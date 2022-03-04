@@ -10,10 +10,11 @@ public class ConditionBuilder {
   /**
    * Returns a builder object for a PutIf condition.
    *
+   * @param conditionalExpression a condition for a PutIf condition
    * @return a builder object
    */
-  public static IfBuilderStart putIf() {
-    return new IfBuilderStart(true);
+  public static PutIfBuilder putIf(ConditionalExpression conditionalExpression) {
+    return new PutIfBuilder(conditionalExpression);
   }
 
   /**
@@ -21,7 +22,7 @@ public class ConditionBuilder {
    *
    * @return a PutIfExists condition
    */
-  public static MutationCondition putIfExists() {
+  public static PutIfExists putIfExists() {
     return new PutIfExists();
   }
 
@@ -30,17 +31,18 @@ public class ConditionBuilder {
    *
    * @return a PutIfNotExists condition
    */
-  public static MutationCondition putIfNotExists() {
+  public static PutIfNotExists putIfNotExists() {
     return new PutIfNotExists();
   }
 
   /**
    * Returns a builder object for a DeleteIf condition.
    *
+   * @param conditionalExpression a condition for a DeleteIf condition
    * @return a builder object
    */
-  public static IfBuilderStart deleteIf() {
-    return new IfBuilderStart(false);
+  public static DeleteIfBuilder deleteIf(ConditionalExpression conditionalExpression) {
+    return new DeleteIfBuilder(conditionalExpression);
   }
 
   /**
@@ -48,1164 +50,566 @@ public class ConditionBuilder {
    *
    * @return a DeleteIfExists condition
    */
-  public static MutationCondition deleteIfExists() {
+  public static DeleteIfExists deleteIfExists() {
     return new DeleteIfExists();
   }
 
-  public static class IfBuilderStart {
+  /**
+   * Returns a builder object for a condition expression for PutIf/DeleteIf
+   *
+   * @param columnName a column name for a condition expression
+   * @return a builder object
+   */
+  public static ConditionalExpressionBuilder column(String columnName) {
+    return new ConditionalExpressionBuilder(columnName);
+  }
 
-    // indicates whether it's for PutIf or DeleteIf. When true, it's for PutIf.
-    private final boolean isPutIf;
+  public static class ConditionalExpressionBuilder {
 
-    private IfBuilderStart(boolean isPutIf) {
-      this.isPutIf = isPutIf;
+    private final String columnName;
+
+    private ConditionalExpressionBuilder(String columnName) {
+      this.columnName = columnName;
     }
 
     /**
-     * Adds an 'equal' conditional expression for a BOOLEAN value.
+     * Creates an 'equal' conditional expression for a BOOLEAN value.
      *
-     * @param columnName a name of target column for the 'equal' conditional expression
      * @param value a BOOLEAN value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder eqBoolean(String columnName, boolean value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.EQ));
+    public ConditionalExpression isEqualToBoolean(boolean value) {
+      return new ConditionalExpression(columnName, value, Operator.EQ);
     }
 
     /**
-     * Adds an 'equal' conditional expression for an INT value.
+     * Creates an 'equal' conditional expression for an INT value.
      *
-     * @param columnName a name of target column for the 'equal' conditional expression
      * @param value an INT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder eqInt(String columnName, int value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.EQ));
+    public ConditionalExpression isEqualToInt(int value) {
+      return new ConditionalExpression(columnName, value, Operator.EQ);
     }
 
     /**
-     * Adds an 'equal' conditional expression for a BIGINT value.
+     * Creates an 'equal' conditional expression for a BIGINT value.
      *
-     * @param columnName a name of target column for the 'equal' conditional expression
      * @param value a BIGINT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder eqBigInt(String columnName, long value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.EQ));
+    public ConditionalExpression isEqualToBigInt(long value) {
+      return new ConditionalExpression(columnName, value, Operator.EQ);
     }
 
     /**
-     * Adds an 'equal' conditional expression for a FLOAT value.
+     * Creates an 'equal' conditional expression for a FLOAT value.
      *
-     * @param columnName a name of target column for the 'equal' conditional expression
      * @param value a FLOAT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder eqFloat(String columnName, float value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.EQ));
+    public ConditionalExpression isEqualToFloat(float value) {
+      return new ConditionalExpression(columnName, value, Operator.EQ);
     }
 
     /**
-     * Adds an 'equal' conditional expression for a DOUBLE value.
+     * Creates an 'equal' conditional expression for a DOUBLE value.
      *
-     * @param columnName a name of target column for the 'equal' conditional expression
      * @param value a DOUBLE value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder eqDouble(String columnName, double value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.EQ));
+    public ConditionalExpression isEqualToDouble(double value) {
+      return new ConditionalExpression(columnName, value, Operator.EQ);
     }
 
     /**
-     * Adds an 'equal' conditional expression for a TEXT value.
+     * Creates an 'equal' conditional expression for a TEXT value.
      *
-     * @param columnName a name of target column for the 'equal' conditional expression
      * @param value a TEXT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder eqText(String columnName, String value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.EQ));
+    public ConditionalExpression isEqualToText(String value) {
+      return new ConditionalExpression(columnName, value, Operator.EQ);
     }
 
     /**
-     * Adds an 'equal' conditional expression for a BLOB value.
+     * Creates an 'equal' conditional expression for a BLOB value.
      *
-     * @param columnName a name of target column for the 'equal' conditional expression
      * @param value a BLOB value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder eqBlob(String columnName, byte[] value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.EQ));
+    public ConditionalExpression isEqualToBlob(byte[] value) {
+      return new ConditionalExpression(columnName, value, Operator.EQ);
     }
 
     /**
-     * Adds an 'equal' conditional expression for a BLOB value.
+     * Creates an 'equal' conditional expression for a BLOB value.
      *
-     * @param columnName a name of target column for the 'equal' conditional expression
      * @param value a BLOB value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder eqBlob(String columnName, ByteBuffer value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.EQ));
+    public ConditionalExpression isEqualToBlob(ByteBuffer value) {
+      return new ConditionalExpression(columnName, value, Operator.EQ);
     }
 
     /**
-     * Adds a 'not equal' conditional expression for a BOOLEAN value.
+     * Creates a 'not equal' conditional expression for a BOOLEAN value.
      *
-     * @param columnName a name of target column for the 'not equal' conditional expression
      * @param value a BOOLEAN value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder neBoolean(String columnName, boolean value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.NE));
+    public ConditionalExpression isNotEqualToBoolean(boolean value) {
+      return new ConditionalExpression(columnName, value, Operator.NE);
     }
 
     /**
-     * Adds a 'not equal' conditional expression for an INT value.
+     * Creates a 'not equal' conditional expression for an INT value.
      *
-     * @param columnName a name of target column for the 'not equal' conditional expression
      * @param value an INT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder neInt(String columnName, int value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.NE));
+    public ConditionalExpression isNotEqualToInt(int value) {
+      return new ConditionalExpression(columnName, value, Operator.NE);
     }
 
     /**
-     * Adds a 'not equal' conditional expression for a BIGINT value.
+     * Creates a 'not equal' conditional expression for a BIGINT value.
      *
-     * @param columnName a name of target column for the 'not equal' conditional expression
      * @param value a BIGINT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder neBigInt(String columnName, long value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.NE));
+    public ConditionalExpression isNotEqualToBigInt(long value) {
+      return new ConditionalExpression(columnName, value, Operator.NE);
     }
 
     /**
-     * Adds a 'not equal' conditional expression for a FLOAT value.
+     * Creates a 'not equal' conditional expression for a FLOAT value.
      *
-     * @param columnName a name of target column for the 'not equal' conditional expression
      * @param value a FLOAT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder neFloat(String columnName, float value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.NE));
+    public ConditionalExpression isNotEqualToFloat(float value) {
+      return new ConditionalExpression(columnName, value, Operator.NE);
     }
 
     /**
-     * Adds a 'not equal' conditional expression for a DOUBLE value.
+     * Creates a 'not equal' conditional expression for a DOUBLE value.
      *
-     * @param columnName a name of target column for the 'not equal' conditional expression
      * @param value a DOUBLE value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder neDouble(String columnName, double value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.NE));
+    public ConditionalExpression isNotEqualToDouble(double value) {
+      return new ConditionalExpression(columnName, value, Operator.NE);
     }
 
     /**
-     * Adds a 'not equal' conditional expression for a TEXT value.
+     * Creates a 'not equal' conditional expression for a TEXT value.
      *
-     * @param columnName a name of target column for the 'not equal' conditional expression
      * @param value a TEXT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder neText(String columnName, String value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.NE));
+    public ConditionalExpression isNotEqualToText(String value) {
+      return new ConditionalExpression(columnName, value, Operator.NE);
     }
 
     /**
-     * Adds a 'not equal' conditional expression for a BLOB value.
+     * Creates a 'not equal' conditional expression for a BLOB value.
      *
-     * @param columnName a name of target column for the 'not equal' conditional expression
      * @param value a BLOB value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder neBlob(String columnName, byte[] value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.NE));
+    public ConditionalExpression isNotEqualToBlob(byte[] value) {
+      return new ConditionalExpression(columnName, value, Operator.NE);
     }
 
     /**
-     * Adds a 'not equal' conditional expression for a BLOB value.
+     * Creates a 'not equal' conditional expression for a BLOB value.
      *
-     * @param columnName a name of target column for the 'not equal' conditional expression
      * @param value a BLOB value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder neBlob(String columnName, ByteBuffer value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.NE));
+    public ConditionalExpression isNotEqualToBlob(ByteBuffer value) {
+      return new ConditionalExpression(columnName, value, Operator.NE);
     }
 
     /**
-     * Adds a 'greater than' conditional expression for a BOOLEAN value.
+     * Creates a 'greater than' conditional expression for a BOOLEAN value.
      *
-     * @param columnName a name of target column for the 'greater than' conditional expression
      * @param value a BOOLEAN value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder gtBoolean(String columnName, boolean value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.GT));
+    public ConditionalExpression isGreaterThanBoolean(boolean value) {
+      return new ConditionalExpression(columnName, value, Operator.GT);
     }
 
     /**
-     * Adds a 'greater than' conditional expression for an INT value.
+     * Creates a 'greater than' conditional expression for an INT value.
      *
-     * @param columnName a name of target column for the 'greater than' conditional expression
      * @param value an INT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder gtInt(String columnName, int value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.GT));
+    public ConditionalExpression isGreaterThanInt(int value) {
+      return new ConditionalExpression(columnName, value, Operator.GT);
     }
 
     /**
-     * Adds a 'greater than' conditional expression for a BIGINT value.
+     * Creates a 'greater than' conditional expression for a BIGINT value.
      *
-     * @param columnName a name of target column for the 'greater than' conditional expression
      * @param value a BIGINT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder gtBigInt(String columnName, long value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.GT));
+    public ConditionalExpression isGreaterThanBigInt(long value) {
+      return new ConditionalExpression(columnName, value, Operator.GT);
     }
 
     /**
-     * Adds a 'greater than' conditional expression for a FLOAT value.
+     * Creates a 'greater than' conditional expression for a FLOAT value.
      *
-     * @param columnName a name of target column for the 'greater than' conditional expression
      * @param value a FLOAT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder gtFloat(String columnName, float value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.GT));
+    public ConditionalExpression isGreaterThanFloat(float value) {
+      return new ConditionalExpression(columnName, value, Operator.GT);
     }
 
     /**
-     * Adds a 'greater than' conditional expression for a DOUBLE value.
+     * Creates a 'greater than' conditional expression for a DOUBLE value.
      *
-     * @param columnName a name of target column for the 'greater than' conditional expression
      * @param value a DOUBLE value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder gtDouble(String columnName, double value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.GT));
+    public ConditionalExpression isGreaterThanDouble(double value) {
+      return new ConditionalExpression(columnName, value, Operator.GT);
     }
 
     /**
-     * Adds a 'greater than' conditional expression for a TEXT value.
+     * Creates a 'greater than' conditional expression for a TEXT value.
      *
-     * @param columnName a name of target column for the 'greater than' conditional expression
      * @param value a TEXT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder gtText(String columnName, String value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.GT));
+    public ConditionalExpression isGreaterThanText(String value) {
+      return new ConditionalExpression(columnName, value, Operator.GT);
     }
 
     /**
-     * Adds a 'greater than' conditional expression for a BLOB value.
+     * Creates a 'greater than' conditional expression for a BLOB value.
      *
-     * @param columnName a name of target column for the 'greater than' conditional expression
      * @param value a BLOB value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder gtBlob(String columnName, byte[] value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.GT));
+    public ConditionalExpression isGreaterThanBlob(byte[] value) {
+      return new ConditionalExpression(columnName, value, Operator.GT);
     }
 
     /**
-     * Adds a 'greater than' conditional expression for a BLOB value.
+     * Creates a 'greater than' conditional expression for a BLOB value.
      *
-     * @param columnName a name of target column for the 'greater than' conditional expression
      * @param value a BLOB value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder gtBlob(String columnName, ByteBuffer value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.GT));
+    public ConditionalExpression isGreaterThanBlob(ByteBuffer value) {
+      return new ConditionalExpression(columnName, value, Operator.GT);
     }
 
     /**
-     * Adds a 'greater than or equal' conditional expression for a BOOLEAN value.
+     * Creates a 'greater than or equal' conditional expression for a BOOLEAN value.
      *
-     * @param columnName a name of target column for the 'greater than or equal' conditional
-     *     expression
      * @param value a BOOLEAN value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder gteBoolean(String columnName, boolean value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.GTE));
+    public ConditionalExpression isGreaterThanOrEqualToBoolean(boolean value) {
+      return new ConditionalExpression(columnName, value, Operator.GTE);
     }
 
     /**
-     * Adds a 'greater than or equal' conditional expression for an INT value.
+     * Creates a 'greater than or equal' conditional expression for an INT value.
      *
-     * @param columnName a name of target column for the 'greater than or equal' conditional
-     *     expression
      * @param value an INT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder gteInt(String columnName, int value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.GTE));
+    public ConditionalExpression isGreaterThanOrEqualToInt(int value) {
+      return new ConditionalExpression(columnName, value, Operator.GTE);
     }
 
     /**
-     * Adds a 'greater than or equal' conditional expression for a BIGINT value.
+     * Creates a 'greater than or equal' conditional expression for a BIGINT value.
      *
-     * @param columnName a name of target column for the 'greater than or equal' conditional
-     *     expression
      * @param value a BIGINT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder gteBigInt(String columnName, long value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.GTE));
+    public ConditionalExpression isGreaterThanOrEqualToBigInt(long value) {
+      return new ConditionalExpression(columnName, value, Operator.GTE);
     }
 
     /**
-     * Adds a 'greater than or equal' conditional expression for a FLOAT value.
+     * Creates a 'greater than or equal' conditional expression for a FLOAT value.
      *
-     * @param columnName a name of target column for the 'greater than or equal' conditional
-     *     expression
      * @param value a FLOAT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder gteFloat(String columnName, float value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.GTE));
+    public ConditionalExpression isGreaterThanOrEqualToFloat(float value) {
+      return new ConditionalExpression(columnName, value, Operator.GTE);
     }
 
     /**
-     * Adds a 'greater than or equal' conditional expression for a DOUBLE value.
+     * Creates a 'greater than or equal' conditional expression for a DOUBLE value.
      *
-     * @param columnName a name of target column for the 'greater than or equal' conditional
-     *     expression
      * @param value a DOUBLE value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder gteDouble(String columnName, double value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.GTE));
+    public ConditionalExpression isGreaterThanOrEqualToDouble(double value) {
+      return new ConditionalExpression(columnName, value, Operator.GTE);
     }
 
     /**
-     * Adds a 'greater than or equal' conditional expression for a TEXT value.
+     * Creates a 'greater than or equal' conditional expression for a TEXT value.
      *
-     * @param columnName a name of target column for the 'greater than or equal' conditional
-     *     expression
      * @param value a TEXT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder gteText(String columnName, String value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.GTE));
+    public ConditionalExpression isGreaterThanOrEqualToText(String value) {
+      return new ConditionalExpression(columnName, value, Operator.GTE);
     }
 
     /**
-     * Adds a 'greater than or equal' conditional expression for a BLOB value.
+     * Creates a 'greater than or equal' conditional expression for a BLOB value.
      *
-     * @param columnName a name of target column for the 'greater than or equal' conditional
-     *     expression
      * @param value a BLOB value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder gteBlob(String columnName, byte[] value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.GTE));
+    public ConditionalExpression isGreaterThanOrEqualToBlob(byte[] value) {
+      return new ConditionalExpression(columnName, value, Operator.GTE);
     }
 
     /**
-     * Adds a 'greater than or equal' conditional expression for a BLOB value.
+     * Creates a 'greater than or equal' conditional expression for a BLOB value.
      *
-     * @param columnName a name of target column for the 'greater than or equal' conditional
-     *     expression
      * @param value a BLOB value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder gteBlob(String columnName, ByteBuffer value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.GTE));
+    public ConditionalExpression isGreaterThanOrEqualToBlob(ByteBuffer value) {
+      return new ConditionalExpression(columnName, value, Operator.GTE);
     }
 
     /**
-     * Adds a 'less than' conditional expression for a BOOLEAN value.
+     * Creates a 'less than' conditional expression for a BOOLEAN value.
      *
-     * @param columnName a name of target column for the 'less than' conditional expression
      * @param value a BOOLEAN value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder ltBoolean(String columnName, boolean value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.LT));
+    public ConditionalExpression isLessThanBoolean(boolean value) {
+      return new ConditionalExpression(columnName, value, Operator.LT);
     }
 
     /**
-     * Adds a 'less than' conditional expression for an INT value.
+     * Creates a 'less than' conditional expression for an INT value.
      *
-     * @param columnName a name of target column for the 'less than' conditional expression
      * @param value an INT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder ltInt(String columnName, int value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.LT));
+    public ConditionalExpression isLessThanInt(int value) {
+      return new ConditionalExpression(columnName, value, Operator.LT);
     }
 
     /**
-     * Adds a 'less than' conditional expression for a BIGINT value.
+     * Creates a 'less than' conditional expression for a BIGINT value.
      *
-     * @param columnName a name of target column for the 'less than' conditional expression
      * @param value a BIGINT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder ltBigInt(String columnName, long value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.LT));
+    public ConditionalExpression isLessThanBigInt(long value) {
+      return new ConditionalExpression(columnName, value, Operator.LT);
     }
 
     /**
-     * Adds a 'less than' conditional expression for a FLOAT value.
+     * Creates a 'less than' conditional expression for a FLOAT value.
      *
-     * @param columnName a name of target column for the 'less than' conditional expression
      * @param value a FLOAT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder ltFloat(String columnName, float value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.LT));
+    public ConditionalExpression isLessThanFloat(float value) {
+      return new ConditionalExpression(columnName, value, Operator.LT);
     }
 
     /**
-     * Adds a 'less than' conditional expression for a DOUBLE value.
+     * Creates a 'less than' conditional expression for a DOUBLE value.
      *
-     * @param columnName a name of target column for the 'less than' conditional expression
      * @param value a DOUBLE value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder ltDouble(String columnName, double value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.LT));
+    public ConditionalExpression isLessThanDouble(double value) {
+      return new ConditionalExpression(columnName, value, Operator.LT);
     }
 
     /**
-     * Adds a 'less than' conditional expression for a TEXT value.
+     * Creates a 'less than' conditional expression for a TEXT value.
      *
-     * @param columnName a name of target column for the 'less than' conditional expression
      * @param value a TEXT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder ltText(String columnName, String value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.LT));
+    public ConditionalExpression isLessThanText(String value) {
+      return new ConditionalExpression(columnName, value, Operator.LT);
     }
 
     /**
-     * Adds a 'less than' conditional expression for a BLOB value.
+     * Creates a 'less than' conditional expression for a BLOB value.
      *
-     * @param columnName a name of target column for the 'less than' conditional expression
      * @param value a BLOB value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder ltBlob(String columnName, byte[] value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.LT));
+    public ConditionalExpression isLessThanBlob(byte[] value) {
+      return new ConditionalExpression(columnName, value, Operator.LT);
     }
 
     /**
-     * Adds a 'less than' conditional expression for a BLOB value.
+     * Creates a 'less than' conditional expression for a BLOB value.
      *
-     * @param columnName a name of target column for the 'less than' conditional expression
      * @param value a BLOB value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder ltBlob(String columnName, ByteBuffer value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.LT));
+    public ConditionalExpression isLessThanBlob(ByteBuffer value) {
+      return new ConditionalExpression(columnName, value, Operator.LT);
     }
 
     /**
-     * Adds a 'less than or equal' conditional expression for a BOOLEAN value.
+     * Creates a 'less than or equal' conditional expression for a BOOLEAN value.
      *
-     * @param columnName a name of target column for the 'less than or equal' conditional expression
      * @param value a BOOLEAN value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder lteBoolean(String columnName, boolean value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.LTE));
+    public ConditionalExpression isLessThanOrEqualToBoolean(boolean value) {
+      return new ConditionalExpression(columnName, value, Operator.LTE);
     }
 
     /**
-     * Adds a 'less than or equal' conditional expression for an INT value.
+     * Creates a 'less than or equal' conditional expression for an INT value.
      *
-     * @param columnName a name of target column for the 'less than or equal' conditional expression
      * @param value an INT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder lteInt(String columnName, int value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.LTE));
+    public ConditionalExpression isLessThanOrEqualToInt(int value) {
+      return new ConditionalExpression(columnName, value, Operator.LTE);
     }
 
     /**
-     * Adds a 'less than or equal' conditional expression for a BIGINT value.
+     * Creates a 'less than or equal' conditional expression for a BIGINT value.
      *
-     * @param columnName a name of target column for the 'less than or equal' conditional expression
      * @param value a BIGINT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder lteBigInt(String columnName, long value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.LTE));
+    public ConditionalExpression isLessThanOrEqualToBigInt(long value) {
+      return new ConditionalExpression(columnName, value, Operator.LTE);
     }
 
     /**
-     * Adds a 'less than or equal' conditional expression for a FLOAT value.
+     * Creates a 'less than or equal' conditional expression for a FLOAT value.
      *
-     * @param columnName a name of target column for the 'less than or equal' conditional expression
      * @param value a FLOAT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder lteFloat(String columnName, float value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.LTE));
+    public ConditionalExpression isLessThanOrEqualToFloat(float value) {
+      return new ConditionalExpression(columnName, value, Operator.LTE);
     }
 
     /**
-     * Adds a 'less than or equal' conditional expression for a DOUBLE value.
+     * Creates a 'less than or equal' conditional expression for a DOUBLE value.
      *
-     * @param columnName a name of target column for the 'less than or equal' conditional expression
      * @param value a DOUBLE value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder lteDouble(String columnName, double value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.LTE));
+    public ConditionalExpression isLessThanOrEqualToDouble(double value) {
+      return new ConditionalExpression(columnName, value, Operator.LTE);
     }
 
     /**
-     * Adds a 'less than or equal' conditional expression for a TEXT value.
+     * Creates a 'less than or equal' conditional expression for a TEXT value.
      *
-     * @param columnName a name of target column for the 'less than or equal' conditional expression
      * @param value a TEXT value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder lteText(String columnName, String value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.LTE));
+    public ConditionalExpression isLessThanOrEqualToText(String value) {
+      return new ConditionalExpression(columnName, value, Operator.LTE);
     }
 
     /**
-     * Adds a 'less than or equal' conditional expression for a BLOB value.
+     * Creates a 'less than or equal' conditional expression for a BLOB value.
      *
-     * @param columnName a name of target column for the 'less than or equal' conditional expression
      * @param value a BLOB value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder lteBlob(String columnName, byte[] value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.LTE));
+    public ConditionalExpression isLessThanOrEqualToBlob(byte[] value) {
+      return new ConditionalExpression(columnName, value, Operator.LTE);
     }
 
     /**
-     * Adds a 'less than or equal' conditional expression for a BLOB value.
+     * Creates a 'less than or equal' conditional expression for a BLOB value.
      *
-     * @param columnName a name of target column for the 'less than or equal' conditional expression
      * @param value a BLOB value used to compare with the target column
-     * @return a builder object
+     * @return a conditional expression
      */
-    public IfBuilder lteBlob(String columnName, ByteBuffer value) {
-      return new IfBuilder(isPutIf, new ConditionalExpression(columnName, value, Operator.LTE));
+    public ConditionalExpression isLessThanOrEqualToBlob(ByteBuffer value) {
+      return new ConditionalExpression(columnName, value, Operator.LTE);
     }
   }
 
-  public static class IfBuilder {
-
-    // indicates whether it's for PutIf or DeleteIf. When true, it's for PutIf.
-    private final boolean isPutIf;
+  public static class PutIfBuilder {
 
     private final List<ConditionalExpression> conditionalExpressions;
 
-    private IfBuilder(boolean isPutIf, ConditionalExpression firstConditionalExpression) {
-      this.isPutIf = isPutIf;
+    private PutIfBuilder(ConditionalExpression conditionalExpression) {
       conditionalExpressions = new ArrayList<>();
-      conditionalExpressions.add(firstConditionalExpression);
+      conditionalExpressions.add(conditionalExpression);
     }
 
     /**
-     * Adds an 'equal' conditional expression for a BOOLEAN value.
+     * Adds a condition for a PutIf condition.
      *
-     * @param columnName a name of target column for the 'equal' conditional expression
-     * @param value a BOOLEAN value used to compare with the target column
+     * @param conditionalExpression a condition for a PutIf condition
      * @return a builder object
      */
-    public IfBuilder andEqBoolean(String columnName, boolean value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.EQ));
+    public PutIfBuilder and(ConditionalExpression conditionalExpression) {
+      conditionalExpressions.add(conditionalExpression);
       return this;
     }
 
     /**
-     * Adds an 'equal' conditional expression for an INT value.
+     * Builds a PutIf condition with the specified conditional expressions.
      *
-     * @param columnName a name of target column for the 'equal' conditional expression
-     * @param value an INT value used to compare with the target column
+     * @return a PutIf condition
+     */
+    public PutIf build() {
+      return new PutIf(conditionalExpressions);
+    }
+  }
+
+  public static class DeleteIfBuilder {
+
+    private final List<ConditionalExpression> conditionalExpressions;
+
+    private DeleteIfBuilder(ConditionalExpression conditionalExpression) {
+      conditionalExpressions = new ArrayList<>();
+      conditionalExpressions.add(conditionalExpression);
+    }
+
+    /**
+     * Adds a condition for a DeleteIf condition.
+     *
+     * @param conditionalExpression a condition for a DeleteIf condition
      * @return a builder object
      */
-    public IfBuilder andEqInt(String columnName, int value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.EQ));
+    public DeleteIfBuilder and(ConditionalExpression conditionalExpression) {
+      conditionalExpressions.add(conditionalExpression);
       return this;
     }
 
     /**
-     * Adds an 'equal' conditional expression for a BIGINT value.
+     * Builds a DeleteIf condition with the specified conditional expressions.
      *
-     * @param columnName a name of target column for the 'equal' conditional expression
-     * @param value a BIGINT value used to compare with the target column
-     * @return a builder object
+     * @return a DeleteIf condition
      */
-    public IfBuilder andEqBigInt(String columnName, long value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.EQ));
-      return this;
-    }
-
-    /**
-     * Adds an 'equal' conditional expression for a FLOAT value.
-     *
-     * @param columnName a name of target column for the 'equal' conditional expression
-     * @param value a FLOAT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andEqFloat(String columnName, float value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.EQ));
-      return this;
-    }
-
-    /**
-     * Adds an 'equal' conditional expression for a DOUBLE value.
-     *
-     * @param columnName a name of target column for the 'equal' conditional expression
-     * @param value a DOUBLE value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andEqDouble(String columnName, double value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.EQ));
-      return this;
-    }
-
-    /**
-     * Adds an 'equal' conditional expression for a TEXT value.
-     *
-     * @param columnName a name of target column for the 'equal' conditional expression
-     * @param value a TEXT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andEqText(String columnName, String value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.EQ));
-      return this;
-    }
-
-    /**
-     * Adds an 'equal' conditional expression for a BLOB value.
-     *
-     * @param columnName a name of target column for the 'equal' conditional expression
-     * @param value a BLOB value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andEqBlob(String columnName, byte[] value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.EQ));
-      return this;
-    }
-
-    /**
-     * Adds an 'equal' conditional expression for a BLOB value.
-     *
-     * @param columnName a name of target column for the 'equal' conditional expression
-     * @param value a BLOB value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andEqBlob(String columnName, ByteBuffer value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.EQ));
-      return this;
-    }
-
-    /**
-     * Adds a 'not equal' conditional expression for a BOOLEAN value.
-     *
-     * @param columnName a name of target column for the 'not equal' conditional expression
-     * @param value a BOOLEAN value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andNeBoolean(String columnName, boolean value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.NE));
-      return this;
-    }
-
-    /**
-     * Adds a 'not equal' conditional expression for an INT value.
-     *
-     * @param columnName a name of target column for the 'not equal' conditional expression
-     * @param value an INT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andNeInt(String columnName, int value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.NE));
-      return this;
-    }
-
-    /**
-     * Adds a 'not equal' conditional expression for a BIGINT value.
-     *
-     * @param columnName a name of target column for the 'not equal' conditional expression
-     * @param value a BIGINT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andNeBigInt(String columnName, long value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.NE));
-      return this;
-    }
-
-    /**
-     * Adds a 'not equal' conditional expression for a FLOAT value.
-     *
-     * @param columnName a name of target column for the 'not equal' conditional expression
-     * @param value a FLOAT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andNeFloat(String columnName, float value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.NE));
-      return this;
-    }
-
-    /**
-     * Adds a 'not equal' conditional expression for a DOUBLE value.
-     *
-     * @param columnName a name of target column for the 'not equal' conditional expression
-     * @param value a DOUBLE value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andNeDouble(String columnName, double value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.NE));
-      return this;
-    }
-
-    /**
-     * Adds a 'not equal' conditional expression for a TEXT value.
-     *
-     * @param columnName a name of target column for the 'not equal' conditional expression
-     * @param value a TEXT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andNeText(String columnName, String value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.NE));
-      return this;
-    }
-
-    /**
-     * Adds a 'not equal' conditional expression for a BLOB value.
-     *
-     * @param columnName a name of target column for the 'not equal' conditional expression
-     * @param value a BLOB value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andNeBlob(String columnName, byte[] value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.NE));
-      return this;
-    }
-
-    /**
-     * Adds a 'not equal' conditional expression for a BLOB value.
-     *
-     * @param columnName a name of target column for the 'not equal' conditional expression
-     * @param value a BLOB value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andNeBlob(String columnName, ByteBuffer value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.NE));
-      return this;
-    }
-
-    /**
-     * Adds a 'greater than' conditional expression for a BOOLEAN value.
-     *
-     * @param columnName a name of target column for the 'greater than' conditional expression
-     * @param value a BOOLEAN value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andGtBoolean(String columnName, boolean value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.GT));
-      return this;
-    }
-
-    /**
-     * Adds a 'greater than' conditional expression for an INT value.
-     *
-     * @param columnName a name of target column for the 'greater than' conditional expression
-     * @param value an INT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andGtInt(String columnName, int value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.GT));
-      return this;
-    }
-
-    /**
-     * Adds a 'greater than' conditional expression for a BIGINT value.
-     *
-     * @param columnName a name of target column for the 'greater than' conditional expression
-     * @param value a BIGINT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andGtBigInt(String columnName, long value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.GT));
-      return this;
-    }
-
-    /**
-     * Adds a 'greater than' conditional expression for a FLOAT value.
-     *
-     * @param columnName a name of target column for the 'greater than' conditional expression
-     * @param value a FLOAT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andGtFloat(String columnName, float value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.GT));
-      return this;
-    }
-
-    /**
-     * Adds a 'greater than' conditional expression for a DOUBLE value.
-     *
-     * @param columnName a name of target column for the 'greater than' conditional expression
-     * @param value a DOUBLE value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andGtDouble(String columnName, double value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.GT));
-      return this;
-    }
-
-    /**
-     * Adds a 'greater than' conditional expression for a TEXT value.
-     *
-     * @param columnName a name of target column for the 'greater than' conditional expression
-     * @param value a TEXT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andGtText(String columnName, String value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.GT));
-      return this;
-    }
-
-    /**
-     * Adds a 'greater than' conditional expression for a BLOB value.
-     *
-     * @param columnName a name of target column for the 'greater than' conditional expression
-     * @param value a BLOB value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andGtBlob(String columnName, byte[] value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.GT));
-      return this;
-    }
-
-    /**
-     * Adds a 'greater than' conditional expression for a BLOB value.
-     *
-     * @param columnName a name of target column for the 'greater than' conditional expression
-     * @param value a BLOB value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andGtBlob(String columnName, ByteBuffer value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.GT));
-      return this;
-    }
-
-    /**
-     * Adds a 'greater than or equal' conditional expression for a BOOLEAN value.
-     *
-     * @param columnName a name of target column for the 'greater than or equal' conditional
-     *     expression
-     * @param value a BOOLEAN value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andGteBoolean(String columnName, boolean value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.GTE));
-      return this;
-    }
-
-    /**
-     * Adds a 'greater than or equal' conditional expression for an INT value.
-     *
-     * @param columnName a name of target column for the 'greater than or equal' conditional
-     *     expression
-     * @param value an INT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andGteInt(String columnName, int value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.GTE));
-      return this;
-    }
-
-    /**
-     * Adds a 'greater than or equal' conditional expression for a BIGINT value.
-     *
-     * @param columnName a name of target column for the 'greater than or equal' conditional
-     *     expression
-     * @param value a BIGINT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andGteBigInt(String columnName, long value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.GTE));
-      return this;
-    }
-
-    /**
-     * Adds a 'greater than or equal' conditional expression for a FLOAT value.
-     *
-     * @param columnName a name of target column for the 'greater than or equal' conditional
-     *     expression
-     * @param value a FLOAT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andGteFloat(String columnName, float value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.GTE));
-      return this;
-    }
-
-    /**
-     * Adds a 'greater than or equal' conditional expression for a DOUBLE value.
-     *
-     * @param columnName a name of target column for the 'greater than or equal' conditional
-     *     expression
-     * @param value a DOUBLE value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andGteDouble(String columnName, double value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.GTE));
-      return this;
-    }
-
-    /**
-     * Adds a 'greater than or equal' conditional expression for a TEXT value.
-     *
-     * @param columnName a name of target column for the 'greater than or equal' conditional
-     *     expression
-     * @param value a TEXT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andGteText(String columnName, String value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.GTE));
-      return this;
-    }
-
-    /**
-     * Adds a 'greater than or equal' conditional expression for a BLOB value.
-     *
-     * @param columnName a name of target column for the 'greater than or equal' conditional
-     *     expression
-     * @param value a BLOB value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andGteBlob(String columnName, byte[] value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.GTE));
-      return this;
-    }
-
-    /**
-     * Adds a 'greater than or equal' conditional expression for a BLOB value.
-     *
-     * @param columnName a name of target column for the 'greater than or equal' conditional
-     *     expression
-     * @param value a BLOB value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andGteBlob(String columnName, ByteBuffer value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.GTE));
-      return this;
-    }
-
-    /**
-     * Adds a 'less than' conditional expression for a BOOLEAN value.
-     *
-     * @param columnName a name of target column for the 'less than' conditional expression
-     * @param value a BOOLEAN value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andLtBoolean(String columnName, boolean value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.LT));
-      return this;
-    }
-
-    /**
-     * Adds a 'less than' conditional expression for an INT value.
-     *
-     * @param columnName a name of target column for the 'less than' conditional expression
-     * @param value an INT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andLtInt(String columnName, int value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.LT));
-      return this;
-    }
-
-    /**
-     * Adds a 'less than' conditional expression for a BIGINT value.
-     *
-     * @param columnName a name of target column for the 'less than' conditional expression
-     * @param value a BIGINT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andLtBigInt(String columnName, long value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.LT));
-      return this;
-    }
-
-    /**
-     * Adds a 'less than' conditional expression for a FLOAT value.
-     *
-     * @param columnName a name of target column for the 'less than' conditional expression
-     * @param value a FLOAT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andLtFloat(String columnName, float value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.LT));
-      return this;
-    }
-
-    /**
-     * Adds a 'less than' conditional expression for a DOUBLE value.
-     *
-     * @param columnName a name of target column for the 'less than' conditional expression
-     * @param value a DOUBLE value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andLtDouble(String columnName, double value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.LT));
-      return this;
-    }
-
-    /**
-     * Adds a 'less than' conditional expression for a TEXT value.
-     *
-     * @param columnName a name of target column for the 'less than' conditional expression
-     * @param value a TEXT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andLtText(String columnName, String value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.LT));
-      return this;
-    }
-
-    /**
-     * Adds a 'less than' conditional expression for a BLOB value.
-     *
-     * @param columnName a name of target column for the 'less than' conditional expression
-     * @param value a BLOB value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andLtBlob(String columnName, byte[] value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.LT));
-      return this;
-    }
-
-    /**
-     * Adds a 'less than' conditional expression for a BLOB value.
-     *
-     * @param columnName a name of target column for the 'less than' conditional expression
-     * @param value a BLOB value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andLtBlob(String columnName, ByteBuffer value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.LT));
-      return this;
-    }
-
-    /**
-     * Adds a 'less than or equal' conditional expression for a BOOLEAN value.
-     *
-     * @param columnName a name of target column for the 'less than or equal' conditional expression
-     * @param value a BOOLEAN value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andLteBoolean(String columnName, boolean value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.LTE));
-      return this;
-    }
-
-    /**
-     * Adds a 'less than or equal' conditional expression for an INT value.
-     *
-     * @param columnName a name of target column for the 'less than or equal' conditional expression
-     * @param value an INT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andLteInt(String columnName, int value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.LTE));
-      return this;
-    }
-
-    /**
-     * Adds a 'less than or equal' conditional expression for a BIGINT value.
-     *
-     * @param columnName a name of target column for the 'less than or equal' conditional expression
-     * @param value a BIGINT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andLteBigInt(String columnName, long value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.LTE));
-      return this;
-    }
-
-    /**
-     * Adds a 'less than or equal' conditional expression for a FLOAT value.
-     *
-     * @param columnName a name of target column for the 'less than or equal' conditional expression
-     * @param value a FLOAT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andLteFloat(String columnName, float value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.LTE));
-      return this;
-    }
-
-    /**
-     * Adds a 'less than or equal' conditional expression for a DOUBLE value.
-     *
-     * @param columnName a name of target column for the 'less than or equal' conditional expression
-     * @param value a DOUBLE value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andLteDouble(String columnName, double value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.LTE));
-      return this;
-    }
-
-    /**
-     * Adds a 'less than or equal' conditional expression for a TEXT value.
-     *
-     * @param columnName a name of target column for the 'less than or equal' conditional expression
-     * @param value a TEXT value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andLteText(String columnName, String value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.LTE));
-      return this;
-    }
-
-    /**
-     * Adds a 'less than or equal' conditional expression for a BLOB value.
-     *
-     * @param columnName a name of target column for the 'less than or equal' conditional expression
-     * @param value a BLOB value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andLteBlob(String columnName, byte[] value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.LTE));
-      return this;
-    }
-
-    /**
-     * Adds a 'less than or equal' conditional expression for a BLOB value.
-     *
-     * @param columnName a name of target column for the 'less than or equal' conditional expression
-     * @param value a BLOB value used to compare with the target column
-     * @return a builder object
-     */
-    public IfBuilder andLteBlob(String columnName, ByteBuffer value) {
-      conditionalExpressions.add(new ConditionalExpression(columnName, value, Operator.LTE));
-      return this;
-    }
-
-    /**
-     * Builds a condition with the specified conditional expressions.
-     *
-     * @return a condition
-     */
-    public MutationCondition build() {
-      if (isPutIf) {
-        return new PutIf(conditionalExpressions);
-      } else {
-        return new DeleteIf(conditionalExpressions);
-      }
+    public DeleteIf build() {
+      return new DeleteIf(conditionalExpressions);
     }
   }
 }
