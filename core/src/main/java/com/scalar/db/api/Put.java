@@ -77,9 +77,24 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param booleanValue a BOOLEAN value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   *     #withBooleanValue(String, boolean)} instead
    */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   public Put withValue(String columnName, boolean booleanValue) {
-    values.put(columnName, Optional.of(new BooleanValue(columnName, booleanValue)));
+    return withBooleanValue(columnName, booleanValue);
+  }
+
+  /**
+   * Adds the specified BOOLEAN value to the list of put values.
+   *
+   * @param columnName a column name of the value
+   * @param value a BOOLEAN value to put
+   * @return this object
+   */
+  public Put withBooleanValue(String columnName, boolean value) {
+    values.put(columnName, Optional.of(new BooleanValue(columnName, value)));
     return this;
   }
 
@@ -89,9 +104,24 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param intValue a INT value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   *     #withIntValue(String, int)} instead
    */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   public Put withValue(String columnName, int intValue) {
-    values.put(columnName, Optional.of(new IntValue(columnName, intValue)));
+    return withIntValue(columnName, intValue);
+  }
+
+  /**
+   * Adds the specified INT value to the list of put values.
+   *
+   * @param columnName a column name of the value
+   * @param value a INT value to put
+   * @return this object
+   */
+  public Put withIntValue(String columnName, int value) {
+    values.put(columnName, Optional.of(new IntValue(columnName, value)));
     return this;
   }
 
@@ -101,9 +131,24 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param bigIntValue a BIGINT value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   *     #withBigIntValue(String, long)} instead
    */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   public Put withValue(String columnName, long bigIntValue) {
-    values.put(columnName, Optional.of(new BigIntValue(columnName, bigIntValue)));
+    return withBigIntValue(columnName, bigIntValue);
+  }
+
+  /**
+   * Adds the specified BIGINT value to the list of put values.
+   *
+   * @param columnName a column name of the value
+   * @param value a BIGINT value to put
+   * @return this object
+   */
+  public Put withBigIntValue(String columnName, long value) {
+    values.put(columnName, Optional.of(new BigIntValue(columnName, value)));
     return this;
   }
 
@@ -113,9 +158,24 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param floatValue a value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   *     #withFloatValue(String, float)} instead
    */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   public Put withValue(String columnName, float floatValue) {
-    values.put(columnName, Optional.of(new FloatValue(columnName, floatValue)));
+    return withFloatValue(columnName, floatValue);
+  }
+
+  /**
+   * Adds the specified FLOAT value to the list of put values.
+   *
+   * @param columnName a column name of the value
+   * @param value a value to put
+   * @return this object
+   */
+  public Put withFloatValue(String columnName, float value) {
+    values.put(columnName, Optional.of(new FloatValue(columnName, value)));
     return this;
   }
 
@@ -125,9 +185,24 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param doubleValue a DOUBLE value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   *     #withDoubleValue(String, double)} instead
    */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   public Put withValue(String columnName, double doubleValue) {
-    values.put(columnName, Optional.of(new DoubleValue(columnName, doubleValue)));
+    return withDoubleValue(columnName, doubleValue);
+  }
+
+  /**
+   * Adds the specified DOUBLE value to the list of put values.
+   *
+   * @param columnName a column name of the value
+   * @param value a DOUBLE value to put
+   * @return this object
+   */
+  public Put withDoubleValue(String columnName, double value) {
+    values.put(columnName, Optional.of(new DoubleValue(columnName, value)));
     return this;
   }
 
@@ -137,13 +212,26 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param textValue a TEXT value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   *     #withTextValue(String, String)} instead
    */
+  @Deprecated
   public Put withValue(String columnName, @Nullable String textValue) {
     if (textValue == null) {
-      withNullValue(columnName);
-    } else {
-      values.put(columnName, Optional.of(new TextValue(columnName, textValue)));
+      return withNullValue(columnName);
     }
+    return withTextValue(columnName, textValue);
+  }
+
+  /**
+   * Adds the specified TEXT value to the list of put values.
+   *
+   * @param columnName a column name of the value
+   * @param value a TEXT value to put
+   * @return this object
+   */
+  public Put withTextValue(String columnName, String value) {
+    values.put(columnName, Optional.of(new TextValue(columnName, Objects.requireNonNull(value))));
     return this;
   }
 
@@ -153,13 +241,26 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param blobValue a BLOB value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   *     #withBlobValue(String, byte[])} instead
    */
+  @Deprecated
   public Put withValue(String columnName, @Nullable byte[] blobValue) {
     if (blobValue == null) {
-      withNullValue(columnName);
-    } else {
-      values.put(columnName, Optional.of(new BlobValue(columnName, blobValue)));
+      return withNullValue(columnName);
     }
+    return withBlobValue(columnName, blobValue);
+  }
+
+  /**
+   * Adds the specified BLOB value as a byte array to the list of put values.
+   *
+   * @param columnName a column name of the value
+   * @param value a BLOB value to put
+   * @return this object
+   */
+  public Put withBlobValue(String columnName, byte[] value) {
+    values.put(columnName, Optional.of(new BlobValue(columnName, Objects.requireNonNull(value))));
     return this;
   }
 
@@ -169,13 +270,26 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param blobValue a BLOB value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   *     #withBlobValue(String, ByteBuffer)} instead
    */
+  @Deprecated
   public Put withValue(String columnName, @Nullable ByteBuffer blobValue) {
     if (blobValue == null) {
-      withNullValue(columnName);
-    } else {
-      values.put(columnName, Optional.of(new BlobValue(columnName, blobValue)));
+      return withNullValue(columnName);
     }
+    return withBlobValue(columnName, blobValue);
+  }
+
+  /**
+   * Adds the specified Blob value as a ByteBuffer to the list of put values.
+   *
+   * @param columnName a column name of the value
+   * @param value a BLOB value to put
+   * @return this object
+   */
+  public Put withBlobValue(String columnName, ByteBuffer value) {
+    values.put(columnName, Optional.of(new BlobValue(columnName, Objects.requireNonNull(value))));
     return this;
   }
 

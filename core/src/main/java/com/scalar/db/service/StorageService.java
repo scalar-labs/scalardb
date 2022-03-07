@@ -25,26 +25,31 @@ public class StorageService implements DistributedStorage {
     this.storage = storage;
   }
 
+  @Deprecated
   @Override
   public void with(String namespace, String tableName) {
     storage.with(namespace, tableName);
   }
 
+  @Deprecated
   @Override
   public void withNamespace(String namespace) {
     storage.withNamespace(namespace);
   }
 
+  @Deprecated
   @Override
   public Optional<String> getNamespace() {
     return storage.getNamespace();
   }
 
+  @Deprecated
   @Override
   public void withTable(String tableName) {
     storage.withTable(tableName);
   }
 
+  @Deprecated
   @Override
   public Optional<String> getTable() {
     return storage.getTable();

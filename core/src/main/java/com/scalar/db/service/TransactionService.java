@@ -21,26 +21,31 @@ public class TransactionService implements DistributedTransactionManager {
     this.manager = manager;
   }
 
+  @Deprecated
   @Override
   public void with(String namespace, String tableName) {
     manager.with(namespace, tableName);
   }
 
+  @Deprecated
   @Override
   public void withNamespace(String namespace) {
     manager.withNamespace(namespace);
   }
 
+  @Deprecated
   @Override
   public Optional<String> getNamespace() {
     return manager.getNamespace();
   }
 
+  @Deprecated
   @Override
   public void withTable(String tableName) {
     manager.withTable(tableName);
   }
 
+  @Deprecated
   @Override
   public Optional<String> getTable() {
     return manager.getTable();
