@@ -14,6 +14,11 @@ import javax.annotation.concurrent.Immutable;
 @Immutable
 public class PutIfNotExists implements MutationCondition {
 
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   *     to build a condition instead
+   */
+  @Deprecated
   public PutIfNotExists() {}
 
   /**
