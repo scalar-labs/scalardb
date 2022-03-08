@@ -48,7 +48,10 @@ public class ConditionalExpression {
    * @param columnName a name of target column
    * @param booleanValue a BOOLEAN value used to compare with the target column
    * @param operator an operator used to compare the target column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   *     to build a condition instead
    */
+  @Deprecated
   public ConditionalExpression(String columnName, boolean booleanValue, Operator operator) {
     this(columnName, new BooleanValue(booleanValue), operator);
   }
@@ -59,7 +62,10 @@ public class ConditionalExpression {
    * @param columnName a name of target column
    * @param intValue an INT value used to compare with the target column
    * @param operator an operator used to compare the target column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   *     to build a condition instead
    */
+  @Deprecated
   public ConditionalExpression(String columnName, int intValue, Operator operator) {
     this(columnName, new IntValue(intValue), operator);
   }
@@ -70,7 +76,10 @@ public class ConditionalExpression {
    * @param columnName a name of target column
    * @param bigIntValue a BIGINT value used to compare with the target column
    * @param operator an operator used to compare the target column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   *     to build a condition instead
    */
+  @Deprecated
   public ConditionalExpression(String columnName, long bigIntValue, Operator operator) {
     this(columnName, new BigIntValue(bigIntValue), operator);
   }
@@ -81,7 +90,10 @@ public class ConditionalExpression {
    * @param columnName a name of target column
    * @param floatValue a FLOAT value used to compare with the target column
    * @param operator an operator used to compare the target column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   *     to build a condition instead
    */
+  @Deprecated
   public ConditionalExpression(String columnName, float floatValue, Operator operator) {
     this(columnName, new FloatValue(floatValue), operator);
   }
@@ -92,7 +104,10 @@ public class ConditionalExpression {
    * @param columnName a name of target column
    * @param doubleValue a DOUBLE value used to compare with the target column
    * @param operator an operator used to compare the target column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   *     to build a condition instead
    */
+  @Deprecated
   public ConditionalExpression(String columnName, double doubleValue, Operator operator) {
     this(columnName, new DoubleValue(doubleValue), operator);
   }
@@ -103,7 +118,10 @@ public class ConditionalExpression {
    * @param columnName a name of target column
    * @param textValue a TEXT value used to compare with the target column
    * @param operator an operator used to compare the target column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   *     to build a condition instead
    */
+  @Deprecated
   public ConditionalExpression(String columnName, String textValue, Operator operator) {
     this(columnName, new TextValue(textValue), operator);
   }
@@ -114,7 +132,10 @@ public class ConditionalExpression {
    * @param columnName a name of target column
    * @param blobValue a BLOB value used to compare with the target column
    * @param operator an operator used to compare the target column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   *     to build a condition instead
    */
+  @Deprecated
   public ConditionalExpression(String columnName, byte[] blobValue, Operator operator) {
     this(columnName, new BlobValue(blobValue), operator);
   }
@@ -125,7 +146,10 @@ public class ConditionalExpression {
    * @param columnName a name of target column
    * @param blobValue a BLOB value used to compare with the target column
    * @param operator an operator used to compare the target column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   *     to build a condition instead
    */
+  @Deprecated
   public ConditionalExpression(String columnName, ByteBuffer blobValue, Operator operator) {
     this(columnName, new BlobValue(blobValue), operator);
   }
