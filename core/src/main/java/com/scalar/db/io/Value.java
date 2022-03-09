@@ -17,14 +17,14 @@ import javax.annotation.Nonnull;
 public interface Value<T> extends Comparable<Value<T>> {
 
   /**
-   * Returns the name of the value (column)
+   * Returns the name of the value (column).
    *
    * @return the name of this value (column)
    */
   String getName();
 
   /**
-   * Creates a copy of the value (column) with the specified name
+   * Creates a copy of the value (column) with the specified name.
    *
    * @param name name of a {@code Value}
    * @return a {@code Value} which has the same content of this value
@@ -32,14 +32,14 @@ public interface Value<T> extends Comparable<Value<T>> {
   Value<T> copyWith(String name);
 
   /**
-   * Accepts a {@link ValueVisitor} to be able to be traversed
+   * Accepts a {@link ValueVisitor} to be able to be traversed.
    *
    * @param v a visitor class used for traversing {@code Value}s (columns)
    */
   void accept(ValueVisitor v);
 
   /**
-   * Returns the value of this {@code Value} (column)
+   * Returns the value of this {@code Value} (column).
    *
    * @return the value of this {@code Value} (column)
    */
@@ -47,74 +47,81 @@ public interface Value<T> extends Comparable<Value<T>> {
   T get();
 
   /**
-   * Returns the value of this {@code Value} (column) as a boolean type
+   * Returns the data type of this {@code Value} (column).
+   *
+   * @return the data type of this {@code Value} (column)
+   */
+  DataType getDataType();
+
+  /**
+   * Returns the value of this {@code Value} (column) as a boolean type.
    *
    * @return the value of this {@code Value} (column)
    */
   default boolean getAsBoolean() {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("The data type of this column is " + getDataType());
   }
 
   /**
-   * Returns the value of this {@code Value} (column) as an integer type
+   * Returns the value of this {@code Value} (column) as an integer type.
    *
    * @return the value of this {@code Value} (column)
    */
   default int getAsInt() {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("The data type of this column is " + getDataType());
   }
 
   /**
-   * Returns the value of this {@code Value} (column) as a long type
+   * Returns the value of this {@code Value} (column) as a long type.
    *
    * @return the value of this {@code Value} (column)
    */
   default long getAsLong() {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("The data type of this column is " + getDataType());
   }
 
   /**
-   * Returns the value of this {@code Value} (column) as a float type
+   * Returns the value of this {@code Value} (column) as a float type.
    *
    * @return the value of this {@code Value} (column)
    */
   default float getAsFloat() {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("The data type of this column is " + getDataType());
   }
 
   /**
-   * Returns the value of this {@code Value} (column) as a double type
+   * Returns the value of this {@code Value} (column) as a double type.
    *
    * @return the value of this {@code Value} (column)
    */
   default double getAsDouble() {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("The data type of this column is " + getDataType());
   }
 
   /**
-   * Returns the value of this {@code Value} (column) as a string type
+   * Returns the value of this {@code Value} (column) as a string type.
    *
    * @return the value of this {@code Value} (column)
    */
   default Optional<String> getAsString() {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("The data type of this column is " + getDataType());
   }
 
   /**
-   * Returns the value of this {@code Value} (column) as a byte array type
+   * Returns the value of this {@code Value} (column) as a byte array type.
    *
    * @return the value of this {@code Value} (column)
    */
   default Optional<byte[]> getAsBytes() {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("The data type of this column is " + getDataType());
   }
 
   /**
-   * Returns the value of this {@code Value} (column) as a byte buffer
+   * Returns the value of this {@code Value} (column) as a byte buffer.
    *
    * @return the value of this {@code Value} (column)
    */
   default Optional<ByteBuffer> getAsByteBuffer() {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("The data type of this column is " + getDataType());
   }
 }
