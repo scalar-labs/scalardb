@@ -1480,21 +1480,18 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   @Test
-  public void commit_DeleteGivenWithoutRead_ShouldThrowIllegalArgumentException() {
+  public void commit_DeleteGivenWithoutRead_ShouldNotThrowAnyExceptions() {
     // Arrange
     Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
     ConsensusCommit transaction = manager.start();
 
     // Act Assert
     transaction.delete(delete);
-    assertThatCode(transaction::commit)
-        .isInstanceOf(CommitException.class)
-        .hasCauseInstanceOf(IllegalArgumentException.class);
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
   }
 
   @Test
-  public void commit_DeleteGivenForNonExisting_ShouldThrowIllegalArgumentException()
-      throws CrudException {
+  public void commit_DeleteGivenForNonExisting_ShouldNotThrowAnyExceptions() throws CrudException {
     // Arrange
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
     Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
@@ -1503,9 +1500,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Act Assert
     transaction.get(get);
     transaction.delete(delete);
-    assertThatCode(transaction::commit)
-        .isInstanceOf(CommitException.class)
-        .hasCauseInstanceOf(IllegalArgumentException.class);
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
   }
 
   @Test

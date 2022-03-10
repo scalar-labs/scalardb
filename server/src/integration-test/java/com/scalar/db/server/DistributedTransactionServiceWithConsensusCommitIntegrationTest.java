@@ -599,7 +599,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
   }
 
   @Test
-  public void commit_DeleteGivenWithoutRead_ShouldThrowCommitException()
+  public void commit_DeleteGivenWithoutRead_ShouldNotThrowAnyExceptions()
       throws TransactionException {
     // Arrange
     Delete delete = prepareDelete(0, 0, TABLE_1);
@@ -607,11 +607,11 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     // Act Assert
     transaction.delete(delete);
-    assertThatCode(transaction::commit).isInstanceOf(CommitException.class);
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
   }
 
   @Test
-  public void commit_DeleteGivenForNonExisting_ShouldThrowCommitException()
+  public void commit_DeleteGivenForNonExisting_ShouldNotThrowAnyExceptions()
       throws TransactionException {
     // Arrange
     Get get = prepareGet(0, 0, TABLE_1);
@@ -621,7 +621,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     // Act Assert
     transaction.get(get);
     transaction.delete(delete);
-    assertThatCode(transaction::commit).isInstanceOf(CommitException.class);
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
   }
 
   @Test
