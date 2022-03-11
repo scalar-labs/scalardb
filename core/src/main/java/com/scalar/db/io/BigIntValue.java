@@ -54,6 +54,11 @@ public final class BigIntValue implements Value<Long> {
   }
 
   @Override
+  public DataType getDataType() {
+    return DataType.BIGINT;
+  }
+
+  @Override
   public long getAsLong() {
     return value;
   }

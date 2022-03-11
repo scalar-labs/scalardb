@@ -90,6 +90,11 @@ public final class BlobValue implements Value<Optional<byte[]>> {
   }
 
   @Override
+  public DataType getDataType() {
+    return DataType.BLOB;
+  }
+
+  @Override
   public Optional<byte[]> getAsBytes() {
     return get();
   }
