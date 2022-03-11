@@ -6,7 +6,6 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toVersionValue;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionalExpression;
@@ -197,12 +196,25 @@ public class PrepareMutationComposerTest {
   }
 
   @Test
-  public void delete_DeleteAndNullResultGiven_ShouldThrowIllegalArgumentException() {
+  public void delete_DeleteAndNullResultGiven_ShouldComposePutWithPutIfNotExistsCondition() {
     // Arrange
     Delete delete = prepareDelete();
 
-    // Act Assert
-    assertThatThrownBy(() -> composer.add(delete, null))
-        .isInstanceOf(IllegalArgumentException.class);
+    // Act
+    composer.add(delete, null);
+
+    // Assert
+    Put actual = (Put) mutations.get(0);
+    Put expected =
+        new Put(delete.getPartitionKey(), delete.getClusteringKey().orElse(null))
+            .forNamespace(delete.forNamespace().get())
+            .forTable(delete.forTable().get());
+    expected.withConsistency(Consistency.LINEARIZABLE);
+    expected.withCondition(new PutIfNotExists());
+    expected.withValue(Attribute.toPreparedAtValue(ANY_TIME_5));
+    expected.withValue(Attribute.toIdValue(ANY_ID_3));
+    expected.withValue(Attribute.toStateValue(TransactionState.DELETED));
+    expected.withValue(Attribute.toVersionValue(1));
+    assertThat(actual).isEqualTo(expected);
   }
 }

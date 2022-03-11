@@ -667,34 +667,28 @@ public class TwoPhaseCommitTransactionServiceWithTwoPhaseConsensusCommitIntegrat
   }
 
   @Test
-  public void prepare_DeleteGivenWithoutRead_ShouldThrowPreparationException()
+  public void prepare_DeleteGivenWithoutRead_ShouldNotThrowAnyExceptions()
       throws TransactionException {
     // Arrange
     GrpcTwoPhaseCommitTransaction transaction = manager.start();
     transaction.delete(prepareDelete(0, 0, TABLE_1));
 
-    // Act
-    Throwable throwable = catchThrowable(transaction::prepare);
+    // Act Assert
+    assertThatCode(transaction::prepare).doesNotThrowAnyException();
     transaction.rollback();
-
-    // Assert
-    assertThat(throwable).isInstanceOf(PreparationException.class);
   }
 
   @Test
-  public void prepare_DeleteGivenForNonExisting_ShouldThrowPreparationException()
+  public void prepare_DeleteGivenForNonExisting_ShouldNotThrowAnyExceptions()
       throws TransactionException {
     // Arrange
     GrpcTwoPhaseCommitTransaction transaction = manager.start();
     transaction.get(prepareGet(0, 0, TABLE_1));
     transaction.delete(prepareDelete(0, 0, TABLE_1));
 
-    // Act
-    Throwable throwable = catchThrowable(transaction::prepare);
+    // Act Assert
+    assertThatCode(transaction::prepare).doesNotThrowAnyException();
     transaction.rollback();
-
-    // Assert
-    assertThat(throwable).isInstanceOf(PreparationException.class);
   }
 
   @Test

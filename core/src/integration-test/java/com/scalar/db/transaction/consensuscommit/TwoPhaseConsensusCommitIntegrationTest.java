@@ -1350,35 +1350,25 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   }
 
   @Test
-  public void prepare_DeleteGivenWithoutRead_ShouldThrowIllegalArgumentException() {
+  public void prepare_DeleteGivenWithoutRead_ShouldNotThrowAnyExceptions() {
     // Arrange
     TwoPhaseConsensusCommit transaction = manager.start();
     transaction.delete(prepareDelete(0, 0, TABLE_1));
 
-    // Act
-    Throwable throwable = catchThrowable(transaction::prepare);
-
-    // Assert
-    assertThat(throwable).isInstanceOf(PreparationException.class);
-    assertThat(throwable.getCause()).isInstanceOf(CommitException.class);
-    assertThat(throwable.getCause().getCause()).isInstanceOf(IllegalArgumentException.class);
+    // Act Assert
+    assertThatCode(transaction::prepare).doesNotThrowAnyException();
   }
 
   @Test
-  public void prepare_DeleteGivenForNonExisting_ShouldThrowIllegalArgumentException()
+  public void prepare_DeleteGivenForNonExisting_ShouldNotThrowAnyExceptions()
       throws TransactionException {
     // Arrange
     TwoPhaseConsensusCommit transaction = manager.start();
     transaction.get(prepareGet(0, 0, TABLE_1));
     transaction.delete(prepareDelete(0, 0, TABLE_1));
 
-    // Act
-    Throwable throwable = catchThrowable(transaction::prepare);
-
-    // Assert
-    assertThat(throwable).isInstanceOf(PreparationException.class);
-    assertThat(throwable.getCause()).isInstanceOf(CommitException.class);
-    assertThat(throwable.getCause().getCause()).isInstanceOf(IllegalArgumentException.class);
+    // Act Assert
+    assertThatCode(transaction::prepare).doesNotThrowAnyException();
   }
 
   @Test
