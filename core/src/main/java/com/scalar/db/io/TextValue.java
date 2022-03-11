@@ -84,6 +84,11 @@ public final class TextValue implements Value<Optional<String>> {
     return value;
   }
 
+  @Override
+  public DataType getDataType() {
+    return DataType.TEXT;
+  }
+
   /**
    * Returns the value of this {@code Value} (column)
    *

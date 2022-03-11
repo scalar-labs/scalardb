@@ -47,6 +47,11 @@ public final class IntValue implements Value<Integer> {
   }
 
   @Override
+  public DataType getDataType() {
+    return DataType.INT;
+  }
+
+  @Override
   public int getAsInt() {
     return value;
   }
