@@ -90,11 +90,6 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
   }
 
   private void add(Delete base, TransactionResult result) {
-    if (result == null) {
-      throw new IllegalArgumentException(
-          "the record to be deleted must be existing and read beforehand");
-    }
-
     Put put =
         new Put(base.getPartitionKey(), getClusteringKey(base, result).orElse(null))
             .forNamespace(base.forNamespace().get())
@@ -105,15 +100,23 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     values.add(Attribute.toIdValue(id));
     values.add(Attribute.toStateValue(TransactionState.DELETED));
     values.add(Attribute.toPreparedAtValue(current));
-    values.addAll(createBeforeValues(base, result));
-    int version = result.getVersion();
-    values.add(Attribute.toVersionValue(version + 1));
 
-    // check if the record is not interrupted by other conflicting transactions
-    put.withCondition(
-        new PutIf(
-            new ConditionalExpression(VERSION, toVersionValue(version), Operator.EQ),
-            new ConditionalExpression(ID, toIdValue(result.getId()), Operator.EQ)));
+    if (result != null) {
+      values.addAll(createBeforeValues(base, result));
+      int version = result.getVersion();
+      values.add(Attribute.toVersionValue(version + 1));
+
+      // check if the record is not interrupted by other conflicting transactions
+      put.withCondition(
+          new PutIf(
+              new ConditionalExpression(VERSION, toVersionValue(version), Operator.EQ),
+              new ConditionalExpression(ID, toIdValue(result.getId()), Operator.EQ)));
+    } else {
+      put.withValue(Attribute.toVersionValue(1));
+
+      // check if the record is not created by other conflicting transactions
+      put.withCondition(new PutIfNotExists());
+    }
 
     put.withValues(values);
     mutations.add(put);
