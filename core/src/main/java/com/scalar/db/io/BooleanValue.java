@@ -47,6 +47,11 @@ public final class BooleanValue implements Value<Boolean> {
   }
 
   @Override
+  public DataType getDataType() {
+    return DataType.BOOLEAN;
+  }
+
+  @Override
   public boolean getAsBoolean() {
     return value;
   }
