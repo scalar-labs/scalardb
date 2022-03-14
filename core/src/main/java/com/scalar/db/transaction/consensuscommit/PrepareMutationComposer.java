@@ -59,15 +59,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     put.withValue(Attribute.toIdValue(id));
     put.withValue(Attribute.toStateValue(TransactionState.PREPARED));
     put.withValue(Attribute.toPreparedAtValue(current));
-    base.getNullableValues()
-        .forEach(
-            (k, v) -> {
-              if (v.isPresent()) {
-                put.withValue(v.get());
-              } else {
-                put.withNullValue(k);
-              }
-            });
+    base.getColumns().values().forEach(put::withValue);
 
     if (result != null) { // overwrite existing record
       put.withValues(createBeforeValues(base, result));

@@ -5,15 +5,24 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
+import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BlobValue;
+import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.DoubleValue;
+import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.FloatValue;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import com.scalar.db.util.ScalarDbUtils;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -81,20 +90,23 @@ public class PutTest {
   public void withValue_ProperValueGiven_ShouldReturnWhatsSet() {
     // Arrange
     Put put = preparePut();
-    TextValue value1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
-    TextValue value2 = new TextValue(ANY_NAME_2, ANY_TEXT_2);
+    TextColumn column2 = TextColumn.of(ANY_NAME_2, ANY_TEXT_2);
+    TextColumn column1 = TextColumn.of(ANY_NAME_1, ANY_TEXT_1);
 
     // Act
-    put.withValue(value1).withValue(value2);
+    put.withValue(column1).withValue(column2);
 
     // Assert
     assertThat(put.getValues())
-        .isEqualTo(ImmutableMap.of(value1.getName(), value1, value2.getName(), value2));
-
-    assertThat(put.getNullableValues())
         .isEqualTo(
             ImmutableMap.of(
-                value1.getName(), Optional.of(value1), value2.getName(), Optional.of(value2)));
+                column1.getName(),
+                ScalarDbUtils.toValue(column1),
+                column2.getName(),
+                ScalarDbUtils.toValue(column2)));
+
+    assertThat(put.getColumns())
+        .isEqualTo(ImmutableMap.of(column1.getName(), column1, column2.getName(), column2));
 
     assertThat(put.getContainedColumnNames()).isEqualTo(ImmutableSet.of(ANY_NAME_1, ANY_NAME_2));
 
@@ -122,12 +134,11 @@ public class PutTest {
         .withValue("val5", 1.23)
         .withValue("val6", "string_value")
         .withValue("val7", "blob_value".getBytes(StandardCharsets.UTF_8))
-        .withValue("val8", ByteBuffer.wrap("blob_value2".getBytes(StandardCharsets.UTF_8)))
-        .withNullValue("val9");
+        .withValue("val8", ByteBuffer.wrap("blob_value2".getBytes(StandardCharsets.UTF_8)));
 
     // Assert
     Map<String, Value<?>> values = put.getValues();
-    assertThat(values.size()).isEqualTo(9);
+    assertThat(values.size()).isEqualTo(8);
     assertThat(values.get("val1")).isEqualTo(new BooleanValue("val1", true));
     assertThat(values.get("val2")).isEqualTo(new IntValue("val2", 5678));
     assertThat(values.get("val3")).isEqualTo(new BigIntValue("val3", 1234L));
@@ -138,30 +149,22 @@ public class PutTest {
         .isEqualTo(new BlobValue("val7", "blob_value".getBytes(StandardCharsets.UTF_8)));
     assertThat(values.get("val8"))
         .isEqualTo(new BlobValue("val8", "blob_value2".getBytes(StandardCharsets.UTF_8)));
-    assertThat(values).containsKey("val9");
-    assertThat(values.get("val9")).isNull();
 
-    Map<String, Optional<Value<?>>> nullableValues = put.getNullableValues();
-    assertThat(nullableValues.size()).isEqualTo(9);
-    assertThat(nullableValues.get("val1")).isEqualTo(Optional.of(new BooleanValue("val1", true)));
-    assertThat(nullableValues.get("val2")).isEqualTo(Optional.of(new IntValue("val2", 5678)));
-    assertThat(nullableValues.get("val3")).isEqualTo(Optional.of(new BigIntValue("val3", 1234L)));
-    assertThat(nullableValues.get("val4")).isEqualTo(Optional.of(new FloatValue("val4", 4.56f)));
-    assertThat(nullableValues.get("val5")).isEqualTo(Optional.of(new DoubleValue("val5", 1.23)));
-    assertThat(nullableValues.get("val6"))
-        .isEqualTo(Optional.of(new TextValue("val6", "string_value")));
-    assertThat(nullableValues.get("val7"))
-        .isEqualTo(
-            Optional.of(new BlobValue("val7", "blob_value".getBytes(StandardCharsets.UTF_8))));
-    assertThat(nullableValues.get("val8"))
-        .isEqualTo(
-            Optional.of(new BlobValue("val8", "blob_value2".getBytes(StandardCharsets.UTF_8))));
-    assertThat(nullableValues.get("val9")).isEqualTo(Optional.empty());
+    Map<String, Column<?>> columns = put.getColumns();
+    assertThat(columns.size()).isEqualTo(8);
+    assertThat(columns.get("val1")).isEqualTo(BooleanColumn.of("val1", true));
+    assertThat(columns.get("val2")).isEqualTo(IntColumn.of("val2", 5678));
+    assertThat(columns.get("val3")).isEqualTo(BigIntColumn.of("val3", 1234L));
+    assertThat(columns.get("val4")).isEqualTo(FloatColumn.of("val4", 4.56f));
+    assertThat(columns.get("val5")).isEqualTo(DoubleColumn.of("val5", 1.23));
+    assertThat(columns.get("val6")).isEqualTo(TextColumn.of("val6", "string_value"));
+    assertThat(columns.get("val7"))
+        .isEqualTo(BlobColumn.of("val7", "blob_value".getBytes(StandardCharsets.UTF_8)));
+    assertThat(columns.get("val8"))
+        .isEqualTo(BlobColumn.of("val8", "blob_value2".getBytes(StandardCharsets.UTF_8)));
 
     assertThat(put.getContainedColumnNames())
-        .isEqualTo(
-            ImmutableSet.of(
-                "val1", "val2", "val3", "val4", "val5", "val6", "val7", "val8", "val9"));
+        .isEqualTo(ImmutableSet.of("val1", "val2", "val3", "val4", "val5", "val6", "val7", "val8"));
 
     assertThat(put.containsColumn("val1")).isTrue();
     assertThat(put.isNullValue("val1")).isFalse();
@@ -214,10 +217,6 @@ public class PutTest {
         .isEqualTo("blob_value2".getBytes(StandardCharsets.UTF_8));
     assertThat(put.getValueAsObject("val8"))
         .isEqualTo(ByteBuffer.wrap("blob_value2".getBytes(StandardCharsets.UTF_8)));
-
-    assertThat(put.containsColumn("val9")).isTrue();
-    assertThat(put.isNullValue("val9")).isTrue();
-    assertThat(put.getValueAsObject("val9")).isNull();
   }
 
   @Test
@@ -234,11 +233,18 @@ public class PutTest {
         .withTextValue("val6", "string_value")
         .withBlobValue("val7", "blob_value".getBytes(StandardCharsets.UTF_8))
         .withBlobValue("val8", ByteBuffer.wrap("blob_value2".getBytes(StandardCharsets.UTF_8)))
-        .withNullValue("val9");
+        .withBooleanValue("val9", null)
+        .withIntValue("val10", null)
+        .withBigIntValue("val11", null)
+        .withFloatValue("val12", null)
+        .withDoubleValue("val13", null)
+        .withTextValue("val14", null)
+        .withBlobValue("val15", (ByteBuffer) null)
+        .withBlobValue("val16", (byte[]) null);
 
     // Assert
     Map<String, Value<?>> values = put.getValues();
-    assertThat(values.size()).isEqualTo(9);
+    assertThat(values.size()).isEqualTo(16);
     assertThat(values.get("val1")).isEqualTo(new BooleanValue("val1", true));
     assertThat(values.get("val2")).isEqualTo(new IntValue("val2", 5678));
     assertThat(values.get("val3")).isEqualTo(new BigIntValue("val3", 1234L));
@@ -251,28 +257,47 @@ public class PutTest {
         .isEqualTo(new BlobValue("val8", "blob_value2".getBytes(StandardCharsets.UTF_8)));
     assertThat(values).containsKey("val9");
     assertThat(values.get("val9")).isNull();
+    assertThat(values).containsKey("val10");
+    assertThat(values.get("val10")).isNull();
+    assertThat(values).containsKey("val11");
+    assertThat(values.get("val11")).isNull();
+    assertThat(values).containsKey("val12");
+    assertThat(values.get("val12")).isNull();
+    assertThat(values).containsKey("val13");
+    assertThat(values.get("val13")).isNull();
+    assertThat(values).containsKey("val14");
+    assertThat(values.get("val14")).isNull();
+    assertThat(values).containsKey("val15");
+    assertThat(values.get("val15")).isNull();
+    assertThat(values).containsKey("val16");
+    assertThat(values.get("val16")).isNull();
 
-    Map<String, Optional<Value<?>>> nullableValues = put.getNullableValues();
-    assertThat(nullableValues.size()).isEqualTo(9);
-    assertThat(nullableValues.get("val1")).isEqualTo(Optional.of(new BooleanValue("val1", true)));
-    assertThat(nullableValues.get("val2")).isEqualTo(Optional.of(new IntValue("val2", 5678)));
-    assertThat(nullableValues.get("val3")).isEqualTo(Optional.of(new BigIntValue("val3", 1234L)));
-    assertThat(nullableValues.get("val4")).isEqualTo(Optional.of(new FloatValue("val4", 4.56f)));
-    assertThat(nullableValues.get("val5")).isEqualTo(Optional.of(new DoubleValue("val5", 1.23)));
-    assertThat(nullableValues.get("val6"))
-        .isEqualTo(Optional.of(new TextValue("val6", "string_value")));
-    assertThat(nullableValues.get("val7"))
-        .isEqualTo(
-            Optional.of(new BlobValue("val7", "blob_value".getBytes(StandardCharsets.UTF_8))));
-    assertThat(nullableValues.get("val8"))
-        .isEqualTo(
-            Optional.of(new BlobValue("val8", "blob_value2".getBytes(StandardCharsets.UTF_8))));
-    assertThat(nullableValues.get("val9")).isEqualTo(Optional.empty());
+    Map<String, Column<?>> columns = put.getColumns();
+    assertThat(columns.size()).isEqualTo(16);
+    assertThat(columns.get("val1")).isEqualTo(BooleanColumn.of("val1", true));
+    assertThat(columns.get("val2")).isEqualTo(IntColumn.of("val2", 5678));
+    assertThat(columns.get("val3")).isEqualTo(BigIntColumn.of("val3", 1234L));
+    assertThat(columns.get("val4")).isEqualTo(FloatColumn.of("val4", 4.56f));
+    assertThat(columns.get("val5")).isEqualTo(DoubleColumn.of("val5", 1.23));
+    assertThat(columns.get("val6")).isEqualTo(TextColumn.of("val6", "string_value"));
+    assertThat(columns.get("val7"))
+        .isEqualTo(BlobColumn.of("val7", "blob_value".getBytes(StandardCharsets.UTF_8)));
+    assertThat(columns.get("val8"))
+        .isEqualTo(BlobColumn.of("val8", "blob_value2".getBytes(StandardCharsets.UTF_8)));
+    assertThat(columns.get("val9")).isEqualTo(BooleanColumn.ofNull("val9"));
+    assertThat(columns.get("val10")).isEqualTo(IntColumn.ofNull("val10"));
+    assertThat(columns.get("val11")).isEqualTo(BigIntColumn.ofNull("val11"));
+    assertThat(columns.get("val12")).isEqualTo(FloatColumn.ofNull("val12"));
+    assertThat(columns.get("val13")).isEqualTo(DoubleColumn.ofNull("val13"));
+    assertThat(columns.get("val14")).isEqualTo(TextColumn.ofNull("val14"));
+    assertThat(columns.get("val15")).isEqualTo(BlobColumn.ofNull("val15"));
+    assertThat(columns.get("val16")).isEqualTo(BlobColumn.ofNull("val16"));
 
     assertThat(put.getContainedColumnNames())
         .isEqualTo(
             ImmutableSet.of(
-                "val1", "val2", "val3", "val4", "val5", "val6", "val7", "val8", "val9"));
+                "val1", "val2", "val3", "val4", "val5", "val6", "val7", "val8", "val9", "val10",
+                "val11", "val12", "val13", "val14", "val15", "val16"));
 
     assertThat(put.containsColumn("val1")).isTrue();
     assertThat(put.isNullValue("val1")).isFalse();
@@ -328,7 +353,43 @@ public class PutTest {
 
     assertThat(put.containsColumn("val9")).isTrue();
     assertThat(put.isNullValue("val9")).isTrue();
+    assertThat(put.getBooleanValue("val9")).isFalse();
     assertThat(put.getValueAsObject("val9")).isNull();
+
+    assertThat(put.containsColumn("val10")).isTrue();
+    assertThat(put.isNullValue("val10")).isTrue();
+    assertThat(put.getIntValue("val10")).isEqualTo(0);
+    assertThat(put.getValueAsObject("val10")).isNull();
+
+    assertThat(put.containsColumn("val11")).isTrue();
+    assertThat(put.isNullValue("val11")).isTrue();
+    assertThat(put.getBigIntValue("val11")).isEqualTo(0L);
+    assertThat(put.getValueAsObject("val11")).isNull();
+
+    assertThat(put.containsColumn("val12")).isTrue();
+    assertThat(put.isNullValue("val12")).isTrue();
+    assertThat(put.getFloatValue("val12")).isEqualTo(0.0F);
+    assertThat(put.getValueAsObject("val12")).isNull();
+
+    assertThat(put.containsColumn("val13")).isTrue();
+    assertThat(put.isNullValue("val13")).isTrue();
+    assertThat(put.getDoubleValue("val13")).isEqualTo(0.0);
+    assertThat(put.getValueAsObject("val13")).isNull();
+
+    assertThat(put.containsColumn("val14")).isTrue();
+    assertThat(put.isNullValue("val14")).isTrue();
+    assertThat(put.getTextValue("val14")).isNull();
+    assertThat(put.getValueAsObject("val14")).isNull();
+
+    assertThat(put.containsColumn("val15")).isTrue();
+    assertThat(put.isNullValue("val15")).isTrue();
+    assertThat(put.getBlobValue("val15")).isNull();
+    assertThat(put.getValueAsObject("val15")).isNull();
+
+    assertThat(put.containsColumn("val16")).isTrue();
+    assertThat(put.isNullValue("val16")).isTrue();
+    assertThat(put.getBlobValue("val16")).isNull();
+    assertThat(put.getValueAsObject("val16")).isNull();
   }
 
   @Test
@@ -345,10 +406,13 @@ public class PutTest {
     assertThat(put.getValues())
         .isEqualTo(ImmutableMap.of(value1.getName(), value1, value2.getName(), value2));
 
-    assertThat(put.getNullableValues())
+    assertThat(put.getColumns())
         .isEqualTo(
             ImmutableMap.of(
-                value1.getName(), Optional.of(value1), value2.getName(), Optional.of(value2)));
+                value1.getName(),
+                ScalarDbUtils.toColumn(value1),
+                value2.getName(),
+                ScalarDbUtils.toColumn(value2)));
 
     assertThat(put.getContainedColumnNames()).isEqualTo(ImmutableSet.of(ANY_NAME_1, ANY_NAME_2));
 
@@ -364,17 +428,16 @@ public class PutTest {
   }
 
   @Test
-  public void getNullableValues_TryToModifyReturned_ShouldThrowException() {
+  public void getColumns_TryToModifyReturned_ShouldThrowException() {
     // Arrange
     Put put = preparePut();
-    TextValue value1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
-    TextValue value2 = new TextValue(ANY_NAME_2, ANY_TEXT_2);
-    put.withValue(value1).withValue(value2);
+    TextColumn column1 = TextColumn.of(ANY_NAME_1, ANY_TEXT_1);
+    TextColumn column2 = TextColumn.of(ANY_NAME_2, ANY_TEXT_2);
+    put.withValue(column1).withValue(column2);
 
     // Act Assert
-    Map<String, Optional<Value<?>>> values = put.getNullableValues();
-    assertThatThrownBy(
-            () -> values.put(ANY_NAME_3, Optional.of(new TextValue(ANY_NAME_3, ANY_TEXT_3))))
+    Map<String, Column<?>> values = put.getColumns();
+    assertThatThrownBy(() -> values.put(ANY_NAME_3, TextColumn.of(ANY_NAME_3, ANY_TEXT_3)))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 

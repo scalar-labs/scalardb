@@ -14,10 +14,11 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.TextValue;
-import com.scalar.db.io.Value;
 import com.scalar.db.util.ResultImpl;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
@@ -53,15 +54,17 @@ public class RecoveryHandlerTest {
   }
 
   private TransactionResult prepareResult(long preparedAt, TransactionState transactionState) {
-    ImmutableMap<String, Optional<Value<?>>> values =
-        ImmutableMap.<String, Optional<Value<?>>>builder()
-            .put(ANY_NAME_1, Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
-            .put(Attribute.ID, Optional.of(Attribute.toIdValue(ANY_ID_1)))
-            .put(Attribute.PREPARED_AT, Optional.of(Attribute.toPreparedAtValue(preparedAt)))
-            .put(Attribute.STATE, Optional.of(Attribute.toStateValue(transactionState)))
-            .put(Attribute.VERSION, Optional.of(Attribute.toVersionValue(1)))
+    ImmutableMap<String, Column<?>> columns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ANY_NAME_1, ScalarDbUtils.toColumn(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+            .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(ANY_ID_1)))
+            .put(
+                Attribute.PREPARED_AT,
+                ScalarDbUtils.toColumn(Attribute.toPreparedAtValue(preparedAt)))
+            .put(Attribute.STATE, ScalarDbUtils.toColumn(Attribute.toStateValue(transactionState)))
+            .put(Attribute.VERSION, ScalarDbUtils.toColumn(Attribute.toVersionValue(1)))
             .build();
-    return new TransactionResult(new ResultImpl(values, TABLE_METADATA));
+    return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
   }
 
   private TransactionResult preparePreparedResult(long preparedAt) {

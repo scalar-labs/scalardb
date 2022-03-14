@@ -214,7 +214,7 @@ public class DynamoMutationTest {
   @Test
   public void getValueBindMap_PutWithNullValueGiven_ShouldReturnBindMap() {
     // Arrange
-    Put put = preparePut().withNullValue(ANY_NAME_3);
+    Put put = preparePut().withIntValue(ANY_NAME_3, null);
     Map<String, AttributeValue> expected = new HashMap<>();
     expected.put(DynamoOperation.VALUE_ALIAS + "0", AttributeValue.builder().nul(true).build());
     expected.put(

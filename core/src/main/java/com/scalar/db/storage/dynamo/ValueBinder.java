@@ -1,13 +1,13 @@
 package com.scalar.db.storage.dynamo;
 
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.io.ValueVisitor;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.ColumnVisitor;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
@@ -21,16 +21,11 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
  * @author Yuji Ito
  */
 @NotThreadSafe
-public final class ValueBinder implements ValueVisitor {
+public final class ValueBinder implements ColumnVisitor {
   private final Map<String, AttributeValue> values;
   private final String alias;
   private int i;
 
-  /**
-   * Constructs {@code ValueBinder} with the specified {@code BoundStatement}
-   *
-   * @param alias an alias
-   */
   public ValueBinder(String alias) {
     this.values = new HashMap<>();
     this.alias = alias;
@@ -42,98 +37,77 @@ public final class ValueBinder implements ValueVisitor {
     return values;
   }
 
-  /**
-   * Sets the specified {@code BooleanValue} to the expression
-   *
-   * @param value a {@code BooleanValue} to be set
-   */
   @Override
-  public void visit(BooleanValue value) {
-    values.put(alias + i, AttributeValue.builder().bool(value.getAsBoolean()).build());
+  public void visit(BooleanColumn column) {
+    values.put(
+        alias + i,
+        column.hasNullValue()
+            ? AttributeValue.builder().nul(true).build()
+            : AttributeValue.builder().bool(column.getBooleanValue()).build());
     i++;
   }
 
-  /**
-   * Sets the specified {@code IntValue} to the expression
-   *
-   * @param value a {@code IntValue} to be set
-   */
   @Override
-  public void visit(IntValue value) {
-    values.put(alias + i, AttributeValue.builder().n(String.valueOf(value.getAsInt())).build());
+  public void visit(IntColumn column) {
+    values.put(
+        alias + i,
+        column.hasNullValue()
+            ? AttributeValue.builder().nul(true).build()
+            : AttributeValue.builder().n(String.valueOf(column.getIntValue())).build());
     i++;
   }
 
-  /**
-   * Sets the specified {@code BigIntValue} to the expression
-   *
-   * @param value a {@code BigIntValue} to be set
-   */
   @Override
-  public void visit(BigIntValue value) {
-    values.put(alias + i, AttributeValue.builder().n(String.valueOf(value.getAsLong())).build());
+  public void visit(BigIntColumn column) {
+    values.put(
+        alias + i,
+        column.hasNullValue()
+            ? AttributeValue.builder().nul(true).build()
+            : AttributeValue.builder().n(String.valueOf(column.getBigIntValue())).build());
     i++;
   }
 
-  /**
-   * Sets the specified {@code FloatValue} to the expression
-   *
-   * @param value a {@code FloatValue} to be set
-   */
   @Override
-  public void visit(FloatValue value) {
-    values.put(alias + i, AttributeValue.builder().n(String.valueOf(value.getAsFloat())).build());
+  public void visit(FloatColumn column) {
+    values.put(
+        alias + i,
+        column.hasNullValue()
+            ? AttributeValue.builder().nul(true).build()
+            : AttributeValue.builder().n(String.valueOf(column.getFloatValue())).build());
     i++;
   }
 
-  /**
-   * Sets the specified {@code DoubleValue} to the expression
-   *
-   * @param value a {@code DoubleValue} to be set
-   */
   @Override
-  public void visit(DoubleValue value) {
-    values.put(alias + i, AttributeValue.builder().n(String.valueOf(value.getAsDouble())).build());
+  public void visit(DoubleColumn column) {
+    values.put(
+        alias + i,
+        column.hasNullValue()
+            ? AttributeValue.builder().nul(true).build()
+            : AttributeValue.builder().n(String.valueOf(column.getDoubleValue())).build());
     i++;
   }
 
-  /**
-   * Sets the specified {@code TextValue} to the expression
-   *
-   * @param value a {@code TextValue} to be set
-   */
   @Override
-  public void visit(TextValue value) {
-    AttributeValue.Builder builder = AttributeValue.builder();
-    if (value.get().isPresent()) {
-      builder.s(value.get().get());
+  public void visit(TextColumn column) {
+    if (column.hasNullValue()) {
+      values.put(alias + i, AttributeValue.builder().nul(true).build());
     } else {
-      builder.nul(true);
+      assert column.getTextValue() != null;
+      values.put(alias + i, AttributeValue.builder().s(column.getTextValue()).build());
     }
-    values.put(alias + i, builder.build());
     i++;
   }
 
-  /**
-   * Sets the specified {@code BlobValue} to the bound statement
-   *
-   * @param value a {@code BlobValue} to be set
-   */
   @Override
-  public void visit(BlobValue value) {
-    AttributeValue.Builder builder = AttributeValue.builder();
-    if (value.get().isPresent()) {
-      builder.b(SdkBytes.fromByteArray(value.get().get()));
+  public void visit(BlobColumn column) {
+    if (column.hasNullValue()) {
+      values.put(alias + i, AttributeValue.builder().nul(true).build());
     } else {
-      builder.nul(true);
+      assert column.getBlobValue() != null;
+      values.put(
+          alias + i,
+          AttributeValue.builder().b(SdkBytes.fromByteBuffer(column.getBlobValue())).build());
     }
-    values.put(alias + i, builder.build());
-    i++;
-  }
-
-  /** Bind a NULL value */
-  public void bindNullValue() {
-    values.put(alias + i, AttributeValue.builder().nul(true).build());
     i++;
   }
 }

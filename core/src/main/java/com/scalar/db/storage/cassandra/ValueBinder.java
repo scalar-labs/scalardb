@@ -3,14 +3,14 @@ package com.scalar.db.storage.cassandra;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.datastax.driver.core.BoundStatement;
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.io.ValueVisitor;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.ColumnVisitor;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -20,7 +20,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  * @author Hiroyuki Yamada
  */
 @NotThreadSafe
-public final class ValueBinder implements ValueVisitor {
+public final class ValueBinder implements ColumnVisitor {
   private final BoundStatement bound;
   private int i;
 
@@ -34,89 +34,69 @@ public final class ValueBinder implements ValueVisitor {
     i = 0;
   }
 
-  /**
-   * Sets the specified {@code BooleanValue} to the bound statement
-   *
-   * @param value a {@code BooleanValue} to be set
-   */
   @Override
-  public void visit(BooleanValue value) {
-    bound.setBool(i++, value.get());
-  }
-
-  /**
-   * Sets the specified {@code IntValue} to the bound statement
-   *
-   * @param value a {@code IntValue} to be set
-   */
-  @Override
-  public void visit(IntValue value) {
-    bound.setInt(i++, value.get());
-  }
-
-  /**
-   * Sets the specified {@code BigIntValue} to the bound statement
-   *
-   * @param value a {@code BigIntValue} to be set
-   */
-  @Override
-  public void visit(BigIntValue value) {
-    bound.setLong(i++, value.get());
-  }
-
-  /**
-   * Sets the specified {@code FloatValue} to the bound statement
-   *
-   * @param value a {@code FloatValue} to be set
-   */
-  @Override
-  public void visit(FloatValue value) {
-    bound.setFloat(i++, value.get());
-  }
-
-  /**
-   * Sets the specified {@code DoubleValue} to the bound statement
-   *
-   * @param value a {@code DoubleValue} to be set
-   */
-  @Override
-  public void visit(DoubleValue value) {
-    bound.setDouble(i++, value.get());
-  }
-
-  /**
-   * Sets the specified {@code TextValue} to the bound statement
-   *
-   * @param value a {@code TextValue} to be set
-   */
-  @Override
-  public void visit(TextValue value) {
-    if (value.get().isPresent()) {
-      bound.setString(i, value.get().get());
+  public void visit(BooleanColumn column) {
+    if (column.hasNullValue()) {
+      bound.setToNull(i++);
     } else {
-      bound.setToNull(i);
+      bound.setBool(i++, column.getBooleanValue());
     }
-    i++;
   }
 
-  /**
-   * Sets the specified {@code BlobValue} to the bound statement
-   *
-   * @param value a {@code BlobValue} to be set
-   */
   @Override
-  public void visit(BlobValue value) {
-    if (value.get().isPresent()) {
-      byte[] b = value.get().get();
-      bound.setBytes(i, (ByteBuffer) ByteBuffer.allocate(b.length).put(b).flip());
+  public void visit(IntColumn column) {
+    if (column.hasNullValue()) {
+      bound.setToNull(i++);
     } else {
-      bound.setToNull(i);
+      bound.setInt(i++, column.getIntValue());
     }
-    i++;
   }
 
-  /** Bind a NULL value */
-  public void bindNullValue() {
-    bound.setToNull(i++);
+  @Override
+  public void visit(BigIntColumn column) {
+    if (column.hasNullValue()) {
+      bound.setToNull(i++);
+    } else {
+      bound.setLong(i++, column.getBigIntValue());
+    }
+  }
+
+  @Override
+  public void visit(FloatColumn column) {
+    if (column.hasNullValue()) {
+      bound.setToNull(i++);
+    } else {
+      bound.setFloat(i++, column.getFloatValue());
+    }
+  }
+
+  @Override
+  public void visit(DoubleColumn column) {
+    if (column.hasNullValue()) {
+      bound.setToNull(i++);
+    } else {
+      bound.setDouble(i++, column.getDoubleValue());
+    }
+  }
+
+  @Override
+  public void visit(TextColumn column) {
+    if (column.hasNullValue()) {
+      bound.setToNull(i++);
+    } else {
+      assert column.getTextValue() != null;
+      bound.setString(i++, column.getTextValue());
+    }
+  }
+
+  @Override
+  public void visit(BlobColumn column) {
+    if (column.hasNullValue()) {
+      bound.setToNull(i++);
+    } else {
+      assert column.getBlobValueAsBytes() != null;
+      byte[] b = column.getBlobValueAsBytes();
+      bound.setBytes(i++, (ByteBuffer) ByteBuffer.allocate(b.length).put(b).flip());
+    }
   }
 }

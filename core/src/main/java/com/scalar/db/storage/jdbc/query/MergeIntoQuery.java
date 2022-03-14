@@ -4,15 +4,14 @@ import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
@@ -26,7 +25,7 @@ public class MergeIntoQuery implements UpsertQuery {
   private final TableMetadata tableMetadata;
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
-  private final Map<String, Optional<Value<?>>> values;
+  private final Map<String, Column<?>> columns;
 
   public MergeIntoQuery(Builder builder) {
     rdbEngine = builder.rdbEngine;
@@ -35,7 +34,7 @@ public class MergeIntoQuery implements UpsertQuery {
     tableMetadata = builder.tableMetadata;
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
-    values = builder.values;
+    columns = builder.columns;
   }
 
   @Override
@@ -46,7 +45,7 @@ public class MergeIntoQuery implements UpsertQuery {
         k -> k.forEach(v -> enclosedKeyNames.add(enclose(v.getName(), rdbEngine))));
 
     List<String> enclosedValueNames =
-        values.keySet().stream().map(n -> enclose(n, rdbEngine)).collect(Collectors.toList());
+        columns.keySet().stream().map(n -> enclose(n, rdbEngine)).collect(Collectors.toList());
 
     StringBuilder sql = new StringBuilder();
     sql.append("MERGE INTO ")
@@ -56,7 +55,7 @@ public class MergeIntoQuery implements UpsertQuery {
         .append(" FROM DUAL) t2 ON (")
         .append(makePrimaryKeyConditionsSqlString(enclosedKeyNames))
         .append(")");
-    if (!values.isEmpty()) {
+    if (!columns.isEmpty()) {
       sql.append(" WHEN MATCHED THEN UPDATE SET ")
           .append(makeUpdateSetSqlString(enclosedValueNames));
     }
@@ -96,44 +95,36 @@ public class MergeIntoQuery implements UpsertQuery {
         new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine);
 
     // For the USING SELECT statement
-    for (Value<?> value : partitionKey) {
-      value.accept(binder);
+    for (Column<?> column : partitionKey.getColumns()) {
+      column.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
     if (clusteringKey.isPresent()) {
-      for (Value<?> value : clusteringKey.get()) {
-        value.accept(binder);
+      for (Column<?> column : clusteringKey.get().getColumns()) {
+        column.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
     }
 
     // For the UPDATE statement
-    for (Entry<String, Optional<Value<?>>> entry : values.entrySet()) {
-      if (entry.getValue().isPresent()) {
-        entry.getValue().get().accept(binder);
-      } else {
-        binder.bindNullValue(entry.getKey());
-      }
+    for (Column<?> column : columns.values()) {
+      column.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
 
     // For the INSERT statement
-    for (Value<?> value : partitionKey) {
-      value.accept(binder);
+    for (Column<?> column : partitionKey.getColumns()) {
+      column.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
     if (clusteringKey.isPresent()) {
-      for (Value<?> value : clusteringKey.get()) {
-        value.accept(binder);
+      for (Column<?> column : clusteringKey.get().getColumns()) {
+        column.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
     }
-    for (Entry<String, Optional<Value<?>>> entry : values.entrySet()) {
-      if (entry.getValue().isPresent()) {
-        entry.getValue().get().accept(binder);
-      } else {
-        binder.bindNullValue(entry.getKey());
-      }
+    for (Column<?> column : columns.values()) {
+      column.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
   }

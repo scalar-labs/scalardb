@@ -45,8 +45,20 @@ public class TableMetadataManager {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
       throw new IllegalArgumentException("operation has no target namespace and table name");
     }
+    return getTableMetadata(operation.forNamespace().get(), operation.forTable().get());
+  }
+
+  /**
+   * Returns a table metadata corresponding to the specified operation.
+   *
+   * @param namespace a namespace to retrieve
+   * @param table a table to retrieve
+   * @return a table metadata. null if the table is not found.
+   * @throws ExecutionException if the operation failed
+   */
+  public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     try {
-      TableKey key = new TableKey(operation.forNamespace().get(), operation.forTable().get());
+      TableKey key = new TableKey(namespace, table);
       return tableMetadataCache.get(key).orElse(null);
     } catch (java.util.concurrent.ExecutionException e) {
       throw new ExecutionException("getting a table metadata failed", e);

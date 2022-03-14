@@ -85,7 +85,7 @@ public class CosmosMutationTest {
   public void makeRecord_PutWithNullValueGiven_ShouldReturnWithValues() {
     // Arrange
     Put put = preparePut();
-    put.withNullValue(ANY_NAME_3);
+    put.withIntValue(ANY_NAME_3, null);
     CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
     String id = cosmosMutation.getId();
     String concatenatedPartitionKey = cosmosMutation.getConcatenatedPartitionKey();

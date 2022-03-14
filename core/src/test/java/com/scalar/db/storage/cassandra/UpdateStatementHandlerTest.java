@@ -343,7 +343,7 @@ public class UpdateStatementHandlerTest {
     // Arrange
     configureBehavior(null);
     put = preparePutWithClusteringKey();
-    put.withNullValue(ANY_NAME_3);
+    put.withIntValue(ANY_NAME_3, null);
 
     // Act
     handler.bind(prepared, put);

@@ -15,6 +15,7 @@ import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
+import com.scalar.db.util.TableMetadataManager;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
@@ -30,6 +31,7 @@ public class TwoPhaseCommitTransactionServiceTest {
   private static final String ANY_ID = "id";
 
   @Mock private TwoPhaseCommitTransactionManager manager;
+  @Mock private TableMetadataManager tableMetadataManager;
   @Mock private GateKeeper gateKeeper;
   @Mock private TwoPhaseCommitTransaction transaction;
   @Captor private ArgumentCaptor<StatusRuntimeException> exceptionCaptor;
@@ -41,7 +43,9 @@ public class TwoPhaseCommitTransactionServiceTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    service = new TwoPhaseCommitTransactionService(manager, gateKeeper, new Metrics());
+    service =
+        new TwoPhaseCommitTransactionService(
+            manager, tableMetadataManager, gateKeeper, new Metrics());
     when(manager.start()).thenReturn(transaction);
     when(manager.start(anyString())).thenReturn(transaction);
     when(transaction.getId()).thenReturn(ANY_ID);

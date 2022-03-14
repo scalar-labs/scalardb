@@ -1,18 +1,22 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.Value;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.AbstractResult;
-import com.scalar.db.util.ScalarDbUtils;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Supplier;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
@@ -20,57 +24,21 @@ import javax.annotation.concurrent.Immutable;
 public class MergedResult extends AbstractResult {
   private final Optional<TransactionResult> result;
   private final Put put;
-  private final Map<String, Optional<Value<?>>> putValues;
+  private final Map<String, Column<?>> putColumns;
   private final TableMetadata metadata;
-
-  private final Supplier<Map<String, Value<?>>> valuesWithDefaultValues;
 
   public MergedResult(Optional<TransactionResult> result, Put put, TableMetadata metadata) {
     // assume that all the columns are projected to the result
     this.result = result;
     this.put = put;
 
-    putValues = new HashMap<>();
-    putValues.putAll(put.getNullableValues());
-    put.getPartitionKey().get().forEach(v -> putValues.put(v.getName(), Optional.of(v)));
+    putColumns = new HashMap<>();
+    putColumns.putAll(put.getColumns());
+    put.getPartitionKey().getColumns().forEach(c -> putColumns.put(c.getName(), c));
     put.getClusteringKey()
-        .ifPresent(k -> k.forEach(v -> putValues.put(v.getName(), Optional.of(v))));
+        .ifPresent(k -> k.getColumns().forEach(c -> putColumns.put(c.getName(), c)));
 
     this.metadata = metadata;
-
-    // lazy loading
-    valuesWithDefaultValues =
-        Suppliers.memoize(
-            () -> {
-              ImmutableMap.Builder<String, Value<?>> builder = ImmutableMap.builder();
-              if (result.isPresent()) {
-                result
-                    .get()
-                    .getValues()
-                    .forEach(
-                        (k, v) -> {
-                          if (putValues.containsKey(k)) {
-                            Optional<Value<?>> value = putValues.get(k);
-                            if (value.isPresent()) {
-                              builder.put(k, value.get());
-                            } else {
-                              builder.put(k, ScalarDbUtils.getDefaultValue(k, metadata));
-                            }
-                          } else {
-                            builder.put(k, v);
-                          }
-                        });
-              } else {
-                for (String columnName : metadata.getColumnNames()) {
-                  if (putValues.containsKey(columnName) && putValues.get(columnName).isPresent()) {
-                    builder.put(columnName, putValues.get(columnName).get());
-                  } else {
-                    builder.put(columnName, ScalarDbUtils.getDefaultValue(columnName, metadata));
-                  }
-                }
-              }
-              return builder.build();
-            });
   }
 
   @Override
@@ -83,23 +51,11 @@ public class MergedResult extends AbstractResult {
     return put.getClusteringKey();
   }
 
-  @Deprecated
-  @Override
-  public Optional<Value<?>> getValue(String columnName) {
-    return Optional.of(valuesWithDefaultValues.get().get(columnName));
-  }
-
-  @Deprecated
-  @Override
-  public Map<String, Value<?>> getValues() {
-    return valuesWithDefaultValues.get();
-  }
-
   @Override
   public boolean isNull(String columnName) {
     checkIfExists(columnName);
-    if (putValues.containsKey(columnName)) {
-      return !putValues.get(columnName).isPresent();
+    if (putColumns.containsKey(columnName)) {
+      return putColumns.get(columnName).hasNullValue();
     }
     return result.map(transactionResult -> transactionResult.isNull(columnName)).orElse(true);
   }
@@ -107,8 +63,8 @@ public class MergedResult extends AbstractResult {
   @Override
   public boolean getBoolean(String columnName) {
     checkIfExists(columnName);
-    if (putValues.containsKey(columnName)) {
-      return putValues.get(columnName).map(Value::getAsBoolean).orElse(false);
+    if (putColumns.containsKey(columnName)) {
+      return putColumns.get(columnName).getBooleanValue();
     }
     return result.map(r -> r.getBoolean(columnName)).orElse(false);
   }
@@ -116,8 +72,8 @@ public class MergedResult extends AbstractResult {
   @Override
   public int getInt(String columnName) {
     checkIfExists(columnName);
-    if (putValues.containsKey(columnName)) {
-      return putValues.get(columnName).map(Value::getAsInt).orElse(0);
+    if (putColumns.containsKey(columnName)) {
+      return putColumns.get(columnName).getIntValue();
     }
     return result.map(r -> r.getInt(columnName)).orElse(0);
   }
@@ -125,8 +81,8 @@ public class MergedResult extends AbstractResult {
   @Override
   public long getBigInt(String columnName) {
     checkIfExists(columnName);
-    if (putValues.containsKey(columnName)) {
-      return putValues.get(columnName).map(Value::getAsLong).orElse(0L);
+    if (putColumns.containsKey(columnName)) {
+      return putColumns.get(columnName).getBigIntValue();
     }
     return result.map(r -> r.getBigInt(columnName)).orElse(0L);
   }
@@ -134,8 +90,8 @@ public class MergedResult extends AbstractResult {
   @Override
   public float getFloat(String columnName) {
     checkIfExists(columnName);
-    if (putValues.containsKey(columnName)) {
-      return putValues.get(columnName).map(Value::getAsFloat).orElse(0.0F);
+    if (putColumns.containsKey(columnName)) {
+      return putColumns.get(columnName).getFloatValue();
     }
     return result.map(r -> r.getFloat(columnName)).orElse(0.0F);
   }
@@ -143,8 +99,8 @@ public class MergedResult extends AbstractResult {
   @Override
   public double getDouble(String columnName) {
     checkIfExists(columnName);
-    if (putValues.containsKey(columnName)) {
-      return putValues.get(columnName).map(Value::getAsDouble).orElse(0.0D);
+    if (putColumns.containsKey(columnName)) {
+      return putColumns.get(columnName).getDoubleValue();
     }
     return result.map(r -> r.getDouble(columnName)).orElse(0.0D);
   }
@@ -153,8 +109,8 @@ public class MergedResult extends AbstractResult {
   @Override
   public String getText(String columnName) {
     checkIfExists(columnName);
-    if (putValues.containsKey(columnName)) {
-      return putValues.get(columnName).flatMap(Value::getAsString).orElse(null);
+    if (putColumns.containsKey(columnName)) {
+      return putColumns.get(columnName).getTextValue();
     }
     return result.map(r -> r.getText(columnName)).orElse(null);
   }
@@ -163,8 +119,8 @@ public class MergedResult extends AbstractResult {
   @Override
   public ByteBuffer getBlobAsByteBuffer(String columnName) {
     checkIfExists(columnName);
-    if (putValues.containsKey(columnName)) {
-      return putValues.get(columnName).flatMap(Value::getAsByteBuffer).orElse(null);
+    if (putColumns.containsKey(columnName)) {
+      return putColumns.get(columnName).getBlobValueAsByteBuffer();
     }
     return result.map(r -> r.getBlobAsByteBuffer(columnName)).orElse(null);
   }
@@ -173,8 +129,8 @@ public class MergedResult extends AbstractResult {
   @Override
   public byte[] getBlobAsBytes(String columnName) {
     checkIfExists(columnName);
-    if (putValues.containsKey(columnName)) {
-      return putValues.get(columnName).flatMap(Value::getAsBytes).orElse(null);
+    if (putColumns.containsKey(columnName)) {
+      return putColumns.get(columnName).getBlobValueAsBytes();
     }
     return result.map(r -> r.getBlobAsBytes(columnName)).orElse(null);
   }
@@ -217,5 +173,43 @@ public class MergedResult extends AbstractResult {
   @Override
   public Set<String> getContainedColumnNames() {
     return result.map(TransactionResult::getContainedColumnNames).orElse(metadata.getColumnNames());
+  }
+
+  @Override
+  public Map<String, Column<?>> getColumns() {
+    ImmutableMap.Builder<String, Column<?>> builder = ImmutableMap.builder();
+    if (result.isPresent()) {
+      result.get().getColumns().forEach((k, v) -> builder.put(k, putColumns.getOrDefault(k, v)));
+    } else {
+      for (String columnName : metadata.getColumnNames()) {
+        if (putColumns.containsKey(columnName)) {
+          builder.put(columnName, putColumns.get(columnName));
+        } else {
+          builder.put(columnName, getNullColumn(columnName));
+        }
+      }
+    }
+    return builder.build();
+  }
+
+  private Column<?> getNullColumn(String columnName) {
+    switch (metadata.getColumnDataType(columnName)) {
+      case BOOLEAN:
+        return BooleanColumn.ofNull(columnName);
+      case INT:
+        return IntColumn.ofNull(columnName);
+      case BIGINT:
+        return BigIntColumn.ofNull(columnName);
+      case FLOAT:
+        return FloatColumn.ofNull(columnName);
+      case DOUBLE:
+        return DoubleColumn.ofNull(columnName);
+      case TEXT:
+        return TextColumn.ofNull(columnName);
+      case BLOB:
+        return BlobColumn.ofNull(columnName);
+      default:
+        throw new AssertionError();
+    }
   }
 }

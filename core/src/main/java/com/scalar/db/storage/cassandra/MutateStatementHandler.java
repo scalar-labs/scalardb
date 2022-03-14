@@ -88,6 +88,6 @@ public abstract class MutateStatementHandler extends StatementHandler {
   protected void bindCondition(ValueBinder binder, Mutation mutation) {
     mutation
         .getCondition()
-        .ifPresent(c -> c.getExpressions().forEach(e -> e.getValue().accept(binder)));
+        .ifPresent(c -> c.getExpressions().forEach(e -> e.getColumn().accept(binder)));
   }
 }

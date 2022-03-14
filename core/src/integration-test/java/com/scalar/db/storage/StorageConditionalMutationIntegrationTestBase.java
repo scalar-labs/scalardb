@@ -151,8 +151,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
     String columnName = getColumnName(dataType);
     Value<?> value = getInitialValue(initialPut, dataType).copyWith("");
     MutationCondition condition =
-        ConditionBuilder.putIf(getConditionalExpression(columnName, operator, dataType, value))
-            .build();
+        ConditionBuilder.putIf(getConditionalExpression(columnName, operator, value)).build();
     boolean shouldMutate = shouldMutate(initialPut, operator, dataType, value);
 
     Put put = preparePutWithRandomValues().withCondition(condition);
@@ -171,8 +170,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
       String columnName = getColumnName(dataType);
       Value<?> value = getRandomValue(RANDOM, "", dataType);
       MutationCondition condition =
-          ConditionBuilder.putIf(getConditionalExpression(columnName, operator, dataType, value))
-              .build();
+          ConditionBuilder.putIf(getConditionalExpression(columnName, operator, value)).build();
       boolean shouldMutate = shouldMutate(initialPut, operator, dataType, value);
 
       Put put = preparePutWithRandomValues().withCondition(condition);
@@ -219,11 +217,8 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
     Value<?> secondValue = getInitialValue(initialPut, secondDataType).copyWith("");
 
     MutationCondition condition =
-        ConditionBuilder.putIf(
-                getConditionalExpression(firstColumnName, firstOperator, firstDataType, firstValue))
-            .and(
-                getConditionalExpression(
-                    secondColumnName, secondOperator, secondDataType, secondValue))
+        ConditionBuilder.putIf(getConditionalExpression(firstColumnName, firstOperator, firstValue))
+            .and(getConditionalExpression(secondColumnName, secondOperator, secondValue))
             .build();
 
     boolean shouldMutate =
@@ -266,11 +261,8 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
 
       MutationCondition condition =
           ConditionBuilder.putIf(
-                  getConditionalExpression(
-                      firstColumnName, firstOperator, firstDataType, firstValue))
-              .and(
-                  getConditionalExpression(
-                      secondColumnName, secondOperator, secondDataType, secondValue))
+                  getConditionalExpression(firstColumnName, firstOperator, firstValue))
+              .and(getConditionalExpression(secondColumnName, secondOperator, secondValue))
               .build();
 
       boolean shouldMutate =
@@ -492,8 +484,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
     String columnName = getColumnName(dataType);
     Value<?> value = getInitialValue(initialPut, dataType).copyWith("");
     MutationCondition condition =
-        ConditionBuilder.deleteIf(getConditionalExpression(columnName, operator, dataType, value))
-            .build();
+        ConditionBuilder.deleteIf(getConditionalExpression(columnName, operator, value)).build();
     boolean shouldMutate = shouldMutate(initialPut, operator, dataType, value);
 
     Delete delete = prepareDelete().withCondition(condition);
@@ -515,8 +506,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
       String columnName = getColumnName(dataType);
       Value<?> value = getRandomValue(RANDOM, "", dataType);
       MutationCondition condition =
-          ConditionBuilder.deleteIf(getConditionalExpression(columnName, operator, dataType, value))
-              .build();
+          ConditionBuilder.deleteIf(getConditionalExpression(columnName, operator, value)).build();
       boolean shouldMutate = shouldMutate(initialPut, operator, dataType, value);
 
       Delete delete = prepareDelete().withCondition(condition);
@@ -568,10 +558,8 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
 
     MutationCondition condition =
         ConditionBuilder.deleteIf(
-                getConditionalExpression(firstColumnName, firstOperator, firstDataType, firstValue))
-            .and(
-                getConditionalExpression(
-                    secondColumnName, secondOperator, secondDataType, secondValue))
+                getConditionalExpression(firstColumnName, firstOperator, firstValue))
+            .and(getConditionalExpression(secondColumnName, secondOperator, secondValue))
             .build();
 
     boolean shouldMutate =
@@ -614,11 +602,8 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
 
       MutationCondition condition =
           ConditionBuilder.deleteIf(
-                  getConditionalExpression(
-                      firstColumnName, firstOperator, firstDataType, firstValue))
-              .and(
-                  getConditionalExpression(
-                      secondColumnName, secondOperator, secondDataType, secondValue))
+                  getConditionalExpression(firstColumnName, firstOperator, firstValue))
+              .and(getConditionalExpression(secondColumnName, secondOperator, secondValue))
               .build();
 
       boolean shouldMutate =
@@ -793,138 +778,8 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
   }
 
   private ConditionalExpression getConditionalExpression(
-      String columnName, Operator operator, DataType dataType, Value<?> value) {
-    switch (operator) {
-      case EQ:
-        switch (dataType) {
-          case BOOLEAN:
-            return ConditionBuilder.column(columnName).isEqualToBoolean(value.getAsBoolean());
-          case INT:
-            return ConditionBuilder.column(columnName).isEqualToInt(value.getAsInt());
-          case BIGINT:
-            return ConditionBuilder.column(columnName).isEqualToBigInt(value.getAsLong());
-          case FLOAT:
-            return ConditionBuilder.column(columnName).isEqualToFloat(value.getAsFloat());
-          case DOUBLE:
-            return ConditionBuilder.column(columnName).isEqualToDouble(value.getAsDouble());
-          case TEXT:
-            return ConditionBuilder.column(columnName).isEqualToText(value.getAsString().get());
-          case BLOB:
-            return ConditionBuilder.column(columnName).isEqualToBlob(value.getAsByteBuffer().get());
-          default:
-            throw new AssertionError();
-        }
-      case NE:
-        switch (dataType) {
-          case BOOLEAN:
-            return ConditionBuilder.column(columnName).isNotEqualToBoolean(value.getAsBoolean());
-          case INT:
-            return ConditionBuilder.column(columnName).isNotEqualToInt(value.getAsInt());
-          case BIGINT:
-            return ConditionBuilder.column(columnName).isNotEqualToBigInt(value.getAsLong());
-          case FLOAT:
-            return ConditionBuilder.column(columnName).isNotEqualToFloat(value.getAsFloat());
-          case DOUBLE:
-            return ConditionBuilder.column(columnName).isNotEqualToDouble(value.getAsDouble());
-          case TEXT:
-            return ConditionBuilder.column(columnName).isNotEqualToText(value.getAsString().get());
-          case BLOB:
-            return ConditionBuilder.column(columnName)
-                .isNotEqualToBlob(value.getAsByteBuffer().get());
-          default:
-            throw new AssertionError();
-        }
-      case GT:
-        switch (dataType) {
-          case BOOLEAN:
-            return ConditionBuilder.column(columnName).isGreaterThanBoolean(value.getAsBoolean());
-          case INT:
-            return ConditionBuilder.column(columnName).isGreaterThanInt(value.getAsInt());
-          case BIGINT:
-            return ConditionBuilder.column(columnName).isGreaterThanBigInt(value.getAsLong());
-          case FLOAT:
-            return ConditionBuilder.column(columnName).isGreaterThanFloat(value.getAsFloat());
-          case DOUBLE:
-            return ConditionBuilder.column(columnName).isGreaterThanDouble(value.getAsDouble());
-          case TEXT:
-            return ConditionBuilder.column(columnName).isGreaterThanText(value.getAsString().get());
-          case BLOB:
-            return ConditionBuilder.column(columnName)
-                .isGreaterThanBlob(value.getAsByteBuffer().get());
-          default:
-            throw new AssertionError();
-        }
-      case GTE:
-        switch (dataType) {
-          case BOOLEAN:
-            return ConditionBuilder.column(columnName)
-                .isGreaterThanOrEqualToBoolean(value.getAsBoolean());
-          case INT:
-            return ConditionBuilder.column(columnName).isGreaterThanOrEqualToInt(value.getAsInt());
-          case BIGINT:
-            return ConditionBuilder.column(columnName)
-                .isGreaterThanOrEqualToBigInt(value.getAsLong());
-          case FLOAT:
-            return ConditionBuilder.column(columnName)
-                .isGreaterThanOrEqualToFloat(value.getAsFloat());
-          case DOUBLE:
-            return ConditionBuilder.column(columnName)
-                .isGreaterThanOrEqualToDouble(value.getAsDouble());
-          case TEXT:
-            return ConditionBuilder.column(columnName)
-                .isGreaterThanOrEqualToText(value.getAsString().get());
-          case BLOB:
-            return ConditionBuilder.column(columnName)
-                .isGreaterThanOrEqualToBlob(value.getAsByteBuffer().get());
-          default:
-            throw new AssertionError();
-        }
-      case LT:
-        switch (dataType) {
-          case BOOLEAN:
-            return ConditionBuilder.column(columnName).isLessThanBoolean(value.getAsBoolean());
-          case INT:
-            return ConditionBuilder.column(columnName).isLessThanInt(value.getAsInt());
-          case BIGINT:
-            return ConditionBuilder.column(columnName).isLessThanBigInt(value.getAsLong());
-          case FLOAT:
-            return ConditionBuilder.column(columnName).isLessThanFloat(value.getAsFloat());
-          case DOUBLE:
-            return ConditionBuilder.column(columnName).isLessThanDouble(value.getAsDouble());
-          case TEXT:
-            return ConditionBuilder.column(columnName).isLessThanText(value.getAsString().get());
-          case BLOB:
-            return ConditionBuilder.column(columnName)
-                .isLessThanBlob(value.getAsByteBuffer().get());
-          default:
-            throw new AssertionError();
-        }
-      case LTE:
-        switch (dataType) {
-          case BOOLEAN:
-            return ConditionBuilder.column(columnName)
-                .isLessThanOrEqualToBoolean(value.getAsBoolean());
-          case INT:
-            return ConditionBuilder.column(columnName).isLessThanOrEqualToInt(value.getAsInt());
-          case BIGINT:
-            return ConditionBuilder.column(columnName).isLessThanOrEqualToBigInt(value.getAsLong());
-          case FLOAT:
-            return ConditionBuilder.column(columnName).isLessThanOrEqualToFloat(value.getAsFloat());
-          case DOUBLE:
-            return ConditionBuilder.column(columnName)
-                .isLessThanOrEqualToDouble(value.getAsDouble());
-          case TEXT:
-            return ConditionBuilder.column(columnName)
-                .isLessThanOrEqualToText(value.getAsString().get());
-          case BLOB:
-            return ConditionBuilder.column(columnName)
-                .isLessThanOrEqualToBlob(value.getAsByteBuffer().get());
-          default:
-            throw new AssertionError();
-        }
-      default:
-        throw new AssertionError();
-    }
+      String columnName, Operator operator, Value<?> value) {
+    return new ConditionalExpression(columnName, value, operator);
   }
 
   private boolean shouldMutate(
@@ -951,19 +806,19 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
   private Value<?> getInitialValue(Put initialPut, DataType dataType) {
     switch (dataType) {
       case BOOLEAN:
-        return initialPut.getNullableValues().get(COL_NAME1).get();
+        return initialPut.getValues().get(COL_NAME1);
       case INT:
-        return initialPut.getNullableValues().get(COL_NAME2).get();
+        return initialPut.getValues().get(COL_NAME2);
       case BIGINT:
-        return initialPut.getNullableValues().get(COL_NAME3).get();
+        return initialPut.getValues().get(COL_NAME3);
       case FLOAT:
-        return initialPut.getNullableValues().get(COL_NAME4).get();
+        return initialPut.getValues().get(COL_NAME4);
       case DOUBLE:
-        return initialPut.getNullableValues().get(COL_NAME5).get();
+        return initialPut.getValues().get(COL_NAME5);
       case TEXT:
-        return initialPut.getNullableValues().get(COL_NAME6).get();
+        return initialPut.getValues().get(COL_NAME6);
       case BLOB:
-        return initialPut.getNullableValues().get(COL_NAME7).get();
+        return initialPut.getValues().get(COL_NAME7);
       default:
         throw new AssertionError();
     }
