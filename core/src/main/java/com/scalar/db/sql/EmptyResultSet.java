@@ -7,6 +7,14 @@ import java.util.Optional;
 
 public class EmptyResultSet implements ResultSet {
 
+  private static final EmptyResultSet INSTANCE = new EmptyResultSet();
+
+  public static EmptyResultSet get() {
+    return INSTANCE;
+  }
+
+  private EmptyResultSet() {}
+
   @Override
   public Optional<Record> one() {
     return Optional.empty();

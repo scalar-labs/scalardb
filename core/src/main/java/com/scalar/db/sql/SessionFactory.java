@@ -20,7 +20,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
 
-public final class SqlSessionFactory implements Closeable {
+public final class SessionFactory implements Closeable {
 
   private final TableMetadataManager tableMetadataManager;
 
@@ -29,7 +29,7 @@ public final class SqlSessionFactory implements Closeable {
   private final DistributedTransactionManager transactionManager;
   private final TwoPhaseCommitTransactionManager twoPhaseCommitTransactionManager;
 
-  private SqlSessionFactory(DatabaseConfig config) {
+  private SessionFactory(DatabaseConfig config) {
     StorageFactory storageFactory = new StorageFactory(config);
     TransactionFactory transactionFactory = new TransactionFactory(config);
 
@@ -41,42 +41,42 @@ public final class SqlSessionFactory implements Closeable {
     twoPhaseCommitTransactionManager = transactionFactory.getTwoPhaseCommitTransactionManager();
   }
 
-  public StorageSqlSession getStorageSqlSession() {
-    return new StorageSqlSession(storage, admin, tableMetadataManager);
+  public StorageSession getStorageSqlSession() {
+    return new StorageSession(storage, admin, tableMetadataManager);
   }
 
-  public TransactionSqlSession beginTransaction() {
+  public TransactionSession beginTransaction() {
     try {
       DistributedTransaction transaction = transactionManager.start();
-      return new TransactionSqlSession(transaction, tableMetadataManager);
+      return new TransactionSession(transaction, tableMetadataManager);
     } catch (TransactionException e) {
       throw new SqlException("Failed to start a transaction");
     }
   }
 
-  public TwoPhaseCommitTransactionSqlSession beginTwoPhaseCommitTransaction() {
+  public TwoPhaseCommitTransactionSession beginTwoPhaseCommitTransaction() {
     try {
       TwoPhaseCommitTransaction transaction = twoPhaseCommitTransactionManager.start();
-      return new TwoPhaseCommitTransactionSqlSession(transaction, tableMetadataManager);
+      return new TwoPhaseCommitTransactionSession(transaction, tableMetadataManager);
     } catch (TransactionException e) {
       throw new SqlException("Failed to start a two-phase commit transaction");
     }
   }
 
-  public TwoPhaseCommitTransactionSqlSession joinTwoPhaseCommitTransaction(String transactionId) {
+  public TwoPhaseCommitTransactionSession joinTwoPhaseCommitTransaction(String transactionId) {
     try {
       TwoPhaseCommitTransaction transaction = twoPhaseCommitTransactionManager.join(transactionId);
-      return new TwoPhaseCommitTransactionSqlSession(transaction, tableMetadataManager);
+      return new TwoPhaseCommitTransactionSession(transaction, tableMetadataManager);
     } catch (TransactionException e) {
       throw new SqlException("Failed to join a two-phase commit transaction");
     }
   }
 
-  public TwoPhaseCommitTransactionSqlSession resumeTwoPhaseCommitTransaction(String transactionId) {
+  public TwoPhaseCommitTransactionSession resumeTwoPhaseCommitTransaction(String transactionId) {
     try {
       TwoPhaseCommitTransaction transaction =
           twoPhaseCommitTransactionManager.resume(transactionId);
-      return new TwoPhaseCommitTransactionSqlSession(transaction, tableMetadataManager);
+      return new TwoPhaseCommitTransactionSession(transaction, tableMetadataManager);
     } catch (TransactionException e) {
       throw new SqlException("Failed to resume a two-phase commit transaction");
     }
@@ -119,8 +119,8 @@ public final class SqlSessionFactory implements Closeable {
       return this;
     }
 
-    public SqlSessionFactory build() {
-      return new SqlSessionFactory(new DatabaseConfig(properties));
+    public SessionFactory build() {
+      return new SessionFactory(new DatabaseConfig(properties));
     }
   }
 }

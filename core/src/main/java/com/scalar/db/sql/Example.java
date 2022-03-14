@@ -24,23 +24,23 @@ public class Example {
   private static final String COLUMN_NAME_4 = "col4";
 
   public static void main(String[] args) {
-    try (SqlSessionFactory sqlSessionFactory =
-        SqlSessionFactory.builder()
+    try (SessionFactory sessionFactory =
+        SessionFactory.builder()
             .withProperty("scalar.db.contact_points", "jdbc:mysql://localhost:3306/")
             .withProperty("scalar.db.username", "root")
             .withProperty("scalar.db.password", "mysql")
             .withProperty("scalar.db.storage", "jdbc")
             .build()) {
-      storageModeExample(sqlSessionFactory);
-      transactionModeExample(sqlSessionFactory);
-      twoPhaseCommitTransactionModeExample(sqlSessionFactory);
+      storageModeExample(sessionFactory);
+      transactionModeExample(sessionFactory);
+      twoPhaseCommitTransactionModeExample(sessionFactory);
     }
   }
 
-  public static void storageModeExample(SqlSessionFactory sqlSessionFactory) {
+  public static void storageModeExample(SessionFactory sessionFactory) {
     System.out.println("Start storage mode example");
 
-    StorageSqlSession storageSqlSession = sqlSessionFactory.getStorageSqlSession();
+    StorageSession storageSqlSession = sessionFactory.getStorageSqlSession();
 
     ResultSet resultSet;
 
@@ -166,10 +166,10 @@ public class Example {
     resultSet.close();
   }
 
-  public static void transactionModeExample(SqlSessionFactory sqlSessionFactory) {
+  public static void transactionModeExample(SessionFactory sessionFactory) {
     System.out.println("Start transaction mode example");
 
-    StorageSqlSession storageSqlSession = sqlSessionFactory.getStorageSqlSession();
+    StorageSession storageSqlSession = sessionFactory.getStorageSqlSession();
 
     ResultSet resultSet;
 
@@ -220,7 +220,7 @@ public class Example {
     resultSet.close();
 
     // Begin
-    TransactionSqlSession transactionSqlSession = sqlSessionFactory.beginTransaction();
+    TransactionSession transactionSqlSession = sessionFactory.beginTransaction();
 
     // Insert
     InsertStatement insertStatement =
@@ -298,10 +298,10 @@ public class Example {
     resultSet.close();
   }
 
-  public static void twoPhaseCommitTransactionModeExample(SqlSessionFactory sqlSessionFactory) {
+  public static void twoPhaseCommitTransactionModeExample(SessionFactory sessionFactory) {
     System.out.println("Start two-phase commit transaction mode example");
 
-    StorageSqlSession storageSqlSession = sqlSessionFactory.getStorageSqlSession();
+    StorageSession storageSqlSession = sessionFactory.getStorageSqlSession();
 
     ResultSet resultSet;
 
@@ -352,11 +352,11 @@ public class Example {
     resultSet.close();
 
     // Begin
-    TwoPhaseCommitTransactionSqlSession twoPhaseCommitTransactionSqlSession1 =
-        sqlSessionFactory.beginTwoPhaseCommitTransaction();
+    TwoPhaseCommitTransactionSession twoPhaseCommitTransactionSqlSession1 =
+        sessionFactory.beginTwoPhaseCommitTransaction();
 
-    TwoPhaseCommitTransactionSqlSession twoPhaseCommitTransactionSqlSession2 =
-        sqlSessionFactory.joinTwoPhaseCommitTransaction(
+    TwoPhaseCommitTransactionSession twoPhaseCommitTransactionSqlSession2 =
+        sessionFactory.joinTwoPhaseCommitTransaction(
             twoPhaseCommitTransactionSqlSession1.getTransactionId());
 
     // Insert
@@ -458,6 +458,10 @@ public class Example {
     // Prepare
     twoPhaseCommitTransactionSqlSession1.prepare();
     twoPhaseCommitTransactionSqlSession2.prepare();
+
+    // Validate
+    twoPhaseCommitTransactionSqlSession1.validate();
+    twoPhaseCommitTransactionSqlSession2.validate();
 
     // Commit
     twoPhaseCommitTransactionSqlSession1.commit();

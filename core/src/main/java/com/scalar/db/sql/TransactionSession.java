@@ -2,22 +2,18 @@ package com.scalar.db.sql;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.api.TwoPhaseCommitTransaction;
+import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.PreparationConflictException;
-import com.scalar.db.exception.transaction.PreparationException;
-import com.scalar.db.exception.transaction.RollbackException;
-import com.scalar.db.exception.transaction.ValidationConflictException;
-import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.sql.exception.SqlException;
 import com.scalar.db.sql.exception.TransactionConflictException;
 import com.scalar.db.sql.exception.UnknownTransactionStatusException;
@@ -37,12 +33,13 @@ import com.scalar.db.util.TableMetadataManager;
 import java.util.List;
 import java.util.Optional;
 
-public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
-  private final TwoPhaseCommitTransaction transaction;
+public class TransactionSession implements Session {
+
+  private final DistributedTransaction transaction;
   private final TableMetadataManager tableMetadataManager;
 
-  public TwoPhaseCommitTransactionSqlSession(
-      TwoPhaseCommitTransaction transaction, TableMetadataManager tableMetadataManager) {
+  public TransactionSession(
+      DistributedTransaction transaction, TableMetadataManager tableMetadataManager) {
     this.transaction = transaction;
     this.tableMetadataManager = tableMetadataManager;
   }
@@ -51,31 +48,6 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
   public ResultSet execute(Statement statement) {
     new StatementValidator(tableMetadataManager, statement).validate();
     return new StatementExecutor(transaction, tableMetadataManager, statement).execute();
-  }
-
-  public String getTransactionId() {
-    return transaction.getId();
-  }
-
-  public void prepare() {
-    try {
-      transaction.prepare();
-    } catch (PreparationConflictException e) {
-      throw new TransactionConflictException("Conflict happened during preparing a transaction", e);
-    } catch (PreparationException e) {
-      throw new SqlException("Failed to prepare a transaction", e);
-    }
-  }
-
-  public void validation() {
-    try {
-      transaction.validate();
-    } catch (ValidationConflictException e) {
-      throw new TransactionConflictException(
-          "Conflict happened during validating a transaction", e);
-    } catch (ValidationException e) {
-      throw new SqlException("Failed to validate a transaction", e);
-    }
   }
 
   public void commit() {
@@ -93,22 +65,22 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
 
   public void rollback() {
     try {
-      transaction.rollback();
-    } catch (RollbackException e) {
+      transaction.abort();
+    } catch (AbortException e) {
       throw new SqlException("Failed to abort a transaction", e);
     }
   }
 
   private static class StatementExecutor implements StatementVisitor {
 
-    private final TwoPhaseCommitTransaction transaction;
+    private final DistributedTransaction transaction;
     private final TableMetadataManager tableMetadataManager;
     private final Statement statement;
 
     private ResultSet resultSet;
 
     public StatementExecutor(
-        TwoPhaseCommitTransaction transaction,
+        DistributedTransaction transaction,
         TableMetadataManager tableMetadataManager,
         Statement statement) {
       this.transaction = transaction;
@@ -124,31 +96,31 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
     @Override
     public void visit(CreateNamespaceStatement statement) {
       throw new UnsupportedOperationException(
-          "Creating a namespace is not supported in two-phase commit transaction mode");
+          "Creating a namespace is not supported in transaction mode");
     }
 
     @Override
     public void visit(CreateTableStatement statement) {
       throw new UnsupportedOperationException(
-          "Creating a table is not supported in two-phase commit transaction mode");
+          "Creating a table is not supported in transaction mode");
     }
 
     @Override
     public void visit(DropNamespaceStatement statement) {
       throw new UnsupportedOperationException(
-          "Dropping a namespace is not supported in two-phase commit transaction mode");
+          "Dropping a namespace is not supported in transaction mode");
     }
 
     @Override
     public void visit(DropTableStatement statement) {
       throw new UnsupportedOperationException(
-          "Dropping a table is not supported in two-phase commit transaction mode");
+          "Dropping a table is not supported in transaction mode");
     }
 
     @Override
     public void visit(TruncateTableStatement statement) {
       throw new UnsupportedOperationException(
-          "Truncating a table is not supported in two-phase commit transaction mode");
+          "Truncating a table is not supported in transaction mode");
     }
 
     @Override
@@ -173,7 +145,7 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
                       r ->
                           (ResultSet)
                               new SingleRecordResultSet(new ResultRecord(r, projectedColumnNames)))
-                  .orElse(new EmptyResultSet());
+                  .orElse(EmptyResultSet.get());
         } else {
           List<Result> results = transaction.scan((Scan) selection);
           resultSet = new ResultIteratorResultSet(results.iterator(), projectedColumnNames);
@@ -197,7 +169,7 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
               "Conditional update is not supported in transaction mode");
         }
         transaction.put(put);
-        resultSet = new EmptyResultSet();
+        resultSet = EmptyResultSet.get();
       } catch (CrudConflictException e) {
         throw new TransactionConflictException("Conflict happened during inserting a record", e);
       } catch (CrudException e) {
@@ -217,7 +189,7 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
               "Conditional update is not supported in transaction mode");
         }
         transaction.put(put);
-        resultSet = new EmptyResultSet();
+        resultSet = EmptyResultSet.get();
       } catch (CrudConflictException e) {
         throw new TransactionConflictException("Conflict happened during updating a record", e);
       } catch (CrudException e) {
@@ -237,7 +209,7 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
               "Conditional update is not supported in transaction mode");
         }
         transaction.delete(delete);
-        resultSet = new EmptyResultSet();
+        resultSet = EmptyResultSet.get();
       } catch (CrudConflictException e) {
         throw new TransactionConflictException("Conflict happened during deleting a record", e);
       } catch (CrudException e) {
@@ -247,8 +219,7 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
 
     @Override
     public void visit(BatchStatement statement) {
-      throw new UnsupportedOperationException(
-          "Batch is not supported in two-phase commit transaction mode");
+      throw new UnsupportedOperationException("Batch is not supported in transaction mode");
     }
   }
 }

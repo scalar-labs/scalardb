@@ -35,13 +35,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class StorageSqlSession implements SqlSession {
+public class StorageSession implements Session {
 
   private final DistributedStorage storage;
   private final DistributedStorageAdmin admin;
   private final TableMetadataManager tableMetadataManager;
 
-  public StorageSqlSession(
+  public StorageSession(
       DistributedStorage storage,
       DistributedStorageAdmin admin,
       TableMetadataManager tableMetadataManager) {
@@ -85,7 +85,7 @@ public class StorageSqlSession implements SqlSession {
     public void visit(CreateNamespaceStatement statement) {
       try {
         admin.createNamespace(statement.namespaceName, statement.ifNotExists, statement.options);
-        resultSet = new EmptyResultSet();
+        resultSet = EmptyResultSet.get();
       } catch (ExecutionException e) {
         throw new SqlException("Failed to create a namespace", e);
       }
@@ -101,7 +101,7 @@ public class StorageSqlSession implements SqlSession {
             tableMetadata,
             statement.ifNotExists,
             statement.options);
-        resultSet = new EmptyResultSet();
+        resultSet = EmptyResultSet.get();
       } catch (ExecutionException e) {
         throw new SqlException("Failed to create a table", e);
       }
@@ -116,7 +116,7 @@ public class StorageSqlSession implements SqlSession {
           }
         }
         admin.dropNamespace(statement.namespaceName, statement.ifExists);
-        resultSet = new EmptyResultSet();
+        resultSet = EmptyResultSet.get();
       } catch (ExecutionException e) {
         throw new SqlException("Failed to drop a namespace", e);
       }
@@ -126,7 +126,7 @@ public class StorageSqlSession implements SqlSession {
     public void visit(DropTableStatement statement) {
       try {
         admin.dropTable(statement.namespaceName, statement.tableName, statement.ifExists);
-        resultSet = new EmptyResultSet();
+        resultSet = EmptyResultSet.get();
       } catch (ExecutionException e) {
         throw new SqlException("Failed to drop a table", e);
       }
@@ -136,7 +136,7 @@ public class StorageSqlSession implements SqlSession {
     public void visit(TruncateTableStatement statement) {
       try {
         admin.truncateTable(statement.namespaceName, statement.tableName);
-        resultSet = new EmptyResultSet();
+        resultSet = EmptyResultSet.get();
       } catch (ExecutionException e) {
         throw new SqlException("Failed to drop a table", e);
       }
@@ -164,7 +164,7 @@ public class StorageSqlSession implements SqlSession {
                       r ->
                           (ResultSet)
                               new SingleRecordResultSet(new ResultRecord(r, projectedColumnNames)))
-                  .orElse(new EmptyResultSet());
+                  .orElse(EmptyResultSet.get());
         } else {
           Scanner scanner = storage.scan((Scan) selection);
           resultSet = new ScannerResultSet(scanner, projectedColumnNames);
@@ -185,7 +185,7 @@ public class StorageSqlSession implements SqlSession {
         if (put.getCondition().isPresent()) {
           resultSet = new SingleRecordResultSet(new ConditionalMutationResultRecord(true));
         } else {
-          resultSet = new EmptyResultSet();
+          resultSet = EmptyResultSet.get();
         }
       } catch (NoMutationException e) {
         resultSet = new SingleRecordResultSet(new ConditionalMutationResultRecord(false));
@@ -207,7 +207,7 @@ public class StorageSqlSession implements SqlSession {
         if (put.getCondition().isPresent()) {
           resultSet = new SingleRecordResultSet(new ConditionalMutationResultRecord(true));
         } else {
-          resultSet = new EmptyResultSet();
+          resultSet = EmptyResultSet.get();
         }
       } catch (NoMutationException e) {
         resultSet = new SingleRecordResultSet(new ConditionalMutationResultRecord(false));
@@ -229,7 +229,7 @@ public class StorageSqlSession implements SqlSession {
         if (delete.getCondition().isPresent()) {
           resultSet = new SingleRecordResultSet(new ConditionalMutationResultRecord(true));
         } else {
-          resultSet = new EmptyResultSet();
+          resultSet = EmptyResultSet.get();
         }
       } catch (NoMutationException e) {
         resultSet = new SingleRecordResultSet(new ConditionalMutationResultRecord(false));
@@ -274,7 +274,7 @@ public class StorageSqlSession implements SqlSession {
         if (hasCondition) {
           resultSet = new SingleRecordResultSet(new ConditionalMutationResultRecord(true));
         } else {
-          resultSet = new EmptyResultSet();
+          resultSet = EmptyResultSet.get();
         }
       } catch (NoMutationException e) {
         resultSet = new SingleRecordResultSet(new ConditionalMutationResultRecord(false));
