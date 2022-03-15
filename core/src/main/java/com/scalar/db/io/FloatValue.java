@@ -47,6 +47,11 @@ public final class FloatValue implements Value<Float> {
   }
 
   @Override
+  public DataType getDataType() {
+    return DataType.FLOAT;
+  }
+
+  @Override
   public float getAsFloat() {
     return value;
   }

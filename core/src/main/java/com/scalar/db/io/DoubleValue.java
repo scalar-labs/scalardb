@@ -47,6 +47,11 @@ public final class DoubleValue implements Value<Double> {
   }
 
   @Override
+  public DataType getDataType() {
+    return DataType.DOUBLE;
+  }
+
+  @Override
   public double getAsDouble() {
     return value;
   }
