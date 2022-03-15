@@ -48,7 +48,9 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ContinuousBackupsStatus;
+import software.amazon.awssdk.services.dynamodb.model.CreateGlobalSecondaryIndexAction;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.DeleteGlobalSecondaryIndexAction;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeContinuousBackupsRequest;
@@ -58,6 +60,9 @@ import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndex;
+import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndexDescription;
+import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndexUpdate;
+import software.amazon.awssdk.services.dynamodb.model.IndexStatus;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ListTablesRequest;
@@ -73,6 +78,7 @@ import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import software.amazon.awssdk.services.dynamodb.model.TableStatus;
 import software.amazon.awssdk.services.dynamodb.model.UpdateContinuousBackupsRequest;
+import software.amazon.awssdk.services.dynamodb.model.UpdateTableRequest;
 
 /**
  * Manages table creating, dropping and truncating in Dynamo DB
@@ -223,7 +229,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
     waitForTableCreation(getFullTableName(namespace, table));
 
-    addTableMetadata(namespace, table, metadata);
+    putTableMetadata(namespace, table, metadata);
 
     boolean noScaling = Boolean.parseBoolean(options.getOrDefault(NO_SCALING, DEFAULT_NO_SCALING));
     if (!noScaling) {
@@ -342,7 +348,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     return getFullTableName(namespace, tableName) + "." + GLOBAL_INDEX_NAME_PREFIX + "." + keyName;
   }
 
-  private void addTableMetadata(String namespace, String table, TableMetadata metadata)
+  private void putTableMetadata(String namespace, String table, TableMetadata metadata)
       throws ExecutionException {
     createMetadataTableIfNotExists();
 
@@ -491,26 +497,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       }
     }
 
-    // request
-    for (RegisterScalableTargetRequest registerScalableTargetRequest :
-        registerScalableTargetRequestList) {
-      try {
-        applicationAutoScalingClient.registerScalableTarget(registerScalableTargetRequest);
-      } catch (Exception e) {
-        throw new ExecutionException(
-            "Unable to register scalable target for " + registerScalableTargetRequest.resourceId(),
-            e);
-      }
-    }
-
-    for (PutScalingPolicyRequest putScalingPolicyRequest : putScalingPolicyRequestList) {
-      try {
-        applicationAutoScalingClient.putScalingPolicy(putScalingPolicyRequest);
-      } catch (Exception e) {
-        throw new ExecutionException(
-            "Unable to put scaling policy request for " + putScalingPolicyRequest.resourceId(), e);
-      }
-    }
+    registerScalableTarget(registerScalableTargetRequestList);
+    putScalingPolicy(putScalingPolicyRequestList);
   }
 
   private RegisterScalableTargetRequest buildRegisterScalableTargetRequest(
@@ -627,55 +615,32 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       return;
     }
 
-    List<DeregisterScalableTargetRequest> deregisterScalableTargetRequestList = new ArrayList<>();
     List<DeleteScalingPolicyRequest> deleteScalingPolicyRequestList = new ArrayList<>();
+    List<DeregisterScalableTargetRequest> deregisterScalableTargetRequestList = new ArrayList<>();
 
     // write, read scaling of table
     for (String scalingType : TABLE_SCALING_TYPE_SET) {
-      deregisterScalableTargetRequestList.add(
-          buildDeregisterScalableTargetRequest(getTableResourceID(namespace, table), scalingType));
       deleteScalingPolicyRequestList.add(
           buildDeleteScalingPolicyRequest(getTableResourceID(namespace, table), scalingType));
+      deregisterScalableTargetRequestList.add(
+          buildDeregisterScalableTargetRequest(getTableResourceID(namespace, table), scalingType));
     }
 
     // write, read scaling of global indexes (secondary indexes)
     Set<String> secondaryIndexes = tableMetadata.getSecondaryIndexNames();
     for (String secondaryIndex : secondaryIndexes) {
       for (String scalingType : SECONDARY_INDEX_SCALING_TYPE_SET) {
-        deregisterScalableTargetRequestList.add(
-            buildDeregisterScalableTargetRequest(
-                getGlobalIndexResourceID(namespace, table, secondaryIndex), scalingType));
         deleteScalingPolicyRequestList.add(
             buildDeleteScalingPolicyRequest(
                 getGlobalIndexResourceID(namespace, table, secondaryIndex), scalingType));
+        deregisterScalableTargetRequestList.add(
+            buildDeregisterScalableTargetRequest(
+                getGlobalIndexResourceID(namespace, table, secondaryIndex), scalingType));
       }
     }
 
-    // request
-    for (DeleteScalingPolicyRequest deleteScalingPolicyRequest : deleteScalingPolicyRequestList) {
-      try {
-        applicationAutoScalingClient.deleteScalingPolicy(deleteScalingPolicyRequest);
-      } catch (Exception e) {
-        if (!(e instanceof ObjectNotFoundException)) {
-          LOGGER.warn(
-              "The scaling policy " + deleteScalingPolicyRequest.policyName() + " is not found.");
-        }
-      }
-    }
-
-    for (DeregisterScalableTargetRequest deregisterScalableTargetRequest :
-        deregisterScalableTargetRequestList) {
-      try {
-        applicationAutoScalingClient.deregisterScalableTarget(deregisterScalableTargetRequest);
-      } catch (Exception e) {
-        if (!(e instanceof ObjectNotFoundException)) {
-          LOGGER.warn(
-              "The scalable target "
-                  + deregisterScalableTargetRequest.resourceId()
-                  + " is not found");
-        }
-      }
-    }
+    deleteScalingPolicy(deleteScalingPolicyRequestList);
+    deregisterScalableTarget(deregisterScalableTargetRequestList);
   }
 
   private DeregisterScalableTargetRequest buildDeregisterScalableTargetRequest(
@@ -782,6 +747,233 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       }
       lastKeyEvaluated = scanResponse.lastEvaluatedKey();
     } while (!lastKeyEvaluated.isEmpty());
+  }
+
+  @Override
+  public void createIndex(
+      String namespace, String table, String columnName, Map<String, String> options)
+      throws ExecutionException {
+
+    long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_REQUEST_UNIT));
+    TableMetadata metadata = getTableMetadata(namespace, table);
+    try {
+      client.updateTable(
+          UpdateTableRequest.builder()
+              .tableName(getFullTableName(namespace, table))
+              .attributeDefinitions(
+                  AttributeDefinition.builder()
+                      .attributeName(columnName)
+                      .attributeType(
+                          SECONDARY_INDEX_DATATYPE_MAP.get(metadata.getColumnDataType(columnName)))
+                      .build())
+              .globalSecondaryIndexUpdates(
+                  GlobalSecondaryIndexUpdate.builder()
+                      .create(
+                          CreateGlobalSecondaryIndexAction.builder()
+                              .indexName(getGlobalIndexName(namespace, table, columnName))
+                              .keySchema(
+                                  KeySchemaElement.builder()
+                                      .attributeName(columnName)
+                                      .keyType(KeyType.HASH)
+                                      .build())
+                              .projection(
+                                  Projection.builder().projectionType(ProjectionType.ALL).build())
+                              .provisionedThroughput(
+                                  ProvisionedThroughput.builder()
+                                      .readCapacityUnits(ru)
+                                      .writeCapacityUnits(ru)
+                                      .build())
+                              .build())
+                      .build())
+              .build());
+    } catch (Exception e) {
+      throw new ExecutionException("creating the secondary index failed", e);
+    }
+
+    waitForIndexCreation(namespace, table, columnName);
+
+    // enable auto scaling
+    boolean noScaling = Boolean.parseBoolean(options.getOrDefault(NO_SCALING, DEFAULT_NO_SCALING));
+    if (!noScaling) {
+      List<RegisterScalableTargetRequest> registerScalableTargetRequestList = new ArrayList<>();
+      List<PutScalingPolicyRequest> putScalingPolicyRequestList = new ArrayList<>();
+
+      // write, read scaling of global indexes (secondary indexes)
+      for (String scalingType : SECONDARY_INDEX_SCALING_TYPE_SET) {
+        registerScalableTargetRequestList.add(
+            buildRegisterScalableTargetRequest(
+                getGlobalIndexResourceID(namespace, table, columnName), scalingType, (int) ru));
+        putScalingPolicyRequestList.add(
+            buildPutScalingPolicyRequest(
+                getGlobalIndexResourceID(namespace, table, columnName), scalingType));
+      }
+
+      registerScalableTarget(registerScalableTargetRequestList);
+      putScalingPolicy(putScalingPolicyRequestList);
+    }
+
+    // update metadata
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    putTableMetadata(
+        namespace,
+        table,
+        TableMetadata.newBuilder(tableMetadata).addSecondaryIndex(columnName).build());
+  }
+
+  private void waitForIndexCreation(String namespace, String table, String columnName)
+      throws ExecutionException {
+    try {
+      String indexName = getGlobalIndexName(namespace, table, columnName);
+      while (true) {
+        Uninterruptibles.sleepUninterruptibly(WAITING_DURATION_SECS, TimeUnit.SECONDS);
+        DescribeTableResponse response =
+            client.describeTable(
+                DescribeTableRequest.builder()
+                    .tableName(getFullTableName(namespace, table))
+                    .build());
+        for (GlobalSecondaryIndexDescription globalSecondaryIndex :
+            response.table().globalSecondaryIndexes()) {
+          if (globalSecondaryIndex.indexName().equals(indexName)) {
+            if (globalSecondaryIndex.indexStatus() == IndexStatus.ACTIVE) {
+              return;
+            }
+          }
+        }
+      }
+    } catch (Exception e) {
+      throw new ExecutionException("waiting for the secondary index creation failed", e);
+    }
+  }
+
+  private void registerScalableTarget(
+      List<RegisterScalableTargetRequest> registerScalableTargetRequestList)
+      throws ExecutionException {
+    for (RegisterScalableTargetRequest registerScalableTargetRequest :
+        registerScalableTargetRequestList) {
+      try {
+        applicationAutoScalingClient.registerScalableTarget(registerScalableTargetRequest);
+      } catch (Exception e) {
+        throw new ExecutionException(
+            "Unable to register scalable target for " + registerScalableTargetRequest.resourceId(),
+            e);
+      }
+    }
+  }
+
+  private void putScalingPolicy(List<PutScalingPolicyRequest> putScalingPolicyRequestList)
+      throws ExecutionException {
+    for (PutScalingPolicyRequest putScalingPolicyRequest : putScalingPolicyRequestList) {
+      try {
+        applicationAutoScalingClient.putScalingPolicy(putScalingPolicyRequest);
+      } catch (Exception e) {
+        throw new ExecutionException(
+            "Unable to put scaling policy request for " + putScalingPolicyRequest.resourceId(), e);
+      }
+    }
+  }
+
+  @Override
+  public void dropIndex(String namespace, String table, String columnName)
+      throws ExecutionException {
+    try {
+      client.updateTable(
+          UpdateTableRequest.builder()
+              .tableName(getFullTableName(namespace, table))
+              .globalSecondaryIndexUpdates(
+                  GlobalSecondaryIndexUpdate.builder()
+                      .delete(
+                          DeleteGlobalSecondaryIndexAction.builder()
+                              .indexName(getGlobalIndexName(namespace, table, columnName))
+                              .build())
+                      .build())
+              .build());
+    } catch (Exception e) {
+      throw new ExecutionException("dropping the secondary index failed", e);
+    }
+
+    waitForIndexDeletion(namespace, table, columnName);
+
+    // disable auto scaling
+    List<DeleteScalingPolicyRequest> deleteScalingPolicyRequestList = new ArrayList<>();
+    List<DeregisterScalableTargetRequest> deregisterScalableTargetRequestList = new ArrayList<>();
+
+    for (String scalingType : SECONDARY_INDEX_SCALING_TYPE_SET) {
+      deleteScalingPolicyRequestList.add(
+          buildDeleteScalingPolicyRequest(
+              getGlobalIndexResourceID(namespace, table, columnName), scalingType));
+      deregisterScalableTargetRequestList.add(
+          buildDeregisterScalableTargetRequest(
+              getGlobalIndexResourceID(namespace, table, columnName), scalingType));
+    }
+
+    deleteScalingPolicy(deleteScalingPolicyRequestList);
+    deregisterScalableTarget(deregisterScalableTargetRequestList);
+
+    // update metadata
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    putTableMetadata(
+        namespace,
+        table,
+        TableMetadata.newBuilder(tableMetadata).removeSecondaryIndex(columnName).build());
+  }
+
+  private void waitForIndexDeletion(String namespace, String table, String columnName)
+      throws ExecutionException {
+    try {
+      String indexName = getGlobalIndexName(namespace, table, columnName);
+      while (true) {
+        Uninterruptibles.sleepUninterruptibly(WAITING_DURATION_SECS, TimeUnit.SECONDS);
+        DescribeTableResponse response =
+            client.describeTable(
+                DescribeTableRequest.builder()
+                    .tableName(getFullTableName(namespace, table))
+                    .build());
+        boolean deleted = true;
+        for (GlobalSecondaryIndexDescription globalSecondaryIndex :
+            response.table().globalSecondaryIndexes()) {
+          if (globalSecondaryIndex.indexName().equals(indexName)) {
+            deleted = false;
+            break;
+          }
+        }
+        if (deleted) {
+          break;
+        }
+      }
+    } catch (Exception e) {
+      throw new ExecutionException("waiting for the secondary index deletion failed", e);
+    }
+  }
+
+  private void deleteScalingPolicy(
+      List<DeleteScalingPolicyRequest> deleteScalingPolicyRequestList) {
+    for (DeleteScalingPolicyRequest deleteScalingPolicyRequest : deleteScalingPolicyRequestList) {
+      try {
+        applicationAutoScalingClient.deleteScalingPolicy(deleteScalingPolicyRequest);
+      } catch (Exception e) {
+        if (!(e instanceof ObjectNotFoundException)) {
+          LOGGER.warn(
+              "The scaling policy " + deleteScalingPolicyRequest.policyName() + " is not found.");
+        }
+      }
+    }
+  }
+
+  private void deregisterScalableTarget(
+      List<DeregisterScalableTargetRequest> deregisterScalableTargetRequestList) {
+    for (DeregisterScalableTargetRequest deregisterScalableTargetRequest :
+        deregisterScalableTargetRequestList) {
+      try {
+        applicationAutoScalingClient.deregisterScalableTarget(deregisterScalableTargetRequest);
+      } catch (Exception e) {
+        if (!(e instanceof ObjectNotFoundException)) {
+          LOGGER.warn(
+              "The scalable target "
+                  + deregisterScalableTargetRequest.resourceId()
+                  + " is not found");
+        }
+      }
+    }
   }
 
   @Override

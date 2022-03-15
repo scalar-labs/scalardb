@@ -4,9 +4,11 @@ import com.google.inject.Inject;
 import com.google.protobuf.Empty;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.rpc.CreateIndexRequest;
 import com.scalar.db.rpc.CreateNamespaceRequest;
 import com.scalar.db.rpc.CreateTableRequest;
 import com.scalar.db.rpc.DistributedStorageAdminGrpc;
+import com.scalar.db.rpc.DropIndexRequest;
 import com.scalar.db.rpc.DropNamespaceRequest;
 import com.scalar.db.rpc.DropTableRequest;
 import com.scalar.db.rpc.GetNamespaceTableNamesRequest;
@@ -106,6 +108,34 @@ public class DistributedStorageAdminService
         },
         responseObserver,
         "truncate_table");
+  }
+
+  @Override
+  public void createIndex(CreateIndexRequest request, StreamObserver<Empty> responseObserver) {
+    execute(
+        () -> {
+          admin.createIndex(
+              request.getNamespace(),
+              request.getTable(),
+              request.getColumnName(),
+              request.getOptionsMap());
+          responseObserver.onNext(Empty.getDefaultInstance());
+          responseObserver.onCompleted();
+        },
+        responseObserver,
+        "create_index");
+  }
+
+  @Override
+  public void dropIndex(DropIndexRequest request, StreamObserver<Empty> responseObserver) {
+    execute(
+        () -> {
+          admin.dropIndex(request.getNamespace(), request.getTable(), request.getColumnName());
+          responseObserver.onNext(Empty.getDefaultInstance());
+          responseObserver.onCompleted();
+        },
+        responseObserver,
+        "drop_index");
   }
 
   @Override

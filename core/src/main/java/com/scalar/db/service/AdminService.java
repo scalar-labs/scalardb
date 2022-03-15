@@ -49,6 +49,19 @@ public class AdminService implements DistributedStorageAdmin {
   }
 
   @Override
+  public void createIndex(
+      String namespace, String table, String columnName, Map<String, String> options)
+      throws ExecutionException {
+    admin.createIndex(namespace, table, columnName, options);
+  }
+
+  @Override
+  public void dropIndex(String namespace, String table, String columnName)
+      throws ExecutionException {
+    admin.dropIndex(namespace, table, columnName);
+  }
+
+  @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     return admin.getTableMetadata(namespace, table);
   }

@@ -20,6 +20,7 @@ import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.CosmosScripts;
 import com.azure.cosmos.models.CompositePathSortOrder;
 import com.azure.cosmos.models.CosmosContainerProperties;
+import com.azure.cosmos.models.CosmosContainerResponse;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosItemResponse;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
@@ -641,5 +642,142 @@ public class CosmosAdminTest {
             eq("SELECT * FROM metadata WHERE metadata.id LIKE 'ns.%'"),
             refEq(new CosmosQueryRequestOptions()),
             eq(CosmosTableMetadata.class));
+  }
+
+  @Test
+  public void createIndex_ShouldCreateIndexProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "sample_table";
+
+    when(client.getDatabase(namespace)).thenReturn(database);
+    CosmosContainerResponse response = mock(CosmosContainerResponse.class);
+    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+        .thenReturn(response);
+    CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
+    when(response.getProperties()).thenReturn(properties);
+    when(database.getContainer(table)).thenReturn(container);
+
+    // for metadata table
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer metadataContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(CosmosAdmin.METADATA_DATABASE)).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
+        .thenReturn(metadataContainer);
+    @SuppressWarnings("unchecked")
+    CosmosItemResponse<CosmosTableMetadata> itemResponse = mock(CosmosItemResponse.class);
+    when(metadataContainer.readItem(
+            anyString(),
+            any(PartitionKey.class),
+            ArgumentMatchers.<Class<CosmosTableMetadata>>any()))
+        .thenReturn(itemResponse);
+
+    CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
+    cosmosTableMetadata.setId(getFullTableName(namespace, table));
+    cosmosTableMetadata.setColumns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"));
+    cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c1"));
+    cosmosTableMetadata.setClusteringKeyNames(Collections.emptyList());
+    cosmosTableMetadata.setClusteringOrders(Collections.emptyMap());
+    cosmosTableMetadata.setSecondaryIndexNames(ImmutableSet.of("c2"));
+    when(itemResponse.getItem()).thenReturn(cosmosTableMetadata);
+
+    // Act
+    admin.createIndex(namespace, table, "c3");
+
+    // Assert
+    verify(database).createContainerIfNotExists(table, "/concatenatedPartitionKey");
+
+    ArgumentCaptor<IndexingPolicy> indexingPolicyCaptor =
+        ArgumentCaptor.forClass(IndexingPolicy.class);
+    verify(properties).setIndexingPolicy(indexingPolicyCaptor.capture());
+    IndexingPolicy indexingPolicy = indexingPolicyCaptor.getValue();
+    assertThat(indexingPolicy.getIncludedPaths().size()).isEqualTo(3);
+    assertThat(indexingPolicy.getIncludedPaths().get(0).getPath())
+        .isEqualTo("/concatenatedPartitionKey/?");
+    assertThat(indexingPolicy.getIncludedPaths().get(1).getPath()).isEqualTo("/values/c3/?");
+    assertThat(indexingPolicy.getIncludedPaths().get(2).getPath()).isEqualTo("/values/c2/?");
+    assertThat(indexingPolicy.getExcludedPaths().size()).isEqualTo(1);
+    assertThat(indexingPolicy.getExcludedPaths().get(0).getPath()).isEqualTo("/*");
+    assertThat(indexingPolicy.getCompositeIndexes()).isEmpty();
+
+    verify(container).replace(properties);
+
+    // for metadata table
+    CosmosTableMetadata expected = new CosmosTableMetadata();
+    expected.setId(getFullTableName(namespace, table));
+    expected.setColumns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"));
+    expected.setPartitionKeyNames(Collections.singletonList("c1"));
+    expected.setClusteringKeyNames(Collections.emptyList());
+    expected.setClusteringOrders(Collections.emptyMap());
+    expected.setSecondaryIndexNames(ImmutableSet.of("c2", "c3"));
+    verify(metadataContainer).upsertItem(expected);
+  }
+
+  @Test
+  public void dropIndex_ShouldDropIndexProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "sample_table";
+
+    when(client.getDatabase(namespace)).thenReturn(database);
+    CosmosContainerResponse response = mock(CosmosContainerResponse.class);
+    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+        .thenReturn(response);
+    CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
+    when(response.getProperties()).thenReturn(properties);
+    when(database.getContainer(table)).thenReturn(container);
+
+    // for metadata table
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer metadataContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(CosmosAdmin.METADATA_DATABASE)).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
+        .thenReturn(metadataContainer);
+    @SuppressWarnings("unchecked")
+    CosmosItemResponse<CosmosTableMetadata> itemResponse = mock(CosmosItemResponse.class);
+    when(metadataContainer.readItem(
+            anyString(),
+            any(PartitionKey.class),
+            ArgumentMatchers.<Class<CosmosTableMetadata>>any()))
+        .thenReturn(itemResponse);
+
+    CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
+    cosmosTableMetadata.setId(getFullTableName(namespace, table));
+    cosmosTableMetadata.setColumns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"));
+    cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c1"));
+    cosmosTableMetadata.setClusteringKeyNames(Collections.emptyList());
+    cosmosTableMetadata.setClusteringOrders(Collections.emptyMap());
+    cosmosTableMetadata.setSecondaryIndexNames(ImmutableSet.of("c2", "c3"));
+    when(itemResponse.getItem()).thenReturn(cosmosTableMetadata);
+
+    // Act
+    admin.dropIndex(namespace, table, "c2");
+
+    // Assert
+    verify(database).createContainerIfNotExists(table, "/concatenatedPartitionKey");
+
+    ArgumentCaptor<IndexingPolicy> indexingPolicyCaptor =
+        ArgumentCaptor.forClass(IndexingPolicy.class);
+    verify(properties).setIndexingPolicy(indexingPolicyCaptor.capture());
+    IndexingPolicy indexingPolicy = indexingPolicyCaptor.getValue();
+    assertThat(indexingPolicy.getIncludedPaths().size()).isEqualTo(2);
+    assertThat(indexingPolicy.getIncludedPaths().get(0).getPath())
+        .isEqualTo("/concatenatedPartitionKey/?");
+    assertThat(indexingPolicy.getIncludedPaths().get(1).getPath()).isEqualTo("/values/c3/?");
+    assertThat(indexingPolicy.getExcludedPaths().size()).isEqualTo(1);
+    assertThat(indexingPolicy.getExcludedPaths().get(0).getPath()).isEqualTo("/*");
+    assertThat(indexingPolicy.getCompositeIndexes()).isEmpty();
+
+    verify(container).replace(properties);
+
+    // for metadata table
+    CosmosTableMetadata expected = new CosmosTableMetadata();
+    expected.setId(getFullTableName(namespace, table));
+    expected.setColumns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"));
+    expected.setPartitionKeyNames(Collections.singletonList("c1"));
+    expected.setClusteringKeyNames(Collections.emptyList());
+    expected.setClusteringOrders(Collections.emptyMap());
+    expected.setSecondaryIndexNames(ImmutableSet.of("c3"));
+    verify(metadataContainer).upsertItem(expected);
   }
 }

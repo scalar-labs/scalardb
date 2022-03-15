@@ -169,6 +169,68 @@ public final class DistributedStorageAdminGrpc {
     return getTruncateTableMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.CreateIndexRequest,
+      com.google.protobuf.Empty> getCreateIndexMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "CreateIndex",
+      requestType = com.scalar.db.rpc.CreateIndexRequest.class,
+      responseType = com.google.protobuf.Empty.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.CreateIndexRequest,
+      com.google.protobuf.Empty> getCreateIndexMethod() {
+    io.grpc.MethodDescriptor<com.scalar.db.rpc.CreateIndexRequest, com.google.protobuf.Empty> getCreateIndexMethod;
+    if ((getCreateIndexMethod = DistributedStorageAdminGrpc.getCreateIndexMethod) == null) {
+      synchronized (DistributedStorageAdminGrpc.class) {
+        if ((getCreateIndexMethod = DistributedStorageAdminGrpc.getCreateIndexMethod) == null) {
+          DistributedStorageAdminGrpc.getCreateIndexMethod = getCreateIndexMethod =
+              io.grpc.MethodDescriptor.<com.scalar.db.rpc.CreateIndexRequest, com.google.protobuf.Empty>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "CreateIndex"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.CreateIndexRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.google.protobuf.Empty.getDefaultInstance()))
+              .setSchemaDescriptor(new DistributedStorageAdminMethodDescriptorSupplier("CreateIndex"))
+              .build();
+        }
+      }
+    }
+    return getCreateIndexMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.DropIndexRequest,
+      com.google.protobuf.Empty> getDropIndexMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "DropIndex",
+      requestType = com.scalar.db.rpc.DropIndexRequest.class,
+      responseType = com.google.protobuf.Empty.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.DropIndexRequest,
+      com.google.protobuf.Empty> getDropIndexMethod() {
+    io.grpc.MethodDescriptor<com.scalar.db.rpc.DropIndexRequest, com.google.protobuf.Empty> getDropIndexMethod;
+    if ((getDropIndexMethod = DistributedStorageAdminGrpc.getDropIndexMethod) == null) {
+      synchronized (DistributedStorageAdminGrpc.class) {
+        if ((getDropIndexMethod = DistributedStorageAdminGrpc.getDropIndexMethod) == null) {
+          DistributedStorageAdminGrpc.getDropIndexMethod = getDropIndexMethod =
+              io.grpc.MethodDescriptor.<com.scalar.db.rpc.DropIndexRequest, com.google.protobuf.Empty>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "DropIndex"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.DropIndexRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.google.protobuf.Empty.getDefaultInstance()))
+              .setSchemaDescriptor(new DistributedStorageAdminMethodDescriptorSupplier("DropIndex"))
+              .build();
+        }
+      }
+    }
+    return getDropIndexMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.GetTableMetadataRequest,
       com.scalar.db.rpc.GetTableMetadataResponse> getGetTableMetadataMethod;
 
@@ -347,6 +409,20 @@ public final class DistributedStorageAdminGrpc {
 
     /**
      */
+    public void createIndex(com.scalar.db.rpc.CreateIndexRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCreateIndexMethod(), responseObserver);
+    }
+
+    /**
+     */
+    public void dropIndex(com.scalar.db.rpc.DropIndexRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDropIndexMethod(), responseObserver);
+    }
+
+    /**
+     */
     public void getTableMetadata(com.scalar.db.rpc.GetTableMetadataRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetTableMetadataResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetTableMetadataMethod(), responseObserver);
@@ -403,6 +479,20 @@ public final class DistributedStorageAdminGrpc {
                 com.scalar.db.rpc.TruncateTableRequest,
                 com.google.protobuf.Empty>(
                   this, METHODID_TRUNCATE_TABLE)))
+          .addMethod(
+            getCreateIndexMethod(),
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
+              new MethodHandlers<
+                com.scalar.db.rpc.CreateIndexRequest,
+                com.google.protobuf.Empty>(
+                  this, METHODID_CREATE_INDEX)))
+          .addMethod(
+            getDropIndexMethod(),
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
+              new MethodHandlers<
+                com.scalar.db.rpc.DropIndexRequest,
+                com.google.protobuf.Empty>(
+                  this, METHODID_DROP_INDEX)))
           .addMethod(
             getGetTableMetadataMethod(),
             io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -484,6 +574,22 @@ public final class DistributedStorageAdminGrpc {
 
     /**
      */
+    public void createIndex(com.scalar.db.rpc.CreateIndexRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getCreateIndexMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void dropIndex(com.scalar.db.rpc.DropIndexRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getDropIndexMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
     public void getTableMetadata(com.scalar.db.rpc.GetTableMetadataRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetTableMetadataResponse> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
@@ -554,6 +660,20 @@ public final class DistributedStorageAdminGrpc {
     public com.google.protobuf.Empty truncateTable(com.scalar.db.rpc.TruncateTableRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getTruncateTableMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.google.protobuf.Empty createIndex(com.scalar.db.rpc.CreateIndexRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getCreateIndexMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.google.protobuf.Empty dropIndex(com.scalar.db.rpc.DropIndexRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getDropIndexMethod(), getCallOptions(), request);
     }
 
     /**
@@ -634,6 +754,22 @@ public final class DistributedStorageAdminGrpc {
 
     /**
      */
+    public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> createIndex(
+        com.scalar.db.rpc.CreateIndexRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getCreateIndexMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> dropIndex(
+        com.scalar.db.rpc.DropIndexRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getDropIndexMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
     public com.google.common.util.concurrent.ListenableFuture<com.scalar.db.rpc.GetTableMetadataResponse> getTableMetadata(
         com.scalar.db.rpc.GetTableMetadataRequest request) {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
@@ -662,9 +798,11 @@ public final class DistributedStorageAdminGrpc {
   private static final int METHODID_CREATE_TABLE = 2;
   private static final int METHODID_DROP_TABLE = 3;
   private static final int METHODID_TRUNCATE_TABLE = 4;
-  private static final int METHODID_GET_TABLE_METADATA = 5;
-  private static final int METHODID_GET_NAMESPACE_TABLE_NAMES = 6;
-  private static final int METHODID_NAMESPACE_EXISTS = 7;
+  private static final int METHODID_CREATE_INDEX = 5;
+  private static final int METHODID_DROP_INDEX = 6;
+  private static final int METHODID_GET_TABLE_METADATA = 7;
+  private static final int METHODID_GET_NAMESPACE_TABLE_NAMES = 8;
+  private static final int METHODID_NAMESPACE_EXISTS = 9;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -701,6 +839,14 @@ public final class DistributedStorageAdminGrpc {
           break;
         case METHODID_TRUNCATE_TABLE:
           serviceImpl.truncateTable((com.scalar.db.rpc.TruncateTableRequest) request,
+              (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
+          break;
+        case METHODID_CREATE_INDEX:
+          serviceImpl.createIndex((com.scalar.db.rpc.CreateIndexRequest) request,
+              (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
+          break;
+        case METHODID_DROP_INDEX:
+          serviceImpl.dropIndex((com.scalar.db.rpc.DropIndexRequest) request,
               (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
           break;
         case METHODID_GET_TABLE_METADATA:
@@ -781,6 +927,8 @@ public final class DistributedStorageAdminGrpc {
               .addMethod(getCreateTableMethod())
               .addMethod(getDropTableMethod())
               .addMethod(getTruncateTableMethod())
+              .addMethod(getCreateIndexMethod())
+              .addMethod(getDropIndexMethod())
               .addMethod(getGetTableMetadataMethod())
               .addMethod(getGetNamespaceTableNamesMethod())
               .addMethod(getNamespaceExistsMethod())
