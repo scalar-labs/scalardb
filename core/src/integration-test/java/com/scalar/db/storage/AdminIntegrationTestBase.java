@@ -402,10 +402,48 @@ public abstract class AdminIntegrationTestBase {
   public void tableExists_ShouldReturnCorrectResults() throws ExecutionException {
     // Arrange
 
-    // Act  Assert
+    // Act Assert
     assertThat(admin.tableExists(namespace1, TABLE1)).isTrue();
     assertThat(admin.tableExists(namespace1, TABLE2)).isTrue();
     assertThat(admin.tableExists(namespace1, TABLE3)).isTrue();
     assertThat(admin.tableExists(namespace1, TABLE4)).isFalse();
+  }
+
+  @Test
+  public void createIndex_ShouldCreateIndexCorrectly() throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreateOptions();
+      admin.createTable(namespace1, TABLE4, TABLE_METADATA, options);
+
+      // Act
+      admin.createIndex(namespace1, TABLE4, COL_NAME7, options);
+
+      // Assert
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME7)).isTrue();
+      assertThat(admin.getTableMetadata(namespace1, TABLE4).getSecondaryIndexNames())
+          .contains(COL_NAME7);
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
+  }
+
+  @Test
+  public void dropIndex_ShouldDropIndexCorrectly() throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreateOptions();
+      admin.createTable(namespace1, TABLE4, TABLE_METADATA, options);
+
+      // Act
+      admin.dropIndex(namespace1, TABLE4, COL_NAME6);
+
+      // Assert
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME6)).isFalse();
+      assertThat(admin.getTableMetadata(namespace1, TABLE4).getSecondaryIndexNames())
+          .doesNotContain(COL_NAME6);
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
   }
 }

@@ -1,5 +1,6 @@
 package com.scalar.db.storage.cosmos;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.scalar.db.util.ImmutableLinkedHashSet;
@@ -95,5 +96,17 @@ public class CosmosTableMetadata {
   public int hashCode() {
     return Objects.hash(
         id, partitionKeyNames, clusteringKeyNames, clusteringOrders, secondaryIndexNames, columns);
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("id", id)
+        .add("partitionKeyNames", partitionKeyNames)
+        .add("clusteringKeyNames", clusteringKeyNames)
+        .add("clusteringOrders", clusteringOrders)
+        .add("secondaryIndexNames", secondaryIndexNames)
+        .add("columns", columns)
+        .toString();
   }
 }

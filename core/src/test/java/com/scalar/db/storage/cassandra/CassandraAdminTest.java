@@ -1,6 +1,7 @@
 package com.scalar.db.storage.cassandra;
 
 import static com.datastax.driver.core.Metadata.quote;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -37,6 +38,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -309,7 +311,7 @@ public class CassandraAdminTest {
     indexes.add("c5");
 
     // Act
-    cassandraAdmin.createSecondaryIndex(namespace, table, indexes);
+    cassandraAdmin.createSecondaryIndexes(namespace, table, indexes, Collections.emptyMap());
 
     // Assert
     SchemaStatement c1IndexStatement =
@@ -335,7 +337,7 @@ public class CassandraAdminTest {
     indexes.add("to");
 
     // Act
-    cassandraAdmin.createSecondaryIndex(namespace, table, indexes);
+    cassandraAdmin.createSecondaryIndexes(namespace, table, indexes, Collections.emptyMap());
 
     // Assert
     SchemaStatement c1IndexStatement =
@@ -429,7 +431,7 @@ public class CassandraAdminTest {
     Set<String> actualTableNames = cassandraAdmin.getNamespaceTableNames(namespace);
 
     // Assert
-    Assertions.assertThat(actualTableNames).isEqualTo(ImmutableSet.copyOf(expectedTableNames));
+    assertThat(actualTableNames).isEqualTo(ImmutableSet.copyOf(expectedTableNames));
   }
 
   @Test
@@ -479,5 +481,38 @@ public class CassandraAdminTest {
     Assert.assertTrue(cassandraAdmin.namespaceExists(namespace));
 
     verify(metadata).getKeyspace(namespace);
+  }
+
+  @Test
+  public void createIndex_ShouldExecuteProperCql() throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "tbl";
+    String columnName = "col";
+
+    // Act
+    cassandraAdmin.createIndex(namespace, table, columnName, Collections.emptyMap());
+
+    // Assert
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(cassandraSession).execute(captor.capture());
+    assertThat(captor.getValue().trim())
+        .isEqualTo("CREATE INDEX tbl_index_col ON sample_ns.tbl(col)");
+  }
+
+  @Test
+  public void dropIndex_ShouldExecuteProperCql() throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "tbl";
+    String columnName = "col";
+
+    // Act
+    cassandraAdmin.dropIndex(namespace, table, columnName);
+
+    // Assert
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(cassandraSession).execute(captor.capture());
+    assertThat(captor.getValue().trim()).isEqualTo("DROP INDEX sample_ns.tbl_index_col");
   }
 }
