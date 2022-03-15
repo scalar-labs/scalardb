@@ -177,8 +177,18 @@ public class TableMetadata {
       return this;
     }
 
+    public Builder removeColumn(String name) {
+      columns.remove(name);
+      return this;
+    }
+
     public Builder addPartitionKey(String name) {
       partitionKeyNames.add(name);
+      return this;
+    }
+
+    public Builder removePartitionKey(String name) {
+      partitionKeyNames.remove(name);
       return this;
     }
 
@@ -193,8 +203,19 @@ public class TableMetadata {
       return this;
     }
 
+    public Builder removeClusteringKey(String name) {
+      clusteringKeyNames.remove(name);
+      clusteringOrders.remove(name);
+      return this;
+    }
+
     public Builder addSecondaryIndex(String name) {
       secondaryIndexNames.add(name);
+      return this;
+    }
+
+    public Builder removeSecondaryIndex(String name) {
+      secondaryIndexNames.remove(name);
       return this;
     }
 

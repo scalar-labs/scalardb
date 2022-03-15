@@ -11,8 +11,10 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.rpc.CreateIndexRequest;
 import com.scalar.db.rpc.CreateNamespaceRequest;
 import com.scalar.db.rpc.CreateTableRequest;
+import com.scalar.db.rpc.DropIndexRequest;
 import com.scalar.db.rpc.DropNamespaceRequest;
 import com.scalar.db.rpc.DropTableRequest;
 import com.scalar.db.rpc.GetNamespaceTableNamesRequest;
@@ -140,6 +142,50 @@ public class DistributedStorageAdminServiceTest {
 
     // Assert
     verify(admin).truncateTable(any(), any());
+    verify(responseObserver).onNext(any());
+    verify(responseObserver).onCompleted();
+  }
+
+  @Test
+  public void createIndex_IsCalledWithProperArguments_AdminShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    CreateIndexRequest request =
+        CreateIndexRequest.newBuilder()
+            .setNamespace("namespace")
+            .setTable("table")
+            .setTable("col")
+            .build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
+
+    // Act
+    adminService.createIndex(request, responseObserver);
+
+    // Assert
+    verify(admin).createIndex(any(), any(), any(), anyMap());
+    verify(responseObserver).onNext(any());
+    verify(responseObserver).onCompleted();
+  }
+
+  @Test
+  public void dropIndex_IsCalledWithProperArguments_AdminShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    DropIndexRequest request =
+        DropIndexRequest.newBuilder()
+            .setNamespace("namespace")
+            .setTable("table")
+            .setTable("col")
+            .build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
+
+    // Act
+    adminService.dropIndex(request, responseObserver);
+
+    // Assert
+    verify(admin).dropIndex(any(), any(), any());
     verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }
