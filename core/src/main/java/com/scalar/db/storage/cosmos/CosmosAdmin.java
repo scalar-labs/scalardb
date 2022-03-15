@@ -200,7 +200,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
           convertToCosmosTableMetadata(getFullTableName(namespace, table), metadata);
       getMetadataContainer().upsertItem(cosmosTableMetadata);
     } catch (RuntimeException e) {
-      throw new ExecutionException("adding the table metadata failed", e);
+      throw new ExecutionException("putting the table metadata failed", e);
     }
   }
 
@@ -368,7 +368,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       // update the container properties
       database.getContainer(containerName).replace(properties);
     } catch (RuntimeException e) {
-      throw new ExecutionException("dropping the secondary index failed", e);
+      throw new ExecutionException("updating the indexing policy failed", e);
     }
   }
 
