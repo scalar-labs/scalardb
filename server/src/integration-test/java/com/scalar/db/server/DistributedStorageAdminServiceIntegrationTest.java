@@ -2,11 +2,11 @@ package com.scalar.db.server;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.storage.AdminIntegrationTestBase;
+import com.scalar.db.storage.StorageAdminIntegrationTestBase;
 import java.io.IOException;
 import org.junit.AfterClass;
 
-public class DistributedStorageAdminServiceIntegrationTest extends AdminIntegrationTestBase {
+public class DistributedStorageAdminServiceIntegrationTest extends StorageAdminIntegrationTestBase {
 
   private static ScalarDbServer server;
 
@@ -26,7 +26,7 @@ public class DistributedStorageAdminServiceIntegrationTest extends AdminIntegrat
 
   @AfterClass
   public static void tearDownAfterClass() throws ExecutionException {
-    AdminIntegrationTestBase.tearDownAfterClass();
+    StorageAdminIntegrationTestBase.tearDownAfterClass();
     if (server != null) {
       server.shutdown();
       server.blockUntilShutdown();

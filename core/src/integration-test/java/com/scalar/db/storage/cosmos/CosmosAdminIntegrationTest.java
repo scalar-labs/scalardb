@@ -1,11 +1,11 @@
 package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.AdminIntegrationTestBase;
+import com.scalar.db.storage.StorageAdminIntegrationTestBase;
 import java.util.Map;
 import java.util.Optional;
 
-public class CosmosAdminIntegrationTest extends AdminIntegrationTestBase {
+public class CosmosAdminIntegrationTest extends StorageAdminIntegrationTestBase {
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {

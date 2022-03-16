@@ -111,9 +111,9 @@ public class TwoPhaseConsensusCommitIntegrationTest {
             .addClusteringKey(ACCOUNT_TYPE)
             .build();
     admin.createNamespace(NAMESPACE, true);
-    consensusCommitAdmin.createTransactionalTable(NAMESPACE, TABLE_1, tableMetadata, true);
-    consensusCommitAdmin.createTransactionalTable(NAMESPACE, TABLE_2, tableMetadata, true);
-    consensusCommitAdmin.createCoordinatorTable();
+    consensusCommitAdmin.createTable(NAMESPACE, TABLE_1, tableMetadata, true);
+    consensusCommitAdmin.createTable(NAMESPACE, TABLE_2, tableMetadata, true);
+    consensusCommitAdmin.createCoordinatorNamespaceAndTable();
   }
 
   private static void initManagerAndCoordinator(DatabaseConfig config) {
@@ -145,7 +145,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     admin.dropTable(NAMESPACE, TABLE_1);
     admin.dropTable(NAMESPACE, TABLE_2);
     admin.dropNamespace(NAMESPACE);
-    consensusCommitAdmin.dropCoordinatorTable();
+    consensusCommitAdmin.dropCoordinatorNamespaceAndTable();
   }
 
   @Test
