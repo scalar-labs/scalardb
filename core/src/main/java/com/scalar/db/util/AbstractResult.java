@@ -3,19 +3,34 @@ package com.scalar.db.util;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Result;
+import com.scalar.db.io.Value;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public abstract class AbstractResult implements Result {
 
+  private final Supplier<Map<String, Value<?>>> valuesWithDefaultValues;
   private final Supplier<Integer> hashCode;
 
   public AbstractResult() {
-    // lazy loading
+    valuesWithDefaultValues =
+        Suppliers.memoize(
+            () ->
+                ImmutableMap.copyOf(
+                    getColumns().entrySet().stream()
+                        .collect(
+                            Collectors.toMap(
+                                Entry::getKey, e -> ScalarDbUtils.toValue(e.getValue())))));
+
     hashCode =
         Suppliers.memoize(
             () -> {
@@ -33,6 +48,18 @@ public abstract class AbstractResult implements Result {
     if (!contains(name)) {
       throw new IllegalArgumentException(name + " doesn't exist");
     }
+  }
+
+  @Deprecated
+  @Override
+  public Optional<Value<?>> getValue(String columnName) {
+    return Optional.ofNullable(valuesWithDefaultValues.get().get(columnName));
+  }
+
+  @Deprecated
+  @Override
+  public Map<String, Value<?>> getValues() {
+    return valuesWithDefaultValues.get();
   }
 
   @Override

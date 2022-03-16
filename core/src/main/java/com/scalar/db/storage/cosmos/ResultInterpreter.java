@@ -2,22 +2,21 @@ package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.io.Value;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.ResultImpl;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -33,7 +32,7 @@ public class ResultInterpreter {
   }
 
   public Result interpret(Record record) {
-    Map<String, Optional<Value<?>>> ret = new HashMap<>();
+    Map<String, Column<?>> ret = new HashMap<>();
 
     Map<String, Object> recordValues = record.getValues();
     if (projections.isEmpty()) {
@@ -54,30 +53,40 @@ public class ResultInterpreter {
   }
 
   private void add(
-      Map<String, Optional<Value<?>>> values, String name, Object value, TableMetadata metadata) {
-    values.put(name, Optional.ofNullable(convert(value, name, metadata.getColumnDataType(name))));
+      Map<String, Column<?>> columns, String name, Object value, TableMetadata metadata) {
+    columns.put(name, convert(value, name, metadata.getColumnDataType(name)));
   }
 
-  @Nullable
-  private Value<?> convert(@Nullable Object recordValue, String name, DataType dataType) {
-    if (recordValue == null) {
-      return null;
-    }
+  private Column<?> convert(@Nullable Object recordValue, String name, DataType dataType) {
     switch (dataType) {
       case BOOLEAN:
-        return new BooleanValue(name, (boolean) recordValue);
+        return recordValue == null
+            ? BooleanColumn.ofNull(name)
+            : BooleanColumn.of(name, (boolean) recordValue);
       case INT:
-        return new IntValue(name, ((Number) recordValue).intValue());
+        return recordValue == null
+            ? IntColumn.ofNull(name)
+            : IntColumn.of(name, ((Number) recordValue).intValue());
       case BIGINT:
-        return new BigIntValue(name, ((Number) recordValue).longValue());
+        return recordValue == null
+            ? BigIntColumn.ofNull(name)
+            : BigIntColumn.of(name, ((Number) recordValue).longValue());
       case FLOAT:
-        return new FloatValue(name, ((Number) recordValue).floatValue());
+        return recordValue == null
+            ? FloatColumn.ofNull(name)
+            : FloatColumn.of(name, ((Number) recordValue).floatValue());
       case DOUBLE:
-        return new DoubleValue(name, ((Number) recordValue).doubleValue());
+        return recordValue == null
+            ? DoubleColumn.ofNull(name)
+            : DoubleColumn.of(name, ((Number) recordValue).doubleValue());
       case TEXT:
-        return new TextValue(name, (String) recordValue);
+        return recordValue == null
+            ? TextColumn.ofNull(name)
+            : TextColumn.of(name, (String) recordValue);
       case BLOB:
-        return new BlobValue(name, Base64.getDecoder().decode((String) recordValue));
+        return recordValue == null
+            ? BlobColumn.ofNull(name)
+            : BlobColumn.of(name, Base64.getDecoder().decode((String) recordValue));
       default:
         throw new AssertionError();
     }

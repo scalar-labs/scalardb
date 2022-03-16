@@ -1,13 +1,15 @@
 package com.scalar.db.api;
 
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
-import com.scalar.db.io.TextValue;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.Value;
+import com.scalar.db.util.ScalarDbUtils;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 import javax.annotation.concurrent.Immutable;
@@ -19,8 +21,7 @@ import javax.annotation.concurrent.Immutable;
  */
 @Immutable
 public class ConditionalExpression {
-  private final String columnName;
-  private final Value<?> value;
+  private final Column<?> column;
   private final Operator operator;
 
   /**
@@ -37,8 +38,17 @@ public class ConditionalExpression {
    */
   @Deprecated
   public ConditionalExpression(String columnName, Value<?> value, Operator operator) {
-    this.columnName = columnName;
-    this.value = value;
+    this(ScalarDbUtils.toColumn(value).copyWith(columnName), operator);
+  }
+
+  /**
+   * Constructs a {@code ConditionalExpression} with the specified column and operator.
+   *
+   * @param column a target column used to compare
+   * @param operator an operator used to compare the target column
+   */
+  ConditionalExpression(Column<?> column, Operator operator) {
+    this.column = column;
     this.operator = operator;
   }
 
@@ -53,7 +63,7 @@ public class ConditionalExpression {
    */
   @Deprecated
   public ConditionalExpression(String columnName, boolean booleanValue, Operator operator) {
-    this(columnName, new BooleanValue(booleanValue), operator);
+    this(BooleanColumn.of(columnName, booleanValue), operator);
   }
 
   /**
@@ -67,7 +77,7 @@ public class ConditionalExpression {
    */
   @Deprecated
   public ConditionalExpression(String columnName, int intValue, Operator operator) {
-    this(columnName, new IntValue(intValue), operator);
+    this(IntColumn.of(columnName, intValue), operator);
   }
 
   /**
@@ -81,7 +91,7 @@ public class ConditionalExpression {
    */
   @Deprecated
   public ConditionalExpression(String columnName, long bigIntValue, Operator operator) {
-    this(columnName, new BigIntValue(bigIntValue), operator);
+    this(BigIntColumn.of(columnName, bigIntValue), operator);
   }
 
   /**
@@ -95,7 +105,7 @@ public class ConditionalExpression {
    */
   @Deprecated
   public ConditionalExpression(String columnName, float floatValue, Operator operator) {
-    this(columnName, new FloatValue(floatValue), operator);
+    this(FloatColumn.of(columnName, floatValue), operator);
   }
 
   /**
@@ -109,7 +119,7 @@ public class ConditionalExpression {
    */
   @Deprecated
   public ConditionalExpression(String columnName, double doubleValue, Operator operator) {
-    this(columnName, new DoubleValue(doubleValue), operator);
+    this(DoubleColumn.of(columnName, doubleValue), operator);
   }
 
   /**
@@ -123,7 +133,7 @@ public class ConditionalExpression {
    */
   @Deprecated
   public ConditionalExpression(String columnName, String textValue, Operator operator) {
-    this(columnName, new TextValue(textValue), operator);
+    this(TextColumn.of(columnName, textValue), operator);
   }
 
   /**
@@ -137,7 +147,7 @@ public class ConditionalExpression {
    */
   @Deprecated
   public ConditionalExpression(String columnName, byte[] blobValue, Operator operator) {
-    this(columnName, new BlobValue(blobValue), operator);
+    this(BlobColumn.of(columnName, blobValue), operator);
   }
 
   /**
@@ -151,7 +161,7 @@ public class ConditionalExpression {
    */
   @Deprecated
   public ConditionalExpression(String columnName, ByteBuffer blobValue, Operator operator) {
-    this(columnName, new BlobValue(blobValue), operator);
+    this(BlobColumn.of(columnName, blobValue), operator);
   }
 
   /**
@@ -162,28 +172,30 @@ public class ConditionalExpression {
    */
   @Deprecated
   public String getName() {
-    return columnName;
+    return column.getName();
   }
 
   /**
-   * Returns the column name of target column.
+   * Returns the value used to compare with the target column.
    *
-   * @return the column name of target column
+   * @return the value used to compare with the target column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
    */
-  public String getColumnName() {
-    return columnName;
+  @Deprecated
+  public Value<?> getValue() {
+    return ScalarDbUtils.toValue(column).copyWith("");
   }
 
   /**
-   * Return the value used to compare with the target column.
+   * Returns the target column used to compare.
    *
    * <p>This method is primarily for internal use. Breaking changes can and will be introduced to
    * this method. Users should not depend on it.
    *
-   * @return the value used to compare with the target column
+   * @return the target column
    */
-  public Value<?> getValue() {
-    return value;
+  public Column<?> getColumn() {
+    return column;
   }
 
   /**
@@ -192,7 +204,7 @@ public class ConditionalExpression {
    * @return the BOOLEAN value to compare with the target column
    */
   public boolean getBooleanValue() {
-    return value.getAsBoolean();
+    return column.getBooleanValue();
   }
 
   /**
@@ -201,7 +213,7 @@ public class ConditionalExpression {
    * @return the INT value to compare with the target column
    */
   public int getIntValue() {
-    return value.getAsInt();
+    return column.getIntValue();
   }
 
   /**
@@ -210,7 +222,7 @@ public class ConditionalExpression {
    * @return the BIGINT value to compare with the target column
    */
   public long getBigIntValue() {
-    return value.getAsLong();
+    return column.getBigIntValue();
   }
 
   /**
@@ -219,7 +231,7 @@ public class ConditionalExpression {
    * @return the FLOAT value to compare with the target column
    */
   public float getFloatValue() {
-    return value.getAsFloat();
+    return column.getFloatValue();
   }
 
   /**
@@ -228,7 +240,7 @@ public class ConditionalExpression {
    * @return the DOUBLE value to compare with the target column
    */
   public double getDoubleValue() {
-    return value.getAsDouble();
+    return column.getDoubleValue();
   }
 
   /**
@@ -237,7 +249,7 @@ public class ConditionalExpression {
    * @return the TEXT value to compare with the target column
    */
   public String getTextValue() {
-    return value.getAsString().orElse(null);
+    return column.getTextValue();
   }
 
   /**
@@ -255,7 +267,7 @@ public class ConditionalExpression {
    * @return the BLOB value to compare with the target column as a ByteBuffer type
    */
   public ByteBuffer getBlobValueAsByteBuffer() {
-    return value.getAsByteBuffer().orElse(null);
+    return column.getBlobValueAsByteBuffer();
   }
 
   /**
@@ -264,7 +276,7 @@ public class ConditionalExpression {
    * @return the BLOB value to compare with the target column as a byte array type
    */
   public byte[] getBlobValueAsBytes() {
-    return value.getAsBytes().orElse(null);
+    return column.getBlobValueAsBytes();
   }
 
   /**
@@ -280,23 +292,7 @@ public class ConditionalExpression {
    * @return the value to compare with the target column as an Object type
    */
   public Object getValueAsObject() {
-    if (value instanceof BooleanValue) {
-      return getBooleanValue();
-    } else if (value instanceof IntValue) {
-      return getIntValue();
-    } else if (value instanceof BigIntValue) {
-      return getBigIntValue();
-    } else if (value instanceof FloatValue) {
-      return getFloatValue();
-    } else if (value instanceof DoubleValue) {
-      return getDoubleValue();
-    } else if (value instanceof TextValue) {
-      return getTextValue();
-    } else if (value instanceof BlobValue) {
-      return getBlobValue();
-    } else {
-      throw new AssertionError();
-    }
+    return column.getValueAsObject();
   }
 
   /**
@@ -329,14 +325,12 @@ public class ConditionalExpression {
       return false;
     }
     ConditionalExpression other = (ConditionalExpression) o;
-    return columnName.equals(other.columnName)
-        && value.equals(other.value)
-        && operator.equals(other.operator);
+    return column.equals(other.column) && operator.equals(other.operator);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(columnName, value, operator);
+    return Objects.hash(column, operator);
   }
 
   public enum Operator {

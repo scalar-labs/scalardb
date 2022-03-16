@@ -8,6 +8,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.rpc.DistributedStorageGrpc;
 import com.scalar.db.rpc.GetRequest;
@@ -16,11 +17,13 @@ import com.scalar.db.rpc.MutateRequest;
 import com.scalar.db.rpc.ScanRequest;
 import com.scalar.db.rpc.ScanResponse;
 import com.scalar.db.util.ProtoUtils;
+import com.scalar.db.util.TableMetadataManager;
 import com.scalar.db.util.ThrowableRunnable;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -37,13 +40,18 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
   private static final int DEFAULT_SCAN_FETCH_COUNT = 100;
 
   private final DistributedStorage storage;
+  private final TableMetadataManager tableMetadataManager;
   private final GateKeeper gateKeeper;
   private final Metrics metrics;
 
   @Inject
   public DistributedStorageService(
-      DistributedStorage storage, GateKeeper gateKeeper, Metrics metrics) {
+      DistributedStorage storage,
+      TableMetadataManager tableMetadataManager,
+      GateKeeper gateKeeper,
+      Metrics metrics) {
     this.storage = storage;
+    this.tableMetadataManager = tableMetadataManager;
     this.gateKeeper = gateKeeper;
     this.metrics = metrics;
   }
@@ -52,7 +60,14 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
   public void get(GetRequest request, StreamObserver<GetResponse> responseObserver) {
     execute(
         () -> {
-          Get get = ProtoUtils.toGet(request.getGet());
+          TableMetadata metadata =
+              tableMetadataManager.getTableMetadata(
+                  request.getGet().getNamespace(), request.getGet().getTable());
+          if (metadata == null) {
+            throw new IllegalArgumentException("the specified table is not found");
+          }
+
+          Get get = ProtoUtils.toGet(request.getGet(), metadata);
           Optional<Result> result = storage.get(get);
           GetResponse.Builder builder = GetResponse.newBuilder();
           result.ifPresent(r -> builder.setResult(ProtoUtils.toResult(r)));
@@ -66,16 +81,34 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
   @Override
   public StreamObserver<ScanRequest> scan(StreamObserver<ScanResponse> responseObserver) {
     return new ScanStreamObserver(
-        storage, responseObserver, metrics, this::preProcess, this::postProcess);
+        storage,
+        tableMetadataManager,
+        responseObserver,
+        metrics,
+        this::preProcess,
+        this::postProcess);
   }
 
   @Override
   public void mutate(MutateRequest request, StreamObserver<Empty> responseObserver) {
     execute(
         () -> {
-          List<Mutation> mutations = new ArrayList<>(request.getMutationCount());
-          for (com.scalar.db.rpc.Mutation mutation : request.getMutationList()) {
-            mutations.add(ProtoUtils.toMutation(mutation));
+          List<Mutation> mutations;
+          if (request.getMutationCount() > 0) {
+            TableMetadata metadata =
+                tableMetadataManager.getTableMetadata(
+                    request.getMutationList().get(0).getNamespace(),
+                    request.getMutationList().get(0).getTable());
+            if (metadata == null) {
+              throw new IllegalArgumentException("the specified table is not found");
+            }
+
+            mutations = new ArrayList<>(request.getMutationCount());
+            for (com.scalar.db.rpc.Mutation mutation : request.getMutationList()) {
+              mutations.add(ProtoUtils.toMutation(mutation, metadata));
+            }
+          } else {
+            mutations = Collections.emptyList();
           }
           storage.mutate(mutations);
           responseObserver.onNext(Empty.getDefaultInstance());
@@ -132,6 +165,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
   private static class ScanStreamObserver implements StreamObserver<ScanRequest> {
 
     private final DistributedStorage storage;
+    private final TableMetadataManager tableMetadataManager;
     private final StreamObserver<ScanResponse> responseObserver;
     private final Metrics metrics;
     private final Function<StreamObserver<?>, Boolean> preProcessor;
@@ -143,11 +177,13 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
 
     public ScanStreamObserver(
         DistributedStorage storage,
+        TableMetadataManager tableMetadataManager,
         StreamObserver<ScanResponse> responseObserver,
         Metrics metrics,
         Function<StreamObserver<?>, Boolean> preProcessor,
         Runnable postProcessor) {
       this.storage = storage;
+      this.tableMetadataManager = tableMetadataManager;
       this.responseObserver = responseObserver;
       this.metrics = metrics;
       this.preProcessor = preProcessor;
@@ -199,7 +235,13 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
             SERVICE_NAME,
             "scan.open_scanner",
             () -> {
-              Scan scan = ProtoUtils.toScan(request.getScan());
+              TableMetadata metadata =
+                  tableMetadataManager.getTableMetadata(
+                      request.getScan().getNamespace(), request.getScan().getTable());
+              if (metadata == null) {
+                throw new IllegalArgumentException("the specified table is not found");
+              }
+              Scan scan = ProtoUtils.toScan(request.getScan(), metadata);
               scanner = storage.scan(scan);
             });
         return true;

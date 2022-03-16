@@ -1,5 +1,6 @@
 package com.scalar.db.api;
 
+import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import java.nio.ByteBuffer;
@@ -193,4 +194,14 @@ public interface Result {
    * @return a set of the contained column names
    */
   Set<String> getContainedColumnNames();
+
+  /**
+   * Returns a map of {@link Column}s in this result.
+   *
+   * <p>This method is primarily for internal use. Breaking changes can and will be introduced to
+   * this method. Users should not depend on it.
+   *
+   * @return a map of {@code Column}s in this result
+   */
+  Map<String, Column<?>> getColumns();
 }

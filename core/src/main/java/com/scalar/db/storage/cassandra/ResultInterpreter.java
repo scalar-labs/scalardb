@@ -3,22 +3,20 @@ package com.scalar.db.storage.cassandra;
 import com.datastax.driver.core.Row;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.io.Value;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.ResultImpl;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -33,44 +31,44 @@ public class ResultInterpreter {
   }
 
   public Result interpret(Row row) {
-    Map<String, Optional<Value<?>>> ret = new HashMap<>();
+    Map<String, Column<?>> ret = new HashMap<>();
     if (projections.isEmpty()) {
       metadata
           .getColumnNames()
-          .forEach(
-              name ->
-                  ret.put(
-                      name,
-                      Optional.ofNullable(convert(row, name, metadata.getColumnDataType(name)))));
+          .forEach(name -> ret.put(name, convert(row, name, metadata.getColumnDataType(name))));
     } else {
       projections.forEach(
-          name ->
-              ret.put(
-                  name, Optional.ofNullable(convert(row, name, metadata.getColumnDataType(name)))));
+          name -> ret.put(name, convert(row, name, metadata.getColumnDataType(name))));
     }
     return new ResultImpl(ret, metadata);
   }
 
-  @Nullable
-  private Value<?> convert(Row row, String name, DataType type) {
-    if (row.isNull(name)) {
-      return null;
-    }
+  private Column<?> convert(Row row, String name, DataType type) {
     switch (type) {
       case BOOLEAN:
-        return new BooleanValue(name, row.getBool(name));
+        return row.isNull(name)
+            ? BooleanColumn.ofNull(name)
+            : BooleanColumn.of(name, row.getBool(name));
       case INT:
-        return new IntValue(name, row.getInt(name));
+        return row.isNull(name) ? IntColumn.ofNull(name) : IntColumn.of(name, row.getInt(name));
       case BIGINT:
-        return new BigIntValue(name, row.getLong(name));
+        return row.isNull(name)
+            ? BigIntColumn.ofNull(name)
+            : BigIntColumn.of(name, row.getLong(name));
       case FLOAT:
-        return new FloatValue(name, row.getFloat(name));
+        return row.isNull(name)
+            ? FloatColumn.ofNull(name)
+            : FloatColumn.of(name, row.getFloat(name));
       case DOUBLE:
-        return new DoubleValue(name, row.getDouble(name));
+        return row.isNull(name)
+            ? DoubleColumn.ofNull(name)
+            : DoubleColumn.of(name, row.getDouble(name));
       case TEXT:
-        return new TextValue(name, row.getString(name));
+        return row.isNull(name)
+            ? TextColumn.ofNull(name)
+            : TextColumn.of(name, row.getString(name));
       case BLOB:
-        return new BlobValue(name, row.getBytes(name));
+        return row.isNull(name) ? BlobColumn.ofNull(name) : BlobColumn.of(name, row.getBytes(name));
       default:
         throw new AssertionError();
     }
