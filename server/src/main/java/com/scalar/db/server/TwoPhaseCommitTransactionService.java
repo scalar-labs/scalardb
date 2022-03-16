@@ -2,8 +2,10 @@ package com.scalar.db.server;
 
 import com.google.inject.Inject;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
@@ -35,9 +37,11 @@ import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.GetResponse;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ScanResponse;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse;
 import com.scalar.db.util.ProtoUtils;
+import com.scalar.db.util.TableMetadataManager;
 import com.scalar.db.util.ThrowableRunnable;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -55,13 +59,18 @@ public class TwoPhaseCommitTransactionService
   private static final String SERVICE_NAME = "two_phase_commit_transaction";
 
   private final TwoPhaseCommitTransactionManager manager;
+  private final TableMetadataManager tableMetadataManager;
   private final GateKeeper gateKeeper;
   private final Metrics metrics;
 
   @Inject
   public TwoPhaseCommitTransactionService(
-      TwoPhaseCommitTransactionManager manager, GateKeeper gateKeeper, Metrics metrics) {
+      TwoPhaseCommitTransactionManager manager,
+      TableMetadataManager tableMetadataManager,
+      GateKeeper gateKeeper,
+      Metrics metrics) {
     this.manager = manager;
+    this.tableMetadataManager = tableMetadataManager;
     this.gateKeeper = gateKeeper;
     this.metrics = metrics;
   }
@@ -70,7 +79,12 @@ public class TwoPhaseCommitTransactionService
   public StreamObserver<TwoPhaseCommitTransactionRequest> twoPhaseCommitTransaction(
       StreamObserver<TwoPhaseCommitTransactionResponse> responseObserver) {
     return new TwoPhaseCommitTransactionStreamObserver(
-        manager, responseObserver, metrics, this::preProcess, this::postProcess);
+        manager,
+        tableMetadataManager,
+        responseObserver,
+        metrics,
+        this::preProcess,
+        this::postProcess);
   }
 
   @Override
@@ -148,6 +162,7 @@ public class TwoPhaseCommitTransactionService
       implements StreamObserver<TwoPhaseCommitTransactionRequest> {
 
     private final TwoPhaseCommitTransactionManager manager;
+    private final TableMetadataManager tableMetadataManager;
     private final StreamObserver<TwoPhaseCommitTransactionResponse> responseObserver;
     private final Metrics metrics;
     private final Function<StreamObserver<?>, Boolean> preProcessor;
@@ -158,11 +173,13 @@ public class TwoPhaseCommitTransactionService
 
     public TwoPhaseCommitTransactionStreamObserver(
         TwoPhaseCommitTransactionManager manager,
+        TableMetadataManager tableMetadataManager,
         StreamObserver<TwoPhaseCommitTransactionResponse> responseObserver,
         Metrics metrics,
         Function<StreamObserver<?>, Boolean> preProcessor,
         Runnable postProcessor) {
       this.manager = manager;
+      this.tableMetadataManager = tableMetadataManager;
       this.responseObserver = responseObserver;
       this.metrics = metrics;
       this.preProcessor = preProcessor;
@@ -309,7 +326,14 @@ public class TwoPhaseCommitTransactionService
         GetRequest request, TwoPhaseCommitTransactionResponse.Builder responseBuilder) {
       execute(
           () -> {
-            Get get = ProtoUtils.toGet(request.getGet());
+            TableMetadata metadata =
+                tableMetadataManager.getTableMetadata(
+                    request.getGet().getNamespace(), request.getGet().getTable());
+            if (metadata == null) {
+              throw new IllegalArgumentException("the specified table is not found");
+            }
+
+            Get get = ProtoUtils.toGet(request.getGet(), metadata);
             Optional<Result> result = transaction.get(get);
             GetResponse.Builder builder = GetResponse.newBuilder();
             result.ifPresent(r -> builder.setResult(ProtoUtils.toResult(r)));
@@ -323,7 +347,14 @@ public class TwoPhaseCommitTransactionService
         ScanRequest request, TwoPhaseCommitTransactionResponse.Builder responseBuilder) {
       execute(
           () -> {
-            Scan scan = ProtoUtils.toScan(request.getScan());
+            TableMetadata metadata =
+                tableMetadataManager.getTableMetadata(
+                    request.getScan().getNamespace(), request.getScan().getTable());
+            if (metadata == null) {
+              throw new IllegalArgumentException("the specified table is not found");
+            }
+
+            Scan scan = ProtoUtils.toScan(request.getScan(), metadata);
             List<Result> results = transaction.scan(scan);
             ScanResponse.Builder builder = ScanResponse.newBuilder();
             results.forEach(r -> builder.addResult(ProtoUtils.toResult(r)));
@@ -336,11 +367,26 @@ public class TwoPhaseCommitTransactionService
     private void mutate(
         MutateRequest request, TwoPhaseCommitTransactionResponse.Builder responseBuilder) {
       execute(
-          () ->
-              transaction.mutate(
+          () -> {
+            List<Mutation> mutations;
+            if (request.getMutationCount() > 0) {
+              TableMetadata metadata =
+                  tableMetadataManager.getTableMetadata(
+                      request.getMutationList().get(0).getNamespace(),
+                      request.getMutationList().get(0).getTable());
+              if (metadata == null) {
+                throw new IllegalArgumentException("the specified table is not found");
+              }
+
+              mutations =
                   request.getMutationList().stream()
-                      .map(ProtoUtils::toMutation)
-                      .collect(Collectors.toList())),
+                      .map(m -> ProtoUtils.toMutation(m, metadata))
+                      .collect(Collectors.toList());
+            } else {
+              mutations = Collections.emptyList();
+            }
+            transaction.mutate(mutations);
+          },
           responseBuilder,
           "transaction.mutate");
     }

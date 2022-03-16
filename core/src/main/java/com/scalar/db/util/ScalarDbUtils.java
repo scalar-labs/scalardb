@@ -9,12 +9,20 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
+import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BlobValue;
+import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.DoubleValue;
+import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.FloatValue;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.util.List;
@@ -144,22 +152,59 @@ public final class ScalarDbUtils {
     return namespace + "." + table;
   }
 
-  public static Value<?> getDefaultValue(String name, TableMetadata metadata) {
-    switch (metadata.getColumnDataType(name)) {
+  /**
+   * Converts {@code Column} to {@code Value}.
+   *
+   * @param column a column to convert
+   * @return a value converted from the column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   */
+  @Deprecated
+  public static Value<?> toValue(Column<?> column) {
+    switch (column.getDataType()) {
       case BOOLEAN:
-        return new BooleanValue(name, false);
+        return new BooleanValue(column.getName(), column.getBooleanValue());
       case INT:
-        return new IntValue(name, 0);
+        return new IntValue(column.getName(), column.getIntValue());
       case BIGINT:
-        return new BigIntValue(name, 0L);
+        return new BigIntValue(column.getName(), column.getBigIntValue());
       case FLOAT:
-        return new FloatValue(name, 0.0F);
+        return new FloatValue(column.getName(), column.getFloatValue());
       case DOUBLE:
-        return new DoubleValue(name, 0.0D);
+        return new DoubleValue(column.getName(), column.getDoubleValue());
       case TEXT:
-        return new TextValue(name, (String) null);
+        return new TextValue(column.getName(), column.getTextValue());
       case BLOB:
-        return new BlobValue(name, (byte[]) null);
+        return new BlobValue(column.getName(), column.getBlobValue());
+      default:
+        throw new AssertionError();
+    }
+  }
+
+  /**
+   * Converts {@code Value} to {@code Column}.
+   *
+   * @param value a value to convert
+   * @return a column converted from the value
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   */
+  @Deprecated
+  public static Column<?> toColumn(Value<?> value) {
+    switch (value.getDataType()) {
+      case BOOLEAN:
+        return BooleanColumn.of(value.getName(), value.getAsBoolean());
+      case INT:
+        return IntColumn.of(value.getName(), value.getAsInt());
+      case BIGINT:
+        return BigIntColumn.of(value.getName(), value.getAsLong());
+      case FLOAT:
+        return FloatColumn.of(value.getName(), value.getAsFloat());
+      case DOUBLE:
+        return DoubleColumn.of(value.getName(), value.getAsDouble());
+      case TEXT:
+        return TextColumn.of(value.getName(), value.getAsString().orElse(null));
+      case BLOB:
+        return BlobColumn.of(value.getName(), value.getAsBytes().orElse(null));
       default:
         throw new AssertionError();
     }

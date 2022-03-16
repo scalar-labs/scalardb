@@ -139,6 +139,19 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void createIndex(
+      String namespace, String table, String columnName, Map<String, String> options)
+      throws ExecutionException {
+    getAdmin(namespace, table).createIndex(namespace, table, columnName, options);
+  }
+
+  @Override
+  public void dropIndex(String namespace, String table, String columnName)
+      throws ExecutionException {
+    getAdmin(namespace, table).dropIndex(namespace, table, columnName);
+  }
+
+  @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     return getAdmin(namespace, table).getTableMetadata(namespace, table);
   }

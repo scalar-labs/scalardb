@@ -68,7 +68,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
     UpdateQuery updateQuery =
         queryBuilder
             .update(put.forNamespace().get(), put.forTable().get(), tableMetadata)
-            .set(put.getNullableValues())
+            .set(put.getColumns())
             .where(put.getPartitionKey(), put.getClusteringKey(), condition.getExpressions())
             .build();
     executeMutate(updateQuery);
@@ -80,7 +80,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
     UpdateQuery updateQuery =
         queryBuilder
             .update(put.forNamespace().get(), put.forTable().get(), tableMetadata)
-            .set(put.getNullableValues())
+            .set(put.getColumns())
             .where(put.getPartitionKey(), put.getClusteringKey())
             .build();
     executeMutate(updateQuery);
@@ -92,7 +92,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
     InsertQuery insertQuery =
         queryBuilder
             .insertInto(put.forNamespace().get(), put.forTable().get(), tableMetadata)
-            .values(put.getPartitionKey(), put.getClusteringKey(), put.getNullableValues())
+            .values(put.getPartitionKey(), put.getClusteringKey(), put.getColumns())
             .build();
     try (PreparedStatement preparedStatement = connection.prepareStatement(insertQuery.sql())) {
       insertQuery.bind(preparedStatement);

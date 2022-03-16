@@ -1,20 +1,16 @@
 package com.scalar.db.storage.cassandra;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.datastax.driver.core.BoundStatement;
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
-import com.scalar.db.io.TextValue;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import org.junit.Before;
@@ -39,104 +35,169 @@ public class ValueBinderTest {
   }
 
   @Test
-  public void visit_BooleanValueAcceptCalled_ShouldCallSetBool() {
+  public void visit_BooleanColumnAcceptCalled_ShouldCallSetBool() {
     // Arrange
-    BooleanValue value = new BooleanValue(ANY_NAME, ANY_BOOL);
+    BooleanColumn column = BooleanColumn.of(ANY_NAME, ANY_BOOL);
     ValueBinder binder = new ValueBinder(bound);
 
     // Act
-    value.accept(binder);
+    column.accept(binder);
 
     // Assert
     verify(bound).setBool(0, ANY_BOOL);
   }
 
   @Test
-  public void visit_IntValueAcceptCalled_ShouldCallSetInt() {
+  public void visit_BooleanColumnWithNullValueAcceptCalled_ShouldCallSetToNull() {
     // Arrange
-    IntValue value = new IntValue(ANY_NAME, ANY_INT);
+    BooleanColumn column = BooleanColumn.ofNull(ANY_NAME);
     ValueBinder binder = new ValueBinder(bound);
 
     // Act
-    value.accept(binder);
-
-    // Assert
-    verify(bound).setInt(0, ANY_INT);
-  }
-
-  @Test
-  public void visit_BigIntValueAcceptCalled_ShouldCallSetLong() {
-    // Arrange
-    BigIntValue value = new BigIntValue(ANY_NAME, ANY_LONG);
-    ValueBinder binder = new ValueBinder(bound);
-
-    // Act
-    value.accept(binder);
-
-    // Assert
-    verify(bound).setLong(0, ANY_LONG);
-  }
-
-  @Test
-  public void visit_FloatValueAcceptCalled_ShouldCallSetFloat() {
-    // Arrange
-    FloatValue value = new FloatValue(ANY_NAME, ANY_FLOAT);
-    ValueBinder binder = new ValueBinder(bound);
-
-    // Act
-    value.accept(binder);
-
-    // Assert
-    verify(bound).setFloat(0, ANY_FLOAT);
-  }
-
-  @Test
-  public void visit_DoubleValueAcceptCalled_ShouldCallSetDouble() {
-    // Arrange
-    DoubleValue value = new DoubleValue(ANY_NAME, ANY_DOUBLE);
-    ValueBinder binder = new ValueBinder(bound);
-
-    // Act
-    value.accept(binder);
-
-    // Assert
-    verify(bound).setDouble(0, ANY_DOUBLE);
-  }
-
-  @Test
-  public void visit_TextValueAcceptCalled_ShouldCallSetString() {
-    // Arrange
-    TextValue value = new TextValue(ANY_NAME, ANY_STRING);
-    ValueBinder binder = new ValueBinder(bound);
-
-    // Act
-    value.accept(binder);
-
-    // Assert
-    verify(bound).setString(0, ANY_STRING);
-  }
-
-  @Test
-  public void visit_TextValueWithNullValueAcceptCalled_ShouldCallSetToNull() {
-    // Arrange
-    TextValue value = new TextValue(ANY_NAME, (String) null);
-    ValueBinder binder = new ValueBinder(bound);
-
-    // Act
-    value.accept(binder);
+    column.accept(binder);
 
     // Assert
     verify(bound).setToNull(0);
   }
 
   @Test
-  public void visit_BlobValueAcceptCalled_ShouldCallSetString() {
+  public void visit_IntColumnAcceptCalled_ShouldCallSetInt() {
     // Arrange
-    BlobValue value = new BlobValue(ANY_NAME, ANY_STRING.getBytes(StandardCharsets.UTF_8));
+    IntColumn column = IntColumn.of(ANY_NAME, ANY_INT);
     ValueBinder binder = new ValueBinder(bound);
 
     // Act
-    value.accept(binder);
+    column.accept(binder);
+
+    // Assert
+    verify(bound).setInt(0, ANY_INT);
+  }
+
+  @Test
+  public void visit_IntColumnWithNullValueAcceptCalled_ShouldCallSetToNull() {
+    // Arrange
+    IntColumn column = IntColumn.ofNull(ANY_NAME);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    column.accept(binder);
+
+    // Assert
+    verify(bound).setToNull(0);
+  }
+
+  @Test
+  public void visit_BigIntColumnAcceptCalled_ShouldCallSetLong() {
+    // Arrange
+    BigIntColumn column = BigIntColumn.of(ANY_NAME, ANY_LONG);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    column.accept(binder);
+
+    // Assert
+    verify(bound).setLong(0, ANY_LONG);
+  }
+
+  @Test
+  public void visit_BigIntColumnWithNullValueAcceptCalled_ShouldCallSetToNull() {
+    // Arrange
+    BigIntColumn column = BigIntColumn.ofNull(ANY_NAME);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    column.accept(binder);
+
+    // Assert
+    verify(bound).setToNull(0);
+  }
+
+  @Test
+  public void visit_FloatColumnAcceptCalled_ShouldCallSetFloat() {
+    // Arrange
+    FloatColumn column = FloatColumn.of(ANY_NAME, ANY_FLOAT);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    column.accept(binder);
+
+    // Assert
+    verify(bound).setFloat(0, ANY_FLOAT);
+  }
+
+  @Test
+  public void visit_FloatColumnWithNullValueAcceptCalled_ShouldCallSetToNull() {
+    // Arrange
+    FloatColumn column = FloatColumn.ofNull(ANY_NAME);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    column.accept(binder);
+
+    // Assert
+    verify(bound).setToNull(0);
+  }
+
+  @Test
+  public void visit_DoubleColumnAcceptCalled_ShouldCallSetDouble() {
+    // Arrange
+    DoubleColumn column = DoubleColumn.of(ANY_NAME, ANY_DOUBLE);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    column.accept(binder);
+
+    // Assert
+    verify(bound).setDouble(0, ANY_DOUBLE);
+  }
+
+  @Test
+  public void visit_DoubleColumnWithNullValueAcceptCalled_ShouldCallSetToNull() {
+    // Arrange
+    DoubleColumn column = DoubleColumn.ofNull(ANY_NAME);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    column.accept(binder);
+
+    // Assert
+    verify(bound).setToNull(0);
+  }
+
+  @Test
+  public void visit_TextColumnAcceptCalled_ShouldCallSetString() {
+    // Arrange
+    TextColumn column = TextColumn.of(ANY_NAME, ANY_STRING);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    column.accept(binder);
+
+    // Assert
+    verify(bound).setString(0, ANY_STRING);
+  }
+
+  @Test
+  public void visit_TextColumnWithNullValueAcceptCalled_ShouldCallSetToNull() {
+    // Arrange
+    TextColumn column = TextColumn.ofNull(ANY_NAME);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    column.accept(binder);
+
+    // Assert
+    verify(bound).setToNull(0);
+  }
+
+  @Test
+  public void visit_BlobColumnAcceptCalled_ShouldCallSetString() {
+    // Arrange
+    BlobColumn column = BlobColumn.of(ANY_NAME, ANY_STRING.getBytes(StandardCharsets.UTF_8));
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    column.accept(binder);
 
     // Assert
     verify(bound)
@@ -149,13 +210,13 @@ public class ValueBinderTest {
   }
 
   @Test
-  public void visit_BlobValueWithNullValueAcceptCalled_ShouldCallSetToNull() {
+  public void visit_BlobColumnWithNullValueAcceptCalled_ShouldCallSetToNull() {
     // Arrange
-    BlobValue value = new BlobValue(ANY_NAME, (byte[]) null);
+    BlobColumn column = BlobColumn.ofNull(ANY_NAME);
     ValueBinder binder = new ValueBinder(bound);
 
     // Act
-    value.accept(binder);
+    column.accept(binder);
 
     // Assert
     verify(bound).setToNull(0);
@@ -164,13 +225,13 @@ public class ValueBinderTest {
   @Test
   public void visit_AcceptCalledMultipleTimes_ShouldCallSetWithIncremented() {
     // Arrange
-    TextValue value1 = new TextValue(ANY_NAME, ANY_STRING);
-    IntValue value2 = new IntValue(ANY_NAME, ANY_INT);
+    TextColumn column1 = TextColumn.of(ANY_NAME, ANY_STRING);
+    IntColumn column2 = IntColumn.of(ANY_NAME, ANY_INT);
     ValueBinder binder = new ValueBinder(bound);
 
     // Act
-    value1.accept(binder);
-    value2.accept(binder);
+    column1.accept(binder);
+    column2.accept(binder);
 
     // Assert
     verify(bound).setString(0, ANY_STRING);
@@ -178,24 +239,24 @@ public class ValueBinderTest {
   }
 
   @Test
-  public void visit_AcceptCalledMultipleTimesWithNullValue_ShouldSkipNull() {
+  public void visit_AcceptCalledMultipleTimesWithNullValue_ShouldSetProperly() {
     // Arrange
-    IntValue value1 = new IntValue(ANY_NAME, ANY_INT);
-    BlobValue value2 = new BlobValue(ANY_NAME, (byte[]) null);
-    TextValue value3 = new TextValue(ANY_NAME, (String) null);
-    IntValue value4 = new IntValue(ANY_NAME, ANY_INT);
+    IntColumn column1 = IntColumn.of(ANY_NAME, ANY_INT);
+    BlobColumn column2 = BlobColumn.ofNull(ANY_NAME);
+    TextColumn column3 = TextColumn.ofNull(ANY_NAME);
+    IntColumn column4 = IntColumn.of(ANY_NAME, ANY_INT);
     ValueBinder binder = new ValueBinder(bound);
 
     // Act
-    value1.accept(binder);
-    value2.accept(binder);
-    value3.accept(binder);
-    value4.accept(binder);
+    column1.accept(binder);
+    column2.accept(binder);
+    column3.accept(binder);
+    column4.accept(binder);
 
     // Assert
     verify(bound).setInt(0, ANY_INT);
-    verify(bound, never()).setBytes(anyInt(), any(ByteBuffer.class));
-    verify(bound, never()).setString(anyInt(), anyString());
+    verify(bound).setToNull(1);
+    verify(bound).setToNull(2);
     verify(bound).setInt(3, ANY_INT);
   }
 
@@ -203,17 +264,5 @@ public class ValueBinderTest {
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
     assertThatThrownBy(() -> new ValueBinder(null)).isInstanceOf(NullPointerException.class);
-  }
-
-  @Test
-  public void bindNullValue_ShouldCallSetToNull() {
-    // Arrange
-    ValueBinder binder = new ValueBinder(bound);
-
-    // Act
-    binder.bindNullValue();
-
-    // Assert
-    verify(bound).setToNull(0);
   }
 }

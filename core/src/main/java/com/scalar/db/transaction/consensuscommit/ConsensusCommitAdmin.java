@@ -1,146 +1,111 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.buildTransactionalTableMetadata;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.removeTransactionalMetaColumns;
 
+import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
-import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
-public class ConsensusCommitAdmin {
+public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
   private final DistributedStorageAdmin admin;
   private final String coordinatorNamespace;
 
+  @Inject
   public ConsensusCommitAdmin(DistributedStorageAdmin admin, ConsensusCommitConfig config) {
     this.admin = admin;
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
   }
 
-  /**
-   * Creates a coordinator namespace and table if it does not exist.
-   *
-   * @throws ExecutionException if the operation failed
-   */
-  public void createCoordinatorTable() throws ExecutionException {
-    admin.createNamespace(coordinatorNamespace, true);
-    admin.createTable(coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, true);
+  @Override
+  public void createCoordinatorNamespaceAndTable(Map<String, String> options)
+      throws ExecutionException {
+    admin.createNamespace(coordinatorNamespace, options);
+    admin.createTable(coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
   }
 
-  /**
-   * Creates a coordinator namespace and table if it does not exist.
-   *
-   * @param options options to create namespace and table
-   * @throws ExecutionException if the operation failed
-   */
-  public void createCoordinatorTable(Map<String, String> options) throws ExecutionException {
-    admin.createNamespace(coordinatorNamespace, true, options);
-    admin.createTable(
-        coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, true, options);
-  }
-
-  /**
-   * Truncates a coordinator table.
-   *
-   * @throws ExecutionException if the operation failed
-   */
-  public void truncateCoordinatorTable() throws ExecutionException {
-    admin.truncateTable(coordinatorNamespace, Coordinator.TABLE);
-  }
-
-  /**
-   * Drops a coordinator namespace and table.
-   *
-   * @throws ExecutionException if the operation failed
-   */
-  public void dropCoordinatorTable() throws ExecutionException {
+  @Override
+  public void dropCoordinatorNamespaceAndTable() throws ExecutionException {
     admin.dropTable(coordinatorNamespace, Coordinator.TABLE);
     admin.dropNamespace(coordinatorNamespace);
   }
 
-  /**
-   * Return true if a coordinator table exists.
-   *
-   * @return true if a coordinator table exists, false otherwise
-   * @throws ExecutionException if the operation failed
-   */
+  @Override
+  public void truncateCoordinatorTable() throws ExecutionException {
+    admin.truncateTable(coordinatorNamespace, Coordinator.TABLE);
+  }
+
+  @Override
   public boolean coordinatorTableExists() throws ExecutionException {
     return admin.tableExists(coordinatorNamespace, Coordinator.TABLE);
   }
 
-  /**
-   * Creates a new transactional table.
-   *
-   * @param namespace a namespace already created
-   * @param table a table to create
-   * @param metadata a metadata to create
-   * @param options options to create
-   * @throws ExecutionException if the operation failed
-   */
-  public void createTransactionalTable(
+  @Override
+  public void createNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    admin.createNamespace(namespace, options);
+  }
+
+  @Override
+  public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     admin.createTable(namespace, table, buildTransactionalTableMetadata(metadata), options);
   }
 
-  /**
-   * Creates a new transactional table.
-   *
-   * @param namespace an existing namespace
-   * @param table a table to create
-   * @param metadata a metadata to create
-   * @param ifNotExists if set to true, the table will be created only if it does not exist already.
-   *     If set to false, it will try to create the table but may throw an exception if it already
-   *     exists
-   * @param options options to create
-   * @throws ExecutionException if the operation failed
-   */
-  public void createTransactionalTable(
-      String namespace,
-      String table,
-      TableMetadata metadata,
-      boolean ifNotExists,
-      Map<String, String> options)
-      throws ExecutionException {
-    if (ifNotExists && admin.getNamespaceTableNames(namespace).contains(table)) {
-      return;
-    }
-    createTransactionalTable(namespace, table, metadata, options);
+  @Override
+  public void dropTable(String namespace, String table) throws ExecutionException {
+    admin.dropTable(namespace, table);
   }
 
-  /**
-   * Creates a new transactional table.
-   *
-   * @param namespace an existing namespace
-   * @param table a table to create
-   * @param metadata a metadata to create
-   * @param ifNotExists if set to true, the table will be created only if it does not exist already.
-   *     If set to false, it will try to create the table but may throw an exception if it already
-   *     exists
-   * @throws ExecutionException if the operation failed
-   */
-  public void createTransactionalTable(
-      String namespace, String table, TableMetadata metadata, boolean ifNotExists)
-      throws ExecutionException {
-    if (ifNotExists && admin.getNamespaceTableNames(namespace).contains(table)) {
-      return;
-    }
-    createTransactionalTable(namespace, table, metadata, Collections.emptyMap());
+  @Override
+  public void dropNamespace(String namespace) throws ExecutionException {
+    admin.dropNamespace(namespace);
   }
 
-  /**
-   * Creates a new transactional table.
-   *
-   * @param namespace an existing namespace
-   * @param table a table to create
-   * @param metadata a metadata to create
-   * @throws ExecutionException if the operation failed
-   */
-  public void createTransactionalTable(String namespace, String table, TableMetadata metadata)
+  @Override
+  public void truncateTable(String namespace, String table) throws ExecutionException {
+    admin.truncateTable(namespace, table);
+  }
+
+  @Override
+  public void createIndex(
+      String namespace, String table, String columnName, Map<String, String> options)
       throws ExecutionException {
-    createTransactionalTable(namespace, table, metadata, Collections.emptyMap());
+    admin.createIndex(namespace, table, columnName, options);
+  }
+
+  @Override
+  public void dropIndex(String namespace, String table, String columnName)
+      throws ExecutionException {
+    admin.dropIndex(namespace, table, columnName);
+  }
+
+  @Override
+  public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
+    TableMetadata metadata = admin.getTableMetadata(namespace, table);
+    return metadata == null ? null : removeTransactionalMetaColumns(metadata);
+  }
+
+  @Override
+  public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
+    return admin.getNamespaceTableNames(namespace);
+  }
+
+  @Override
+  public boolean namespaceExists(String namespace) throws ExecutionException {
+    return admin.namespaceExists(namespace);
+  }
+
+  @Override
+  public void close() {
+    admin.close();
   }
 }

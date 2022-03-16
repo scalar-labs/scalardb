@@ -2,10 +2,12 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -13,6 +15,7 @@ import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -34,19 +37,20 @@ public class ConsensusCommitAdminTest {
   }
 
   @Test
-  public void createCoordinatorTable_shouldCreateCoordinatorTableProperly()
+  public void createCoordinatorNamespaceAndTable_shouldCreateCoordinatorTableProperly()
       throws ExecutionException {
-    createCoordinatorTable_shouldCreateCoordinatorTableProperly(Optional.empty());
+    createCoordinatorNamespaceAndTable_shouldCreateCoordinatorTableProperly(Optional.empty());
   }
 
   @Test
   public void
-      createCoordinatorTable_WithCoordinatorNamespaceChanged_shouldCreateWithChangedNamespace()
+      createCoordinatorNamespaceAndTable_WithCoordinatorNamespaceChanged_shouldCreateWithChangedNamespace()
           throws ExecutionException {
-    createCoordinatorTable_shouldCreateCoordinatorTableProperly(Optional.of("changed_coordinator"));
+    createCoordinatorNamespaceAndTable_shouldCreateCoordinatorTableProperly(
+        Optional.of("changed_coordinator"));
   }
 
-  private void createCoordinatorTable_shouldCreateCoordinatorTableProperly(
+  private void createCoordinatorNamespaceAndTable_shouldCreateCoordinatorTableProperly(
       Optional<String> coordinatorNamespace) throws ExecutionException {
     // Arrange
     String coordinatorNamespaceName = coordinatorNamespace.orElse(Coordinator.NAMESPACE);
@@ -56,29 +60,35 @@ public class ConsensusCommitAdminTest {
     }
 
     // Act
-    admin.createCoordinatorTable();
+    admin.createCoordinatorNamespaceAndTable();
 
     // Assert
-    verify(distributedStorageAdmin).createNamespace(coordinatorNamespaceName, true);
     verify(distributedStorageAdmin)
-        .createTable(coordinatorNamespaceName, Coordinator.TABLE, Coordinator.TABLE_METADATA, true);
+        .createNamespace(coordinatorNamespaceName, Collections.emptyMap());
+    verify(distributedStorageAdmin)
+        .createTable(
+            coordinatorNamespaceName,
+            Coordinator.TABLE,
+            Coordinator.TABLE_METADATA,
+            Collections.emptyMap());
   }
 
   @Test
-  public void createCoordinatorTable_WithOptions_shouldCreateCoordinatorTableProperly()
+  public void createCoordinatorNamespaceAndTable_WithOptions_shouldCreateCoordinatorTableProperly()
       throws ExecutionException {
-    createCoordinatorTable_WithOptions_shouldCreateCoordinatorTableProperly(Optional.empty());
+    createCoordinatorNamespaceAndTable_WithOptions_shouldCreateCoordinatorTableProperly(
+        Optional.empty());
   }
 
   @Test
   public void
-      createCoordinatorTable_WithOptionsWithCoordinatorNamespaceChanged_shouldCreateWithChangedNamespace()
+      createCoordinatorNamespaceAndTable_WithOptionsWithCoordinatorNamespaceChanged_shouldCreateWithChangedNamespace()
           throws ExecutionException {
-    createCoordinatorTable_WithOptions_shouldCreateCoordinatorTableProperly(
+    createCoordinatorNamespaceAndTable_WithOptions_shouldCreateCoordinatorTableProperly(
         Optional.of("changed_coordinator"));
   }
 
-  private void createCoordinatorTable_WithOptions_shouldCreateCoordinatorTableProperly(
+  private void createCoordinatorNamespaceAndTable_WithOptions_shouldCreateCoordinatorTableProperly(
       Optional<String> coordinatorNamespace) throws ExecutionException {
     // Arrange
     String coordinatorNamespaceName = coordinatorNamespace.orElse(Coordinator.NAMESPACE);
@@ -90,13 +100,13 @@ public class ConsensusCommitAdminTest {
     Map<String, String> options = ImmutableMap.of("name", "value");
 
     // Act
-    admin.createCoordinatorTable(options);
+    admin.createCoordinatorNamespaceAndTable(options);
 
     // Assert
-    verify(distributedStorageAdmin).createNamespace(coordinatorNamespaceName, true, options);
+    verify(distributedStorageAdmin).createNamespace(coordinatorNamespaceName, options);
     verify(distributedStorageAdmin)
         .createTable(
-            coordinatorNamespaceName, Coordinator.TABLE, Coordinator.TABLE_METADATA, true, options);
+            coordinatorNamespaceName, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
   }
 
   @Test
@@ -130,18 +140,20 @@ public class ConsensusCommitAdminTest {
   }
 
   @Test
-  public void dropCoordinatorTable_shouldDropCoordinatorTableProperly() throws ExecutionException {
-    dropCoordinatorTable_shouldDropCoordinatorTableProperly(Optional.empty());
+  public void dropCoordinatorNamespaceAndTable_shouldDropCoordinatorTableProperly()
+      throws ExecutionException {
+    dropCoordinatorNamespaceAndTable_shouldDropCoordinatorTableProperly(Optional.empty());
   }
 
   @Test
   public void
-      dropCoordinatorTable_WithCoordinatorNamespaceChanged_shouldDropCoordinatorTableProperly()
+      dropCoordinatorNamespaceAndTable_WithCoordinatorNamespaceChanged_shouldDropCoordinatorTableProperly()
           throws ExecutionException {
-    dropCoordinatorTable_shouldDropCoordinatorTableProperly(Optional.of("changed_coordinator"));
+    dropCoordinatorNamespaceAndTable_shouldDropCoordinatorTableProperly(
+        Optional.of("changed_coordinator"));
   }
 
-  private void dropCoordinatorTable_shouldDropCoordinatorTableProperly(
+  private void dropCoordinatorNamespaceAndTable_shouldDropCoordinatorTableProperly(
       Optional<String> coordinatorNamespace) throws ExecutionException {
     // Arrange
     String coordinatorNamespaceName = coordinatorNamespace.orElse(Coordinator.NAMESPACE);
@@ -151,7 +163,7 @@ public class ConsensusCommitAdminTest {
     }
 
     // Act
-    admin.dropCoordinatorTable();
+    admin.dropCoordinatorNamespaceAndTable();
 
     // Assert
     verify(distributedStorageAdmin).dropTable(coordinatorNamespaceName, Coordinator.TABLE);
@@ -189,7 +201,7 @@ public class ConsensusCommitAdminTest {
   }
 
   @Test
-  public void createTransactionalTable_tableMetadataGiven_shouldCreateTransactionalTableProperly()
+  public void createTable_tableMetadataGiven_shouldCreateTransactionalTableProperly()
       throws ExecutionException {
     // Arrange
     final String ACCOUNT_ID = "account_id";
@@ -226,7 +238,7 @@ public class ConsensusCommitAdminTest {
             .build();
 
     // Act
-    admin.createTransactionalTable(NAMESPACE, TABLE, tableMetadata);
+    admin.createTable(NAMESPACE, TABLE, tableMetadata);
 
     // Assert
     verify(distributedStorageAdmin).createTable(NAMESPACE, TABLE, expected, Collections.emptyMap());
@@ -234,13 +246,13 @@ public class ConsensusCommitAdminTest {
 
   @Test
   public void
-      createTransactionalTable_tableMetadataThatHasTransactionMetaColumnGiven_shouldThrowIllegalArgumentException() {
+      createTable_tableMetadataThatHasTransactionMetaColumnGiven_shouldThrowIllegalArgumentException() {
     // Arrange
 
     // Act Assert
     assertThatThrownBy(
             () ->
-                admin.createTransactionalTable(
+                admin.createTable(
                     NAMESPACE,
                     TABLE,
                     TableMetadata.newBuilder()
@@ -254,13 +266,13 @@ public class ConsensusCommitAdminTest {
 
   @Test
   public void
-      createTransactionalTable_tableMetadataThatHasNonPrimaryKeyColumnWithBeforePrefixGiven_shouldThrowIllegalArgumentException() {
+      createTable_tableMetadataThatHasNonPrimaryKeyColumnWithBeforePrefixGiven_shouldThrowIllegalArgumentException() {
     // Arrange
 
     // Act Assert
     assertThatThrownBy(
             () ->
-                admin.createTransactionalTable(
+                admin.createTable(
                     NAMESPACE,
                     TABLE,
                     TableMetadata.newBuilder()
@@ -272,5 +284,144 @@ public class ConsensusCommitAdminTest {
                         .addPartitionKey("col1")
                         .build()))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void createNamespace_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+
+    // Act
+    admin.createNamespace("ns", Collections.emptyMap());
+
+    // Assert
+    verify(distributedStorageAdmin).createNamespace("ns", Collections.emptyMap());
+  }
+
+  @Test
+  public void dropTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+
+    // Act
+    admin.dropTable("ns", "tbl");
+
+    // Assert
+    verify(distributedStorageAdmin).dropTable("ns", "tbl");
+  }
+
+  @Test
+  public void dropNamespace_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+
+    // Act
+    admin.dropNamespace("ns");
+
+    // Assert
+    verify(distributedStorageAdmin).dropNamespace("ns");
+  }
+
+  @Test
+  public void truncateTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+
+    // Act
+    admin.truncateTable("ns", "tbl");
+
+    // Assert
+    verify(distributedStorageAdmin).truncateTable("ns", "tbl");
+  }
+
+  @Test
+  public void createIndex_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+
+    // Act
+    admin.createIndex("ns", "tbl", "col", Collections.emptyMap());
+
+    // Assert
+    verify(distributedStorageAdmin).createIndex("ns", "tbl", "col", Collections.emptyMap());
+  }
+
+  @Test
+  public void dropIndex_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+
+    // Act
+    admin.dropIndex("ns", "tbl", "col");
+
+    // Assert
+    verify(distributedStorageAdmin).dropIndex("ns", "tbl", "col");
+  }
+
+  @Test
+  public void getTableMetadata_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    final String ACCOUNT_ID = "account_id";
+    final String ACCOUNT_TYPE = "account_type";
+    final String BALANCE = "balance";
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build();
+
+    TableMetadata expected =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build();
+
+    when(distributedStorageAdmin.getTableMetadata(any(), any())).thenReturn(tableMetadata);
+
+    // Act
+    TableMetadata actual = admin.getTableMetadata("ns", "tbl");
+
+    // Assert
+    verify(distributedStorageAdmin).getTableMetadata("ns", "tbl");
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void getNamespaceTableNames_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    Set<String> tableNames = ImmutableSet.of("tbl1", "tbl2", "tbl3");
+    when(distributedStorageAdmin.getNamespaceTableNames(any())).thenReturn(tableNames);
+
+    // Act
+    Set<String> actual = admin.getNamespaceTableNames("ns");
+
+    // Assert
+    verify(distributedStorageAdmin).getNamespaceTableNames("ns");
+    assertThat(actual).isEqualTo(tableNames);
+  }
+
+  @Test
+  public void namespaceExists_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    when(distributedStorageAdmin.namespaceExists(any())).thenReturn(true);
+
+    // Act
+    boolean actual = admin.namespaceExists("ns");
+
+    // Assert
+    verify(distributedStorageAdmin).namespaceExists("ns");
+    assertThat(actual).isTrue();
   }
 }

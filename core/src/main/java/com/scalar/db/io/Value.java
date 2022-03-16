@@ -7,13 +7,10 @@ import javax.annotation.Nonnull;
 /**
  * An abstraction for storage entry's value (column).
  *
- * <p>This class and the implementation classes of it are primarily for internal use. Breaking
- * changes can and will be introduced to them. Users should not depend on them. And maybe we will
- * rename this class to {@code Column} in the future because it is a more proper name for this
- * abstraction.
- *
  * @author Hiroyuki Yamada
+ * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
  */
+@Deprecated
 public interface Value<T> extends Comparable<Value<T>> {
 
   /**

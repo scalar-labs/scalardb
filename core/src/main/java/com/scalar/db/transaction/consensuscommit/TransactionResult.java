@@ -4,8 +4,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.util.AbstractResult;
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -31,18 +31,6 @@ public class TransactionResult extends AbstractResult {
   @Override
   public Optional<Key> getClusteringKey() {
     return result.getClusteringKey();
-  }
-
-  @Deprecated
-  @Override
-  public Optional<Value<?>> getValue(String columnName) {
-    return result.getValue(columnName);
-  }
-
-  @Deprecated
-  @Override
-  public Map<String, Value<?>> getValues() {
-    return result.getValues();
   }
 
   @Override
@@ -107,6 +95,11 @@ public class TransactionResult extends AbstractResult {
   @Override
   public Set<String> getContainedColumnNames() {
     return result.getContainedColumnNames();
+  }
+
+  @Override
+  public Map<String, Column<?>> getColumns() {
+    return result.getColumns();
   }
 
   public String getId() {

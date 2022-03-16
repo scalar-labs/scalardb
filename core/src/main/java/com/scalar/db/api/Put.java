@@ -3,22 +3,23 @@ package com.scalar.db.api;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.Value;
+import com.scalar.db.util.ScalarDbUtils;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -30,7 +31,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public class Put extends Mutation {
-  private final Map<String, Optional<Value<?>>> values;
+  private final Map<String, Column<?>> columns;
 
   /**
    * Constructs a {@code Put} with the specified partition {@link Key}.
@@ -50,12 +51,12 @@ public class Put extends Mutation {
    */
   public Put(Key partitionKey, Key clusteringKey) {
     super(partitionKey, clusteringKey);
-    values = new LinkedHashMap<>();
+    columns = new LinkedHashMap<>();
   }
 
   public Put(Put put) {
     super(put);
-    values = new LinkedHashMap<>(put.values);
+    columns = new LinkedHashMap<>(put.columns);
   }
 
   /**
@@ -67,8 +68,7 @@ public class Put extends Mutation {
    */
   @Deprecated
   public Put withValue(Value<?> value) {
-    values.put(value.getName(), Optional.of(value));
-    return this;
+    return withValue(ScalarDbUtils.toColumn(value));
   }
 
   /**
@@ -94,7 +94,22 @@ public class Put extends Mutation {
    * @return this object
    */
   public Put withBooleanValue(String columnName, boolean value) {
-    values.put(columnName, Optional.of(new BooleanValue(columnName, value)));
+    columns.put(columnName, BooleanColumn.of(columnName, value));
+    return this;
+  }
+
+  /**
+   * Adds the specified BOOLEAN value to the list of put values.
+   *
+   * @param columnName a column name of the value
+   * @param value a BOOLEAN value to put
+   * @return this object
+   */
+  public Put withBooleanValue(String columnName, @Nullable Boolean value) {
+    if (value != null) {
+      return withBooleanValue(columnName, value.booleanValue());
+    }
+    columns.put(columnName, BooleanColumn.ofNull(columnName));
     return this;
   }
 
@@ -121,7 +136,22 @@ public class Put extends Mutation {
    * @return this object
    */
   public Put withIntValue(String columnName, int value) {
-    values.put(columnName, Optional.of(new IntValue(columnName, value)));
+    columns.put(columnName, IntColumn.of(columnName, value));
+    return this;
+  }
+
+  /**
+   * Adds the specified INT value to the list of put values.
+   *
+   * @param columnName a column name of the value
+   * @param value a INT value to put
+   * @return this object
+   */
+  public Put withIntValue(String columnName, @Nullable Integer value) {
+    if (value != null) {
+      return withIntValue(columnName, value.intValue());
+    }
+    columns.put(columnName, IntColumn.ofNull(columnName));
     return this;
   }
 
@@ -148,7 +178,22 @@ public class Put extends Mutation {
    * @return this object
    */
   public Put withBigIntValue(String columnName, long value) {
-    values.put(columnName, Optional.of(new BigIntValue(columnName, value)));
+    columns.put(columnName, BigIntColumn.of(columnName, value));
+    return this;
+  }
+
+  /**
+   * Adds the specified BIGINT value to the list of put values.
+   *
+   * @param columnName a column name of the value
+   * @param value a BIGINT value to put
+   * @return this object
+   */
+  public Put withBigIntValue(String columnName, @Nullable Long value) {
+    if (value != null) {
+      return withBigIntValue(columnName, value.longValue());
+    }
+    columns.put(columnName, BigIntColumn.ofNull(columnName));
     return this;
   }
 
@@ -175,7 +220,22 @@ public class Put extends Mutation {
    * @return this object
    */
   public Put withFloatValue(String columnName, float value) {
-    values.put(columnName, Optional.of(new FloatValue(columnName, value)));
+    columns.put(columnName, FloatColumn.of(columnName, value));
+    return this;
+  }
+
+  /**
+   * Adds the specified FLOAT value to the list of put values.
+   *
+   * @param columnName a column name of the value
+   * @param value a value to put
+   * @return this object
+   */
+  public Put withFloatValue(String columnName, @Nullable Float value) {
+    if (value != null) {
+      return withFloatValue(columnName, value.floatValue());
+    }
+    columns.put(columnName, FloatColumn.ofNull(columnName));
     return this;
   }
 
@@ -202,7 +262,22 @@ public class Put extends Mutation {
    * @return this object
    */
   public Put withDoubleValue(String columnName, double value) {
-    values.put(columnName, Optional.of(new DoubleValue(columnName, value)));
+    columns.put(columnName, DoubleColumn.of(columnName, value));
+    return this;
+  }
+
+  /**
+   * Adds the specified DOUBLE value to the list of put values.
+   *
+   * @param columnName a column name of the value
+   * @param value a DOUBLE value to put
+   * @return this object
+   */
+  public Put withDoubleValue(String columnName, @Nullable Double value) {
+    if (value != null) {
+      return withDoubleValue(columnName, value.doubleValue());
+    }
+    columns.put(columnName, DoubleColumn.ofNull(columnName));
     return this;
   }
 
@@ -215,11 +290,9 @@ public class Put extends Mutation {
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
    *     #withTextValue(String, String)} instead
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public Put withValue(String columnName, @Nullable String textValue) {
-    if (textValue == null) {
-      return withNullValue(columnName);
-    }
     return withTextValue(columnName, textValue);
   }
 
@@ -230,8 +303,8 @@ public class Put extends Mutation {
    * @param value a TEXT value to put
    * @return this object
    */
-  public Put withTextValue(String columnName, String value) {
-    values.put(columnName, Optional.of(new TextValue(columnName, Objects.requireNonNull(value))));
+  public Put withTextValue(String columnName, @Nullable String value) {
+    columns.put(columnName, TextColumn.of(columnName, value));
     return this;
   }
 
@@ -244,11 +317,9 @@ public class Put extends Mutation {
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
    *     #withBlobValue(String, byte[])} instead
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public Put withValue(String columnName, @Nullable byte[] blobValue) {
-    if (blobValue == null) {
-      return withNullValue(columnName);
-    }
     return withBlobValue(columnName, blobValue);
   }
 
@@ -259,8 +330,8 @@ public class Put extends Mutation {
    * @param value a BLOB value to put
    * @return this object
    */
-  public Put withBlobValue(String columnName, byte[] value) {
-    values.put(columnName, Optional.of(new BlobValue(columnName, Objects.requireNonNull(value))));
+  public Put withBlobValue(String columnName, @Nullable byte[] value) {
+    columns.put(columnName, BlobColumn.of(columnName, value));
     return this;
   }
 
@@ -273,11 +344,9 @@ public class Put extends Mutation {
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
    *     #withBlobValue(String, ByteBuffer)} instead
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public Put withValue(String columnName, @Nullable ByteBuffer blobValue) {
-    if (blobValue == null) {
-      return withNullValue(columnName);
-    }
     return withBlobValue(columnName, blobValue);
   }
 
@@ -288,8 +357,8 @@ public class Put extends Mutation {
    * @param value a BLOB value to put
    * @return this object
    */
-  public Put withBlobValue(String columnName, ByteBuffer value) {
-    values.put(columnName, Optional.of(new BlobValue(columnName, Objects.requireNonNull(value))));
+  public Put withBlobValue(String columnName, @Nullable ByteBuffer value) {
+    columns.put(columnName, BlobColumn.of(columnName, value));
     return this;
   }
 
@@ -302,18 +371,21 @@ public class Put extends Mutation {
    */
   @Deprecated
   public Put withValues(Collection<Value<?>> values) {
-    values.forEach(v -> this.values.put(v.getName(), Optional.of(v)));
+    values.forEach(v -> this.columns.put(v.getName(), ScalarDbUtils.toColumn(v)));
     return this;
   }
 
   /**
-   * Adds NULL value to the list of put values.
+   * Adds a column to the list of put values.
    *
-   * @param columnName a column name of the value
+   * <p>This method is primarily for internal use. Breaking changes can and will be introduced to
+   * this method. Users should not depend on it.
+   *
+   * @param column a column to put
    * @return this object
    */
-  public Put withNullValue(String columnName) {
-    values.put(columnName, Optional.empty());
+  public Put withValue(Column<?> column) {
+    columns.put(column.getName(), column);
     return this;
   }
 
@@ -326,20 +398,20 @@ public class Put extends Mutation {
   @Deprecated
   public Map<String, Value<?>> getValues() {
     Map<String, Value<?>> ret = new HashMap<>();
-    values.forEach((k, v) -> ret.put(k, v.orElse(null)));
+    columns.forEach((k, v) -> ret.put(k, v.hasNullValue() ? null : ScalarDbUtils.toValue(v)));
     return ret;
   }
 
   /**
-   * Returns a map of {@link Value}s.
+   * Returns a map of {@link Column}s.
    *
    * <p>This method is primarily for internal use. Breaking changes can and will be introduced to
    * this method. Users should not depend on it.
    *
-   * @return a map of {@code Value}s
+   * @return a map of {@code Column}s
    */
-  public Map<String, Optional<Value<?>>> getNullableValues() {
-    return ImmutableMap.copyOf(values);
+  public Map<String, Column<?>> getColumns() {
+    return ImmutableMap.copyOf(columns);
   }
 
   /**
@@ -350,17 +422,7 @@ public class Put extends Mutation {
    */
   public boolean isNullValue(String columnName) {
     checkIfExists(columnName);
-
-    Optional<Value<?>> value = values.get(columnName);
-    if (value.isPresent()) {
-      if (value.get() instanceof TextValue) {
-        return !value.get().getAsString().isPresent();
-      } else if (value.get() instanceof BlobValue) {
-        return !value.get().getAsBytes().isPresent();
-      }
-    }
-
-    return !value.isPresent();
+    return columns.get(columnName).hasNullValue();
   }
 
   /**
@@ -375,13 +437,7 @@ public class Put extends Mutation {
    */
   public boolean getBooleanValue(String columnName) {
     checkIfExists(columnName);
-
-    if (isNullValue(columnName)) {
-      // default value
-      return false;
-    }
-    assert values.get(columnName).isPresent();
-    return values.get(columnName).get().getAsBoolean();
+    return columns.get(columnName).getBooleanValue();
   }
 
   /**
@@ -396,13 +452,7 @@ public class Put extends Mutation {
    */
   public int getIntValue(String columnName) {
     checkIfExists(columnName);
-
-    if (isNullValue(columnName)) {
-      // default value
-      return 0;
-    }
-    assert values.get(columnName).isPresent();
-    return values.get(columnName).get().getAsInt();
+    return columns.get(columnName).getIntValue();
   }
 
   /**
@@ -417,13 +467,7 @@ public class Put extends Mutation {
    */
   public long getBigIntValue(String columnName) {
     checkIfExists(columnName);
-
-    if (isNullValue(columnName)) {
-      // default value
-      return 0L;
-    }
-    assert values.get(columnName).isPresent();
-    return values.get(columnName).get().getAsLong();
+    return columns.get(columnName).getBigIntValue();
   }
 
   /**
@@ -438,13 +482,7 @@ public class Put extends Mutation {
    */
   public float getFloatValue(String columnName) {
     checkIfExists(columnName);
-
-    if (isNullValue(columnName)) {
-      // default value
-      return 0.0F;
-    }
-    assert values.get(columnName).isPresent();
-    return values.get(columnName).get().getAsFloat();
+    return columns.get(columnName).getFloatValue();
   }
 
   /**
@@ -459,13 +497,7 @@ public class Put extends Mutation {
    */
   public double getDoubleValue(String columnName) {
     checkIfExists(columnName);
-
-    if (isNullValue(columnName)) {
-      // default value
-      return 0.0D;
-    }
-    assert values.get(columnName).isPresent();
-    return values.get(columnName).get().getAsDouble();
+    return columns.get(columnName).getDoubleValue();
   }
 
   /**
@@ -477,13 +509,7 @@ public class Put extends Mutation {
   @Nullable
   public String getTextValue(String columnName) {
     checkIfExists(columnName);
-
-    if (isNullValue(columnName)) {
-      // default value
-      return null;
-    }
-    assert values.get(columnName).isPresent();
-    return values.get(columnName).get().getAsString().orElse(null);
+    return columns.get(columnName).getTextValue();
   }
 
   /**
@@ -508,13 +534,7 @@ public class Put extends Mutation {
   @Nullable
   public ByteBuffer getBlobValueAsByteBuffer(String columnName) {
     checkIfExists(columnName);
-
-    if (isNullValue(columnName)) {
-      // default value
-      return null;
-    }
-    assert values.get(columnName).isPresent();
-    return values.get(columnName).get().getAsByteBuffer().orElse(null);
+    return columns.get(columnName).getBlobValueAsByteBuffer();
   }
 
   /**
@@ -527,13 +547,7 @@ public class Put extends Mutation {
   @Nullable
   public byte[] getBlobValueAsBytes(String columnName) {
     checkIfExists(columnName);
-
-    if (isNullValue(columnName)) {
-      // default value
-      return null;
-    }
-    assert values.get(columnName).isPresent();
-    return values.get(columnName).get().getAsBytes().orElse(null);
+    return columns.get(columnName).getBlobValueAsBytes();
   }
 
   /**
@@ -552,29 +566,7 @@ public class Put extends Mutation {
   @Nullable
   public Object getValueAsObject(String columnName) {
     checkIfExists(columnName);
-    if (isNullValue(columnName)) {
-      return null;
-    }
-
-    Optional<Value<?>> value = values.get(columnName);
-    assert value.isPresent();
-    if (value.get() instanceof BooleanValue) {
-      return getBooleanValue(columnName);
-    } else if (value.get() instanceof IntValue) {
-      return getIntValue(columnName);
-    } else if (value.get() instanceof BigIntValue) {
-      return getBigIntValue(columnName);
-    } else if (value.get() instanceof FloatValue) {
-      return getFloatValue(columnName);
-    } else if (value.get() instanceof DoubleValue) {
-      return getDoubleValue(columnName);
-    } else if (value.get() instanceof TextValue) {
-      return getTextValue(columnName);
-    } else if (value.get() instanceof BlobValue) {
-      return getBlobValue(columnName);
-    } else {
-      throw new AssertionError();
-    }
+    return columns.get(columnName).getValueAsObject();
   }
 
   /**
@@ -584,7 +576,7 @@ public class Put extends Mutation {
    * @return whether the result contains the specified column name
    */
   public boolean containsColumn(String columnName) {
-    return values.containsKey(columnName);
+    return columns.containsKey(columnName);
   }
 
   /**
@@ -593,7 +585,7 @@ public class Put extends Mutation {
    * @return a set of the contained column names
    */
   public Set<String> getContainedColumnNames() {
-    return ImmutableSet.copyOf(values.keySet());
+    return ImmutableSet.copyOf(columns.keySet());
   }
 
   private void checkIfExists(String name) {
@@ -652,12 +644,12 @@ public class Put extends Mutation {
       return false;
     }
     Put other = (Put) o;
-    return values.equals(other.values);
+    return columns.equals(other.columns);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), values);
+    return Objects.hash(super.hashCode(), columns);
   }
 
   @Override
@@ -667,7 +659,7 @@ public class Put extends Mutation {
         .add("table", forTable())
         .add("partitionKey", getPartitionKey())
         .add("clusteringKey", getClusteringKey())
-        .add("values", getNullableValues())
+        .add("columns", getColumns())
         .add("consistency", getConsistency())
         .add("condition", getCondition())
         .toString();

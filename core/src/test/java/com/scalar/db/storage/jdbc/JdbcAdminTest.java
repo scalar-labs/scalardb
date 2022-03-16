@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -20,6 +21,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -27,6 +29,7 @@ import java.util.Set;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -242,8 +245,8 @@ public class JdbcAdminTest {
     createTable_forX_shouldExecuteCreateTableStatement(
         RdbEngine.MYSQL,
         "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3`,`c1`,`c4`))",
-        "CREATE INDEX index_my_ns_foo_table_c4 ON `my_ns`.`foo_table` (`c4`)",
-        "CREATE INDEX index_my_ns_foo_table_c1 ON `my_ns`.`foo_table` (`c1`)",
+        "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
+        "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
         "CREATE SCHEMA IF NOT EXISTS `scalardb`",
         "CREATE TABLE IF NOT EXISTS `scalardb`.`metadata`("
             + "`full_table_name` VARCHAR(128),"
@@ -269,8 +272,8 @@ public class JdbcAdminTest {
     createTable_forX_shouldExecuteCreateTableStatement(
         RdbEngine.POSTGRESQL,
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE INDEX index_my_ns_foo_table_c4 ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX index_my_ns_foo_table_c1 ON \"my_ns\".\"foo_table\" (\"c1\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "CREATE SCHEMA IF NOT EXISTS \"scalardb\"",
         "CREATE TABLE IF NOT EXISTS \"scalardb\".\"metadata\"("
             + "\"full_table_name\" VARCHAR(128),"
@@ -297,8 +300,8 @@ public class JdbcAdminTest {
         RdbEngine.SQL_SERVER,
         "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_BIN,"
             + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3],[c1],[c4]))",
-        "CREATE INDEX index_my_ns_foo_table_c4 ON [my_ns].[foo_table] ([c4])",
-        "CREATE INDEX index_my_ns_foo_table_c1 ON [my_ns].[foo_table] ([c1])",
+        "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
+        "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])",
         "CREATE SCHEMA [scalardb]",
         "CREATE TABLE [scalardb].[metadata]("
             + "[full_table_name] VARCHAR(128),"
@@ -325,8 +328,8 @@ public class JdbcAdminTest {
         RdbEngine.ORACLE,
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE INDEX index_my_ns_foo_table_c4 ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX index_my_ns_foo_table_c1 ON \"my_ns\".\"foo_table\" (\"c1\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "CREATE USER \"scalardb\" IDENTIFIED BY \"oracle\"",
         "ALTER USER \"scalardb\" quota unlimited on USERS",
         "CREATE TABLE \"scalardb\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
@@ -389,8 +392,8 @@ public class JdbcAdminTest {
         RdbEngine.MYSQL,
         Optional.empty(),
         "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
-        "CREATE INDEX index_my_ns_foo_table_c4 ON `my_ns`.`foo_table` (`c4`)",
-        "CREATE INDEX index_my_ns_foo_table_c1 ON `my_ns`.`foo_table` (`c1`)",
+        "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
+        "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
         "CREATE SCHEMA IF NOT EXISTS `scalardb`",
         "CREATE TABLE IF NOT EXISTS `scalardb`.`metadata`("
             + "`full_table_name` VARCHAR(128),"
@@ -418,8 +421,8 @@ public class JdbcAdminTest {
         Optional.empty(),
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX index_my_ns_foo_table_c4 ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX index_my_ns_foo_table_c1 ON \"my_ns\".\"foo_table\" (\"c1\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "CREATE SCHEMA IF NOT EXISTS \"scalardb\"",
         "CREATE TABLE IF NOT EXISTS \"scalardb\".\"metadata\"("
             + "\"full_table_name\" VARCHAR(128),"
@@ -447,8 +450,8 @@ public class JdbcAdminTest {
         Optional.empty(),
         "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_BIN,"
             + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
-        "CREATE INDEX index_my_ns_foo_table_c4 ON [my_ns].[foo_table] ([c4])",
-        "CREATE INDEX index_my_ns_foo_table_c1 ON [my_ns].[foo_table] ([c1])",
+        "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
+        "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])",
         "CREATE SCHEMA [scalardb]",
         "CREATE TABLE [scalardb].[metadata]("
             + "[full_table_name] VARCHAR(128),"
@@ -477,8 +480,8 @@ public class JdbcAdminTest {
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX index_my_ns_foo_table_c4 ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX index_my_ns_foo_table_c1 ON \"my_ns\".\"foo_table\" (\"c1\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "CREATE USER \"scalardb\" IDENTIFIED BY \"oracle\"",
         "ALTER USER \"scalardb\" quota unlimited on USERS",
         "CREATE TABLE \"scalardb\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
@@ -499,8 +502,8 @@ public class JdbcAdminTest {
         RdbEngine.MYSQL,
         Optional.of("changed"),
         "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
-        "CREATE INDEX index_my_ns_foo_table_c4 ON `my_ns`.`foo_table` (`c4`)",
-        "CREATE INDEX index_my_ns_foo_table_c1 ON `my_ns`.`foo_table` (`c1`)",
+        "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
+        "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
         "CREATE SCHEMA IF NOT EXISTS `changed`",
         "CREATE TABLE IF NOT EXISTS `changed`.`metadata`("
             + "`full_table_name` VARCHAR(128),"
@@ -529,8 +532,8 @@ public class JdbcAdminTest {
         Optional.of("changed"),
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX index_my_ns_foo_table_c4 ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX index_my_ns_foo_table_c1 ON \"my_ns\".\"foo_table\" (\"c1\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "CREATE SCHEMA IF NOT EXISTS \"changed\"",
         "CREATE TABLE IF NOT EXISTS \"changed\".\"metadata\"("
             + "\"full_table_name\" VARCHAR(128),"
@@ -558,8 +561,8 @@ public class JdbcAdminTest {
         RdbEngine.SQL_SERVER,
         Optional.of("changed"),
         "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_BIN,[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
-        "CREATE INDEX index_my_ns_foo_table_c4 ON [my_ns].[foo_table] ([c4])",
-        "CREATE INDEX index_my_ns_foo_table_c1 ON [my_ns].[foo_table] ([c1])",
+        "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
+        "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])",
         "CREATE SCHEMA [changed]",
         "CREATE TABLE [changed].[metadata]("
             + "[full_table_name] VARCHAR(128),"
@@ -589,8 +592,8 @@ public class JdbcAdminTest {
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX index_my_ns_foo_table_c4 ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX index_my_ns_foo_table_c1 ON \"my_ns\".\"foo_table\" (\"c1\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "CREATE USER \"changed\" IDENTIFIED BY \"oracle\"",
         "ALTER USER \"changed\" quota unlimited on USERS",
         "CREATE TABLE \"changed\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
@@ -1188,6 +1191,128 @@ public class JdbcAdminTest {
     verify(selectStatement).executeQuery();
     verify(connection).prepareStatement(expectedSelectStatement);
     verify(selectStatement).setString(1, namespace);
+  }
+
+  @Test
+  public void createIndex_forMysql_ShouldCreateIndexProperly() throws Exception {
+    createIndex_forX_ShouldCreateIndexProperly(
+        RdbEngine.MYSQL,
+        "CREATE INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl` (`my_column`)",
+        "UPDATE `scalardb`.`metadata` SET `indexed`=true WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
+  }
+
+  @Test
+  public void createIndex_forPostgresql_ShouldCreateIndexProperly() throws Exception {
+    createIndex_forX_ShouldCreateIndexProperly(
+        RdbEngine.POSTGRESQL,
+        "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
+        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=true WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+  }
+
+  @Test
+  public void createIndex_forSqlServer_ShouldCreateIndexProperly() throws Exception {
+    createIndex_forX_ShouldCreateIndexProperly(
+        RdbEngine.SQL_SERVER,
+        "CREATE INDEX [index_my_ns_my_tbl_my_column] ON [my_ns].[my_tbl] ([my_column])",
+        "UPDATE [scalardb].[metadata] SET [indexed]=1 WHERE [full_table_name]='my_ns.my_tbl' AND [column_name]='my_column'");
+  }
+
+  @Test
+  public void createIndex_forOracle_ShouldCreateIndexProperly() throws Exception {
+    createIndex_forX_ShouldCreateIndexProperly(
+        RdbEngine.ORACLE,
+        "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
+        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=1 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+  }
+
+  private void createIndex_forX_ShouldCreateIndexProperly(
+      RdbEngine rdbEngine,
+      String expectedCreateIndexStatement,
+      String expectedUpdateTableMetadataStatement)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "my_tbl";
+    String column = "my_column";
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+
+    Connection connection = mock(Connection.class);
+    Statement statement = mock(Statement.class);
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+
+    // Act
+    admin.createIndex(namespace, table, column, Collections.emptyMap());
+
+    // Assert
+    verify(connection, times(2)).createStatement();
+
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(statement, times(2)).execute(captor.capture());
+    assertThat(captor.getAllValues().get(0)).isEqualTo(expectedCreateIndexStatement);
+    assertThat(captor.getAllValues().get(1)).isEqualTo(expectedUpdateTableMetadataStatement);
+  }
+
+  @Test
+  public void dropIndex_forMysql_ShouldDropIndexProperly() throws Exception {
+    dropIndex_forX_ShouldDropIndexProperly(
+        RdbEngine.MYSQL,
+        "DROP INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl`",
+        "UPDATE `scalardb`.`metadata` SET `indexed`=false WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
+  }
+
+  @Test
+  public void dropIndex_forPostgresql_ShouldDropIndexProperly() throws Exception {
+    dropIndex_forX_ShouldDropIndexProperly(
+        RdbEngine.POSTGRESQL,
+        "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
+        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+  }
+
+  @Test
+  public void dropIndex_forSqlServer_ShouldDropIndexProperly() throws Exception {
+    dropIndex_forX_ShouldDropIndexProperly(
+        RdbEngine.SQL_SERVER,
+        "DROP INDEX [index_my_ns_my_tbl_my_column] ON [my_ns].[my_tbl]",
+        "UPDATE [scalardb].[metadata] SET [indexed]=0 WHERE [full_table_name]='my_ns.my_tbl' AND [column_name]='my_column'");
+  }
+
+  @Test
+  public void dropIndex_forOracle_ShouldDropIndexProperly() throws Exception {
+    dropIndex_forX_ShouldDropIndexProperly(
+        RdbEngine.ORACLE,
+        "DROP INDEX \"index_my_ns_my_tbl_my_column\"",
+        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=0 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+  }
+
+  private void dropIndex_forX_ShouldDropIndexProperly(
+      RdbEngine rdbEngine,
+      String expectedDropIndexStatement,
+      String expectedUpdateTableMetadataStatement)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "my_tbl";
+    String column = "my_column";
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+
+    Connection connection = mock(Connection.class);
+    Statement statement = mock(Statement.class);
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+
+    // Act
+    admin.dropIndex(namespace, table, column);
+
+    // Assert
+    verify(connection, times(2)).createStatement();
+
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(statement, times(2)).execute(captor.capture());
+    assertThat(captor.getAllValues().get(0)).isEqualTo(expectedDropIndexStatement);
+    assertThat(captor.getAllValues().get(1)).isEqualTo(expectedUpdateTableMetadataStatement);
   }
 
   // Utility class used to mock ResultSet for getTableMetadata test

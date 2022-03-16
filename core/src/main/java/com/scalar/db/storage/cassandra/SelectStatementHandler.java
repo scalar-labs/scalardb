@@ -20,6 +20,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import java.util.ArrayList;
@@ -204,8 +205,8 @@ public class SelectStatementHandler extends StatementHandler {
     ValueBinder binder = new ValueBinder(bound);
 
     // bind in the prepared order
-    get.getPartitionKey().forEach(v -> v.accept(binder));
-    get.getClusteringKey().ifPresent(k -> k.forEach(v -> v.accept(binder)));
+    get.getPartitionKey().getColumns().forEach(c -> c.accept(binder));
+    get.getClusteringKey().ifPresent(k -> k.getColumns().forEach(c -> c.accept(binder)));
 
     return bound;
   }
@@ -214,7 +215,7 @@ public class SelectStatementHandler extends StatementHandler {
     ValueBinder binder = new ValueBinder(bound);
 
     // bind in the prepared order
-    scan.getPartitionKey().forEach(v -> v.accept(binder));
+    scan.getPartitionKey().getColumns().forEach(c -> c.accept(binder));
 
     Set<String> traveledEqualKeySet = new HashSet<>();
     bindStart(binder, scan, traveledEqualKeySet);
@@ -227,7 +228,7 @@ public class SelectStatementHandler extends StatementHandler {
     scan.getStartClusteringKey()
         .ifPresent(
             k -> {
-              List<Value<?>> start = k.get();
+              List<Column<?>> start = k.getColumns();
               IntStream.range(0, start.size())
                   .forEach(
                       i -> {
@@ -243,7 +244,7 @@ public class SelectStatementHandler extends StatementHandler {
     scan.getEndClusteringKey()
         .ifPresent(
             k -> {
-              List<Value<?>> end = k.get();
+              List<Column<?>> end = k.getColumns();
               IntStream.range(0, end.size())
                   .forEach(
                       i -> {

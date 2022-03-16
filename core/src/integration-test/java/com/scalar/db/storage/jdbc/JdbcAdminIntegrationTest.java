@@ -1,9 +1,9 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.AdminIntegrationTestBase;
+import com.scalar.db.storage.StorageAdminIntegrationTestBase;
 
-public class JdbcAdminIntegrationTest extends AdminIntegrationTestBase {
+public class JdbcAdminIntegrationTest extends StorageAdminIntegrationTestBase {
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {

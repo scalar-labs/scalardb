@@ -6,8 +6,8 @@ import static com.scalar.db.storage.jdbc.query.QueryUtils.getOperatorString;
 
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -54,7 +54,7 @@ public class DeleteQuery implements Query {
     otherConditions.forEach(
         c ->
             conditions.add(
-                enclose(c.getColumnName(), rdbEngine) + getOperatorString(c.getOperator()) + "?"));
+                enclose(c.getName(), rdbEngine) + getOperatorString(c.getOperator()) + "?"));
     return String.join(" AND ", conditions);
   }
 
@@ -63,20 +63,20 @@ public class DeleteQuery implements Query {
     PreparedStatementBinder binder =
         new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine);
 
-    for (Value<?> value : partitionKey) {
-      value.accept(binder);
+    for (Column<?> column : partitionKey.getColumns()) {
+      column.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
 
     if (clusteringKey.isPresent()) {
-      for (Value<?> value : clusteringKey.get()) {
-        value.accept(binder);
+      for (Column<?> column : clusteringKey.get().getColumns()) {
+        column.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
     }
 
     for (ConditionalExpression condition : otherConditions) {
-      condition.getValue().accept(binder);
+      condition.getColumn().accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
   }

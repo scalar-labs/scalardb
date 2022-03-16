@@ -5,8 +5,8 @@ import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -27,9 +27,9 @@ public class SimpleSelectQuery implements SelectQuery {
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
   private final Optional<Key> commonClusteringKey;
-  private final Optional<Value<?>> startValue;
+  private final Optional<Column<?>> startColumn;
   private final boolean startInclusive;
-  private final Optional<Value<?>> endValue;
+  private final Optional<Column<?>> endColumn;
   private final boolean endInclusive;
   private final List<Scan.Ordering> orderings;
   private final boolean isRangeQuery;
@@ -44,9 +44,9 @@ public class SimpleSelectQuery implements SelectQuery {
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     commonClusteringKey = builder.commonClusteringKey;
-    startValue = builder.startValue;
+    startColumn = builder.startColumn;
     startInclusive = builder.startInclusive;
-    endValue = builder.endValue;
+    endColumn = builder.endColumn;
     endInclusive = builder.endInclusive;
     orderings = builder.orderings;
     isRangeQuery = builder.isRangeQuery;
@@ -78,10 +78,10 @@ public class SimpleSelectQuery implements SelectQuery {
         k -> k.forEach(v -> conditions.add(enclose(v.getName(), rdbEngine) + "=?")));
     commonClusteringKey.ifPresent(
         k -> k.forEach(v -> conditions.add(enclose(v.getName(), rdbEngine) + "=?")));
-    startValue.ifPresent(
-        sv -> conditions.add(enclose(sv.getName(), rdbEngine) + (startInclusive ? ">=?" : ">?")));
-    endValue.ifPresent(
-        ev -> conditions.add(enclose(ev.getName(), rdbEngine) + (endInclusive ? "<=?" : "<?")));
+    startColumn.ifPresent(
+        c -> conditions.add(enclose(c.getName(), rdbEngine) + (startInclusive ? ">=?" : ">?")));
+    endColumn.ifPresent(
+        c -> conditions.add(enclose(c.getName(), rdbEngine) + (endInclusive ? "<=?" : "<?")));
     return String.join(" AND ", conditions);
   }
 
@@ -126,32 +126,32 @@ public class SimpleSelectQuery implements SelectQuery {
     PreparedStatementBinder binder =
         new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine);
 
-    for (Value<?> value : partitionKey) {
-      value.accept(binder);
+    for (Column<?> column : partitionKey.getColumns()) {
+      column.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
 
     if (clusteringKey.isPresent()) {
-      for (Value<?> value : clusteringKey.get()) {
-        value.accept(binder);
+      for (Column<?> column : clusteringKey.get().getColumns()) {
+        column.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
     }
 
     if (commonClusteringKey.isPresent()) {
-      for (Value<?> value : commonClusteringKey.get()) {
-        value.accept(binder);
+      for (Column<?> column : commonClusteringKey.get().getColumns()) {
+        column.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
     }
 
-    if (startValue.isPresent()) {
-      startValue.get().accept(binder);
+    if (startColumn.isPresent()) {
+      startColumn.get().accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
 
-    if (endValue.isPresent()) {
-      endValue.get().accept(binder);
+    if (endColumn.isPresent()) {
+      endColumn.get().accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
   }

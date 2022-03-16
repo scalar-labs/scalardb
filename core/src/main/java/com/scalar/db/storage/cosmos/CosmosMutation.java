@@ -12,7 +12,7 @@ import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.Value;
+import com.scalar.db.io.Column;
 import java.util.Collection;
 import java.util.Map;
 import javax.annotation.Nonnull;
@@ -62,8 +62,8 @@ public class CosmosMutation extends CosmosOperation {
 
     record.setId(getId());
     record.setConcatenatedPartitionKey(getConcatenatedPartitionKey());
-    record.setPartitionKey(toMap(put.getPartitionKey().get()));
-    put.getClusteringKey().ifPresent(k -> record.setClusteringKey(toMap(k.get())));
+    record.setPartitionKey(toMap(put.getPartitionKey().getColumns()));
+    put.getClusteringKey().ifPresent(k -> record.setClusteringKey(toMap(k.getColumns())));
     record.setValues(toMapForPut(put));
 
     return record;
@@ -111,25 +111,15 @@ public class CosmosMutation extends CosmosOperation {
     return new CosmosStoredProcedureRequestOptions().setPartitionKey(getCosmosPartitionKey());
   }
 
-  private Map<String, Object> toMap(Collection<Value<?>> values) {
+  private Map<String, Object> toMap(Collection<Column<?>> columns) {
     MapVisitor visitor = new MapVisitor();
-    values.forEach(v -> v.accept(visitor));
-
+    columns.forEach(c -> c.accept(visitor));
     return visitor.get();
   }
 
   private Map<String, Object> toMapForPut(Put put) {
     MapVisitor visitor = new MapVisitor();
-    put.getNullableValues()
-        .forEach(
-            (k, v) -> {
-              if (v.isPresent()) {
-                v.get().accept(visitor);
-              } else {
-                visitor.addNullValue(k);
-              }
-            });
-
+    put.getColumns().values().forEach(c -> c.accept(visitor));
     return visitor.get();
   }
 

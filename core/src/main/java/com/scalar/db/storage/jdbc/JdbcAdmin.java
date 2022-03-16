@@ -35,7 +35,7 @@ import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+@SuppressFBWarnings({"OBL_UNSATISFIED_OBLIGATION", "SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"})
 @ThreadSafe
 public class JdbcAdmin implements DistributedStorageAdmin {
 
@@ -178,6 +178,93 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
+  private void createTableInternal(
+      Connection connection, String schema, String table, TableMetadata metadata)
+      throws SQLException {
+    String createTableStatement =
+        "CREATE TABLE " + enclosedFullTableName(schema, table, rdbEngine) + "(";
+    // Order the columns for their creation by (partition keys >> clustering keys >> other columns)
+    LinkedHashSet<String> sortedColumnNames =
+        Sets.newLinkedHashSet(
+            Iterables.concat(
+                metadata.getPartitionKeyNames(),
+                metadata.getClusteringKeyNames(),
+                metadata.getColumnNames()));
+    // Add columns definition
+    createTableStatement +=
+        sortedColumnNames.stream()
+            .map(
+                columnName ->
+                    enclose(columnName) + " " + getVendorDbColumnType(metadata, columnName))
+            .collect(Collectors.joining(","));
+
+    boolean hasDescClusteringOrder = hasDescClusteringOrder(metadata);
+
+    // Add primary key definition
+    if (hasDescClusteringOrder
+        && (rdbEngine == RdbEngine.MYSQL || rdbEngine == RdbEngine.SQL_SERVER)) {
+      // For MySQL and SQL Server, specify the clustering orders in the primary key definition
+      createTableStatement +=
+          ", PRIMARY KEY ("
+              + Stream.concat(
+                      metadata.getPartitionKeyNames().stream().map(c -> enclose(c) + " ASC"),
+                      metadata.getClusteringKeyNames().stream()
+                          .map(c -> enclose(c) + " " + metadata.getClusteringOrder(c)))
+                  .collect(Collectors.joining(","))
+              + "))";
+    } else {
+      createTableStatement +=
+          ", PRIMARY KEY ("
+              + Stream.concat(
+                      metadata.getPartitionKeyNames().stream(),
+                      metadata.getClusteringKeyNames().stream())
+                  .map(this::enclose)
+                  .collect(Collectors.joining(","))
+              + "))";
+    }
+    if (rdbEngine == RdbEngine.ORACLE) {
+      // For Oracle Database, add ROWDEPENDENCIES to the table to improve the performance
+      createTableStatement += " ROWDEPENDENCIES";
+    }
+    execute(connection, createTableStatement);
+
+    if (rdbEngine == RdbEngine.ORACLE) {
+      // For Oracle Database, set INITRANS to 3 and MAXTRANS to 255 for the table to improve the
+      // performance
+      String alterTableStatement =
+          "ALTER TABLE "
+              + enclosedFullTableName(schema, table, rdbEngine)
+              + " INITRANS 3 MAXTRANS 255";
+      execute(connection, alterTableStatement);
+    }
+
+    if (hasDescClusteringOrder
+        && (rdbEngine == RdbEngine.POSTGRESQL || rdbEngine == RdbEngine.ORACLE)) {
+      // For PostgreSQL and Oracle, create a unique index for the clustering orders
+      String createUniqueIndexStatement =
+          "CREATE UNIQUE INDEX "
+              + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
+              + " ON "
+              + enclosedFullTableName(schema, table, rdbEngine)
+              + " ("
+              + Stream.concat(
+                      metadata.getPartitionKeyNames().stream().map(c -> enclose(c) + " ASC"),
+                      metadata.getClusteringKeyNames().stream()
+                          .map(c -> enclose(c) + " " + metadata.getClusteringOrder(c)))
+                  .collect(Collectors.joining(","))
+              + ")";
+      execute(connection, createUniqueIndexStatement);
+    }
+  }
+
+  private void createIndex(
+      Connection connection, String schema, String table, TableMetadata metadata)
+      throws SQLException {
+    for (String indexedColumn : metadata.getSecondaryIndexNames()) {
+      createIndex(connection, schema, table, indexedColumn);
+    }
+  }
+
   private void addTableMetadata(
       Connection connection, String namespace, String table, TableMetadata metadata)
       throws SQLException {
@@ -228,7 +315,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   private void createMetadataTableIfNotExists(Connection connection) throws SQLException {
     String createTableStatement =
         "CREATE TABLE "
@@ -645,86 +731,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
-  private void createTableInternal(
-      Connection connection, String schema, String table, TableMetadata metadata)
-      throws SQLException {
-    String createTableStatement =
-        "CREATE TABLE " + enclosedFullTableName(schema, table, rdbEngine) + "(";
-    // Order the columns for their creation by (partition keys >> clustering keys >> other columns)
-    LinkedHashSet<String> sortedColumnNames =
-        Sets.newLinkedHashSet(
-            Iterables.concat(
-                metadata.getPartitionKeyNames(),
-                metadata.getClusteringKeyNames(),
-                metadata.getColumnNames()));
-    // Add columns definition
-    createTableStatement +=
-        sortedColumnNames.stream()
-            .map(
-                columnName ->
-                    enclose(columnName) + " " + getVendorDbColumnType(metadata, columnName))
-            .collect(Collectors.joining(","));
-
-    boolean hasDescClusteringOrder = hasDescClusteringOrder(metadata);
-
-    // Add primary key definition
-    if (hasDescClusteringOrder
-        && (rdbEngine == RdbEngine.MYSQL || rdbEngine == RdbEngine.SQL_SERVER)) {
-      // For MySQL and SQL Server, specify the clustering orders in the primary key definition
-      createTableStatement +=
-          ", PRIMARY KEY ("
-              + Stream.concat(
-                      metadata.getPartitionKeyNames().stream().map(c -> enclose(c) + " ASC"),
-                      metadata.getClusteringKeyNames().stream()
-                          .map(c -> enclose(c) + " " + metadata.getClusteringOrder(c)))
-                  .collect(Collectors.joining(","))
-              + "))";
-    } else {
-      createTableStatement +=
-          ", PRIMARY KEY ("
-              + Stream.concat(
-                      metadata.getPartitionKeyNames().stream(),
-                      metadata.getClusteringKeyNames().stream())
-                  .map(this::enclose)
-                  .collect(Collectors.joining(","))
-              + "))";
-    }
-    if (rdbEngine == RdbEngine.ORACLE) {
-      // For Oracle Database, add ROWDEPENDENCIES to the table to improve the performance
-      createTableStatement += " ROWDEPENDENCIES";
-    }
-    execute(connection, createTableStatement);
-
-    if (rdbEngine == RdbEngine.ORACLE) {
-      // For Oracle Database, set INITRANS to 3 and MAXTRANS to 255 for the table to improve the
-      // performance
-      String alterTableStatement =
-          "ALTER TABLE "
-              + enclosedFullTableName(schema, table, rdbEngine)
-              + " INITRANS 3 MAXTRANS 255";
-      execute(connection, alterTableStatement);
-    }
-
-    if (hasDescClusteringOrder
-        && (rdbEngine == RdbEngine.POSTGRESQL || rdbEngine == RdbEngine.ORACLE)) {
-      // For PostgreSQL and Oracle, create a unique index for the clustering orders
-      String createUniqueIndexStatement =
-          "CREATE UNIQUE INDEX "
-              + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
-              + " ON "
-              + enclosedFullTableName(schema, table, rdbEngine)
-              + " ("
-              + Stream.concat(
-                      metadata.getPartitionKeyNames().stream().map(c -> enclose(c) + " ASC"),
-                      metadata.getClusteringKeyNames().stream()
-                          .map(c -> enclose(c) + " " + metadata.getClusteringOrder(c)))
-                  .collect(Collectors.joining(","))
-              + ")";
-      execute(connection, createUniqueIndexStatement);
-    }
-  }
-
   /**
    * Get the vendor DB data type that is equivalent to the Scalar DB data type
    *
@@ -755,21 +761,91 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         .anyMatch(c -> metadata.getClusteringOrder(c) == Order.DESC);
   }
 
-  private void createIndex(
-      Connection connection, String schema, String table, TableMetadata metadata)
-      throws SQLException {
-    for (String indexedColumn : metadata.getSecondaryIndexNames()) {
-      String indexName = String.join("_", INDEX_NAME_PREFIX, schema, table, indexedColumn);
-      String createIndexStatement =
-          "CREATE INDEX "
-              + indexName
-              + " ON "
-              + encloseFullTableName(schema, table)
-              + " ("
-              + enclose(indexedColumn)
-              + ")";
-      execute(connection, createIndexStatement);
+  @Override
+  public void createIndex(
+      String namespace, String table, String columnName, Map<String, String> options)
+      throws ExecutionException {
+    try (Connection connection = dataSource.getConnection()) {
+      createIndex(connection, namespace, table, columnName);
+      updateTableMetadata(connection, namespace, table, columnName, true);
+    } catch (SQLException e) {
+      throw new ExecutionException("creating the secondary index failed", e);
     }
+  }
+
+  @Override
+  public void dropIndex(String namespace, String table, String columnName)
+      throws ExecutionException {
+    try (Connection connection = dataSource.getConnection()) {
+      dropIndex(connection, namespace, table, columnName);
+      updateTableMetadata(connection, namespace, table, columnName, false);
+    } catch (SQLException e) {
+      throw new ExecutionException("dropping the secondary index failed", e);
+    }
+  }
+
+  private void createIndex(Connection connection, String schema, String table, String indexedColumn)
+      throws SQLException {
+    String indexName = getIndexName(schema, table, indexedColumn);
+    String createIndexStatement =
+        "CREATE INDEX "
+            + enclose(indexName)
+            + " ON "
+            + encloseFullTableName(schema, table)
+            + " ("
+            + enclose(indexedColumn)
+            + ")";
+    execute(connection, createIndexStatement);
+  }
+
+  private void dropIndex(Connection connection, String schema, String table, String indexedColumn)
+      throws SQLException {
+    String indexName = getIndexName(schema, table, indexedColumn);
+
+    String dropIndexStatement;
+    switch (rdbEngine) {
+      case MYSQL:
+      case SQL_SERVER:
+        dropIndexStatement =
+            "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
+        break;
+      case POSTGRESQL:
+        dropIndexStatement = "DROP INDEX " + enclose(schema) + "." + enclose(indexName);
+        break;
+      case ORACLE:
+        dropIndexStatement = "DROP INDEX " + enclose(indexName);
+        break;
+      default:
+        throw new AssertionError();
+    }
+
+    execute(connection, dropIndexStatement);
+  }
+
+  private String getIndexName(String schema, String table, String indexedColumn) {
+    return String.join("_", INDEX_NAME_PREFIX, schema, table, indexedColumn);
+  }
+
+  private void updateTableMetadata(
+      Connection connection, String schema, String table, String columnName, boolean indexed)
+      throws SQLException {
+    String updateStatement =
+        "UPDATE "
+            + encloseFullTableName(metadataSchema, METADATA_TABLE)
+            + " SET "
+            + enclose(METADATA_COL_INDEXED)
+            + "="
+            + computeBooleanValue(indexed)
+            + " WHERE "
+            + enclose(METADATA_COL_FULL_TABLE_NAME)
+            + "='"
+            + getFullTableName(schema, table)
+            + "' AND "
+            + enclose(METADATA_COL_COLUMN_NAME)
+            + "='"
+            + columnName
+            + "'";
+    execute(connection, updateStatement);
   }
 
   private void execute(Connection connection, String sql) throws SQLException {

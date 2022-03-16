@@ -14,7 +14,9 @@ import javax.annotation.concurrent.Immutable;
  * numbers Double-precision floating-point format can exactly represent.
  *
  * @author Hiroyuki Yamada
+ * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
  */
+@Deprecated
 @Immutable
 public final class BigIntValue implements Value<Long> {
   public static final long MAX_VALUE = 9007199254740992L;

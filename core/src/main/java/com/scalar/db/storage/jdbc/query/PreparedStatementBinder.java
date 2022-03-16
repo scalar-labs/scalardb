@@ -1,14 +1,14 @@
 package com.scalar.db.storage.jdbc.query;
 
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.io.ValueVisitor;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.ColumnVisitor;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -16,7 +16,7 @@ import java.sql.Types;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-public class PreparedStatementBinder implements ValueVisitor {
+public class PreparedStatementBinder implements ColumnVisitor {
 
   private final PreparedStatement preparedStatement;
   private final TableMetadata tableMetadata;
@@ -39,71 +39,91 @@ public class PreparedStatementBinder implements ValueVisitor {
   }
 
   @Override
-  public void visit(BooleanValue value) {
+  public void visit(BooleanColumn column) {
     try {
-      preparedStatement.setBoolean(index++, value.get());
+      if (column.hasNullValue()) {
+        preparedStatement.setNull(index++, getSqlType(column.getName()));
+      } else {
+        preparedStatement.setBoolean(index++, column.getBooleanValue());
+      }
     } catch (SQLException e) {
       sqlException = e;
     }
   }
 
   @Override
-  public void visit(IntValue value) {
+  public void visit(IntColumn column) {
     try {
-      preparedStatement.setInt(index++, value.get());
+      if (column.hasNullValue()) {
+        preparedStatement.setNull(index++, getSqlType(column.getName()));
+      } else {
+        preparedStatement.setInt(index++, column.getIntValue());
+      }
     } catch (SQLException e) {
       sqlException = e;
     }
   }
 
   @Override
-  public void visit(BigIntValue value) {
+  public void visit(BigIntColumn column) {
     try {
-      preparedStatement.setLong(index++, value.get());
+      if (column.hasNullValue()) {
+        preparedStatement.setNull(index++, getSqlType(column.getName()));
+      } else {
+        preparedStatement.setLong(index++, column.getBigIntValue());
+      }
     } catch (SQLException e) {
       sqlException = e;
     }
   }
 
   @Override
-  public void visit(FloatValue value) {
+  public void visit(FloatColumn column) {
     try {
-      preparedStatement.setFloat(index++, value.get());
+      if (column.hasNullValue()) {
+        preparedStatement.setNull(index++, getSqlType(column.getName()));
+      } else {
+        preparedStatement.setFloat(index++, column.getFloatValue());
+      }
     } catch (SQLException e) {
       sqlException = e;
     }
   }
 
   @Override
-  public void visit(DoubleValue value) {
+  public void visit(DoubleColumn column) {
     try {
-      preparedStatement.setDouble(index++, value.get());
+      if (column.hasNullValue()) {
+        preparedStatement.setNull(index++, getSqlType(column.getName()));
+      } else {
+        preparedStatement.setDouble(index++, column.getDoubleValue());
+      }
     } catch (SQLException e) {
       sqlException = e;
     }
   }
 
   @Override
-  public void visit(TextValue value) {
+  public void visit(TextColumn column) {
     try {
-      preparedStatement.setString(index++, value.get().orElse(null));
+      if (column.hasNullValue()) {
+        preparedStatement.setNull(index++, getSqlType(column.getName()));
+      } else {
+        preparedStatement.setString(index++, column.getTextValue());
+      }
     } catch (SQLException e) {
       sqlException = e;
     }
   }
 
   @Override
-  public void visit(BlobValue value) {
+  public void visit(BlobColumn column) {
     try {
-      preparedStatement.setBytes(index++, value.get().orElse(null));
-    } catch (SQLException e) {
-      sqlException = e;
-    }
-  }
-
-  public void bindNullValue(String name) {
-    try {
-      preparedStatement.setNull(index++, getSqlType(name));
+      if (column.hasNullValue()) {
+        preparedStatement.setNull(index++, getSqlType(column.getName()));
+      } else {
+        preparedStatement.setBytes(index++, column.getBlobValueAsBytes());
+      }
     } catch (SQLException e) {
       sqlException = e;
     }

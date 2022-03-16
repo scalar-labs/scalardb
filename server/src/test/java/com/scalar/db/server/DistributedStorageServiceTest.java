@@ -12,13 +12,16 @@ import com.google.protobuf.Empty;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.rpc.GetRequest;
 import com.scalar.db.rpc.GetResponse;
 import com.scalar.db.rpc.MutateRequest;
 import com.scalar.db.util.ProtoUtils;
+import com.scalar.db.util.TableMetadataManager;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
@@ -34,6 +37,7 @@ import org.mockito.MockitoAnnotations;
 public class DistributedStorageServiceTest {
 
   @Mock private DistributedStorage storage;
+  @Mock private TableMetadataManager tableMetadataManager;
   @Mock private GateKeeper gateKeeper;
   @Captor private ArgumentCaptor<StatusRuntimeException> exceptionCaptor;
 
@@ -44,7 +48,14 @@ public class DistributedStorageServiceTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    storageService = new DistributedStorageService(storage, gateKeeper, new Metrics());
+    storageService =
+        new DistributedStorageService(storage, tableMetadataManager, gateKeeper, new Metrics());
+    when(tableMetadataManager.getTableMetadata(any(), any()))
+        .thenReturn(
+            TableMetadata.newBuilder()
+                .addColumn("col1", DataType.INT)
+                .addPartitionKey("col1")
+                .build());
     when(gateKeeper.letIn()).thenReturn(true);
   }
 

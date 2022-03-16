@@ -936,7 +936,8 @@ public abstract class StorageIntegrationTestBase {
     Put put = preparePuts().get(0);
     storage.put(put);
 
-    put.withNullValue(COL_NAME2);
+    put.withTextValue(COL_NAME2, null);
+    put.withBooleanValue(COL_NAME5, null);
 
     // Act
     storage.put(put);
@@ -951,7 +952,7 @@ public abstract class StorageIntegrationTestBase {
         .isEqualTo(Optional.of(new TextValue(COL_NAME2, (String) null)));
     assertThat(result.getValue(COL_NAME3)).isEqualTo(Optional.of(new IntValue(COL_NAME3, 0)));
     assertThat(result.getValue(COL_NAME5))
-        .isEqualTo(Optional.of(new BooleanValue(COL_NAME5, true)));
+        .isEqualTo(Optional.of(new BooleanValue(COL_NAME5, false)));
 
     assertThat(result.getContainedColumnNames())
         .isEqualTo(
@@ -978,9 +979,9 @@ public abstract class StorageIntegrationTestBase {
     assertThat(result.getAsObject(COL_NAME3)).isEqualTo(0);
 
     assertThat(result.contains(COL_NAME5)).isTrue();
-    assertThat(result.isNull(COL_NAME5)).isFalse();
-    assertThat(result.getBoolean(COL_NAME5)).isEqualTo(true);
-    assertThat(result.getAsObject(COL_NAME5)).isEqualTo(true);
+    assertThat(result.isNull(COL_NAME5)).isTrue();
+    assertThat(result.getBoolean(COL_NAME5)).isFalse();
+    assertThat(result.getAsObject(COL_NAME5)).isNull();
   }
 
   @Test

@@ -4,15 +4,14 @@ import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
@@ -26,7 +25,7 @@ public class InsertQuery implements Query {
   private final TableMetadata tableMetadata;
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
-  private final Map<String, Optional<Value<?>>> values;
+  private final Map<String, Column<?>> columns;
 
   private InsertQuery(Builder builder) {
     rdbEngine = builder.rdbEngine;
@@ -35,7 +34,7 @@ public class InsertQuery implements Query {
     tableMetadata = builder.tableMetadata;
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
-    values = builder.values;
+    columns = builder.columns;
   }
 
   @Override
@@ -50,7 +49,7 @@ public class InsertQuery implements Query {
     List<String> names = new ArrayList<>();
     partitionKey.forEach(v -> names.add(v.getName()));
     clusteringKey.ifPresent(k -> k.forEach(v -> names.add(v.getName())));
-    names.addAll(values.keySet());
+    names.addAll(columns.keySet());
     return "("
         + names.stream().map(n -> enclose(n, rdbEngine)).collect(Collectors.joining(","))
         + ") VALUES ("
@@ -63,24 +62,20 @@ public class InsertQuery implements Query {
     PreparedStatementBinder binder =
         new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine);
 
-    for (Value<?> value : partitionKey) {
-      value.accept(binder);
+    for (Column<?> column : partitionKey.getColumns()) {
+      column.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
 
     if (clusteringKey.isPresent()) {
-      for (Value<?> value : clusteringKey.get()) {
-        value.accept(binder);
+      for (Column<?> column : clusteringKey.get().getColumns()) {
+        column.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
     }
 
-    for (Entry<String, Optional<Value<?>>> entry : values.entrySet()) {
-      if (entry.getValue().isPresent()) {
-        entry.getValue().get().accept(binder);
-      } else {
-        binder.bindNullValue(entry.getKey());
-      }
+    for (Column<?> column : columns.values()) {
+      column.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
   }
@@ -92,7 +87,7 @@ public class InsertQuery implements Query {
     private final TableMetadata tableMetadata;
     private Key partitionKey;
     private Optional<Key> clusteringKey;
-    private Map<String, Optional<Value<?>>> values;
+    private Map<String, Column<?>> columns;
 
     Builder(RdbEngine rdbEngine, String schema, String table, TableMetadata tableMetadata) {
       this.rdbEngine = rdbEngine;
@@ -102,10 +97,10 @@ public class InsertQuery implements Query {
     }
 
     public Builder values(
-        Key partitionKey, Optional<Key> clusteringKey, Map<String, Optional<Value<?>>> values) {
+        Key partitionKey, Optional<Key> clusteringKey, Map<String, Column<?>> columns) {
       this.partitionKey = partitionKey;
       this.clusteringKey = clusteringKey;
-      this.values = values;
+      this.columns = columns;
       return this;
     }
 

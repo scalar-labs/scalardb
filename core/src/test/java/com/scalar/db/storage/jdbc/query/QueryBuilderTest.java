@@ -9,10 +9,11 @@ import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
-import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -389,16 +390,16 @@ public class QueryBuilderTest {
     InsertQuery query;
     PreparedStatement preparedStatement;
 
-    Map<String, Optional<Value<?>>> values = new HashMap<>();
-    values.put("v1", Optional.of(new TextValue("v1Value")));
-    values.put("v2", Optional.of(new TextValue("v2Value")));
-    values.put("v3", Optional.of(new TextValue("v3Value")));
+    Map<String, Column<?>> columns = new HashMap<>();
+    columns.put("v1", TextColumn.of("v1", "v1Value"));
+    columns.put("v2", TextColumn.of("v2", "v2Value"));
+    columns.put("v3", TextColumn.of("v3", "v3Value"));
 
     preparedStatement = mock(PreparedStatement.class);
     query =
         queryBuilder
             .insertInto(NAMESPACE, TABLE, TABLE_METADATA)
-            .values(new Key("p1", "p1Value"), Optional.empty(), values)
+            .values(new Key("p1", "p1Value"), Optional.empty(), columns)
             .build();
     assertThat(query.sql())
         .isEqualTo(encloseSql("INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?)"));
@@ -412,7 +413,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .insertInto(NAMESPACE, TABLE, TABLE_METADATA)
-            .values(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")), values)
+            .values(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")), columns)
             .build();
     assertThat(query.sql())
         .isEqualTo(encloseSql("INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)"));
@@ -423,7 +424,7 @@ public class QueryBuilderTest {
     verify(preparedStatement).setString(4, "v2Value");
     verify(preparedStatement).setString(5, "v3Value");
 
-    values.put("v4", Optional.of(new TextValue("v4Value")));
+    columns.put("v4", TextColumn.of("v4", "v4Value"));
     preparedStatement = mock(PreparedStatement.class);
     query =
         queryBuilder
@@ -431,7 +432,7 @@ public class QueryBuilderTest {
             .values(
                 new Key("p1", "p1Value", "p2", "p2Value"),
                 Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
-                values)
+                columns)
             .build();
     assertThat(query.sql())
         .isEqualTo(
@@ -446,7 +447,7 @@ public class QueryBuilderTest {
     verify(preparedStatement).setString(7, "v3Value");
     verify(preparedStatement).setString(8, "v4Value");
 
-    values.put("v5", Optional.empty());
+    columns.put("v5", TextColumn.ofNull("v5"));
     preparedStatement = mock(PreparedStatement.class);
     query =
         queryBuilder
@@ -454,7 +455,7 @@ public class QueryBuilderTest {
             .values(
                 new Key("p1", "p1Value", "p2", "p2Value"),
                 Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
-                values)
+                columns)
             .build();
     assertThat(query.sql())
         .isEqualTo(
@@ -477,16 +478,16 @@ public class QueryBuilderTest {
     UpdateQuery query;
     PreparedStatement preparedStatement;
 
-    Map<String, Optional<Value<?>>> values = new HashMap<>();
-    values.put("v1", Optional.of(new TextValue("v1Value")));
-    values.put("v2", Optional.of(new TextValue("v2Value")));
-    values.put("v3", Optional.of(new TextValue("v3Value")));
+    Map<String, Column<?>> columns = new HashMap<>();
+    columns.put("v1", TextColumn.of("v1", "v1Value"));
+    columns.put("v2", TextColumn.of("v2", "v2Value"));
+    columns.put("v3", TextColumn.of("v3", "v3Value"));
 
     preparedStatement = mock(PreparedStatement.class);
     query =
         queryBuilder
             .update(NAMESPACE, TABLE, TABLE_METADATA)
-            .set(values)
+            .set(columns)
             .where(new Key("p1", "p1Value"), Optional.empty())
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=?"));
@@ -500,7 +501,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .update(NAMESPACE, TABLE, TABLE_METADATA)
-            .set(values)
+            .set(columns)
             .where(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")))
             .build();
     assertThat(query.sql())
@@ -516,7 +517,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .update(NAMESPACE, TABLE, TABLE_METADATA)
-            .set(values)
+            .set(columns)
             .where(
                 new Key("p1", "p1Value", "p2", "p2Value"),
                 Optional.of(new Key("c1", "c1Value", "c2", "c2Value")))
@@ -537,7 +538,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .update(NAMESPACE, TABLE, TABLE_METADATA)
-            .set(values)
+            .set(columns)
             .where(
                 new Key("p1", "p1Value"),
                 Optional.of(new Key("c1", "c1Value")),
@@ -559,7 +560,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .update(NAMESPACE, TABLE, TABLE_METADATA)
-            .set(values)
+            .set(columns)
             .where(
                 new Key("p1", "p1Value"),
                 Optional.of(new Key("c1", "c1Value")),
@@ -583,12 +584,12 @@ public class QueryBuilderTest {
     verify(preparedStatement).setString(7, "v2ConditionValue");
     verify(preparedStatement).setString(8, "v3ConditionValue");
 
-    values.put("v4", Optional.empty());
+    columns.put("v4", TextColumn.ofNull("v4"));
     preparedStatement = mock(PreparedStatement.class);
     query =
         queryBuilder
             .update(NAMESPACE, TABLE, TABLE_METADATA)
-            .set(values)
+            .set(columns)
             .where(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")))
             .build();
     assertThat(query.sql())
@@ -692,10 +693,10 @@ public class QueryBuilderTest {
     UpsertQuery query;
     PreparedStatement preparedStatement;
 
-    Map<String, Optional<Value<?>>> values = new HashMap<>();
-    values.put("v1", Optional.of(new TextValue("v1Value")));
-    values.put("v2", Optional.of(new TextValue("v2Value")));
-    values.put("v3", Optional.of(new TextValue("v3Value")));
+    Map<String, Column<?>> columns = new HashMap<>();
+    columns.put("v1", TextColumn.of("v1", "v1Value"));
+    columns.put("v2", TextColumn.of("v2", "v2Value"));
+    columns.put("v3", TextColumn.of("v3", "v3Value"));
 
     preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngine) {
@@ -726,7 +727,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
-            .values(new Key("p1", "p1Value"), Optional.empty(), values)
+            .values(new Key("p1", "p1Value"), Optional.empty(), columns)
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
     query.bind(preparedStatement);
@@ -785,7 +786,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
-            .values(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")), values)
+            .values(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")), columns)
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
     query.bind(preparedStatement);
@@ -816,7 +817,7 @@ public class QueryBuilderTest {
         break;
     }
 
-    values.put("v4", Optional.of(new TextValue("v4Value")));
+    columns.put("v4", TextColumn.of("v4", "v4Value"));
     preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngine) {
       case MYSQL:
@@ -852,7 +853,7 @@ public class QueryBuilderTest {
             .values(
                 new Key("p1", "p1Value", "p2", "p2Value"),
                 Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
-                values)
+                columns)
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
     query.bind(preparedStatement);
@@ -893,7 +894,7 @@ public class QueryBuilderTest {
         break;
     }
 
-    values.put("v5", Optional.empty());
+    columns.put("v5", TextColumn.ofNull("v5"));
     preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngine) {
       case MYSQL:
@@ -930,7 +931,7 @@ public class QueryBuilderTest {
             .values(
                 new Key("p1", "p1Value", "p2", "p2Value"),
                 Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
-                values)
+                columns)
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
     query.bind(preparedStatement);

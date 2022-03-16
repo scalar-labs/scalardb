@@ -18,15 +18,15 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.IntValue;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.io.Value;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.ResultImpl;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -88,17 +88,19 @@ public class CommitMutationComposerTest {
   }
 
   private TransactionResult prepareResult(TransactionState state) {
-    ImmutableMap<String, Optional<Value<?>>> values =
-        ImmutableMap.<String, Optional<Value<?>>>builder()
-            .put(ANY_NAME_1, Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
-            .put(ANY_NAME_2, Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
-            .put(ANY_NAME_3, Optional.of(new IntValue(ANY_NAME_3, ANY_INT_2)))
-            .put(Attribute.ID, Optional.of(Attribute.toIdValue(ANY_ID)))
-            .put(Attribute.PREPARED_AT, Optional.of(Attribute.toPreparedAtValue(ANY_TIME_1)))
-            .put(Attribute.STATE, Optional.of(Attribute.toStateValue(state)))
-            .put(Attribute.VERSION, Optional.of(Attribute.toVersionValue(2)))
+    ImmutableMap<String, Column<?>> columns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
+            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
+            .put(ANY_NAME_3, IntColumn.of(ANY_NAME_3, ANY_INT_2))
+            .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(ANY_ID)))
+            .put(
+                Attribute.PREPARED_AT,
+                ScalarDbUtils.toColumn(Attribute.toPreparedAtValue(ANY_TIME_1)))
+            .put(Attribute.STATE, ScalarDbUtils.toColumn(Attribute.toStateValue(state)))
+            .put(Attribute.VERSION, ScalarDbUtils.toColumn(Attribute.toVersionValue(2)))
             .build();
-    return new TransactionResult(new ResultImpl(values, TABLE_METADATA));
+    return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
   }
 
   @Test

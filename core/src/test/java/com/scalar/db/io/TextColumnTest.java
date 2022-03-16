@@ -1,0 +1,89 @@
+package com.scalar.db.io;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import org.junit.Test;
+
+public class TextColumnTest {
+
+  @Test
+  public void of_ProperValueGiven_ShouldReturnWhatsSet() {
+    // Arrange
+
+    // Act
+    TextColumn column = TextColumn.of("col", "text");
+
+    // Assert
+    assertThat(column.getName()).isEqualTo("col");
+    assertThat(column.getValue()).isPresent();
+    assertThat(column.getValue().get()).isEqualTo("text");
+    assertThat(column.getTextValue()).isEqualTo("text");
+    assertThat(column.getDataType()).isEqualTo(DataType.TEXT);
+    assertThat(column.hasNullValue()).isFalse();
+    assertThat(column.getValueAsObject()).isEqualTo("text");
+    assertThatThrownBy(column::getBooleanValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getIntValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getBigIntValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getFloatValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getDoubleValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getBlobValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getBlobValueAsByteBuffer)
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getBlobValueAsBytes)
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void ofNull_ProperValueGiven_ShouldReturnWhatsSet() {
+    // Arrange
+
+    // Act
+    TextColumn column = TextColumn.ofNull("col");
+
+    // Assert
+    assertThat(column.getName()).isEqualTo("col");
+    assertThat(column.getValue()).isNotPresent();
+    assertThat(column.getTextValue()).isNull();
+    assertThat(column.getDataType()).isEqualTo(DataType.TEXT);
+    assertThat(column.hasNullValue()).isTrue();
+    assertThat(column.getValueAsObject()).isNull();
+    assertThatThrownBy(column::getBooleanValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getIntValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getBigIntValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getFloatValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getDoubleValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getBlobValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getBlobValueAsByteBuffer)
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getBlobValueAsBytes)
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void copyWith_ProperValueGiven_ShouldReturnSameValueButDifferentName() {
+    // Arrange
+
+    // Act
+    TextColumn column = TextColumn.of("col", "text").copyWith("col2");
+
+    // Assert
+    assertThat(column.getName()).isEqualTo("col2");
+    assertThat(column.getValue()).isPresent();
+    assertThat(column.getValue().get()).isEqualTo("text");
+    assertThat(column.getTextValue()).isEqualTo("text");
+    assertThat(column.getDataType()).isEqualTo(DataType.TEXT);
+    assertThat(column.hasNullValue()).isFalse();
+    assertThat(column.getValueAsObject()).isEqualTo("text");
+    assertThatThrownBy(column::getBooleanValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getIntValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getBigIntValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getFloatValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getDoubleValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getBlobValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getBlobValueAsByteBuffer)
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getBlobValueAsBytes)
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+}

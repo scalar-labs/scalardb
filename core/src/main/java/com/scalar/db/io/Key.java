@@ -3,7 +3,9 @@ package com.scalar.db.io;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
+import com.scalar.db.util.ScalarDbUtils;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,6 +14,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
@@ -22,7 +25,7 @@ import javax.annotation.concurrent.Immutable;
  */
 @Immutable
 public final class Key implements Comparable<Key>, Iterable<Value<?>> {
-  private final List<Value<?>> values;
+  private final List<Column<?>> columns;
 
   /**
    * Constructs a {@code Key} with the specified {@link Value}s
@@ -33,8 +36,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
   @Deprecated
   public Key(Value<?>... values) {
     checkNotNull(values);
-    this.values = new ArrayList<>(values.length);
-    this.values.addAll(Arrays.asList(values));
+    this.columns = new ArrayList<>(values.length);
+    Arrays.stream(values).map(ScalarDbUtils::toColumn).forEach(columns::add);
   }
 
   /**
@@ -46,8 +49,18 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
   @Deprecated
   public Key(List<Value<?>> values) {
     checkNotNull(values);
-    this.values = new ArrayList<>(values.size());
-    this.values.addAll(values);
+    this.columns = new ArrayList<>(values.size());
+    values.stream().map(ScalarDbUtils::toColumn).forEach(columns::add);
+  }
+
+  /**
+   * Constructs a {@code Key} with the specified list of {@link Column}s
+   *
+   * @param columns a list of {@link Column}s which this key is composed of
+   */
+  private Key(Collection<Column<?>> columns) {
+    checkNotNull(columns);
+    this.columns = new ArrayList<>(columns);
   }
 
   /**
@@ -60,7 +73,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    */
   @Deprecated
   public Key(String columnName, boolean booleanValue) {
-    values = Collections.singletonList(new BooleanValue(columnName, booleanValue));
+    columns = Collections.singletonList(BooleanColumn.of(columnName, booleanValue));
   }
 
   /**
@@ -73,7 +86,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    */
   @Deprecated
   public Key(String columnName, int intValue) {
-    values = Collections.singletonList(new IntValue(columnName, intValue));
+    columns = Collections.singletonList(IntColumn.of(columnName, intValue));
   }
 
   /**
@@ -86,7 +99,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    */
   @Deprecated
   public Key(String columnName, long bigIntValue) {
-    values = Collections.singletonList(new BigIntValue(columnName, bigIntValue));
+    columns = Collections.singletonList(BigIntColumn.of(columnName, bigIntValue));
   }
 
   /**
@@ -99,7 +112,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    */
   @Deprecated
   public Key(String columnName, float floatValue) {
-    values = Collections.singletonList(new FloatValue(columnName, floatValue));
+    columns = Collections.singletonList(FloatColumn.of(columnName, floatValue));
   }
 
   /**
@@ -112,7 +125,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    */
   @Deprecated
   public Key(String columnName, double doubleValue) {
-    values = Collections.singletonList(new DoubleValue(columnName, doubleValue));
+    columns = Collections.singletonList(DoubleColumn.of(columnName, doubleValue));
   }
 
   /**
@@ -125,7 +138,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    */
   @Deprecated
   public Key(String columnName, String textValue) {
-    values = Collections.singletonList(new TextValue(columnName, textValue));
+    columns = Collections.singletonList(TextColumn.of(columnName, textValue));
   }
 
   /**
@@ -138,7 +151,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    */
   @Deprecated
   public Key(String columnName, byte[] blobValue) {
-    values = Collections.singletonList(new BlobValue(columnName, blobValue));
+    columns = Collections.singletonList(BlobColumn.of(columnName, blobValue));
   }
 
   /**
@@ -151,7 +164,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    */
   @Deprecated
   public Key(String columnName, ByteBuffer blobValue) {
-    values = Collections.singletonList(new BlobValue(columnName, blobValue));
+    columns = Collections.singletonList(BlobColumn.of(columnName, blobValue));
   }
 
   /**
@@ -166,7 +179,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    */
   @Deprecated
   public Key(String n1, Object v1, String n2, Object v2) {
-    values = Arrays.asList(toValue(n1, v1), toValue(n2, v2));
+    columns = Arrays.asList(toColumn(n1, v1), toColumn(n2, v2));
   }
 
   /**
@@ -183,7 +196,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    */
   @Deprecated
   public Key(String n1, Object v1, String n2, Object v2, String n3, Object v3) {
-    values = Arrays.asList(toValue(n1, v1), toValue(n2, v2), toValue(n3, v3));
+    columns = Arrays.asList(toColumn(n1, v1), toColumn(n2, v2), toColumn(n3, v3));
   }
 
   /**
@@ -203,7 +216,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
   @Deprecated
   public Key(
       String n1, Object v1, String n2, Object v2, String n3, Object v3, String n4, Object v4) {
-    values = Arrays.asList(toValue(n1, v1), toValue(n2, v2), toValue(n3, v3), toValue(n4, v4));
+    columns = Arrays.asList(toColumn(n1, v1), toColumn(n2, v2), toColumn(n3, v3), toColumn(n4, v4));
   }
 
   /**
@@ -234,28 +247,32 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
       Object v4,
       String n5,
       Object v5) {
-    values =
+    columns =
         Arrays.asList(
-            toValue(n1, v1), toValue(n2, v2), toValue(n3, v3), toValue(n4, v4), toValue(n5, v5));
+            toColumn(n1, v1),
+            toColumn(n2, v2),
+            toColumn(n3, v3),
+            toColumn(n4, v4),
+            toColumn(n5, v5));
   }
 
-  private Value<?> toValue(String name, Object value) {
+  private Column<?> toColumn(String name, Object value) {
     if (value instanceof Boolean) {
-      return new BooleanValue(name, (Boolean) value);
+      return BooleanColumn.of(name, (Boolean) value);
     } else if (value instanceof Integer) {
-      return new IntValue(name, (Integer) value);
+      return IntColumn.of(name, (Integer) value);
     } else if (value instanceof Long) {
-      return new BigIntValue(name, (Long) value);
+      return BigIntColumn.of(name, (Long) value);
     } else if (value instanceof Float) {
-      return new FloatValue(name, (Float) value);
+      return FloatColumn.of(name, (Float) value);
     } else if (value instanceof Double) {
-      return new DoubleValue(name, (Double) value);
+      return DoubleColumn.of(name, (Double) value);
     } else if (value instanceof String) {
-      return new TextValue(name, (String) value);
+      return TextColumn.of(name, (String) value);
     } else if (value instanceof byte[]) {
-      return new BlobValue(name, (byte[]) value);
+      return BlobColumn.of(name, (byte[]) value);
     } else if (value instanceof ByteBuffer) {
-      return new BlobValue(name, (ByteBuffer) value);
+      return BlobColumn.of(name, (ByteBuffer) value);
     } else {
       throw new IllegalArgumentException(
           "Unsupported type, name: " + name + ", type: " + value.getClass().getName());
@@ -269,10 +286,24 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * this method. Users should not depend on it.
    *
    * @return list of {@code Value} which this key is composed of
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
    */
+  @Deprecated
   @Nonnull
   public List<Value<?>> get() {
-    return Collections.unmodifiableList(values);
+    return columns.stream().map(ScalarDbUtils::toValue).collect(Collectors.toList());
+  }
+
+  /**
+   * Returns the list of {@code Column} which this key is composed of.
+   *
+   * <p>This method is primarily for internal use. Breaking changes can and will be introduced to
+   * this method. Users should not depend on it.
+   *
+   * @return list of {@code Column} which this key is composed of
+   */
+  public List<Column<?>> getColumns() {
+    return ImmutableList.copyOf(columns);
   }
 
   /**
@@ -281,7 +312,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @return the size of list of columns which this key is composed of
    */
   public int size() {
-    return values.size();
+    return columns.size();
   }
 
   /**
@@ -291,7 +322,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @return the column name of the i-th column which this key is composed of
    */
   public String getColumnName(int i) {
-    return values.get(i).getName();
+    return columns.get(i).getName();
   }
 
   /**
@@ -300,8 +331,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param i the position of the column which this key is composed of
    * @return the BOOLEAN value of the i-th column which this key is composed of
    */
-  public boolean getBoolean(int i) {
-    return values.get(i).getAsBoolean();
+  public boolean getBooleanValue(int i) {
+    return columns.get(i).getBooleanValue();
   }
 
   /**
@@ -310,8 +341,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param i the position of the column which this key is composed of
    * @return the INT value of the i-th column which this key is composed of
    */
-  public int getInt(int i) {
-    return values.get(i).getAsInt();
+  public int getIntValue(int i) {
+    return columns.get(i).getIntValue();
   }
 
   /**
@@ -320,8 +351,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param i the position of the column which this key is composed of
    * @return the BIGINT value of the i-th column which this key is composed of
    */
-  public long getBigInt(int i) {
-    return values.get(i).getAsLong();
+  public long getBigIntValue(int i) {
+    return columns.get(i).getBigIntValue();
   }
 
   /**
@@ -330,8 +361,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param i the position of the column which this key is composed of
    * @return the FLOAT value of the i-th column which this key is composed of
    */
-  public float getFloat(int i) {
-    return values.get(i).getAsFloat();
+  public float getFloatValue(int i) {
+    return columns.get(i).getFloatValue();
   }
 
   /**
@@ -340,8 +371,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param i the position of the column which this key is composed of
    * @return the DOUBLE value of the i-th column which this key is composed of
    */
-  public double getDouble(int i) {
-    return values.get(i).getAsDouble();
+  public double getDoubleValue(int i) {
+    return columns.get(i).getDoubleValue();
   }
 
   /**
@@ -350,8 +381,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param i the position of the column which this key is composed of
    * @return the TEXT value of the i-th column which this key is composed of
    */
-  public String getText(int i) {
-    return values.get(i).getAsString().orElse(null);
+  public String getTextValue(int i) {
+    return columns.get(i).getTextValue();
   }
 
   /**
@@ -360,8 +391,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param i the position of the column which this key is composed of
    * @return the BLOB value of the i-th column which this key is composed of as a ByteBuffer type
    */
-  public ByteBuffer getBlob(int i) {
-    return getBlobAsByteBuffer(i);
+  public ByteBuffer getBlobValue(int i) {
+    return getBlobValueAsByteBuffer(i);
   }
 
   /**
@@ -370,8 +401,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param i the position of the column which this key is composed of
    * @return the BLOB value of the i-th column which this key is composed of as a ByteBuffer type
    */
-  public ByteBuffer getBlobAsByteBuffer(int i) {
-    return values.get(i).getAsByteBuffer().orElse(null);
+  public ByteBuffer getBlobValueAsByteBuffer(int i) {
+    return columns.get(i).getBlobValueAsByteBuffer();
   }
 
   /**
@@ -380,8 +411,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param i the position of the column which this key is composed of
    * @return the BLOB value of the i-th column which this key is composed of as a byte array type
    */
-  public byte[] getBlobAsBytes(int i) {
-    return values.get(i).getAsBytes().orElse(null);
+  public byte[] getBlobValueAsBytes(int i) {
+    return columns.get(i).getBlobValueAsBytes();
   }
 
   /**
@@ -397,29 +428,13 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param i the position of the column which this key is composed of
    * @return the value of the i-th column which this key is composed of as an Object type
    */
-  public Object getAsObject(int i) {
-    if (values.get(i) instanceof BooleanValue) {
-      return getBoolean(i);
-    } else if (values.get(i) instanceof IntValue) {
-      return getInt(i);
-    } else if (values.get(i) instanceof BigIntValue) {
-      return getBigInt(i);
-    } else if (values.get(i) instanceof FloatValue) {
-      return getFloat(i);
-    } else if (values.get(i) instanceof DoubleValue) {
-      return getDouble(i);
-    } else if (values.get(i) instanceof TextValue) {
-      return getText(i);
-    } else if (values.get(i) instanceof BlobValue) {
-      return getBlob(i);
-    } else {
-      throw new AssertionError();
-    }
+  public Object getValueAsObject(int i) {
+    return columns.get(i).getValueAsObject();
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(values);
+    return Objects.hash(columns);
   }
 
   /**
@@ -444,25 +459,43 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
       return false;
     }
     Key that = (Key) o;
-    return values.equals(that.values);
+    return columns.equals(that.columns);
   }
 
   @Override
   public String toString() {
     MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this);
-    values.forEach(helper::addValue);
+    columns.forEach(helper::addValue);
     return helper.toString();
   }
 
+  /**
+   * @return an iterator of the values which this key is composed of
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   */
+  @Deprecated
   @Nonnull
   @Override
   public Iterator<Value<?>> iterator() {
-    return values.iterator();
+    return new Iterator<Value<?>>() {
+
+      private final Iterator<Column<?>> iterator = columns.iterator();
+
+      @Override
+      public boolean hasNext() {
+        return iterator.hasNext();
+      }
+
+      @Override
+      public Value<?> next() {
+        return ScalarDbUtils.toValue(iterator.next());
+      }
+    };
   }
 
   @Override
   public int compareTo(Key o) {
-    return Ordering.<Value<?>>natural().lexicographical().compare(values, o.values);
+    return Ordering.<Column<?>>natural().lexicographical().compare(columns, o.columns);
   }
 
   /**
@@ -639,7 +672,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
 
   /** A builder class that builds a {@code Key} instance */
   public static final class Builder {
-    private final List<Value<?>> values = new ArrayList<>();
+    private final List<Column<?>> columns = new ArrayList<>();
 
     private Builder() {}
 
@@ -651,7 +684,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
      * @return a builder object
      */
     public Builder addBoolean(String columnName, boolean value) {
-      values.add(new BooleanValue(columnName, value));
+      columns.add(BooleanColumn.of(columnName, value));
       return this;
     }
 
@@ -663,7 +696,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
      * @return a builder object
      */
     public Builder addInt(String columnName, int value) {
-      values.add(new IntValue(columnName, value));
+      columns.add(IntColumn.of(columnName, value));
       return this;
     }
 
@@ -675,7 +708,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
      * @return a builder object
      */
     public Builder addBigInt(String columnName, long value) {
-      values.add(new BigIntValue(columnName, value));
+      columns.add(BigIntColumn.of(columnName, value));
       return this;
     }
 
@@ -687,7 +720,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
      * @return a builder object
      */
     public Builder addFloat(String columnName, float value) {
-      values.add(new FloatValue(columnName, value));
+      columns.add(FloatColumn.of(columnName, value));
       return this;
     }
 
@@ -699,7 +732,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
      * @return a builder object
      */
     public Builder addDouble(String columnName, double value) {
-      values.add(new DoubleValue(columnName, value));
+      columns.add(DoubleColumn.of(columnName, value));
       return this;
     }
 
@@ -711,7 +744,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
      * @return a builder object
      */
     public Builder addText(String columnName, String value) {
-      values.add(new TextValue(columnName, value));
+      columns.add(TextColumn.of(columnName, value));
       return this;
     }
 
@@ -723,7 +756,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
      * @return a builder object
      */
     public Builder addBlob(String columnName, byte[] value) {
-      values.add(new BlobValue(columnName, value));
+      columns.add(BlobColumn.of(columnName, value));
       return this;
     }
 
@@ -735,7 +768,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
      * @return a builder object
      */
     public Builder addBlob(String columnName, ByteBuffer value) {
-      values.add(new BlobValue(columnName, value));
+      columns.add(BlobColumn.of(columnName, value));
       return this;
     }
 
@@ -746,7 +779,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
      */
     @Deprecated
     public Builder add(Value<?> value) {
-      values.add(value);
+      columns.add(ScalarDbUtils.toColumn(value));
       return this;
     }
 
@@ -757,7 +790,21 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
      */
     @Deprecated
     public Builder addAll(Collection<? extends Value<?>> values) {
-      this.values.addAll(values);
+      values.stream().map(ScalarDbUtils::toColumn).forEach(columns::add);
+      return this;
+    }
+
+    /**
+     * Adds a column as an element of Key.
+     *
+     * <p>This method is primarily for internal use. Breaking changes can and will be introduced to
+     * this method. Users should not depend on it.
+     *
+     * @param column a column to add
+     * @return a builder object
+     */
+    public Builder add(Column<?> column) {
+      columns.add(column);
       return this;
     }
 
@@ -771,7 +818,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
     }
 
     public Key build() {
-      return new Key(values);
+      return new Key(columns);
     }
   }
 }

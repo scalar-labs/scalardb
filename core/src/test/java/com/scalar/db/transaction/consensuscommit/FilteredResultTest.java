@@ -7,16 +7,16 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.io.BigIntValue;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
-import com.scalar.db.io.Value;
 import com.scalar.db.util.ResultImpl;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -59,25 +59,25 @@ public class FilteredResultTest {
   @Before
   public void setUp() {
     // Arrange
-    Map<String, Optional<Value<?>>> values =
-        ImmutableMap.<String, Optional<Value<?>>>builder()
-            .put(ACCOUNT_ID, Optional.of(ACCOUNT_ID_VALUE))
-            .put(ACCOUNT_TYPE, Optional.of(ACCOUNT_TYPE_VALUE))
-            .put(BALANCE, Optional.of(BALANCE_VALUE))
-            .put(Attribute.ID, Optional.of(ID_VALUE))
-            .put(Attribute.STATE, Optional.of(STATE_VALUE))
-            .put(Attribute.VERSION, Optional.of(VERSION_VALUE))
-            .put(Attribute.PREPARED_AT, Optional.of(PREPARED_AT_VALUE))
-            .put(Attribute.COMMITTED_AT, Optional.of(COMMITTED_AT_VALUE))
-            .put(Attribute.BEFORE_PREFIX + BALANCE, Optional.of(BEFORE_BALANCE_VALUE))
-            .put(Attribute.BEFORE_ID, Optional.of(BEFORE_ID_VALUE))
-            .put(Attribute.BEFORE_STATE, Optional.of(BEFORE_STATE_VALUE))
-            .put(Attribute.BEFORE_VERSION, Optional.of(BEFORE_VERSION_VALUE))
-            .put(Attribute.BEFORE_PREPARED_AT, Optional.of(BEFORE_PREPARED_AT_VALUE))
-            .put(Attribute.BEFORE_COMMITTED_AT, Optional.of(BEFORE_COMMITTED_AT_VALUE))
+    Map<String, Column<?>> columns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ACCOUNT_ID, ScalarDbUtils.toColumn(ACCOUNT_ID_VALUE))
+            .put(ACCOUNT_TYPE, ScalarDbUtils.toColumn(ACCOUNT_TYPE_VALUE))
+            .put(BALANCE, ScalarDbUtils.toColumn(BALANCE_VALUE))
+            .put(Attribute.ID, ScalarDbUtils.toColumn(ID_VALUE))
+            .put(Attribute.STATE, ScalarDbUtils.toColumn(STATE_VALUE))
+            .put(Attribute.VERSION, ScalarDbUtils.toColumn(VERSION_VALUE))
+            .put(Attribute.PREPARED_AT, ScalarDbUtils.toColumn(PREPARED_AT_VALUE))
+            .put(Attribute.COMMITTED_AT, ScalarDbUtils.toColumn(COMMITTED_AT_VALUE))
+            .put(Attribute.BEFORE_PREFIX + BALANCE, ScalarDbUtils.toColumn(BEFORE_BALANCE_VALUE))
+            .put(Attribute.BEFORE_ID, ScalarDbUtils.toColumn(BEFORE_ID_VALUE))
+            .put(Attribute.BEFORE_STATE, ScalarDbUtils.toColumn(BEFORE_STATE_VALUE))
+            .put(Attribute.BEFORE_VERSION, ScalarDbUtils.toColumn(BEFORE_VERSION_VALUE))
+            .put(Attribute.BEFORE_PREPARED_AT, ScalarDbUtils.toColumn(BEFORE_PREPARED_AT_VALUE))
+            .put(Attribute.BEFORE_COMMITTED_AT, ScalarDbUtils.toColumn(BEFORE_COMMITTED_AT_VALUE))
             .build();
 
-    result = new ResultImpl(values, TABLE_METADATA);
+    result = new ResultImpl(columns, TABLE_METADATA);
   }
 
   @Test
@@ -426,11 +426,11 @@ public class FilteredResultTest {
         new ResultImpl(
             ImmutableMap.of(
                 ACCOUNT_ID,
-                Optional.of(ACCOUNT_ID_VALUE),
+                ScalarDbUtils.toColumn(ACCOUNT_ID_VALUE),
                 ACCOUNT_TYPE,
-                Optional.of(ACCOUNT_TYPE_VALUE),
+                ScalarDbUtils.toColumn(ACCOUNT_TYPE_VALUE),
                 BALANCE,
-                Optional.of(BALANCE_VALUE)),
+                ScalarDbUtils.toColumn(BALANCE_VALUE)),
             TABLE_METADATA);
 
     // Act
@@ -459,7 +459,8 @@ public class FilteredResultTest {
     Result filteredResult =
         new FilteredResult(result, Collections.singletonList(BALANCE), TABLE_METADATA);
     Result anotherResult =
-        new ResultImpl(ImmutableMap.of(BALANCE, Optional.of(BALANCE_VALUE)), TABLE_METADATA);
+        new ResultImpl(
+            ImmutableMap.of(BALANCE, ScalarDbUtils.toColumn(BALANCE_VALUE)), TABLE_METADATA);
 
     // Act
     boolean isEqual = filteredResult.equals(anotherResult);

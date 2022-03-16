@@ -99,7 +99,7 @@ public class ConditionalQueryBuilder implements MutationConditionVisitor {
 
   private <T> Consumer<T> createConditionWith(ConditionalExpression e) {
     // TODO: for a clustering key?
-    Field<Object> field = DSL.field("r.values" + quoteKeyword(e.getColumnName()));
+    Field<Object> field = DSL.field("r.values" + quoteKeyword(e.getName()));
     switch (e.getOperator()) {
       case EQ:
         return v -> select.and(field.equal(v));

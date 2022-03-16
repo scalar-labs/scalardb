@@ -12,7 +12,9 @@ import javax.annotation.concurrent.Immutable;
  * A {@code Value} (column) for a single precision floating point number
  *
  * @author Hiroyuki Yamada
+ * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
  */
+@Deprecated
 @Immutable
 public final class FloatValue implements Value<Float> {
   private static final String ANONYMOUS = "";
