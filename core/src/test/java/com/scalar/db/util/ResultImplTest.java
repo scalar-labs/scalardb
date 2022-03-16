@@ -5,14 +5,22 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
+import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BlobValue;
+import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.DoubleValue;
+import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.FloatValue;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.nio.ByteBuffer;
@@ -54,35 +62,30 @@ public class ResultImplTest {
           .addClusteringKey(ANY_NAME_2)
           .build();
 
-  private Map<String, Optional<Value<?>>> values;
+  private Map<String, Column<?>> columns;
 
   @Before
   public void setUp() {
-    values =
-        ImmutableMap.<String, Optional<Value<?>>>builder()
-            .put(ANY_NAME_1, Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
-            .put(ANY_NAME_2, Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
-            .put(ANY_COLUMN_NAME_1, Optional.of(new BooleanValue(ANY_COLUMN_NAME_1, true)))
-            .put(ANY_COLUMN_NAME_2, Optional.of(new IntValue(ANY_COLUMN_NAME_2, Integer.MAX_VALUE)))
-            .put(
-                ANY_COLUMN_NAME_3,
-                Optional.of(new BigIntValue(ANY_COLUMN_NAME_3, BigIntValue.MAX_VALUE)))
-            .put(ANY_COLUMN_NAME_4, Optional.of(new FloatValue(ANY_COLUMN_NAME_4, Float.MAX_VALUE)))
-            .put(
-                ANY_COLUMN_NAME_5,
-                Optional.of(new DoubleValue(ANY_COLUMN_NAME_5, Double.MAX_VALUE)))
-            .put(ANY_COLUMN_NAME_6, Optional.of(new TextValue(ANY_COLUMN_NAME_6, "string")))
+    columns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
+            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
+            .put(ANY_COLUMN_NAME_1, BooleanColumn.of(ANY_COLUMN_NAME_1, true))
+            .put(ANY_COLUMN_NAME_2, IntColumn.of(ANY_COLUMN_NAME_2, Integer.MAX_VALUE))
+            .put(ANY_COLUMN_NAME_3, BigIntColumn.of(ANY_COLUMN_NAME_3, BigIntColumn.MAX_VALUE))
+            .put(ANY_COLUMN_NAME_4, FloatColumn.of(ANY_COLUMN_NAME_4, Float.MAX_VALUE))
+            .put(ANY_COLUMN_NAME_5, DoubleColumn.of(ANY_COLUMN_NAME_5, Double.MAX_VALUE))
+            .put(ANY_COLUMN_NAME_6, TextColumn.of(ANY_COLUMN_NAME_6, "string"))
             .put(
                 ANY_COLUMN_NAME_7,
-                Optional.of(
-                    new BlobValue(ANY_COLUMN_NAME_7, "bytes".getBytes(StandardCharsets.UTF_8))))
+                BlobColumn.of(ANY_COLUMN_NAME_7, "bytes".getBytes(StandardCharsets.UTF_8)))
             .build();
   }
 
   @Test
   public void getValue_ProperValuesGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    ResultImpl result = new ResultImpl(values, TABLE_METADATA);
+    ResultImpl result = new ResultImpl(columns, TABLE_METADATA);
 
     // Act Assert
     assertThat(result.getValue(ANY_NAME_1))
@@ -177,16 +180,16 @@ public class ResultImplTest {
     // Arrange
     ResultImpl result =
         new ResultImpl(
-            ImmutableMap.<String, Optional<Value<?>>>builder()
-                .put(ANY_NAME_1, Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
-                .put(ANY_NAME_2, Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
-                .put(ANY_COLUMN_NAME_1, Optional.empty())
-                .put(ANY_COLUMN_NAME_2, Optional.empty())
-                .put(ANY_COLUMN_NAME_3, Optional.empty())
-                .put(ANY_COLUMN_NAME_4, Optional.empty())
-                .put(ANY_COLUMN_NAME_5, Optional.empty())
-                .put(ANY_COLUMN_NAME_6, Optional.empty())
-                .put(ANY_COLUMN_NAME_7, Optional.empty())
+            ImmutableMap.<String, Column<?>>builder()
+                .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
+                .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
+                .put(ANY_COLUMN_NAME_1, BooleanColumn.ofNull(ANY_COLUMN_NAME_1))
+                .put(ANY_COLUMN_NAME_2, IntColumn.ofNull(ANY_COLUMN_NAME_2))
+                .put(ANY_COLUMN_NAME_3, BigIntColumn.ofNull(ANY_COLUMN_NAME_3))
+                .put(ANY_COLUMN_NAME_4, FloatColumn.ofNull(ANY_COLUMN_NAME_4))
+                .put(ANY_COLUMN_NAME_5, DoubleColumn.ofNull(ANY_COLUMN_NAME_5))
+                .put(ANY_COLUMN_NAME_6, TextColumn.ofNull(ANY_COLUMN_NAME_6))
+                .put(ANY_COLUMN_NAME_7, BlobColumn.ofNull(ANY_COLUMN_NAME_7))
                 .build(),
             TABLE_METADATA);
 
@@ -278,26 +281,16 @@ public class ResultImplTest {
     // Arrange
     ResultImpl result =
         new ResultImpl(
-            ImmutableMap.<String, Optional<Value<?>>>builder()
-                .put(ANY_NAME_1, Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
-                .put(ANY_NAME_2, Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
-                .put(ANY_COLUMN_NAME_1, Optional.of(new BooleanValue(ANY_COLUMN_NAME_1, true)))
-                .put(
-                    ANY_COLUMN_NAME_2,
-                    Optional.of(new IntValue(ANY_COLUMN_NAME_2, Integer.MAX_VALUE)))
-                .put(
-                    ANY_COLUMN_NAME_3,
-                    Optional.of(new BigIntValue(ANY_COLUMN_NAME_3, BigIntValue.MAX_VALUE)))
-                .put(
-                    ANY_COLUMN_NAME_4,
-                    Optional.of(new FloatValue(ANY_COLUMN_NAME_4, Float.MAX_VALUE)))
-                .put(
-                    ANY_COLUMN_NAME_5,
-                    Optional.of(new DoubleValue(ANY_COLUMN_NAME_5, Double.MAX_VALUE)))
-                .put(
-                    ANY_COLUMN_NAME_6, Optional.of(new TextValue(ANY_COLUMN_NAME_6, (String) null)))
-                .put(
-                    ANY_COLUMN_NAME_7, Optional.of(new BlobValue(ANY_COLUMN_NAME_7, (byte[]) null)))
+            ImmutableMap.<String, Column<?>>builder()
+                .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
+                .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
+                .put(ANY_COLUMN_NAME_1, BooleanColumn.of(ANY_COLUMN_NAME_1, true))
+                .put(ANY_COLUMN_NAME_2, IntColumn.of(ANY_COLUMN_NAME_2, Integer.MAX_VALUE))
+                .put(ANY_COLUMN_NAME_3, BigIntColumn.of(ANY_COLUMN_NAME_3, BigIntColumn.MAX_VALUE))
+                .put(ANY_COLUMN_NAME_4, FloatColumn.of(ANY_COLUMN_NAME_4, Float.MAX_VALUE))
+                .put(ANY_COLUMN_NAME_5, DoubleColumn.of(ANY_COLUMN_NAME_5, Double.MAX_VALUE))
+                .put(ANY_COLUMN_NAME_6, TextColumn.of(ANY_COLUMN_NAME_6, null))
+                .put(ANY_COLUMN_NAME_7, BlobColumn.of(ANY_COLUMN_NAME_7, (byte[]) null))
                 .build(),
             TABLE_METADATA);
 
@@ -386,7 +379,7 @@ public class ResultImplTest {
   @Test
   public void getValues_ProperValuesGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    ResultImpl result = new ResultImpl(values, TABLE_METADATA);
+    ResultImpl result = new ResultImpl(columns, TABLE_METADATA);
 
     // Act
     Map<String, Value<?>> actual = result.getValues();
@@ -402,7 +395,7 @@ public class ResultImplTest {
   @Test
   public void getValues_NoValuesGivenInConstructor_ShouldReturnEmptyValues() {
     // Arrange
-    Map<String, Optional<Value<?>>> emptyValues = Collections.emptyMap();
+    Map<String, Column<?>> emptyValues = Collections.emptyMap();
     ResultImpl result = new ResultImpl(emptyValues, TABLE_METADATA);
 
     // Act
@@ -415,7 +408,7 @@ public class ResultImplTest {
   @Test
   public void getValues_TryToModifyReturned_ShouldThrowException() {
     // Arrange
-    ResultImpl result = new ResultImpl(values, TABLE_METADATA);
+    ResultImpl result = new ResultImpl(columns, TABLE_METADATA);
     Map<String, Value<?>> values = result.getValues();
 
     // Act Assert
@@ -424,10 +417,41 @@ public class ResultImplTest {
   }
 
   @Test
+  public void getColumns_ProperValuesGivenInConstructor_ShouldReturnWhatsSet() {
+    // Arrange
+    ResultImpl result = new ResultImpl(columns, TABLE_METADATA);
+
+    // Act
+    Map<String, Column<?>> columns = result.getColumns();
+
+    // Assert
+    assertThat(columns.size()).isEqualTo(9);
+    assertThat(columns.get(ANY_NAME_1).hasNullValue()).isFalse();
+    assertThat(columns.get(ANY_NAME_1).getTextValue()).isEqualTo(ANY_TEXT_1);
+    assertThat(columns.get(ANY_NAME_2).hasNullValue()).isFalse();
+    assertThat(columns.get(ANY_NAME_2).getTextValue()).isEqualTo(ANY_TEXT_2);
+    assertThat(columns.get(ANY_COLUMN_NAME_1).hasNullValue()).isFalse();
+    assertThat(columns.get(ANY_COLUMN_NAME_1).getBooleanValue()).isEqualTo(true);
+    assertThat(columns.get(ANY_COLUMN_NAME_2).hasNullValue()).isFalse();
+    assertThat(columns.get(ANY_COLUMN_NAME_2).getIntValue()).isEqualTo(Integer.MAX_VALUE);
+    assertThat(columns.get(ANY_COLUMN_NAME_3).hasNullValue()).isFalse();
+    assertThat(columns.get(ANY_COLUMN_NAME_3).getBigIntValue()).isEqualTo(BigIntColumn.MAX_VALUE);
+    assertThat(columns.get(ANY_COLUMN_NAME_4).hasNullValue()).isFalse();
+    assertThat(columns.get(ANY_COLUMN_NAME_4).getFloatValue()).isEqualTo(Float.MAX_VALUE);
+    assertThat(columns.get(ANY_COLUMN_NAME_5).hasNullValue()).isFalse();
+    assertThat(columns.get(ANY_COLUMN_NAME_5).getDoubleValue()).isEqualTo(Double.MAX_VALUE);
+    assertThat(columns.get(ANY_COLUMN_NAME_6).hasNullValue()).isFalse();
+    assertThat(columns.get(ANY_COLUMN_NAME_6).getTextValue()).isEqualTo("string");
+    assertThat(columns.get(ANY_COLUMN_NAME_7).hasNullValue()).isFalse();
+    assertThat(columns.get(ANY_COLUMN_NAME_7).getBlobValue())
+        .isEqualTo(ByteBuffer.wrap("bytes".getBytes(StandardCharsets.UTF_8)));
+  }
+
+  @Test
   public void equals_DifferentObjectsSameValuesGiven_ShouldReturnTrue() {
     // Arrange
-    ResultImpl r1 = new ResultImpl(values, TABLE_METADATA);
-    ResultImpl r2 = new ResultImpl(values, TABLE_METADATA);
+    ResultImpl r1 = new ResultImpl(columns, TABLE_METADATA);
+    ResultImpl r2 = new ResultImpl(columns, TABLE_METADATA);
 
     // Act Assert
     assertThat(r1.equals(r2)).isTrue();
@@ -436,8 +460,8 @@ public class ResultImplTest {
   @Test
   public void equals_DifferentObjectsDifferentValuesGiven_ShouldReturnFalse() {
     // Arrange
-    ResultImpl r1 = new ResultImpl(values, TABLE_METADATA);
-    Map<String, Optional<Value<?>>> emptyValues = Collections.emptyMap();
+    ResultImpl r1 = new ResultImpl(columns, TABLE_METADATA);
+    Map<String, Column<?>> emptyValues = Collections.emptyMap();
     ResultImpl r2 = new ResultImpl(emptyValues, TABLE_METADATA);
 
     // Act Assert
@@ -453,7 +477,7 @@ public class ResultImplTest {
   @Test
   public void getPartitionKey_RequiredValuesGiven_ShouldReturnPartitionKey() {
     // Arrange
-    ResultImpl result = new ResultImpl(values, TABLE_METADATA);
+    ResultImpl result = new ResultImpl(columns, TABLE_METADATA);
 
     // Act
     Optional<Key> key = result.getPartitionKey();
@@ -467,34 +491,24 @@ public class ResultImplTest {
   @Test
   public void getPartitionKey_NotRequiredValuesGiven_ShouldReturnPartitionKey() {
     // Arrange
-    ResultImpl result1 =
+    ResultImpl result =
         new ResultImpl(
-            ImmutableMap.<String, Optional<Value<?>>>builder()
-                .put(ANY_NAME_2, Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
-                .build(),
-            TABLE_METADATA);
-
-    ResultImpl result2 =
-        new ResultImpl(
-            ImmutableMap.<String, Optional<Value<?>>>builder()
-                .put(ANY_NAME_1, Optional.empty())
-                .put(ANY_NAME_2, Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
+            ImmutableMap.<String, Column<?>>builder()
+                .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
                 .build(),
             TABLE_METADATA);
 
     // Act
-    Optional<Key> key1 = result1.getPartitionKey();
-    Optional<Key> key2 = result2.getPartitionKey();
+    Optional<Key> key = result.getPartitionKey();
 
     // Assert
-    assertThat(key1).isNotPresent();
-    assertThat(key2).isNotPresent();
+    assertThat(key).isNotPresent();
   }
 
   @Test
   public void getClusteringKey_RequiredValuesGiven_ShouldReturnClusteringKey() {
     // Arrange
-    ResultImpl result = new ResultImpl(values, TABLE_METADATA);
+    ResultImpl result = new ResultImpl(columns, TABLE_METADATA);
 
     // Act
     Optional<Key> key = result.getClusteringKey();
@@ -508,27 +522,17 @@ public class ResultImplTest {
   @Test
   public void getClusteringKey_NotRequiredValuesGiven_ShouldReturnClusteringKey() {
     // Arrange
-    ResultImpl result1 =
+    ResultImpl result =
         new ResultImpl(
-            ImmutableMap.<String, Optional<Value<?>>>builder()
-                .put(ANY_NAME_1, Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
-                .build(),
-            TABLE_METADATA);
-
-    ResultImpl result2 =
-        new ResultImpl(
-            ImmutableMap.<String, Optional<Value<?>>>builder()
-                .put(ANY_NAME_1, Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
-                .put(ANY_NAME_2, Optional.empty())
+            ImmutableMap.<String, Column<?>>builder()
+                .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
                 .build(),
             TABLE_METADATA);
 
     // Act
-    Optional<Key> key1 = result1.getClusteringKey();
-    Optional<Key> key2 = result2.getClusteringKey();
+    Optional<Key> key = result.getClusteringKey();
 
     // Assert
-    assertThat(key1).isNotPresent();
-    assertThat(key2).isNotPresent();
+    assertThat(key).isNotPresent();
   }
 }

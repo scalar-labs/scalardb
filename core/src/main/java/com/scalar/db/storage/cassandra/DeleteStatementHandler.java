@@ -79,8 +79,8 @@ public class DeleteStatementHandler extends MutateStatementHandler {
     ValueBinder binder = new ValueBinder(bound);
 
     // bind in the prepared order
-    del.getPartitionKey().forEach(v -> v.accept(binder));
-    del.getClusteringKey().ifPresent(k -> k.forEach(v -> v.accept(binder)));
+    del.getPartitionKey().getColumns().forEach(c -> c.accept(binder));
+    del.getClusteringKey().ifPresent(k -> k.getColumns().forEach(c -> c.accept(binder)));
 
     bindCondition(binder, del);
 

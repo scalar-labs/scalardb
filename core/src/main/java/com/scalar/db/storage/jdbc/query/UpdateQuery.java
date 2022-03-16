@@ -6,8 +6,8 @@ import static com.scalar.db.storage.jdbc.query.QueryUtils.getOperatorString;
 
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
@@ -29,7 +28,7 @@ public class UpdateQuery implements Query {
   private final TableMetadata tableMetadata;
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
-  private final Map<String, Optional<Value<?>>> values;
+  private final Map<String, Column<?>> columns;
   private final List<ConditionalExpression> otherConditions;
 
   private UpdateQuery(Builder builder) {
@@ -39,7 +38,7 @@ public class UpdateQuery implements Query {
     tableMetadata = builder.tableMetadata;
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
-    values = builder.values;
+    columns = builder.columns;
     otherConditions = builder.otherConditions;
   }
 
@@ -54,7 +53,7 @@ public class UpdateQuery implements Query {
   }
 
   private String makeSetSqlString() {
-    return values.keySet().stream()
+    return columns.keySet().stream()
         .map(n -> enclose(n, rdbEngine) + "=?")
         .collect(Collectors.joining(","));
   }
@@ -67,7 +66,7 @@ public class UpdateQuery implements Query {
     otherConditions.forEach(
         c ->
             conditions.add(
-                enclose(c.getColumnName(), rdbEngine) + getOperatorString(c.getOperator()) + "?"));
+                enclose(c.getName(), rdbEngine) + getOperatorString(c.getOperator()) + "?"));
     return String.join(" AND ", conditions);
   }
 
@@ -76,29 +75,25 @@ public class UpdateQuery implements Query {
     PreparedStatementBinder binder =
         new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine);
 
-    for (Entry<String, Optional<Value<?>>> entry : values.entrySet()) {
-      if (entry.getValue().isPresent()) {
-        entry.getValue().get().accept(binder);
-      } else {
-        binder.bindNullValue(entry.getKey());
-      }
+    for (Column<?> column : columns.values()) {
+      column.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
 
-    for (Value<?> value : partitionKey) {
-      value.accept(binder);
+    for (Column<?> column : partitionKey.getColumns()) {
+      column.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
 
     if (clusteringKey.isPresent()) {
-      for (Value<?> value : clusteringKey.get()) {
-        value.accept(binder);
+      for (Column<?> column : clusteringKey.get().getColumns()) {
+        column.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
     }
 
     for (ConditionalExpression condition : otherConditions) {
-      condition.getValue().accept(binder);
+      condition.getColumn().accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
   }
@@ -111,7 +106,7 @@ public class UpdateQuery implements Query {
     List<ConditionalExpression> otherConditions;
     private Key partitionKey;
     private Optional<Key> clusteringKey;
-    private Map<String, Optional<Value<?>>> values;
+    private Map<String, Column<?>> columns;
 
     Builder(RdbEngine rdbEngine, String schema, String table, TableMetadata tableMetadata) {
       this.rdbEngine = rdbEngine;
@@ -120,8 +115,8 @@ public class UpdateQuery implements Query {
       this.tableMetadata = tableMetadata;
     }
 
-    public Builder set(Map<String, Optional<Value<?>>> values) {
-      this.values = values;
+    public Builder set(Map<String, Column<?>> columns) {
+      this.columns = columns;
       return this;
     }
 

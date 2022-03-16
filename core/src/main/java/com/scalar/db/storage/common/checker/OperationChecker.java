@@ -9,16 +9,14 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.TableMetadataManager;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.function.Supplier;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -38,7 +36,7 @@ public class OperationChecker {
 
     if (ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
       if (!new ColumnChecker(metadata, true, false, false)
-          .check(get.getPartitionKey().get().get(0))) {
+          .check(get.getPartitionKey().getColumns().get(0))) {
         throw new IllegalArgumentException(
             "The partition key is not properly specified. Operation: " + get);
       }
@@ -60,7 +58,7 @@ public class OperationChecker {
 
     if (ScalarDbUtils.isSecondaryIndexSpecified(scan, metadata)) {
       if (!new ColumnChecker(metadata, true, false, false)
-          .check(scan.getPartitionKey().get().get(0))) {
+          .check(scan.getPartitionKey().getColumns().get(0))) {
         throw new IllegalArgumentException(
             "The partition key is not properly specified. Operation: " + scan);
       }
@@ -187,7 +185,7 @@ public class OperationChecker {
   public void check(Put put) throws ExecutionException {
     TableMetadata metadata = getMetadata(put);
     checkPrimaryKey(put, metadata);
-    checkValues(put, metadata);
+    checkColumnsInPut(put, metadata);
     checkCondition(put, metadata);
   }
 
@@ -206,10 +204,9 @@ public class OperationChecker {
     return metadata;
   }
 
-  private void checkValues(Put put, TableMetadata metadata) {
-    for (Map.Entry<String, Optional<Value<?>>> entry : put.getNullableValues().entrySet()) {
-      if (!new ColumnChecker(metadata, false, false, true)
-          .check(entry.getKey(), entry.getValue())) {
+  private void checkColumnsInPut(Put put, TableMetadata metadata) {
+    for (Column<?> column : put.getColumns().values()) {
+      if (!new ColumnChecker(metadata, false, false, true).check(column)) {
         throw new IllegalArgumentException(
             "The values are not properly specified. Operation: " + put);
       }
@@ -276,30 +273,28 @@ public class OperationChecker {
 
   private boolean checkKey(
       Key key, LinkedHashSet<String> keyNames, boolean allowPartial, TableMetadata metadata) {
-    List<Value<?>> values = new ArrayList<>(key.get());
-
     if (!allowPartial) {
-      if (values.size() != keyNames.size()) {
+      if (key.getColumns().size() != keyNames.size()) {
         return false;
       }
     } else {
-      if (values.size() > keyNames.size()) {
+      if (key.getColumns().size() > keyNames.size()) {
         return false;
       }
     }
 
     Iterator<String> iterator = keyNames.iterator();
-    for (Value<?> value : values) {
-      if (value == null) {
+    for (Column<?> column : key.getColumns()) {
+      if (column == null) {
         return false;
       }
       String keyName = iterator.next();
 
-      if (!keyName.equals(value.getName())) {
+      if (!keyName.equals(column.getName())) {
         return false;
       }
 
-      if (!new ColumnChecker(metadata, true, true, false).check(value)) {
+      if (!new ColumnChecker(metadata, true, true, false).check(column)) {
         return false;
       }
     }

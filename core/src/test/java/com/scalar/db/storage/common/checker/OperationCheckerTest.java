@@ -579,7 +579,7 @@ public class OperationCheckerTest {
         new Put(partitionKey, clusteringKey)
             .withValue(COL1, 1)
             .withValue(COL2, 0.1D)
-            .withNullValue(COL3)
+            .withBooleanValue(COL3, null)
             .withCondition(condition)
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);

@@ -4,8 +4,10 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -29,9 +31,11 @@ import com.scalar.db.rpc.TransactionResponse.GetResponse;
 import com.scalar.db.rpc.TransactionResponse.ScanResponse;
 import com.scalar.db.rpc.TransactionResponse.StartResponse;
 import com.scalar.db.util.ProtoUtils;
+import com.scalar.db.util.TableMetadataManager;
 import com.scalar.db.util.ThrowableRunnable;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -48,13 +52,18 @@ public class DistributedTransactionService
   private static final String SERVICE_NAME = "distributed_transaction";
 
   private final DistributedTransactionManager manager;
+  private final TableMetadataManager tableMetadataManager;
   private final GateKeeper gateKeeper;
   private final Metrics metrics;
 
   @Inject
   public DistributedTransactionService(
-      DistributedTransactionManager manager, GateKeeper gateKeeper, Metrics metrics) {
+      DistributedTransactionManager manager,
+      TableMetadataManager tableMetadataManager,
+      GateKeeper gateKeeper,
+      Metrics metrics) {
     this.manager = manager;
+    this.tableMetadataManager = tableMetadataManager;
     this.gateKeeper = gateKeeper;
     this.metrics = metrics;
   }
@@ -63,7 +72,12 @@ public class DistributedTransactionService
   public StreamObserver<TransactionRequest> transaction(
       StreamObserver<TransactionResponse> responseObserver) {
     return new TransactionStreamObserver(
-        manager, responseObserver, metrics, this::preProcess, this::postProcess);
+        manager,
+        tableMetadataManager,
+        responseObserver,
+        metrics,
+        this::preProcess,
+        this::postProcess);
   }
 
   @Override
@@ -141,6 +155,7 @@ public class DistributedTransactionService
   private static class TransactionStreamObserver implements StreamObserver<TransactionRequest> {
 
     private final DistributedTransactionManager manager;
+    private final TableMetadataManager tableMetadataManager;
     private final StreamObserver<TransactionResponse> responseObserver;
     private final Metrics metrics;
     private final Function<StreamObserver<?>, Boolean> preProcessor;
@@ -151,11 +166,13 @@ public class DistributedTransactionService
 
     public TransactionStreamObserver(
         DistributedTransactionManager manager,
+        TableMetadataManager tableMetadataManager,
         StreamObserver<TransactionResponse> responseObserver,
         Metrics metrics,
         Function<StreamObserver<?>, Boolean> preProcessor,
         Runnable postProcessor) {
       this.manager = manager;
+      this.tableMetadataManager = tableMetadataManager;
       this.responseObserver = responseObserver;
       this.metrics = metrics;
       this.preProcessor = preProcessor;
@@ -266,7 +283,14 @@ public class DistributedTransactionService
     private void get(GetRequest request, TransactionResponse.Builder responseBuilder) {
       execute(
           () -> {
-            Get get = ProtoUtils.toGet(request.getGet());
+            TableMetadata metadata =
+                tableMetadataManager.getTableMetadata(
+                    request.getGet().getNamespace(), request.getGet().getTable());
+            if (metadata == null) {
+              throw new IllegalArgumentException("the specified table is not found");
+            }
+
+            Get get = ProtoUtils.toGet(request.getGet(), metadata);
             Optional<Result> result = transaction.get(get);
             GetResponse.Builder builder = GetResponse.newBuilder();
             result.ifPresent(r -> builder.setResult(ProtoUtils.toResult(r)));
@@ -279,7 +303,14 @@ public class DistributedTransactionService
     private void scan(ScanRequest request, TransactionResponse.Builder responseBuilder) {
       execute(
           () -> {
-            Scan scan = ProtoUtils.toScan(request.getScan());
+            TableMetadata metadata =
+                tableMetadataManager.getTableMetadata(
+                    request.getScan().getNamespace(), request.getScan().getTable());
+            if (metadata == null) {
+              throw new IllegalArgumentException("the specified table is not found");
+            }
+
+            Scan scan = ProtoUtils.toScan(request.getScan(), metadata);
             List<Result> results = transaction.scan(scan);
             ScanResponse.Builder builder = ScanResponse.newBuilder();
             results.forEach(r -> builder.addResult(ProtoUtils.toResult(r)));
@@ -291,11 +322,26 @@ public class DistributedTransactionService
 
     private void mutate(MutateRequest request, TransactionResponse.Builder responseBuilder) {
       execute(
-          () ->
-              transaction.mutate(
+          () -> {
+            List<Mutation> mutations;
+            if (request.getMutationCount() > 0) {
+              TableMetadata metadata =
+                  tableMetadataManager.getTableMetadata(
+                      request.getMutationList().get(0).getNamespace(),
+                      request.getMutationList().get(0).getTable());
+              if (metadata == null) {
+                throw new IllegalArgumentException("the specified table is not found");
+              }
+
+              mutations =
                   request.getMutationList().stream()
-                      .map(ProtoUtils::toMutation)
-                      .collect(Collectors.toList())),
+                      .map(m -> ProtoUtils.toMutation(m, metadata))
+                      .collect(Collectors.toList());
+            } else {
+              mutations = Collections.emptyList();
+            }
+            transaction.mutate(mutations);
+          },
           responseBuilder,
           "transaction.mutate");
     }

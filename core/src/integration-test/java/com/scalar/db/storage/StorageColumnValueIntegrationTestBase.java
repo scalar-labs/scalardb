@@ -453,13 +453,13 @@ public abstract class StorageColumnValueIntegrationTestBase {
 
     Put put =
         new Put(new Key(partitionKeyValue))
-            .withNullValue(COL_NAME1)
-            .withNullValue(COL_NAME2)
-            .withNullValue(COL_NAME3)
-            .withNullValue(COL_NAME4)
-            .withNullValue(COL_NAME5)
-            .withNullValue(COL_NAME6)
-            .withNullValue(COL_NAME7)
+            .withBooleanValue(COL_NAME1, null)
+            .withIntValue(COL_NAME2, null)
+            .withBigIntValue(COL_NAME3, null)
+            .withFloatValue(COL_NAME4, null)
+            .withDoubleValue(COL_NAME5, null)
+            .withTextValue(COL_NAME6, null)
+            .withBlobValue(COL_NAME7, (ByteBuffer) null)
             .forNamespace(namespace)
             .forTable(TABLE);
 
@@ -570,13 +570,13 @@ public abstract class StorageColumnValueIntegrationTestBase {
 
     Put putForNullValues =
         new Put(new Key(partitionKeyValue))
-            .withNullValue(COL_NAME1)
-            .withNullValue(COL_NAME2)
-            .withNullValue(COL_NAME3)
-            .withNullValue(COL_NAME4)
-            .withNullValue(COL_NAME5)
-            .withNullValue(COL_NAME6)
-            .withNullValue(COL_NAME7)
+            .withBooleanValue(COL_NAME1, null)
+            .withIntValue(COL_NAME2, null)
+            .withBigIntValue(COL_NAME3, null)
+            .withFloatValue(COL_NAME4, null)
+            .withDoubleValue(COL_NAME5, null)
+            .withTextValue(COL_NAME6, null)
+            .withBlobValue(COL_NAME7, (ByteBuffer) null)
             .forNamespace(namespace)
             .forTable(TABLE);
 

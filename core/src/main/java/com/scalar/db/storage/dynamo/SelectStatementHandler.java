@@ -11,8 +11,8 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.storage.dynamo.bytes.BytesUtils;
 import com.scalar.db.storage.dynamo.bytes.KeyBytesEncoder;
 import com.scalar.db.util.ScalarDbUtils;
@@ -103,8 +103,8 @@ public class SelectStatementHandler extends StatementHandler {
   private List<Map<String, AttributeValue>> executeQueryWithIndex(
       Selection selection, TableMetadata tableMetadata) {
     DynamoOperation dynamoOperation = new DynamoOperation(selection, tableMetadata);
-    Value<?> keyValue = selection.getPartitionKey().get().get(0);
-    String column = keyValue.getName();
+    Column<?> keyColumn = selection.getPartitionKey().getColumns().get(0);
+    String column = keyColumn.getName();
     String indexTable = dynamoOperation.getGlobalIndexName(column);
     QueryRequest.Builder builder =
         QueryRequest.builder().tableName(dynamoOperation.getTableName()).indexName(indexTable);
@@ -112,7 +112,7 @@ public class SelectStatementHandler extends StatementHandler {
     String expressionColumnName = DynamoOperation.COLUMN_NAME_ALIAS + "0";
     String condition = expressionColumnName + " = " + DynamoOperation.VALUE_ALIAS + "0";
     ValueBinder binder = new ValueBinder(DynamoOperation.VALUE_ALIAS);
-    keyValue.accept(binder);
+    keyColumn.accept(binder);
     Map<String, AttributeValue> bindMap = binder.build();
     builder
         .keyConditionExpression(condition)

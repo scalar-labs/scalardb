@@ -12,7 +12,9 @@ import javax.annotation.concurrent.Immutable;
  * A {@code Value} (column) for a double precision floating point number
  *
  * @author Hiroyuki Yamada
+ * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
  */
+@Deprecated
 @Immutable
 public final class DoubleValue implements Value<Double> {
   private static final String ANONYMOUS = "";

@@ -112,15 +112,7 @@ public class Snapshot {
     if (writeSet.containsKey(key)) {
       // merge the previous put in the write set and the new put
       Put originalPut = writeSet.get(key);
-      put.getNullableValues()
-          .forEach(
-              (k, v) -> {
-                if (v.isPresent()) {
-                  originalPut.withValue(v.get());
-                } else {
-                  originalPut.withNullValue(k);
-                }
-              });
+      put.getColumns().values().forEach(originalPut::withValue);
     } else {
       writeSet.put(key, put);
     }

@@ -15,6 +15,7 @@ import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
+import com.scalar.db.util.TableMetadataManager;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
@@ -30,6 +31,7 @@ public class DistributedTransactionServiceTest {
   private static final String ANY_ID = "id";
 
   @Mock private DistributedTransactionManager manager;
+  @Mock private TableMetadataManager tableMetadataManager;
   @Mock private GateKeeper gateKeeper;
   @Mock private DistributedTransaction transaction;
   @Captor private ArgumentCaptor<StatusRuntimeException> exceptionCaptor;
@@ -41,7 +43,8 @@ public class DistributedTransactionServiceTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    transactionService = new DistributedTransactionService(manager, gateKeeper, new Metrics());
+    transactionService =
+        new DistributedTransactionService(manager, tableMetadataManager, gateKeeper, new Metrics());
     when(manager.start()).thenReturn(transaction);
     when(manager.start(anyString())).thenReturn(transaction);
     when(transaction.getId()).thenReturn(ANY_ID);

@@ -2,8 +2,8 @@ package com.scalar.db.storage.jdbc.query;
 
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import java.util.Collections;
 import java.util.List;
@@ -20,9 +20,9 @@ public interface SelectQuery extends Query {
     Key partitionKey;
     Optional<Key> clusteringKey = Optional.empty();
     Optional<Key> commonClusteringKey = Optional.empty();
-    Optional<Value<?>> startValue = Optional.empty();
+    Optional<Column<?>> startColumn = Optional.empty();
     boolean startInclusive;
-    Optional<Value<?>> endValue = Optional.empty();
+    Optional<Column<?>> endColumn = Optional.empty();
     boolean endInclusive;
     List<Scan.Ordering> orderings = Collections.emptyList();
     private int limit;
@@ -78,13 +78,15 @@ public interface SelectQuery extends Query {
       }
 
       if (startClusteringKey.isPresent()) {
-        startValue =
-            Optional.of(startClusteringKey.get().get().get(startClusteringKey.get().size() - 1));
+        startColumn =
+            Optional.of(
+                startClusteringKey.get().getColumns().get(startClusteringKey.get().size() - 1));
         this.startInclusive = startInclusive;
       }
 
       if (endClusteringKey.isPresent()) {
-        endValue = Optional.of(endClusteringKey.get().get().get(endClusteringKey.get().size() - 1));
+        endColumn =
+            Optional.of(endClusteringKey.get().getColumns().get(endClusteringKey.get().size() - 1));
         this.endInclusive = endInclusive;
       }
 

@@ -2,13 +2,13 @@ package com.scalar.db.storage.cosmos;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
-import com.scalar.db.io.TextValue;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import org.junit.Before;
@@ -16,20 +16,20 @@ import org.junit.Test;
 
 public class MapVisitorTest {
   private static final boolean ANY_BOOLEAN = false;
-  private static final BooleanValue ANY_BOOLEAN_VALUE =
-      new BooleanValue("any_boolean", ANY_BOOLEAN);
+  private static final BooleanColumn ANY_BOOLEAN_COLUMN =
+      BooleanColumn.of("any_boolean", ANY_BOOLEAN);
   private static final int ANY_INT = Integer.MIN_VALUE;
-  private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT);
-  private static final long ANY_BIGINT = BigIntValue.MAX_VALUE;
-  private static final BigIntValue ANY_BIGINT_VALUE = new BigIntValue("any_bigint", ANY_BIGINT);
+  private static final IntColumn ANY_INT_COLUMN = IntColumn.of("any_int", ANY_INT);
+  private static final long ANY_BIGINT = BigIntColumn.MAX_VALUE;
+  private static final BigIntColumn ANY_BIGINT_COLUMN = BigIntColumn.of("any_bigint", ANY_BIGINT);
   private static final float ANY_FLOAT = Float.MIN_NORMAL;
-  private static final FloatValue ANY_FLOAT_VALUE = new FloatValue("any_float", ANY_FLOAT);
+  private static final FloatColumn ANY_FLOAT_COLUMN = FloatColumn.of("any_float", ANY_FLOAT);
   private static final double ANY_DOUBLE = Double.MIN_NORMAL;
-  private static final DoubleValue ANY_DOUBLE_VALUE = new DoubleValue("any_double", ANY_DOUBLE);
+  private static final DoubleColumn ANY_DOUBLE_COLUMN = DoubleColumn.of("any_double", ANY_DOUBLE);
   private static final String ANY_TEXT = "test";
-  private static final TextValue ANY_TEXT_VALUE = new TextValue("any_text", ANY_TEXT);
+  private static final TextColumn ANY_TEXT_COLUMN = TextColumn.of("any_text", ANY_TEXT);
   private static final byte[] ANY_BLOB = ANY_TEXT.getBytes(StandardCharsets.UTF_8);
-  private static final BlobValue ANY_BLOB_VALUE = new BlobValue("any_blob", ANY_BLOB);
+  private static final BlobColumn ANY_BLOB_COLUMN = BlobColumn.of("any_blob", ANY_BLOB);
   private MapVisitor visitor;
 
   @Before
@@ -38,63 +38,113 @@ public class MapVisitorTest {
   }
 
   @Test
-  public void visit_BooleanValueAcceptCalled_ShouldGetMap() {
+  public void visit_BooleanColumnAcceptCalled_ShouldGetMap() {
     // Act
-    ANY_BOOLEAN_VALUE.accept(visitor);
+    ANY_BOOLEAN_COLUMN.accept(visitor);
 
     // Assert
-    assertThat(visitor.get().get(ANY_BOOLEAN_VALUE.getName())).isEqualTo(ANY_BOOLEAN);
+    assertThat(visitor.get().get(ANY_BOOLEAN_COLUMN.getName())).isEqualTo(ANY_BOOLEAN);
   }
 
   @Test
-  public void visit_IntValueAcceptCalled_ShouldGetMap() {
+  public void visit_BooleanColumnWithNullValueAcceptCalled_ShouldGetMap() {
     // Act
-    ANY_INT_VALUE.accept(visitor);
+    BooleanColumn.ofNull("any_boolean").accept(visitor);
 
     // Assert
-    assertThat(visitor.get().get(ANY_INT_VALUE.getName())).isEqualTo(ANY_INT);
+    assertThat(visitor.get().containsKey("any_boolean")).isTrue();
+    assertThat(visitor.get().get("any_boolean")).isNull();
   }
 
   @Test
-  public void visit_BigIntValueAcceptCalled_ShouldGetMap() {
+  public void visit_IntColumnAcceptCalled_ShouldGetMap() {
     // Act
-    ANY_BIGINT_VALUE.accept(visitor);
+    ANY_INT_COLUMN.accept(visitor);
 
     // Assert
-    assertThat(visitor.get().get(ANY_BIGINT_VALUE.getName())).isEqualTo(ANY_BIGINT);
+    assertThat(visitor.get().get(ANY_INT_COLUMN.getName())).isEqualTo(ANY_INT);
   }
 
   @Test
-  public void visit_FloatValueAcceptCalled_ShouldGetMap() {
+  public void visit_IntColumnWithNullValueAcceptCalled_ShouldGetMap() {
     // Act
-    ANY_FLOAT_VALUE.accept(visitor);
+    IntColumn.ofNull("any_int").accept(visitor);
 
     // Assert
-    assertThat(visitor.get().get(ANY_FLOAT_VALUE.getName())).isEqualTo(ANY_FLOAT);
+    assertThat(visitor.get().containsKey("any_int")).isTrue();
+    assertThat(visitor.get().get("any_int")).isNull();
   }
 
   @Test
-  public void visit_DoubleValueAcceptCalled_ShouldGetMap() {
+  public void visit_BigIntColumnAcceptCalled_ShouldGetMap() {
     // Act
-    ANY_DOUBLE_VALUE.accept(visitor);
+    ANY_BIGINT_COLUMN.accept(visitor);
 
     // Assert
-    assertThat(visitor.get().get(ANY_DOUBLE_VALUE.getName())).isEqualTo(ANY_DOUBLE);
+    assertThat(visitor.get().get(ANY_BIGINT_COLUMN.getName())).isEqualTo(ANY_BIGINT);
   }
 
   @Test
-  public void visit_TextValueAcceptCalled_ShouldGetMap() {
+  public void visit_BigIntColumnWithNullValueAcceptCalled_ShouldGetMap() {
     // Act
-    ANY_TEXT_VALUE.accept(visitor);
+    BigIntColumn.ofNull("any_bigint").accept(visitor);
 
     // Assert
-    assertThat(visitor.get().get(ANY_TEXT_VALUE.getName())).isEqualTo(ANY_TEXT);
+    assertThat(visitor.get().containsKey("any_bigint")).isTrue();
+    assertThat(visitor.get().get("any_bigint")).isNull();
   }
 
   @Test
-  public void visit_TextValueWithNullValueAcceptCalled_ShouldGetMap() {
+  public void visit_FloatColumnAcceptCalled_ShouldGetMap() {
     // Act
-    new TextValue("any_text", (String) null).accept(visitor);
+    ANY_FLOAT_COLUMN.accept(visitor);
+
+    // Assert
+    assertThat(visitor.get().get(ANY_FLOAT_COLUMN.getName())).isEqualTo(ANY_FLOAT);
+  }
+
+  @Test
+  public void visit_FloatColumnWithNullValueAcceptCalled_ShouldGetMap() {
+    // Act
+    FloatColumn.ofNull("any_float").accept(visitor);
+
+    // Assert
+    assertThat(visitor.get().containsKey("any_float")).isTrue();
+    assertThat(visitor.get().get("any_float")).isNull();
+  }
+
+  @Test
+  public void visit_DoubleColumnAcceptCalled_ShouldGetMap() {
+    // Act
+    ANY_DOUBLE_COLUMN.accept(visitor);
+
+    // Assert
+    assertThat(visitor.get().get(ANY_DOUBLE_COLUMN.getName())).isEqualTo(ANY_DOUBLE);
+  }
+
+  @Test
+  public void visit_DoubleColumnWithNullValueAcceptCalled_ShouldGetMap() {
+    // Act
+    FloatColumn.ofNull("any_double").accept(visitor);
+
+    // Assert
+    assertThat(visitor.get().containsKey("any_double")).isTrue();
+    assertThat(visitor.get().get("any_double")).isNull();
+  }
+
+  @Test
+  public void visit_TextColumnAcceptCalled_ShouldGetMap() {
+    // Act
+    ANY_TEXT_COLUMN.accept(visitor);
+
+    // Assert
+    assertThat(visitor.get().get(ANY_TEXT_COLUMN.getName())).isEqualTo(ANY_TEXT);
+  }
+
+  @Test
+  public void visit_TextColumnWithNullValueAcceptCalled_ShouldGetMap() {
+    // Act
+    TextColumn.ofNull("any_text").accept(visitor);
 
     // Assert
     assertThat(visitor.get().containsKey("any_text")).isTrue();
@@ -102,9 +152,9 @@ public class MapVisitorTest {
   }
 
   @Test
-  public void visit_BlobValueAcceptCalled_ShouldGetMap() {
+  public void visit_BlobColumnAcceptCalled_ShouldGetMap() {
     // Act
-    ANY_BLOB_VALUE.accept(visitor);
+    ANY_BLOB_COLUMN.accept(visitor);
 
     // Assert
     ByteBuffer expected =
@@ -112,26 +162,16 @@ public class MapVisitorTest {
             ByteBuffer.allocate(ANY_TEXT.length())
                 .put(ANY_TEXT.getBytes(StandardCharsets.UTF_8))
                 .flip();
-    assertThat(visitor.get().get(ANY_BLOB_VALUE.getName())).isEqualTo(expected);
+    assertThat(visitor.get().get(ANY_BLOB_COLUMN.getName())).isEqualTo(expected);
   }
 
   @Test
-  public void visit_BlobValueWithNullValueAcceptCalled_ShouldGetMap() {
+  public void visit_BlobColumnWithNullValueAcceptCalled_ShouldGetMap() {
     // Act
-    new BlobValue("any_blob", (byte[]) null).accept(visitor);
+    BlobColumn.ofNull("any_blob").accept(visitor);
 
     // Assert
     assertThat(visitor.get().containsKey("any_blob")).isTrue();
     assertThat(visitor.get().get("any_blob")).isNull();
-  }
-
-  @Test
-  public void addNullValue_ShouldGetMap() {
-    // Act
-    visitor.addNullValue("any_name");
-
-    // Assert
-    assertThat(visitor.get().containsKey("any_name")).isTrue();
-    assertThat(visitor.get().get("any_name")).isNull();
   }
 }

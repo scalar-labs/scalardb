@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import com.scalar.db.api.ConditionalExpression.Operator;
+import com.scalar.db.io.Column;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,11 +11,21 @@ public class ConditionBuilder {
   /**
    * Returns a builder object for a PutIf condition.
    *
-   * @param conditionalExpression a condition for a PutIf condition
+   * @param conditionalExpression a condition expression for a PutIf condition
    * @return a builder object
    */
   public static PutIfBuilder putIf(ConditionalExpression conditionalExpression) {
     return new PutIfBuilder(conditionalExpression);
+  }
+
+  /**
+   * Creates a PutIf condition with the specified conditional expressions.
+   *
+   * @param conditionalExpressions condition expressions for a PutIf condition
+   * @return a PutIf condition
+   */
+  public static PutIf putIf(List<ConditionalExpression> conditionalExpressions) {
+    return new PutIf(conditionalExpressions);
   }
 
   /**
@@ -38,11 +49,21 @@ public class ConditionBuilder {
   /**
    * Returns a builder object for a DeleteIf condition.
    *
-   * @param conditionalExpression a condition for a DeleteIf condition
+   * @param conditionalExpression a condition expression for a DeleteIf condition
    * @return a builder object
    */
   public static DeleteIfBuilder deleteIf(ConditionalExpression conditionalExpression) {
     return new DeleteIfBuilder(conditionalExpression);
+  }
+
+  /**
+   * Creates a DeleteIf condition with the specified conditional expressions.
+   *
+   * @param conditionalExpressions condition expressions for a DeleteIf condition
+   * @return a DeleteIf condition
+   */
+  public static DeleteIf deleteIf(List<ConditionalExpression> conditionalExpressions) {
+    return new DeleteIf(conditionalExpressions);
   }
 
   /**
@@ -52,6 +73,21 @@ public class ConditionBuilder {
    */
   public static DeleteIfExists deleteIfExists() {
     return new DeleteIfExists();
+  }
+
+  /**
+   * Builds a conditional expression with the specified column and operator.
+   *
+   * <p>This method is primarily for internal use. Breaking changes can and will be introduced to
+   * this method. Users should not depend on it.
+   *
+   * @param column a target column used to compare
+   * @param operator an operator used to compare the target column
+   * @return a conditional expression
+   */
+  public static ConditionalExpression buildConditionalExpression(
+      Column<?> column, Operator operator) {
+    return new ConditionalExpression(column, operator);
   }
 
   /**

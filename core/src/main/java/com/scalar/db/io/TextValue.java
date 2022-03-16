@@ -16,7 +16,9 @@ import javax.annotation.concurrent.Immutable;
  * A {@code Value} (column) for a string
  *
  * @author Hiroyuki Yamada
+ * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
  */
+@Deprecated
 @Immutable
 public final class TextValue implements Value<Optional<String>> {
   private static final String ANONYMOUS = "";

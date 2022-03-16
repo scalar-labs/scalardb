@@ -21,6 +21,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.Optional;
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
@@ -105,10 +106,10 @@ public class CoordinatorTest {
 
     // Assert
     assertThat(put.getPartitionKey().get().get(0)).isEqualTo(new TextValue(Attribute.ID, ANY_ID_1));
-    assertThat(put.getNullableValues().get(Attribute.STATE))
-        .isEqualTo(Optional.of(Attribute.toStateValue(TransactionState.COMMITTED)));
-    assertThat(put.getNullableValues().get(Attribute.CREATED_AT))
-        .isEqualTo(Optional.of(Attribute.toCreatedAtValue(current)));
+    assertThat(put.getColumns().get(Attribute.STATE))
+        .isEqualTo(ScalarDbUtils.toColumn(Attribute.toStateValue(TransactionState.COMMITTED)));
+    assertThat(put.getColumns().get(Attribute.CREATED_AT))
+        .isEqualTo(ScalarDbUtils.toColumn(Attribute.toCreatedAtValue(current)));
     assertThat(put.getConsistency()).isEqualTo(Consistency.LINEARIZABLE);
     assertThat(put.getCondition().get()).isExactlyInstanceOf(PutIfNotExists.class);
     assertThat(put.forNamespace().get()).isEqualTo(Coordinator.NAMESPACE);

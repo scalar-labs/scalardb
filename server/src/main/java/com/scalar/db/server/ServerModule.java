@@ -14,16 +14,19 @@ import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
 import com.scalar.db.transaction.rpc.GrpcTransactionManager;
+import com.scalar.db.util.TableMetadataManager;
 import java.util.Properties;
 
 public class ServerModule extends AbstractModule {
 
   private final ServerConfig config;
+  private final DatabaseConfig databaseConfig;
   private final StorageFactory storageFactory;
   private final TransactionFactory transactionFactory;
 
   public ServerModule(ServerConfig config, DatabaseConfig databaseConfig) {
     this.config = config;
+    this.databaseConfig = databaseConfig;
     storageFactory = new StorageFactory(databaseConfig);
 
     Properties transactionProperties = new Properties();
@@ -73,5 +76,12 @@ public class ServerModule extends AbstractModule {
   @Singleton
   Metrics provideMetrics() {
     return new Metrics(config);
+  }
+
+  @Provides
+  @Singleton
+  TableMetadataManager provideTableMetadataManager(DistributedStorageAdmin admin) {
+    return new TableMetadataManager(
+        admin, databaseConfig.getTableMetadataCacheExpirationTimeSecs());
   }
 }

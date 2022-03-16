@@ -81,7 +81,7 @@ public class DynamoMutation extends DynamoOperation {
       }
     }
 
-    for (String unusedName : put.getNullableValues().keySet()) {
+    for (String unusedName : put.getColumns().keySet()) {
       expressions.add(COLUMN_NAME_ALIAS + i + " = " + VALUE_ALIAS + i);
       i++;
     }
@@ -117,7 +117,7 @@ public class DynamoMutation extends DynamoOperation {
       }
     }
 
-    for (String name : put.getNullableValues().keySet()) {
+    for (String name : put.getColumns().keySet()) {
       columnMap.put(COLUMN_NAME_ALIAS + i, name);
       i++;
     }
@@ -132,7 +132,7 @@ public class DynamoMutation extends DynamoOperation {
     if (mutation.getCondition().isPresent()) {
       int index = 0;
       for (ConditionalExpression expression : mutation.getCondition().get().getExpressions()) {
-        ret.put(CONDITION_COLUMN_NAME_ALIAS + index, expression.getColumnName());
+        ret.put(CONDITION_COLUMN_NAME_ALIAS + index, expression.getName());
         index++;
       }
     }
@@ -145,7 +145,7 @@ public class DynamoMutation extends DynamoOperation {
     Mutation mutation = (Mutation) getOperation();
     mutation
         .getCondition()
-        .ifPresent(c -> c.getExpressions().forEach(e -> e.getValue().accept(binder)));
+        .ifPresent(c -> c.getExpressions().forEach(e -> e.getColumn().accept(binder)));
 
     return binder.build();
   }
@@ -165,19 +165,11 @@ public class DynamoMutation extends DynamoOperation {
     Put put = (Put) getOperation();
 
     if (withKey) {
-      put.getPartitionKey().get().forEach(v -> v.accept(binder));
-      put.getClusteringKey().ifPresent(k -> k.get().forEach(v -> v.accept(binder)));
+      put.getPartitionKey().getColumns().forEach(c -> c.accept(binder));
+      put.getClusteringKey().ifPresent(k -> k.getColumns().forEach(c -> c.accept(binder)));
     }
 
-    put.getNullableValues()
-        .forEach(
-            (k, v) -> {
-              if (v.isPresent()) {
-                v.get().accept(binder);
-              } else {
-                binder.bindNullValue();
-              }
-            });
+    put.getColumns().values().forEach(c -> c.accept(binder));
 
     return binder.build();
   }

@@ -26,11 +26,14 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.util.ResultImpl;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -119,16 +122,16 @@ public class SnapshotTest {
   }
 
   private TransactionResult prepareResult(String txId) {
-    ImmutableMap<String, Optional<Value<?>>> values =
-        ImmutableMap.<String, Optional<Value<?>>>builder()
-            .put(ANY_NAME_1, Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
-            .put(ANY_NAME_2, Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
-            .put(ANY_NAME_3, Optional.of(new TextValue(ANY_NAME_3, ANY_TEXT_3)))
-            .put(ANY_NAME_4, Optional.of(new TextValue(ANY_NAME_4, ANY_TEXT_4)))
-            .put(Attribute.ID, Optional.of(Attribute.toIdValue(txId)))
-            .put(Attribute.VERSION, Optional.of(Attribute.toVersionValue(ANY_VERSION)))
+    ImmutableMap<String, Column<?>> columns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ANY_NAME_1, ScalarDbUtils.toColumn(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+            .put(ANY_NAME_2, ScalarDbUtils.toColumn(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
+            .put(ANY_NAME_3, ScalarDbUtils.toColumn(new TextValue(ANY_NAME_3, ANY_TEXT_3)))
+            .put(ANY_NAME_4, ScalarDbUtils.toColumn(new TextValue(ANY_NAME_4, ANY_TEXT_4)))
+            .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(txId)))
+            .put(Attribute.VERSION, ScalarDbUtils.toColumn(Attribute.toVersionValue(ANY_VERSION)))
             .build();
-    return new TransactionResult(new ResultImpl(values, TABLE_METADATA));
+    return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
   }
 
   private Get prepareGet() {
@@ -259,20 +262,20 @@ public class SnapshotTest {
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME)
             .withValue(ANY_NAME_3, ANY_TEXT_5)
-            .withNullValue(ANY_NAME_4);
+            .withTextValue(ANY_NAME_4, null);
 
     // Act
     snapshot.put(key, put1);
     snapshot.put(key, put2);
 
     // Assert
-    assertThat(writeSet.get(key).getNullableValues())
+    assertThat(writeSet.get(key).getColumns())
         .isEqualTo(
             ImmutableMap.of(
                 ANY_NAME_3,
-                Optional.of(new TextValue(ANY_NAME_3, ANY_TEXT_5)),
+                TextColumn.of(ANY_NAME_3, ANY_TEXT_5),
                 ANY_NAME_4,
-                Optional.empty()));
+                TextColumn.ofNull(ANY_NAME_4)));
   }
 
   @Test
@@ -317,7 +320,7 @@ public class SnapshotTest {
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME)
             .withValue(ANY_NAME_3, ANY_TEXT_5)
-            .withNullValue(ANY_NAME_4);
+            .withTextValue(ANY_NAME_4, null);
     Snapshot.Key key = new Snapshot.Key(prepareGet());
     TransactionResult result = prepareResult(ANY_ID);
     snapshot.put(key, Optional.of(result));
@@ -863,13 +866,13 @@ public class SnapshotTest {
             new ResultImpl(
                 ImmutableMap.of(
                     ANY_NAME_1,
-                    Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)),
+                    TextColumn.of(ANY_NAME_1, ANY_TEXT_1),
                     ANY_NAME_2,
-                    Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_2)),
+                    TextColumn.of(ANY_NAME_2, ANY_TEXT_2),
                     Attribute.ID,
-                    Optional.of(Attribute.toIdValue("id1")),
+                    ScalarDbUtils.toColumn(Attribute.toIdValue("id1")),
                     Attribute.VERSION,
-                    Optional.of(Attribute.toVersionValue(ANY_VERSION))),
+                    ScalarDbUtils.toColumn(Attribute.toVersionValue(ANY_VERSION))),
                 TABLE_METADATA));
 
     Result result2 =
@@ -877,13 +880,13 @@ public class SnapshotTest {
             new ResultImpl(
                 ImmutableMap.of(
                     ANY_NAME_1,
-                    Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_2)),
+                    TextColumn.of(ANY_NAME_1, ANY_TEXT_2),
                     ANY_NAME_2,
-                    Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_1)),
+                    TextColumn.of(ANY_NAME_2, ANY_TEXT_1),
                     Attribute.ID,
-                    Optional.of(Attribute.toIdValue("id2")),
+                    ScalarDbUtils.toColumn(Attribute.toIdValue("id2")),
                     Attribute.VERSION,
-                    Optional.of(Attribute.toVersionValue(ANY_VERSION))),
+                    ScalarDbUtils.toColumn(Attribute.toVersionValue(ANY_VERSION))),
                 TABLE_METADATA));
 
     Snapshot.Key key1 = new Snapshot.Key(scan1, result1);

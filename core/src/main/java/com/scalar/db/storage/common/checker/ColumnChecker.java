@@ -1,26 +1,24 @@
 package com.scalar.db.storage.common.checker;
 
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.ColumnVisitor;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.io.Value;
-import com.scalar.db.io.ValueVisitor;
-import java.util.Optional;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-class ColumnChecker implements ValueVisitor {
+class ColumnChecker implements ColumnVisitor {
   private final TableMetadata tableMetadata;
   private final boolean notNull;
   private final boolean notEmpty;
   private final boolean notPrimaryKey;
-  private String name;
   private boolean isValid;
 
   public ColumnChecker(
@@ -31,87 +29,99 @@ class ColumnChecker implements ValueVisitor {
     this.notPrimaryKey = notPrimaryKey;
   }
 
-  public boolean check(Value<?> value) {
-    return check(value.getName(), Optional.of(value));
-  }
-
-  public boolean check(String name, Value<?> value) {
-    return check(name, Optional.of(value));
-  }
-
-  public boolean check(String name, Optional<Value<?>> value) {
-    if (!value.isPresent()) {
-      return !notNull;
-    }
-
-    this.name = name;
-
+  public boolean check(Column<?> column) {
     // Check if the column exists
-    if (!tableMetadata.getColumnNames().contains(name)) {
+    if (!tableMetadata.getColumnNames().contains(column.getName())) {
       return false;
     }
 
     if (notPrimaryKey) {
       // Check if the column is primary key or not
-      if (tableMetadata.getPartitionKeyNames().contains(name)
-          || tableMetadata.getClusteringKeyNames().contains(name)) {
+      if (tableMetadata.getPartitionKeyNames().contains(column.getName())
+          || tableMetadata.getClusteringKeyNames().contains(column.getName())) {
         return false;
       }
     }
 
     // Check if the column data type is correct and the column value is null or empty
-    value.get().accept(this);
+    column.accept(this);
     return isValid;
   }
 
   @Override
-  public void visit(BooleanValue value) {
-    isValid = tableMetadata.getColumnDataType(name) == DataType.BOOLEAN;
-  }
-
-  @Override
-  public void visit(IntValue value) {
-    isValid = tableMetadata.getColumnDataType(name) == DataType.INT;
-  }
-
-  @Override
-  public void visit(BigIntValue value) {
-    isValid = tableMetadata.getColumnDataType(name) == DataType.BIGINT;
-  }
-
-  @Override
-  public void visit(FloatValue value) {
-    isValid = tableMetadata.getColumnDataType(name) == DataType.FLOAT;
-  }
-
-  @Override
-  public void visit(DoubleValue value) {
-    isValid = tableMetadata.getColumnDataType(name) == DataType.DOUBLE;
-  }
-
-  @Override
-  public void visit(TextValue value) {
-    if (notNull && !value.getAsString().isPresent()) {
+  public void visit(BooleanColumn column) {
+    if (notNull && column.hasNullValue()) {
       isValid = false;
       return;
     }
-    if (notEmpty && (value.getAsString().isPresent() && value.getAsString().get().isEmpty())) {
-      isValid = false;
-      return;
-    }
-    isValid = tableMetadata.getColumnDataType(name) == DataType.TEXT;
+    isValid = tableMetadata.getColumnDataType(column.getName()) == DataType.BOOLEAN;
   }
 
   @Override
-  public void visit(BlobValue value) {
-    if (notNull && !value.getAsBytes().isPresent()) {
+  public void visit(IntColumn column) {
+    if (notNull && column.hasNullValue()) {
       isValid = false;
       return;
     }
-    if (notEmpty && (value.getAsBytes().isPresent() && value.getAsBytes().get().length == 0)) {
+    isValid = tableMetadata.getColumnDataType(column.getName()) == DataType.INT;
+  }
+
+  @Override
+  public void visit(BigIntColumn column) {
+    if (notNull && column.hasNullValue()) {
       isValid = false;
       return;
     }
-    isValid = tableMetadata.getColumnDataType(name) == DataType.BLOB;
+    isValid = tableMetadata.getColumnDataType(column.getName()) == DataType.BIGINT;
+  }
+
+  @Override
+  public void visit(FloatColumn column) {
+    if (notNull && column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+    isValid = tableMetadata.getColumnDataType(column.getName()) == DataType.FLOAT;
+  }
+
+  @Override
+  public void visit(DoubleColumn column) {
+    if (notNull && column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+    isValid = tableMetadata.getColumnDataType(column.getName()) == DataType.DOUBLE;
+  }
+
+  @Override
+  public void visit(TextColumn column) {
+    if (notNull && column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+    if (notEmpty) {
+      String textValue = column.getTextValue();
+      if (textValue != null && textValue.isEmpty()) {
+        isValid = false;
+        return;
+      }
+    }
+    isValid = tableMetadata.getColumnDataType(column.getName()) == DataType.TEXT;
+  }
+
+  @Override
+  public void visit(BlobColumn column) {
+    if (notNull && column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+    if (notEmpty) {
+      byte[] blobValue = column.getBlobValueAsBytes();
+      if (blobValue != null && blobValue.length == 0) {
+        isValid = false;
+        return;
+      }
+    }
+    isValid = tableMetadata.getColumnDataType(column.getName()) == DataType.BLOB;
   }
 }

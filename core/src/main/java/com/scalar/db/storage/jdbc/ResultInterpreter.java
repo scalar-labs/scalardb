@@ -2,15 +2,15 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.io.Value;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.ResultImpl;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -18,8 +18,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -34,53 +32,70 @@ public class ResultInterpreter {
   }
 
   public Result interpret(ResultSet resultSet) throws SQLException {
-    Map<String, Optional<Value<?>>> values = new HashMap<>();
+    Map<String, Column<?>> ret = new HashMap<>();
     if (projections.isEmpty()) {
       for (String projection : metadata.getColumnNames()) {
-        values.put(projection, Optional.ofNullable(getValue(projection, resultSet)));
+        ret.put(projection, convert(projection, resultSet));
       }
     } else {
       for (String projection : projections) {
-        values.put(projection, Optional.ofNullable(getValue(projection, resultSet)));
+        ret.put(projection, convert(projection, resultSet));
       }
     }
-    return new ResultImpl(values, metadata);
+    return new ResultImpl(ret, metadata);
   }
 
-  @Nullable
-  private Value<?> getValue(String name, ResultSet resultSet) throws SQLException {
-    Value<?> ret;
+  private Column<?> convert(String name, ResultSet resultSet) throws SQLException {
+    Column<?> ret;
 
     DataType dataType = metadata.getColumnDataType(name);
     switch (dataType) {
       case BOOLEAN:
-        ret = new BooleanValue(name, resultSet.getBoolean(name));
+        ret = BooleanColumn.of(name, resultSet.getBoolean(name));
+        if (resultSet.wasNull()) {
+          ret = BooleanColumn.ofNull(name);
+        }
         break;
       case INT:
-        ret = new IntValue(name, resultSet.getInt(name));
+        ret = IntColumn.of(name, resultSet.getInt(name));
+        if (resultSet.wasNull()) {
+          ret = IntColumn.ofNull(name);
+        }
         break;
       case BIGINT:
-        ret = new BigIntValue(name, resultSet.getLong(name));
+        ret = BigIntColumn.of(name, resultSet.getLong(name));
+        if (resultSet.wasNull()) {
+          ret = BigIntColumn.ofNull(name);
+        }
         break;
       case FLOAT:
         // To handle Float.MAX_VALUE in MySQL, we need to get the value as double, then cast it to
         // float
-        ret = new FloatValue(name, (float) resultSet.getDouble(name));
+        ret = FloatColumn.of(name, (float) resultSet.getDouble(name));
+        if (resultSet.wasNull()) {
+          ret = FloatColumn.ofNull(name);
+        }
         break;
       case DOUBLE:
-        ret = new DoubleValue(name, resultSet.getDouble(name));
+        ret = DoubleColumn.of(name, resultSet.getDouble(name));
+        if (resultSet.wasNull()) {
+          ret = DoubleColumn.ofNull(name);
+        }
         break;
       case TEXT:
-        ret = new TextValue(name, resultSet.getString(name));
+        ret = TextColumn.of(name, resultSet.getString(name));
+        if (resultSet.wasNull()) {
+          ret = TextColumn.ofNull(name);
+        }
         break;
       case BLOB:
-        ret = new BlobValue(name, resultSet.getBytes(name));
+        ret = BlobColumn.of(name, resultSet.getBytes(name));
+        if (resultSet.wasNull()) {
+          ret = BlobColumn.ofNull(name);
+        }
         break;
       default:
         throw new AssertionError();
-    }
-    if (resultSet.wasNull()) {
-      return null;
     }
     return ret;
   }

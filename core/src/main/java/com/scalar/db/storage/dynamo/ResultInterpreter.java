@@ -2,21 +2,20 @@ package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.io.Value;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.ResultImpl;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -33,7 +32,7 @@ public class ResultInterpreter {
   }
 
   public Result interpret(Map<String, AttributeValue> item) {
-    Map<String, Optional<Value<?>>> ret = new HashMap<>();
+    Map<String, Column<?>> ret = new HashMap<>();
     if (projections.isEmpty()) {
       metadata.getColumnNames().forEach(name -> add(ret, name, item.get(name)));
     } else {
@@ -42,31 +41,35 @@ public class ResultInterpreter {
     return new ResultImpl(ret, metadata);
   }
 
-  private void add(Map<String, Optional<Value<?>>> values, String name, AttributeValue itemValue) {
-    values.put(
-        name, Optional.ofNullable(convert(itemValue, name, metadata.getColumnDataType(name))));
+  private void add(Map<String, Column<?>> columns, String name, AttributeValue itemValue) {
+    columns.put(name, convert(itemValue, name, metadata.getColumnDataType(name)));
   }
 
-  @Nullable
-  private Value<?> convert(@Nullable AttributeValue itemValue, String name, DataType dataType) {
-    if (itemValue == null || (itemValue.nul() != null && itemValue.nul())) {
-      return null;
-    }
+  private Column<?> convert(@Nullable AttributeValue itemValue, String name, DataType dataType) {
+    boolean isNull = itemValue == null || (itemValue.nul() != null && itemValue.nul());
     switch (dataType) {
       case BOOLEAN:
-        return new BooleanValue(name, itemValue.bool());
+        return isNull ? BooleanColumn.ofNull(name) : BooleanColumn.of(name, itemValue.bool());
       case INT:
-        return new IntValue(name, Integer.parseInt(itemValue.n()));
+        return isNull
+            ? IntColumn.ofNull(name)
+            : IntColumn.of(name, Integer.parseInt(itemValue.n()));
       case BIGINT:
-        return new BigIntValue(name, Long.parseLong(itemValue.n()));
+        return isNull
+            ? BigIntColumn.ofNull(name)
+            : BigIntColumn.of(name, Long.parseLong(itemValue.n()));
       case FLOAT:
-        return new FloatValue(name, Float.parseFloat(itemValue.n()));
+        return isNull
+            ? FloatColumn.ofNull(name)
+            : FloatColumn.of(name, Float.parseFloat(itemValue.n()));
       case DOUBLE:
-        return new DoubleValue(name, Double.parseDouble(itemValue.n()));
+        return isNull
+            ? DoubleColumn.ofNull(name)
+            : DoubleColumn.of(name, Double.parseDouble(itemValue.n()));
       case TEXT:
-        return new TextValue(name, itemValue.s());
+        return isNull ? TextColumn.ofNull(name) : TextColumn.of(name, itemValue.s());
       case BLOB:
-        return new BlobValue(name, itemValue.b().asByteArray());
+        return isNull ? BlobColumn.ofNull(name) : BlobColumn.of(name, itemValue.b().asByteArray());
       default:
         throw new AssertionError();
     }

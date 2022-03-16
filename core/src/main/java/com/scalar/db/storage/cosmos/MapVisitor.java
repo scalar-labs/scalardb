@@ -1,14 +1,13 @@
 package com.scalar.db.storage.cosmos;
 
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.io.ValueVisitor;
-import java.nio.ByteBuffer;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.ColumnVisitor;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -19,7 +18,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  * @author Yuji Ito
  */
 @NotThreadSafe
-public class MapVisitor implements ValueVisitor {
+public class MapVisitor implements ColumnVisitor {
   private final Map<String, Object> values;
 
   public MapVisitor() {
@@ -30,84 +29,38 @@ public class MapVisitor implements ValueVisitor {
     return values;
   }
 
-  /**
-   * Sets the specified {@code BooleanValue} to the map
-   *
-   * @param value a {@code BooleanValue} to be set
-   */
   @Override
-  public void visit(BooleanValue value) {
-    values.put(value.getName(), value.get());
+  public void visit(BooleanColumn column) {
+    values.put(column.getName(), column.hasNullValue() ? null : column.getBooleanValue());
   }
 
-  /**
-   * Sets the specified {@code IntValue} to the map
-   *
-   * @param value a {@code IntValue} to be set
-   */
   @Override
-  public void visit(IntValue value) {
-    values.put(value.getName(), value.get());
+  public void visit(IntColumn column) {
+    values.put(column.getName(), column.hasNullValue() ? null : column.getIntValue());
   }
 
-  /**
-   * Sets the specified {@code BigIntValue} to the map
-   *
-   * @param value a {@code BigIntValue} to be set
-   */
   @Override
-  public void visit(BigIntValue value) {
-    values.put(value.getName(), value.get());
+  public void visit(BigIntColumn column) {
+    values.put(column.getName(), column.hasNullValue() ? null : column.getBigIntValue());
   }
 
-  /**
-   * Sets the specified {@code FloatValue} to the map
-   *
-   * @param value a {@code FloatValue} to be set
-   */
   @Override
-  public void visit(FloatValue value) {
-    values.put(value.getName(), value.get());
+  public void visit(FloatColumn column) {
+    values.put(column.getName(), column.hasNullValue() ? null : column.getFloatValue());
   }
 
-  /**
-   * Sets the specified {@code DoubleValue} to the map
-   *
-   * @param value a {@code DoubleValue} to be set
-   */
   @Override
-  public void visit(DoubleValue value) {
-    values.put(value.getName(), value.get());
+  public void visit(DoubleColumn column) {
+    values.put(column.getName(), column.hasNullValue() ? null : column.getDoubleValue());
   }
 
-  /**
-   * Sets the specified {@code TextValue} to the map
-   *
-   * @param value a {@code TextValue} to be set
-   */
   @Override
-  public void visit(TextValue value) {
-    values.put(value.getName(), value.get().orElse(null));
+  public void visit(TextColumn column) {
+    values.put(column.getName(), column.hasNullValue() ? null : column.getTextValue());
   }
 
-  /**
-   * Sets the specified {@code BlobValue} to the map
-   *
-   * @param value a {@code BlobValue} to be set
-   */
   @Override
-  public void visit(BlobValue value) {
-    values.put(
-        value.getName(),
-        value.get().map(b -> ByteBuffer.allocate(b.length).put(b).flip()).orElse(null));
-  }
-
-  /**
-   * Adds a NULL value for the specified name
-   *
-   * @param name a name
-   */
-  public void addNullValue(String name) {
-    values.put(name, null);
+  public void visit(BlobColumn column) {
+    values.put(column.getName(), column.hasNullValue() ? null : column.getBlobValue());
   }
 }
