@@ -131,13 +131,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
             .addPartitionKey(ACCOUNT_ID)
             .addClusteringKey(ACCOUNT_TYPE)
             .build();
-    admin.createNamespace(namespace1, true, options);
-    consensusCommitAdmin.createTransactionalTable(
-        namespace1, TABLE_1, tableMetadata, true, options);
-    admin.createNamespace(namespace2, true, options);
-    consensusCommitAdmin.createTransactionalTable(
-        namespace2, TABLE_2, tableMetadata, true, options);
-    consensusCommitAdmin.createCoordinatorTable(options);
+    consensusCommitAdmin.createNamespace(namespace1, true, options);
+    consensusCommitAdmin.createTable(namespace1, TABLE_1, tableMetadata, true, options);
+    consensusCommitAdmin.createNamespace(namespace2, true, options);
+    consensusCommitAdmin.createTable(namespace2, TABLE_2, tableMetadata, true, options);
+    consensusCommitAdmin.createCoordinatorNamespaceAndTable(options);
   }
 
   protected Map<String, String> getCreateOptions() {
@@ -145,25 +143,25 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   private void truncateTables() throws ExecutionException {
-    admin.truncateTable(namespace1, TABLE_1);
-    admin.truncateTable(namespace2, TABLE_2);
+    consensusCommitAdmin.truncateTable(namespace1, TABLE_1);
+    consensusCommitAdmin.truncateTable(namespace2, TABLE_2);
     consensusCommitAdmin.truncateCoordinatorTable();
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws ExecutionException {
     deleteTables();
-    admin.close();
+    consensusCommitAdmin.close();
     originalStorage.close();
     parallelExecutor.close();
   }
 
   private static void deleteTables() throws ExecutionException {
-    admin.dropTable(namespace1, TABLE_1);
-    admin.dropNamespace(namespace1);
-    admin.dropTable(namespace2, TABLE_2);
-    admin.dropNamespace(namespace2);
-    consensusCommitAdmin.dropCoordinatorTable();
+    consensusCommitAdmin.dropTable(namespace1, TABLE_1);
+    consensusCommitAdmin.dropNamespace(namespace1);
+    consensusCommitAdmin.dropTable(namespace2, TABLE_2);
+    consensusCommitAdmin.dropNamespace(namespace2);
+    consensusCommitAdmin.dropCoordinatorNamespaceAndTable();
   }
 
   @Test

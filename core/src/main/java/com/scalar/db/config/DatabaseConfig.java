@@ -8,6 +8,7 @@ import static com.scalar.db.config.ConfigUtils.getStringArray;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.storage.cassandra.Cassandra;
@@ -22,8 +23,10 @@ import com.scalar.db.storage.multistorage.MultiStorage;
 import com.scalar.db.storage.multistorage.MultiStorageAdmin;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcStorage;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
 import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager;
+import com.scalar.db.transaction.jdbc.JdbcTransactionAdmin;
 import com.scalar.db.transaction.jdbc.JdbcTransactionManager;
 import com.scalar.db.transaction.rpc.GrpcTransactionManager;
 import com.scalar.db.transaction.rpc.GrpcTwoPhaseCommitTransactionManager;
@@ -49,8 +52,9 @@ public class DatabaseConfig {
   @Nullable private String username;
   @Nullable private String password;
   private Class<? extends DistributedStorage> storageClass;
-  private Class<? extends DistributedStorageAdmin> adminClass;
+  private Class<? extends DistributedStorageAdmin> storageAdminClass;
   private Class<? extends DistributedTransactionManager> transactionManagerClass;
+  private Class<? extends DistributedTransactionAdmin> transactionAdminClass;
   private Class<? extends TwoPhaseCommitTransactionManager> twoPhaseCommitTransactionManagerClass;
   private long tableMetadataCacheExpirationTimeSecs;
 
@@ -93,27 +97,27 @@ public class DatabaseConfig {
     switch (storage.toLowerCase()) {
       case "cassandra":
         storageClass = Cassandra.class;
-        adminClass = CassandraAdmin.class;
+        storageAdminClass = CassandraAdmin.class;
         break;
       case "cosmos":
         storageClass = Cosmos.class;
-        adminClass = CosmosAdmin.class;
+        storageAdminClass = CosmosAdmin.class;
         break;
       case "dynamo":
         storageClass = Dynamo.class;
-        adminClass = DynamoAdmin.class;
+        storageAdminClass = DynamoAdmin.class;
         break;
       case "jdbc":
         storageClass = JdbcDatabase.class;
-        adminClass = JdbcAdmin.class;
+        storageAdminClass = JdbcAdmin.class;
         break;
       case "multi-storage":
         storageClass = MultiStorage.class;
-        adminClass = MultiStorageAdmin.class;
+        storageAdminClass = MultiStorageAdmin.class;
         break;
       case "grpc":
         storageClass = GrpcStorage.class;
-        adminClass = GrpcAdmin.class;
+        storageAdminClass = GrpcAdmin.class;
         break;
       default:
         throw new IllegalArgumentException("storage '" + storage + "' isn't supported");
@@ -133,6 +137,7 @@ public class DatabaseConfig {
     switch (transactionManager.toLowerCase()) {
       case "consensus-commit":
         transactionManagerClass = ConsensusCommitManager.class;
+        transactionAdminClass = ConsensusCommitAdmin.class;
         twoPhaseCommitTransactionManagerClass = TwoPhaseConsensusCommitManager.class;
         break;
       case "jdbc":
@@ -145,6 +150,7 @@ public class DatabaseConfig {
                   + ")");
         }
         transactionManagerClass = JdbcTransactionManager.class;
+        transactionAdminClass = JdbcTransactionAdmin.class;
         twoPhaseCommitTransactionManagerClass = null;
         break;
       case "grpc":
@@ -157,6 +163,7 @@ public class DatabaseConfig {
                   + ")");
         }
         transactionManagerClass = GrpcTransactionManager.class;
+        transactionAdminClass = null;
         twoPhaseCommitTransactionManagerClass = GrpcTwoPhaseCommitTransactionManager.class;
         break;
       default:
@@ -188,17 +195,21 @@ public class DatabaseConfig {
     return storageClass;
   }
 
-  public Class<? extends DistributedStorageAdmin> getAdminClass() {
-    return adminClass;
+  public Class<? extends DistributedStorageAdmin> getStorageAdminClass() {
+    return storageAdminClass;
+  }
+
+  public Class<? extends DistributedTransactionManager> getTransactionManagerClass() {
+    return transactionManagerClass;
+  }
+
+  public Class<? extends DistributedTransactionAdmin> getTransactionAdminClass() {
+    return transactionAdminClass;
   }
 
   public Class<? extends TwoPhaseCommitTransactionManager>
       getTwoPhaseCommitTransactionManagerClass() {
     return twoPhaseCommitTransactionManagerClass;
-  }
-
-  public Class<? extends DistributedTransactionManager> getTransactionManagerClass() {
-    return transactionManagerClass;
   }
 
   public long getTableMetadataCacheExpirationTimeSecs() {

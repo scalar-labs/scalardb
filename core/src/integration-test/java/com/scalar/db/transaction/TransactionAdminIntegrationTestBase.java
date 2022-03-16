@@ -1,27 +1,30 @@
-package com.scalar.db.storage;
+package com.scalar.db.transaction;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionAdmin;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import com.scalar.db.service.StorageFactory;
+import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.storage.TestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.AfterClass;
@@ -29,9 +32,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
-public abstract class AdminIntegrationTestBase {
+public abstract class TransactionAdminIntegrationTestBase {
 
-  private static final String TEST_NAME = "admin";
+  private static final String TEST_NAME = "tx_admin";
   private static final String NAMESPACE1 = "integration_testing_" + TEST_NAME + "1";
   private static final String NAMESPACE2 = "integration_testing_" + TEST_NAME + "2";
   private static final String NAMESPACE3 = "integration_testing_" + TEST_NAME + "3";
@@ -73,8 +76,8 @@ public abstract class AdminIntegrationTestBase {
           .build();
 
   private static boolean initialized;
-  private static DistributedStorageAdmin admin;
-  private static DistributedStorage storage;
+  private static DistributedTransactionAdmin admin;
+  private static DistributedTransactionManager manager;
   private static String namespace1;
   private static String namespace2;
   private static String namespace3;
@@ -83,14 +86,14 @@ public abstract class AdminIntegrationTestBase {
   public void setUp() throws Exception {
     if (!initialized) {
       initialize();
-      StorageFactory factory =
-          new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
-      admin = factory.getAdmin();
+      TransactionFactory factory =
+          new TransactionFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+      admin = factory.getTransactionAdmin();
       namespace1 = getNamespace1();
       namespace2 = getNamespace2();
       namespace3 = getNamespace3();
       createTables();
-      storage = factory.getStorage();
+      manager = factory.getTransactionManager();
       initialized = true;
     }
   }
@@ -119,6 +122,11 @@ public abstract class AdminIntegrationTestBase {
         admin.createTable(namespace, table, TABLE_METADATA, true, options);
       }
     }
+    try {
+      admin.createCoordinatorNamespaceAndTable(options);
+    } catch (UnsupportedOperationException ignored) {
+      // ignore
+    }
   }
 
   protected Map<String, String> getCreateOptions() {
@@ -129,6 +137,7 @@ public abstract class AdminIntegrationTestBase {
   public static void tearDownAfterClass() throws ExecutionException {
     dropTables();
     admin.close();
+    initialized = false;
   }
 
   private static void dropTables() throws ExecutionException {
@@ -137,6 +146,11 @@ public abstract class AdminIntegrationTestBase {
         admin.dropTable(namespace, table);
       }
       admin.dropNamespace(namespace, true);
+    }
+    try {
+      admin.dropCoordinatorNamespaceAndTable();
+    } catch (UnsupportedOperationException ignored) {
+      // ignore
     }
   }
 
@@ -351,11 +365,13 @@ public abstract class AdminIntegrationTestBase {
   }
 
   @Test
-  public void truncateTable_ShouldTruncateProperly() throws ExecutionException, IOException {
+  public void truncateTable_ShouldTruncateProperly()
+      throws ExecutionException, TransactionException {
     // Arrange
     Key partitionKey = new Key(COL_NAME2, "aaa", COL_NAME1, 1);
     Key clusteringKey = new Key(COL_NAME4, 2, COL_NAME3, "bbb");
-    storage.put(
+    DistributedTransaction transaction = manager.start();
+    transaction.put(
         new Put(partitionKey, clusteringKey)
             .withValue(COL_NAME5, 3)
             .withValue(COL_NAME6, "ccc")
@@ -366,15 +382,17 @@ public abstract class AdminIntegrationTestBase {
             .withValue(COL_NAME11, "ddd".getBytes(StandardCharsets.UTF_8))
             .forNamespace(namespace1)
             .forTable(TABLE1));
+    transaction.commit();
 
     // Act
     admin.truncateTable(namespace1, TABLE1);
 
     // Assert
-    Scanner scanner =
-        storage.scan(new Scan(partitionKey).forNamespace(namespace1).forTable(TABLE1));
-    assertThat(scanner.all()).isEmpty();
-    scanner.close();
+    transaction = manager.start();
+    List<Result> results =
+        transaction.scan(new Scan(partitionKey).forNamespace(namespace1).forTable(TABLE1));
+    assertThat(results).isEmpty();
+    transaction.commit();
   }
 
   @Test

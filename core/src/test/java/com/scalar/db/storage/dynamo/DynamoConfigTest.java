@@ -39,7 +39,7 @@ public class DynamoConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_SECRET_ACCESS_ID);
     assertThat(config.getStorageClass()).isEqualTo(Dynamo.class);
-    assertThat(config.getAdminClass()).isEqualTo(DynamoAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(DynamoAdmin.class);
     assertThat(config.getEndpointOverride().isPresent()).isTrue();
     assertThat(config.getEndpointOverride().get()).isEqualTo(ANY_ENDPOINT_OVERRIDE);
     assertThat(config.getTableMetadataNamespace()).isPresent();
@@ -81,7 +81,7 @@ public class DynamoConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_SECRET_ACCESS_ID);
     assertThat(config.getStorageClass()).isEqualTo(Dynamo.class);
-    assertThat(config.getAdminClass()).isEqualTo(DynamoAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(DynamoAdmin.class);
     assertThat(config.getEndpointOverride().isPresent()).isFalse();
     assertThat(config.getTableMetadataNamespace()).isPresent();
     assertThat(config.getTableMetadataNamespace().get()).isEqualTo(ANY_TABLE_METADATA_NAMESPACE);
@@ -108,7 +108,7 @@ public class DynamoConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_SECRET_ACCESS_ID);
     assertThat(config.getStorageClass()).isEqualTo(Dynamo.class);
-    assertThat(config.getAdminClass()).isEqualTo(DynamoAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(DynamoAdmin.class);
     assertThat(config.getEndpointOverride().isPresent()).isTrue();
     assertThat(config.getEndpointOverride().get()).isEqualTo(ANY_ENDPOINT_OVERRIDE);
     assertThat(config.getTableMetadataNamespace()).isNotPresent();

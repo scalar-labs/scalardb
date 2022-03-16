@@ -32,7 +32,7 @@ public class CosmosConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_KEY);
     assertThat(config.getStorageClass()).isEqualTo(Cosmos.class);
-    assertThat(config.getAdminClass()).isEqualTo(CosmosAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(CosmosAdmin.class);
     assertThat(config.getTableMetadataDatabase()).isPresent();
     assertThat(config.getTableMetadataDatabase().get()).isEqualTo(ANY_TABLE_METADATA_DATABASE);
   }
@@ -65,7 +65,7 @@ public class CosmosConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_KEY);
     assertThat(config.getStorageClass()).isEqualTo(Cosmos.class);
-    assertThat(config.getAdminClass()).isEqualTo(CosmosAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(CosmosAdmin.class);
     assertThat(config.getTableMetadataDatabase()).isNotPresent();
   }
 }

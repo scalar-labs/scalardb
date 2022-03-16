@@ -2,11 +2,12 @@ package com.scalar.db.schemaloader;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -19,20 +20,20 @@ import org.slf4j.LoggerFactory;
 public class SchemaOperator {
   private static final Logger LOGGER = LoggerFactory.getLogger(SchemaOperator.class);
 
-  private final DistributedStorageAdmin admin;
-  private final ConsensusCommitAdmin consensusCommitAdmin;
+  private final DistributedStorageAdmin storageAdmin;
+  private final DistributedTransactionAdmin transactionAdmin;
 
   public SchemaOperator(DatabaseConfig config) {
     StorageFactory storageFactory = new StorageFactory(config);
-    admin = storageFactory.getAdmin();
-    consensusCommitAdmin =
-        new ConsensusCommitAdmin(admin, new ConsensusCommitConfig(config.getProperties()));
+    storageAdmin = storageFactory.getAdmin();
+    TransactionFactory transactionFactory = new TransactionFactory(config);
+    transactionAdmin = transactionFactory.getTransactionAdmin();
   }
 
   @VisibleForTesting
-  SchemaOperator(DistributedStorageAdmin admin, ConsensusCommitAdmin consensusCommitAdmin) {
-    this.admin = admin;
-    this.consensusCommitAdmin = consensusCommitAdmin;
+  SchemaOperator(DistributedStorageAdmin admin, ConsensusCommitAdmin transactionAdmin) {
+    this.storageAdmin = admin;
+    this.transactionAdmin = transactionAdmin;
   }
 
   public void createTables(List<TableSchema> tableSchemaList) throws SchemaLoaderException {
@@ -52,7 +53,7 @@ public class SchemaOperator {
   private void createNamespace(String namespace, Map<String, String> options)
       throws SchemaLoaderException {
     try {
-      admin.createNamespace(namespace, true, options);
+      storageAdmin.createNamespace(namespace, true, options);
     } catch (ExecutionException e) {
       throw new SchemaLoaderException("Creating the namespace " + namespace + " failed.", e);
     }
@@ -63,10 +64,10 @@ public class SchemaOperator {
     String tableName = tableSchema.getTable();
     try {
       if (tableSchema.isTransactionalTable()) {
-        consensusCommitAdmin.createTransactionalTable(
+        transactionAdmin.createTable(
             namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
       } else {
-        admin.createTable(
+        storageAdmin.createTable(
             namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
       }
       LOGGER.info("Creating the table {} in the namespace {} succeeded.", tableName, namespace);
@@ -94,7 +95,7 @@ public class SchemaOperator {
 
   private void dropTable(String namespace, String tableName) throws SchemaLoaderException {
     try {
-      admin.dropTable(namespace, tableName);
+      storageAdmin.dropTable(namespace, tableName);
       LOGGER.info("Deleting the table {} in the namespace {} succeeded.", tableName, namespace);
     } catch (ExecutionException e) {
       throw new SchemaLoaderException(
@@ -105,7 +106,7 @@ public class SchemaOperator {
   private void dropNamespaces(Set<String> namespaces) throws SchemaLoaderException {
     for (String namespace : namespaces) {
       try {
-        admin.dropNamespace(namespace, true);
+        storageAdmin.dropNamespace(namespace, true);
       } catch (ExecutionException e) {
         throw new SchemaLoaderException("Deleting the namespace " + namespace + " failed.", e);
       }
@@ -114,7 +115,7 @@ public class SchemaOperator {
 
   private boolean tableExists(String namespace, String tableName) throws SchemaLoaderException {
     try {
-      return admin.tableExists(namespace, tableName);
+      return storageAdmin.tableExists(namespace, tableName);
     } catch (ExecutionException e) {
       throw new SchemaLoaderException(
           "Checking the existence of the table "
@@ -132,7 +133,7 @@ public class SchemaOperator {
       return;
     }
     try {
-      consensusCommitAdmin.createCoordinatorTable(options);
+      transactionAdmin.createCoordinatorNamespaceAndTable(options);
       LOGGER.info("Creating the coordinator table succeeded.");
     } catch (ExecutionException e) {
       throw new SchemaLoaderException("Creating the coordinator table failed.", e);
@@ -145,7 +146,7 @@ public class SchemaOperator {
       return;
     }
     try {
-      consensusCommitAdmin.dropCoordinatorTable();
+      transactionAdmin.dropCoordinatorNamespaceAndTable();
       LOGGER.info("Deleting the coordinator table succeeded.");
     } catch (ExecutionException e) {
       throw new SchemaLoaderException("Deleting the coordinator table failed.", e);
@@ -154,13 +155,14 @@ public class SchemaOperator {
 
   private boolean coordinatorTableExists() throws SchemaLoaderException {
     try {
-      return consensusCommitAdmin.coordinatorTableExists();
+      return transactionAdmin.coordinatorTableExists();
     } catch (ExecutionException e) {
       throw new SchemaLoaderException("Checking the existence of the coordinator table failed.", e);
     }
   }
 
   public void close() {
-    admin.close();
+    storageAdmin.close();
+    transactionAdmin.close();
   }
 }
