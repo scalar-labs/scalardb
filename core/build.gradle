@@ -57,6 +57,8 @@ sourceSets {
             include '**/com/scalar/db/storage/jdbc/*.java'
             include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
             include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithJdbcDatabaseIntegrationTest.java'
+            include '**/com/scalar/db/transaction/TransactionAdminIntegrationTestBase.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitAdminWithJdbcDatabaseIntegrationTest.java'
             include '**/com/scalar/db/transaction/jdbc/*.java'
         }
         resources.srcDir file('src/integration-test/resources')

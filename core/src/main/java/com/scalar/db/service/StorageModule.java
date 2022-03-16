@@ -22,7 +22,7 @@ public class StorageModule extends AbstractModule {
   @Override
   protected void configure() {
     bind(DistributedStorage.class).to(config.getStorageClass()).in(Singleton.class);
-    bind(DistributedStorageAdmin.class).to(config.getAdminClass()).in(Singleton.class);
+    bind(DistributedStorageAdmin.class).to(config.getStorageAdminClass()).in(Singleton.class);
   }
 
   @Singleton

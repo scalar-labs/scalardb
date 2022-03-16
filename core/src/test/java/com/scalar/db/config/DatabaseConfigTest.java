@@ -15,9 +15,13 @@ import com.scalar.db.storage.multistorage.MultiStorage;
 import com.scalar.db.storage.multistorage.MultiStorageAdmin;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcStorage;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
+import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager;
+import com.scalar.db.transaction.jdbc.JdbcTransactionAdmin;
 import com.scalar.db.transaction.jdbc.JdbcTransactionManager;
 import com.scalar.db.transaction.rpc.GrpcTransactionManager;
+import com.scalar.db.transaction.rpc.GrpcTwoPhaseCommitTransactionManager;
 import java.util.Collections;
 import java.util.Properties;
 import org.junit.Test;
@@ -47,8 +51,11 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
-    assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(CassandraAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
+    assertThat(config.getTransactionAdminClass()).isEqualTo(ConsensusCommitAdmin.class);
+    assertThat(config.getTwoPhaseCommitTransactionManagerClass())
+        .isEqualTo(TwoPhaseConsensusCommitManager.class);
     assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
@@ -70,8 +77,11 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
-    assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(CassandraAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
+    assertThat(config.getTransactionAdminClass()).isEqualTo(ConsensusCommitAdmin.class);
+    assertThat(config.getTwoPhaseCommitTransactionManagerClass())
+        .isEqualTo(TwoPhaseConsensusCommitManager.class);
     assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
@@ -93,8 +103,11 @@ public class DatabaseConfigTest {
     assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
     assertThat(config.getPassword().isPresent()).isFalse();
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
-    assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(CassandraAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
+    assertThat(config.getTransactionAdminClass()).isEqualTo(ConsensusCommitAdmin.class);
+    assertThat(config.getTwoPhaseCommitTransactionManagerClass())
+        .isEqualTo(TwoPhaseConsensusCommitManager.class);
     assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
@@ -118,8 +131,11 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
-    assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(CassandraAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
+    assertThat(config.getTransactionAdminClass()).isEqualTo(ConsensusCommitAdmin.class);
+    assertThat(config.getTwoPhaseCommitTransactionManagerClass())
+        .isEqualTo(TwoPhaseConsensusCommitManager.class);
     assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
@@ -166,7 +182,7 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
-    assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(CassandraAdmin.class);
   }
 
   @Test
@@ -189,7 +205,7 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(Cosmos.class);
-    assertThat(config.getAdminClass()).isEqualTo(CosmosAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(CosmosAdmin.class);
   }
 
   @Test
@@ -212,7 +228,7 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(Dynamo.class);
-    assertThat(config.getAdminClass()).isEqualTo(DynamoAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(DynamoAdmin.class);
   }
 
   @Test
@@ -235,7 +251,7 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
-    assertThat(config.getAdminClass()).isEqualTo(JdbcAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(JdbcAdmin.class);
   }
 
   @Test
@@ -253,7 +269,7 @@ public class DatabaseConfigTest {
     assertThat(config.getUsername().isPresent()).isFalse();
     assertThat(config.getPassword().isPresent()).isFalse();
     assertThat(config.getStorageClass()).isEqualTo(MultiStorage.class);
-    assertThat(config.getAdminClass()).isEqualTo(MultiStorageAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(MultiStorageAdmin.class);
   }
 
   @Test
@@ -276,7 +292,7 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(GrpcStorage.class);
-    assertThat(config.getAdminClass()).isEqualTo(GrpcAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(GrpcAdmin.class);
   }
 
   @Test
@@ -314,8 +330,11 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
-    assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(CassandraAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
+    assertThat(config.getTransactionAdminClass()).isEqualTo(ConsensusCommitAdmin.class);
+    assertThat(config.getTwoPhaseCommitTransactionManagerClass())
+        .isEqualTo(TwoPhaseConsensusCommitManager.class);
   }
 
   @Test
@@ -340,8 +359,10 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
-    assertThat(config.getAdminClass()).isEqualTo(JdbcAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(JdbcAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(JdbcTransactionManager.class);
+    assertThat(config.getTransactionAdminClass()).isEqualTo(JdbcTransactionAdmin.class);
+    assertThat(config.getTwoPhaseCommitTransactionManagerClass()).isNull();
   }
 
   @Test
@@ -382,8 +403,11 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(GrpcStorage.class);
-    assertThat(config.getAdminClass()).isEqualTo(GrpcAdmin.class);
+    assertThat(config.getStorageAdminClass()).isEqualTo(GrpcAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(GrpcTransactionManager.class);
+    assertThat(config.getTransactionAdminClass()).isNull();
+    assertThat(config.getTwoPhaseCommitTransactionManagerClass())
+        .isEqualTo(GrpcTwoPhaseCommitTransactionManager.class);
   }
 
   @Test

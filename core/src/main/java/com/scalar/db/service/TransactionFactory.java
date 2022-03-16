@@ -2,6 +2,7 @@ package com.scalar.db.service;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
@@ -24,6 +25,15 @@ public class TransactionFactory {
    */
   public DistributedTransactionManager getTransactionManager() {
     return injector.getInstance(DistributedTransactionManager.class);
+  }
+
+  /**
+   * Returns a {@link DistributedTransactionAdmin} instance
+   *
+   * @return a {@link DistributedTransactionAdmin} instance
+   */
+  public DistributedTransactionAdmin getTransactionAdmin() {
+    return injector.getInstance(DistributedTransactionAdmin.class);
   }
 
   /**

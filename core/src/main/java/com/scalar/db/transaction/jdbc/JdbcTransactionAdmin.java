@@ -1,50 +1,29 @@
-package com.scalar.db.transaction.consensuscommit;
+package com.scalar.db.transaction.jdbc;
 
-import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.buildTransactionalTableMetadata;
-import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.removeTransactionalMetaColumns;
-
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
-import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.storage.jdbc.JdbcAdmin;
+import com.scalar.db.storage.jdbc.JdbcConfig;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
-public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
+public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
 
-  private final DistributedStorageAdmin admin;
-  private final String coordinatorNamespace;
+  private final JdbcAdmin admin;
 
   @Inject
-  public ConsensusCommitAdmin(DistributedStorageAdmin admin, ConsensusCommitConfig config) {
+  public JdbcTransactionAdmin(JdbcConfig config) {
+    admin = new JdbcAdmin(config);
+  }
+
+  @VisibleForTesting
+  JdbcTransactionAdmin(JdbcAdmin admin) {
     this.admin = admin;
-    coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
-  }
-
-  @Override
-  public void createCoordinatorNamespaceAndTable(Map<String, String> options)
-      throws ExecutionException {
-    admin.createNamespace(coordinatorNamespace, options);
-    admin.createTable(coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
-  }
-
-  @Override
-  public void dropCoordinatorNamespaceAndTable() throws ExecutionException {
-    admin.dropTable(coordinatorNamespace, Coordinator.TABLE);
-    admin.dropNamespace(coordinatorNamespace);
-  }
-
-  @Override
-  public void truncateCoordinatorTable() throws ExecutionException {
-    admin.truncateTable(coordinatorNamespace, Coordinator.TABLE);
-  }
-
-  @Override
-  public boolean coordinatorTableExists() throws ExecutionException {
-    return admin.tableExists(coordinatorNamespace, Coordinator.TABLE);
   }
 
   @Override
@@ -57,7 +36,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    admin.createTable(namespace, table, buildTransactionalTableMetadata(metadata), options);
+    admin.createTable(namespace, table, metadata, options);
   }
 
   @Override
@@ -90,8 +69,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
-    TableMetadata metadata = admin.getTableMetadata(namespace, table);
-    return metadata == null ? null : removeTransactionalMetaColumns(metadata);
+    return admin.getTableMetadata(namespace, table);
   }
 
   @Override
@@ -102,6 +80,26 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
     return admin.namespaceExists(namespace);
+  }
+
+  @Override
+  public void createCoordinatorNamespaceAndTable(Map<String, String> options) {
+    throw new UnsupportedOperationException("this method is not supported in JDBC transaction");
+  }
+
+  @Override
+  public void dropCoordinatorNamespaceAndTable() {
+    throw new UnsupportedOperationException("this method is not supported in JDBC transaction");
+  }
+
+  @Override
+  public void truncateCoordinatorTable() {
+    throw new UnsupportedOperationException("this method is not supported in JDBC transaction");
+  }
+
+  @Override
+  public boolean coordinatorTableExists() {
+    throw new UnsupportedOperationException("this method is not supported in JDBC transaction");
   }
 
   @Override

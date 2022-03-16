@@ -50,8 +50,7 @@ public class SchemaOperatorTest {
     // Assert
     verify(admin, times(3)).createNamespace("ns", true, options);
     verify(admin, times(3)).tableExists("ns", "tb");
-    verify(consensusCommitAdmin, times(3))
-        .createTransactionalTable("ns", "tb", tableMetadata, options);
+    verify(consensusCommitAdmin, times(3)).createTable("ns", "tb", tableMetadata, options);
   }
 
   @Test
@@ -85,7 +84,7 @@ public class SchemaOperatorTest {
 
     // Assert
     verify(consensusCommitAdmin).coordinatorTableExists();
-    verify(consensusCommitAdmin).createCoordinatorTable(options);
+    verify(consensusCommitAdmin).createCoordinatorNamespaceAndTable(options);
   }
 
   @Test
@@ -99,7 +98,7 @@ public class SchemaOperatorTest {
 
     // Assert
     verify(consensusCommitAdmin).coordinatorTableExists();
-    verify(consensusCommitAdmin, never()).createCoordinatorTable(options);
+    verify(consensusCommitAdmin, never()).createCoordinatorNamespaceAndTable(options);
   }
 
   @Test
@@ -134,7 +133,7 @@ public class SchemaOperatorTest {
 
     // Assert
     verify(consensusCommitAdmin).coordinatorTableExists();
-    verify(consensusCommitAdmin).dropCoordinatorTable();
+    verify(consensusCommitAdmin).dropCoordinatorNamespaceAndTable();
   }
 
   @Test
@@ -148,6 +147,6 @@ public class SchemaOperatorTest {
 
     // Assert
     verify(consensusCommitAdmin).coordinatorTableExists();
-    verify(consensusCommitAdmin, never()).dropCoordinatorTable();
+    verify(consensusCommitAdmin, never()).dropCoordinatorNamespaceAndTable();
   }
 }
