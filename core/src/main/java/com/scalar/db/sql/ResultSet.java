@@ -4,7 +4,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.Optional;
 
-public interface ResultSet extends Iterable<Record>, Closeable {
+public interface ResultSet extends Iterable<Record> {
 
   Optional<Record> one();
 

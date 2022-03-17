@@ -1,13 +1,13 @@
 package com.scalar.db.sql.builder;
 
+import com.google.common.collect.ImmutableList;
 import com.scalar.db.sql.Assignment;
 import com.scalar.db.sql.statement.InsertStatement;
-import java.util.Arrays;
 import java.util.List;
 
-public final class InsertBuilder {
+public final class InsertStatementBuilder {
 
-  private InsertBuilder() {}
+  private InsertStatementBuilder() {}
 
   public static class Start {
     private final String namespaceName;
@@ -19,29 +19,27 @@ public final class InsertBuilder {
     }
 
     public End values(Assignment... assignments) {
-      return new End(namespaceName, tableName, Arrays.asList(assignments));
+      return new End(namespaceName, tableName, ImmutableList.copyOf(assignments));
+    }
+
+    public End values(List<Assignment> assignments) {
+      return new End(namespaceName, tableName, ImmutableList.copyOf(assignments));
     }
   }
 
   public static class End {
     private final String namespaceName;
     private final String tableName;
-    private final List<Assignment> assignments;
-    private boolean ifNotExists;
+    private final ImmutableList<Assignment> assignments;
 
-    public End(String namespaceName, String tableName, List<Assignment> assignments) {
+    public End(String namespaceName, String tableName, ImmutableList<Assignment> assignments) {
       this.namespaceName = namespaceName;
       this.tableName = tableName;
       this.assignments = assignments;
     }
 
-    public End ifNotExists() {
-      ifNotExists = true;
-      return this;
-    }
-
     public InsertStatement build() {
-      return new InsertStatement(namespaceName, tableName, assignments, ifNotExists);
+      return new InsertStatement(namespaceName, tableName, assignments);
     }
   }
 }

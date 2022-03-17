@@ -2,12 +2,12 @@ package com.scalar.db.sql.builder;
 
 import com.scalar.db.sql.statement.TruncateTableStatement;
 
-public class TruncateTableBuilder {
+public class TruncateTableStatementBuilder {
 
   private final String namespaceName;
   private final String tableName;
 
-  TruncateTableBuilder(String namespaceName, String tableName) {
+  TruncateTableStatementBuilder(String namespaceName, String tableName) {
     this.namespaceName = namespaceName;
     this.tableName = tableName;
   }

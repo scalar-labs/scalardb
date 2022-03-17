@@ -2,15 +2,23 @@ package com.scalar.db.sql.statement;
 
 import com.google.common.collect.ImmutableMap;
 
-public class CreateNamespaceStatement implements DdlStatement {
+public class CreateIndexStatement implements DdlStatement {
 
   public final String namespaceName;
+  public final String tableName;
+  public final String columnName;
   public final boolean ifNotExists;
   public final ImmutableMap<String, String> options;
 
-  public CreateNamespaceStatement(
-      String namespaceName, boolean ifNotExists, ImmutableMap<String, String> options) {
+  public CreateIndexStatement(
+      String namespaceName,
+      String tableName,
+      String columnName,
+      boolean ifNotExists,
+      ImmutableMap<String, String> options) {
     this.namespaceName = namespaceName;
+    this.tableName = tableName;
+    this.columnName = columnName;
     this.ifNotExists = ifNotExists;
     this.options = options;
   }

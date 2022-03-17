@@ -1,15 +1,18 @@
 package com.scalar.db.sql.statement;
 
-public class DropNamespaceStatement implements DdlStatement {
+public class DropIndexStatement implements DdlStatement {
 
   public final String namespaceName;
+  public final String tableName;
+  public final String columnName;
   public final boolean ifExists;
-  public final boolean cascade;
 
-  public DropNamespaceStatement(String namespaceName, boolean ifExists, boolean cascade) {
+  public DropIndexStatement(
+      String namespaceName, String tableName, String columnName, boolean ifExists) {
     this.namespaceName = namespaceName;
+    this.tableName = tableName;
+    this.columnName = columnName;
     this.ifExists = ifExists;
-    this.cascade = cascade;
   }
 
   @Override

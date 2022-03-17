@@ -4,7 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.scalar.db.sql.Condition;
 import com.scalar.db.sql.Ordering;
 
-public class SelectStatement implements Statement {
+public class SelectStatement implements DmlStatement {
 
   public final String namespaceName;
   public final String tableName;
@@ -30,6 +30,11 @@ public class SelectStatement implements Statement {
 
   @Override
   public void accept(StatementVisitor visitor) {
+    visitor.visit(this);
+  }
+
+  @Override
+  public void accept(DmlStatementVisitor visitor) {
     visitor.visit(this);
   }
 }

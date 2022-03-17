@@ -1,18 +1,7 @@
 package com.scalar.db.sql;
 
-import com.scalar.db.sql.builder.SqlBuilder;
-import com.scalar.db.sql.statement.BatchStatement;
-import com.scalar.db.sql.statement.CreateNamespaceStatement;
-import com.scalar.db.sql.statement.CreateTableStatement;
-import com.scalar.db.sql.statement.DeleteStatement;
-import com.scalar.db.sql.statement.DropNamespaceStatement;
-import com.scalar.db.sql.statement.DropTableStatement;
-import com.scalar.db.sql.statement.InsertStatement;
-import com.scalar.db.sql.statement.SelectStatement;
-import com.scalar.db.sql.statement.TruncateTableStatement;
-import com.scalar.db.sql.statement.UpdateStatement;
-import com.scalar.db.transaction.consensuscommit.Attribute;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.sql.builder.StatementBuilder;
+import com.scalar.db.sql.exception.SqlException;
 
 public class Example {
 
@@ -31,462 +20,272 @@ public class Example {
             .withProperty("scalar.db.password", "mysql")
             .withProperty("scalar.db.storage", "jdbc")
             .build()) {
-      storageModeExample(sessionFactory);
       transactionModeExample(sessionFactory);
       twoPhaseCommitTransactionModeExample(sessionFactory);
     }
   }
 
-  public static void storageModeExample(SessionFactory sessionFactory) {
-    System.out.println("Start storage mode example");
-
-    StorageSession storageSqlSession = sessionFactory.getStorageSqlSession();
-
-    ResultSet resultSet;
-
-    // Create namespace
-    CreateNamespaceStatement createNamespaceStatement =
-        SqlBuilder.createNamespace(NAMESPACE_NAME).ifNotExists().build();
-    resultSet = storageSqlSession.execute(createNamespaceStatement);
-    resultSet.close();
-
-    // Create table
-    CreateTableStatement createTableStatement =
-        SqlBuilder.createTable(NAMESPACE_NAME, TABLE_NAME)
-            .ifNotExists()
-            .withPartitionKey(COLUMN_NAME_1, DataType.INT)
-            .withClusteringKey(COLUMN_NAME_2, DataType.TEXT)
-            .withColumn(COLUMN_NAME_3, DataType.BIGINT)
-            .withColumn(COLUMN_NAME_4, DataType.FLOAT)
-            .withClusteringOrder(COLUMN_NAME_2, Order.ASC)
-            .build();
-    resultSet = storageSqlSession.execute(createTableStatement);
-    resultSet.close();
-
-    // Insert
-    InsertStatement insertStatement =
-        SqlBuilder.insertInto(NAMESPACE_NAME, TABLE_NAME)
-            .values(
-                Assignment.column(COLUMN_NAME_1).value(Value.ofInt(10)),
-                Assignment.column(COLUMN_NAME_2).value(Value.ofText("abc")),
-                Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(100L)),
-                Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(1.23F)))
-            .ifNotExists()
-            .build();
-    resultSet = storageSqlSession.execute(insertStatement);
-    System.out.println("InsertStatement result: " + resultSet.one().get().getBoolean(0));
-    resultSet.close();
-
-    // Update
-    UpdateStatement updateStatement =
-        SqlBuilder.update(NAMESPACE_NAME, TABLE_NAME)
-            .set(
-                Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(200L)),
-                Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(4.56F)))
-            .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
-            .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
-            .if_(Condition.column(COLUMN_NAME_3).isEqualTo(Value.ofBigInt(100L)))
-            .and(Condition.column(COLUMN_NAME_4).isEqualTo(Value.ofFloat(1.23F)))
-            .build();
-    resultSet = storageSqlSession.execute(updateStatement);
-    System.out.println("UpdateStatement result: " + resultSet.one().get().getBoolean(0));
-    resultSet.close();
-
-    // Batch
-    InsertStatement batchStatement1 =
-        SqlBuilder.insertInto(NAMESPACE_NAME, TABLE_NAME)
-            .values(
-                Assignment.column(COLUMN_NAME_1).value(Value.ofInt(10)),
-                Assignment.column(COLUMN_NAME_2).value(Value.ofText("def")),
-                Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(200L)),
-                Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(1.00F)))
-            .ifNotExists()
-            .build();
-    InsertStatement batchStatement2 =
-        SqlBuilder.insertInto(NAMESPACE_NAME, TABLE_NAME)
-            .values(
-                Assignment.column(COLUMN_NAME_1).value(Value.ofInt(10)),
-                Assignment.column(COLUMN_NAME_2).value(Value.ofText("ghi")),
-                Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(300L)),
-                Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(2.00F)))
-            .ifNotExists()
-            .build();
-    BatchStatement batchStatement =
-        SqlBuilder.batch().addStatement(batchStatement1).addStatement(batchStatement2).build();
-    resultSet = storageSqlSession.execute(batchStatement);
-    System.out.println("DeleteStatement result: " + resultSet.one().get().getBoolean(0));
-    resultSet.close();
-
-    // Select
-    SelectStatement selectStatement =
-        SqlBuilder.select(COLUMN_NAME_1, COLUMN_NAME_2, COLUMN_NAME_3)
-            .from(NAMESPACE_NAME, TABLE_NAME)
-            .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
-            .orderBy(Ordering.column(COLUMN_NAME_2).asc())
-            .limit(10)
-            .build();
-
-    try (ResultSet rs = storageSqlSession.execute(selectStatement)) {
-      for (Record record : rs) {
-        System.out.println("column1 value: " + record.getInt(COLUMN_NAME_1));
-        System.out.println("column2 value: " + record.getText(COLUMN_NAME_2));
-        System.out.println("column3 value: " + record.getBigInt(COLUMN_NAME_3));
-        System.out.println();
-      }
-    }
-
-    // Delete
-    DeleteStatement deleteStatement =
-        SqlBuilder.deleteFrom(NAMESPACE_NAME, TABLE_NAME)
-            .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
-            .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
-            .if_(Condition.column(COLUMN_NAME_3).isEqualTo(Value.ofBigInt(100L)))
-            .and(Condition.column(COLUMN_NAME_4).isEqualTo(Value.ofFloat(1.23F)))
-            .build();
-    resultSet = storageSqlSession.execute(deleteStatement);
-    System.out.println("DeleteStatement result: " + resultSet.one().get().getBoolean(0));
-    resultSet.close();
-
-    // Truncate table
-    TruncateTableStatement truncateTableStatement =
-        SqlBuilder.truncateTable(NAMESPACE_NAME, TABLE_NAME).build();
-    resultSet = storageSqlSession.execute(truncateTableStatement);
-    resultSet.close();
-
-    // Drop table
-    DropTableStatement dropTableStatement =
-        SqlBuilder.dropTable(NAMESPACE_NAME, TABLE_NAME).ifExists().build();
-    resultSet = storageSqlSession.execute(dropTableStatement);
-    resultSet.close();
-
-    // Drop namespace
-    DropNamespaceStatement dropNamespaceStatement =
-        SqlBuilder.dropNamespace(NAMESPACE_NAME).ifExists().cascade().build();
-    resultSet = storageSqlSession.execute(dropNamespaceStatement);
-    resultSet.close();
-  }
-
   public static void transactionModeExample(SessionFactory sessionFactory) {
     System.out.println("Start transaction mode example");
 
-    StorageSession storageSqlSession = sessionFactory.getStorageSqlSession();
+    Session session = sessionFactory.getTransactionSession();
 
-    ResultSet resultSet;
+    // Create a namespace
+    session.execute(StatementBuilder.createNamespace(NAMESPACE_NAME).ifNotExists().build());
 
-    // Create namespace
-    CreateNamespaceStatement createNamespaceStatement =
-        SqlBuilder.createNamespace(NAMESPACE_NAME).ifNotExists().build();
-    resultSet = storageSqlSession.execute(createNamespaceStatement);
-    resultSet.close();
-
-    createNamespaceStatement =
-        SqlBuilder.createNamespace(Coordinator.NAMESPACE).ifNotExists().build();
-    resultSet = storageSqlSession.execute(createNamespaceStatement);
-    resultSet.close();
-
-    // Create table
-    CreateTableStatement createTableStatement =
-        SqlBuilder.createTable(NAMESPACE_NAME, TABLE_NAME)
+    // Create a table
+    session.execute(
+        StatementBuilder.createTable(NAMESPACE_NAME, TABLE_NAME)
             .ifNotExists()
             .withPartitionKey(COLUMN_NAME_1, DataType.INT)
             .withClusteringKey(COLUMN_NAME_2, DataType.TEXT)
             .withColumn(COLUMN_NAME_3, DataType.BIGINT)
             .withColumn(COLUMN_NAME_4, DataType.FLOAT)
-            .withColumn(Attribute.ID, DataType.TEXT)
-            .withColumn(Attribute.STATE, DataType.INT)
-            .withColumn(Attribute.VERSION, DataType.INT)
-            .withColumn(Attribute.PREPARED_AT, DataType.BIGINT)
-            .withColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
-            .withColumn(Attribute.BEFORE_PREFIX + COLUMN_NAME_3, DataType.BIGINT)
-            .withColumn(Attribute.BEFORE_PREFIX + COLUMN_NAME_4, DataType.FLOAT)
-            .withColumn(Attribute.BEFORE_ID, DataType.TEXT)
-            .withColumn(Attribute.BEFORE_STATE, DataType.INT)
-            .withColumn(Attribute.BEFORE_VERSION, DataType.INT)
-            .withColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
-            .withColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
             .withClusteringOrder(COLUMN_NAME_2, Order.ASC)
-            .build();
-    resultSet = storageSqlSession.execute(createTableStatement);
-    resultSet.close();
+            .build());
 
-    createTableStatement =
-        SqlBuilder.createTable(Coordinator.NAMESPACE, Coordinator.TABLE)
+    // Create a index
+    session.execute(
+        StatementBuilder.createIndex()
             .ifNotExists()
-            .withPartitionKey(Attribute.ID, DataType.TEXT)
-            .withColumn(Attribute.STATE, DataType.INT)
-            .withColumn(Attribute.CREATED_AT, DataType.BIGINT)
-            .build();
-    resultSet = storageSqlSession.execute(createTableStatement);
-    resultSet.close();
+            .onTable(NAMESPACE_NAME, TABLE_NAME)
+            .column(COLUMN_NAME_3)
+            .build());
 
-    // Begin
-    TransactionSession transactionSqlSession = sessionFactory.beginTransaction();
+    // Create a coordinator table
+    session.execute(StatementBuilder.createCoordinatorTable().ifNotExists().build());
 
-    // Insert
-    InsertStatement insertStatement =
-        SqlBuilder.insertInto(NAMESPACE_NAME, TABLE_NAME)
-            .values(
-                Assignment.column(COLUMN_NAME_1).value(Value.ofInt(10)),
-                Assignment.column(COLUMN_NAME_2).value(Value.ofText("abc")),
-                Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(100L)),
-                Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(1.23F)))
-            .build();
-    resultSet = transactionSqlSession.execute(insertStatement);
-    resultSet.close();
+    try {
+      // Begin
+      session.beginTransaction();
 
-    // Update
-    UpdateStatement updateStatement =
-        SqlBuilder.update(NAMESPACE_NAME, TABLE_NAME)
-            .set(
-                Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(200L)),
-                Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(4.56F)))
-            .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
-            .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
-            .build();
-    resultSet = transactionSqlSession.execute(updateStatement);
-    resultSet.close();
+      // Insert
+      session.execute(
+          StatementBuilder.insertInto(NAMESPACE_NAME, TABLE_NAME)
+              .values(
+                  Assignment.column(COLUMN_NAME_1).value(Value.ofInt(10)),
+                  Assignment.column(COLUMN_NAME_2).value(Value.ofText("abc")),
+                  Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(100L)),
+                  Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(1.23F)))
+              .build());
 
-    // Select
-    SelectStatement selectStatement =
-        SqlBuilder.select(COLUMN_NAME_1, COLUMN_NAME_2, COLUMN_NAME_3)
-            .from(NAMESPACE_NAME, TABLE_NAME)
-            .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
-            .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
-            .build();
+      // Update
+      session.execute(
+          StatementBuilder.update(NAMESPACE_NAME, TABLE_NAME)
+              .set(
+                  Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(200L)),
+                  Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(4.56F)))
+              .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
+              .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
+              .build());
 
-    try (ResultSet rs = transactionSqlSession.execute(selectStatement)) {
-      for (Record record : rs) {
+      // Select
+      ResultSet resultSet =
+          session.executeQuery(
+              StatementBuilder.select(COLUMN_NAME_1, COLUMN_NAME_2, COLUMN_NAME_3)
+                  .from(NAMESPACE_NAME, TABLE_NAME)
+                  .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
+                  .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
+                  .build());
+      for (Record record : resultSet) {
         System.out.println("column1 value: " + record.getInt(COLUMN_NAME_1));
         System.out.println("column2 value: " + record.getText(COLUMN_NAME_2));
         System.out.println("column3 value: " + record.getBigInt(COLUMN_NAME_3));
         System.out.println();
       }
+
+      // Delete
+      session.execute(
+          StatementBuilder.deleteFrom(NAMESPACE_NAME, TABLE_NAME)
+              .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
+              .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
+              .build());
+
+      // Commit
+      session.commit();
+    } catch (SqlException e) {
+      // Rollback
+      session.rollback();
     }
 
-    // Delete
-    DeleteStatement deleteStatement =
-        SqlBuilder.deleteFrom(NAMESPACE_NAME, TABLE_NAME)
-            .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
-            .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
-            .build();
-    resultSet = transactionSqlSession.execute(deleteStatement);
-    resultSet.close();
+    // Truncate a table
+    session.execute(StatementBuilder.truncateTable(NAMESPACE_NAME, TABLE_NAME).build());
 
-    // Commit
-    transactionSqlSession.commit();
+    // Truncate a coordinator table
+    session.execute(StatementBuilder.truncateCoordinatorTable().build());
 
-    // Drop table
-    DropTableStatement dropTableStatement =
-        SqlBuilder.dropTable(NAMESPACE_NAME, TABLE_NAME).ifExists().build();
-    resultSet = storageSqlSession.execute(dropTableStatement);
-    resultSet.close();
+    // Drop an index
+    session.execute(
+        StatementBuilder.dropIndex()
+            .ifExists()
+            .onTable(NAMESPACE_NAME, TABLE_NAME)
+            .column(COLUMN_NAME_3)
+            .build());
 
-    dropTableStatement =
-        SqlBuilder.dropTable(Coordinator.NAMESPACE, Coordinator.TABLE).ifExists().build();
-    resultSet = storageSqlSession.execute(dropTableStatement);
-    resultSet.close();
+    // Drop a table
+    session.execute(StatementBuilder.dropTable(NAMESPACE_NAME, TABLE_NAME).ifExists().build());
 
-    // Drop namespace
-    DropNamespaceStatement dropNamespaceStatement =
-        SqlBuilder.dropNamespace(NAMESPACE_NAME).ifExists().cascade().build();
-    resultSet = storageSqlSession.execute(dropNamespaceStatement);
-    resultSet.close();
+    // Drop a namespace
+    session.execute(StatementBuilder.dropNamespace(NAMESPACE_NAME).ifExists().cascade().build());
 
-    dropNamespaceStatement =
-        SqlBuilder.dropNamespace(Coordinator.NAMESPACE).ifExists().cascade().build();
-    resultSet = storageSqlSession.execute(dropNamespaceStatement);
-    resultSet.close();
+    // Drop a coordinator table
+    session.execute(StatementBuilder.dropCoordinatorTable().ifExists().build());
   }
 
   public static void twoPhaseCommitTransactionModeExample(SessionFactory sessionFactory) {
     System.out.println("Start two-phase commit transaction mode example");
 
-    StorageSession storageSqlSession = sessionFactory.getStorageSqlSession();
+    Session session1 = sessionFactory.getTwoPhaseCommitTransactionSession();
+    Session session2 = sessionFactory.getTwoPhaseCommitTransactionSession();
 
-    ResultSet resultSet;
+    // Create a namespace
+    session1.execute(StatementBuilder.createNamespace(NAMESPACE_NAME).ifNotExists().build());
 
-    // Create namespace
-    CreateNamespaceStatement createNamespaceStatement =
-        SqlBuilder.createNamespace(NAMESPACE_NAME).ifNotExists().build();
-    resultSet = storageSqlSession.execute(createNamespaceStatement);
-    resultSet.close();
-
-    createNamespaceStatement =
-        SqlBuilder.createNamespace(Coordinator.NAMESPACE).ifNotExists().build();
-    resultSet = storageSqlSession.execute(createNamespaceStatement);
-    resultSet.close();
-
-    // Create table
-    CreateTableStatement createTableStatement =
-        SqlBuilder.createTable(NAMESPACE_NAME, TABLE_NAME)
+    // Create a table
+    session1.execute(
+        StatementBuilder.createTable(NAMESPACE_NAME, TABLE_NAME)
             .ifNotExists()
             .withPartitionKey(COLUMN_NAME_1, DataType.INT)
             .withClusteringKey(COLUMN_NAME_2, DataType.TEXT)
             .withColumn(COLUMN_NAME_3, DataType.BIGINT)
             .withColumn(COLUMN_NAME_4, DataType.FLOAT)
-            .withColumn(Attribute.ID, DataType.TEXT)
-            .withColumn(Attribute.STATE, DataType.INT)
-            .withColumn(Attribute.VERSION, DataType.INT)
-            .withColumn(Attribute.PREPARED_AT, DataType.BIGINT)
-            .withColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
-            .withColumn(Attribute.BEFORE_PREFIX + COLUMN_NAME_3, DataType.BIGINT)
-            .withColumn(Attribute.BEFORE_PREFIX + COLUMN_NAME_4, DataType.FLOAT)
-            .withColumn(Attribute.BEFORE_ID, DataType.TEXT)
-            .withColumn(Attribute.BEFORE_STATE, DataType.INT)
-            .withColumn(Attribute.BEFORE_VERSION, DataType.INT)
-            .withColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
-            .withColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
             .withClusteringOrder(COLUMN_NAME_2, Order.ASC)
-            .build();
-    resultSet = storageSqlSession.execute(createTableStatement);
-    resultSet.close();
+            .build());
 
-    createTableStatement =
-        SqlBuilder.createTable(Coordinator.NAMESPACE, Coordinator.TABLE)
+    // Create a index
+    session1.execute(
+        StatementBuilder.createIndex()
             .ifNotExists()
-            .withPartitionKey(Attribute.ID, DataType.TEXT)
-            .withColumn(Attribute.STATE, DataType.INT)
-            .withColumn(Attribute.CREATED_AT, DataType.BIGINT)
-            .build();
-    resultSet = storageSqlSession.execute(createTableStatement);
-    resultSet.close();
+            .onTable(NAMESPACE_NAME, TABLE_NAME)
+            .column(COLUMN_NAME_3)
+            .build());
 
-    // Begin
-    TwoPhaseCommitTransactionSession twoPhaseCommitTransactionSqlSession1 =
-        sessionFactory.beginTwoPhaseCommitTransaction();
+    // Create a coordinator table
+    session1.execute(StatementBuilder.createCoordinatorTable().ifNotExists().build());
 
-    TwoPhaseCommitTransactionSession twoPhaseCommitTransactionSqlSession2 =
-        sessionFactory.joinTwoPhaseCommitTransaction(
-            twoPhaseCommitTransactionSqlSession1.getTransactionId());
+    try {
+      // Begin and join
+      session1.beginTransaction();
+      session2.joinTransaction(session1.getTransactionId());
 
-    // Insert
-    InsertStatement insertStatement1 =
-        SqlBuilder.insertInto(NAMESPACE_NAME, TABLE_NAME)
-            .values(
-                Assignment.column(COLUMN_NAME_1).value(Value.ofInt(10)),
-                Assignment.column(COLUMN_NAME_2).value(Value.ofText("abc")),
-                Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(100L)),
-                Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(1.23F)))
-            .build();
-    resultSet = twoPhaseCommitTransactionSqlSession1.execute(insertStatement1);
-    resultSet.close();
+      // Insert
+      session1.execute(
+          StatementBuilder.insertInto(NAMESPACE_NAME, TABLE_NAME)
+              .values(
+                  Assignment.column(COLUMN_NAME_1).value(Value.ofInt(10)),
+                  Assignment.column(COLUMN_NAME_2).value(Value.ofText("abc")),
+                  Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(100L)),
+                  Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(1.23F)))
+              .build());
 
-    InsertStatement insertStatement2 =
-        SqlBuilder.insertInto(NAMESPACE_NAME, TABLE_NAME)
-            .values(
-                Assignment.column(COLUMN_NAME_1).value(Value.ofInt(11)),
-                Assignment.column(COLUMN_NAME_2).value(Value.ofText("def")),
-                Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(200L)),
-                Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(2.46F)))
-            .build();
-    resultSet = twoPhaseCommitTransactionSqlSession2.execute(insertStatement2);
-    resultSet.close();
+      session2.execute(
+          StatementBuilder.insertInto(NAMESPACE_NAME, TABLE_NAME)
+              .values(
+                  Assignment.column(COLUMN_NAME_1).value(Value.ofInt(11)),
+                  Assignment.column(COLUMN_NAME_2).value(Value.ofText("def")),
+                  Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(200L)),
+                  Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(2.46F)))
+              .build());
 
-    // Update
-    UpdateStatement updateStatement1 =
-        SqlBuilder.update(NAMESPACE_NAME, TABLE_NAME)
-            .set(
-                Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(200L)),
-                Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(4.56F)))
-            .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
-            .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
-            .build();
-    resultSet = twoPhaseCommitTransactionSqlSession1.execute(updateStatement1);
-    resultSet.close();
+      // Update
+      session1.execute(
+          StatementBuilder.update(NAMESPACE_NAME, TABLE_NAME)
+              .set(
+                  Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(200L)),
+                  Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(4.56F)))
+              .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
+              .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
+              .build());
 
-    UpdateStatement updateStatement2 =
-        SqlBuilder.update(NAMESPACE_NAME, TABLE_NAME)
-            .set(
-                Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(300L)),
-                Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(7.89F)))
-            .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(11)))
-            .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("def")))
-            .build();
-    resultSet = twoPhaseCommitTransactionSqlSession2.execute(updateStatement2);
-    resultSet.close();
+      session2.execute(
+          StatementBuilder.update(NAMESPACE_NAME, TABLE_NAME)
+              .set(
+                  Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(300L)),
+                  Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(7.89F)))
+              .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(11)))
+              .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("def")))
+              .build());
 
-    // Select
-    SelectStatement selectStatement1 =
-        SqlBuilder.select(COLUMN_NAME_1, COLUMN_NAME_2, COLUMN_NAME_3)
-            .from(NAMESPACE_NAME, TABLE_NAME)
-            .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
-            .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
-            .build();
-
-    try (ResultSet rs = twoPhaseCommitTransactionSqlSession1.execute(selectStatement1)) {
-      for (Record record : rs) {
+      // Select
+      ResultSet resultSet1 =
+          session1.executeQuery(
+              StatementBuilder.select(COLUMN_NAME_1, COLUMN_NAME_2, COLUMN_NAME_3)
+                  .from(NAMESPACE_NAME, TABLE_NAME)
+                  .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
+                  .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
+                  .build());
+      for (Record record : resultSet1) {
         System.out.println("column1 value: " + record.getInt(COLUMN_NAME_1));
         System.out.println("column2 value: " + record.getText(COLUMN_NAME_2));
         System.out.println("column3 value: " + record.getBigInt(COLUMN_NAME_3));
         System.out.println();
       }
-    }
 
-    SelectStatement selectStatement2 =
-        SqlBuilder.select(COLUMN_NAME_1, COLUMN_NAME_2, COLUMN_NAME_3)
-            .from(NAMESPACE_NAME, TABLE_NAME)
-            .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(11)))
-            .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("def")))
-            .build();
-
-    try (ResultSet rs = twoPhaseCommitTransactionSqlSession2.execute(selectStatement2)) {
-      for (Record record : rs) {
+      ResultSet resultSet2 =
+          session2.executeQuery(
+              StatementBuilder.select(COLUMN_NAME_1, COLUMN_NAME_2, COLUMN_NAME_3)
+                  .from(NAMESPACE_NAME, TABLE_NAME)
+                  .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(11)))
+                  .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("def")))
+                  .build());
+      for (Record record : resultSet2) {
         System.out.println("column1 value: " + record.getInt(COLUMN_NAME_1));
         System.out.println("column2 value: " + record.getText(COLUMN_NAME_2));
         System.out.println("column3 value: " + record.getBigInt(COLUMN_NAME_3));
         System.out.println();
       }
+
+      // Delete
+      session1.execute(
+          StatementBuilder.deleteFrom(NAMESPACE_NAME, TABLE_NAME)
+              .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
+              .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
+              .build());
+
+      session2.execute(
+          StatementBuilder.deleteFrom(NAMESPACE_NAME, TABLE_NAME)
+              .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(11)))
+              .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("def")))
+              .build());
+
+      // Prepare
+      session1.prepare();
+      session2.prepare();
+
+      // Validate
+      session1.validate();
+      session2.validate();
+
+      // Commit
+      session1.commit();
+      session2.commit();
+    } catch (SqlException e) {
+      // Rollback
+      session1.rollback();
+      session2.rollback();
     }
 
-    // Delete
-    DeleteStatement deleteStatement1 =
-        SqlBuilder.deleteFrom(NAMESPACE_NAME, TABLE_NAME)
-            .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
-            .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
-            .build();
-    resultSet = twoPhaseCommitTransactionSqlSession1.execute(deleteStatement1);
-    resultSet.close();
+    // Truncate a table
+    session1.execute(StatementBuilder.truncateTable(NAMESPACE_NAME, TABLE_NAME).build());
 
-    DeleteStatement deleteStatement2 =
-        SqlBuilder.deleteFrom(NAMESPACE_NAME, TABLE_NAME)
-            .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(11)))
-            .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("def")))
-            .build();
-    resultSet = twoPhaseCommitTransactionSqlSession2.execute(deleteStatement2);
-    resultSet.close();
+    // Truncate a coordinator table
+    session1.execute(StatementBuilder.truncateCoordinatorTable().build());
 
-    // Prepare
-    twoPhaseCommitTransactionSqlSession1.prepare();
-    twoPhaseCommitTransactionSqlSession2.prepare();
+    // Drop an index
+    session1.execute(
+        StatementBuilder.dropIndex()
+            .ifExists()
+            .onTable(NAMESPACE_NAME, TABLE_NAME)
+            .column(COLUMN_NAME_3)
+            .build());
 
-    // Validate
-    twoPhaseCommitTransactionSqlSession1.validate();
-    twoPhaseCommitTransactionSqlSession2.validate();
+    // Drop a table
+    session1.execute(StatementBuilder.dropTable(NAMESPACE_NAME, TABLE_NAME).ifExists().build());
 
-    // Commit
-    twoPhaseCommitTransactionSqlSession1.commit();
-    twoPhaseCommitTransactionSqlSession2.commit();
+    // Drop a namespace
+    session1.execute(StatementBuilder.dropNamespace(NAMESPACE_NAME).ifExists().cascade().build());
 
-    // Drop table
-    DropTableStatement dropTableStatement =
-        SqlBuilder.dropTable(NAMESPACE_NAME, TABLE_NAME).ifExists().build();
-    resultSet = storageSqlSession.execute(dropTableStatement);
-    resultSet.close();
-
-    dropTableStatement =
-        SqlBuilder.dropTable(Coordinator.NAMESPACE, Coordinator.TABLE).ifExists().build();
-    resultSet = storageSqlSession.execute(dropTableStatement);
-    resultSet.close();
-
-    // Drop namespace
-    DropNamespaceStatement dropNamespaceStatement =
-        SqlBuilder.dropNamespace(NAMESPACE_NAME).ifExists().cascade().build();
-    resultSet = storageSqlSession.execute(dropNamespaceStatement);
-    resultSet.close();
-
-    dropNamespaceStatement =
-        SqlBuilder.dropNamespace(Coordinator.NAMESPACE).ifExists().cascade().build();
-    resultSet = storageSqlSession.execute(dropNamespaceStatement);
-    resultSet.close();
+    // Drop a coordinator table
+    session1.execute(StatementBuilder.dropCoordinatorTable().ifExists().build());
   }
 }

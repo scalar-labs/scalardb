@@ -1,15 +1,11 @@
 package com.scalar.db.sql.statement;
 
-public class DropNamespaceStatement implements DdlStatement {
+public class DropCoordinatorTableStatement implements DdlStatement {
 
-  public final String namespaceName;
   public final boolean ifExists;
-  public final boolean cascade;
 
-  public DropNamespaceStatement(String namespaceName, boolean ifExists, boolean cascade) {
-    this.namespaceName = namespaceName;
+  public DropCoordinatorTableStatement(boolean ifExists) {
     this.ifExists = ifExists;
-    this.cascade = cascade;
   }
 
   @Override

@@ -6,9 +6,9 @@ import com.scalar.db.sql.DataType;
 import com.scalar.db.sql.Order;
 import com.scalar.db.sql.statement.CreateTableStatement;
 
-public class CreateTableBuilder {
+public class CreateTableStatementBuilder {
 
-  private CreateTableBuilder() {}
+  private CreateTableStatementBuilder() {}
 
   public static class Start {
     private final String namespaceName;

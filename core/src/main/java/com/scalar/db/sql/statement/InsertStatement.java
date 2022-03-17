@@ -1,21 +1,19 @@
 package com.scalar.db.sql.statement;
 
+import com.google.common.collect.ImmutableList;
 import com.scalar.db.sql.Assignment;
-import java.util.List;
 
-public class InsertStatement implements Statement, BatchableStatement {
+public class InsertStatement implements DmlStatement {
 
   public final String namespaceName;
   public final String tableName;
-  public final List<Assignment> assignments;
-  public final boolean ifNotExists;
+  public final ImmutableList<Assignment> assignments;
 
   public InsertStatement(
-      String namespaceName, String tableName, List<Assignment> assignments, boolean ifNotExists) {
+      String namespaceName, String tableName, ImmutableList<Assignment> assignments) {
     this.namespaceName = namespaceName;
     this.tableName = tableName;
     this.assignments = assignments;
-    this.ifNotExists = ifNotExists;
   }
 
   @Override
@@ -24,7 +22,7 @@ public class InsertStatement implements Statement, BatchableStatement {
   }
 
   @Override
-  public void accept(BatchableStatementVisitor visitor) {
+  public void accept(DmlStatementVisitor visitor) {
     visitor.visit(this);
   }
 }

@@ -1,8 +1,7 @@
 package com.scalar.db.sql;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
-import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
@@ -20,12 +19,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
 
-public final class SessionFactory implements Closeable {
+public final class SessionFactory implements AutoCloseable {
 
   private final TableMetadataManager tableMetadataManager;
-
-  private final DistributedStorage storage;
-  private final DistributedStorageAdmin admin;
+  private final DistributedStorageAdmin storageAdmin;
+  private final DistributedTransactionAdmin transactionAdmin;
   private final DistributedTransactionManager transactionManager;
   private final TwoPhaseCommitTransactionManager twoPhaseCommitTransactionManager;
 
@@ -33,50 +31,29 @@ public final class SessionFactory implements Closeable {
     StorageFactory storageFactory = new StorageFactory(config);
     TransactionFactory transactionFactory = new TransactionFactory(config);
 
-    storage = storageFactory.getStorage();
-    admin = storageFactory.getAdmin();
+    storageAdmin = storageFactory.getAdmin();
     tableMetadataManager =
-        new TableMetadataManager(admin, config.getTableMetadataCacheExpirationTimeSecs());
+        new TableMetadataManager(storageAdmin, config.getTableMetadataCacheExpirationTimeSecs());
+    transactionAdmin = transactionFactory.getTransactionAdmin();
     transactionManager = transactionFactory.getTransactionManager();
     twoPhaseCommitTransactionManager = transactionFactory.getTwoPhaseCommitTransactionManager();
   }
 
-  public StorageSession getStorageSqlSession() {
-    return new StorageSession(storage, admin, tableMetadataManager);
+  public Session getTransactionSession() {
+    return new TransactionSession(transactionAdmin, transactionManager, tableMetadataManager);
   }
 
-  public TransactionSession beginTransaction() {
-    try {
-      DistributedTransaction transaction = transactionManager.start();
-      return new TransactionSession(transaction, tableMetadataManager);
-    } catch (TransactionException e) {
-      throw new SqlException("Failed to start a transaction");
-    }
+  public Session getTwoPhaseCommitTransactionSession() {
+    return new TwoPhaseCommitTransactionSession(
+        transactionAdmin, twoPhaseCommitTransactionManager, tableMetadataManager);
   }
 
-  public TwoPhaseCommitTransactionSession beginTwoPhaseCommitTransaction() {
-    try {
-      TwoPhaseCommitTransaction transaction = twoPhaseCommitTransactionManager.start();
-      return new TwoPhaseCommitTransactionSession(transaction, tableMetadataManager);
-    } catch (TransactionException e) {
-      throw new SqlException("Failed to start a two-phase commit transaction");
-    }
-  }
-
-  public TwoPhaseCommitTransactionSession joinTwoPhaseCommitTransaction(String transactionId) {
-    try {
-      TwoPhaseCommitTransaction transaction = twoPhaseCommitTransactionManager.join(transactionId);
-      return new TwoPhaseCommitTransactionSession(transaction, tableMetadataManager);
-    } catch (TransactionException e) {
-      throw new SqlException("Failed to join a two-phase commit transaction");
-    }
-  }
-
-  public TwoPhaseCommitTransactionSession resumeTwoPhaseCommitTransaction(String transactionId) {
+  public Session resumeTwoPhaseCommitTransactionSession(String transactionId) {
     try {
       TwoPhaseCommitTransaction transaction =
           twoPhaseCommitTransactionManager.resume(transactionId);
-      return new TwoPhaseCommitTransactionSession(transaction, tableMetadataManager);
+      return new TwoPhaseCommitTransactionSession(
+          transactionAdmin, twoPhaseCommitTransactionManager, transaction, tableMetadataManager);
     } catch (TransactionException e) {
       throw new SqlException("Failed to resume a two-phase commit transaction");
     }
@@ -84,8 +61,8 @@ public final class SessionFactory implements Closeable {
 
   @Override
   public void close() {
-    storage.close();
-    admin.close();
+    storageAdmin.close();
+    transactionAdmin.close();
     transactionManager.close();
     twoPhaseCommitTransactionManager.close();
   }

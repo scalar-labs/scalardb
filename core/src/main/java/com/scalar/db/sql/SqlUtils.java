@@ -3,15 +3,9 @@ package com.scalar.db.sql;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Multimaps;
-import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionBuilder.DeleteIfBuilder;
-import com.scalar.db.api.ConditionBuilder.PutIfBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIf;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
@@ -217,10 +211,7 @@ public final class SqlUtils {
     statement.assignments.stream()
         .filter(a -> !metadata.getPartitionKeyNames().contains(a.columnName))
         .filter(a -> !metadata.getClusteringKeyNames().contains(a.columnName))
-        .forEach(a -> addValueToPut(put, a.columnName, a.value));
-    if (statement.ifNotExists) {
-      put.withCondition(ConditionBuilder.putIfNotExists());
-    }
+        .forEach(a -> addValueToPut(put, a.columnName, a.value, metadata));
     return put;
   }
 
@@ -236,12 +227,7 @@ public final class SqlUtils {
         new Put(partitionKey, clusteringKey)
             .forNamespace(statement.namespaceName)
             .forTable(statement.tableName);
-    statement.assignments.forEach(a -> addValueToPut(put, a.columnName, a.value));
-    if (!statement.ifConditions.isEmpty()) {
-      put.withCondition(createPutIfFromConditions(statement.ifConditions));
-    } else if (statement.ifExists) {
-      put.withCondition(ConditionBuilder.putIfExists());
-    }
+    statement.assignments.forEach(a -> addValueToPut(put, a.columnName, a.value, metadata));
     return put;
   }
 
@@ -254,16 +240,9 @@ public final class SqlUtils {
       clusteringKey =
           createKeyFromConditions(statement.whereConditions, metadata.getClusteringKeyNames());
     }
-    Delete delete =
-        new Delete(partitionKey, clusteringKey)
-            .forNamespace(statement.namespaceName)
-            .forTable(statement.tableName);
-    if (!statement.ifConditions.isEmpty()) {
-      delete.withCondition(createDeleteIfFromConditions(statement.ifConditions));
-    } else if (statement.ifExists) {
-      delete.withCondition(ConditionBuilder.putIfExists());
-    }
-    return delete;
+    return new Delete(partitionKey, clusteringKey)
+        .forNamespace(statement.namespaceName)
+        .forTable(statement.tableName);
   }
 
   private static Key createKeyFromAssignments(
@@ -351,7 +330,8 @@ public final class SqlUtils {
     }
   }
 
-  private static void addValueToPut(Put put, String columnName, Value value) {
+  private static void addValueToPut(
+      Put put, String columnName, Value value, TableMetadata metadata) {
     switch (value.type) {
       case BOOLEAN:
         assert value.value instanceof Boolean;
@@ -386,260 +366,32 @@ public final class SqlUtils {
         put.withBlobValue(columnName, (byte[]) value.value);
         break;
       case NULL:
-        put.withNullValue(columnName);
+        switch (metadata.getColumnDataType(columnName)) {
+          case BOOLEAN:
+            put.withBooleanValue(columnName, null);
+            break;
+          case INT:
+            put.withIntValue(columnName, null);
+            break;
+          case BIGINT:
+            put.withBigIntValue(columnName, null);
+            break;
+          case FLOAT:
+            put.withFloatValue(columnName, null);
+            break;
+          case DOUBLE:
+            put.withDoubleValue(columnName, null);
+            break;
+          case TEXT:
+            put.withTextValue(columnName, null);
+            break;
+          case BLOB:
+            put.withBlobValue(columnName, (ByteBuffer) null);
+            break;
+          default:
+            throw new AssertionError();
+        }
         break;
-      default:
-        throw new AssertionError();
-    }
-  }
-
-  private static PutIf createPutIfFromConditions(List<Condition> conditions) {
-    List<ConditionalExpression> conditionalExpressions = createConditionalExpressions(conditions);
-    PutIfBuilder putIfBuilder = ConditionBuilder.putIf(conditionalExpressions.get(0));
-    for (int i = 1; i < conditionalExpressions.size(); i++) {
-      putIfBuilder.and(conditionalExpressions.get(i));
-    }
-    return putIfBuilder.build();
-  }
-
-  private static DeleteIf createDeleteIfFromConditions(List<Condition> conditions) {
-    List<ConditionalExpression> conditionalExpressions = createConditionalExpressions(conditions);
-    DeleteIfBuilder deleteIfBuilder = ConditionBuilder.deleteIf(conditionalExpressions.get(0));
-    for (int i = 1; i < conditionalExpressions.size(); i++) {
-      deleteIfBuilder.and(conditionalExpressions.get(i));
-    }
-    return deleteIfBuilder.build();
-  }
-
-  private static List<ConditionalExpression> createConditionalExpressions(
-      List<Condition> conditions) {
-    return conditions.stream()
-        .map(
-            c -> {
-              switch (c.operator) {
-                case IS_EQUAL_TO:
-                  return createIsEqualToConditionalExpression(c.columnName, c.value);
-                case IS_NOT_EQUAL_TO:
-                  return createIsNotEqualToConditionalExpression(c.columnName, c.value);
-                case IS_GREATER_THAN:
-                  return createIsGreaterThanConditionalExpression(c.columnName, c.value);
-                case IS_GREATER_THAN_OR_EQUAL_TO:
-                  return createIsGreaterThanOrEqualToConditionalExpression(c.columnName, c.value);
-                case IS_LESS_THAN:
-                  return createIsLessThanConditionalExpression(c.columnName, c.value);
-                case IS_LESS_THAN_OR_EQUAL_TO:
-                  return createIsLessThanOrEqualToConditionalExpression(c.columnName, c.value);
-                default:
-                  throw new AssertionError();
-              }
-            })
-        .collect(Collectors.toList());
-  }
-
-  private static ConditionalExpression createIsEqualToConditionalExpression(
-      String columnName, Value value) {
-    switch (value.type) {
-      case BOOLEAN:
-        assert value.value instanceof Boolean;
-        return ConditionBuilder.column(columnName).isEqualToBoolean((Boolean) value.value);
-      case INT:
-        assert value.value instanceof Integer;
-        return ConditionBuilder.column(columnName).isEqualToInt((Integer) value.value);
-      case BIGINT:
-        assert value.value instanceof Long;
-        return ConditionBuilder.column(columnName).isEqualToBigInt((Long) value.value);
-      case FLOAT:
-        assert value.value instanceof Float;
-        return ConditionBuilder.column(columnName).isEqualToFloat((Float) value.value);
-      case DOUBLE:
-        assert value.value instanceof Double;
-        return ConditionBuilder.column(columnName).isEqualToDouble((Double) value.value);
-      case TEXT:
-        assert value.value instanceof String;
-        return ConditionBuilder.column(columnName).isEqualToText((String) value.value);
-      case BLOB_BYTE_BUFFER:
-        assert value.value instanceof ByteBuffer;
-        return ConditionBuilder.column(columnName).isEqualToBlob((ByteBuffer) value.value);
-      case BLOB_BYTES:
-        assert value.value instanceof byte[];
-        return ConditionBuilder.column(columnName).isEqualToBlob((byte[]) value.value);
-      case NULL:
-        // TODO
-      default:
-        throw new AssertionError();
-    }
-  }
-
-  private static ConditionalExpression createIsNotEqualToConditionalExpression(
-      String columnName, Value value) {
-    switch (value.type) {
-      case BOOLEAN:
-        assert value.value instanceof Boolean;
-        return ConditionBuilder.column(columnName).isNotEqualToBoolean((Boolean) value.value);
-      case INT:
-        assert value.value instanceof Integer;
-        return ConditionBuilder.column(columnName).isNotEqualToInt((Integer) value.value);
-      case BIGINT:
-        assert value.value instanceof Long;
-        return ConditionBuilder.column(columnName).isNotEqualToBigInt((Long) value.value);
-      case FLOAT:
-        assert value.value instanceof Float;
-        return ConditionBuilder.column(columnName).isNotEqualToFloat((Float) value.value);
-      case DOUBLE:
-        assert value.value instanceof Double;
-        return ConditionBuilder.column(columnName).isNotEqualToDouble((Double) value.value);
-      case TEXT:
-        assert value.value instanceof String;
-        return ConditionBuilder.column(columnName).isNotEqualToText((String) value.value);
-      case BLOB_BYTE_BUFFER:
-        assert value.value instanceof ByteBuffer;
-        return ConditionBuilder.column(columnName).isNotEqualToBlob((ByteBuffer) value.value);
-      case BLOB_BYTES:
-        assert value.value instanceof byte[];
-        return ConditionBuilder.column(columnName).isNotEqualToBlob((byte[]) value.value);
-      case NULL:
-        // TODO
-      default:
-        throw new AssertionError();
-    }
-  }
-
-  private static ConditionalExpression createIsGreaterThanConditionalExpression(
-      String columnName, Value value) {
-    switch (value.type) {
-      case BOOLEAN:
-        assert value.value instanceof Boolean;
-        return ConditionBuilder.column(columnName).isGreaterThanBoolean((Boolean) value.value);
-      case INT:
-        assert value.value instanceof Integer;
-        return ConditionBuilder.column(columnName).isGreaterThanInt((Integer) value.value);
-      case BIGINT:
-        assert value.value instanceof Long;
-        return ConditionBuilder.column(columnName).isGreaterThanBigInt((Long) value.value);
-      case FLOAT:
-        assert value.value instanceof Float;
-        return ConditionBuilder.column(columnName).isGreaterThanFloat((Float) value.value);
-      case DOUBLE:
-        assert value.value instanceof Double;
-        return ConditionBuilder.column(columnName).isGreaterThanDouble((Double) value.value);
-      case TEXT:
-        assert value.value instanceof String;
-        return ConditionBuilder.column(columnName).isGreaterThanText((String) value.value);
-      case BLOB_BYTE_BUFFER:
-        assert value.value instanceof ByteBuffer;
-        return ConditionBuilder.column(columnName).isGreaterThanBlob((ByteBuffer) value.value);
-      case BLOB_BYTES:
-        assert value.value instanceof byte[];
-        return ConditionBuilder.column(columnName).isGreaterThanBlob((byte[]) value.value);
-      case NULL:
-        // TODO
-      default:
-        throw new AssertionError();
-    }
-  }
-
-  private static ConditionalExpression createIsGreaterThanOrEqualToConditionalExpression(
-      String columnName, Value value) {
-    switch (value.type) {
-      case BOOLEAN:
-        assert value.value instanceof Boolean;
-        return ConditionBuilder.column(columnName)
-            .isGreaterThanOrEqualToBoolean((Boolean) value.value);
-      case INT:
-        assert value.value instanceof Integer;
-        return ConditionBuilder.column(columnName).isGreaterThanOrEqualToInt((Integer) value.value);
-      case BIGINT:
-        assert value.value instanceof Long;
-        return ConditionBuilder.column(columnName).isGreaterThanOrEqualToBigInt((Long) value.value);
-      case FLOAT:
-        assert value.value instanceof Float;
-        return ConditionBuilder.column(columnName).isGreaterThanOrEqualToFloat((Float) value.value);
-      case DOUBLE:
-        assert value.value instanceof Double;
-        return ConditionBuilder.column(columnName)
-            .isGreaterThanOrEqualToDouble((Double) value.value);
-      case TEXT:
-        assert value.value instanceof String;
-        return ConditionBuilder.column(columnName).isGreaterThanOrEqualToText((String) value.value);
-      case BLOB_BYTE_BUFFER:
-        assert value.value instanceof ByteBuffer;
-        return ConditionBuilder.column(columnName)
-            .isGreaterThanOrEqualToBlob((ByteBuffer) value.value);
-      case BLOB_BYTES:
-        assert value.value instanceof byte[];
-        return ConditionBuilder.column(columnName).isGreaterThanOrEqualToBlob((byte[]) value.value);
-      case NULL:
-        // TODO
-      default:
-        throw new AssertionError();
-    }
-  }
-
-  private static ConditionalExpression createIsLessThanConditionalExpression(
-      String columnName, Value value) {
-    switch (value.type) {
-      case BOOLEAN:
-        assert value.value instanceof Boolean;
-        return ConditionBuilder.column(columnName).isLessThanBoolean((Boolean) value.value);
-      case INT:
-        assert value.value instanceof Integer;
-        return ConditionBuilder.column(columnName).isLessThanInt((Integer) value.value);
-      case BIGINT:
-        assert value.value instanceof Long;
-        return ConditionBuilder.column(columnName).isLessThanBigInt((Long) value.value);
-      case FLOAT:
-        assert value.value instanceof Float;
-        return ConditionBuilder.column(columnName).isLessThanFloat((Float) value.value);
-      case DOUBLE:
-        assert value.value instanceof Double;
-        return ConditionBuilder.column(columnName).isLessThanDouble((Double) value.value);
-      case TEXT:
-        assert value.value instanceof String;
-        return ConditionBuilder.column(columnName).isLessThanText((String) value.value);
-      case BLOB_BYTE_BUFFER:
-        assert value.value instanceof ByteBuffer;
-        return ConditionBuilder.column(columnName).isLessThanBlob((ByteBuffer) value.value);
-      case BLOB_BYTES:
-        assert value.value instanceof byte[];
-        return ConditionBuilder.column(columnName).isLessThanBlob((byte[]) value.value);
-      case NULL:
-        // TODO
-      default:
-        throw new AssertionError();
-    }
-  }
-
-  private static ConditionalExpression createIsLessThanOrEqualToConditionalExpression(
-      String columnName, Value value) {
-    switch (value.type) {
-      case BOOLEAN:
-        assert value.value instanceof Boolean;
-        return ConditionBuilder.column(columnName)
-            .isLessThanOrEqualToBoolean((Boolean) value.value);
-      case INT:
-        assert value.value instanceof Integer;
-        return ConditionBuilder.column(columnName).isLessThanOrEqualToInt((Integer) value.value);
-      case BIGINT:
-        assert value.value instanceof Long;
-        return ConditionBuilder.column(columnName).isLessThanOrEqualToBigInt((Long) value.value);
-      case FLOAT:
-        assert value.value instanceof Float;
-        return ConditionBuilder.column(columnName).isLessThanOrEqualToFloat((Float) value.value);
-      case DOUBLE:
-        assert value.value instanceof Double;
-        return ConditionBuilder.column(columnName).isLessThanOrEqualToDouble((Double) value.value);
-      case TEXT:
-        assert value.value instanceof String;
-        return ConditionBuilder.column(columnName).isLessThanOrEqualToText((String) value.value);
-      case BLOB_BYTE_BUFFER:
-        assert value.value instanceof ByteBuffer;
-        return ConditionBuilder.column(columnName)
-            .isLessThanOrEqualToBlob((ByteBuffer) value.value);
-      case BLOB_BYTES:
-        assert value.value instanceof byte[];
-        return ConditionBuilder.column(columnName).isLessThanOrEqualToBlob((byte[]) value.value);
-      case NULL:
-        // TODO
       default:
         throw new AssertionError();
     }

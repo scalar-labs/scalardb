@@ -2,18 +2,18 @@ package com.scalar.db.sql.builder;
 
 import com.scalar.db.sql.statement.DropTableStatement;
 
-public class DropTableBuilder {
+public class DropTableStatementBuilder {
 
   private final String namespaceName;
   private final String tableName;
   private boolean ifExists;
 
-  DropTableBuilder(String namespaceName, String tableName) {
+  DropTableStatementBuilder(String namespaceName, String tableName) {
     this.namespaceName = namespaceName;
     this.tableName = tableName;
   }
 
-  public DropTableBuilder ifExists() {
+  public DropTableStatementBuilder ifExists() {
     ifExists = true;
     return this;
   }

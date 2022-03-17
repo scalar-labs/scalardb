@@ -33,7 +33,4 @@ public class SingleRecordResultSet implements ResultSet {
   public Iterator<Record> iterator() {
     return iterator;
   }
-
-  @Override
-  public void close() {}
 }

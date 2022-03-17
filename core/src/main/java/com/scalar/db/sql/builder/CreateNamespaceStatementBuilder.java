@@ -3,23 +3,23 @@ package com.scalar.db.sql.builder;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.sql.statement.CreateNamespaceStatement;
 
-public class CreateNamespaceBuilder {
+public class CreateNamespaceStatementBuilder {
 
   private final String namespaceName;
   private boolean ifNotExists;
   private final ImmutableMap.Builder<String, String> optionsBuilder;
 
-  CreateNamespaceBuilder(String namespaceName) {
+  CreateNamespaceStatementBuilder(String namespaceName) {
     this.namespaceName = namespaceName;
     optionsBuilder = ImmutableMap.builder();
   }
 
-  public CreateNamespaceBuilder ifNotExists() {
+  public CreateNamespaceStatementBuilder ifNotExists() {
     ifNotExists = true;
     return this;
   }
 
-  public CreateNamespaceBuilder withOption(String name, String value) {
+  public CreateNamespaceStatementBuilder withOption(String name, String value) {
     optionsBuilder.put(name, value);
     return this;
   }

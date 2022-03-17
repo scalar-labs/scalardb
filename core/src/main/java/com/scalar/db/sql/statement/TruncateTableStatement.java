@@ -1,6 +1,6 @@
 package com.scalar.db.sql.statement;
 
-public class TruncateTableStatement implements Statement {
+public class TruncateTableStatement implements DdlStatement {
 
   public final String namespaceName;
   public final String tableName;
@@ -12,6 +12,11 @@ public class TruncateTableStatement implements Statement {
 
   @Override
   public void accept(StatementVisitor visitor) {
+    visitor.visit(this);
+  }
+
+  @Override
+  public void accept(DdlStatementVisitor visitor) {
     visitor.visit(this);
   }
 }

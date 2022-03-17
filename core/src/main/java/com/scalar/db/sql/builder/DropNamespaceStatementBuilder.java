@@ -2,22 +2,22 @@ package com.scalar.db.sql.builder;
 
 import com.scalar.db.sql.statement.DropNamespaceStatement;
 
-public class DropNamespaceBuilder {
+public class DropNamespaceStatementBuilder {
 
   private final String namespaceName;
   private boolean ifExists;
   private boolean cascade;
 
-  DropNamespaceBuilder(String namespaceName) {
+  DropNamespaceStatementBuilder(String namespaceName) {
     this.namespaceName = namespaceName;
   }
 
-  public DropNamespaceBuilder ifExists() {
+  public DropNamespaceStatementBuilder ifExists() {
     ifExists = true;
     return this;
   }
 
-  public DropNamespaceBuilder cascade() {
+  public DropNamespaceStatementBuilder cascade() {
     cascade = true;
     return this;
   }

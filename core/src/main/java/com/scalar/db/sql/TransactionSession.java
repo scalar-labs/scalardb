@@ -3,6 +3,8 @@ package com.scalar.db.sql;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionAdmin;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
@@ -14,45 +16,133 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.sql.exception.SqlException;
 import com.scalar.db.sql.exception.TransactionConflictException;
 import com.scalar.db.sql.exception.UnknownTransactionStatusException;
-import com.scalar.db.sql.statement.BatchStatement;
-import com.scalar.db.sql.statement.CreateNamespaceStatement;
-import com.scalar.db.sql.statement.CreateTableStatement;
+import com.scalar.db.sql.statement.DdlStatement;
 import com.scalar.db.sql.statement.DeleteStatement;
-import com.scalar.db.sql.statement.DropNamespaceStatement;
-import com.scalar.db.sql.statement.DropTableStatement;
+import com.scalar.db.sql.statement.DmlStatement;
+import com.scalar.db.sql.statement.DmlStatementVisitor;
 import com.scalar.db.sql.statement.InsertStatement;
 import com.scalar.db.sql.statement.SelectStatement;
 import com.scalar.db.sql.statement.Statement;
-import com.scalar.db.sql.statement.StatementVisitor;
-import com.scalar.db.sql.statement.TruncateTableStatement;
 import com.scalar.db.sql.statement.UpdateStatement;
 import com.scalar.db.util.TableMetadataManager;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
 
+@NotThreadSafe
 public class TransactionSession implements Session {
 
-  private final DistributedTransaction transaction;
+  private final DistributedTransactionAdmin admin;
+  private final DistributedTransactionManager manager;
   private final TableMetadataManager tableMetadataManager;
 
+  @Nullable private DistributedTransaction transaction;
+  @Nullable private ResultSet resultSet;
+
   public TransactionSession(
-      DistributedTransaction transaction, TableMetadataManager tableMetadataManager) {
-    this.transaction = transaction;
+      DistributedTransactionAdmin admin,
+      DistributedTransactionManager manager,
+      TableMetadataManager tableMetadataManager) {
+    this.admin = admin;
+    this.manager = manager;
     this.tableMetadataManager = tableMetadataManager;
   }
 
   @Override
-  public ResultSet execute(Statement statement) {
-    new StatementValidator(tableMetadataManager, statement).validate();
-    return new StatementExecutor(transaction, tableMetadataManager, statement).execute();
+  public void beginTransaction() {
+    checkIfTransactionInProgress();
+
+    try {
+      transaction = manager.start();
+      resultSet = null;
+    } catch (TransactionException e) {
+      throw new SqlException("Failed to begin a transaction", e);
+    }
   }
 
+  @Override
+  public void beginTransaction(String transactionId) {
+    checkIfTransactionInProgress();
+
+    try {
+      transaction = manager.start(transactionId);
+      resultSet = null;
+    } catch (TransactionException e) {
+      throw new SqlException("Failed to begin a transaction", e);
+    }
+  }
+
+  @Override
+  public void joinTransaction(String transactionId) {
+    throw new UnsupportedOperationException(
+        "joining a transaction is not supported in transaction mode");
+  }
+
+  @Override
+  public void execute(Statement statement) {
+    new StatementValidator(tableMetadataManager, statement).validate();
+
+    if (statement instanceof DdlStatement) {
+      checkIfTransactionInProgress();
+
+      new DdlStatementExecutor(admin, (DdlStatement) statement).execute();
+      resultSet = EmptyResultSet.get();
+    } else if (statement instanceof DmlStatement) {
+      checkIfTransactionBegun();
+
+      resultSet =
+          new DmlStatementExecutor(transaction, tableMetadataManager, (DmlStatement) statement)
+              .execute();
+    } else {
+      throw new AssertionError();
+    }
+  }
+
+  @Nullable
+  @Override
+  public ResultSet getResultSet() {
+    if (resultSet == null) {
+      throw new IllegalStateException("No query executed yet");
+    }
+
+    return resultSet;
+  }
+
+  @Override
+  public ResultSet executeQuery(SelectStatement statement) {
+    checkIfTransactionBegun();
+
+    new StatementValidator(tableMetadataManager, statement).validate();
+    resultSet = new DmlStatementExecutor(transaction, tableMetadataManager, statement).execute();
+    return resultSet;
+  }
+
+  @Override
+  public void prepare() {
+    throw new UnsupportedOperationException(
+        "preparing a transaction is not supported in transaction mode");
+  }
+
+  @Override
+  public void validate() {
+    throw new UnsupportedOperationException(
+        "validating a transaction is not supported in transaction mode");
+  }
+
+  @Override
   public void commit() {
+    checkIfTransactionBegun();
+    assert transaction != null;
+
     try {
       transaction.commit();
+      transaction = null;
+      resultSet = null;
     } catch (CommitConflictException e) {
       throw new TransactionConflictException(
           "Conflict happened during committing a transaction", e);
@@ -63,26 +153,61 @@ public class TransactionSession implements Session {
     }
   }
 
+  @Override
   public void rollback() {
+    checkIfTransactionBegun();
+    assert transaction != null;
+
     try {
       transaction.abort();
     } catch (AbortException e) {
       throw new SqlException("Failed to abort a transaction", e);
+    } finally {
+      transaction = null;
+      resultSet = null;
     }
   }
 
-  private static class StatementExecutor implements StatementVisitor {
+  @Override
+  public String getTransactionId() {
+    checkIfTransactionBegun();
+    assert transaction != null;
+    return transaction.getId();
+  }
+
+  @Override
+  public Metadata getMetadata() {
+    checkIfTransactionInProgress();
+
+    // TODO
+    return null;
+  }
+
+  private void checkIfTransactionInProgress() {
+    if (transaction != null) {
+      throw new IllegalStateException(
+          "The previous transaction is still in progress. Commit or rollback it first");
+    }
+  }
+
+  private void checkIfTransactionBegun() {
+    if (transaction == null) {
+      throw new IllegalStateException("A transaction is not begun");
+    }
+  }
+
+  private static class DmlStatementExecutor implements DmlStatementVisitor {
 
     private final DistributedTransaction transaction;
     private final TableMetadataManager tableMetadataManager;
-    private final Statement statement;
+    private final DmlStatement statement;
 
     private ResultSet resultSet;
 
-    public StatementExecutor(
+    public DmlStatementExecutor(
         DistributedTransaction transaction,
         TableMetadataManager tableMetadataManager,
-        Statement statement) {
+        DmlStatement statement) {
       this.transaction = transaction;
       this.tableMetadataManager = tableMetadataManager;
       this.statement = statement;
@@ -91,36 +216,6 @@ public class TransactionSession implements Session {
     public ResultSet execute() {
       statement.accept(this);
       return resultSet;
-    }
-
-    @Override
-    public void visit(CreateNamespaceStatement statement) {
-      throw new UnsupportedOperationException(
-          "Creating a namespace is not supported in transaction mode");
-    }
-
-    @Override
-    public void visit(CreateTableStatement statement) {
-      throw new UnsupportedOperationException(
-          "Creating a table is not supported in transaction mode");
-    }
-
-    @Override
-    public void visit(DropNamespaceStatement statement) {
-      throw new UnsupportedOperationException(
-          "Dropping a namespace is not supported in transaction mode");
-    }
-
-    @Override
-    public void visit(DropTableStatement statement) {
-      throw new UnsupportedOperationException(
-          "Dropping a table is not supported in transaction mode");
-    }
-
-    @Override
-    public void visit(TruncateTableStatement statement) {
-      throw new UnsupportedOperationException(
-          "Truncating a table is not supported in transaction mode");
     }
 
     @Override
@@ -164,10 +259,6 @@ public class TransactionSession implements Session {
               tableMetadataManager, statement.namespaceName, statement.tableName);
       Put put = SqlUtils.convertInsertStatementToPut(statement, metadata);
       try {
-        if (put.getCondition().isPresent()) {
-          throw new UnsupportedOperationException(
-              "Conditional update is not supported in transaction mode");
-        }
         transaction.put(put);
         resultSet = EmptyResultSet.get();
       } catch (CrudConflictException e) {
@@ -184,10 +275,6 @@ public class TransactionSession implements Session {
               tableMetadataManager, statement.namespaceName, statement.tableName);
       Put put = SqlUtils.convertUpdateStatementToPut(statement, metadata);
       try {
-        if (put.getCondition().isPresent()) {
-          throw new UnsupportedOperationException(
-              "Conditional update is not supported in transaction mode");
-        }
         transaction.put(put);
         resultSet = EmptyResultSet.get();
       } catch (CrudConflictException e) {
@@ -204,10 +291,6 @@ public class TransactionSession implements Session {
               tableMetadataManager, statement.namespaceName, statement.tableName);
       Delete delete = SqlUtils.convertDeleteStatementToDelete(statement, metadata);
       try {
-        if (delete.getCondition().isPresent()) {
-          throw new UnsupportedOperationException(
-              "Conditional update is not supported in transaction mode");
-        }
         transaction.delete(delete);
         resultSet = EmptyResultSet.get();
       } catch (CrudConflictException e) {
@@ -215,11 +298,6 @@ public class TransactionSession implements Session {
       } catch (CrudException e) {
         throw new SqlException("Failed to delete a record", e);
       }
-    }
-
-    @Override
-    public void visit(BatchStatement statement) {
-      throw new UnsupportedOperationException("Batch is not supported in transaction mode");
     }
   }
 }

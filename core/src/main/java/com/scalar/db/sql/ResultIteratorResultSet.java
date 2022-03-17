@@ -29,9 +29,6 @@ public class ResultIteratorResultSet implements ResultSet {
     return new ResultIterator(iterator, projectedColumnNames);
   }
 
-  @Override
-  public void close() {}
-
   private static class ResultIterator implements Iterator<Record> {
 
     private final Iterator<Result> iterator;

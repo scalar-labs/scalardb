@@ -29,7 +29,4 @@ public class EmptyResultSet implements ResultSet {
   public Iterator<Record> iterator() {
     return Collections.emptyIterator();
   }
-
-  @Override
-  public void close() {}
 }

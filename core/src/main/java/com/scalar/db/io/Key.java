@@ -814,7 +814,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
      * @return the current number of the elements of Key
      */
     public int size() {
-      return values.size();
+      return columns.size();
     }
 
     public Key build() {

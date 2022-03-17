@@ -6,9 +6,9 @@ import com.scalar.db.sql.Ordering;
 import com.scalar.db.sql.statement.SelectStatement;
 import java.util.List;
 
-public final class SelectBuilder {
+public final class SelectStatementBuilder {
 
-  private SelectBuilder() {}
+  private SelectStatementBuilder() {}
 
   public static class Start {
     private final ImmutableList<String> projectedColumnNames;

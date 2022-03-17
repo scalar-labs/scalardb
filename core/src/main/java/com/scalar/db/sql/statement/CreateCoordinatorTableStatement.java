@@ -2,15 +2,13 @@ package com.scalar.db.sql.statement;
 
 import com.google.common.collect.ImmutableMap;
 
-public class CreateNamespaceStatement implements DdlStatement {
+public class CreateCoordinatorTableStatement implements DdlStatement {
 
-  public final String namespaceName;
   public final boolean ifNotExists;
   public final ImmutableMap<String, String> options;
 
-  public CreateNamespaceStatement(
-      String namespaceName, boolean ifNotExists, ImmutableMap<String, String> options) {
-    this.namespaceName = namespaceName;
+  public CreateCoordinatorTableStatement(
+      boolean ifNotExists, ImmutableMap<String, String> options) {
     this.ifNotExists = ifNotExists;
     this.options = options;
   }
