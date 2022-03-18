@@ -75,8 +75,8 @@ public class Example {
               .set(
                   Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(200L)),
                   Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(4.56F)))
-              .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
-              .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
+              .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
+              .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
               .build());
 
       // Select
@@ -84,8 +84,8 @@ public class Example {
           session.executeQuery(
               StatementBuilder.select(COLUMN_NAME_1, COLUMN_NAME_2, COLUMN_NAME_3)
                   .from(NAMESPACE_NAME, TABLE_NAME)
-                  .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
-                  .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
+                  .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
+                  .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
                   .build());
       for (Record record : resultSet) {
         System.out.println("column1 value: " + record.getInt(COLUMN_NAME_1));
@@ -97,8 +97,8 @@ public class Example {
       // Delete
       session.execute(
           StatementBuilder.deleteFrom(NAMESPACE_NAME, TABLE_NAME)
-              .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
-              .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
+              .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
+              .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
               .build());
 
       // Commit
@@ -193,8 +193,8 @@ public class Example {
               .set(
                   Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(200L)),
                   Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(4.56F)))
-              .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
-              .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
+              .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
+              .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
               .build());
 
       session2.execute(
@@ -202,8 +202,8 @@ public class Example {
               .set(
                   Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(300L)),
                   Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(7.89F)))
-              .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(11)))
-              .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("def")))
+              .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(11)))
+              .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("def")))
               .build());
 
       // Select
@@ -211,8 +211,8 @@ public class Example {
           session1.executeQuery(
               StatementBuilder.select(COLUMN_NAME_1, COLUMN_NAME_2, COLUMN_NAME_3)
                   .from(NAMESPACE_NAME, TABLE_NAME)
-                  .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
-                  .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
+                  .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
+                  .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
                   .build());
       for (Record record : resultSet1) {
         System.out.println("column1 value: " + record.getInt(COLUMN_NAME_1));
@@ -225,8 +225,8 @@ public class Example {
           session2.executeQuery(
               StatementBuilder.select(COLUMN_NAME_1, COLUMN_NAME_2, COLUMN_NAME_3)
                   .from(NAMESPACE_NAME, TABLE_NAME)
-                  .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(11)))
-                  .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("def")))
+                  .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(11)))
+                  .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("def")))
                   .build());
       for (Record record : resultSet2) {
         System.out.println("column1 value: " + record.getInt(COLUMN_NAME_1));
@@ -238,14 +238,14 @@ public class Example {
       // Delete
       session1.execute(
           StatementBuilder.deleteFrom(NAMESPACE_NAME, TABLE_NAME)
-              .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
-              .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
+              .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
+              .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
               .build());
 
       session2.execute(
           StatementBuilder.deleteFrom(NAMESPACE_NAME, TABLE_NAME)
-              .where(Condition.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(11)))
-              .and(Condition.column(COLUMN_NAME_2).isEqualTo(Value.ofText("def")))
+              .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(11)))
+              .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("def")))
               .build());
 
       // Prepare

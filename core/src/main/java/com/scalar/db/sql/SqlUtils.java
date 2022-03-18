@@ -11,7 +11,7 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
-import com.scalar.db.sql.Condition.Operator;
+import com.scalar.db.sql.Predicate.Operator;
 import com.scalar.db.sql.exception.SqlException;
 import com.scalar.db.sql.exception.TableNotFoundException;
 import com.scalar.db.sql.statement.CreateTableStatement;
@@ -81,16 +81,16 @@ public final class SqlUtils {
   public static Selection convertSelectStatementToSelection(
       SelectStatement statement, TableMetadata metadata) {
     Key partitionKey =
-        createKeyFromConditions(statement.whereConditions, metadata.getPartitionKeyNames());
+        createKeyFromPredicates(statement.predicates, metadata.getPartitionKeyNames());
 
-    ImmutableListMultimap<String, Condition> conditionsMap =
-        Multimaps.index(statement.whereConditions, c -> c.columnName);
+    ImmutableListMultimap<String, Predicate> predicatesMap =
+        Multimaps.index(statement.predicates, c -> c.columnName);
 
-    if (isGet(conditionsMap, metadata)) {
+    if (isGet(predicatesMap, metadata)) {
       Key clusteringKey = null;
       if (!metadata.getClusteringKeyNames().isEmpty()) {
         clusteringKey =
-            createKeyFromConditions(statement.whereConditions, metadata.getClusteringKeyNames());
+            createKeyFromPredicates(statement.predicates, metadata.getClusteringKeyNames());
       }
       return new Get(partitionKey, clusteringKey)
           .withProjections(statement.projectedColumnNames)
@@ -102,7 +102,7 @@ public final class SqlUtils {
               .withProjections(statement.projectedColumnNames)
               .forNamespace(statement.namespaceName)
               .forTable(statement.tableName);
-      setClusteringKeyRangeForScan(scan, conditionsMap, metadata);
+      setClusteringKeyRangeForScan(scan, predicatesMap, metadata);
       if (!statement.orderings.isEmpty()) {
         statement.orderings.forEach(o -> scan.withOrdering(convertOrdering(o)));
       }
@@ -114,19 +114,19 @@ public final class SqlUtils {
   }
 
   private static boolean isGet(
-      ImmutableListMultimap<String, Condition> conditionsMap, TableMetadata metadata) {
+      ImmutableListMultimap<String, Predicate> predicatesMap, TableMetadata metadata) {
     return metadata.getClusteringKeyNames().stream()
         .allMatch(
             n -> {
-              if (conditionsMap.get(n).size() == 1) {
-                return conditionsMap.get(n).get(0).operator == Operator.IS_EQUAL_TO;
+              if (predicatesMap.get(n).size() == 1) {
+                return predicatesMap.get(n).get(0).operator == Operator.IS_EQUAL_TO;
               }
               return false;
             });
   }
 
   private static void setClusteringKeyRangeForScan(
-      Scan scan, ImmutableListMultimap<String, Condition> conditionsMap, TableMetadata metadata) {
+      Scan scan, ImmutableListMultimap<String, Predicate> predicatesMap, TableMetadata metadata) {
     Key.Builder startClusteringKeyBuilder = Key.newBuilder();
     Key.Builder endClusteringKeyBuilder = Key.newBuilder();
 
@@ -134,15 +134,15 @@ public final class SqlUtils {
     while (clusteringKeyNamesIterator.hasNext()) {
       String clusteringKeyName = clusteringKeyNamesIterator.next();
 
-      ImmutableList<Condition> conditions = conditionsMap.get(clusteringKeyName);
-      if (conditions.size() == 1 && conditions.get(0).operator == Operator.IS_EQUAL_TO) {
-        addToKeyBuilder(startClusteringKeyBuilder, clusteringKeyName, conditions.get(0).value);
-        addToKeyBuilder(endClusteringKeyBuilder, clusteringKeyName, conditions.get(0).value);
+      ImmutableList<Predicate> predicates = predicatesMap.get(clusteringKeyName);
+      if (predicates.size() == 1 && predicates.get(0).operator == Operator.IS_EQUAL_TO) {
+        addToKeyBuilder(startClusteringKeyBuilder, clusteringKeyName, predicates.get(0).value);
+        addToKeyBuilder(endClusteringKeyBuilder, clusteringKeyName, predicates.get(0).value);
         if (!clusteringKeyNamesIterator.hasNext()) {
           scan.withStart(startClusteringKeyBuilder.build(), true);
           scan.withEnd(endClusteringKeyBuilder.build(), true);
         }
-      } else if (conditions.isEmpty()) {
+      } else if (predicates.isEmpty()) {
         if (startClusteringKeyBuilder.size() > 0) {
           scan.withStart(startClusteringKeyBuilder.build(), true);
         }
@@ -150,8 +150,8 @@ public final class SqlUtils {
           scan.withEnd(endClusteringKeyBuilder.build(), true);
         }
         break;
-      } else if (conditions.size() == 1 || conditions.size() == 2) {
-        conditions.forEach(
+      } else if (predicates.size() == 1 || predicates.size() == 2) {
+        predicates.forEach(
             c -> {
               switch (c.operator) {
                 case IS_GREATER_THAN:
@@ -171,8 +171,6 @@ public final class SqlUtils {
                   scan.withEnd(endClusteringKeyBuilder.build(), true);
                   break;
                 case IS_EQUAL_TO:
-                  // TODO
-                case IS_NOT_EQUAL_TO:
                   // TODO
                 default:
                   throw new AssertionError();
@@ -217,11 +215,11 @@ public final class SqlUtils {
 
   public static Put convertUpdateStatementToPut(UpdateStatement statement, TableMetadata metadata) {
     Key partitionKey =
-        createKeyFromConditions(statement.whereConditions, metadata.getPartitionKeyNames());
+        createKeyFromPredicates(statement.wherePredicates, metadata.getPartitionKeyNames());
     Key clusteringKey = null;
     if (!metadata.getClusteringKeyNames().isEmpty()) {
       clusteringKey =
-          createKeyFromConditions(statement.whereConditions, metadata.getClusteringKeyNames());
+          createKeyFromPredicates(statement.wherePredicates, metadata.getClusteringKeyNames());
     }
     Put put =
         new Put(partitionKey, clusteringKey)
@@ -234,11 +232,11 @@ public final class SqlUtils {
   public static Delete convertDeleteStatementToDelete(
       DeleteStatement statement, TableMetadata metadata) {
     Key partitionKey =
-        createKeyFromConditions(statement.whereConditions, metadata.getPartitionKeyNames());
+        createKeyFromPredicates(statement.wherePredicates, metadata.getPartitionKeyNames());
     Key clusteringKey = null;
     if (!metadata.getClusteringKeyNames().isEmpty()) {
       clusteringKey =
-          createKeyFromConditions(statement.whereConditions, metadata.getClusteringKeyNames());
+          createKeyFromPredicates(statement.wherePredicates, metadata.getClusteringKeyNames());
     }
     return new Delete(partitionKey, clusteringKey)
         .forNamespace(statement.namespaceName)
@@ -257,23 +255,21 @@ public final class SqlUtils {
     return builder.build();
   }
 
-  private static Key createKeyFromConditions(
-      List<Condition> conditions, Collection<String> keyColumnNames) {
-    Map<String, Condition> conditionsMap =
-        conditions.stream()
+  private static Key createKeyFromPredicates(
+      List<Predicate> predicates, Collection<String> keyColumnNames) {
+    Map<String, Predicate> predicatesMap =
+        predicates.stream()
             .filter(c -> keyColumnNames.contains(c.columnName))
             .collect(Collectors.toMap(a -> a.columnName, Function.identity()));
 
     Key.Builder builder = Key.newBuilder();
     keyColumnNames.forEach(
         n -> {
-          Condition condition = conditionsMap.get(n);
-          switch (condition.operator) {
+          Predicate predicate = predicatesMap.get(n);
+          switch (predicate.operator) {
             case IS_EQUAL_TO:
-              addToKeyBuilder(builder, n, condition.value);
+              addToKeyBuilder(builder, n, predicate.value);
               break;
-            case IS_NOT_EQUAL_TO:
-              // TODO
             case IS_GREATER_THAN:
               // TODO
             case IS_GREATER_THAN_OR_EQUAL_TO:

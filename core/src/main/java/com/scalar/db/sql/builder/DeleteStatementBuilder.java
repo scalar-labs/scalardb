@@ -1,7 +1,7 @@
 package com.scalar.db.sql.builder;
 
 import com.google.common.collect.ImmutableList;
-import com.scalar.db.sql.Condition;
+import com.scalar.db.sql.Predicate;
 import com.scalar.db.sql.statement.DeleteStatement;
 import java.util.List;
 
@@ -24,16 +24,16 @@ public final class DeleteStatementBuilder {
       this.tableName = tableName;
     }
 
-    public Where where(Condition condition) {
-      ImmutableList.Builder<Condition> whereConditionsBuilder = ImmutableList.builder();
-      whereConditionsBuilder.add(condition);
-      return new Where(namespaceName, tableName, whereConditionsBuilder);
+    public Where where(Predicate predicate) {
+      ImmutableList.Builder<Predicate> predicateBuilder = ImmutableList.builder();
+      predicateBuilder.add(predicate);
+      return new Where(namespaceName, tableName, predicateBuilder);
     }
 
-    public End where(List<Condition> conditions) {
-      ImmutableList.Builder<Condition> whereConditionsBuilder = ImmutableList.builder();
-      whereConditionsBuilder.addAll(conditions);
-      return new End(namespaceName, tableName, whereConditionsBuilder);
+    public End where(List<Predicate> predicates) {
+      ImmutableList.Builder<Predicate> predicatesBuilder = ImmutableList.builder();
+      predicatesBuilder.addAll(predicates);
+      return new End(namespaceName, tableName, predicatesBuilder);
     }
   }
 
@@ -41,12 +41,12 @@ public final class DeleteStatementBuilder {
     private Where(
         String namespaceName,
         String tableName,
-        ImmutableList.Builder<Condition> whereConditionsBuilder) {
-      super(namespaceName, tableName, whereConditionsBuilder);
+        ImmutableList.Builder<Predicate> predicatesBuilder) {
+      super(namespaceName, tableName, predicatesBuilder);
     }
 
-    public Where and(Condition condition) {
-      whereConditionsBuilder.add(condition);
+    public Where and(Predicate predicate) {
+      predicatesBuilder.add(predicate);
       return this;
     }
   }
@@ -54,19 +54,19 @@ public final class DeleteStatementBuilder {
   public static class End {
     protected final String namespaceName;
     protected final String tableName;
-    protected final ImmutableList.Builder<Condition> whereConditionsBuilder;
+    protected final ImmutableList.Builder<Predicate> predicatesBuilder;
 
     public End(
         String namespaceName,
         String tableName,
-        ImmutableList.Builder<Condition> whereConditionsBuilder) {
+        ImmutableList.Builder<Predicate> predicatesBuilder) {
       this.namespaceName = namespaceName;
       this.tableName = tableName;
-      this.whereConditionsBuilder = whereConditionsBuilder;
+      this.predicatesBuilder = predicatesBuilder;
     }
 
     public DeleteStatement build() {
-      return new DeleteStatement(namespaceName, tableName, whereConditionsBuilder.build());
+      return new DeleteStatement(namespaceName, tableName, predicatesBuilder.build());
     }
   }
 }

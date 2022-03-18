@@ -2,24 +2,24 @@ package com.scalar.db.sql.statement;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.sql.Assignment;
-import com.scalar.db.sql.Condition;
+import com.scalar.db.sql.Predicate;
 
 public class UpdateStatement implements DmlStatement {
 
   public final String namespaceName;
   public final String tableName;
   public final ImmutableList<Assignment> assignments;
-  public final ImmutableList<Condition> whereConditions;
+  public final ImmutableList<Predicate> wherePredicates;
 
   public UpdateStatement(
       String namespaceName,
       String tableName,
       ImmutableList<Assignment> assignments,
-      ImmutableList<Condition> whereConditions) {
+      ImmutableList<Predicate> wherePredicates) {
     this.namespaceName = namespaceName;
     this.tableName = tableName;
     this.assignments = assignments;
-    this.whereConditions = whereConditions;
+    this.wherePredicates = wherePredicates;
   }
 
   @Override

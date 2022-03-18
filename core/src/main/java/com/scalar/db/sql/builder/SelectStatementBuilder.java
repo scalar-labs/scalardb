@@ -1,8 +1,8 @@
 package com.scalar.db.sql.builder;
 
 import com.google.common.collect.ImmutableList;
-import com.scalar.db.sql.Condition;
 import com.scalar.db.sql.Ordering;
+import com.scalar.db.sql.Predicate;
 import com.scalar.db.sql.statement.SelectStatement;
 import java.util.List;
 
@@ -34,10 +34,10 @@ public final class SelectStatementBuilder {
       this.tableName = tableName;
     }
 
-    public Where where(Condition condition) {
-      ImmutableList.Builder<Condition> whereConditionsBuilder = ImmutableList.builder();
-      whereConditionsBuilder.add(condition);
-      return new Where(projectedColumnNames, namespaceName, tableName, whereConditionsBuilder);
+    public Where where(Predicate predicate) {
+      ImmutableList.Builder<Predicate> predicatesBuilder = ImmutableList.builder();
+      predicatesBuilder.add(predicate);
+      return new Where(projectedColumnNames, namespaceName, tableName, predicatesBuilder);
     }
   }
 
@@ -46,12 +46,12 @@ public final class SelectStatementBuilder {
         ImmutableList<String> projectedColumnNames,
         String namespaceName,
         String tableName,
-        ImmutableList.Builder<Condition> whereConditionsBuilder) {
-      super(projectedColumnNames, namespaceName, tableName, whereConditionsBuilder);
+        ImmutableList.Builder<Predicate> predicatesBuilder) {
+      super(projectedColumnNames, namespaceName, tableName, predicatesBuilder);
     }
 
-    public Where and(Condition condition) {
-      whereConditionsBuilder.add(condition);
+    public Where and(Predicate predicate) {
+      predicatesBuilder.add(predicate);
       return this;
     }
   }
@@ -60,7 +60,7 @@ public final class SelectStatementBuilder {
     protected final ImmutableList<String> projectedColumnNames;
     protected final String namespaceName;
     protected final String tableName;
-    protected final ImmutableList.Builder<Condition> whereConditionsBuilder;
+    protected final ImmutableList.Builder<Predicate> predicatesBuilder;
     private ImmutableList<Ordering> orderings = ImmutableList.of();
     private int limit;
 
@@ -68,11 +68,11 @@ public final class SelectStatementBuilder {
         ImmutableList<String> projectedColumnNames,
         String namespaceName,
         String tableName,
-        ImmutableList.Builder<Condition> whereConditionsBuilder) {
+        ImmutableList.Builder<Predicate> predicatesBuilder) {
       this.projectedColumnNames = projectedColumnNames;
       this.namespaceName = namespaceName;
       this.tableName = tableName;
-      this.whereConditionsBuilder = whereConditionsBuilder;
+      this.predicatesBuilder = predicatesBuilder;
     }
 
     public End orderBy(Ordering... orderings) {
@@ -90,7 +90,7 @@ public final class SelectStatementBuilder {
           namespaceName,
           tableName,
           projectedColumnNames,
-          whereConditionsBuilder.build(),
+          predicatesBuilder.build(),
           orderings,
           limit);
     }
