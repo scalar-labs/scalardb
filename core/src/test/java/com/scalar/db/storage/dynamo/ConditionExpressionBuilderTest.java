@@ -2,8 +2,7 @@ package com.scalar.db.storage.dynamo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.scalar.db.api.ConditionalExpression;
-import com.scalar.db.api.ConditionalExpression.Operator;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
@@ -16,6 +15,8 @@ import org.mockito.MockitoAnnotations;
 public class ConditionExpressionBuilderTest {
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
+  private static final String ANY_NAME_3 = "name3";
+  private static final String ANY_NAME_4 = "name4";
   private static final int ANY_INT = 1;
   private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT);
 
@@ -42,9 +43,12 @@ public class ConditionExpressionBuilderTest {
   public void build_PutIfAcceptCalled_ShouldReturnCondition() {
     // Arrange
     PutIf condition =
-        new PutIf(
-            new ConditionalExpression(ANY_NAME_1, ANY_INT_VALUE, Operator.EQ),
-            new ConditionalExpression(ANY_NAME_2, ANY_INT_VALUE, Operator.GT));
+        ConditionBuilder.putIf(
+                ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT_VALUE.getAsInt()))
+            .and(ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT_VALUE.getAsInt()))
+            .and(ConditionBuilder.column(ANY_NAME_3).isNullInt())
+            .and(ConditionBuilder.column(ANY_NAME_4).isNotNullInt())
+            .build();
     ConditionExpressionBuilder builder =
         new ConditionExpressionBuilder(
             DynamoOperation.CONDITION_COLUMN_NAME_ALIAS, DynamoOperation.CONDITION_VALUE_ALIAS);
@@ -54,7 +58,11 @@ public class ConditionExpressionBuilderTest {
     String actual = builder.build();
 
     // Assert
-    assertThat(actual).isEqualTo("#ccol0 = :cval0 AND #ccol1 > :cval1");
+    assertThat(actual)
+        .isEqualTo(
+            "#ccol0 = :cval0 AND #ccol1 > :cval1 "
+                + "AND (attribute_not_exists(#ccol2) OR #ccol2 = :cval2) "
+                + "AND (attribute_exists(#ccol3) AND NOT #ccol3 = :cval3)");
   }
 
   @Test
@@ -93,9 +101,13 @@ public class ConditionExpressionBuilderTest {
   public void visit_DeleteIfAcceptCalled_ShouldCallWhere() {
     // Arrange
     DeleteIf condition =
-        new DeleteIf(
-            new ConditionalExpression(ANY_NAME_1, ANY_INT_VALUE, Operator.EQ),
-            new ConditionalExpression(ANY_NAME_2, ANY_INT_VALUE, Operator.GT));
+        ConditionBuilder.deleteIf(
+                ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT_VALUE.getAsInt()))
+            .and(ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT_VALUE.getAsInt()))
+            .and(ConditionBuilder.column(ANY_NAME_3).isNullInt())
+            .and(ConditionBuilder.column(ANY_NAME_4).isNotNullInt())
+            .build();
+
     ConditionExpressionBuilder builder =
         new ConditionExpressionBuilder(
             DynamoOperation.CONDITION_COLUMN_NAME_ALIAS, DynamoOperation.CONDITION_VALUE_ALIAS);
@@ -105,6 +117,10 @@ public class ConditionExpressionBuilderTest {
     String actual = builder.build();
 
     // Assert
-    assertThat(actual).isEqualTo("#ccol0 = :cval0 AND #ccol1 > :cval1");
+    assertThat(actual)
+        .isEqualTo(
+            "#ccol0 = :cval0 AND #ccol1 > :cval1 "
+                + "AND (attribute_not_exists(#ccol2) OR #ccol2 = :cval2) "
+                + "AND (attribute_exists(#ccol3) AND NOT #ccol3 = :cval3)");
   }
 }

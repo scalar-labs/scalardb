@@ -152,7 +152,7 @@ public class BatchHandler {
       if (delete.getCondition().get() instanceof DeleteIfExists) {
         condition = dynamoMutation.getIfExistsCondition();
       } else {
-        condition = dynamoMutation.getCondition();
+        condition = dynamoMutation.getIfExistsCondition() + " AND " + dynamoMutation.getCondition();
         deleteBuilder.expressionAttributeNames(dynamoMutation.getConditionColumnMap());
         Map<String, AttributeValue> bindMap = dynamoMutation.getConditionBindMap();
         deleteBuilder.expressionAttributeValues(bindMap);

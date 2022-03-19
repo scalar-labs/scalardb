@@ -89,13 +89,13 @@ public class CosmosMutation extends CosmosOperation {
           .ifPresent(
               k -> {
                 ValueBinder binder = new ValueBinder();
-                k.get()
+                k.getColumns()
                     .forEach(
-                        v -> {
+                        c -> {
                           Field<Object> field =
-                              DSL.field("r.clusteringKey" + quoteKeyword(v.getName()));
+                              DSL.field("r.clusteringKey" + quoteKeyword(c.getName()));
                           binder.set(s -> select.and(field.equal(s)));
-                          v.accept(binder);
+                          c.accept(binder);
                         });
               });
     }

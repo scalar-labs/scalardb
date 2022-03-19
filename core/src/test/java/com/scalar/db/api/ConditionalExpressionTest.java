@@ -3,18 +3,25 @@ package com.scalar.db.api;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.api.ConditionalExpression.Operator;
+import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
+import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BlobValue;
+import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.DoubleValue;
+import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.FloatValue;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import org.junit.Test;
 
-public class ConditionExpressionTest {
+public class ConditionalExpressionTest {
 
   @Test
   public void constructor_ProperArgsGiven_ShouldConstructProperly() {
@@ -103,5 +110,50 @@ public class ConditionExpressionTest {
     assertThat(expression9.getValueAsObject())
         .isEqualTo(ByteBuffer.wrap("blob2".getBytes(StandardCharsets.UTF_8)));
     assertThat(expression9.getOperator()).isEqualTo(Operator.NE);
+  }
+
+  @Test
+  public void constructor_ColumnAndOperatorGiven_ShouldConstructProperly() {
+    // Arrange
+
+    // Act
+    ConditionalExpression expression1 =
+        new ConditionalExpression(BooleanColumn.of("col1", true), Operator.EQ);
+    ConditionalExpression expression2 =
+        new ConditionalExpression(IntColumn.of("col2", 123), Operator.NE);
+    ConditionalExpression expression3 =
+        new ConditionalExpression(BigIntColumn.of("col3", 456L), Operator.GT);
+    ConditionalExpression expression4 =
+        new ConditionalExpression(FloatColumn.of("col4", 1.23F), Operator.GTE);
+    ConditionalExpression expression5 =
+        new ConditionalExpression(DoubleColumn.of("col5", 4.56D), Operator.LT);
+    ConditionalExpression expression6 =
+        new ConditionalExpression(TextColumn.of("col6", "text"), Operator.LTE);
+    ConditionalExpression expression7 =
+        new ConditionalExpression(
+            BlobColumn.of("col7", "blob".getBytes(StandardCharsets.UTF_8)), Operator.EQ);
+
+    // Assert
+    assertThat(expression1.getColumn()).isEqualTo(BooleanColumn.of("col1", true));
+    assertThat(expression1.getOperator()).isEqualTo(Operator.EQ);
+
+    assertThat(expression2.getColumn()).isEqualTo(IntColumn.of("col2", 123));
+    assertThat(expression2.getOperator()).isEqualTo(Operator.NE);
+
+    assertThat(expression3.getColumn()).isEqualTo(BigIntColumn.of("col3", 456L));
+    assertThat(expression3.getOperator()).isEqualTo(Operator.GT);
+
+    assertThat(expression4.getColumn()).isEqualTo(FloatColumn.of("col4", 1.23F));
+    assertThat(expression4.getOperator()).isEqualTo(Operator.GTE);
+
+    assertThat(expression5.getColumn()).isEqualTo(DoubleColumn.of("col5", 4.56D));
+    assertThat(expression5.getOperator()).isEqualTo(Operator.LT);
+
+    assertThat(expression6.getColumn()).isEqualTo(TextColumn.of("col6", "text"));
+    assertThat(expression6.getOperator()).isEqualTo(Operator.LTE);
+
+    assertThat(expression7.getColumn())
+        .isEqualTo(BlobColumn.of("col7", "blob".getBytes(StandardCharsets.UTF_8)));
+    assertThat(expression7.getOperator()).isEqualTo(Operator.EQ);
   }
 }

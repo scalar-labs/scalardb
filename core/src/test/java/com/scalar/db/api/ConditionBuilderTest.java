@@ -3,6 +3,13 @@ package com.scalar.db.api;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.api.ConditionalExpression.Operator;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import org.junit.Test;
@@ -273,6 +280,72 @@ public class ConditionBuilderTest {
         .isEqualTo(
             new ConditionalExpression(
                 "col8", ByteBuffer.wrap("blob2".getBytes(StandardCharsets.UTF_8)), Operator.LTE));
+  }
+
+  @Test
+  public void putIf_WithIsNullConditions_ShouldBuildProperly() {
+    // Arrange
+
+    // Act
+    PutIf actual =
+        ConditionBuilder.putIf(ConditionBuilder.column("col1").isNullBoolean())
+            .and(ConditionBuilder.column("col2").isNullInt())
+            .and(ConditionBuilder.column("col3").isNullBigInt())
+            .and(ConditionBuilder.column("col4").isNullFloat())
+            .and(ConditionBuilder.column("col5").isNullDouble())
+            .and(ConditionBuilder.column("col6").isNullText())
+            .and(ConditionBuilder.column("col7").isNullBlob())
+            .build();
+
+    // Assert
+    assertThat(actual.getExpressions().size()).isEqualTo(7);
+    assertThat(actual.getExpressions().get(0).getColumn()).isEqualTo(BooleanColumn.ofNull("col1"));
+    assertThat(actual.getExpressions().get(0).getOperator()).isEqualTo(Operator.IS_NULL);
+    assertThat(actual.getExpressions().get(1).getColumn()).isEqualTo(IntColumn.ofNull("col2"));
+    assertThat(actual.getExpressions().get(1).getOperator()).isEqualTo(Operator.IS_NULL);
+    assertThat(actual.getExpressions().get(2).getColumn()).isEqualTo(BigIntColumn.ofNull("col3"));
+    assertThat(actual.getExpressions().get(2).getOperator()).isEqualTo(Operator.IS_NULL);
+    assertThat(actual.getExpressions().get(3).getColumn()).isEqualTo(FloatColumn.ofNull("col4"));
+    assertThat(actual.getExpressions().get(3).getOperator()).isEqualTo(Operator.IS_NULL);
+    assertThat(actual.getExpressions().get(4).getColumn()).isEqualTo(DoubleColumn.ofNull("col5"));
+    assertThat(actual.getExpressions().get(4).getOperator()).isEqualTo(Operator.IS_NULL);
+    assertThat(actual.getExpressions().get(5).getColumn()).isEqualTo(TextColumn.ofNull("col6"));
+    assertThat(actual.getExpressions().get(5).getOperator()).isEqualTo(Operator.IS_NULL);
+    assertThat(actual.getExpressions().get(6).getColumn()).isEqualTo(BlobColumn.ofNull("col7"));
+    assertThat(actual.getExpressions().get(6).getOperator()).isEqualTo(Operator.IS_NULL);
+  }
+
+  @Test
+  public void putIf_WithIsNotNullConditions_ShouldBuildProperly() {
+    // Arrange
+
+    // Act
+    PutIf actual =
+        ConditionBuilder.putIf(ConditionBuilder.column("col1").isNotNullBoolean())
+            .and(ConditionBuilder.column("col2").isNotNullInt())
+            .and(ConditionBuilder.column("col3").isNotNullBigInt())
+            .and(ConditionBuilder.column("col4").isNotNullFloat())
+            .and(ConditionBuilder.column("col5").isNotNullDouble())
+            .and(ConditionBuilder.column("col6").isNotNullText())
+            .and(ConditionBuilder.column("col7").isNotNullBlob())
+            .build();
+
+    // Assert
+    assertThat(actual.getExpressions().size()).isEqualTo(7);
+    assertThat(actual.getExpressions().get(0).getColumn()).isEqualTo(BooleanColumn.ofNull("col1"));
+    assertThat(actual.getExpressions().get(0).getOperator()).isEqualTo(Operator.IS_NOT_NULL);
+    assertThat(actual.getExpressions().get(1).getColumn()).isEqualTo(IntColumn.ofNull("col2"));
+    assertThat(actual.getExpressions().get(1).getOperator()).isEqualTo(Operator.IS_NOT_NULL);
+    assertThat(actual.getExpressions().get(2).getColumn()).isEqualTo(BigIntColumn.ofNull("col3"));
+    assertThat(actual.getExpressions().get(2).getOperator()).isEqualTo(Operator.IS_NOT_NULL);
+    assertThat(actual.getExpressions().get(3).getColumn()).isEqualTo(FloatColumn.ofNull("col4"));
+    assertThat(actual.getExpressions().get(3).getOperator()).isEqualTo(Operator.IS_NOT_NULL);
+    assertThat(actual.getExpressions().get(4).getColumn()).isEqualTo(DoubleColumn.ofNull("col5"));
+    assertThat(actual.getExpressions().get(4).getOperator()).isEqualTo(Operator.IS_NOT_NULL);
+    assertThat(actual.getExpressions().get(5).getColumn()).isEqualTo(TextColumn.ofNull("col6"));
+    assertThat(actual.getExpressions().get(5).getOperator()).isEqualTo(Operator.IS_NOT_NULL);
+    assertThat(actual.getExpressions().get(6).getColumn()).isEqualTo(BlobColumn.ofNull("col7"));
+    assertThat(actual.getExpressions().get(6).getOperator()).isEqualTo(Operator.IS_NOT_NULL);
   }
 
   @Test
@@ -562,6 +635,72 @@ public class ConditionBuilderTest {
         .isEqualTo(
             new ConditionalExpression(
                 "col8", ByteBuffer.wrap("blob2".getBytes(StandardCharsets.UTF_8)), Operator.LTE));
+  }
+
+  @Test
+  public void deleteIf_WithIsNullConditions_ShouldBuildProperly() {
+    // Arrange
+
+    // Act
+    DeleteIf actual =
+        ConditionBuilder.deleteIf(ConditionBuilder.column("col1").isNullBoolean())
+            .and(ConditionBuilder.column("col2").isNullInt())
+            .and(ConditionBuilder.column("col3").isNullBigInt())
+            .and(ConditionBuilder.column("col4").isNullFloat())
+            .and(ConditionBuilder.column("col5").isNullDouble())
+            .and(ConditionBuilder.column("col6").isNullText())
+            .and(ConditionBuilder.column("col7").isNullBlob())
+            .build();
+
+    // Assert
+    assertThat(actual.getExpressions().size()).isEqualTo(7);
+    assertThat(actual.getExpressions().get(0).getColumn()).isEqualTo(BooleanColumn.ofNull("col1"));
+    assertThat(actual.getExpressions().get(0).getOperator()).isEqualTo(Operator.IS_NULL);
+    assertThat(actual.getExpressions().get(1).getColumn()).isEqualTo(IntColumn.ofNull("col2"));
+    assertThat(actual.getExpressions().get(1).getOperator()).isEqualTo(Operator.IS_NULL);
+    assertThat(actual.getExpressions().get(2).getColumn()).isEqualTo(BigIntColumn.ofNull("col3"));
+    assertThat(actual.getExpressions().get(2).getOperator()).isEqualTo(Operator.IS_NULL);
+    assertThat(actual.getExpressions().get(3).getColumn()).isEqualTo(FloatColumn.ofNull("col4"));
+    assertThat(actual.getExpressions().get(3).getOperator()).isEqualTo(Operator.IS_NULL);
+    assertThat(actual.getExpressions().get(4).getColumn()).isEqualTo(DoubleColumn.ofNull("col5"));
+    assertThat(actual.getExpressions().get(4).getOperator()).isEqualTo(Operator.IS_NULL);
+    assertThat(actual.getExpressions().get(5).getColumn()).isEqualTo(TextColumn.ofNull("col6"));
+    assertThat(actual.getExpressions().get(5).getOperator()).isEqualTo(Operator.IS_NULL);
+    assertThat(actual.getExpressions().get(6).getColumn()).isEqualTo(BlobColumn.ofNull("col7"));
+    assertThat(actual.getExpressions().get(6).getOperator()).isEqualTo(Operator.IS_NULL);
+  }
+
+  @Test
+  public void deleteIf_WithIsNotNullConditions_ShouldBuildProperly() {
+    // Arrange
+
+    // Act
+    DeleteIf actual =
+        ConditionBuilder.deleteIf(ConditionBuilder.column("col1").isNotNullBoolean())
+            .and(ConditionBuilder.column("col2").isNotNullInt())
+            .and(ConditionBuilder.column("col3").isNotNullBigInt())
+            .and(ConditionBuilder.column("col4").isNotNullFloat())
+            .and(ConditionBuilder.column("col5").isNotNullDouble())
+            .and(ConditionBuilder.column("col6").isNotNullText())
+            .and(ConditionBuilder.column("col7").isNotNullBlob())
+            .build();
+
+    // Assert
+    assertThat(actual.getExpressions().size()).isEqualTo(7);
+    assertThat(actual.getExpressions().get(0).getColumn()).isEqualTo(BooleanColumn.ofNull("col1"));
+    assertThat(actual.getExpressions().get(0).getOperator()).isEqualTo(Operator.IS_NOT_NULL);
+    assertThat(actual.getExpressions().get(1).getColumn()).isEqualTo(IntColumn.ofNull("col2"));
+    assertThat(actual.getExpressions().get(1).getOperator()).isEqualTo(Operator.IS_NOT_NULL);
+    assertThat(actual.getExpressions().get(2).getColumn()).isEqualTo(BigIntColumn.ofNull("col3"));
+    assertThat(actual.getExpressions().get(2).getOperator()).isEqualTo(Operator.IS_NOT_NULL);
+    assertThat(actual.getExpressions().get(3).getColumn()).isEqualTo(FloatColumn.ofNull("col4"));
+    assertThat(actual.getExpressions().get(3).getOperator()).isEqualTo(Operator.IS_NOT_NULL);
+    assertThat(actual.getExpressions().get(4).getColumn()).isEqualTo(DoubleColumn.ofNull("col5"));
+    assertThat(actual.getExpressions().get(4).getOperator()).isEqualTo(Operator.IS_NOT_NULL);
+    assertThat(actual.getExpressions().get(5).getColumn()).isEqualTo(TextColumn.ofNull("col6"));
+    assertThat(actual.getExpressions().get(5).getOperator()).isEqualTo(Operator.IS_NOT_NULL);
+    assertThat(actual.getExpressions().get(6).getColumn()).isEqualTo(BlobColumn.ofNull("col7"));
+    assertThat(actual.getExpressions().get(6).getOperator()).isEqualTo(Operator.IS_NOT_NULL);
   }
 
   @Test

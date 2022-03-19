@@ -1,9 +1,7 @@
 package com.scalar.db.io;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.Comparators;
 import com.google.common.collect.ComparisonChain;
-import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -73,12 +71,12 @@ public class BooleanColumn implements Column<Boolean> {
     return value;
   }
 
-  @SuppressWarnings("UnstableApiUsage")
   @Override
   public int compareTo(Column<Boolean> o) {
     return ComparisonChain.start()
         .compare(getName(), o.getName())
-        .compare(getValue(), o.getValue(), Comparators.emptiesLast(Comparator.naturalOrder()))
+        .compareTrueFirst(hasNullValue(), o.hasNullValue())
+        .compareFalseFirst(getBooleanValue(), o.getBooleanValue())
         .result();
   }
 

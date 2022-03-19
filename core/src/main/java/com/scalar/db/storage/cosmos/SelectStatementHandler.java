@@ -14,7 +14,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.io.Value;
+import com.scalar.db.io.Column;
 import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.TableMetadataManager;
 import java.util.Collections;
@@ -130,13 +130,13 @@ public class SelectStatementHandler extends StatementHandler {
         .ifPresent(
             k -> {
               ValueBinder binder = new ValueBinder();
-              List<Value<?>> start = k.get();
+              List<Column<?>> start = k.getColumns();
               IntStream.range(0, start.size())
                   .forEach(
                       i -> {
-                        Value<?> value = start.get(i);
+                        Column<?> column = start.get(i);
                         Field<Object> field =
-                            DSL.field("r.clusteringKey" + quoteKeyword(value.getName()));
+                            DSL.field("r.clusteringKey" + quoteKeyword(column.getName()));
                         if (i == (start.size() - 1)) {
                           if (scan.getStartInclusive()) {
                             binder.set(v -> select.and(field.greaterOrEqual(v)));
@@ -146,7 +146,7 @@ public class SelectStatementHandler extends StatementHandler {
                         } else {
                           binder.set(v -> select.and(field.equal(v)));
                         }
-                        value.accept(binder);
+                        column.accept(binder);
                       });
             });
   }
@@ -160,13 +160,13 @@ public class SelectStatementHandler extends StatementHandler {
         .ifPresent(
             k -> {
               ValueBinder binder = new ValueBinder();
-              List<Value<?>> end = k.get();
+              List<Column<?>> end = k.getColumns();
               IntStream.range(0, end.size())
                   .forEach(
                       i -> {
-                        Value<?> value = end.get(i);
+                        Column<?> column = end.get(i);
                         Field<Object> field =
-                            DSL.field("r.clusteringKey" + quoteKeyword(value.getName()));
+                            DSL.field("r.clusteringKey" + quoteKeyword(column.getName()));
                         if (i == (end.size() - 1)) {
                           if (scan.getEndInclusive()) {
                             binder.set(v -> select.and(field.lessOrEqual(v)));
@@ -176,7 +176,7 @@ public class SelectStatementHandler extends StatementHandler {
                         } else {
                           binder.set(v -> select.and(field.equal(v)));
                         }
-                        value.accept(binder);
+                        column.accept(binder);
                       });
             });
   }
@@ -209,18 +209,18 @@ public class SelectStatementHandler extends StatementHandler {
 
   private String makeQueryWithIndex(Operation operation, TableMetadata tableMetadata) {
     SelectWhereStep<org.jooq.Record> select = DSL.using(SQLDialect.DEFAULT).selectFrom("Record r");
-    Value<?> keyValue = operation.getPartitionKey().get().get(0);
+    Column<?> column = operation.getPartitionKey().getColumns().get(0);
     String fieldName;
-    if (tableMetadata.getClusteringKeyNames().contains(keyValue.getName())) {
+    if (tableMetadata.getClusteringKeyNames().contains(column.getName())) {
       fieldName = "r.clusteringKey";
     } else {
       fieldName = "r.values";
     }
-    Field<Object> field = DSL.field(fieldName + quoteKeyword(keyValue.getName()));
+    Field<Object> field = DSL.field(fieldName + quoteKeyword(column.getName()));
 
     ValueBinder binder = new ValueBinder();
     binder.set(v -> select.where(field.eq(v)));
-    keyValue.accept(binder);
+    column.accept(binder);
 
     return select.getSQL(ParamType.INLINED);
   }
