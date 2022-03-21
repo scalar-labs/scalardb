@@ -26,6 +26,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
@@ -1283,6 +1284,22 @@ public abstract class StorageIntegrationTestBase {
 
     // Act Assert
     assertThatCode(() -> storage.put(put)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void put_PutGivenForIndexedColumnWithNullValue_ShouldPut() throws ExecutionException {
+    // Arrange
+    storage.put(preparePuts().get(0).withValue(IntColumn.ofNull(COL_NAME3))); // (0,0)
+    Get get = new Get(prepareGet(0, 0));
+
+    // Act
+    Optional<Result> actual = storage.get(get);
+
+    // Assert
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(actual.get().getColumns().get(COL_NAME1)).isEqualTo(IntColumn.of(COL_NAME1, 0));
+    assertThat(actual.get().getColumns().get(COL_NAME4)).isEqualTo(IntColumn.of(COL_NAME4, 0));
+    assertThat(actual.get().getColumns().get(COL_NAME3)).isEqualTo(IntColumn.ofNull(COL_NAME3));
   }
 
   @Test
