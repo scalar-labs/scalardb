@@ -1,7 +1,7 @@
 package com.scalar.db.sql.statement;
 
 import com.google.common.collect.ImmutableList;
-import com.scalar.db.sql.Ordering;
+import com.scalar.db.sql.ClusteringOrdering;
 import com.scalar.db.sql.Predicate;
 
 public class SelectStatement implements DmlStatement {
@@ -10,7 +10,7 @@ public class SelectStatement implements DmlStatement {
   public final String tableName;
   public final ImmutableList<String> projectedColumnNames;
   public final ImmutableList<Predicate> predicates;
-  public final ImmutableList<Ordering> orderings;
+  public final ImmutableList<ClusteringOrdering> clusteringOrderings;
   public final int limit;
 
   public SelectStatement(
@@ -18,13 +18,13 @@ public class SelectStatement implements DmlStatement {
       String tableName,
       ImmutableList<String> projectedColumnNames,
       ImmutableList<Predicate> predicates,
-      ImmutableList<Ordering> orderings,
+      ImmutableList<ClusteringOrdering> clusteringOrderings,
       int limit) {
     this.namespaceName = namespaceName;
     this.tableName = tableName;
     this.projectedColumnNames = projectedColumnNames;
     this.predicates = predicates;
-    this.orderings = orderings;
+    this.clusteringOrderings = clusteringOrderings;
     this.limit = limit;
   }
 

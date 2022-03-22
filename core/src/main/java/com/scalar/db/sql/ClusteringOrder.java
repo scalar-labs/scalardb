@@ -1,6 +1,6 @@
 package com.scalar.db.sql;
 
-public enum Order {
+public enum ClusteringOrder {
   ASC,
   DESC
 }

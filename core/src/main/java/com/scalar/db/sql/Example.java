@@ -13,39 +13,39 @@ public class Example {
   private static final String COLUMN_NAME_4 = "col4";
 
   public static void main(String[] args) {
-    try (SessionFactory sessionFactory =
-        SessionFactory.builder()
+    try (SqlSessionFactory sqlSessionFactory =
+        SqlSessionFactory.builder()
             .withProperty("scalar.db.contact_points", "jdbc:mysql://localhost:3306/")
             .withProperty("scalar.db.username", "root")
             .withProperty("scalar.db.password", "mysql")
             .withProperty("scalar.db.storage", "jdbc")
             .build()) {
-      transactionModeExample(sessionFactory);
-      twoPhaseCommitTransactionModeExample(sessionFactory);
+      transactionModeExample(sqlSessionFactory);
+      twoPhaseCommitTransactionModeExample(sqlSessionFactory);
     }
   }
 
-  public static void transactionModeExample(SessionFactory sessionFactory) {
+  public static void transactionModeExample(SqlSessionFactory sqlSessionFactory) {
     System.out.println("Start transaction mode example");
 
-    Session session = sessionFactory.getTransactionSession();
+    SqlSession sqlSession = sqlSessionFactory.getTransactionSession();
 
     // Create a namespace
-    session.execute(StatementBuilder.createNamespace(NAMESPACE_NAME).ifNotExists().build());
+    sqlSession.execute(StatementBuilder.createNamespace(NAMESPACE_NAME).ifNotExists().build());
 
     // Create a table
-    session.execute(
+    sqlSession.execute(
         StatementBuilder.createTable(NAMESPACE_NAME, TABLE_NAME)
             .ifNotExists()
             .withPartitionKey(COLUMN_NAME_1, DataType.INT)
             .withClusteringKey(COLUMN_NAME_2, DataType.TEXT)
             .withColumn(COLUMN_NAME_3, DataType.BIGINT)
             .withColumn(COLUMN_NAME_4, DataType.FLOAT)
-            .withClusteringOrder(COLUMN_NAME_2, Order.ASC)
+            .withClusteringOrder(COLUMN_NAME_2, ClusteringOrder.ASC)
             .build());
 
     // Create a index
-    session.execute(
+    sqlSession.execute(
         StatementBuilder.createIndex()
             .ifNotExists()
             .onTable(NAMESPACE_NAME, TABLE_NAME)
@@ -53,14 +53,14 @@ public class Example {
             .build());
 
     // Create a coordinator table
-    session.execute(StatementBuilder.createCoordinatorTable().ifNotExists().build());
+    sqlSession.execute(StatementBuilder.createCoordinatorTable().ifNotExists().build());
 
     try {
       // Begin
-      session.beginTransaction();
+      sqlSession.beginTransaction();
 
       // Insert
-      session.execute(
+      sqlSession.execute(
           StatementBuilder.insertInto(NAMESPACE_NAME, TABLE_NAME)
               .values(
                   Assignment.column(COLUMN_NAME_1).value(Value.ofInt(10)),
@@ -70,7 +70,7 @@ public class Example {
               .build());
 
       // Update
-      session.execute(
+      sqlSession.execute(
           StatementBuilder.update(NAMESPACE_NAME, TABLE_NAME)
               .set(
                   Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(200L)),
@@ -81,11 +81,12 @@ public class Example {
 
       // Select
       ResultSet resultSet =
-          session.executeQuery(
+          sqlSession.executeQuery(
               StatementBuilder.select(COLUMN_NAME_1, COLUMN_NAME_2, COLUMN_NAME_3)
                   .from(NAMESPACE_NAME, TABLE_NAME)
                   .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
                   .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
+                  .orderBy(ClusteringOrdering.column(COLUMN_NAME_2).desc())
                   .build());
       for (Record record : resultSet) {
         System.out.println("column1 value: " + record.getInt(COLUMN_NAME_1));
@@ -95,27 +96,27 @@ public class Example {
       }
 
       // Delete
-      session.execute(
+      sqlSession.execute(
           StatementBuilder.deleteFrom(NAMESPACE_NAME, TABLE_NAME)
               .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
               .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
               .build());
 
       // Commit
-      session.commit();
+      sqlSession.commit();
     } catch (SqlException e) {
       // Rollback
-      session.rollback();
+      sqlSession.rollback();
     }
 
     // Truncate a table
-    session.execute(StatementBuilder.truncateTable(NAMESPACE_NAME, TABLE_NAME).build());
+    sqlSession.execute(StatementBuilder.truncateTable(NAMESPACE_NAME, TABLE_NAME).build());
 
     // Truncate a coordinator table
-    session.execute(StatementBuilder.truncateCoordinatorTable().build());
+    sqlSession.execute(StatementBuilder.truncateCoordinatorTable().build());
 
     // Drop an index
-    session.execute(
+    sqlSession.execute(
         StatementBuilder.dropIndex()
             .ifExists()
             .onTable(NAMESPACE_NAME, TABLE_NAME)
@@ -123,37 +124,37 @@ public class Example {
             .build());
 
     // Drop a table
-    session.execute(StatementBuilder.dropTable(NAMESPACE_NAME, TABLE_NAME).ifExists().build());
+    sqlSession.execute(StatementBuilder.dropTable(NAMESPACE_NAME, TABLE_NAME).ifExists().build());
 
     // Drop a namespace
-    session.execute(StatementBuilder.dropNamespace(NAMESPACE_NAME).ifExists().cascade().build());
+    sqlSession.execute(StatementBuilder.dropNamespace(NAMESPACE_NAME).ifExists().cascade().build());
 
     // Drop a coordinator table
-    session.execute(StatementBuilder.dropCoordinatorTable().ifExists().build());
+    sqlSession.execute(StatementBuilder.dropCoordinatorTable().ifExists().build());
   }
 
-  public static void twoPhaseCommitTransactionModeExample(SessionFactory sessionFactory) {
+  public static void twoPhaseCommitTransactionModeExample(SqlSessionFactory sqlSessionFactory) {
     System.out.println("Start two-phase commit transaction mode example");
 
-    Session session1 = sessionFactory.getTwoPhaseCommitTransactionSession();
-    Session session2 = sessionFactory.getTwoPhaseCommitTransactionSession();
+    SqlSession sqlSession1 = sqlSessionFactory.getTwoPhaseCommitTransactionSession();
+    SqlSession sqlSession2 = sqlSessionFactory.getTwoPhaseCommitTransactionSession();
 
     // Create a namespace
-    session1.execute(StatementBuilder.createNamespace(NAMESPACE_NAME).ifNotExists().build());
+    sqlSession1.execute(StatementBuilder.createNamespace(NAMESPACE_NAME).ifNotExists().build());
 
     // Create a table
-    session1.execute(
+    sqlSession1.execute(
         StatementBuilder.createTable(NAMESPACE_NAME, TABLE_NAME)
             .ifNotExists()
             .withPartitionKey(COLUMN_NAME_1, DataType.INT)
             .withClusteringKey(COLUMN_NAME_2, DataType.TEXT)
             .withColumn(COLUMN_NAME_3, DataType.BIGINT)
             .withColumn(COLUMN_NAME_4, DataType.FLOAT)
-            .withClusteringOrder(COLUMN_NAME_2, Order.ASC)
+            .withClusteringOrder(COLUMN_NAME_2, ClusteringOrder.ASC)
             .build());
 
     // Create a index
-    session1.execute(
+    sqlSession1.execute(
         StatementBuilder.createIndex()
             .ifNotExists()
             .onTable(NAMESPACE_NAME, TABLE_NAME)
@@ -161,15 +162,15 @@ public class Example {
             .build());
 
     // Create a coordinator table
-    session1.execute(StatementBuilder.createCoordinatorTable().ifNotExists().build());
+    sqlSession1.execute(StatementBuilder.createCoordinatorTable().ifNotExists().build());
 
     try {
       // Begin and join
-      session1.beginTransaction();
-      session2.joinTransaction(session1.getTransactionId());
+      sqlSession1.beginTransaction();
+      sqlSession2.joinTransaction(sqlSession1.getTransactionId());
 
       // Insert
-      session1.execute(
+      sqlSession1.execute(
           StatementBuilder.insertInto(NAMESPACE_NAME, TABLE_NAME)
               .values(
                   Assignment.column(COLUMN_NAME_1).value(Value.ofInt(10)),
@@ -178,7 +179,7 @@ public class Example {
                   Assignment.column(COLUMN_NAME_4).value(Value.ofFloat(1.23F)))
               .build());
 
-      session2.execute(
+      sqlSession2.execute(
           StatementBuilder.insertInto(NAMESPACE_NAME, TABLE_NAME)
               .values(
                   Assignment.column(COLUMN_NAME_1).value(Value.ofInt(11)),
@@ -188,7 +189,7 @@ public class Example {
               .build());
 
       // Update
-      session1.execute(
+      sqlSession1.execute(
           StatementBuilder.update(NAMESPACE_NAME, TABLE_NAME)
               .set(
                   Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(200L)),
@@ -197,7 +198,7 @@ public class Example {
               .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
               .build());
 
-      session2.execute(
+      sqlSession2.execute(
           StatementBuilder.update(NAMESPACE_NAME, TABLE_NAME)
               .set(
                   Assignment.column(COLUMN_NAME_3).value(Value.ofBigInt(300L)),
@@ -208,11 +209,12 @@ public class Example {
 
       // Select
       ResultSet resultSet1 =
-          session1.executeQuery(
+          sqlSession1.executeQuery(
               StatementBuilder.select(COLUMN_NAME_1, COLUMN_NAME_2, COLUMN_NAME_3)
                   .from(NAMESPACE_NAME, TABLE_NAME)
                   .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
                   .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
+                  .orderBy(ClusteringOrdering.column(COLUMN_NAME_2).desc())
                   .build());
       for (Record record : resultSet1) {
         System.out.println("column1 value: " + record.getInt(COLUMN_NAME_1));
@@ -222,11 +224,12 @@ public class Example {
       }
 
       ResultSet resultSet2 =
-          session2.executeQuery(
+          sqlSession2.executeQuery(
               StatementBuilder.select(COLUMN_NAME_1, COLUMN_NAME_2, COLUMN_NAME_3)
                   .from(NAMESPACE_NAME, TABLE_NAME)
                   .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(11)))
                   .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("def")))
+                  .orderBy(ClusteringOrdering.column(COLUMN_NAME_2).desc())
                   .build());
       for (Record record : resultSet2) {
         System.out.println("column1 value: " + record.getInt(COLUMN_NAME_1));
@@ -236,43 +239,43 @@ public class Example {
       }
 
       // Delete
-      session1.execute(
+      sqlSession1.execute(
           StatementBuilder.deleteFrom(NAMESPACE_NAME, TABLE_NAME)
               .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
               .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
               .build());
 
-      session2.execute(
+      sqlSession2.execute(
           StatementBuilder.deleteFrom(NAMESPACE_NAME, TABLE_NAME)
               .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(11)))
               .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("def")))
               .build());
 
       // Prepare
-      session1.prepare();
-      session2.prepare();
+      sqlSession1.prepare();
+      sqlSession2.prepare();
 
       // Validate
-      session1.validate();
-      session2.validate();
+      sqlSession1.validate();
+      sqlSession2.validate();
 
       // Commit
-      session1.commit();
-      session2.commit();
+      sqlSession1.commit();
+      sqlSession2.commit();
     } catch (SqlException e) {
       // Rollback
-      session1.rollback();
-      session2.rollback();
+      sqlSession1.rollback();
+      sqlSession2.rollback();
     }
 
     // Truncate a table
-    session1.execute(StatementBuilder.truncateTable(NAMESPACE_NAME, TABLE_NAME).build());
+    sqlSession1.execute(StatementBuilder.truncateTable(NAMESPACE_NAME, TABLE_NAME).build());
 
     // Truncate a coordinator table
-    session1.execute(StatementBuilder.truncateCoordinatorTable().build());
+    sqlSession1.execute(StatementBuilder.truncateCoordinatorTable().build());
 
     // Drop an index
-    session1.execute(
+    sqlSession1.execute(
         StatementBuilder.dropIndex()
             .ifExists()
             .onTable(NAMESPACE_NAME, TABLE_NAME)
@@ -280,12 +283,13 @@ public class Example {
             .build());
 
     // Drop a table
-    session1.execute(StatementBuilder.dropTable(NAMESPACE_NAME, TABLE_NAME).ifExists().build());
+    sqlSession1.execute(StatementBuilder.dropTable(NAMESPACE_NAME, TABLE_NAME).ifExists().build());
 
     // Drop a namespace
-    session1.execute(StatementBuilder.dropNamespace(NAMESPACE_NAME).ifExists().cascade().build());
+    sqlSession1.execute(
+        StatementBuilder.dropNamespace(NAMESPACE_NAME).ifExists().cascade().build());
 
     // Drop a coordinator table
-    session1.execute(StatementBuilder.dropCoordinatorTable().ifExists().build());
+    sqlSession1.execute(StatementBuilder.dropCoordinatorTable().ifExists().build());
   }
 }

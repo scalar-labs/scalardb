@@ -19,7 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
 
-public final class SessionFactory implements AutoCloseable {
+public final class SqlSessionFactory implements AutoCloseable {
 
   private final TableMetadataManager tableMetadataManager;
   private final DistributedStorageAdmin storageAdmin;
@@ -27,7 +27,7 @@ public final class SessionFactory implements AutoCloseable {
   private final DistributedTransactionManager transactionManager;
   private final TwoPhaseCommitTransactionManager twoPhaseCommitTransactionManager;
 
-  private SessionFactory(DatabaseConfig config) {
+  private SqlSessionFactory(DatabaseConfig config) {
     StorageFactory storageFactory = new StorageFactory(config);
     TransactionFactory transactionFactory = new TransactionFactory(config);
 
@@ -39,20 +39,20 @@ public final class SessionFactory implements AutoCloseable {
     twoPhaseCommitTransactionManager = transactionFactory.getTwoPhaseCommitTransactionManager();
   }
 
-  public Session getTransactionSession() {
-    return new TransactionSession(transactionAdmin, transactionManager, tableMetadataManager);
+  public SqlSession getTransactionSession() {
+    return new TransactionSqlSession(transactionAdmin, transactionManager, tableMetadataManager);
   }
 
-  public Session getTwoPhaseCommitTransactionSession() {
-    return new TwoPhaseCommitTransactionSession(
+  public SqlSession getTwoPhaseCommitTransactionSession() {
+    return new TwoPhaseCommitTransactionSqlSession(
         transactionAdmin, twoPhaseCommitTransactionManager, tableMetadataManager);
   }
 
-  public Session resumeTwoPhaseCommitTransactionSession(String transactionId) {
+  public SqlSession resumeTwoPhaseCommitTransactionSession(String transactionId) {
     try {
       TwoPhaseCommitTransaction transaction =
           twoPhaseCommitTransactionManager.resume(transactionId);
-      return new TwoPhaseCommitTransactionSession(
+      return new TwoPhaseCommitTransactionSqlSession(
           transactionAdmin, twoPhaseCommitTransactionManager, transaction, tableMetadataManager);
     } catch (TransactionException e) {
       throw new SqlException("Failed to resume a two-phase commit transaction");
@@ -96,8 +96,8 @@ public final class SessionFactory implements AutoCloseable {
       return this;
     }
 
-    public SessionFactory build() {
-      return new SessionFactory(new DatabaseConfig(properties));
+    public SqlSessionFactory build() {
+      return new SqlSessionFactory(new DatabaseConfig(properties));
     }
   }
 }

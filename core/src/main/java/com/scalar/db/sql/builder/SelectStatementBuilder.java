@@ -1,7 +1,7 @@
 package com.scalar.db.sql.builder;
 
 import com.google.common.collect.ImmutableList;
-import com.scalar.db.sql.Ordering;
+import com.scalar.db.sql.ClusteringOrdering;
 import com.scalar.db.sql.Predicate;
 import com.scalar.db.sql.statement.SelectStatement;
 import java.util.List;
@@ -61,7 +61,7 @@ public final class SelectStatementBuilder {
     protected final String namespaceName;
     protected final String tableName;
     protected final ImmutableList.Builder<Predicate> predicatesBuilder;
-    private ImmutableList<Ordering> orderings = ImmutableList.of();
+    private ImmutableList<ClusteringOrdering> clusteringOrderings = ImmutableList.of();
     private int limit;
 
     public End(
@@ -75,8 +75,13 @@ public final class SelectStatementBuilder {
       this.predicatesBuilder = predicatesBuilder;
     }
 
-    public End orderBy(Ordering... orderings) {
-      this.orderings = ImmutableList.copyOf(orderings);
+    public End orderBy(ClusteringOrdering... clusteringOrderings) {
+      this.clusteringOrderings = ImmutableList.copyOf(clusteringOrderings);
+      return this;
+    }
+
+    public End orderBy(List<ClusteringOrdering> clusteringOrderings) {
+      this.clusteringOrderings = ImmutableList.copyOf(clusteringOrderings);
       return this;
     }
 
@@ -91,7 +96,7 @@ public final class SelectStatementBuilder {
           tableName,
           projectedColumnNames,
           predicatesBuilder.build(),
-          orderings,
+          clusteringOrderings,
           limit);
     }
   }

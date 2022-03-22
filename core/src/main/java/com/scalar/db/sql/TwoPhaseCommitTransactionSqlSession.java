@@ -39,7 +39,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-public class TwoPhaseCommitTransactionSession implements Session {
+public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
 
   private final DistributedTransactionAdmin admin;
   private final TwoPhaseCommitTransactionManager manager;
@@ -48,14 +48,14 @@ public class TwoPhaseCommitTransactionSession implements Session {
   @Nullable private TwoPhaseCommitTransaction transaction;
   @Nullable private ResultSet resultSet;
 
-  public TwoPhaseCommitTransactionSession(
+  public TwoPhaseCommitTransactionSqlSession(
       DistributedTransactionAdmin admin,
       TwoPhaseCommitTransactionManager manager,
       TableMetadataManager tableMetadataManager) {
     this(admin, manager, null, tableMetadataManager);
   }
 
-  public TwoPhaseCommitTransactionSession(
+  public TwoPhaseCommitTransactionSqlSession(
       DistributedTransactionAdmin admin,
       TwoPhaseCommitTransactionManager manager,
       @Nullable TwoPhaseCommitTransaction transaction,
@@ -110,7 +110,7 @@ public class TwoPhaseCommitTransactionSession implements Session {
       checkIfTransactionInProgress();
 
       new DdlStatementExecutor(admin, (DdlStatement) statement).execute();
-      resultSet = EmptyResultSet.get();
+      resultSet = EmptyResultSet.INSTANCE;
     } else if (statement instanceof DmlStatement) {
       checkIfTransactionBegun();
 
@@ -276,7 +276,7 @@ public class TwoPhaseCommitTransactionSession implements Session {
                       r ->
                           (ResultSet)
                               new SingleRecordResultSet(new ResultRecord(r, projectedColumnNames)))
-                  .orElse(EmptyResultSet.get());
+                  .orElse(EmptyResultSet.INSTANCE);
         } else {
           List<Result> results = transaction.scan((Scan) selection);
           resultSet = new ResultIteratorResultSet(results.iterator(), projectedColumnNames);
@@ -296,7 +296,7 @@ public class TwoPhaseCommitTransactionSession implements Session {
       Put put = SqlUtils.convertInsertStatementToPut(statement, metadata);
       try {
         transaction.put(put);
-        resultSet = EmptyResultSet.get();
+        resultSet = EmptyResultSet.INSTANCE;
       } catch (CrudConflictException e) {
         throw new TransactionConflictException("Conflict happened during inserting a record", e);
       } catch (CrudException e) {
@@ -312,7 +312,7 @@ public class TwoPhaseCommitTransactionSession implements Session {
       Put put = SqlUtils.convertUpdateStatementToPut(statement, metadata);
       try {
         transaction.put(put);
-        resultSet = EmptyResultSet.get();
+        resultSet = EmptyResultSet.INSTANCE;
       } catch (CrudConflictException e) {
         throw new TransactionConflictException("Conflict happened during updating a record", e);
       } catch (CrudException e) {
@@ -328,7 +328,7 @@ public class TwoPhaseCommitTransactionSession implements Session {
       Delete delete = SqlUtils.convertDeleteStatementToDelete(statement, metadata);
       try {
         transaction.delete(delete);
-        resultSet = EmptyResultSet.get();
+        resultSet = EmptyResultSet.INSTANCE;
       } catch (CrudConflictException e) {
         throw new TransactionConflictException("Conflict happened during deleting a record", e);
       } catch (CrudException e) {

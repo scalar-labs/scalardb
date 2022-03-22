@@ -4,16 +4,10 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nonnull;
 
-public class EmptyResultSet implements ResultSet {
-
-  private static final EmptyResultSet INSTANCE = new EmptyResultSet();
-
-  public static EmptyResultSet get() {
-    return INSTANCE;
-  }
-
-  private EmptyResultSet() {}
+public enum EmptyResultSet implements ResultSet {
+  INSTANCE;
 
   @Override
   public Optional<Record> one() {
@@ -25,6 +19,7 @@ public class EmptyResultSet implements ResultSet {
     return Collections.emptyList();
   }
 
+  @Nonnull
   @Override
   public Iterator<Record> iterator() {
     return Collections.emptyIterator();

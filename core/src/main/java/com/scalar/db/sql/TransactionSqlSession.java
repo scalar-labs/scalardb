@@ -35,7 +35,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-public class TransactionSession implements Session {
+public class TransactionSqlSession implements SqlSession {
 
   private final DistributedTransactionAdmin admin;
   private final DistributedTransactionManager manager;
@@ -44,7 +44,7 @@ public class TransactionSession implements Session {
   @Nullable private DistributedTransaction transaction;
   @Nullable private ResultSet resultSet;
 
-  public TransactionSession(
+  public TransactionSqlSession(
       DistributedTransactionAdmin admin,
       DistributedTransactionManager manager,
       TableMetadataManager tableMetadataManager) {
@@ -91,7 +91,7 @@ public class TransactionSession implements Session {
       checkIfTransactionInProgress();
 
       new DdlStatementExecutor(admin, (DdlStatement) statement).execute();
-      resultSet = EmptyResultSet.get();
+      resultSet = EmptyResultSet.INSTANCE;
     } else if (statement instanceof DmlStatement) {
       checkIfTransactionBegun();
 
@@ -240,7 +240,7 @@ public class TransactionSession implements Session {
                       r ->
                           (ResultSet)
                               new SingleRecordResultSet(new ResultRecord(r, projectedColumnNames)))
-                  .orElse(EmptyResultSet.get());
+                  .orElse(EmptyResultSet.INSTANCE);
         } else {
           List<Result> results = transaction.scan((Scan) selection);
           resultSet = new ResultIteratorResultSet(results.iterator(), projectedColumnNames);
@@ -260,7 +260,7 @@ public class TransactionSession implements Session {
       Put put = SqlUtils.convertInsertStatementToPut(statement, metadata);
       try {
         transaction.put(put);
-        resultSet = EmptyResultSet.get();
+        resultSet = EmptyResultSet.INSTANCE;
       } catch (CrudConflictException e) {
         throw new TransactionConflictException("Conflict happened during inserting a record", e);
       } catch (CrudException e) {
@@ -276,7 +276,7 @@ public class TransactionSession implements Session {
       Put put = SqlUtils.convertUpdateStatementToPut(statement, metadata);
       try {
         transaction.put(put);
-        resultSet = EmptyResultSet.get();
+        resultSet = EmptyResultSet.INSTANCE;
       } catch (CrudConflictException e) {
         throw new TransactionConflictException("Conflict happened during updating a record", e);
       } catch (CrudException e) {
@@ -292,7 +292,7 @@ public class TransactionSession implements Session {
       Delete delete = SqlUtils.convertDeleteStatementToDelete(statement, metadata);
       try {
         transaction.delete(delete);
-        resultSet = EmptyResultSet.get();
+        resultSet = EmptyResultSet.INSTANCE;
       } catch (CrudConflictException e) {
         throw new TransactionConflictException("Conflict happened during deleting a record", e);
       } catch (CrudException e) {

@@ -3,7 +3,7 @@ package com.scalar.db.sql;
 import com.scalar.db.sql.statement.SelectStatement;
 import com.scalar.db.sql.statement.Statement;
 
-public interface Session {
+public interface SqlSession {
   void beginTransaction();
 
   void beginTransaction(String transactionId);

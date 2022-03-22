@@ -8,7 +8,6 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.sql.Predicate.Operator;
@@ -33,15 +32,16 @@ public final class SqlUtils {
 
   private SqlUtils() {}
 
-  public static TableMetadata convertCreateStatementToTableMetadata(
+  public static com.scalar.db.api.TableMetadata convertCreateStatementToTableMetadata(
       CreateTableStatement statement) {
-    TableMetadata.Builder builder = TableMetadata.newBuilder();
+    com.scalar.db.api.TableMetadata.Builder builder = com.scalar.db.api.TableMetadata.newBuilder();
     statement.columns.forEach((c, d) -> builder.addColumn(c, convertDataType(d)));
     statement.partitionKeyColumnNames.forEach(builder::addPartitionKey);
     statement.clusteringKeyColumnNames.forEach(
         n ->
             builder.addClusteringKey(
-                n, convertDataType(statement.clusteringOrders.getOrDefault(n, Order.ASC))));
+                n,
+                convertDataType(statement.clusteringOrders.getOrDefault(n, ClusteringOrder.ASC))));
     statement.secondaryIndexColumnNames.forEach(builder::addSecondaryIndex);
     return builder.build();
   }
@@ -67,8 +67,8 @@ public final class SqlUtils {
     }
   }
 
-  private static Scan.Ordering.Order convertDataType(Order order) {
-    switch (order) {
+  private static Scan.Ordering.Order convertDataType(ClusteringOrder clusteringOrder) {
+    switch (clusteringOrder) {
       case ASC:
         return Scan.Ordering.Order.ASC;
       case DESC:
@@ -79,7 +79,7 @@ public final class SqlUtils {
   }
 
   public static Selection convertSelectStatementToSelection(
-      SelectStatement statement, TableMetadata metadata) {
+      SelectStatement statement, com.scalar.db.api.TableMetadata metadata) {
     Key partitionKey =
         createKeyFromPredicates(statement.predicates, metadata.getPartitionKeyNames());
 
@@ -103,8 +103,8 @@ public final class SqlUtils {
               .forNamespace(statement.namespaceName)
               .forTable(statement.tableName);
       setClusteringKeyRangeForScan(scan, predicatesMap, metadata);
-      if (!statement.orderings.isEmpty()) {
-        statement.orderings.forEach(o -> scan.withOrdering(convertOrdering(o)));
+      if (!statement.clusteringOrderings.isEmpty()) {
+        statement.clusteringOrderings.forEach(o -> scan.withOrdering(convertOrdering(o)));
       }
       if (statement.limit > 0) {
         scan.withLimit(statement.limit);
@@ -114,7 +114,8 @@ public final class SqlUtils {
   }
 
   private static boolean isGet(
-      ImmutableListMultimap<String, Predicate> predicatesMap, TableMetadata metadata) {
+      ImmutableListMultimap<String, Predicate> predicatesMap,
+      com.scalar.db.api.TableMetadata metadata) {
     return metadata.getClusteringKeyNames().stream()
         .allMatch(
             n -> {
@@ -126,7 +127,9 @@ public final class SqlUtils {
   }
 
   private static void setClusteringKeyRangeForScan(
-      Scan scan, ImmutableListMultimap<String, Predicate> predicatesMap, TableMetadata metadata) {
+      Scan scan,
+      ImmutableListMultimap<String, Predicate> predicatesMap,
+      com.scalar.db.api.TableMetadata metadata) {
     Key.Builder startClusteringKeyBuilder = Key.newBuilder();
     Key.Builder endClusteringKeyBuilder = Key.newBuilder();
 
@@ -183,18 +186,19 @@ public final class SqlUtils {
     }
   }
 
-  private static Scan.Ordering convertOrdering(Ordering ordering) {
-    switch (ordering.order) {
+  private static Scan.Ordering convertOrdering(ClusteringOrdering clusteringOrdering) {
+    switch (clusteringOrdering.clusteringOrder) {
       case ASC:
-        return Scan.Ordering.asc(ordering.columnName);
+        return Scan.Ordering.asc(clusteringOrdering.columnName);
       case DESC:
-        return Scan.Ordering.desc(ordering.columnName);
+        return Scan.Ordering.desc(clusteringOrdering.columnName);
       default:
         throw new AssertionError();
     }
   }
 
-  public static Put convertInsertStatementToPut(InsertStatement statement, TableMetadata metadata) {
+  public static Put convertInsertStatementToPut(
+      InsertStatement statement, com.scalar.db.api.TableMetadata metadata) {
     Key partitionKey =
         createKeyFromAssignments(statement.assignments, metadata.getPartitionKeyNames());
     Key clusteringKey = null;
@@ -213,7 +217,8 @@ public final class SqlUtils {
     return put;
   }
 
-  public static Put convertUpdateStatementToPut(UpdateStatement statement, TableMetadata metadata) {
+  public static Put convertUpdateStatementToPut(
+      UpdateStatement statement, com.scalar.db.api.TableMetadata metadata) {
     Key partitionKey =
         createKeyFromPredicates(statement.wherePredicates, metadata.getPartitionKeyNames());
     Key clusteringKey = null;
@@ -230,7 +235,7 @@ public final class SqlUtils {
   }
 
   public static Delete convertDeleteStatementToDelete(
-      DeleteStatement statement, TableMetadata metadata) {
+      DeleteStatement statement, com.scalar.db.api.TableMetadata metadata) {
     Key partitionKey =
         createKeyFromPredicates(statement.wherePredicates, metadata.getPartitionKeyNames());
     Key clusteringKey = null;
@@ -327,7 +332,7 @@ public final class SqlUtils {
   }
 
   private static void addValueToPut(
-      Put put, String columnName, Value value, TableMetadata metadata) {
+      Put put, String columnName, Value value, com.scalar.db.api.TableMetadata metadata) {
     switch (value.type) {
       case BOOLEAN:
         assert value.value instanceof Boolean;
@@ -393,10 +398,11 @@ public final class SqlUtils {
     }
   }
 
-  public static TableMetadata getTableMetadata(
+  public static com.scalar.db.api.TableMetadata getTableMetadata(
       TableMetadataManager tableMetadataManager, String namespaceName, String tableName) {
     try {
-      TableMetadata metadata = tableMetadataManager.getTableMetadata(namespaceName, tableName);
+      com.scalar.db.api.TableMetadata metadata =
+          tableMetadataManager.getTableMetadata(namespaceName, tableName);
       if (metadata == null) {
         throw new TableNotFoundException(namespaceName, tableName);
       }

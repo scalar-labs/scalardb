@@ -2,8 +2,8 @@ package com.scalar.db.sql.builder;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.scalar.db.sql.ClusteringOrder;
 import com.scalar.db.sql.DataType;
-import com.scalar.db.sql.Order;
 import com.scalar.db.sql.statement.CreateTableStatement;
 
 public class CreateTableStatementBuilder {
@@ -42,7 +42,7 @@ public class CreateTableStatementBuilder {
     private final ImmutableMap.Builder<String, DataType> columnsBuilder;
     private final ImmutableSet.Builder<String> partitionKeyColumnNamesBuilder;
     private final ImmutableSet.Builder<String> clusteringKeyColumnNamesBuilder;
-    private final ImmutableMap.Builder<String, Order> clusteringOrdersBuilder;
+    private final ImmutableMap.Builder<String, ClusteringOrder> clusteringOrdersBuilder;
     private final ImmutableSet.Builder<String> secondaryIndexColumnNamesBuilder;
     private final ImmutableMap.Builder<String, String> optionsBuilder;
 
@@ -80,7 +80,7 @@ public class CreateTableStatementBuilder {
       return this;
     }
 
-    public End withClusteringOrder(String columnName, Order clusteringOrder) {
+    public End withClusteringOrder(String columnName, ClusteringOrder clusteringOrder) {
       if (!clusteringKeyColumnNamesBuilder.build().contains(columnName)) {
         throw new IllegalArgumentException(columnName + " is not a clustering key column");
       }

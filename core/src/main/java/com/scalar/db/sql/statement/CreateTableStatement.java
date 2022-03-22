@@ -2,8 +2,8 @@ package com.scalar.db.sql.statement;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.scalar.db.sql.ClusteringOrder;
 import com.scalar.db.sql.DataType;
-import com.scalar.db.sql.Order;
 
 public class CreateTableStatement implements DdlStatement {
 
@@ -13,7 +13,7 @@ public class CreateTableStatement implements DdlStatement {
   public final ImmutableMap<String, DataType> columns;
   public final ImmutableSet<String> partitionKeyColumnNames;
   public final ImmutableSet<String> clusteringKeyColumnNames;
-  public final ImmutableMap<String, Order> clusteringOrders;
+  public final ImmutableMap<String, ClusteringOrder> clusteringOrders;
   public final ImmutableSet<String> secondaryIndexColumnNames;
   public final ImmutableMap<String, String> options;
 
@@ -24,7 +24,7 @@ public class CreateTableStatement implements DdlStatement {
       ImmutableMap<String, DataType> columns,
       ImmutableSet<String> partitionKeyColumnNames,
       ImmutableSet<String> clusteringKeyColumnNames,
-      ImmutableMap<String, Order> clusteringOrders,
+      ImmutableMap<String, ClusteringOrder> clusteringOrders,
       ImmutableSet<String> secondaryIndexColumnNames,
       ImmutableMap<String, String> options) {
     this.namespaceName = namespaceName;
