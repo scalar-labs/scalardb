@@ -4,9 +4,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.AbstractResult;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.util.AbstractResult;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Optional;

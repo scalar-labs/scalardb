@@ -1,4 +1,4 @@
-package com.scalar.db.util;
+package com.scalar.db.common;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.TableMetadata;
