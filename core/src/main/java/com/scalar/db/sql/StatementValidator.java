@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Streams;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.sql.statement.CreateCoordinatorTableStatement;
 import com.scalar.db.sql.statement.CreateIndexStatement;
 import com.scalar.db.sql.statement.CreateNamespaceStatement;
@@ -21,7 +22,6 @@ import com.scalar.db.sql.statement.StatementVisitor;
 import com.scalar.db.sql.statement.TruncateCoordinatorTableStatement;
 import com.scalar.db.sql.statement.TruncateTableStatement;
 import com.scalar.db.sql.statement.UpdateStatement;
-import com.scalar.db.util.TableMetadataManager;
 import java.util.HashMap;
 import java.util.Map;
 
