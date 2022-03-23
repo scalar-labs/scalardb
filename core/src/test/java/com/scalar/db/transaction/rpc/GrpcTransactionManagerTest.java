@@ -7,13 +7,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.DistributedTransactionGrpc;
 import com.scalar.db.rpc.GetTransactionStateResponse;
 import com.scalar.db.rpc.TransactionState;
 import com.scalar.db.storage.rpc.GrpcConfig;
-import com.scalar.db.util.TableMetadataManager;
 import io.grpc.Status;
 import org.junit.Before;
 import org.junit.Test;
