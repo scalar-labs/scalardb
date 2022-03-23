@@ -1,6 +1,5 @@
 package com.scalar.db.sql;
 
-import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
@@ -8,7 +7,6 @@ import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.sql.exception.SqlException;
 import java.io.IOException;
@@ -17,26 +15,25 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 public final class SqlSessionFactory implements AutoCloseable {
 
-  private final TableMetadataManager tableMetadataManager;
-  private final DistributedStorageAdmin storageAdmin;
   private final DistributedTransactionAdmin transactionAdmin;
   private final DistributedTransactionManager transactionManager;
   private final TwoPhaseCommitTransactionManager twoPhaseCommitTransactionManager;
+  private final TableMetadataManager tableMetadataManager;
 
   private SqlSessionFactory(DatabaseConfig config) {
-    StorageFactory storageFactory = new StorageFactory(config);
     TransactionFactory transactionFactory = new TransactionFactory(config);
-
-    storageAdmin = storageFactory.getAdmin();
-    tableMetadataManager =
-        new TableMetadataManager(storageAdmin, config.getTableMetadataCacheExpirationTimeSecs());
     transactionAdmin = transactionFactory.getTransactionAdmin();
     transactionManager = transactionFactory.getTransactionManager();
     twoPhaseCommitTransactionManager = transactionFactory.getTwoPhaseCommitTransactionManager();
+    tableMetadataManager =
+        new TableMetadataManager(
+            transactionAdmin, config.getTableMetadataCacheExpirationTimeSecs());
   }
 
   public SqlSession getTransactionSession() {
@@ -61,7 +58,6 @@ public final class SqlSessionFactory implements AutoCloseable {
 
   @Override
   public void close() {
-    storageAdmin.close();
     transactionAdmin.close();
     transactionManager.close();
     twoPhaseCommitTransactionManager.close();
@@ -73,9 +69,11 @@ public final class SqlSessionFactory implements AutoCloseable {
 
   public static class Builder {
     private final Properties properties;
+    private final List<String> contactPoints;
 
     private Builder() {
       properties = new Properties();
+      contactPoints = new ArrayList<>();
     }
 
     public Builder withPropertyFile(String path) {
@@ -88,7 +86,7 @@ public final class SqlSessionFactory implements AutoCloseable {
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
-      return null;
+      return this;
     }
 
     public Builder withProperty(String name, String value) {
@@ -96,7 +94,40 @@ public final class SqlSessionFactory implements AutoCloseable {
       return this;
     }
 
+    public Builder addContactPoint(String contactPoint) {
+      contactPoints.add(contactPoint);
+      return this;
+    }
+
+    public Builder withContactPort(int contactPort) {
+      properties.put(DatabaseConfig.CONTACT_PORT, Integer.toString(contactPort));
+      return this;
+    }
+
+    public Builder withUsername(String username) {
+      properties.put(DatabaseConfig.USERNAME, username);
+      return this;
+    }
+
+    public Builder withPassword(String password) {
+      properties.put(DatabaseConfig.PASSWORD, password);
+      return this;
+    }
+
+    public Builder withStorage(String storageType) {
+      properties.put(DatabaseConfig.STORAGE, storageType);
+      return this;
+    }
+
+    public Builder withTransactionManager(String transactionManagerType) {
+      properties.put(DatabaseConfig.TRANSACTION_MANAGER, transactionManagerType);
+      return this;
+    }
+
     public SqlSessionFactory build() {
+      if (!contactPoints.isEmpty()) {
+        properties.put(DatabaseConfig.CONTACT_POINTS, String.join(",", contactPoints));
+      }
       return new SqlSessionFactory(new DatabaseConfig(properties));
     }
   }

@@ -15,10 +15,10 @@ public class Example {
   public static void main(String[] args) {
     try (SqlSessionFactory sqlSessionFactory =
         SqlSessionFactory.builder()
-            .withProperty("scalar.db.contact_points", "jdbc:mysql://localhost:3306/")
-            .withProperty("scalar.db.username", "root")
-            .withProperty("scalar.db.password", "mysql")
-            .withProperty("scalar.db.storage", "jdbc")
+            .addContactPoint("jdbc:mysql://localhost:3306/")
+            .withUsername("root")
+            .withPassword("mysql")
+            .withStorage("jdbc")
             .build()) {
       transactionModeExample(sqlSessionFactory);
       twoPhaseCommitTransactionModeExample(sqlSessionFactory);
