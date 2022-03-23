@@ -1,4 +1,4 @@
-package com.scalar.db.util;
+package com.scalar.db.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;

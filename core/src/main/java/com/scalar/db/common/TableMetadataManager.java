@@ -1,4 +1,4 @@
-package com.scalar.db.util;
+package com.scalar.db.common;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
