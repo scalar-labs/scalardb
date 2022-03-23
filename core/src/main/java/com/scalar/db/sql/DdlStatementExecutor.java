@@ -1,6 +1,7 @@
 package com.scalar.db.sql;
 
 import com.scalar.db.api.DistributedTransactionAdmin;
+import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.sql.exception.SqlException;
@@ -43,7 +44,7 @@ public class DdlStatementExecutor implements DdlStatementVisitor {
   @Override
   public void visit(CreateTableStatement statement) {
     try {
-      TableMetadata tableMetadata = SqlUtils.convertCreateStatementToTableMetadata(statement);
+      TableMetadata tableMetadata = convertCreateStatementToTableMetadata(statement);
       admin.createTable(
           statement.namespaceName,
           statement.tableName,
@@ -52,6 +53,53 @@ public class DdlStatementExecutor implements DdlStatementVisitor {
           statement.options);
     } catch (ExecutionException e) {
       throw new SqlException("Failed to create a table", e);
+    }
+  }
+
+  private static com.scalar.db.api.TableMetadata convertCreateStatementToTableMetadata(
+      CreateTableStatement statement) {
+    com.scalar.db.api.TableMetadata.Builder builder = com.scalar.db.api.TableMetadata.newBuilder();
+    statement.columns.forEach((c, d) -> builder.addColumn(c, convertDataType(d)));
+    statement.partitionKeyColumnNames.forEach(builder::addPartitionKey);
+    statement.clusteringKeyColumnNames.forEach(
+        n ->
+            builder.addClusteringKey(
+                n,
+                convertClusteringOrder(
+                    statement.clusteringOrders.getOrDefault(n, ClusteringOrder.ASC))));
+    statement.secondaryIndexColumnNames.forEach(builder::addSecondaryIndex);
+    return builder.build();
+  }
+
+  private static com.scalar.db.io.DataType convertDataType(DataType dataType) {
+    switch (dataType) {
+      case BOOLEAN:
+        return com.scalar.db.io.DataType.BOOLEAN;
+      case INT:
+        return com.scalar.db.io.DataType.INT;
+      case BIGINT:
+        return com.scalar.db.io.DataType.BIGINT;
+      case FLOAT:
+        return com.scalar.db.io.DataType.FLOAT;
+      case DOUBLE:
+        return com.scalar.db.io.DataType.DOUBLE;
+      case TEXT:
+        return com.scalar.db.io.DataType.TEXT;
+      case BLOB:
+        return com.scalar.db.io.DataType.BLOB;
+      default:
+        throw new AssertionError();
+    }
+  }
+
+  private static Scan.Ordering.Order convertClusteringOrder(ClusteringOrder clusteringOrder) {
+    switch (clusteringOrder) {
+      case ASC:
+        return Scan.Ordering.Order.ASC;
+      case DESC:
+        return Scan.Ordering.Order.DESC;
+      default:
+        throw new AssertionError();
     }
   }
 

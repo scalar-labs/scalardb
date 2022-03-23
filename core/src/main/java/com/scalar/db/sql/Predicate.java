@@ -24,31 +24,31 @@ public class Predicate {
     }
 
     public Predicate isEqualTo(Value value) {
-      return new Predicate(columnName, Operator.IS_EQUAL_TO, value);
+      return new Predicate(columnName, Operator.EQUAL_TO, value);
     }
 
     public Predicate isGreaterThan(Value value) {
-      return new Predicate(columnName, Operator.IS_GREATER_THAN, value);
+      return new Predicate(columnName, Operator.GREATER_THAN, value);
     }
 
     public Predicate isGreaterThanOrEqualTo(Value value) {
-      return new Predicate(columnName, Operator.IS_GREATER_THAN_OR_EQUAL_TO, value);
+      return new Predicate(columnName, Operator.GREATER_THAN_OR_EQUAL_TO, value);
     }
 
     public Predicate isLessThan(Value value) {
-      return new Predicate(columnName, Operator.IS_LESS_THAN, value);
+      return new Predicate(columnName, Operator.LESS_THAN, value);
     }
 
     public Predicate isLessThanOrEqualTo(Value value) {
-      return new Predicate(columnName, Operator.IS_LESS_THAN_OR_EQUAL_TO, value);
+      return new Predicate(columnName, Operator.LESS_THAN_OR_EQUAL_TO, value);
     }
   }
 
   public enum Operator {
-    IS_EQUAL_TO,
-    IS_GREATER_THAN,
-    IS_GREATER_THAN_OR_EQUAL_TO,
-    IS_LESS_THAN,
-    IS_LESS_THAN_OR_EQUAL_TO,
+    EQUAL_TO,
+    GREATER_THAN,
+    GREATER_THAN_OR_EQUAL_TO,
+    LESS_THAN,
+    LESS_THAN_OR_EQUAL_TO,
   }
 }

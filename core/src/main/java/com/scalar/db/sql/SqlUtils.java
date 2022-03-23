@@ -13,7 +13,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.sql.Predicate.Operator;
 import com.scalar.db.sql.exception.SqlException;
 import com.scalar.db.sql.exception.TableNotFoundException;
-import com.scalar.db.sql.statement.CreateTableStatement;
 import com.scalar.db.sql.statement.DeleteStatement;
 import com.scalar.db.sql.statement.InsertStatement;
 import com.scalar.db.sql.statement.SelectStatement;
@@ -27,56 +26,9 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-// TODO refactoring
 public final class SqlUtils {
 
   private SqlUtils() {}
-
-  public static com.scalar.db.api.TableMetadata convertCreateStatementToTableMetadata(
-      CreateTableStatement statement) {
-    com.scalar.db.api.TableMetadata.Builder builder = com.scalar.db.api.TableMetadata.newBuilder();
-    statement.columns.forEach((c, d) -> builder.addColumn(c, convertDataType(d)));
-    statement.partitionKeyColumnNames.forEach(builder::addPartitionKey);
-    statement.clusteringKeyColumnNames.forEach(
-        n ->
-            builder.addClusteringKey(
-                n,
-                convertDataType(statement.clusteringOrders.getOrDefault(n, ClusteringOrder.ASC))));
-    statement.secondaryIndexColumnNames.forEach(builder::addSecondaryIndex);
-    return builder.build();
-  }
-
-  private static com.scalar.db.io.DataType convertDataType(DataType dataType) {
-    switch (dataType) {
-      case BOOLEAN:
-        return com.scalar.db.io.DataType.BOOLEAN;
-      case INT:
-        return com.scalar.db.io.DataType.INT;
-      case BIGINT:
-        return com.scalar.db.io.DataType.BIGINT;
-      case FLOAT:
-        return com.scalar.db.io.DataType.FLOAT;
-      case DOUBLE:
-        return com.scalar.db.io.DataType.DOUBLE;
-      case TEXT:
-        return com.scalar.db.io.DataType.TEXT;
-      case BLOB:
-        return com.scalar.db.io.DataType.BLOB;
-      default:
-        throw new AssertionError();
-    }
-  }
-
-  private static Scan.Ordering.Order convertDataType(ClusteringOrder clusteringOrder) {
-    switch (clusteringOrder) {
-      case ASC:
-        return Scan.Ordering.Order.ASC;
-      case DESC:
-        return Scan.Ordering.Order.DESC;
-      default:
-        throw new AssertionError();
-    }
-  }
 
   public static Selection convertSelectStatementToSelection(
       SelectStatement statement, com.scalar.db.api.TableMetadata metadata) {
@@ -120,7 +72,7 @@ public final class SqlUtils {
         .allMatch(
             n -> {
               if (predicatesMap.get(n).size() == 1) {
-                return predicatesMap.get(n).get(0).operator == Operator.IS_EQUAL_TO;
+                return predicatesMap.get(n).get(0).operator == Operator.EQUAL_TO;
               }
               return false;
             });
@@ -138,7 +90,7 @@ public final class SqlUtils {
       String clusteringKeyName = clusteringKeyNamesIterator.next();
 
       ImmutableList<Predicate> predicates = predicatesMap.get(clusteringKeyName);
-      if (predicates.size() == 1 && predicates.get(0).operator == Operator.IS_EQUAL_TO) {
+      if (predicates.size() == 1 && predicates.get(0).operator == Operator.EQUAL_TO) {
         addToKeyBuilder(startClusteringKeyBuilder, clusteringKeyName, predicates.get(0).value);
         addToKeyBuilder(endClusteringKeyBuilder, clusteringKeyName, predicates.get(0).value);
         if (!clusteringKeyNamesIterator.hasNext()) {
@@ -157,23 +109,23 @@ public final class SqlUtils {
         predicates.forEach(
             c -> {
               switch (c.operator) {
-                case IS_GREATER_THAN:
+                case GREATER_THAN:
                   addToKeyBuilder(startClusteringKeyBuilder, c.columnName, c.value);
                   scan.withStart(startClusteringKeyBuilder.build(), false);
                   break;
-                case IS_GREATER_THAN_OR_EQUAL_TO:
+                case GREATER_THAN_OR_EQUAL_TO:
                   addToKeyBuilder(startClusteringKeyBuilder, c.columnName, c.value);
                   scan.withStart(startClusteringKeyBuilder.build(), true);
                   break;
-                case IS_LESS_THAN:
+                case LESS_THAN:
                   addToKeyBuilder(endClusteringKeyBuilder, c.columnName, c.value);
                   scan.withEnd(endClusteringKeyBuilder.build(), false);
                   break;
-                case IS_LESS_THAN_OR_EQUAL_TO:
+                case LESS_THAN_OR_EQUAL_TO:
                   addToKeyBuilder(endClusteringKeyBuilder, c.columnName, c.value);
                   scan.withEnd(endClusteringKeyBuilder.build(), true);
                   break;
-                case IS_EQUAL_TO:
+                case EQUAL_TO:
                   // TODO
                 default:
                   throw new AssertionError();
@@ -272,16 +224,16 @@ public final class SqlUtils {
         n -> {
           Predicate predicate = predicatesMap.get(n);
           switch (predicate.operator) {
-            case IS_EQUAL_TO:
+            case EQUAL_TO:
               addToKeyBuilder(builder, n, predicate.value);
               break;
-            case IS_GREATER_THAN:
+            case GREATER_THAN:
               // TODO
-            case IS_GREATER_THAN_OR_EQUAL_TO:
+            case GREATER_THAN_OR_EQUAL_TO:
               // TODO
-            case IS_LESS_THAN:
+            case LESS_THAN:
               // TODO
-            case IS_LESS_THAN_OR_EQUAL_TO:
+            case LESS_THAN_OR_EQUAL_TO:
               // TODO
             default:
               throw new AssertionError();
