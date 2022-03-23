@@ -7,13 +7,13 @@ public class DeleteStatement implements DmlStatement {
 
   public final String namespaceName;
   public final String tableName;
-  public final ImmutableList<Predicate> wherePredicates;
+  public final ImmutableList<Predicate> predicates;
 
   public DeleteStatement(
-      String namespaceName, String tableName, ImmutableList<Predicate> wherePredicates) {
+      String namespaceName, String tableName, ImmutableList<Predicate> predicates) {
     this.namespaceName = namespaceName;
     this.tableName = tableName;
-    this.wherePredicates = wherePredicates;
+    this.predicates = predicates;
   }
 
   @Override

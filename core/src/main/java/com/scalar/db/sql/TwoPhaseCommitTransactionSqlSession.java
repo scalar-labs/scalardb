@@ -44,6 +44,7 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
   private final DistributedTransactionAdmin admin;
   private final TwoPhaseCommitTransactionManager manager;
   private final TableMetadataManager tableMetadataManager;
+  private final StatementValidator statementValidator;
 
   @Nullable private TwoPhaseCommitTransaction transaction;
   @Nullable private ResultSet resultSet;
@@ -64,6 +65,7 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
     this.manager = manager;
     this.transaction = transaction;
     this.tableMetadataManager = tableMetadataManager;
+    statementValidator = new StatementValidator(tableMetadataManager);
   }
 
   @Override
@@ -104,7 +106,7 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
 
   @Override
   public void execute(Statement statement) {
-    new StatementValidator(tableMetadataManager, statement).validate();
+    statementValidator.validate(statement);
 
     if (statement instanceof DdlStatement) {
       checkIfTransactionInProgress();
@@ -136,7 +138,7 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
   public ResultSet executeQuery(SelectStatement statement) {
     checkIfTransactionBegun();
 
-    new StatementValidator(tableMetadataManager, statement).validate();
+    statementValidator.validate(statement);
     resultSet = new DmlStatementExecutor(transaction, tableMetadataManager, statement).execute();
     return resultSet;
   }

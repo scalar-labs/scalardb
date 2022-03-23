@@ -70,12 +70,10 @@ public final class SqlUtils {
       com.scalar.db.api.TableMetadata metadata) {
     return metadata.getClusteringKeyNames().stream()
         .allMatch(
-            n -> {
-              if (predicatesMap.get(n).size() == 1) {
-                return predicatesMap.get(n).get(0).operator == Operator.EQUAL_TO;
-              }
-              return false;
-            });
+            n ->
+                predicatesMap.containsKey(n)
+                    && predicatesMap.get(n).size() == 1
+                    && predicatesMap.get(n).get(0).operator == Operator.EQUAL_TO);
   }
 
   private static void setClusteringKeyRangeForScan(
@@ -125,8 +123,6 @@ public final class SqlUtils {
                   addToKeyBuilder(endClusteringKeyBuilder, c.columnName, c.value);
                   scan.withEnd(endClusteringKeyBuilder.build(), true);
                   break;
-                case EQUAL_TO:
-                  // TODO
                 default:
                   throw new AssertionError();
               }
@@ -172,11 +168,11 @@ public final class SqlUtils {
   public static Put convertUpdateStatementToPut(
       UpdateStatement statement, com.scalar.db.api.TableMetadata metadata) {
     Key partitionKey =
-        createKeyFromPredicates(statement.wherePredicates, metadata.getPartitionKeyNames());
+        createKeyFromPredicates(statement.predicates, metadata.getPartitionKeyNames());
     Key clusteringKey = null;
     if (!metadata.getClusteringKeyNames().isEmpty()) {
       clusteringKey =
-          createKeyFromPredicates(statement.wherePredicates, metadata.getClusteringKeyNames());
+          createKeyFromPredicates(statement.predicates, metadata.getClusteringKeyNames());
     }
     Put put =
         new Put(partitionKey, clusteringKey)
@@ -189,11 +185,11 @@ public final class SqlUtils {
   public static Delete convertDeleteStatementToDelete(
       DeleteStatement statement, com.scalar.db.api.TableMetadata metadata) {
     Key partitionKey =
-        createKeyFromPredicates(statement.wherePredicates, metadata.getPartitionKeyNames());
+        createKeyFromPredicates(statement.predicates, metadata.getPartitionKeyNames());
     Key clusteringKey = null;
     if (!metadata.getClusteringKeyNames().isEmpty()) {
       clusteringKey =
-          createKeyFromPredicates(statement.wherePredicates, metadata.getClusteringKeyNames());
+          createKeyFromPredicates(statement.predicates, metadata.getClusteringKeyNames());
     }
     return new Delete(partitionKey, clusteringKey)
         .forNamespace(statement.namespaceName)
@@ -228,13 +224,9 @@ public final class SqlUtils {
               addToKeyBuilder(builder, n, predicate.value);
               break;
             case GREATER_THAN:
-              // TODO
             case GREATER_THAN_OR_EQUAL_TO:
-              // TODO
             case LESS_THAN:
-              // TODO
             case LESS_THAN_OR_EQUAL_TO:
-              // TODO
             default:
               throw new AssertionError();
           }
@@ -277,7 +269,6 @@ public final class SqlUtils {
         builder.addBlob(columnName, (byte[]) value.value);
         break;
       case NULL:
-        // TODO
       default:
         throw new AssertionError();
     }

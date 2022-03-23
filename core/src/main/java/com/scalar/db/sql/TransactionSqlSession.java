@@ -40,6 +40,7 @@ public class TransactionSqlSession implements SqlSession {
   private final DistributedTransactionAdmin admin;
   private final DistributedTransactionManager manager;
   private final TableMetadataManager tableMetadataManager;
+  private final StatementValidator statementValidator;
 
   @Nullable private DistributedTransaction transaction;
   @Nullable private ResultSet resultSet;
@@ -51,6 +52,7 @@ public class TransactionSqlSession implements SqlSession {
     this.admin = admin;
     this.manager = manager;
     this.tableMetadataManager = tableMetadataManager;
+    statementValidator = new StatementValidator(tableMetadataManager);
   }
 
   @Override
@@ -85,7 +87,7 @@ public class TransactionSqlSession implements SqlSession {
 
   @Override
   public void execute(Statement statement) {
-    new StatementValidator(tableMetadataManager, statement).validate();
+    statementValidator.validate(statement);
 
     if (statement instanceof DdlStatement) {
       checkIfTransactionInProgress();
@@ -117,7 +119,7 @@ public class TransactionSqlSession implements SqlSession {
   public ResultSet executeQuery(SelectStatement statement) {
     checkIfTransactionBegun();
 
-    new StatementValidator(tableMetadataManager, statement).validate();
+    statementValidator.validate(statement);
     resultSet = new DmlStatementExecutor(transaction, tableMetadataManager, statement).execute();
     return resultSet;
   }

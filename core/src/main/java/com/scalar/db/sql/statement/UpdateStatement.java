@@ -9,17 +9,17 @@ public class UpdateStatement implements DmlStatement {
   public final String namespaceName;
   public final String tableName;
   public final ImmutableList<Assignment> assignments;
-  public final ImmutableList<Predicate> wherePredicates;
+  public final ImmutableList<Predicate> predicates;
 
   public UpdateStatement(
       String namespaceName,
       String tableName,
       ImmutableList<Assignment> assignments,
-      ImmutableList<Predicate> wherePredicates) {
+      ImmutableList<Predicate> predicates) {
     this.namespaceName = namespaceName;
     this.tableName = tableName;
     this.assignments = assignments;
-    this.wherePredicates = wherePredicates;
+    this.predicates = predicates;
   }
 
   @Override
