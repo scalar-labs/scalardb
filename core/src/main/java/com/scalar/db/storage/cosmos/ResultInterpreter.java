@@ -2,6 +2,7 @@ package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.ResultImpl;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
@@ -11,7 +12,6 @@ import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
-import com.scalar.db.util.ResultImpl;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
