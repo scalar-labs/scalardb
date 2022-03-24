@@ -1,5 +1,7 @@
 package com.scalar.db.sql;
 
+import com.google.common.base.MoreObjects;
+import java.util.Objects;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
@@ -11,6 +13,31 @@ public class Assignment {
   private Assignment(String columnName, Value value) {
     this.columnName = columnName;
     this.value = value;
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("columnName", columnName)
+        .add("value", value)
+        .toString();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof Assignment)) {
+      return false;
+    }
+    Assignment that = (Assignment) o;
+    return Objects.equals(columnName, that.columnName) && Objects.equals(value, that.value);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(columnName, value);
   }
 
   public static Builder column(String columnName) {

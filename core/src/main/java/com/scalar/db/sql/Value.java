@@ -1,6 +1,8 @@
 package com.scalar.db.sql;
 
+import com.google.common.base.MoreObjects;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
@@ -13,6 +15,28 @@ public class Value {
   private Value(Type type, @Nullable Object value) {
     this.type = type;
     this.value = value;
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this).add("type", type).add("value", value).toString();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof Value)) {
+      return false;
+    }
+    Value value1 = (Value) o;
+    return type == value1.type && Objects.equals(value, value1.value);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(type, value);
   }
 
   public static Value ofBoolean(boolean value) {

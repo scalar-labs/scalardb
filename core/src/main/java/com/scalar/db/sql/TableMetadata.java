@@ -1,9 +1,11 @@
 package com.scalar.db.sql;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Streams;
 import com.scalar.db.api.Scan;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -127,5 +129,36 @@ public class TableMetadata {
       default:
         throw new AssertionError();
     }
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("namespaceName", namespaceName)
+        .add("name", name)
+        .add("partitionKey", getPartitionKey())
+        .add("clusteringKey", getClusteringKey())
+        .add("columns", getColumns())
+        .add("indexes", getIndexes())
+        .toString();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof TableMetadata)) {
+      return false;
+    }
+    TableMetadata that = (TableMetadata) o;
+    return Objects.equals(namespaceName, that.namespaceName)
+        && Objects.equals(name, that.name)
+        && Objects.equals(tableMetadata, that.tableMetadata);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(namespaceName, name, tableMetadata);
   }
 }

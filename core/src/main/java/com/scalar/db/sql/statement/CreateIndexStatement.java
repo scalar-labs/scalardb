@@ -1,6 +1,8 @@
 package com.scalar.db.sql.statement;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
+import java.util.Objects;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
@@ -33,5 +35,37 @@ public class CreateIndexStatement implements DdlStatement {
   @Override
   public void accept(DdlStatementVisitor visitor) {
     visitor.visit(this);
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("namespaceName", namespaceName)
+        .add("tableName", tableName)
+        .add("columnName", columnName)
+        .add("ifNotExists", ifNotExists)
+        .add("options", options)
+        .toString();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof CreateIndexStatement)) {
+      return false;
+    }
+    CreateIndexStatement that = (CreateIndexStatement) o;
+    return ifNotExists == that.ifNotExists
+        && Objects.equals(namespaceName, that.namespaceName)
+        && Objects.equals(tableName, that.tableName)
+        && Objects.equals(columnName, that.columnName)
+        && Objects.equals(options, that.options);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(namespaceName, tableName, columnName, ifNotExists, options);
   }
 }

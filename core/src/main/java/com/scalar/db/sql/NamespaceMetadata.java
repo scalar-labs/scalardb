@@ -1,9 +1,11 @@
 package com.scalar.db.sql;
 
+import com.google.common.base.MoreObjects;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.sql.exception.SqlException;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -49,5 +51,27 @@ public class NamespaceMetadata {
     } catch (ExecutionException e) {
       throw new SqlException("Failed to get a table metadata", e);
     }
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this).add("name", name).toString();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof NamespaceMetadata)) {
+      return false;
+    }
+    NamespaceMetadata that = (NamespaceMetadata) o;
+    return Objects.equals(name, that.name);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(name);
   }
 }

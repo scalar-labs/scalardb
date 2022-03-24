@@ -1,10 +1,12 @@
 package com.scalar.db.sql;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Result;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -158,5 +160,30 @@ public class ResultRecord implements Record {
       throw new IndexOutOfBoundsException("Index: " + i + ", Size: " + size());
     }
     return projectedColumnNamesMap.get().get(i);
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("columns", result.getColumns())
+        .add("projectedColumnNamesMap", projectedColumnNamesMap)
+        .toString();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof ResultRecord)) {
+      return false;
+    }
+    ResultRecord that = (ResultRecord) o;
+    return Objects.equals(result, that.result);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(result);
   }
 }

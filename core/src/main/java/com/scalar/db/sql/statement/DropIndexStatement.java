@@ -1,5 +1,7 @@
 package com.scalar.db.sql.statement;
 
+import com.google.common.base.MoreObjects;
+import java.util.Objects;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
@@ -26,5 +28,35 @@ public class DropIndexStatement implements DdlStatement {
   @Override
   public void accept(DdlStatementVisitor visitor) {
     visitor.visit(this);
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("namespaceName", namespaceName)
+        .add("tableName", tableName)
+        .add("columnName", columnName)
+        .add("ifExists", ifExists)
+        .toString();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof DropIndexStatement)) {
+      return false;
+    }
+    DropIndexStatement that = (DropIndexStatement) o;
+    return ifExists == that.ifExists
+        && Objects.equals(namespaceName, that.namespaceName)
+        && Objects.equals(tableName, that.tableName)
+        && Objects.equals(columnName, that.columnName);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(namespaceName, tableName, columnName, ifExists);
   }
 }
