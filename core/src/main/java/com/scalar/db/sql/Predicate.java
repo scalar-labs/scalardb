@@ -12,9 +12,9 @@ public class Predicate {
   public final Value value;
 
   private Predicate(String columnName, Operator operator, Value value) {
-    this.columnName = columnName;
-    this.operator = operator;
-    this.value = value;
+    this.columnName = Objects.requireNonNull(columnName);
+    this.operator = Objects.requireNonNull(operator);
+    this.value = Objects.requireNonNull(value);
   }
 
   @Override

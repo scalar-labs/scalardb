@@ -31,15 +31,15 @@ public class CreateTableStatement implements DdlStatement {
       ImmutableMap<String, ClusteringOrder> clusteringOrders,
       ImmutableSet<String> indexColumnNames,
       ImmutableMap<String, String> options) {
-    this.namespaceName = namespaceName;
-    this.tableName = tableName;
+    this.namespaceName = Objects.requireNonNull(namespaceName);
+    this.tableName = Objects.requireNonNull(tableName);
     this.ifNotExists = ifNotExists;
-    this.columns = columns;
-    this.partitionKeyColumnNames = partitionKeyColumnNames;
-    this.clusteringKeyColumnNames = clusteringKeyColumnNames;
-    this.clusteringOrders = clusteringOrders;
-    this.indexColumnNames = indexColumnNames;
-    this.options = options;
+    this.columns = Objects.requireNonNull(columns);
+    this.partitionKeyColumnNames = Objects.requireNonNull(partitionKeyColumnNames);
+    this.clusteringKeyColumnNames = Objects.requireNonNull(clusteringKeyColumnNames);
+    this.clusteringOrders = Objects.requireNonNull(clusteringOrders);
+    this.indexColumnNames = Objects.requireNonNull(indexColumnNames);
+    this.options = Objects.requireNonNull(options);
   }
 
   @Override

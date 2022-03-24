@@ -20,11 +20,11 @@ public class CreateIndexStatement implements DdlStatement {
       String columnName,
       boolean ifNotExists,
       ImmutableMap<String, String> options) {
-    this.namespaceName = namespaceName;
-    this.tableName = tableName;
-    this.columnName = columnName;
+    this.namespaceName = Objects.requireNonNull(namespaceName);
+    this.tableName = Objects.requireNonNull(tableName);
+    this.columnName = Objects.requireNonNull(columnName);
     this.ifNotExists = ifNotExists;
-    this.options = options;
+    this.options = Objects.requireNonNull(options);
   }
 
   @Override

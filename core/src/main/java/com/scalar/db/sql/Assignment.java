@@ -11,8 +11,8 @@ public class Assignment {
   public final Value value;
 
   private Assignment(String columnName, Value value) {
-    this.columnName = columnName;
-    this.value = value;
+    this.columnName = Objects.requireNonNull(columnName);
+    this.value = Objects.requireNonNull(value);
   }
 
   @Override

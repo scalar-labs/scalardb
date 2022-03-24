@@ -3,6 +3,7 @@ package com.scalar.db.sql;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Result;
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -14,8 +15,8 @@ public class ResultIteratorResultSet implements ResultSet {
 
   public ResultIteratorResultSet(
       Iterator<Result> iterator, ImmutableList<String> projectedColumnNames) {
-    this.iterator = iterator;
-    this.projectedColumnNames = projectedColumnNames;
+    this.iterator = Objects.requireNonNull(iterator);
+    this.projectedColumnNames = Objects.requireNonNull(projectedColumnNames);
   }
 
   @Override

@@ -12,9 +12,9 @@ public class IndexMetadata {
   private final String columnName;
 
   public IndexMetadata(String namespaceName, String tableName, String columnName) {
-    this.namespaceName = namespaceName;
-    this.tableName = tableName;
-    this.columnName = columnName;
+    this.namespaceName = Objects.requireNonNull(namespaceName);
+    this.tableName = Objects.requireNonNull(tableName);
+    this.columnName = Objects.requireNonNull(columnName);
   }
 
   public String getNamespaceName() {

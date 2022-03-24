@@ -11,8 +11,8 @@ public class TruncateTableStatement implements DdlStatement {
   public final String tableName;
 
   public TruncateTableStatement(String namespaceName, String tableName) {
-    this.namespaceName = namespaceName;
-    this.tableName = tableName;
+    this.namespaceName = Objects.requireNonNull(namespaceName);
+    this.tableName = Objects.requireNonNull(tableName);
   }
 
   @Override

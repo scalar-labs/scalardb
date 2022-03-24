@@ -17,6 +17,7 @@ import com.scalar.db.sql.statement.DropNamespaceStatement;
 import com.scalar.db.sql.statement.DropTableStatement;
 import com.scalar.db.sql.statement.TruncateCoordinatorTableStatement;
 import com.scalar.db.sql.statement.TruncateTableStatement;
+import java.util.Objects;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -25,7 +26,7 @@ public class DdlStatementExecutor implements DdlStatementVisitor {
   private final DistributedTransactionAdmin admin;
 
   public DdlStatementExecutor(DistributedTransactionAdmin admin) {
-    this.admin = admin;
+    this.admin = Objects.requireNonNull(admin);
   }
 
   public void execute(DdlStatement statement) {

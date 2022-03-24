@@ -20,10 +20,10 @@ public class UpdateStatement implements DmlStatement {
       String tableName,
       ImmutableList<Assignment> assignments,
       ImmutableList<Predicate> predicates) {
-    this.namespaceName = namespaceName;
-    this.tableName = tableName;
-    this.assignments = assignments;
-    this.predicates = predicates;
+    this.namespaceName = Objects.requireNonNull(namespaceName);
+    this.tableName = Objects.requireNonNull(tableName);
+    this.assignments = Objects.requireNonNull(assignments);
+    this.predicates = Objects.requireNonNull(predicates);
   }
 
   @Override

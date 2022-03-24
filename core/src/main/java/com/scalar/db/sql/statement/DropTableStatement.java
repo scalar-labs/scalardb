@@ -12,8 +12,8 @@ public class DropTableStatement implements DdlStatement {
   public final boolean ifExists;
 
   public DropTableStatement(String namespaceName, String tableName, boolean ifExists) {
-    this.namespaceName = namespaceName;
-    this.tableName = tableName;
+    this.namespaceName = Objects.requireNonNull(namespaceName);
+    this.tableName = Objects.requireNonNull(tableName);
     this.ifExists = ifExists;
   }
 

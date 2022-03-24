@@ -18,8 +18,8 @@ public class NamespaceMetadata {
   private final DistributedTransactionAdmin admin;
 
   public NamespaceMetadata(String name, DistributedTransactionAdmin admin) {
-    this.name = name;
-    this.admin = admin;
+    this.name = Objects.requireNonNull(name);
+    this.admin = Objects.requireNonNull(admin);
   }
 
   public String getName() {

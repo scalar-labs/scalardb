@@ -20,9 +20,9 @@ public class TableMetadata {
 
   public TableMetadata(
       String namespaceName, String name, com.scalar.db.api.TableMetadata tableMetadata) {
-    this.namespaceName = namespaceName;
-    this.name = name;
-    this.tableMetadata = tableMetadata;
+    this.namespaceName = Objects.requireNonNull(namespaceName);
+    this.name = Objects.requireNonNull(name);
+    this.tableMetadata = Objects.requireNonNull(tableMetadata);
   }
 
   public String getNamespaceName() {

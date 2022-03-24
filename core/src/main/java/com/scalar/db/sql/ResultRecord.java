@@ -19,8 +19,9 @@ public class ResultRecord implements Record {
   private final Supplier<ImmutableMap<Integer, String>> projectedColumnNamesMap;
 
   public ResultRecord(Result result, ImmutableList<String> projectedColumnNames) {
-    this.result = result;
+    this.result = Objects.requireNonNull(result);
 
+    Objects.requireNonNull(projectedColumnNames);
     projectedColumnNamesMap =
         Suppliers.memoize(
             () -> {

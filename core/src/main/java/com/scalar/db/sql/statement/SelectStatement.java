@@ -24,11 +24,11 @@ public class SelectStatement implements DmlStatement {
       ImmutableList<Predicate> predicates,
       ImmutableList<ClusteringOrdering> clusteringOrderings,
       int limit) {
-    this.namespaceName = namespaceName;
-    this.tableName = tableName;
-    this.projectedColumnNames = projectedColumnNames;
-    this.predicates = predicates;
-    this.clusteringOrderings = clusteringOrderings;
+    this.namespaceName = Objects.requireNonNull(namespaceName);
+    this.tableName = Objects.requireNonNull(tableName);
+    this.projectedColumnNames = Objects.requireNonNull(projectedColumnNames);
+    this.predicates = Objects.requireNonNull(predicates);
+    this.clusteringOrderings = Objects.requireNonNull(clusteringOrderings);
     this.limit = limit;
   }
 

@@ -14,9 +14,9 @@ public class CreateNamespaceStatement implements DdlStatement {
 
   public CreateNamespaceStatement(
       String namespaceName, boolean ifNotExists, ImmutableMap<String, String> options) {
-    this.namespaceName = namespaceName;
+    this.namespaceName = Objects.requireNonNull(namespaceName);
     this.ifNotExists = ifNotExists;
-    this.options = options;
+    this.options = Objects.requireNonNull(options);
   }
 
   @Override

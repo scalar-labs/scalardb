@@ -24,6 +24,7 @@ import com.scalar.db.sql.statement.TruncateTableStatement;
 import com.scalar.db.sql.statement.UpdateStatement;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -32,7 +33,7 @@ public class StatementValidator implements StatementVisitor {
   private final TableMetadataManager tableMetadataManager;
 
   public StatementValidator(TableMetadataManager tableMetadataManager) {
-    this.tableMetadataManager = tableMetadataManager;
+    this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
   }
 
   public void validate(Statement statement) {

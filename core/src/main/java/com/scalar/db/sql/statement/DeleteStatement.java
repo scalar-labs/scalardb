@@ -15,9 +15,9 @@ public class DeleteStatement implements DmlStatement {
 
   public DeleteStatement(
       String namespaceName, String tableName, ImmutableList<Predicate> predicates) {
-    this.namespaceName = namespaceName;
-    this.tableName = tableName;
-    this.predicates = predicates;
+    this.namespaceName = Objects.requireNonNull(namespaceName);
+    this.tableName = Objects.requireNonNull(tableName);
+    this.predicates = Objects.requireNonNull(predicates);
   }
 
   @Override

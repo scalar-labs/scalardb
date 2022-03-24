@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Properties;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -29,7 +30,7 @@ public final class SqlSessionFactory implements AutoCloseable {
   private final TableMetadataManager tableMetadataManager;
 
   private SqlSessionFactory(DatabaseConfig config) {
-    TransactionFactory transactionFactory = new TransactionFactory(config);
+    TransactionFactory transactionFactory = new TransactionFactory(Objects.requireNonNull(config));
     transactionAdmin = transactionFactory.getTransactionAdmin();
     transactionManager = transactionFactory.getTransactionManager();
     twoPhaseCommitTransactionManager = transactionFactory.getTwoPhaseCommitTransactionManager();

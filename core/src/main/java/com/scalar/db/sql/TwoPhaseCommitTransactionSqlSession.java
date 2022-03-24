@@ -35,6 +35,7 @@ import com.scalar.db.sql.statement.Statement;
 import com.scalar.db.sql.statement.UpdateStatement;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -63,10 +64,10 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
       TwoPhaseCommitTransactionManager manager,
       @Nullable TwoPhaseCommitTransaction transaction,
       TableMetadataManager tableMetadataManager) {
-    this.admin = admin;
-    this.manager = manager;
+    this.admin = Objects.requireNonNull(admin);
+    this.manager = Objects.requireNonNull(manager);
     this.transaction = transaction;
-    this.tableMetadataManager = tableMetadataManager;
+    this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
     statementValidator = new StatementValidator(tableMetadataManager);
     ddlStatementExecutor = new DdlStatementExecutor(admin);
   }

@@ -3,6 +3,7 @@ package com.scalar.db.sql;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.sql.exception.SqlException;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -12,7 +13,7 @@ public class Metadata {
   private final DistributedTransactionAdmin admin;
 
   public Metadata(DistributedTransactionAdmin admin) {
-    this.admin = admin;
+    this.admin = Objects.requireNonNull(admin);
   }
 
   public Optional<NamespaceMetadata> getNamespace(String namespaceName) {

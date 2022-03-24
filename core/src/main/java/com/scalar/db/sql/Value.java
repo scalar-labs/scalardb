@@ -13,7 +13,7 @@ public class Value {
   @Nullable public final Object value;
 
   private Value(Type type, @Nullable Object value) {
-    this.type = type;
+    this.type = Objects.requireNonNull(type);
     this.value = value;
   }
 

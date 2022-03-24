@@ -12,7 +12,7 @@ public class DropNamespaceStatement implements DdlStatement {
   public final boolean cascade;
 
   public DropNamespaceStatement(String namespaceName, boolean ifExists, boolean cascade) {
-    this.namespaceName = namespaceName;
+    this.namespaceName = Objects.requireNonNull(namespaceName);
     this.ifExists = ifExists;
     this.cascade = cascade;
   }

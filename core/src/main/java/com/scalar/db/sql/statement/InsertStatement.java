@@ -15,9 +15,9 @@ public class InsertStatement implements DmlStatement {
 
   public InsertStatement(
       String namespaceName, String tableName, ImmutableList<Assignment> assignments) {
-    this.namespaceName = namespaceName;
-    this.tableName = tableName;
-    this.assignments = assignments;
+    this.namespaceName = Objects.requireNonNull(namespaceName);
+    this.tableName = Objects.requireNonNull(tableName);
+    this.assignments = Objects.requireNonNull(assignments);
   }
 
   @Override

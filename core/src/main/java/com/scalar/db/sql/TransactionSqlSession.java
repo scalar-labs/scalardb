@@ -31,6 +31,7 @@ import com.scalar.db.sql.statement.Statement;
 import com.scalar.db.sql.statement.UpdateStatement;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -51,9 +52,9 @@ public class TransactionSqlSession implements SqlSession {
       DistributedTransactionAdmin admin,
       DistributedTransactionManager manager,
       TableMetadataManager tableMetadataManager) {
-    this.admin = admin;
-    this.manager = manager;
-    this.tableMetadataManager = tableMetadataManager;
+    this.admin = Objects.requireNonNull(admin);
+    this.manager = Objects.requireNonNull(manager);
+    this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
     statementValidator = new StatementValidator(tableMetadataManager);
     ddlStatementExecutor = new DdlStatementExecutor(admin);
   }

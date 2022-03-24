@@ -11,8 +11,8 @@ public class ClusteringOrdering {
   public final ClusteringOrder clusteringOrder;
 
   private ClusteringOrdering(String columnName, ClusteringOrder clusteringOrder) {
-    this.columnName = columnName;
-    this.clusteringOrder = clusteringOrder;
+    this.columnName = Objects.requireNonNull(columnName);
+    this.clusteringOrder = Objects.requireNonNull(clusteringOrder);
   }
 
   @Override

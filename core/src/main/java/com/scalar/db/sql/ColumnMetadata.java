@@ -13,10 +13,10 @@ public class ColumnMetadata {
   private final DataType dataType;
 
   public ColumnMetadata(String namespaceName, String tableName, String name, DataType dataType) {
-    this.namespaceName = namespaceName;
-    this.tableName = tableName;
-    this.name = name;
-    this.dataType = dataType;
+    this.namespaceName = Objects.requireNonNull(namespaceName);
+    this.tableName = Objects.requireNonNull(tableName);
+    this.name = Objects.requireNonNull(name);
+    this.dataType = Objects.requireNonNull(dataType);
   }
 
   public String getNamespaceName() {

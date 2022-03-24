@@ -14,9 +14,9 @@ public class DropIndexStatement implements DdlStatement {
 
   public DropIndexStatement(
       String namespaceName, String tableName, String columnName, boolean ifExists) {
-    this.namespaceName = namespaceName;
-    this.tableName = tableName;
-    this.columnName = columnName;
+    this.namespaceName = Objects.requireNonNull(namespaceName);
+    this.tableName = Objects.requireNonNull(tableName);
+    this.columnName = Objects.requireNonNull(columnName);
     this.ifExists = ifExists;
   }
 
