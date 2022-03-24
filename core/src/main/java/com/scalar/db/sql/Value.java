@@ -2,7 +2,9 @@ package com.scalar.db.sql;
 
 import java.nio.ByteBuffer;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.Immutable;
 
+@Immutable
 public class Value {
 
   public final Type type;

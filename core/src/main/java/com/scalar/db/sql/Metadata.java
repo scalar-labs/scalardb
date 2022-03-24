@@ -4,7 +4,9 @@ import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.sql.exception.SqlException;
 import java.util.Optional;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class Metadata {
 
   private final DistributedTransactionAdmin admin;

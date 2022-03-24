@@ -1,5 +1,8 @@
 package com.scalar.db.sql.statement;
 
+import javax.annotation.concurrent.Immutable;
+
+@Immutable
 public class DropCoordinatorTableStatement implements DdlStatement {
 
   public final boolean ifExists;

@@ -24,7 +24,9 @@ import com.scalar.db.sql.statement.TruncateTableStatement;
 import com.scalar.db.sql.statement.UpdateStatement;
 import java.util.HashMap;
 import java.util.Map;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class StatementValidator implements StatementVisitor {
 
   private final TableMetadataManager tableMetadataManager;

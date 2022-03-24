@@ -45,6 +45,7 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
   private final TwoPhaseCommitTransactionManager manager;
   private final TableMetadataManager tableMetadataManager;
   private final StatementValidator statementValidator;
+  private final DdlStatementExecutor ddlStatementExecutor;
 
   @Nullable private TwoPhaseCommitTransaction transaction;
   @Nullable private ResultSet resultSet;
@@ -66,6 +67,7 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
     this.transaction = transaction;
     this.tableMetadataManager = tableMetadataManager;
     statementValidator = new StatementValidator(tableMetadataManager);
+    ddlStatementExecutor = new DdlStatementExecutor(admin);
   }
 
   @Override
@@ -111,7 +113,7 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
     if (statement instanceof DdlStatement) {
       checkIfTransactionInProgress();
 
-      new DdlStatementExecutor(admin, (DdlStatement) statement).execute();
+      ddlStatementExecutor.execute((DdlStatement) statement);
       resultSet = EmptyResultSet.INSTANCE;
     } else if (statement instanceof DmlStatement) {
       checkIfTransactionBegun();
@@ -216,9 +218,7 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
   @Override
   public Metadata getMetadata() {
     checkIfTransactionInProgress();
-
-    // TODO
-    return null;
+    return new Metadata(admin);
   }
 
   private void checkIfTransactionInProgress() {

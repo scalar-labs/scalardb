@@ -8,7 +8,9 @@ import java.nio.ByteBuffer;
 import java.util.Set;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.Immutable;
 
+@Immutable
 public class ResultRecord implements Record {
 
   private final Result result;

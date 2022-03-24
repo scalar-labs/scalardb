@@ -4,7 +4,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.sql.ClusteringOrder;
 import com.scalar.db.sql.DataType;
+import javax.annotation.concurrent.Immutable;
 
+@Immutable
 public class CreateTableStatement implements DdlStatement {
 
   public final String namespaceName;

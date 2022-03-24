@@ -1,5 +1,8 @@
 package com.scalar.db.sql;
 
+import javax.annotation.concurrent.Immutable;
+
+@Immutable
 public class ColumnMetadata {
 
   private final String namespaceName;

@@ -3,7 +3,9 @@ package com.scalar.db.sql.statement;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.sql.ClusteringOrdering;
 import com.scalar.db.sql.Predicate;
+import javax.annotation.concurrent.Immutable;
 
+@Immutable
 public class SelectStatement implements DmlStatement {
 
   public final String namespaceName;

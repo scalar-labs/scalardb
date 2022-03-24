@@ -4,7 +4,9 @@ import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Result;
 import java.util.Iterator;
 import java.util.Optional;
+import javax.annotation.concurrent.NotThreadSafe;
 
+@NotThreadSafe
 public class ResultIteratorResultSet implements ResultSet {
 
   private final Iterator<Result> iterator;

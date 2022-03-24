@@ -2,7 +2,9 @@ package com.scalar.db.sql.statement;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.sql.Assignment;
+import javax.annotation.concurrent.Immutable;
 
+@Immutable
 public class InsertStatement implements DmlStatement {
 
   public final String namespaceName;

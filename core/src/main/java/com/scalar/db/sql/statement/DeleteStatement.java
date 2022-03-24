@@ -2,7 +2,9 @@ package com.scalar.db.sql.statement;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.sql.Predicate;
+import javax.annotation.concurrent.Immutable;
 
+@Immutable
 public class DeleteStatement implements DmlStatement {
 
   public final String namespaceName;

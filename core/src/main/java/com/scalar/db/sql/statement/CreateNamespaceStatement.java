@@ -1,7 +1,9 @@
 package com.scalar.db.sql.statement;
 
 import com.google.common.collect.ImmutableMap;
+import javax.annotation.concurrent.Immutable;
 
+@Immutable
 public class CreateNamespaceStatement implements DdlStatement {
 
   public final String namespaceName;

@@ -4,7 +4,9 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.concurrent.NotThreadSafe;
 
+@NotThreadSafe
 public class SingleRecordResultSet implements ResultSet {
 
   private final Iterator<Record> iterator;

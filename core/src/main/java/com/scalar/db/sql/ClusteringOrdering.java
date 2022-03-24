@@ -1,5 +1,8 @@
 package com.scalar.db.sql;
 
+import javax.annotation.concurrent.Immutable;
+
+@Immutable
 public class ClusteringOrdering {
 
   public final String columnName;

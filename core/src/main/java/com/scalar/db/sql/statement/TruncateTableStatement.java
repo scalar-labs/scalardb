@@ -1,5 +1,8 @@
 package com.scalar.db.sql.statement;
 
+import javax.annotation.concurrent.Immutable;
+
+@Immutable
 public class TruncateTableStatement implements DdlStatement {
 
   public final String namespaceName;

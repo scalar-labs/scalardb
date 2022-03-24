@@ -18,7 +18,9 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public final class SqlSessionFactory implements AutoCloseable {
 
   private final DistributedTransactionAdmin transactionAdmin;

@@ -1,5 +1,8 @@
 package com.scalar.db.sql.statement;
 
+import javax.annotation.concurrent.Immutable;
+
+@Immutable
 public class TruncateCoordinatorTableStatement implements DdlStatement {
 
   @Override
