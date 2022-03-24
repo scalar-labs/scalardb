@@ -7,12 +7,12 @@ public final class StatementBuilder {
 
   private StatementBuilder() {}
 
-  public static CreateNamespaceStatementBuilder createNamespace(String namespaceName) {
-    return new CreateNamespaceStatementBuilder(namespaceName);
+  public static CreateNamespaceStatementBuilder.Start createNamespace(String namespaceName) {
+    return new CreateNamespaceStatementBuilder.Start(namespaceName);
   }
 
-  public static DropNamespaceStatementBuilder dropNamespace(String namespaceName) {
-    return new DropNamespaceStatementBuilder(namespaceName);
+  public static DropNamespaceStatementBuilder.Start dropNamespace(String namespaceName) {
+    return new DropNamespaceStatementBuilder.Start(namespaceName);
   }
 
   public static CreateTableStatementBuilder.Start createTable(
@@ -20,25 +20,25 @@ public final class StatementBuilder {
     return new CreateTableStatementBuilder.Start(namespaceName, tableName);
   }
 
-  public static DropTableStatementBuilder dropTable(String namespaceName, String tableName) {
-    return new DropTableStatementBuilder(namespaceName, tableName);
+  public static DropTableStatementBuilder.Start dropTable(String namespaceName, String tableName) {
+    return new DropTableStatementBuilder.Start(namespaceName, tableName);
   }
 
-  public static TruncateTableStatementBuilder truncateTable(
+  public static TruncateTableStatementBuilder.Start truncateTable(
       String namespaceName, String tableName) {
-    return new TruncateTableStatementBuilder(namespaceName, tableName);
+    return new TruncateTableStatementBuilder.Start(namespaceName, tableName);
   }
 
-  public static CreateCoordinatorTableStatementBuilder createCoordinatorTable() {
-    return new CreateCoordinatorTableStatementBuilder();
+  public static CreateCoordinatorTableStatementBuilder.Start createCoordinatorTable() {
+    return new CreateCoordinatorTableStatementBuilder.Start();
   }
 
-  public static DropCoordinatorTableStatementBuilder dropCoordinatorTable() {
-    return new DropCoordinatorTableStatementBuilder();
+  public static DropCoordinatorTableStatementBuilder.Start dropCoordinatorTable() {
+    return new DropCoordinatorTableStatementBuilder.Start();
   }
 
-  public static TruncateCoordinatorTableStatementBuilder truncateCoordinatorTable() {
-    return new TruncateCoordinatorTableStatementBuilder();
+  public static TruncateCoordinatorTableStatementBuilder.Start truncateCoordinatorTable() {
+    return new TruncateCoordinatorTableStatementBuilder.Start();
   }
 
   public static CreateIndexStatementBuilder.Start createIndex() {

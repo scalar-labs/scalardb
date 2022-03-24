@@ -4,9 +4,17 @@ import com.scalar.db.sql.statement.TruncateCoordinatorTableStatement;
 
 public class TruncateCoordinatorTableStatementBuilder {
 
-  TruncateCoordinatorTableStatementBuilder() {}
+  private TruncateCoordinatorTableStatementBuilder() {}
 
-  public TruncateCoordinatorTableStatement build() {
-    return new TruncateCoordinatorTableStatement();
+  public static class Start extends Buildable {
+    Start() {}
+  }
+
+  public static class Buildable {
+    private Buildable() {}
+
+    public TruncateCoordinatorTableStatement build() {
+      return new TruncateCoordinatorTableStatement();
+    }
   }
 }

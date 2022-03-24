@@ -2,27 +2,49 @@ package com.scalar.db.sql.builder;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.sql.statement.CreateCoordinatorTableStatement;
+import java.util.Map;
 
 public class CreateCoordinatorTableStatementBuilder {
 
-  private boolean ifNotExists;
-  private final ImmutableMap.Builder<String, String> optionsBuilder;
+  private CreateCoordinatorTableStatementBuilder() {}
 
-  CreateCoordinatorTableStatementBuilder() {
-    optionsBuilder = ImmutableMap.builder();
+  public static class Start extends Buildable {
+    Start() {
+      super(false);
+    }
+
+    public Buildable ifNotExists() {
+      return new Buildable(true);
+    }
   }
 
-  public CreateCoordinatorTableStatementBuilder ifNotExists() {
-    ifNotExists = true;
-    return this;
-  }
+  public static class Buildable {
+    private final boolean ifNotExists;
+    private ImmutableMap.Builder<String, String> optionsBuilder;
 
-  public CreateCoordinatorTableStatementBuilder withOption(String name, String value) {
-    optionsBuilder.put(name, value);
-    return this;
-  }
+    private Buildable(boolean ifNotExists) {
+      this.ifNotExists = ifNotExists;
+    }
 
-  public CreateCoordinatorTableStatement build() {
-    return new CreateCoordinatorTableStatement(ifNotExists, optionsBuilder.build());
+    public Buildable withOption(String name, String value) {
+      if (optionsBuilder == null) {
+        optionsBuilder = ImmutableMap.builder();
+      }
+      optionsBuilder.put(name, value);
+      return this;
+    }
+
+    public Buildable withOptions(Map<String, String> options) {
+      if (optionsBuilder == null) {
+        optionsBuilder = ImmutableMap.builder();
+      }
+      optionsBuilder.putAll(options);
+      return this;
+    }
+
+    public CreateCoordinatorTableStatement build() {
+      return new CreateCoordinatorTableStatement(
+          ifNotExists, optionsBuilder == null ? ImmutableMap.of() : optionsBuilder.build());
+    }
   }
 }

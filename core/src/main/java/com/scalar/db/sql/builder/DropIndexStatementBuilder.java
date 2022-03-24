@@ -6,14 +6,21 @@ public class DropIndexStatementBuilder {
 
   private DropIndexStatementBuilder() {}
 
-  public static class Start {
-    private boolean ifExists;
+  public static class Start extends OnTable {
+    Start() {
+      super(false);
+    }
 
-    Start() {}
+    public OnTable ifExists() {
+      return new OnTable(true);
+    }
+  }
 
-    public Start ifExists() {
-      ifExists = true;
-      return this;
+  public static class OnTable {
+    private final boolean ifExists;
+
+    private OnTable(boolean ifExists) {
+      this.ifExists = ifExists;
     }
 
     public Column onTable(String namespaceName, String tableName) {
@@ -26,24 +33,24 @@ public class DropIndexStatementBuilder {
     private final String tableName;
     private final boolean ifExists;
 
-    private Column(String namespaceName, String tableName, boolean ifNotExists) {
+    private Column(String namespaceName, String tableName, boolean ifExists) {
       this.namespaceName = namespaceName;
       this.tableName = tableName;
-      this.ifExists = ifNotExists;
+      this.ifExists = ifExists;
     }
 
-    public End column(String columnName) {
-      return new End(namespaceName, tableName, columnName, ifExists);
+    public Buildable column(String columnName) {
+      return new Buildable(namespaceName, tableName, columnName, ifExists);
     }
   }
 
-  public static class End {
+  public static class Buildable {
     private final String namespaceName;
     private final String tableName;
     private final String columnName;
     private final boolean ifExists;
 
-    private End(String namespaceName, String tableName, String columnName, boolean ifExists) {
+    private Buildable(String namespaceName, String tableName, String columnName, boolean ifExists) {
       this.namespaceName = namespaceName;
       this.tableName = tableName;
       this.columnName = columnName;

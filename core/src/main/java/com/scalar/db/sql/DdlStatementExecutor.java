@@ -67,7 +67,7 @@ public class DdlStatementExecutor implements DdlStatementVisitor {
                 n,
                 convertClusteringOrder(
                     statement.clusteringOrders.getOrDefault(n, ClusteringOrder.ASC))));
-    statement.secondaryIndexColumnNames.forEach(builder::addSecondaryIndex);
+    statement.indexColumnNames.forEach(builder::addSecondaryIndex);
     return builder.build();
   }
 

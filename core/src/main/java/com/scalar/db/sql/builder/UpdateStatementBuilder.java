@@ -7,6 +7,7 @@ import com.scalar.db.sql.statement.UpdateStatement;
 import java.util.List;
 
 public final class UpdateStatementBuilder {
+
   private UpdateStatementBuilder() {}
 
   public static class Start {
@@ -39,21 +40,21 @@ public final class UpdateStatementBuilder {
       this.assignments = assignments;
     }
 
-    public Where where(Predicate predicate) {
+    public OngoingWhere where(Predicate predicate) {
       ImmutableList.Builder<Predicate> predicatesBuilder = ImmutableList.builder();
       predicatesBuilder.add(predicate);
-      return new Where(namespaceName, tableName, assignments, predicatesBuilder);
+      return new OngoingWhere(namespaceName, tableName, assignments, predicatesBuilder);
     }
 
-    public End where(List<Predicate> predicates) {
+    public Buildable where(List<Predicate> predicates) {
       ImmutableList.Builder<Predicate> predicatesBuilder = ImmutableList.builder();
       predicatesBuilder.addAll(predicates);
-      return new End(namespaceName, tableName, assignments, predicatesBuilder);
+      return new Buildable(namespaceName, tableName, assignments, predicatesBuilder);
     }
   }
 
-  public static class Where extends End {
-    private Where(
+  public static class OngoingWhere extends Buildable {
+    private OngoingWhere(
         String namespaceName,
         String tableName,
         ImmutableList<Assignment> assignments,
@@ -61,19 +62,19 @@ public final class UpdateStatementBuilder {
       super(namespaceName, tableName, assignments, predicatesBuilder);
     }
 
-    public Where and(Predicate predicate) {
+    public OngoingWhere and(Predicate predicate) {
       predicatesBuilder.add(predicate);
       return this;
     }
   }
 
-  public static class End {
-    protected final String namespaceName;
-    protected final String tableName;
-    protected final ImmutableList<Assignment> assignments;
+  public static class Buildable {
+    private final String namespaceName;
+    private final String tableName;
+    private final ImmutableList<Assignment> assignments;
     protected final ImmutableList.Builder<Predicate> predicatesBuilder;
 
-    public End(
+    private Buildable(
         String namespaceName,
         String tableName,
         ImmutableList<Assignment> assignments,

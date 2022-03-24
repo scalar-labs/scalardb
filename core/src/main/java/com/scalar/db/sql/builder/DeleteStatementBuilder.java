@@ -24,39 +24,39 @@ public final class DeleteStatementBuilder {
       this.tableName = tableName;
     }
 
-    public Where where(Predicate predicate) {
+    public OngoingWhere where(Predicate predicate) {
       ImmutableList.Builder<Predicate> predicateBuilder = ImmutableList.builder();
       predicateBuilder.add(predicate);
-      return new Where(namespaceName, tableName, predicateBuilder);
+      return new OngoingWhere(namespaceName, tableName, predicateBuilder);
     }
 
-    public End where(List<Predicate> predicates) {
+    public Buildable where(List<Predicate> predicates) {
       ImmutableList.Builder<Predicate> predicatesBuilder = ImmutableList.builder();
       predicatesBuilder.addAll(predicates);
-      return new End(namespaceName, tableName, predicatesBuilder);
+      return new Buildable(namespaceName, tableName, predicatesBuilder);
     }
   }
 
-  public static class Where extends End {
-    private Where(
+  public static class OngoingWhere extends Buildable {
+    private OngoingWhere(
         String namespaceName,
         String tableName,
         ImmutableList.Builder<Predicate> predicatesBuilder) {
       super(namespaceName, tableName, predicatesBuilder);
     }
 
-    public Where and(Predicate predicate) {
+    public OngoingWhere and(Predicate predicate) {
       predicatesBuilder.add(predicate);
       return this;
     }
   }
 
-  public static class End {
-    protected final String namespaceName;
-    protected final String tableName;
+  public static class Buildable {
+    private final String namespaceName;
+    private final String tableName;
     protected final ImmutableList.Builder<Predicate> predicatesBuilder;
 
-    public End(
+    private Buildable(
         String namespaceName,
         String tableName,
         ImmutableList.Builder<Predicate> predicatesBuilder) {

@@ -4,21 +4,31 @@ import com.scalar.db.sql.statement.DropTableStatement;
 
 public class DropTableStatementBuilder {
 
-  private final String namespaceName;
-  private final String tableName;
-  private boolean ifExists;
+  private DropTableStatementBuilder() {}
 
-  DropTableStatementBuilder(String namespaceName, String tableName) {
-    this.namespaceName = namespaceName;
-    this.tableName = tableName;
+  public static class Start extends Buildable {
+    Start(String namespaceName, String tableName) {
+      super(namespaceName, tableName, false);
+    }
+
+    public Buildable ifExists() {
+      return new Buildable(namespaceName, tableName, true);
+    }
   }
 
-  public DropTableStatementBuilder ifExists() {
-    ifExists = true;
-    return this;
-  }
+  public static class Buildable {
+    protected final String namespaceName;
+    protected final String tableName;
+    private final boolean ifExists;
 
-  public DropTableStatement build() {
-    return new DropTableStatement(namespaceName, tableName, ifExists);
+    private Buildable(String namespaceName, String tableName, boolean ifExists) {
+      this.namespaceName = namespaceName;
+      this.tableName = tableName;
+      this.ifExists = ifExists;
+    }
+
+    public DropTableStatement build() {
+      return new DropTableStatement(namespaceName, tableName, ifExists);
+    }
   }
 }

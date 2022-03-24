@@ -4,15 +4,25 @@ import com.scalar.db.sql.statement.TruncateTableStatement;
 
 public class TruncateTableStatementBuilder {
 
-  private final String namespaceName;
-  private final String tableName;
+  private TruncateTableStatementBuilder() {}
 
-  TruncateTableStatementBuilder(String namespaceName, String tableName) {
-    this.namespaceName = namespaceName;
-    this.tableName = tableName;
+  public static class Start extends Buildable {
+    Start(String namespaceName, String tableName) {
+      super(namespaceName, tableName);
+    }
   }
 
-  public TruncateTableStatement build() {
-    return new TruncateTableStatement(namespaceName, tableName);
+  public static class Buildable {
+    private final String namespaceName;
+    private final String tableName;
+
+    private Buildable(String namespaceName, String tableName) {
+      this.namespaceName = namespaceName;
+      this.tableName = tableName;
+    }
+
+    public TruncateTableStatement build() {
+      return new TruncateTableStatement(namespaceName, tableName);
+    }
   }
 }

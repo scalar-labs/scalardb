@@ -34,15 +34,21 @@ public final class SelectStatementBuilder {
       this.tableName = tableName;
     }
 
-    public Where where(Predicate predicate) {
+    public OngoingWhere where(Predicate predicate) {
       ImmutableList.Builder<Predicate> predicatesBuilder = ImmutableList.builder();
       predicatesBuilder.add(predicate);
-      return new Where(projectedColumnNames, namespaceName, tableName, predicatesBuilder);
+      return new OngoingWhere(projectedColumnNames, namespaceName, tableName, predicatesBuilder);
+    }
+
+    public Buildable where(List<Predicate> predicates) {
+      ImmutableList.Builder<Predicate> predicatesBuilder = ImmutableList.builder();
+      predicatesBuilder.addAll(predicates);
+      return new Buildable(projectedColumnNames, namespaceName, tableName, predicatesBuilder);
     }
   }
 
-  public static class Where extends End {
-    public Where(
+  public static class OngoingWhere extends Buildable {
+    private OngoingWhere(
         ImmutableList<String> projectedColumnNames,
         String namespaceName,
         String tableName,
@@ -50,21 +56,21 @@ public final class SelectStatementBuilder {
       super(projectedColumnNames, namespaceName, tableName, predicatesBuilder);
     }
 
-    public Where and(Predicate predicate) {
+    public OngoingWhere and(Predicate predicate) {
       predicatesBuilder.add(predicate);
       return this;
     }
   }
 
-  public static class End {
-    protected final ImmutableList<String> projectedColumnNames;
-    protected final String namespaceName;
-    protected final String tableName;
+  public static class Buildable {
+    private final ImmutableList<String> projectedColumnNames;
+    private final String namespaceName;
+    private final String tableName;
     protected final ImmutableList.Builder<Predicate> predicatesBuilder;
     private ImmutableList<ClusteringOrdering> clusteringOrderings = ImmutableList.of();
     private int limit;
 
-    public End(
+    private Buildable(
         ImmutableList<String> projectedColumnNames,
         String namespaceName,
         String tableName,
@@ -75,17 +81,17 @@ public final class SelectStatementBuilder {
       this.predicatesBuilder = predicatesBuilder;
     }
 
-    public End orderBy(ClusteringOrdering... clusteringOrderings) {
+    public Buildable orderBy(ClusteringOrdering... clusteringOrderings) {
       this.clusteringOrderings = ImmutableList.copyOf(clusteringOrderings);
       return this;
     }
 
-    public End orderBy(List<ClusteringOrdering> clusteringOrderings) {
+    public Buildable orderBy(List<ClusteringOrdering> clusteringOrderings) {
       this.clusteringOrderings = ImmutableList.copyOf(clusteringOrderings);
       return this;
     }
 
-    public End limit(int limit) {
+    public Buildable limit(int limit) {
       this.limit = limit;
       return this;
     }

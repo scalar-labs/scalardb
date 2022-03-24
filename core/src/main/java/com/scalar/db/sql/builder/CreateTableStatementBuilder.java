@@ -5,37 +5,54 @@ import com.google.common.collect.ImmutableSet;
 import com.scalar.db.sql.ClusteringOrder;
 import com.scalar.db.sql.DataType;
 import com.scalar.db.sql.statement.CreateTableStatement;
+import java.util.Map;
+import java.util.Set;
 
 public class CreateTableStatementBuilder {
 
   private CreateTableStatementBuilder() {}
 
-  public static class Start {
-    private final String namespaceName;
-    private final String tableName;
-    private boolean ifNotExists;
-
+  public static class Start extends WithPartitionKey {
     Start(String namespaceName, String tableName) {
-      this.namespaceName = namespaceName;
-      this.tableName = tableName;
+      super(namespaceName, tableName, false);
     }
 
-    public End withPartitionKey(String columnName, DataType dataType) {
-      ImmutableMap.Builder<String, DataType> columnsBuilder = ImmutableMap.builder();
-      ImmutableSet.Builder<String> partitionKeyColumnNamesBuilder = ImmutableSet.builder();
-      columnsBuilder.put(columnName, dataType);
-      partitionKeyColumnNamesBuilder.add(columnName);
-      return new End(
-          namespaceName, tableName, ifNotExists, columnsBuilder, partitionKeyColumnNamesBuilder);
-    }
-
-    public Start ifNotExists() {
-      ifNotExists = true;
-      return this;
+    public WithPartitionKey ifNotExists() {
+      return new WithPartitionKey(namespaceName, tableName, true);
     }
   }
 
-  public static class End {
+  public static class WithPartitionKey {
+    protected final String namespaceName;
+    protected final String tableName;
+    private final boolean ifNotExists;
+
+    private WithPartitionKey(String namespaceName, String tableName, boolean ifNotExists) {
+      this.namespaceName = namespaceName;
+      this.tableName = tableName;
+      this.ifNotExists = ifNotExists;
+    }
+
+    public Buildable withPartitionKey(String columnName, DataType dataType) {
+      ImmutableMap.Builder<String, DataType> columnsBuilder = ImmutableMap.builder();
+      columnsBuilder.put(columnName, dataType);
+      ImmutableSet.Builder<String> partitionKeyColumnNamesBuilder = ImmutableSet.builder();
+      partitionKeyColumnNamesBuilder.add(columnName);
+      return new Buildable(
+          namespaceName, tableName, ifNotExists, columnsBuilder, partitionKeyColumnNamesBuilder);
+    }
+
+    public Buildable withPartitionKey(Map<String, DataType> columnNameAndDataTypeMap) {
+      ImmutableMap.Builder<String, DataType> columnsBuilder = ImmutableMap.builder();
+      columnsBuilder.putAll(columnNameAndDataTypeMap);
+      ImmutableSet.Builder<String> partitionKeyColumnNamesBuilder = ImmutableSet.builder();
+      partitionKeyColumnNamesBuilder.addAll(columnNameAndDataTypeMap.keySet());
+      return new Buildable(
+          namespaceName, tableName, ifNotExists, columnsBuilder, partitionKeyColumnNamesBuilder);
+    }
+  }
+
+  public static class Buildable {
     private final String namespaceName;
     private final String tableName;
     private final boolean ifNotExists;
@@ -43,10 +60,10 @@ public class CreateTableStatementBuilder {
     private final ImmutableSet.Builder<String> partitionKeyColumnNamesBuilder;
     private final ImmutableSet.Builder<String> clusteringKeyColumnNamesBuilder;
     private final ImmutableMap.Builder<String, ClusteringOrder> clusteringOrdersBuilder;
-    private final ImmutableSet.Builder<String> secondaryIndexColumnNamesBuilder;
+    private final ImmutableSet.Builder<String> indexColumnNamesBuilder;
     private final ImmutableMap.Builder<String, String> optionsBuilder;
 
-    private End(
+    private Buildable(
         String namespaceName,
         String tableName,
         boolean ifNotExists,
@@ -59,28 +76,45 @@ public class CreateTableStatementBuilder {
       this.partitionKeyColumnNamesBuilder = partitionKeyColumnNamesBuilder;
       clusteringKeyColumnNamesBuilder = ImmutableSet.builder();
       clusteringOrdersBuilder = ImmutableMap.builder();
-      secondaryIndexColumnNamesBuilder = ImmutableSet.builder();
+      indexColumnNamesBuilder = ImmutableSet.builder();
       optionsBuilder = ImmutableMap.builder();
     }
 
-    public End withPartitionKey(String columnName, DataType dataType) {
+    public Buildable withPartitionKey(String columnName, DataType dataType) {
       columnsBuilder.put(columnName, dataType);
       partitionKeyColumnNamesBuilder.add(columnName);
       return this;
     }
 
-    public End withClusteringKey(String columnName, DataType dataType) {
+    public Buildable withPartitionKey(Map<String, DataType> columnNameAndDataTypeMap) {
+      columnsBuilder.putAll(columnNameAndDataTypeMap);
+      partitionKeyColumnNamesBuilder.addAll(columnNameAndDataTypeMap.keySet());
+      return this;
+    }
+
+    public Buildable withClusteringKey(String columnName, DataType dataType) {
       columnsBuilder.put(columnName, dataType);
       clusteringKeyColumnNamesBuilder.add(columnName);
       return this;
     }
 
-    public End withColumn(String columnName, DataType dataType) {
+    public Buildable withClusteringKey(Map<String, DataType> columnNameAndDataTypeMap) {
+      columnsBuilder.putAll(columnNameAndDataTypeMap);
+      clusteringKeyColumnNamesBuilder.addAll(columnNameAndDataTypeMap.keySet());
+      return this;
+    }
+
+    public Buildable withColumn(String columnName, DataType dataType) {
       columnsBuilder.put(columnName, dataType);
       return this;
     }
 
-    public End withClusteringOrder(String columnName, ClusteringOrder clusteringOrder) {
+    public Buildable withColumns(Map<String, DataType> columnNameAndDataTypeMap) {
+      columnsBuilder.putAll(columnNameAndDataTypeMap);
+      return this;
+    }
+
+    public Buildable withClusteringOrder(String columnName, ClusteringOrder clusteringOrder) {
       if (!clusteringKeyColumnNamesBuilder.build().contains(columnName)) {
         throw new IllegalArgumentException(columnName + " is not a clustering key column");
       }
@@ -89,13 +123,37 @@ public class CreateTableStatementBuilder {
       return this;
     }
 
-    public End withSecondaryIndex(String columnName) {
-      secondaryIndexColumnNamesBuilder.add(columnName);
+    public Buildable withClusteringOrders(
+        Map<String, ClusteringOrder> columnNameAndClusteringOrderMap) {
+      columnNameAndClusteringOrderMap
+          .keySet()
+          .forEach(
+              c -> {
+                if (!clusteringKeyColumnNamesBuilder.build().contains(c)) {
+                  throw new IllegalArgumentException(c + " is not a clustering key column");
+                }
+              });
+      clusteringOrdersBuilder.putAll(columnNameAndClusteringOrderMap);
       return this;
     }
 
-    public End withOption(String name, String value) {
+    public Buildable withIndex(String columnName) {
+      indexColumnNamesBuilder.add(columnName);
+      return this;
+    }
+
+    public Buildable withIndexes(Set<String> columnNames) {
+      indexColumnNamesBuilder.addAll(columnNames);
+      return this;
+    }
+
+    public Buildable withOption(String name, String value) {
       optionsBuilder.put(name, value);
+      return this;
+    }
+
+    public Buildable withOptions(Map<String, String> options) {
+      optionsBuilder.putAll(options);
       return this;
     }
 
@@ -108,7 +166,7 @@ public class CreateTableStatementBuilder {
           partitionKeyColumnNamesBuilder.build(),
           clusteringKeyColumnNamesBuilder.build(),
           clusteringOrdersBuilder.build(),
-          secondaryIndexColumnNamesBuilder.build(),
+          indexColumnNamesBuilder.build(),
           optionsBuilder.build());
     }
   }

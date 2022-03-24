@@ -14,7 +14,7 @@ public class CreateTableStatement implements DdlStatement {
   public final ImmutableSet<String> partitionKeyColumnNames;
   public final ImmutableSet<String> clusteringKeyColumnNames;
   public final ImmutableMap<String, ClusteringOrder> clusteringOrders;
-  public final ImmutableSet<String> secondaryIndexColumnNames;
+  public final ImmutableSet<String> indexColumnNames;
   public final ImmutableMap<String, String> options;
 
   public CreateTableStatement(
@@ -25,7 +25,7 @@ public class CreateTableStatement implements DdlStatement {
       ImmutableSet<String> partitionKeyColumnNames,
       ImmutableSet<String> clusteringKeyColumnNames,
       ImmutableMap<String, ClusteringOrder> clusteringOrders,
-      ImmutableSet<String> secondaryIndexColumnNames,
+      ImmutableSet<String> indexColumnNames,
       ImmutableMap<String, String> options) {
     this.namespaceName = namespaceName;
     this.tableName = tableName;
@@ -34,7 +34,7 @@ public class CreateTableStatement implements DdlStatement {
     this.partitionKeyColumnNames = partitionKeyColumnNames;
     this.clusteringKeyColumnNames = clusteringKeyColumnNames;
     this.clusteringOrders = clusteringOrders;
-    this.secondaryIndexColumnNames = secondaryIndexColumnNames;
+    this.indexColumnNames = indexColumnNames;
     this.options = options;
   }
 

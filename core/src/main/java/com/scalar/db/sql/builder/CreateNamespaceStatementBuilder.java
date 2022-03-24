@@ -2,29 +2,53 @@ package com.scalar.db.sql.builder;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.sql.statement.CreateNamespaceStatement;
+import java.util.Map;
 
 public class CreateNamespaceStatementBuilder {
 
-  private final String namespaceName;
-  private boolean ifNotExists;
-  private final ImmutableMap.Builder<String, String> optionsBuilder;
+  private CreateNamespaceStatementBuilder() {}
 
-  CreateNamespaceStatementBuilder(String namespaceName) {
-    this.namespaceName = namespaceName;
-    optionsBuilder = ImmutableMap.builder();
+  public static class Start extends Buildable {
+    Start(String namespaceName) {
+      super(namespaceName, false);
+    }
+
+    public Buildable ifNotExists() {
+      return new Buildable(namespaceName, true);
+    }
   }
 
-  public CreateNamespaceStatementBuilder ifNotExists() {
-    ifNotExists = true;
-    return this;
-  }
+  public static class Buildable {
+    protected final String namespaceName;
+    private final boolean ifNotExists;
+    private ImmutableMap.Builder<String, String> optionsBuilder;
 
-  public CreateNamespaceStatementBuilder withOption(String name, String value) {
-    optionsBuilder.put(name, value);
-    return this;
-  }
+    private Buildable(String namespaceName, boolean ifNotExists) {
+      this.namespaceName = namespaceName;
+      this.ifNotExists = ifNotExists;
+    }
 
-  public CreateNamespaceStatement build() {
-    return new CreateNamespaceStatement(namespaceName, ifNotExists, optionsBuilder.build());
+    public Buildable withOption(String name, String value) {
+      if (optionsBuilder == null) {
+        optionsBuilder = ImmutableMap.builder();
+      }
+      optionsBuilder.put(name, value);
+      return this;
+    }
+
+    public Buildable withOptions(Map<String, String> options) {
+      if (optionsBuilder == null) {
+        optionsBuilder = ImmutableMap.builder();
+      }
+      optionsBuilder.putAll(options);
+      return this;
+    }
+
+    public CreateNamespaceStatement build() {
+      return new CreateNamespaceStatement(
+          namespaceName,
+          ifNotExists,
+          optionsBuilder == null ? ImmutableMap.of() : optionsBuilder.build());
+    }
   }
 }

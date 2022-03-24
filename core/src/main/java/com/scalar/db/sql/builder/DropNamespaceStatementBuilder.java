@@ -4,25 +4,41 @@ import com.scalar.db.sql.statement.DropNamespaceStatement;
 
 public class DropNamespaceStatementBuilder {
 
-  private final String namespaceName;
-  private boolean ifExists;
-  private boolean cascade;
+  private DropNamespaceStatementBuilder() {}
 
-  DropNamespaceStatementBuilder(String namespaceName) {
-    this.namespaceName = namespaceName;
+  public static class Start extends Cascade {
+    Start(String namespaceName) {
+      super(namespaceName, false);
+    }
+
+    public Cascade ifExists() {
+      return new Cascade(namespaceName, true);
+    }
   }
 
-  public DropNamespaceStatementBuilder ifExists() {
-    ifExists = true;
-    return this;
+  public static class Cascade extends Buildable {
+    private Cascade(String namespaceName, boolean ifExists) {
+      super(namespaceName, ifExists, false);
+    }
+
+    public Buildable cascade() {
+      return new Buildable(namespaceName, ifExists, true);
+    }
   }
 
-  public DropNamespaceStatementBuilder cascade() {
-    cascade = true;
-    return this;
-  }
+  public static class Buildable {
+    protected final String namespaceName;
+    protected final boolean ifExists;
+    private final boolean cascade;
 
-  public DropNamespaceStatement build() {
-    return new DropNamespaceStatement(namespaceName, ifExists, cascade);
+    private Buildable(String namespaceName, boolean ifExists, boolean cascade) {
+      this.namespaceName = namespaceName;
+      this.ifExists = ifExists;
+      this.cascade = cascade;
+    }
+
+    public DropNamespaceStatement build() {
+      return new DropNamespaceStatement(namespaceName, ifExists, cascade);
+    }
   }
 }

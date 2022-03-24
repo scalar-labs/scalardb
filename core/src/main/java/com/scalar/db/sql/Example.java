@@ -87,6 +87,7 @@ public class Example {
                   .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
                   .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
                   .orderBy(ClusteringOrdering.column(COLUMN_NAME_2).desc())
+                  .limit(10)
                   .build());
       for (Record record : resultSet) {
         System.out.println("column1 value: " + record.getInt(COLUMN_NAME_1));
@@ -215,6 +216,7 @@ public class Example {
                   .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(10)))
                   .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("abc")))
                   .orderBy(ClusteringOrdering.column(COLUMN_NAME_2).desc())
+                  .limit(10)
                   .build());
       for (Record record : resultSet1) {
         System.out.println("column1 value: " + record.getInt(COLUMN_NAME_1));
@@ -230,6 +232,7 @@ public class Example {
                   .where(Predicate.column(COLUMN_NAME_1).isEqualTo(Value.ofInt(11)))
                   .and(Predicate.column(COLUMN_NAME_2).isEqualTo(Value.ofText("def")))
                   .orderBy(ClusteringOrdering.column(COLUMN_NAME_2).desc())
+                  .limit(10)
                   .build());
       for (Record record : resultSet2) {
         System.out.println("column1 value: " + record.getInt(COLUMN_NAME_1));

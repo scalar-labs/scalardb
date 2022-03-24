@@ -4,16 +4,27 @@ import com.scalar.db.sql.statement.DropCoordinatorTableStatement;
 
 public class DropCoordinatorTableStatementBuilder {
 
-  private boolean ifExists;
+  private DropCoordinatorTableStatementBuilder() {}
 
-  DropCoordinatorTableStatementBuilder() {}
+  public static class Start extends Buildable {
+    Start() {
+      super(false);
+    }
 
-  public DropCoordinatorTableStatementBuilder ifExists() {
-    ifExists = true;
-    return this;
+    public Buildable ifExists() {
+      return new Buildable(true);
+    }
   }
 
-  public DropCoordinatorTableStatement build() {
-    return new DropCoordinatorTableStatement(ifExists);
+  public static class Buildable {
+    private final boolean ifExists;
+
+    private Buildable(boolean ifExists) {
+      this.ifExists = ifExists;
+    }
+
+    public DropCoordinatorTableStatement build() {
+      return new DropCoordinatorTableStatement(ifExists);
+    }
   }
 }
