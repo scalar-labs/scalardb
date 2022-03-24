@@ -33,6 +33,7 @@ import com.scalar.db.sql.statement.InsertStatement;
 import com.scalar.db.sql.statement.SelectStatement;
 import com.scalar.db.sql.statement.Statement;
 import com.scalar.db.sql.statement.UpdateStatement;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -277,7 +278,8 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
                   .map(
                       r ->
                           (ResultSet)
-                              new SingleRecordResultSet(new ResultRecord(r, projectedColumnNames)))
+                              new ResultIteratorResultSet(
+                                  Collections.singletonList(r).iterator(), projectedColumnNames))
                   .orElse(EmptyResultSet.INSTANCE);
         } else {
           List<Result> results = transaction.scan((Scan) selection);
