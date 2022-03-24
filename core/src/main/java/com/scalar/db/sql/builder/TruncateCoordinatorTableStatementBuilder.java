@@ -14,7 +14,7 @@ public class TruncateCoordinatorTableStatementBuilder {
     private Buildable() {}
 
     public TruncateCoordinatorTableStatement build() {
-      return new TruncateCoordinatorTableStatement();
+      return TruncateCoordinatorTableStatement.of();
     }
   }
 }

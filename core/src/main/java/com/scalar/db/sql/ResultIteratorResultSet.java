@@ -13,8 +13,7 @@ public class ResultIteratorResultSet implements ResultSet {
   private final Iterator<Result> iterator;
   private final ImmutableList<String> projectedColumnNames;
 
-  public ResultIteratorResultSet(
-      Iterator<Result> iterator, ImmutableList<String> projectedColumnNames) {
+  ResultIteratorResultSet(Iterator<Result> iterator, ImmutableList<String> projectedColumnNames) {
     this.iterator = Objects.requireNonNull(iterator);
     this.projectedColumnNames = Objects.requireNonNull(projectedColumnNames);
   }

@@ -24,7 +24,7 @@ public class DropCoordinatorTableStatementBuilder {
     }
 
     public DropCoordinatorTableStatement build() {
-      return new DropCoordinatorTableStatement(ifExists);
+      return DropCoordinatorTableStatement.of(ifExists);
     }
   }
 }

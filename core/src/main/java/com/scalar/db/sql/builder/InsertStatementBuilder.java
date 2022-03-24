@@ -40,7 +40,7 @@ public final class InsertStatementBuilder {
     }
 
     public InsertStatement build() {
-      return new InsertStatement(namespaceName, tableName, assignments);
+      return InsertStatement.of(namespaceName, tableName, assignments);
     }
   }
 }

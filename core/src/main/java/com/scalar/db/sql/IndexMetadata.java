@@ -11,7 +11,7 @@ public class IndexMetadata {
   private final String tableName;
   private final String columnName;
 
-  public IndexMetadata(String namespaceName, String tableName, String columnName) {
+  IndexMetadata(String namespaceName, String tableName, String columnName) {
     this.namespaceName = Objects.requireNonNull(namespaceName);
     this.tableName = Objects.requireNonNull(tableName);
     this.columnName = Objects.requireNonNull(columnName);

@@ -38,7 +38,7 @@ public class DropNamespaceStatementBuilder {
     }
 
     public DropNamespaceStatement build() {
-      return new DropNamespaceStatement(namespaceName, ifExists, cascade);
+      return DropNamespaceStatement.of(namespaceName, ifExists, cascade);
     }
   }
 }

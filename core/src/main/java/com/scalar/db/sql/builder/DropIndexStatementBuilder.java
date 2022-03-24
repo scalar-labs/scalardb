@@ -58,7 +58,7 @@ public class DropIndexStatementBuilder {
     }
 
     public DropIndexStatement build() {
-      return new DropIndexStatement(namespaceName, tableName, columnName, ifExists);
+      return DropIndexStatement.of(namespaceName, tableName, columnName, ifExists);
     }
   }
 }

@@ -52,14 +52,14 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
   @Nullable private TwoPhaseCommitTransaction transaction;
   @Nullable private ResultSet resultSet;
 
-  public TwoPhaseCommitTransactionSqlSession(
+  TwoPhaseCommitTransactionSqlSession(
       DistributedTransactionAdmin admin,
       TwoPhaseCommitTransactionManager manager,
       TableMetadataManager tableMetadataManager) {
     this(admin, manager, null, tableMetadataManager);
   }
 
-  public TwoPhaseCommitTransactionSqlSession(
+  TwoPhaseCommitTransactionSqlSession(
       DistributedTransactionAdmin admin,
       TwoPhaseCommitTransactionManager manager,
       @Nullable TwoPhaseCommitTransaction transaction,
@@ -236,6 +236,7 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
     }
   }
 
+  @NotThreadSafe
   private static class DmlStatementExecutor implements DmlStatementVisitor {
 
     private final TwoPhaseCommitTransaction transaction;

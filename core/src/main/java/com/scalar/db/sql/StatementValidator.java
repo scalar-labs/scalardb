@@ -160,7 +160,7 @@ public class StatementValidator implements StatementVisitor {
         SqlUtils.getTableMetadata(
             tableMetadataManager, statement.namespaceName, statement.tableName);
 
-    Map<String, Assignment> assignmentsMap = new HashMap<>();
+    Map<String, Assignment> assignmentsMap = new HashMap<>(statement.assignments.size());
     statement.assignments.forEach(
         p -> {
           // check if each column is specified only once
@@ -203,7 +203,7 @@ public class StatementValidator implements StatementVisitor {
 
   private void validatePredicatesForPrimaryKey(
       ImmutableList<Predicate> predicates, TableMetadata tableMetadata) {
-    Map<String, Predicate> predicatesMap = new HashMap<>();
+    Map<String, Predicate> predicatesMap = new HashMap<>(predicates.size());
     predicates.forEach(
         p -> {
           // check if only primary key columns are specified

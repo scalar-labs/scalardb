@@ -66,7 +66,7 @@ public final class DeleteStatementBuilder {
     }
 
     public DeleteStatement build() {
-      return new DeleteStatement(namespaceName, tableName, predicatesBuilder.build());
+      return DeleteStatement.of(namespaceName, tableName, predicatesBuilder.build());
     }
   }
 }

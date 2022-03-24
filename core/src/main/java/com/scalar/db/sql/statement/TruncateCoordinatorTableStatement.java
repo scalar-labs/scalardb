@@ -6,6 +6,11 @@ import javax.annotation.concurrent.Immutable;
 @Immutable
 public class TruncateCoordinatorTableStatement implements DdlStatement {
 
+  private static final TruncateCoordinatorTableStatement INSTANCE =
+      new TruncateCoordinatorTableStatement();
+
+  private TruncateCoordinatorTableStatement() {}
+
   @Override
   public void accept(StatementVisitor visitor) {
     visitor.visit(this);
@@ -32,5 +37,9 @@ public class TruncateCoordinatorTableStatement implements DdlStatement {
   @Override
   public int hashCode() {
     return 0;
+  }
+
+  public static TruncateCoordinatorTableStatement of() {
+    return INSTANCE;
   }
 }

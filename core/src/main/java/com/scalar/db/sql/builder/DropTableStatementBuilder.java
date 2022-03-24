@@ -28,7 +28,7 @@ public class DropTableStatementBuilder {
     }
 
     public DropTableStatement build() {
-      return new DropTableStatement(namespaceName, tableName, ifExists);
+      return DropTableStatement.of(namespaceName, tableName, ifExists);
     }
   }
 }

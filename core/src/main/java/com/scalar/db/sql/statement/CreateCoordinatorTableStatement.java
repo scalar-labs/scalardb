@@ -11,7 +11,7 @@ public class CreateCoordinatorTableStatement implements DdlStatement {
   public final boolean ifNotExists;
   public final ImmutableMap<String, String> options;
 
-  public CreateCoordinatorTableStatement(
+  private CreateCoordinatorTableStatement(
       boolean ifNotExists, ImmutableMap<String, String> options) {
     this.ifNotExists = ifNotExists;
     this.options = Objects.requireNonNull(options);
@@ -50,5 +50,10 @@ public class CreateCoordinatorTableStatement implements DdlStatement {
   @Override
   public int hashCode() {
     return Objects.hash(ifNotExists, options);
+  }
+
+  public static CreateCoordinatorTableStatement of(
+      boolean ifNotExists, ImmutableMap<String, String> options) {
+    return new CreateCoordinatorTableStatement(ifNotExists, options);
   }
 }

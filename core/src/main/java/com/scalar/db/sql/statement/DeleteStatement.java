@@ -13,7 +13,7 @@ public class DeleteStatement implements DmlStatement {
   public final String tableName;
   public final ImmutableList<Predicate> predicates;
 
-  public DeleteStatement(
+  private DeleteStatement(
       String namespaceName, String tableName, ImmutableList<Predicate> predicates) {
     this.namespaceName = Objects.requireNonNull(namespaceName);
     this.tableName = Objects.requireNonNull(tableName);
@@ -56,5 +56,10 @@ public class DeleteStatement implements DmlStatement {
   @Override
   public int hashCode() {
     return Objects.hash(namespaceName, tableName, predicates);
+  }
+
+  public static DeleteStatement of(
+      String namespaceName, String tableName, ImmutableList<Predicate> predicates) {
+    return new DeleteStatement(namespaceName, tableName, predicates);
   }
 }

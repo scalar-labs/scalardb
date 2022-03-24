@@ -43,7 +43,7 @@ public class CreateCoordinatorTableStatementBuilder {
     }
 
     public CreateCoordinatorTableStatement build() {
-      return new CreateCoordinatorTableStatement(
+      return CreateCoordinatorTableStatement.of(
           ifNotExists, optionsBuilder == null ? ImmutableMap.of() : optionsBuilder.build());
     }
   }

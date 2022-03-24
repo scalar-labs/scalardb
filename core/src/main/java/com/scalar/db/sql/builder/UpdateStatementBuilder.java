@@ -86,7 +86,7 @@ public final class UpdateStatementBuilder {
     }
 
     public UpdateStatement build() {
-      return new UpdateStatement(namespaceName, tableName, assignments, predicatesBuilder.build());
+      return UpdateStatement.of(namespaceName, tableName, assignments, predicatesBuilder.build());
     }
   }
 }

@@ -12,7 +12,7 @@ public class CreateNamespaceStatement implements DdlStatement {
   public final boolean ifNotExists;
   public final ImmutableMap<String, String> options;
 
-  public CreateNamespaceStatement(
+  private CreateNamespaceStatement(
       String namespaceName, boolean ifNotExists, ImmutableMap<String, String> options) {
     this.namespaceName = Objects.requireNonNull(namespaceName);
     this.ifNotExists = ifNotExists;
@@ -55,5 +55,10 @@ public class CreateNamespaceStatement implements DdlStatement {
   @Override
   public int hashCode() {
     return Objects.hash(namespaceName, ifNotExists, options);
+  }
+
+  public static CreateNamespaceStatement of(
+      String namespaceName, boolean ifNotExists, ImmutableMap<String, String> options) {
+    return new CreateNamespaceStatement(namespaceName, ifNotExists, options);
   }
 }

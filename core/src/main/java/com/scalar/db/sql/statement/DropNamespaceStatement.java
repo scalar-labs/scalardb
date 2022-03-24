@@ -11,7 +11,7 @@ public class DropNamespaceStatement implements DdlStatement {
   public final boolean ifExists;
   public final boolean cascade;
 
-  public DropNamespaceStatement(String namespaceName, boolean ifExists, boolean cascade) {
+  private DropNamespaceStatement(String namespaceName, boolean ifExists, boolean cascade) {
     this.namespaceName = Objects.requireNonNull(namespaceName);
     this.ifExists = ifExists;
     this.cascade = cascade;
@@ -53,5 +53,9 @@ public class DropNamespaceStatement implements DdlStatement {
   @Override
   public int hashCode() {
     return Objects.hash(namespaceName, ifExists, cascade);
+  }
+
+  public static DropNamespaceStatement of(String namespaceName, boolean ifExists, boolean cascade) {
+    return new DropNamespaceStatement(namespaceName, ifExists, cascade);
   }
 }

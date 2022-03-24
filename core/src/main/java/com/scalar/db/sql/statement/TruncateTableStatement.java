@@ -10,7 +10,7 @@ public class TruncateTableStatement implements DdlStatement {
   public final String namespaceName;
   public final String tableName;
 
-  public TruncateTableStatement(String namespaceName, String tableName) {
+  private TruncateTableStatement(String namespaceName, String tableName) {
     this.namespaceName = Objects.requireNonNull(namespaceName);
     this.tableName = Objects.requireNonNull(tableName);
   }
@@ -49,5 +49,9 @@ public class TruncateTableStatement implements DdlStatement {
   @Override
   public int hashCode() {
     return Objects.hash(namespaceName, tableName);
+  }
+
+  public static TruncateTableStatement of(String namespaceName, String tableName) {
+    return new TruncateTableStatement(namespaceName, tableName);
   }
 }

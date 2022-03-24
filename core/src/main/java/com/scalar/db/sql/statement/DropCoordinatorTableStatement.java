@@ -9,7 +9,7 @@ public class DropCoordinatorTableStatement implements DdlStatement {
 
   public final boolean ifExists;
 
-  public DropCoordinatorTableStatement(boolean ifExists) {
+  private DropCoordinatorTableStatement(boolean ifExists) {
     this.ifExists = ifExists;
   }
 
@@ -43,5 +43,9 @@ public class DropCoordinatorTableStatement implements DdlStatement {
   @Override
   public int hashCode() {
     return Objects.hash(ifExists);
+  }
+
+  public static DropCoordinatorTableStatement of(boolean ifExists) {
+    return new DropCoordinatorTableStatement(ifExists);
   }
 }

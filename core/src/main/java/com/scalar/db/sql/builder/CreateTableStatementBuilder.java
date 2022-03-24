@@ -58,10 +58,12 @@ public class CreateTableStatementBuilder {
     private final boolean ifNotExists;
     private final ImmutableMap.Builder<String, DataType> columnsBuilder;
     private final ImmutableSet.Builder<String> partitionKeyColumnNamesBuilder;
-    private final ImmutableSet.Builder<String> clusteringKeyColumnNamesBuilder;
-    private final ImmutableMap.Builder<String, ClusteringOrder> clusteringOrdersBuilder;
-    private final ImmutableSet.Builder<String> indexColumnNamesBuilder;
-    private final ImmutableMap.Builder<String, String> optionsBuilder;
+    private final ImmutableSet.Builder<String> clusteringKeyColumnNamesBuilder =
+        ImmutableSet.builder();
+    private final ImmutableMap.Builder<String, ClusteringOrder> clusteringOrdersBuilder =
+        ImmutableMap.builder();
+    private final ImmutableSet.Builder<String> indexColumnNamesBuilder = ImmutableSet.builder();
+    private final ImmutableMap.Builder<String, String> optionsBuilder = ImmutableMap.builder();
 
     private Buildable(
         String namespaceName,
@@ -74,10 +76,6 @@ public class CreateTableStatementBuilder {
       this.ifNotExists = ifNotExists;
       this.columnsBuilder = columnsBuilder;
       this.partitionKeyColumnNamesBuilder = partitionKeyColumnNamesBuilder;
-      clusteringKeyColumnNamesBuilder = ImmutableSet.builder();
-      clusteringOrdersBuilder = ImmutableMap.builder();
-      indexColumnNamesBuilder = ImmutableSet.builder();
-      optionsBuilder = ImmutableMap.builder();
     }
 
     public Buildable withPartitionKey(String columnName, DataType dataType) {
@@ -158,7 +156,7 @@ public class CreateTableStatementBuilder {
     }
 
     public CreateTableStatement build() {
-      return new CreateTableStatement(
+      return CreateTableStatement.of(
           namespaceName,
           tableName,
           ifNotExists,

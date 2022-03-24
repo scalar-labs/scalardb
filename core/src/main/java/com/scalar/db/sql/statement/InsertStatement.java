@@ -13,7 +13,7 @@ public class InsertStatement implements DmlStatement {
   public final String tableName;
   public final ImmutableList<Assignment> assignments;
 
-  public InsertStatement(
+  private InsertStatement(
       String namespaceName, String tableName, ImmutableList<Assignment> assignments) {
     this.namespaceName = Objects.requireNonNull(namespaceName);
     this.tableName = Objects.requireNonNull(tableName);
@@ -56,5 +56,10 @@ public class InsertStatement implements DmlStatement {
   @Override
   public int hashCode() {
     return Objects.hash(namespaceName, tableName, assignments);
+  }
+
+  public static InsertStatement of(
+      String namespaceName, String tableName, ImmutableList<Assignment> assignments) {
+    return new InsertStatement(namespaceName, tableName, assignments);
   }
 }

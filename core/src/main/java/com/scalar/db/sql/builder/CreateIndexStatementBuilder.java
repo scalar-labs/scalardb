@@ -51,7 +51,7 @@ public class CreateIndexStatementBuilder {
     private final String tableName;
     private final String columnName;
     private final boolean ifNotExists;
-    private final ImmutableMap.Builder<String, String> optionsBuilder;
+    private final ImmutableMap.Builder<String, String> optionsBuilder = ImmutableMap.builder();
 
     private Buildable(
         String namespaceName, String tableName, String columnName, boolean ifNotExists) {
@@ -59,8 +59,6 @@ public class CreateIndexStatementBuilder {
       this.tableName = tableName;
       this.columnName = columnName;
       this.ifNotExists = ifNotExists;
-
-      optionsBuilder = ImmutableMap.builder();
     }
 
     public Buildable withOption(String name, String value) {
@@ -74,7 +72,7 @@ public class CreateIndexStatementBuilder {
     }
 
     public CreateIndexStatement build() {
-      return new CreateIndexStatement(
+      return CreateIndexStatement.of(
           namespaceName, tableName, columnName, ifNotExists, optionsBuilder.build());
     }
   }

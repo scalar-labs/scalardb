@@ -48,7 +48,7 @@ public class TransactionSqlSession implements SqlSession {
   @Nullable private DistributedTransaction transaction;
   @Nullable private ResultSet resultSet;
 
-  public TransactionSqlSession(
+  TransactionSqlSession(
       DistributedTransactionAdmin admin,
       DistributedTransactionManager manager,
       TableMetadataManager tableMetadataManager) {
@@ -200,6 +200,7 @@ public class TransactionSqlSession implements SqlSession {
     }
   }
 
+  @NotThreadSafe
   private static class DmlStatementExecutor implements DmlStatementVisitor {
 
     private final DistributedTransaction transaction;

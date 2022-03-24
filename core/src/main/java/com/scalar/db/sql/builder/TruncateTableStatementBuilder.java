@@ -22,7 +22,7 @@ public class TruncateTableStatementBuilder {
     }
 
     public TruncateTableStatement build() {
-      return new TruncateTableStatement(namespaceName, tableName);
+      return TruncateTableStatement.of(namespaceName, tableName);
     }
   }
 }

@@ -25,7 +25,7 @@ public class DdlStatementExecutor implements DdlStatementVisitor {
 
   private final DistributedTransactionAdmin admin;
 
-  public DdlStatementExecutor(DistributedTransactionAdmin admin) {
+  DdlStatementExecutor(DistributedTransactionAdmin admin) {
     this.admin = Objects.requireNonNull(admin);
   }
 

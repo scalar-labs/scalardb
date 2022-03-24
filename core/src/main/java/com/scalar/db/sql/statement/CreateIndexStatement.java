@@ -14,7 +14,7 @@ public class CreateIndexStatement implements DdlStatement {
   public final boolean ifNotExists;
   public final ImmutableMap<String, String> options;
 
-  public CreateIndexStatement(
+  private CreateIndexStatement(
       String namespaceName,
       String tableName,
       String columnName,
@@ -67,5 +67,14 @@ public class CreateIndexStatement implements DdlStatement {
   @Override
   public int hashCode() {
     return Objects.hash(namespaceName, tableName, columnName, ifNotExists, options);
+  }
+
+  public static CreateIndexStatement of(
+      String namespaceName,
+      String tableName,
+      String columnName,
+      boolean ifNotExists,
+      ImmutableMap<String, String> options) {
+    return new CreateIndexStatement(namespaceName, tableName, columnName, ifNotExists, options);
   }
 }

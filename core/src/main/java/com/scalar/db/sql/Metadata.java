@@ -12,7 +12,7 @@ public class Metadata {
 
   private final DistributedTransactionAdmin admin;
 
-  public Metadata(DistributedTransactionAdmin admin) {
+  Metadata(DistributedTransactionAdmin admin) {
     this.admin = Objects.requireNonNull(admin);
   }
 

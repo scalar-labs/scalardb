@@ -12,7 +12,7 @@ public class ColumnMetadata {
   private final String name;
   private final DataType dataType;
 
-  public ColumnMetadata(String namespaceName, String tableName, String name, DataType dataType) {
+  ColumnMetadata(String namespaceName, String tableName, String name, DataType dataType) {
     this.namespaceName = Objects.requireNonNull(namespaceName);
     this.tableName = Objects.requireNonNull(tableName);
     this.name = Objects.requireNonNull(name);

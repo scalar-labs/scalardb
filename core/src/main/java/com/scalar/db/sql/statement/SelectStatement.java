@@ -17,7 +17,7 @@ public class SelectStatement implements DmlStatement {
   public final ImmutableList<ClusteringOrdering> clusteringOrderings;
   public final int limit;
 
-  public SelectStatement(
+  private SelectStatement(
       String namespaceName,
       String tableName,
       ImmutableList<String> projectedColumnNames,
@@ -74,6 +74,17 @@ public class SelectStatement implements DmlStatement {
   @Override
   public int hashCode() {
     return Objects.hash(
+        namespaceName, tableName, projectedColumnNames, predicates, clusteringOrderings, limit);
+  }
+
+  public static SelectStatement of(
+      String namespaceName,
+      String tableName,
+      ImmutableList<String> projectedColumnNames,
+      ImmutableList<Predicate> predicates,
+      ImmutableList<ClusteringOrdering> clusteringOrderings,
+      int limit) {
+    return new SelectStatement(
         namespaceName, tableName, projectedColumnNames, predicates, clusteringOrderings, limit);
   }
 }

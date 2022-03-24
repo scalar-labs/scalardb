@@ -97,7 +97,7 @@ public final class SelectStatementBuilder {
     }
 
     public SelectStatement build() {
-      return new SelectStatement(
+      return SelectStatement.of(
           namespaceName,
           tableName,
           projectedColumnNames,

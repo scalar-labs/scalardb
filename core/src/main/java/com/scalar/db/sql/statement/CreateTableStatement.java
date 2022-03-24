@@ -21,7 +21,7 @@ public class CreateTableStatement implements DdlStatement {
   public final ImmutableSet<String> indexColumnNames;
   public final ImmutableMap<String, String> options;
 
-  public CreateTableStatement(
+  private CreateTableStatement(
       String namespaceName,
       String tableName,
       boolean ifNotExists,
@@ -90,6 +90,28 @@ public class CreateTableStatement implements DdlStatement {
   @Override
   public int hashCode() {
     return Objects.hash(
+        namespaceName,
+        tableName,
+        ifNotExists,
+        columns,
+        partitionKeyColumnNames,
+        clusteringKeyColumnNames,
+        clusteringOrders,
+        indexColumnNames,
+        options);
+  }
+
+  public static CreateTableStatement of(
+      String namespaceName,
+      String tableName,
+      boolean ifNotExists,
+      ImmutableMap<String, DataType> columns,
+      ImmutableSet<String> partitionKeyColumnNames,
+      ImmutableSet<String> clusteringKeyColumnNames,
+      ImmutableMap<String, ClusteringOrder> clusteringOrders,
+      ImmutableSet<String> indexColumnNames,
+      ImmutableMap<String, String> options) {
+    return new CreateTableStatement(
         namespaceName,
         tableName,
         ifNotExists,

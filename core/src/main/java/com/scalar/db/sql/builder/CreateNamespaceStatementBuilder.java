@@ -45,7 +45,7 @@ public class CreateNamespaceStatementBuilder {
     }
 
     public CreateNamespaceStatement build() {
-      return new CreateNamespaceStatement(
+      return CreateNamespaceStatement.of(
           namespaceName,
           ifNotExists,
           optionsBuilder == null ? ImmutableMap.of() : optionsBuilder.build());

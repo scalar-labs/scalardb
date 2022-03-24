@@ -11,7 +11,7 @@ public class DropTableStatement implements DdlStatement {
   public final String tableName;
   public final boolean ifExists;
 
-  public DropTableStatement(String namespaceName, String tableName, boolean ifExists) {
+  private DropTableStatement(String namespaceName, String tableName, boolean ifExists) {
     this.namespaceName = Objects.requireNonNull(namespaceName);
     this.tableName = Objects.requireNonNull(tableName);
     this.ifExists = ifExists;
@@ -53,5 +53,9 @@ public class DropTableStatement implements DdlStatement {
   @Override
   public int hashCode() {
     return Objects.hash(namespaceName, tableName, ifExists);
+  }
+
+  public static DropTableStatement of(String namespaceName, String tableName, boolean ifExists) {
+    return new DropTableStatement(namespaceName, tableName, ifExists);
   }
 }

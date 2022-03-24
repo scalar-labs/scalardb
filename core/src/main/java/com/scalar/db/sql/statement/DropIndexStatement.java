@@ -12,7 +12,7 @@ public class DropIndexStatement implements DdlStatement {
   public final String columnName;
   public final boolean ifExists;
 
-  public DropIndexStatement(
+  private DropIndexStatement(
       String namespaceName, String tableName, String columnName, boolean ifExists) {
     this.namespaceName = Objects.requireNonNull(namespaceName);
     this.tableName = Objects.requireNonNull(tableName);
@@ -58,5 +58,10 @@ public class DropIndexStatement implements DdlStatement {
   @Override
   public int hashCode() {
     return Objects.hash(namespaceName, tableName, columnName, ifExists);
+  }
+
+  public static DropIndexStatement of(
+      String namespaceName, String tableName, String columnName, boolean ifExists) {
+    return new DropIndexStatement(namespaceName, tableName, columnName, ifExists);
   }
 }

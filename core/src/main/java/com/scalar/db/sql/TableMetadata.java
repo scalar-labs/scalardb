@@ -18,8 +18,7 @@ public class TableMetadata {
   private final String name;
   private final com.scalar.db.api.TableMetadata tableMetadata;
 
-  public TableMetadata(
-      String namespaceName, String name, com.scalar.db.api.TableMetadata tableMetadata) {
+  TableMetadata(String namespaceName, String name, com.scalar.db.api.TableMetadata tableMetadata) {
     this.namespaceName = Objects.requireNonNull(namespaceName);
     this.name = Objects.requireNonNull(name);
     this.tableMetadata = Objects.requireNonNull(tableMetadata);
