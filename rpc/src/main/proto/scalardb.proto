@@ -82,6 +82,8 @@ message ConditionalExpression {
     GTE = 3;
     LT = 4;
     LTE = 5;
+    IS_NULL = 6;
+    IS_NOT_NULL = 7;
   }
   Operator operator = 3;
 }

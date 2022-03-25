@@ -1,9 +1,10 @@
 package com.scalar.db.storage.dynamo;
 
+import com.google.common.collect.Ordering;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.Value;
 import com.scalar.db.storage.StorageConditionalMutationIntegrationTestBase;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,9 +28,13 @@ public class DynamoConditionalMutationIntegrationTest
     List<OperatorAndDataType> ret = new ArrayList<>();
     for (Operator operator : Operator.values()) {
       for (DataType dataType : DataType.values()) {
-        // DynamoDB only supports the 'equal' and 'not equal' conditions for BOOLEAN type
+        // DynamoDB only supports the 'equal' and 'not equal' and 'is null' and 'is not null'
+        // conditions for BOOLEAN type
         if (dataType == DataType.BOOLEAN) {
-          if (operator == Operator.EQ || operator == Operator.NE) {
+          if (operator == Operator.EQ
+              || operator == Operator.NE
+              || operator == Operator.IS_NULL
+              || operator == Operator.IS_NOT_NULL) {
             ret.add(new OperatorAndDataType(operator, dataType));
           }
         } else {
@@ -41,10 +46,24 @@ public class DynamoConditionalMutationIntegrationTest
   }
 
   @Override
-  protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
+  protected Column<?> getColumnWithRandomValue(
+      Random random, String columnName, DataType dataType) {
     if (dataType == DataType.DOUBLE) {
-      return DynamoTestUtils.getRandomDynamoDoubleValue(random, columnName);
+      return DynamoTestUtils.getRandomDynamoDoubleColumn(random, columnName);
     }
-    return super.getRandomValue(random, columnName, dataType);
+    return super.getColumnWithRandomValue(random, columnName, dataType);
+  }
+
+  @Override
+  protected boolean shouldMutate(
+      Column<?> initialColumn, Column<?> columnToCompare, Operator operator) {
+    switch (operator) {
+      case EQ:
+        return Ordering.natural().compare(initialColumn, columnToCompare) == 0;
+      case NE:
+        return Ordering.natural().compare(initialColumn, columnToCompare) != 0;
+      default:
+        return super.shouldMutate(initialColumn, columnToCompare, operator);
+    }
   }
 }

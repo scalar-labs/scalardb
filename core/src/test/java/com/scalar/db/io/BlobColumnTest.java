@@ -122,4 +122,16 @@ public class BlobColumnTest {
     assertThatThrownBy(column::getDoubleValue).isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(column::getTextValue).isInstanceOf(UnsupportedOperationException.class);
   }
+
+  @Test
+  public void compareTo_ShouldReturnProperResults() {
+    // Arrange
+    BlobColumn column = BlobColumn.of("col", new byte[] {1, 1, 1, 1});
+
+    // Act Assert
+    assertThat(column.compareTo(BlobColumn.of("col", new byte[] {1, 1, 1, 1}))).isEqualTo(0);
+    assertThat(column.compareTo(BlobColumn.of("col", new byte[] {-1, -1, -1, -1}))).isLessThan(0);
+    assertThat(column.compareTo(BlobColumn.of("col", new byte[] {0, 0, 0, 0}))).isGreaterThan(0);
+    assertThat(column.compareTo(BlobColumn.ofNull("col"))).isGreaterThan(0);
+  }
 }

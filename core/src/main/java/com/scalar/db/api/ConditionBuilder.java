@@ -1,7 +1,14 @@
 package com.scalar.db.api;
 
 import com.scalar.db.api.ConditionalExpression.Operator;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -586,6 +593,132 @@ public class ConditionBuilder {
      */
     public ConditionalExpression isLessThanOrEqualToBlob(ByteBuffer value) {
       return new ConditionalExpression(columnName, value, Operator.LTE);
+    }
+
+    /**
+     * Creates a 'is null' conditional expression for a BOOLEAN value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNullBoolean() {
+      return new ConditionalExpression(BooleanColumn.ofNull(columnName), Operator.IS_NULL);
+    }
+
+    /**
+     * Creates a 'is null' conditional expression for an INT value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNullInt() {
+      return new ConditionalExpression(IntColumn.ofNull(columnName), Operator.IS_NULL);
+    }
+
+    /**
+     * Creates a 'is null' conditional expression for a BIGINT value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNullBigInt() {
+      return new ConditionalExpression(BigIntColumn.ofNull(columnName), Operator.IS_NULL);
+    }
+
+    /**
+     * Creates a 'is null' conditional expression for a FLOAT value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNullFloat() {
+      return new ConditionalExpression(FloatColumn.ofNull(columnName), Operator.IS_NULL);
+    }
+
+    /**
+     * Creates a 'is null' conditional expression for a DOUBLE value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNullDouble() {
+      return new ConditionalExpression(DoubleColumn.ofNull(columnName), Operator.IS_NULL);
+    }
+
+    /**
+     * Creates a 'is null' conditional expression for a TEXT value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNullText() {
+      return new ConditionalExpression(TextColumn.ofNull(columnName), Operator.IS_NULL);
+    }
+
+    /**
+     * Creates a 'is null' conditional expression for a BLOB value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNullBlob() {
+      return new ConditionalExpression(BlobColumn.ofNull(columnName), Operator.IS_NULL);
+    }
+
+    /**
+     * Creates a 'is not null' conditional expression for a BOOLEAN value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNotNullBoolean() {
+      return new ConditionalExpression(BooleanColumn.ofNull(columnName), Operator.IS_NOT_NULL);
+    }
+
+    /**
+     * Creates a 'is not null' conditional expression for an INT value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNotNullInt() {
+      return new ConditionalExpression(IntColumn.ofNull(columnName), Operator.IS_NOT_NULL);
+    }
+
+    /**
+     * Creates a 'is not null' conditional expression for a BIGINT value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNotNullBigInt() {
+      return new ConditionalExpression(BigIntColumn.ofNull(columnName), Operator.IS_NOT_NULL);
+    }
+
+    /**
+     * Creates a 'is not null' conditional expression for a FLOAT value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNotNullFloat() {
+      return new ConditionalExpression(FloatColumn.ofNull(columnName), Operator.IS_NOT_NULL);
+    }
+
+    /**
+     * Creates a 'is not null' conditional expression for a DOUBLE value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNotNullDouble() {
+      return new ConditionalExpression(DoubleColumn.ofNull(columnName), Operator.IS_NOT_NULL);
+    }
+
+    /**
+     * Creates a 'is not null' conditional expression for a TEXT value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNotNullText() {
+      return new ConditionalExpression(TextColumn.ofNull(columnName), Operator.IS_NOT_NULL);
+    }
+
+    /**
+     * Creates a 'is not null' conditional expression for a BLOB value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNotNullBlob() {
+      return new ConditionalExpression(BlobColumn.ofNull(columnName), Operator.IS_NOT_NULL);
     }
   }
 

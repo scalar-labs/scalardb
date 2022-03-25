@@ -16,17 +16,23 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 class ColumnChecker implements ColumnVisitor {
   private final TableMetadata tableMetadata;
-  private final boolean notNull;
-  private final boolean notEmpty;
-  private final boolean notPrimaryKey;
+  private final boolean requireNotNull;
+  private final boolean requireNull;
+  private final boolean requireNotEmpty;
+  private final boolean requireNotPrimaryKey;
   private boolean isValid;
 
   public ColumnChecker(
-      TableMetadata tableMetadata, boolean notNull, boolean notEmpty, boolean notPrimaryKey) {
+      TableMetadata tableMetadata,
+      boolean requireNotNull,
+      boolean requireNull,
+      boolean requireNotEmpty,
+      boolean requireNotPrimaryKey) {
     this.tableMetadata = tableMetadata;
-    this.notNull = notNull;
-    this.notEmpty = notEmpty;
-    this.notPrimaryKey = notPrimaryKey;
+    this.requireNotNull = requireNotNull;
+    this.requireNull = requireNull;
+    this.requireNotEmpty = requireNotEmpty;
+    this.requireNotPrimaryKey = requireNotPrimaryKey;
   }
 
   public boolean check(Column<?> column) {
@@ -35,7 +41,7 @@ class ColumnChecker implements ColumnVisitor {
       return false;
     }
 
-    if (notPrimaryKey) {
+    if (requireNotPrimaryKey) {
       // Check if the column is primary key or not
       if (tableMetadata.getPartitionKeyNames().contains(column.getName())
           || tableMetadata.getClusteringKeyNames().contains(column.getName())) {
@@ -50,7 +56,11 @@ class ColumnChecker implements ColumnVisitor {
 
   @Override
   public void visit(BooleanColumn column) {
-    if (notNull && column.hasNullValue()) {
+    if (requireNotNull && column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+    if (requireNull && !column.hasNullValue()) {
       isValid = false;
       return;
     }
@@ -59,7 +69,11 @@ class ColumnChecker implements ColumnVisitor {
 
   @Override
   public void visit(IntColumn column) {
-    if (notNull && column.hasNullValue()) {
+    if (requireNotNull && column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+    if (requireNull && !column.hasNullValue()) {
       isValid = false;
       return;
     }
@@ -68,7 +82,11 @@ class ColumnChecker implements ColumnVisitor {
 
   @Override
   public void visit(BigIntColumn column) {
-    if (notNull && column.hasNullValue()) {
+    if (requireNotNull && column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+    if (requireNull && !column.hasNullValue()) {
       isValid = false;
       return;
     }
@@ -77,7 +95,11 @@ class ColumnChecker implements ColumnVisitor {
 
   @Override
   public void visit(FloatColumn column) {
-    if (notNull && column.hasNullValue()) {
+    if (requireNotNull && column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+    if (requireNull && !column.hasNullValue()) {
       isValid = false;
       return;
     }
@@ -86,7 +108,11 @@ class ColumnChecker implements ColumnVisitor {
 
   @Override
   public void visit(DoubleColumn column) {
-    if (notNull && column.hasNullValue()) {
+    if (requireNotNull && column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+    if (requireNull && !column.hasNullValue()) {
       isValid = false;
       return;
     }
@@ -95,11 +121,15 @@ class ColumnChecker implements ColumnVisitor {
 
   @Override
   public void visit(TextColumn column) {
-    if (notNull && column.hasNullValue()) {
+    if (requireNotNull && column.hasNullValue()) {
       isValid = false;
       return;
     }
-    if (notEmpty) {
+    if (requireNull && !column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+    if (requireNotEmpty) {
       String textValue = column.getTextValue();
       if (textValue != null && textValue.isEmpty()) {
         isValid = false;
@@ -111,11 +141,15 @@ class ColumnChecker implements ColumnVisitor {
 
   @Override
   public void visit(BlobColumn column) {
-    if (notNull && column.hasNullValue()) {
+    if (requireNotNull && column.hasNullValue()) {
       isValid = false;
       return;
     }
-    if (notEmpty) {
+    if (requireNull && !column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+    if (requireNotEmpty) {
       byte[] blobValue = column.getBlobValueAsBytes();
       if (blobValue != null && blobValue.length == 0) {
         isValid = false;

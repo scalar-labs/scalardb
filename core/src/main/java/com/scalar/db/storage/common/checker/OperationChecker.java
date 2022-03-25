@@ -35,7 +35,7 @@ public class OperationChecker {
     checkProjections(get, metadata);
 
     if (ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
-      if (!new ColumnChecker(metadata, true, false, false)
+      if (!new ColumnChecker(metadata, true, false, false, false)
           .check(get.getPartitionKey().getColumns().get(0))) {
         throw new IllegalArgumentException(
             "The partition key is not properly specified. Operation: " + get);
@@ -57,7 +57,7 @@ public class OperationChecker {
     checkProjections(scan, metadata);
 
     if (ScalarDbUtils.isSecondaryIndexSpecified(scan, metadata)) {
-      if (!new ColumnChecker(metadata, true, false, false)
+      if (!new ColumnChecker(metadata, true, false, false, false)
           .check(scan.getPartitionKey().getColumns().get(0))) {
         throw new IllegalArgumentException(
             "The partition key is not properly specified. Operation: " + scan);
@@ -206,7 +206,7 @@ public class OperationChecker {
 
   private void checkColumnsInPut(Put put, TableMetadata metadata) {
     for (Column<?> column : put.getColumns().values()) {
-      if (!new ColumnChecker(metadata, false, false, true).check(column)) {
+      if (!new ColumnChecker(metadata, false, false, false, true).check(column)) {
         throw new IllegalArgumentException(
             "The values are not properly specified. Operation: " + put);
       }
@@ -294,7 +294,7 @@ public class OperationChecker {
         return false;
       }
 
-      if (!new ColumnChecker(metadata, true, true, false).check(column)) {
+      if (!new ColumnChecker(metadata, true, false, true, false).check(column)) {
         return false;
       }
     }

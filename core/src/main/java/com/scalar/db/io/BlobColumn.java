@@ -1,8 +1,8 @@
 package com.scalar.db.io;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.Comparators;
 import com.google.common.collect.ComparisonChain;
+import com.google.common.primitives.UnsignedBytes;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -89,12 +89,15 @@ public class BlobColumn implements Column<ByteBuffer> {
     return getBlobValueAsByteBuffer();
   }
 
-  @SuppressWarnings("UnstableApiUsage")
   @Override
   public int compareTo(Column<ByteBuffer> o) {
     return ComparisonChain.start()
         .compare(getName(), o.getName())
-        .compare(getValue(), o.getValue(), Comparators.emptiesLast(Comparator.naturalOrder()))
+        .compareTrueFirst(hasNullValue(), o.hasNullValue())
+        .compare(
+            getBlobValueAsBytes(),
+            o.getBlobValueAsBytes(),
+            Comparator.nullsFirst(UnsignedBytes.lexicographicalComparator()))
         .result();
   }
 

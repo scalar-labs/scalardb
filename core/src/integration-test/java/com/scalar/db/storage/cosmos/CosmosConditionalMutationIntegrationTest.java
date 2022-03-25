@@ -33,9 +33,13 @@ public class CosmosConditionalMutationIntegrationTest
     List<OperatorAndDataType> ret = new ArrayList<>();
     for (Operator operator : Operator.values()) {
       for (DataType dataType : DataType.values()) {
-        // Cosmos DB only supports the 'equal' and 'not equal' conditions for BLOB type
+        // Cosmos DB only supports the 'equal' and 'not equal' and 'is null' and 'is not null'
+        // conditions for BLOB type
         if (dataType == DataType.BLOB) {
-          if (operator == Operator.EQ || operator == Operator.NE) {
+          if (operator == Operator.EQ
+              || operator == Operator.NE
+              || operator == Operator.IS_NULL
+              || operator == Operator.IS_NOT_NULL) {
             ret.add(new OperatorAndDataType(operator, dataType));
           }
         } else {

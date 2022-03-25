@@ -2,9 +2,10 @@ package com.scalar.db.storage.jdbc.query;
 
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.getOperatorString;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.getConditionString;
 
 import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
@@ -54,7 +55,7 @@ public class DeleteQuery implements Query {
     otherConditions.forEach(
         c ->
             conditions.add(
-                enclose(c.getName(), rdbEngine) + getOperatorString(c.getOperator()) + "?"));
+                getConditionString(c.getColumn().getName(), c.getOperator(), rdbEngine)));
     return String.join(" AND ", conditions);
   }
 
@@ -76,8 +77,12 @@ public class DeleteQuery implements Query {
     }
 
     for (ConditionalExpression condition : otherConditions) {
-      condition.getColumn().accept(binder);
-      binder.throwSQLExceptionIfOccurred();
+      // no need to bind for 'is null' and 'is not null' conditions
+      if (condition.getOperator() != Operator.IS_NULL
+          && condition.getOperator() != Operator.IS_NOT_NULL) {
+        condition.getColumn().accept(binder);
+        binder.throwSQLExceptionIfOccurred();
+      }
     }
   }
 

@@ -86,4 +86,16 @@ public class DoubleColumnTest {
     assertThatThrownBy(column::getBlobValueAsBytes)
         .isInstanceOf(UnsupportedOperationException.class);
   }
+
+  @Test
+  public void compareTo_ShouldReturnProperResults() {
+    // Arrange
+    DoubleColumn column = DoubleColumn.of("col", 1.0D);
+
+    // Act Assert
+    assertThat(column.compareTo(DoubleColumn.of("col", 1.0D))).isEqualTo(0);
+    assertThat(column.compareTo(DoubleColumn.of("col", 2.0D))).isLessThan(0);
+    assertThat(column.compareTo(DoubleColumn.of("col", 0.0D))).isGreaterThan(0);
+    assertThat(column.compareTo(DoubleColumn.ofNull("col"))).isGreaterThan(0);
+  }
 }
