@@ -2,8 +2,8 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.Value;
 import com.scalar.db.storage.StorageConditionalMutationIntegrationTestBase;
 import com.scalar.db.storage.TestUtils;
 import java.util.ArrayList;
@@ -42,14 +42,15 @@ public class JdbcDatabaseConditionalMutationIntegrationTest
   }
 
   @Override
-  protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
+  protected Column<?> getColumnWithRandomValue(
+      Random random, String columnName, DataType dataType) {
     if (rdbEngine == RdbEngine.ORACLE) {
       if (dataType == DataType.DOUBLE) {
-        return JdbcTestUtils.getRandomOracleDoubleValue(random, columnName);
+        return JdbcTestUtils.getRandomOracleDoubleColumn(random, columnName);
       }
       // don't allow empty value since Oracle treats empty value as NULL
-      return TestUtils.getRandomValue(random, columnName, dataType, false);
+      return TestUtils.getColumnWithRandomValue(random, columnName, dataType, false);
     }
-    return super.getRandomValue(random, columnName, dataType);
+    return super.getColumnWithRandomValue(random, columnName, dataType);
   }
 }

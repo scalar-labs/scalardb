@@ -111,9 +111,23 @@ public class ConditionExpressionBuilder implements MutationConditionVisitor {
       case LTE:
         elements = Arrays.asList(columnName, "<=", value);
         break;
+      case IS_NULL:
+        elements =
+            Arrays.asList(
+                "(attribute_not_exists(" + columnName + ")", "OR", columnName, "=", value + ")");
+        break;
+      case IS_NOT_NULL:
+        elements =
+            Arrays.asList(
+                "(attribute_exists(" + columnName + ")",
+                "AND",
+                "NOT",
+                columnName,
+                "=",
+                value + ")");
+        break;
       default:
-        // never comes here because ConditionalExpression accepts only above operators
-        throw new IllegalArgumentException(e.getOperator() + " is not supported");
+        throw new AssertionError();
     }
     index++;
 

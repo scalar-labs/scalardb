@@ -86,4 +86,16 @@ public class IntColumnTest {
     assertThatThrownBy(column::getBlobValueAsBytes)
         .isInstanceOf(UnsupportedOperationException.class);
   }
+
+  @Test
+  public void compareTo_ShouldReturnProperResults() {
+    // Arrange
+    IntColumn column = IntColumn.of("col", 100);
+
+    // Act Assert
+    assertThat(column.compareTo(IntColumn.of("col", 100))).isEqualTo(0);
+    assertThat(column.compareTo(IntColumn.of("col", 200))).isLessThan(0);
+    assertThat(column.compareTo(IntColumn.of("col", 0))).isGreaterThan(0);
+    assertThat(column.compareTo(IntColumn.ofNull("col"))).isGreaterThan(0);
+  }
 }

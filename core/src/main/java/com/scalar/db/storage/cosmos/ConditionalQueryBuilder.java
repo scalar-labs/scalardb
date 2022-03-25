@@ -47,7 +47,7 @@ public class ConditionalQueryBuilder implements MutationConditionVisitor {
         .forEach(
             e -> {
               binder.set(createConditionWith(e));
-              e.getValue().accept(binder);
+              e.getColumn().accept(binder);
             });
   }
 
@@ -83,7 +83,7 @@ public class ConditionalQueryBuilder implements MutationConditionVisitor {
         .forEach(
             e -> {
               binder.set(createConditionWith(e));
-              e.getValue().accept(binder);
+              e.getColumn().accept(binder);
             });
   }
 
@@ -98,8 +98,7 @@ public class ConditionalQueryBuilder implements MutationConditionVisitor {
   }
 
   private <T> Consumer<T> createConditionWith(ConditionalExpression e) {
-    // TODO: for a clustering key?
-    Field<Object> field = DSL.field("r.values" + quoteKeyword(e.getName()));
+    Field<Object> field = DSL.field("r.values" + quoteKeyword(e.getColumn().getName()));
     switch (e.getOperator()) {
       case EQ:
         return v -> select.and(field.equal(v));
@@ -113,9 +112,12 @@ public class ConditionalQueryBuilder implements MutationConditionVisitor {
         return v -> select.and(field.lessThan(v));
       case LTE:
         return v -> select.and(field.lessOrEqual(v));
+      case IS_NULL:
+        return v -> select.and("NOT IS_DEFINED(" + field.getName() + ")");
+      case IS_NOT_NULL:
+        return v -> select.and("IS_DEFINED(" + field.getName() + ")");
       default:
-        // never comes here because ConditionalExpression accepts only above operators
-        throw new IllegalArgumentException(e.getOperator() + " is not supported");
+        throw new AssertionError();
     }
   }
 }

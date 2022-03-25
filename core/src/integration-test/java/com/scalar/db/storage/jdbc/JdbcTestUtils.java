@@ -1,5 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.io.Column;
+import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
@@ -16,6 +18,10 @@ public final class JdbcTestUtils {
 
   public static Value<?> getRandomOracleDoubleValue(Random random, String columnName) {
     return new DoubleValue(columnName, nextOracleDouble(random));
+  }
+
+  public static Column<?> getRandomOracleDoubleColumn(Random random, String columnName) {
+    return DoubleColumn.of(columnName, nextOracleDouble(random));
   }
 
   public static double nextOracleDouble(Random random) {

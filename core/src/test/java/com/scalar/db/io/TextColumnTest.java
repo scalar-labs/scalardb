@@ -86,4 +86,16 @@ public class TextColumnTest {
     assertThatThrownBy(column::getBlobValueAsBytes)
         .isInstanceOf(UnsupportedOperationException.class);
   }
+
+  @Test
+  public void compareTo_ShouldReturnProperResults() {
+    // Arrange
+    TextColumn column = TextColumn.of("col", "aaa");
+
+    // Act Assert
+    assertThat(column.compareTo(TextColumn.of("col", "aaa"))).isEqualTo(0);
+    assertThat(column.compareTo(TextColumn.of("col", "aaaa"))).isLessThan(0);
+    assertThat(column.compareTo(TextColumn.of("col", "aa"))).isGreaterThan(0);
+    assertThat(column.compareTo(TextColumn.ofNull("col"))).isGreaterThan(0);
+  }
 }

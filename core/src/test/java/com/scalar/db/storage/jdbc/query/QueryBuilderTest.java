@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Scan;
@@ -584,6 +585,29 @@ public class QueryBuilderTest {
     verify(preparedStatement).setString(7, "v2ConditionValue");
     verify(preparedStatement).setString(8, "v3ConditionValue");
 
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .update(NAMESPACE, TABLE, TABLE_METADATA)
+            .set(columns)
+            .where(
+                new Key("p1", "p1Value"),
+                Optional.of(new Key("c1", "c1Value")),
+                Arrays.asList(
+                    ConditionBuilder.column("v1").isNullText(),
+                    ConditionBuilder.column("v2").isNotNullText()))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql(
+                "UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=? AND v1 IS NULL AND v2 IS NOT NULL"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "v1Value");
+    verify(preparedStatement).setString(2, "v2Value");
+    verify(preparedStatement).setString(3, "v3Value");
+    verify(preparedStatement).setString(4, "p1Value");
+    verify(preparedStatement).setString(5, "c1Value");
+
     columns.put("v4", TextColumn.ofNull("v4"));
     preparedStatement = mock(PreparedStatement.class);
     query =
@@ -685,6 +709,24 @@ public class QueryBuilderTest {
     verify(preparedStatement).setString(3, "v1ConditionValue");
     verify(preparedStatement).setString(4, "v2ConditionValue");
     verify(preparedStatement).setString(5, "v3ConditionValue");
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .deleteFrom(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(
+                new Key("p1", "p1Value"),
+                Optional.of(new Key("c1", "c1Value")),
+                Arrays.asList(
+                    ConditionBuilder.column("v1").isNullText(),
+                    ConditionBuilder.column("v2").isNotNullText()))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=? AND v1 IS NULL AND v2 IS NOT NULL"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1Value");
   }
 
   @Test

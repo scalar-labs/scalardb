@@ -7,22 +7,27 @@ public final class QueryUtils {
 
   private QueryUtils() {}
 
-  public static String getOperatorString(ConditionalExpression.Operator operator) {
+  public static String getConditionString(
+      String columnName, ConditionalExpression.Operator operator, RdbEngine rdbEngine) {
     switch (operator) {
       case EQ:
-        return "=";
+        return enclose(columnName, rdbEngine) + "=?";
       case NE:
-        return "<>";
+        return enclose(columnName, rdbEngine) + "<>?";
       case GT:
-        return ">";
+        return enclose(columnName, rdbEngine) + ">?";
       case GTE:
-        return ">=";
+        return enclose(columnName, rdbEngine) + ">=?";
       case LT:
-        return "<";
+        return enclose(columnName, rdbEngine) + "<?";
       case LTE:
-        return "<=";
+        return enclose(columnName, rdbEngine) + "<=?";
+      case IS_NULL:
+        return enclose(columnName, rdbEngine) + " IS NULL";
+      case IS_NOT_NULL:
+        return enclose(columnName, rdbEngine) + " IS NOT NULL";
       default:
-        throw new AssertionError("invalid operator: " + operator);
+        throw new AssertionError();
     }
   }
 

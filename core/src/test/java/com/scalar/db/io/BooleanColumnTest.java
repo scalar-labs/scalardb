@@ -86,4 +86,17 @@ public class BooleanColumnTest {
     assertThatThrownBy(column::getBlobValueAsBytes)
         .isInstanceOf(UnsupportedOperationException.class);
   }
+
+  @Test
+  public void compareTo_ShouldReturnProperResults() {
+    // Arrange
+    BooleanColumn column = BooleanColumn.of("col", true);
+
+    // Act Assert
+    assertThat(column.compareTo(BooleanColumn.of("col", true))).isEqualTo(0);
+    assertThat(column.compareTo(BooleanColumn.of("col", false))).isGreaterThan(0);
+    assertThat(BooleanColumn.of("col", false).compareTo(BooleanColumn.of("col", true)))
+        .isLessThan(0);
+    assertThat(column.compareTo(BooleanColumn.ofNull("col"))).isGreaterThan(0);
+  }
 }
