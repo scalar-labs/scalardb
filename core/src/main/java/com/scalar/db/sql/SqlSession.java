@@ -6,8 +6,6 @@ import com.scalar.db.sql.statement.Statement;
 public interface SqlSession {
   void beginTransaction();
 
-  void beginTransaction(String transactionId);
-
   void joinTransaction(String transactionId);
 
   void execute(Statement statement);

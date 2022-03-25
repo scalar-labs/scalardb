@@ -98,7 +98,7 @@ public class TableMetadata {
     return Optional.of(new IndexMetadata(namespaceName, name, columnName));
   }
 
-  private static DataType convertDataType(com.scalar.db.io.DataType dataType) {
+  private DataType convertDataType(com.scalar.db.io.DataType dataType) {
     switch (dataType) {
       case BOOLEAN:
         return DataType.BOOLEAN;
@@ -119,7 +119,7 @@ public class TableMetadata {
     }
   }
 
-  private static ClusteringOrder convertClusteringOrder(Scan.Ordering.Order order) {
+  private ClusteringOrder convertClusteringOrder(Scan.Ordering.Order order) {
     switch (order) {
       case ASC:
         return ClusteringOrder.ASC;

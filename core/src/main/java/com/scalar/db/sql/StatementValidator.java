@@ -2,6 +2,7 @@ package com.scalar.db.sql;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Streams;
 import com.scalar.db.api.TableMetadata;
@@ -78,6 +79,22 @@ public class StatementValidator implements StatementVisitor {
 
     ImmutableListMultimap<String, Predicate> predicatesMap =
         Multimaps.index(statement.predicates, c -> c.columnName);
+
+    // duplication check for projected column names
+    ImmutableSet<String> projectedColumnNamesSet =
+        ImmutableSet.copyOf(statement.projectedColumnNames);
+    if (statement.projectedColumnNames.size() != projectedColumnNamesSet.size()) {
+      throw new IllegalArgumentException(
+          "Specifying duplicated projected column names is not allowed");
+    }
+
+    // check for an index scan
+    if (SqlUtils.isIndexScan(predicatesMap, tableMetadata)) {
+      if (!statement.clusteringOrderings.isEmpty()) {
+        throw new IllegalArgumentException("Specifying 'order by' is not allowed in an index scan");
+      }
+      return;
+    }
 
     // check if only primary key columns are specified
     predicatesMap

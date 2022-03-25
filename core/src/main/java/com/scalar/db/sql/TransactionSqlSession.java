@@ -1,38 +1,22 @@
 package com.scalar.db.sql;
 
-import com.google.common.collect.ImmutableList;
-import com.scalar.db.api.Delete;
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
-import com.scalar.db.api.Get;
-import com.scalar.db.api.Put;
-import com.scalar.db.api.Result;
-import com.scalar.db.api.Scan;
-import com.scalar.db.api.Selection;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
-import com.scalar.db.exception.transaction.CrudConflictException;
-import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.sql.exception.SqlException;
 import com.scalar.db.sql.exception.TransactionConflictException;
 import com.scalar.db.sql.exception.UnknownTransactionStatusException;
 import com.scalar.db.sql.statement.DdlStatement;
-import com.scalar.db.sql.statement.DeleteStatement;
 import com.scalar.db.sql.statement.DmlStatement;
-import com.scalar.db.sql.statement.DmlStatementVisitor;
-import com.scalar.db.sql.statement.InsertStatement;
 import com.scalar.db.sql.statement.SelectStatement;
 import com.scalar.db.sql.statement.Statement;
-import com.scalar.db.sql.statement.UpdateStatement;
-import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -59,6 +43,20 @@ public class TransactionSqlSession implements SqlSession {
     ddlStatementExecutor = new DdlStatementExecutor(admin);
   }
 
+  @VisibleForTesting
+  TransactionSqlSession(
+      DistributedTransactionAdmin admin,
+      DistributedTransactionManager manager,
+      TableMetadataManager tableMetadataManager,
+      StatementValidator statementValidator,
+      DdlStatementExecutor ddlStatementExecutor) {
+    this.admin = Objects.requireNonNull(admin);
+    this.manager = Objects.requireNonNull(manager);
+    this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
+    this.statementValidator = Objects.requireNonNull(statementValidator);
+    this.ddlStatementExecutor = Objects.requireNonNull(ddlStatementExecutor);
+  }
+
   @Override
   public void beginTransaction() {
     checkIfTransactionInProgress();
@@ -72,38 +70,24 @@ public class TransactionSqlSession implements SqlSession {
   }
 
   @Override
-  public void beginTransaction(String transactionId) {
-    checkIfTransactionInProgress();
-
-    try {
-      transaction = manager.start(transactionId);
-      resultSet = null;
-    } catch (TransactionException e) {
-      throw new SqlException("Failed to begin a transaction", e);
-    }
-  }
-
-  @Override
   public void joinTransaction(String transactionId) {
     throw new UnsupportedOperationException(
-        "joining a transaction is not supported in transaction mode");
+        "Joining a transaction is not supported in transaction mode");
   }
 
   @Override
   public void execute(Statement statement) {
-    statementValidator.validate(statement);
-
     if (statement instanceof DdlStatement) {
       checkIfTransactionInProgress();
 
+      statementValidator.validate(statement);
       ddlStatementExecutor.execute((DdlStatement) statement);
       resultSet = EmptyResultSet.INSTANCE;
     } else if (statement instanceof DmlStatement) {
       checkIfTransactionBegun();
 
-      resultSet =
-          new DmlStatementExecutor(transaction, tableMetadataManager, (DmlStatement) statement)
-              .execute();
+      statementValidator.validate(statement);
+      resultSet = executeDmlStatement((DmlStatement) statement);
     } else {
       throw new AssertionError();
     }
@@ -124,20 +108,25 @@ public class TransactionSqlSession implements SqlSession {
     checkIfTransactionBegun();
 
     statementValidator.validate(statement);
-    resultSet = new DmlStatementExecutor(transaction, tableMetadataManager, statement).execute();
+    resultSet = executeDmlStatement(statement);
     return resultSet;
+  }
+
+  @VisibleForTesting
+  ResultSet executeDmlStatement(DmlStatement statement) {
+    return new DmlStatementExecutor(transaction, tableMetadataManager, statement).execute();
   }
 
   @Override
   public void prepare() {
     throw new UnsupportedOperationException(
-        "preparing a transaction is not supported in transaction mode");
+        "Preparing a transaction is not supported in transaction mode");
   }
 
   @Override
   public void validate() {
     throw new UnsupportedOperationException(
-        "validating a transaction is not supported in transaction mode");
+        "Validating a transaction is not supported in transaction mode");
   }
 
   @Override
@@ -197,113 +186,6 @@ public class TransactionSqlSession implements SqlSession {
   private void checkIfTransactionBegun() {
     if (transaction == null) {
       throw new IllegalStateException("A transaction is not begun");
-    }
-  }
-
-  @NotThreadSafe
-  private static class DmlStatementExecutor implements DmlStatementVisitor {
-
-    private final DistributedTransaction transaction;
-    private final TableMetadataManager tableMetadataManager;
-    private final DmlStatement statement;
-
-    private ResultSet resultSet;
-
-    public DmlStatementExecutor(
-        DistributedTransaction transaction,
-        TableMetadataManager tableMetadataManager,
-        DmlStatement statement) {
-      this.transaction = transaction;
-      this.tableMetadataManager = tableMetadataManager;
-      this.statement = statement;
-    }
-
-    public ResultSet execute() {
-      statement.accept(this);
-      return resultSet;
-    }
-
-    @Override
-    public void visit(SelectStatement statement) {
-      TableMetadata metadata =
-          SqlUtils.getTableMetadata(
-              tableMetadataManager, statement.namespaceName, statement.tableName);
-
-      Selection selection = SqlUtils.convertSelectStatementToSelection(statement, metadata);
-
-      ImmutableList<String> projectedColumnNames =
-          statement.projectedColumnNames.isEmpty()
-              ? ImmutableList.copyOf(metadata.getColumnNames())
-              : statement.projectedColumnNames;
-
-      try {
-        if (selection instanceof Get) {
-          Optional<Result> result = transaction.get((Get) selection);
-          resultSet =
-              result
-                  .map(
-                      r ->
-                          (ResultSet)
-                              new ResultIteratorResultSet(
-                                  Collections.singletonList(r).iterator(), projectedColumnNames))
-                  .orElse(EmptyResultSet.INSTANCE);
-        } else {
-          List<Result> results = transaction.scan((Scan) selection);
-          resultSet = new ResultIteratorResultSet(results.iterator(), projectedColumnNames);
-        }
-      } catch (CrudConflictException e) {
-        throw new TransactionConflictException("Conflict happened during selecting a record", e);
-      } catch (CrudException e) {
-        throw new SqlException("Failed to insert a record", e);
-      }
-    }
-
-    @Override
-    public void visit(InsertStatement statement) {
-      TableMetadata metadata =
-          SqlUtils.getTableMetadata(
-              tableMetadataManager, statement.namespaceName, statement.tableName);
-      Put put = SqlUtils.convertInsertStatementToPut(statement, metadata);
-      try {
-        transaction.put(put);
-        resultSet = EmptyResultSet.INSTANCE;
-      } catch (CrudConflictException e) {
-        throw new TransactionConflictException("Conflict happened during inserting a record", e);
-      } catch (CrudException e) {
-        throw new SqlException("Failed to insert a record", e);
-      }
-    }
-
-    @Override
-    public void visit(UpdateStatement statement) {
-      TableMetadata metadata =
-          SqlUtils.getTableMetadata(
-              tableMetadataManager, statement.namespaceName, statement.tableName);
-      Put put = SqlUtils.convertUpdateStatementToPut(statement, metadata);
-      try {
-        transaction.put(put);
-        resultSet = EmptyResultSet.INSTANCE;
-      } catch (CrudConflictException e) {
-        throw new TransactionConflictException("Conflict happened during updating a record", e);
-      } catch (CrudException e) {
-        throw new SqlException("Failed to update a record", e);
-      }
-    }
-
-    @Override
-    public void visit(DeleteStatement statement) {
-      TableMetadata metadata =
-          SqlUtils.getTableMetadata(
-              tableMetadataManager, statement.namespaceName, statement.tableName);
-      Delete delete = SqlUtils.convertDeleteStatementToDelete(statement, metadata);
-      try {
-        transaction.delete(delete);
-        resultSet = EmptyResultSet.INSTANCE;
-      } catch (CrudConflictException e) {
-        throw new TransactionConflictException("Conflict happened during deleting a record", e);
-      } catch (CrudException e) {
-        throw new SqlException("Failed to delete a record", e);
-      }
     }
   }
 }

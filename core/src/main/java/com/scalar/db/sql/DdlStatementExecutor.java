@@ -57,7 +57,7 @@ public class DdlStatementExecutor implements DdlStatementVisitor {
     }
   }
 
-  private static com.scalar.db.api.TableMetadata convertCreateStatementToTableMetadata(
+  private com.scalar.db.api.TableMetadata convertCreateStatementToTableMetadata(
       CreateTableStatement statement) {
     com.scalar.db.api.TableMetadata.Builder builder = com.scalar.db.api.TableMetadata.newBuilder();
     statement.columns.forEach((c, d) -> builder.addColumn(c, convertDataType(d)));
@@ -72,7 +72,7 @@ public class DdlStatementExecutor implements DdlStatementVisitor {
     return builder.build();
   }
 
-  private static com.scalar.db.io.DataType convertDataType(DataType dataType) {
+  private com.scalar.db.io.DataType convertDataType(DataType dataType) {
     switch (dataType) {
       case BOOLEAN:
         return com.scalar.db.io.DataType.BOOLEAN;
@@ -93,7 +93,7 @@ public class DdlStatementExecutor implements DdlStatementVisitor {
     }
   }
 
-  private static Scan.Ordering.Order convertClusteringOrder(ClusteringOrder clusteringOrder) {
+  private Scan.Ordering.Order convertClusteringOrder(ClusteringOrder clusteringOrder) {
     switch (clusteringOrder) {
       case ASC:
         return Scan.Ordering.Order.ASC;
