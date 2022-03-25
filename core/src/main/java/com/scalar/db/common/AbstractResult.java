@@ -1,4 +1,4 @@
-package com.scalar.db.util;
+package com.scalar.db.common;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
@@ -6,6 +6,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Result;
 import com.scalar.db.io.Value;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
