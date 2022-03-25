@@ -1,9 +1,10 @@
 package com.scalar.db.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Ordering;
 import com.scalar.db.api.ConditionBuilder;
@@ -22,11 +23,19 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.service.StorageFactory;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -140,45 +149,89 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
           operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
       put_withPutIfWithSingleConditionWithRandomValue_shouldPutProperly(
           operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
+      put_withPutIfWithInitialDataWithNullValuesWithSingleCondition_shouldPutProperly(
+          operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
+      put_withPutIfWithInitialDataWithoutValuesWithSingleCondition_shouldPutProperly(
+          operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
     }
   }
 
   private void put_withPutIfWithSingleConditionWithSameValue_shouldPutProperly(
       Operator operator, DataType dataType) throws ExecutionException {
     // Arrange
-    Put initialPut = putInitialData();
+    Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
 
     String columnName = getColumnName(dataType);
-    Value<?> value = getInitialValue(initialPut, dataType).copyWith("");
-    MutationCondition condition =
-        ConditionBuilder.putIf(getConditionalExpression(columnName, operator, value)).build();
-    boolean shouldMutate = shouldMutate(initialPut, operator, dataType, value);
+    Column<?> columnToCompare = initialData.get(columnName);
 
+    MutationCondition condition =
+        ConditionBuilder.putIf(buildConditionalExpression(columnToCompare, operator)).build();
     Put put = preparePutWithRandomValues().withCondition(condition);
+
+    boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
     // Act Assert
     put_withPutIf_shouldPutProperly(
-        initialPut, put, shouldMutate, description(initialPut, put, columnName, operator, value));
+        initialData, put, shouldMutate, description(initialData, put, columnToCompare, operator));
   }
 
   private void put_withPutIfWithSingleConditionWithRandomValue_shouldPutProperly(
       Operator operator, DataType dataType) throws ExecutionException {
     for (int i = 0; i < ATTEMPT_COUNT; i++) {
       // Arrange
-      Put initialPut = putInitialData();
+      Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
 
       String columnName = getColumnName(dataType);
-      Value<?> value = getRandomValue(RANDOM, "", dataType);
-      MutationCondition condition =
-          ConditionBuilder.putIf(getConditionalExpression(columnName, operator, value)).build();
-      boolean shouldMutate = shouldMutate(initialPut, operator, dataType, value);
+      Column<?> columnToCompare = getColumnWithRandomValue(RANDOM, columnName, dataType);
 
+      MutationCondition condition =
+          ConditionBuilder.putIf(buildConditionalExpression(columnToCompare, operator)).build();
       Put put = preparePutWithRandomValues().withCondition(condition);
+
+      boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
       // Act Assert
       put_withPutIf_shouldPutProperly(
-          initialPut, put, shouldMutate, description(initialPut, put, columnName, operator, value));
+          initialData, put, shouldMutate, description(initialData, put, columnToCompare, operator));
     }
+  }
+
+  private void put_withPutIfWithInitialDataWithNullValuesWithSingleCondition_shouldPutProperly(
+      Operator operator, DataType dataType) throws ExecutionException {
+    // Arrange
+    Map<String, Column<?>> initialData = putInitialDataWithNullValues();
+
+    String columnName = getColumnName(dataType);
+    Column<?> columnToCompare = getColumnWithRandomValue(RANDOM, columnName, dataType);
+
+    MutationCondition condition =
+        ConditionBuilder.putIf(buildConditionalExpression(columnToCompare, operator)).build();
+    Put put = preparePutWithRandomValues().withCondition(condition);
+
+    boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
+
+    // Act Assert
+    put_withPutIf_shouldPutProperly(
+        initialData, put, shouldMutate, description(initialData, put, columnToCompare, operator));
+  }
+
+  private void put_withPutIfWithInitialDataWithoutValuesWithSingleCondition_shouldPutProperly(
+      Operator operator, DataType dataType) throws ExecutionException {
+    // Arrange
+    Map<String, Column<?>> initialData = putInitialDataWithoutValues();
+
+    String columnName = getColumnName(dataType);
+    Column<?> columnToCompare = getColumnWithRandomValue(RANDOM, columnName, dataType);
+
+    MutationCondition condition =
+        ConditionBuilder.putIf(buildConditionalExpression(columnToCompare, operator)).build();
+    Put put = preparePutWithRandomValues().withCondition(condition);
+
+    boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
+
+    // Act Assert
+    put_withPutIf_shouldPutProperly(
+        initialData, put, shouldMutate, description(initialData, put, columnToCompare, operator));
   }
 
   @Test
@@ -197,6 +250,16 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
             firstOperatorAndDataType.getDataType(),
             secondOperatorAndDataType.getOperator(),
             secondOperatorAndDataType.getDataType());
+        put_withPutIfWithInitialDataWithNullValuesWithMultipleConditions_shouldPutProperly(
+            firstOperatorAndDataType.getOperator(),
+            firstOperatorAndDataType.getDataType(),
+            secondOperatorAndDataType.getOperator(),
+            secondOperatorAndDataType.getDataType());
+        put_withPutIfWithInitialDataWithoutValuesWithMultipleConditions_shouldPutProperly(
+            firstOperatorAndDataType.getOperator(),
+            firstOperatorAndDataType.getDataType(),
+            secondOperatorAndDataType.getOperator(),
+            secondOperatorAndDataType.getDataType());
       }
     }
   }
@@ -208,39 +271,37 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
       DataType secondDataType)
       throws ExecutionException {
     // Arrange
-    Put initialPut = putInitialData();
+    Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
 
     String firstColumnName = getColumnName(firstDataType);
-    Value<?> firstValue = getInitialValue(initialPut, firstDataType).copyWith("");
+    Column<?> firstColumnToCompare = initialData.get(firstColumnName);
 
     String secondColumnName = getColumnName(secondDataType);
-    Value<?> secondValue = getInitialValue(initialPut, secondDataType).copyWith("");
+    Column<?> secondColumnToCompare = initialData.get(secondColumnName);
 
     MutationCondition condition =
-        ConditionBuilder.putIf(getConditionalExpression(firstColumnName, firstOperator, firstValue))
-            .and(getConditionalExpression(secondColumnName, secondOperator, secondValue))
+        ConditionBuilder.putIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
+            .and(buildConditionalExpression(secondColumnToCompare, secondOperator))
             .build();
+    Put put = preparePutWithRandomValues().withCondition(condition);
 
     boolean shouldMutate =
-        shouldMutate(initialPut, firstOperator, firstDataType, firstValue)
-            && shouldMutate(initialPut, secondOperator, secondDataType, secondValue);
-
-    Put put = preparePutWithRandomValues().withCondition(condition);
+        shouldMutate(initialData.get(firstColumnName), firstColumnToCompare, firstOperator)
+            && shouldMutate(
+                initialData.get(secondColumnName), secondColumnToCompare, secondOperator);
 
     // Act Assert
     put_withPutIf_shouldPutProperly(
-        initialPut,
+        initialData,
         put,
         shouldMutate,
         description(
-            initialPut,
+            initialData,
             put,
-            firstColumnName,
+            firstColumnToCompare,
             firstOperator,
-            firstValue,
-            secondColumnName,
-            secondOperator,
-            secondValue));
+            secondColumnToCompare,
+            secondOperator));
   }
 
   private void put_withPutIfWithMultipleConditionsWithRandomValue_shouldPutProperly(
@@ -251,51 +312,134 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
       throws ExecutionException {
     for (int i = 0; i < ATTEMPT_COUNT; i++) {
       // Arrange
-      Put initialPut = putInitialData();
+      Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
 
       String firstColumnName = getColumnName(firstDataType);
-      Value<?> firstValue = getRandomValue(RANDOM, "", firstDataType);
+      Column<?> firstColumnToCompare =
+          getColumnWithRandomValue(RANDOM, firstColumnName, firstDataType);
 
       String secondColumnName = getColumnName(secondDataType);
-      Value<?> secondValue = getRandomValue(RANDOM, "", secondDataType);
+      Column<?> secondColumnToCompare =
+          getColumnWithRandomValue(RANDOM, secondColumnName, secondDataType);
 
       MutationCondition condition =
-          ConditionBuilder.putIf(
-                  getConditionalExpression(firstColumnName, firstOperator, firstValue))
-              .and(getConditionalExpression(secondColumnName, secondOperator, secondValue))
+          ConditionBuilder.putIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
+              .and(buildConditionalExpression(secondColumnToCompare, secondOperator))
               .build();
+      Put put = preparePutWithRandomValues().withCondition(condition);
 
       boolean shouldMutate =
-          shouldMutate(initialPut, firstOperator, firstDataType, firstValue)
-              && shouldMutate(initialPut, secondOperator, secondDataType, secondValue);
-
-      Put put = preparePutWithRandomValues().withCondition(condition);
+          shouldMutate(initialData.get(firstColumnName), firstColumnToCompare, firstOperator)
+              && shouldMutate(
+                  initialData.get(secondColumnName), secondColumnToCompare, secondOperator);
 
       // Act Assert
       put_withPutIf_shouldPutProperly(
-          initialPut,
+          initialData,
           put,
           shouldMutate,
           description(
-              initialPut,
+              initialData,
               put,
-              firstColumnName,
+              firstColumnToCompare,
               firstOperator,
-              firstValue,
-              secondColumnName,
-              secondOperator,
-              secondValue));
+              secondColumnToCompare,
+              secondOperator));
     }
   }
 
+  private void put_withPutIfWithInitialDataWithNullValuesWithMultipleConditions_shouldPutProperly(
+      Operator firstOperator,
+      DataType firstDataType,
+      Operator secondOperator,
+      DataType secondDataType)
+      throws ExecutionException {
+    // Arrange
+    Map<String, Column<?>> initialData = putInitialDataWithNullValues();
+
+    String firstColumnName = getColumnName(firstDataType);
+    Column<?> firstColumnToCompare =
+        getColumnWithRandomValue(RANDOM, firstColumnName, firstDataType);
+
+    String secondColumnName = getColumnName(secondDataType);
+    Column<?> secondColumnToCompare =
+        getColumnWithRandomValue(RANDOM, secondColumnName, secondDataType);
+
+    MutationCondition condition =
+        ConditionBuilder.putIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
+            .and(buildConditionalExpression(secondColumnToCompare, secondOperator))
+            .build();
+    Put put = preparePutWithRandomValues().withCondition(condition);
+
+    boolean shouldMutate =
+        shouldMutate(initialData.get(firstColumnName), firstColumnToCompare, firstOperator)
+            && shouldMutate(
+                initialData.get(secondColumnName), secondColumnToCompare, secondOperator);
+
+    // Act Assert
+    put_withPutIf_shouldPutProperly(
+        initialData,
+        put,
+        shouldMutate,
+        description(
+            initialData,
+            put,
+            firstColumnToCompare,
+            firstOperator,
+            secondColumnToCompare,
+            secondOperator));
+  }
+
+  private void put_withPutIfWithInitialDataWithoutValuesWithMultipleConditions_shouldPutProperly(
+      Operator firstOperator,
+      DataType firstDataType,
+      Operator secondOperator,
+      DataType secondDataType)
+      throws ExecutionException {
+    // Arrange
+    Map<String, Column<?>> initialData = putInitialDataWithoutValues();
+
+    String firstColumnName = getColumnName(firstDataType);
+    Column<?> firstColumnToCompare =
+        getColumnWithRandomValue(RANDOM, firstColumnName, firstDataType);
+
+    String secondColumnName = getColumnName(secondDataType);
+    Column<?> secondColumnToCompare =
+        getColumnWithRandomValue(RANDOM, secondColumnName, secondDataType);
+
+    MutationCondition condition =
+        ConditionBuilder.putIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
+            .and(buildConditionalExpression(secondColumnToCompare, secondOperator))
+            .build();
+    Put put = preparePutWithRandomValues().withCondition(condition);
+
+    boolean shouldMutate =
+        shouldMutate(initialData.get(firstColumnName), firstColumnToCompare, firstOperator)
+            && shouldMutate(
+                initialData.get(secondColumnName), secondColumnToCompare, secondOperator);
+
+    // Act Assert
+    put_withPutIf_shouldPutProperly(
+        initialData,
+        put,
+        shouldMutate,
+        description(
+            initialData,
+            put,
+            firstColumnToCompare,
+            firstOperator,
+            secondColumnToCompare,
+            secondOperator));
+  }
+
   private void put_withPutIf_shouldPutProperly(
-      Put initialPut, Put put, boolean shouldMutate, String description) throws ExecutionException {
+      Map<String, Column<?>> initialData, Put put, boolean shouldMutate, String description)
+      throws ExecutionException {
+    Throwable thrown = catchThrowable(() -> storage.put(put));
     if (shouldMutate) {
-      assertThatCode(() -> storage.put(put)).describedAs(description).doesNotThrowAnyException();
+      assertThat(thrown).describedAs(description).isNull();
     } else {
-      assertThatThrownBy(() -> storage.put(put))
-          .describedAs(description)
-          .isInstanceOf(NoMutationException.class);
+      assertThat(thrown).describedAs(description).isInstanceOf(NoMutationException.class);
     }
 
     Optional<Result> result = storage.get(prepareGet());
@@ -313,33 +457,43 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
                 COL_NAME6,
                 COL_NAME7));
 
-    Put expectedPut = shouldMutate ? put : initialPut;
-    assertThat(result.get().isNull(COL_NAME1)).describedAs(description).isFalse();
+    Map<String, Column<?>> expected = shouldMutate ? put.getColumns() : initialData;
+    assertThat(result.get().isNull(COL_NAME1))
+        .describedAs(description)
+        .isEqualTo(expected.get(COL_NAME1).hasNullValue());
     assertThat(result.get().getBoolean(COL_NAME1))
         .describedAs(description)
-        .isEqualTo(expectedPut.getBooleanValue(COL_NAME1));
-    assertThat(result.get().isNull(COL_NAME2)).describedAs(description).isFalse();
+        .isEqualTo(expected.get(COL_NAME1).getBooleanValue());
+    assertThat(result.get().isNull(COL_NAME2))
+        .describedAs(description)
+        .isEqualTo(expected.get(COL_NAME2).hasNullValue());
     assertThat(result.get().getInt(COL_NAME2))
         .describedAs(description)
-        .isEqualTo(expectedPut.getIntValue(COL_NAME2));
-    assertThat(result.get().isNull(COL_NAME3)).describedAs(description).isFalse();
+        .isEqualTo(expected.get(COL_NAME2).getIntValue());
+    assertThat(result.get().isNull(COL_NAME3))
+        .describedAs(description)
+        .isEqualTo(expected.get(COL_NAME3).hasNullValue());
     assertThat(result.get().getBigInt(COL_NAME3))
         .describedAs(description)
-        .isEqualTo(expectedPut.getBigIntValue(COL_NAME3));
-    assertThat(result.get().isNull(COL_NAME4)).describedAs(description).isFalse();
+        .isEqualTo(expected.get(COL_NAME3).getBigIntValue());
+    assertThat(result.get().isNull(COL_NAME4))
+        .describedAs(description)
+        .isEqualTo(expected.get(COL_NAME4).hasNullValue());
     assertThat(result.get().getFloat(COL_NAME4))
         .describedAs(description)
-        .isEqualTo(expectedPut.getFloatValue(COL_NAME4));
-    assertThat(result.get().isNull(COL_NAME5)).describedAs(description).isFalse();
+        .isEqualTo(expected.get(COL_NAME4).getFloatValue());
+    assertThat(result.get().isNull(COL_NAME5))
+        .describedAs(description)
+        .isEqualTo(expected.get(COL_NAME5).hasNullValue());
     assertThat(result.get().getDouble(COL_NAME5))
         .describedAs(description)
-        .isEqualTo(expectedPut.getDoubleValue(COL_NAME5));
+        .isEqualTo(expected.get(COL_NAME5).getDoubleValue());
     assertThat(result.get().getText(COL_NAME6))
         .describedAs(description)
-        .isEqualTo(expectedPut.getTextValue(COL_NAME6));
+        .isEqualTo(expected.get(COL_NAME6).getTextValue());
     assertThat(result.get().getBlob(COL_NAME7))
         .describedAs(description)
-        .isEqualTo(expectedPut.getBlobValue(COL_NAME7));
+        .isEqualTo(expected.get(COL_NAME7).getBlobValue());
   }
 
   @Test
@@ -347,7 +501,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
     RANDOM.setSeed(seed);
 
     // Arrange
-    putInitialData();
+    putInitialDataWithRandomValues();
 
     Put put = preparePutWithRandomValues().withCondition(ConditionBuilder.putIfExists());
 
@@ -432,7 +586,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
     RANDOM.setSeed(seed);
 
     // Arrange
-    Put initialPut = putInitialData();
+    Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
 
     Put put = preparePutWithRandomValues().withCondition(ConditionBuilder.putIfNotExists());
 
@@ -452,16 +606,19 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
                 COL_NAME5,
                 COL_NAME6,
                 COL_NAME7));
-    assertThat(result.get().getBoolean(COL_NAME1)).isEqualTo(initialPut.getBooleanValue(COL_NAME1));
-    assertThat(result.get().getInt(COL_NAME2)).isEqualTo(initialPut.getIntValue(COL_NAME2));
-
-    assertThat(result.get().getBigInt(COL_NAME3)).isEqualTo(initialPut.getBigIntValue(COL_NAME3));
-
-    assertThat(result.get().getFloat(COL_NAME4)).isEqualTo(initialPut.getFloatValue(COL_NAME4));
-
-    assertThat(result.get().getDouble(COL_NAME5)).isEqualTo(initialPut.getDoubleValue(COL_NAME5));
-    assertThat(result.get().getText(COL_NAME6)).isEqualTo(initialPut.getTextValue(COL_NAME6));
-    assertThat(result.get().getBlob(COL_NAME7)).isEqualTo(initialPut.getBlobValue(COL_NAME7));
+    assertThat(result.get().getBoolean(COL_NAME1))
+        .isEqualTo(initialData.get(COL_NAME1).getBooleanValue());
+    assertThat(result.get().getInt(COL_NAME2)).isEqualTo(initialData.get(COL_NAME2).getIntValue());
+    assertThat(result.get().getBigInt(COL_NAME3))
+        .isEqualTo(initialData.get(COL_NAME3).getBigIntValue());
+    assertThat(result.get().getFloat(COL_NAME4))
+        .isEqualTo(initialData.get(COL_NAME4).getFloatValue());
+    assertThat(result.get().getDouble(COL_NAME5))
+        .isEqualTo(initialData.get(COL_NAME5).getDoubleValue());
+    assertThat(result.get().getText(COL_NAME6))
+        .isEqualTo(initialData.get(COL_NAME6).getTextValue());
+    assertThat(result.get().getBlob(COL_NAME7))
+        .isEqualTo(initialData.get(COL_NAME7).getBlobValue());
   }
 
   @Test
@@ -473,51 +630,102 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
           operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
       delete_withDeleteWithSingleConditionWithRandomValue_shouldPutProperly(
           operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
+      delete_withDeleteIfWithInitialDataWithNullValuesWithSingleCondition_shouldPutProperly(
+          operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
+      delete_withDeleteIfWithInitialDataWithoutValuesWithSingleCondition_shouldPutProperly(
+          operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
     }
   }
 
   private void delete_withDeleteIfWithSingleConditionWithSameValue_shouldPutProperly(
       Operator operator, DataType dataType) throws ExecutionException {
     // Arrange
-    Put initialPut = putInitialData();
+    Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
 
     String columnName = getColumnName(dataType);
-    Value<?> value = getInitialValue(initialPut, dataType).copyWith("");
-    MutationCondition condition =
-        ConditionBuilder.deleteIf(getConditionalExpression(columnName, operator, value)).build();
-    boolean shouldMutate = shouldMutate(initialPut, operator, dataType, value);
+    Column<?> columnToCompare = initialData.get(columnName);
 
+    MutationCondition condition =
+        ConditionBuilder.deleteIf(buildConditionalExpression(columnToCompare, operator)).build();
     Delete delete = prepareDelete().withCondition(condition);
+
+    boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
     // Act Assert
     delete_withDeleteIf_shouldPutProperly(
-        initialPut,
+        initialData,
         delete,
         shouldMutate,
-        description(initialPut, delete, columnName, operator, value));
+        description(initialData, delete, columnToCompare, operator));
   }
 
   private void delete_withDeleteWithSingleConditionWithRandomValue_shouldPutProperly(
       Operator operator, DataType dataType) throws ExecutionException {
     for (int i = 0; i < ATTEMPT_COUNT; i++) {
       // Arrange
-      Put initialPut = putInitialData();
+      Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
 
       String columnName = getColumnName(dataType);
-      Value<?> value = getRandomValue(RANDOM, "", dataType);
-      MutationCondition condition =
-          ConditionBuilder.deleteIf(getConditionalExpression(columnName, operator, value)).build();
-      boolean shouldMutate = shouldMutate(initialPut, operator, dataType, value);
+      Column<?> columnToCompare = getColumnWithRandomValue(RANDOM, columnName, dataType);
 
+      MutationCondition condition =
+          ConditionBuilder.deleteIf(buildConditionalExpression(columnToCompare, operator)).build();
       Delete delete = prepareDelete().withCondition(condition);
+
+      boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
       // Act Assert
       delete_withDeleteIf_shouldPutProperly(
-          initialPut,
+          initialData,
           delete,
           shouldMutate,
-          description(initialPut, delete, columnName, operator, value));
+          description(initialData, delete, columnToCompare, operator));
     }
+  }
+
+  private void
+      delete_withDeleteIfWithInitialDataWithNullValuesWithSingleCondition_shouldPutProperly(
+          Operator operator, DataType dataType) throws ExecutionException {
+    // Arrange
+    Map<String, Column<?>> initialData = putInitialDataWithNullValues();
+
+    String columnName = getColumnName(dataType);
+    Column<?> columnToCompare = getColumnWithRandomValue(RANDOM, columnName, dataType);
+
+    MutationCondition condition =
+        ConditionBuilder.deleteIf(buildConditionalExpression(columnToCompare, operator)).build();
+    Delete delete = prepareDelete().withCondition(condition);
+
+    boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
+
+    // Act Assert
+    delete_withDeleteIf_shouldPutProperly(
+        initialData,
+        delete,
+        shouldMutate,
+        description(initialData, delete, columnToCompare, operator));
+  }
+
+  private void delete_withDeleteIfWithInitialDataWithoutValuesWithSingleCondition_shouldPutProperly(
+      Operator operator, DataType dataType) throws ExecutionException {
+    // Arrange
+    Map<String, Column<?>> initialData = putInitialDataWithoutValues();
+
+    String columnName = getColumnName(dataType);
+    Column<?> columnToCompare = getColumnWithRandomValue(RANDOM, columnName, dataType);
+
+    MutationCondition condition =
+        ConditionBuilder.deleteIf(buildConditionalExpression(columnToCompare, operator)).build();
+    Delete delete = prepareDelete().withCondition(condition);
+
+    boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
+
+    // Act Assert
+    delete_withDeleteIf_shouldPutProperly(
+        initialData,
+        delete,
+        shouldMutate,
+        description(initialData, delete, columnToCompare, operator));
   }
 
   @Test
@@ -537,6 +745,16 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
             firstOperatorAndDataType.getDataType(),
             secondOperatorAndDataType.getOperator(),
             secondOperatorAndDataType.getDataType());
+        delete_withDeleteIfWithInitialDataWithNullValuesWithMultipleConditions_shouldPutProperly(
+            firstOperatorAndDataType.getOperator(),
+            firstOperatorAndDataType.getDataType(),
+            secondOperatorAndDataType.getOperator(),
+            secondOperatorAndDataType.getDataType());
+        delete_withDeleteIfWithInitialDataWithoutValuesWithMultipleConditions_shouldPutProperly(
+            firstOperatorAndDataType.getOperator(),
+            firstOperatorAndDataType.getDataType(),
+            secondOperatorAndDataType.getOperator(),
+            secondOperatorAndDataType.getDataType());
       }
     }
   }
@@ -548,40 +766,38 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
       DataType secondDataType)
       throws ExecutionException {
     // Arrange
-    Put initialPut = putInitialData();
+    Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
 
     String firstColumnName = getColumnName(firstDataType);
-    Value<?> firstValue = getInitialValue(initialPut, firstDataType).copyWith("");
+    Column<?> firstColumnToCompare = initialData.get(firstColumnName);
 
     String secondColumnName = getColumnName(secondDataType);
-    Value<?> secondValue = getInitialValue(initialPut, secondDataType).copyWith("");
+    Column<?> secondColumnToCompare = initialData.get(secondColumnName);
 
     MutationCondition condition =
-        ConditionBuilder.deleteIf(
-                getConditionalExpression(firstColumnName, firstOperator, firstValue))
-            .and(getConditionalExpression(secondColumnName, secondOperator, secondValue))
+        ConditionBuilder.deleteIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
+            .and(buildConditionalExpression(secondColumnToCompare, secondOperator))
             .build();
 
     boolean shouldMutate =
-        shouldMutate(initialPut, firstOperator, firstDataType, firstValue)
-            && shouldMutate(initialPut, secondOperator, secondDataType, secondValue);
+        shouldMutate(initialData.get(firstColumnName), firstColumnToCompare, firstOperator)
+            && shouldMutate(
+                initialData.get(secondColumnName), secondColumnToCompare, secondOperator);
 
     Delete delete = prepareDelete().withCondition(condition);
 
     // Act Assert
     delete_withDeleteIf_shouldPutProperly(
-        initialPut,
+        initialData,
         delete,
         shouldMutate,
         description(
-            initialPut,
+            initialData,
             delete,
-            firstColumnName,
+            firstColumnToCompare,
             firstOperator,
-            firstValue,
-            secondColumnName,
-            secondOperator,
-            secondValue));
+            secondColumnToCompare,
+            secondOperator));
   }
 
   private void delete_withDeleteIfWithMultipleConditionsWithRandomValue_shouldPutProperly(
@@ -592,57 +808,142 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
       throws ExecutionException {
     for (int i = 0; i < ATTEMPT_COUNT; i++) {
       // Arrange
-      Put initialPut = putInitialData();
+      Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
 
       String firstColumnName = getColumnName(firstDataType);
-      Value<?> firstValue = getRandomValue(RANDOM, "", firstDataType);
+      Column<?> firstColumnToCompare =
+          getColumnWithRandomValue(RANDOM, firstColumnName, firstDataType);
 
       String secondColumnName = getColumnName(secondDataType);
-      Value<?> secondValue = getRandomValue(RANDOM, "", secondDataType);
+      Column<?> secondColumnToCompare =
+          getColumnWithRandomValue(RANDOM, secondColumnName, secondDataType);
 
       MutationCondition condition =
-          ConditionBuilder.deleteIf(
-                  getConditionalExpression(firstColumnName, firstOperator, firstValue))
-              .and(getConditionalExpression(secondColumnName, secondOperator, secondValue))
+          ConditionBuilder.deleteIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
+              .and(buildConditionalExpression(secondColumnToCompare, secondOperator))
               .build();
 
       boolean shouldMutate =
-          shouldMutate(initialPut, firstOperator, firstDataType, firstValue)
-              && shouldMutate(initialPut, secondOperator, secondDataType, secondValue);
+          shouldMutate(initialData.get(firstColumnName), firstColumnToCompare, firstOperator)
+              && shouldMutate(
+                  initialData.get(secondColumnName), secondColumnToCompare, secondOperator);
 
       Delete delete = prepareDelete().withCondition(condition);
 
       // Act Assert
       delete_withDeleteIf_shouldPutProperly(
-          initialPut,
+          initialData,
           delete,
           shouldMutate,
           description(
-              initialPut,
+              initialData,
               delete,
-              firstColumnName,
+              firstColumnToCompare,
               firstOperator,
-              firstValue,
-              secondColumnName,
-              secondOperator,
-              secondValue));
+              secondColumnToCompare,
+              secondOperator));
     }
   }
 
+  private void
+      delete_withDeleteIfWithInitialDataWithNullValuesWithMultipleConditions_shouldPutProperly(
+          Operator firstOperator,
+          DataType firstDataType,
+          Operator secondOperator,
+          DataType secondDataType)
+          throws ExecutionException {
+    // Arrange
+    Map<String, Column<?>> initialData = putInitialDataWithNullValues();
+
+    String firstColumnName = getColumnName(firstDataType);
+    Column<?> firstColumnToCompare =
+        getColumnWithRandomValue(RANDOM, firstColumnName, firstDataType);
+
+    String secondColumnName = getColumnName(secondDataType);
+    Column<?> secondColumnToCompare =
+        getColumnWithRandomValue(RANDOM, secondColumnName, secondDataType);
+
+    MutationCondition condition =
+        ConditionBuilder.deleteIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
+            .and(buildConditionalExpression(secondColumnToCompare, secondOperator))
+            .build();
+
+    boolean shouldMutate =
+        shouldMutate(initialData.get(firstColumnName), firstColumnToCompare, firstOperator)
+            && shouldMutate(
+                initialData.get(secondColumnName), secondColumnToCompare, secondOperator);
+
+    Delete delete = prepareDelete().withCondition(condition);
+
+    // Act Assert
+    delete_withDeleteIf_shouldPutProperly(
+        initialData,
+        delete,
+        shouldMutate,
+        description(
+            initialData,
+            delete,
+            firstColumnToCompare,
+            firstOperator,
+            secondColumnToCompare,
+            secondOperator));
+  }
+
+  private void
+      delete_withDeleteIfWithInitialDataWithoutValuesWithMultipleConditions_shouldPutProperly(
+          Operator firstOperator,
+          DataType firstDataType,
+          Operator secondOperator,
+          DataType secondDataType)
+          throws ExecutionException {
+    // Arrange
+    Map<String, Column<?>> initialData = putInitialDataWithoutValues();
+
+    String firstColumnName = getColumnName(firstDataType);
+    Column<?> firstColumnToCompare =
+        getColumnWithRandomValue(RANDOM, firstColumnName, firstDataType);
+
+    String secondColumnName = getColumnName(secondDataType);
+    Column<?> secondColumnToCompare =
+        getColumnWithRandomValue(RANDOM, secondColumnName, secondDataType);
+
+    MutationCondition condition =
+        ConditionBuilder.deleteIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
+            .and(buildConditionalExpression(secondColumnToCompare, secondOperator))
+            .build();
+
+    boolean shouldMutate =
+        shouldMutate(initialData.get(firstColumnName), firstColumnToCompare, firstOperator)
+            && shouldMutate(
+                initialData.get(secondColumnName), secondColumnToCompare, secondOperator);
+
+    Delete delete = prepareDelete().withCondition(condition);
+
+    // Act Assert
+    delete_withDeleteIf_shouldPutProperly(
+        initialData,
+        delete,
+        shouldMutate,
+        description(
+            initialData,
+            delete,
+            firstColumnToCompare,
+            firstOperator,
+            secondColumnToCompare,
+            secondOperator));
+  }
+
   private void delete_withDeleteIf_shouldPutProperly(
-      Put initialPut, Delete delete, boolean shouldMutate, String description)
+      Map<String, Column<?>> initialData, Delete delete, boolean shouldMutate, String description)
       throws ExecutionException {
+    Throwable thrown = catchThrowable(() -> storage.delete(delete));
     if (shouldMutate) {
-      assertThatCode(() -> storage.delete(delete))
-          .describedAs(description)
-          .doesNotThrowAnyException();
+      assertThat(thrown).describedAs(description).isNull();
 
       Optional<Result> result = storage.get(prepareGet());
       assertThat(result).describedAs(description).isNotPresent();
     } else {
-      assertThatThrownBy(() -> storage.delete(delete))
-          .describedAs(description)
-          .isInstanceOf(NoMutationException.class);
+      assertThat(thrown).describedAs(description).isInstanceOf(NoMutationException.class);
 
       Optional<Result> result = storage.get(prepareGet());
       assertThat(result).describedAs(description).isPresent();
@@ -659,27 +960,42 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
                   COL_NAME6,
                   COL_NAME7));
 
+      assertThat(result.get().isNull(COL_NAME1))
+          .describedAs(description)
+          .isEqualTo(initialData.get(COL_NAME1).hasNullValue());
       assertThat(result.get().getBoolean(COL_NAME1))
           .describedAs(description)
-          .isEqualTo(initialPut.getBooleanValue(COL_NAME1));
+          .isEqualTo(initialData.get(COL_NAME1).getBooleanValue());
+      assertThat(result.get().isNull(COL_NAME2))
+          .describedAs(description)
+          .isEqualTo(initialData.get(COL_NAME2).hasNullValue());
       assertThat(result.get().getInt(COL_NAME2))
           .describedAs(description)
-          .isEqualTo(initialPut.getIntValue(COL_NAME2));
+          .isEqualTo(initialData.get(COL_NAME2).getIntValue());
+      assertThat(result.get().isNull(COL_NAME3))
+          .describedAs(description)
+          .isEqualTo(initialData.get(COL_NAME3).hasNullValue());
       assertThat(result.get().getBigInt(COL_NAME3))
           .describedAs(description)
-          .isEqualTo(initialPut.getBigIntValue(COL_NAME3));
+          .isEqualTo(initialData.get(COL_NAME3).getBigIntValue());
+      assertThat(result.get().isNull(COL_NAME4))
+          .describedAs(description)
+          .isEqualTo(initialData.get(COL_NAME4).hasNullValue());
       assertThat(result.get().getFloat(COL_NAME4))
           .describedAs(description)
-          .isEqualTo(initialPut.getFloatValue(COL_NAME4));
+          .isEqualTo(initialData.get(COL_NAME4).getFloatValue());
+      assertThat(result.get().isNull(COL_NAME5))
+          .describedAs(description)
+          .isEqualTo(initialData.get(COL_NAME5).hasNullValue());
       assertThat(result.get().getDouble(COL_NAME5))
           .describedAs(description)
-          .isEqualTo(initialPut.getDoubleValue(COL_NAME5));
+          .isEqualTo(initialData.get(COL_NAME5).getDoubleValue());
       assertThat(result.get().getText(COL_NAME6))
           .describedAs(description)
-          .isEqualTo(initialPut.getTextValue(COL_NAME6));
+          .isEqualTo(initialData.get(COL_NAME6).getTextValue());
       assertThat(result.get().getBlob(COL_NAME7))
           .describedAs(description)
-          .isEqualTo(initialPut.getBlobValue(COL_NAME7));
+          .isEqualTo(initialData.get(COL_NAME7).getBlobValue());
     }
   }
 
@@ -689,7 +1005,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
     RANDOM.setSeed(seed);
 
     // Arrange
-    putInitialData();
+    putInitialDataWithRandomValues();
 
     Delete delete = prepareDelete().withCondition(ConditionBuilder.deleteIfExists());
 
@@ -725,13 +1041,34 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
 
   private Put preparePutWithRandomValues() {
     return new Put(Key.ofInt(PARTITION_KEY, 1))
-        .withValue(getRandomValue(RANDOM, COL_NAME1, DataType.BOOLEAN))
-        .withValue(getRandomValue(RANDOM, COL_NAME2, DataType.INT))
-        .withValue(getRandomValue(RANDOM, COL_NAME3, DataType.BIGINT))
-        .withValue(getRandomValue(RANDOM, COL_NAME4, DataType.FLOAT))
-        .withValue(getRandomValue(RANDOM, COL_NAME5, DataType.DOUBLE))
-        .withValue(getRandomValue(RANDOM, COL_NAME6, DataType.TEXT))
-        .withValue(getRandomValue(RANDOM, COL_NAME7, DataType.BLOB))
+        .withValue(getColumnWithRandomValue(RANDOM, COL_NAME1, DataType.BOOLEAN))
+        .withValue(getColumnWithRandomValue(RANDOM, COL_NAME2, DataType.INT))
+        .withValue(getColumnWithRandomValue(RANDOM, COL_NAME3, DataType.BIGINT))
+        .withValue(getColumnWithRandomValue(RANDOM, COL_NAME4, DataType.FLOAT))
+        .withValue(getColumnWithRandomValue(RANDOM, COL_NAME5, DataType.DOUBLE))
+        .withValue(getColumnWithRandomValue(RANDOM, COL_NAME6, DataType.TEXT))
+        .withValue(getColumnWithRandomValue(RANDOM, COL_NAME7, DataType.BLOB))
+        .withConsistency(Consistency.LINEARIZABLE)
+        .forNamespace(namespace)
+        .forTable(TABLE);
+  }
+
+  private Put preparePutWithNullValues() {
+    return new Put(Key.ofInt(PARTITION_KEY, 1))
+        .withBooleanValue(COL_NAME1, null)
+        .withIntValue(COL_NAME2, null)
+        .withBigIntValue(COL_NAME3, null)
+        .withFloatValue(COL_NAME4, null)
+        .withDoubleValue(COL_NAME5, null)
+        .withTextValue(COL_NAME6, null)
+        .withBlobValue(COL_NAME7, (ByteBuffer) null)
+        .withConsistency(Consistency.LINEARIZABLE)
+        .forNamespace(namespace)
+        .forTable(TABLE);
+  }
+
+  private Put preparePutWithoutValues() {
+    return new Put(Key.ofInt(PARTITION_KEY, 1))
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(namespace)
         .forTable(TABLE);
@@ -744,7 +1081,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
         .forTable(TABLE);
   }
 
-  private Put putInitialData() throws ExecutionException {
+  private Map<String, Column<?>> putInitialDataWithRandomValues() throws ExecutionException {
     try {
       storage.delete(prepareDelete().withCondition(ConditionBuilder.deleteIfExists()));
     } catch (NoMutationException ignored) {
@@ -753,7 +1090,40 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
 
     Put initialPut = preparePutWithRandomValues().withCondition(ConditionBuilder.putIfNotExists());
     storage.put(initialPut);
-    return initialPut;
+    return initialPut.getColumns();
+  }
+
+  private Map<String, Column<?>> putInitialDataWithNullValues() throws ExecutionException {
+    try {
+      storage.delete(prepareDelete().withCondition(ConditionBuilder.deleteIfExists()));
+    } catch (NoMutationException ignored) {
+      // ignored
+    }
+
+    Put initialPut = preparePutWithNullValues().withCondition(ConditionBuilder.putIfNotExists());
+    storage.put(initialPut);
+    return initialPut.getColumns();
+  }
+
+  private Map<String, Column<?>> putInitialDataWithoutValues() throws ExecutionException {
+    try {
+      storage.delete(prepareDelete().withCondition(ConditionBuilder.deleteIfExists()));
+    } catch (NoMutationException ignored) {
+      // ignored
+    }
+
+    Put initialPut = preparePutWithoutValues().withCondition(ConditionBuilder.putIfNotExists());
+    storage.put(initialPut);
+    return ImmutableMap.<String, Column<?>>builder()
+        .put(PARTITION_KEY, IntColumn.of(PARTITION_KEY, 1))
+        .put(COL_NAME1, BooleanColumn.ofNull(COL_NAME1))
+        .put(COL_NAME2, IntColumn.ofNull(COL_NAME2))
+        .put(COL_NAME3, BigIntColumn.ofNull(COL_NAME3))
+        .put(COL_NAME4, FloatColumn.ofNull(COL_NAME4))
+        .put(COL_NAME5, DoubleColumn.ofNull(COL_NAME5))
+        .put(COL_NAME6, TextColumn.ofNull(COL_NAME6))
+        .put(COL_NAME7, BlobColumn.ofNull(COL_NAME7))
+        .build();
   }
 
   private String getColumnName(DataType dataType) {
@@ -777,84 +1147,99 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
     }
   }
 
-  private ConditionalExpression getConditionalExpression(
-      String columnName, Operator operator, Value<?> value) {
-    return new ConditionalExpression(columnName, value, operator);
+  private ConditionalExpression buildConditionalExpression(
+      Column<?> columnToCompare, Operator operator) {
+    if (operator == Operator.IS_NULL || operator == Operator.IS_NOT_NULL) {
+      switch (columnToCompare.getDataType()) {
+        case BOOLEAN:
+          return ConditionBuilder.buildConditionalExpression(
+              BooleanColumn.ofNull(columnToCompare.getName()), operator);
+        case INT:
+          return ConditionBuilder.buildConditionalExpression(
+              IntColumn.ofNull(columnToCompare.getName()), operator);
+        case BIGINT:
+          return ConditionBuilder.buildConditionalExpression(
+              BigIntColumn.ofNull(columnToCompare.getName()), operator);
+        case FLOAT:
+          return ConditionBuilder.buildConditionalExpression(
+              FloatColumn.ofNull(columnToCompare.getName()), operator);
+        case DOUBLE:
+          return ConditionBuilder.buildConditionalExpression(
+              DoubleColumn.ofNull(columnToCompare.getName()), operator);
+        case TEXT:
+          return ConditionBuilder.buildConditionalExpression(
+              TextColumn.ofNull(columnToCompare.getName()), operator);
+        case BLOB:
+          return ConditionBuilder.buildConditionalExpression(
+              BlobColumn.ofNull(columnToCompare.getName()), operator);
+        default:
+          throw new AssertionError();
+      }
+    }
+    return ConditionBuilder.buildConditionalExpression(columnToCompare, operator);
   }
 
-  private boolean shouldMutate(
-      Put initialPut, Operator operator, DataType dataType, Value<?> value) {
-    Value<?> initialValue = getInitialValue(initialPut, dataType).copyWith("");
+  protected boolean shouldMutate(
+      Column<?> initialColumn, Column<?> columnToCompare, Operator operator) {
     switch (operator) {
       case EQ:
-        return Ordering.natural().compare(initialValue, value) == 0;
+        return !initialColumn.hasNullValue()
+            && Ordering.natural().compare(initialColumn, columnToCompare) == 0;
       case NE:
-        return Ordering.natural().compare(initialValue, value) != 0;
+        return !initialColumn.hasNullValue()
+            && Ordering.natural().compare(initialColumn, columnToCompare) != 0;
       case GT:
-        return Ordering.natural().compare(initialValue, value) > 0;
+        return !initialColumn.hasNullValue()
+            && Ordering.natural().compare(initialColumn, columnToCompare) > 0;
       case GTE:
-        return Ordering.natural().compare(initialValue, value) >= 0;
+        return !initialColumn.hasNullValue()
+            && Ordering.natural().compare(initialColumn, columnToCompare) >= 0;
       case LT:
-        return Ordering.natural().compare(initialValue, value) < 0;
+        return !initialColumn.hasNullValue()
+            && Ordering.natural().compare(initialColumn, columnToCompare) < 0;
       case LTE:
-        return Ordering.natural().compare(initialValue, value) <= 0;
+        return !initialColumn.hasNullValue()
+            && Ordering.natural().compare(initialColumn, columnToCompare) <= 0;
+      case IS_NULL:
+        return initialColumn.hasNullValue();
+      case IS_NOT_NULL:
+        return !initialColumn.hasNullValue();
       default:
         throw new AssertionError();
     }
   }
 
-  private Value<?> getInitialValue(Put initialPut, DataType dataType) {
-    switch (dataType) {
-      case BOOLEAN:
-        return initialPut.getValues().get(COL_NAME1);
-      case INT:
-        return initialPut.getValues().get(COL_NAME2);
-      case BIGINT:
-        return initialPut.getValues().get(COL_NAME3);
-      case FLOAT:
-        return initialPut.getValues().get(COL_NAME4);
-      case DOUBLE:
-        return initialPut.getValues().get(COL_NAME5);
-      case TEXT:
-        return initialPut.getValues().get(COL_NAME6);
-      case BLOB:
-        return initialPut.getValues().get(COL_NAME7);
-      default:
-        throw new AssertionError();
-    }
-  }
-
-  protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
-    return TestUtils.getRandomValue(random, columnName, dataType, true);
+  protected Column<?> getColumnWithRandomValue(
+      Random random, String columnName, DataType dataType) {
+    return TestUtils.getColumnWithRandomValue(random, columnName, dataType, true);
   }
 
   private String description(
-      Put initialPut, Mutation mutation, String columnName, Operator operator, Value<?> value) {
-    return String.format(
-        "initialPut: %s, mutation: %s, columnName: %s, operator: %s, value: %s",
-        initialPut, mutation, columnName, operator, value);
-  }
-
-  private String description(
-      Put initialPut,
+      Map<String, Column<?>> initialData,
       Mutation mutation,
-      String firstColumnName,
-      Operator firstOperator,
-      Value<?> firstValue,
-      String secondColumnName,
-      Operator secondOperator,
-      Value<?> secondValue) {
+      Column<?> columnToCompare,
+      Operator operator) {
     return String.format(
-        "initialPut: %s, mutation: %s, firstColumnName: %s, firstOperator: %s, firstValue: %s, "
-            + "secondColumnName: %s, secondOperator: %s, secondValue: %s",
-        initialPut,
+        "initialData: %s, mutation: %s, columnToCompare: %s, operator: %s",
+        initialData, mutation, columnToCompare, operator);
+  }
+
+  private String description(
+      Map<String, Column<?>> initialData,
+      Mutation mutation,
+      Column<?> firstColumnToCompare,
+      Operator firstOperator,
+      Column<?> secondColumnToCompare,
+      Operator secondOperator) {
+    return String.format(
+        "initialData: %s, mutation: %s, firstColumnToCompare: %s, firstOperator: %s, "
+            + "secondColumnToCompare: %s, secondOperator: %s",
+        initialData,
         mutation,
-        firstColumnName,
+        firstColumnToCompare,
         firstOperator,
-        firstValue,
-        secondColumnName,
-        secondOperator,
-        secondValue);
+        secondColumnToCompare,
+        secondOperator);
   }
 
   public static class OperatorAndDataType {

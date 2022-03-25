@@ -110,8 +110,10 @@ public class ConditionSetter implements MutationConditionVisitor {
     String name = quoteIfNecessary(e.getName());
     switch (e.getOperator()) {
       case EQ:
+      case IS_NULL:
         return eq(name, bindMarker());
       case NE:
+      case IS_NOT_NULL:
         return ne(name, bindMarker());
       case GT:
         return gt(name, bindMarker());
@@ -122,8 +124,7 @@ public class ConditionSetter implements MutationConditionVisitor {
       case LTE:
         return lte(name, bindMarker());
       default:
-        // never comes here because ConditionalExpression accepts only above operators
-        throw new IllegalArgumentException(e.getOperator() + " is not supported");
+        throw new AssertionError();
     }
   }
 }

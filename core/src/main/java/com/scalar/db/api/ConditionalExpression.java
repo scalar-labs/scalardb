@@ -340,5 +340,7 @@ public class ConditionalExpression {
     GTE,
     LT,
     LTE,
+    IS_NULL,
+    IS_NOT_NULL
   }
 }

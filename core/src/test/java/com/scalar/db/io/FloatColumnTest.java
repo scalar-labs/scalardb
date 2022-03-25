@@ -86,4 +86,16 @@ public class FloatColumnTest {
     assertThatThrownBy(column::getBlobValueAsBytes)
         .isInstanceOf(UnsupportedOperationException.class);
   }
+
+  @Test
+  public void compareTo_ShouldReturnProperResults() {
+    // Arrange
+    FloatColumn column = FloatColumn.of("col", 1.0F);
+
+    // Act Assert
+    assertThat(column.compareTo(FloatColumn.of("col", 1.0F))).isEqualTo(0);
+    assertThat(column.compareTo(FloatColumn.of("col", 2.0F))).isLessThan(0);
+    assertThat(column.compareTo(FloatColumn.of("col", 0.0F))).isGreaterThan(0);
+    assertThat(column.compareTo(FloatColumn.ofNull("col"))).isGreaterThan(0);
+  }
 }

@@ -86,4 +86,16 @@ public class BigIntColumnTest {
     assertThatThrownBy(column::getBlobValueAsBytes)
         .isInstanceOf(UnsupportedOperationException.class);
   }
+
+  @Test
+  public void compareTo_ShouldReturnProperResults() {
+    // Arrange
+    BigIntColumn column = BigIntColumn.of("col", 100L);
+
+    // Act Assert
+    assertThat(column.compareTo(BigIntColumn.of("col", 100L))).isEqualTo(0);
+    assertThat(column.compareTo(BigIntColumn.of("col", 200L))).isLessThan(0);
+    assertThat(column.compareTo(BigIntColumn.of("col", 0L))).isGreaterThan(0);
+    assertThat(column.compareTo(BigIntColumn.ofNull("col"))).isGreaterThan(0);
+  }
 }

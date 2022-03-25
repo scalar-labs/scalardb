@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.DeleteIf;
@@ -25,6 +26,8 @@ public class ConditionalQueryBuilderTest {
   private static final String ANY_ID = "any_id";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
+  private static final String ANY_NAME_3 = "name3";
+  private static final String ANY_NAME_4 = "name4";
   private static final int ANY_INT = 1;
   private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT);
 
@@ -56,9 +59,13 @@ public class ConditionalQueryBuilderTest {
     SelectConditionStep<org.jooq.Record> testSelect =
         DSL.using(SQLDialect.DEFAULT).selectFrom("Record r").where(DSL.field("r.id").eq(ANY_ID));
     PutIf condition =
-        new PutIf(
-            new ConditionalExpression(ANY_NAME_1, ANY_INT_VALUE, Operator.EQ),
-            new ConditionalExpression(ANY_NAME_2, ANY_INT_VALUE, Operator.GT));
+        ConditionBuilder.putIf(
+                ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT_VALUE.getAsInt()))
+            .and(ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT_VALUE.getAsInt()))
+            .and(ConditionBuilder.column(ANY_NAME_3).isNullInt())
+            .and(ConditionBuilder.column(ANY_NAME_4).isNotNullInt())
+            .build();
+
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(testSelect);
 
     // Act
@@ -80,7 +87,11 @@ public class ConditionalQueryBuilderTest {
                 + "\"]"
                 + " > "
                 + ANY_INT
-                + ")");
+                + " and (NOT IS_DEFINED(r.values[\""
+                + ANY_NAME_3
+                + "\"])) and (IS_DEFINED(r.values[\""
+                + ANY_NAME_4
+                + "\"])))");
   }
 
   @Test

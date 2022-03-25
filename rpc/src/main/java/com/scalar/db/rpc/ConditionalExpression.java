@@ -136,6 +136,14 @@ private static final long serialVersionUID = 0L;
      * <code>LTE = 5;</code>
      */
     LTE(5),
+    /**
+     * <code>IS_NULL = 6;</code>
+     */
+    IS_NULL(6),
+    /**
+     * <code>IS_NOT_NULL = 7;</code>
+     */
+    IS_NOT_NULL(7),
     UNRECOGNIZED(-1),
     ;
 
@@ -163,6 +171,14 @@ private static final long serialVersionUID = 0L;
      * <code>LTE = 5;</code>
      */
     public static final int LTE_VALUE = 5;
+    /**
+     * <code>IS_NULL = 6;</code>
+     */
+    public static final int IS_NULL_VALUE = 6;
+    /**
+     * <code>IS_NOT_NULL = 7;</code>
+     */
+    public static final int IS_NOT_NULL_VALUE = 7;
 
 
     public final int getNumber() {
@@ -195,6 +211,8 @@ private static final long serialVersionUID = 0L;
         case 3: return GTE;
         case 4: return LT;
         case 5: return LTE;
+        case 6: return IS_NULL;
+        case 7: return IS_NOT_NULL;
         default: return null;
       }
     }

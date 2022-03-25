@@ -1,7 +1,6 @@
 package com.scalar.db.io;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.Comparators;
 import com.google.common.collect.ComparisonChain;
 import java.util.Comparator;
 import java.util.Objects;
@@ -58,12 +57,12 @@ public class TextColumn implements Column<String> {
     return value;
   }
 
-  @SuppressWarnings("UnstableApiUsage")
   @Override
   public int compareTo(Column<String> o) {
     return ComparisonChain.start()
         .compare(getName(), o.getName())
-        .compare(getValue(), o.getValue(), Comparators.emptiesLast(Comparator.naturalOrder()))
+        .compareTrueFirst(hasNullValue(), o.hasNullValue())
+        .compare(getTextValue(), o.getTextValue(), Comparator.nullsFirst(Comparator.naturalOrder()))
         .result();
   }
 

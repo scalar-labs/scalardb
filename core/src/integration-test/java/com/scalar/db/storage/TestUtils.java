@@ -2,13 +2,21 @@ package com.scalar.db.storage;
 
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
+import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BlobValue;
+import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.DoubleValue;
+import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.FloatValue;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.cosmos.CosmosAdmin;
@@ -61,6 +69,35 @@ public final class TestUtils {
             columnName, RandomStringUtils.random(count, 0, 0, true, true, null, random));
       case BOOLEAN:
         return new BooleanValue(columnName, random.nextBoolean());
+      default:
+        throw new AssertionError();
+    }
+  }
+
+  public static Column<?> getColumnWithRandomValue(
+      Random random, String columnName, DataType dataType, boolean allowEmpty) {
+    switch (dataType) {
+      case BOOLEAN:
+        return BooleanColumn.of(columnName, random.nextBoolean());
+      case INT:
+        return IntColumn.of(columnName, random.nextInt());
+      case BIGINT:
+        return BigIntColumn.of(columnName, nextBigInt(random));
+      case FLOAT:
+        return FloatColumn.of(columnName, nextFloat(random));
+      case DOUBLE:
+        return DoubleColumn.of(columnName, nextDouble(random));
+      case TEXT:
+        int count =
+            allowEmpty ? random.nextInt(MAX_TEXT_COUNT) : random.nextInt(MAX_TEXT_COUNT - 1) + 1;
+        return TextColumn.of(
+            columnName, RandomStringUtils.random(count, 0, 0, true, true, null, random));
+      case BLOB:
+        int length =
+            allowEmpty ? random.nextInt(MAX_BLOB_LENGTH) : random.nextInt(MAX_BLOB_LENGTH - 1) + 1;
+        byte[] bytes = new byte[length];
+        random.nextBytes(bytes);
+        return BlobColumn.of(columnName, bytes);
       default:
         throw new AssertionError();
     }

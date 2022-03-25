@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
@@ -22,6 +24,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleValue;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
@@ -742,6 +745,58 @@ public class OperationCheckerTest {
 
   @Test
   public void
+      whenCheckingPutOperationWithInvalidPutIfConditionWithIsNull_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
+    List<Value<?>> values =
+        Arrays.asList(
+            new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
+    MutationCondition condition =
+        ConditionBuilder.putIf(
+                ConditionBuilder.buildConditionalExpression(
+                    IntColumn.of(COL1, 1), Operator.IS_NULL))
+            .build();
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(put))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingPutOperationWithInvalidPutIfConditionWithIsNotNull_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
+    List<Value<?>> values =
+        Arrays.asList(
+            new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
+    MutationCondition condition =
+        ConditionBuilder.putIf(
+                ConditionBuilder.buildConditionalExpression(
+                    IntColumn.of(COL1, 1), Operator.IS_NOT_NULL))
+            .build();
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(put))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
       whenCheckingPutOperationWithDeleteIfExistsCondition_shouldThrowIllegalArgumentException() {
     // Arrange
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
@@ -1137,6 +1192,50 @@ public class OperationCheckerTest {
     MutationCondition condition =
         new DeleteIf(
             new ConditionalExpression(COL1, new TextValue("1"), ConditionalExpression.Operator.EQ));
+    Delete delete =
+        new Delete(partitionKey, clusteringKey)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(delete))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingDeleteOperationWithInvalidDeleteIfConditionWithIsNull_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
+    MutationCondition condition =
+        ConditionBuilder.deleteIf(
+                ConditionBuilder.buildConditionalExpression(
+                    IntColumn.of(COL1, 1), Operator.IS_NULL))
+            .build();
+    Delete delete =
+        new Delete(partitionKey, clusteringKey)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(delete))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingDeleteOperationWithInvalidDeleteIfConditionWithIsNotNull_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
+    MutationCondition condition =
+        ConditionBuilder.deleteIf(
+                ConditionBuilder.buildConditionalExpression(
+                    IntColumn.of(COL1, 1), Operator.IS_NOT_NULL))
+            .build();
     Delete delete =
         new Delete(partitionKey, clusteringKey)
             .withCondition(condition)
