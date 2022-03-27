@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
@@ -468,12 +469,21 @@ public class Snapshot {
 
   @Immutable
   private static class MergedResult implements Result {
-    private final Optional<TransactionResult> result;
     private final Put put;
+    private final Map<String, Value<?>> values;
 
     public MergedResult(Optional<TransactionResult> result, Put put) {
-      this.result = result;
       this.put = put;
+
+      Map<String, Value<?>> tmp = new HashMap<>();
+      if (result.isPresent()) {
+        tmp.putAll(result.get().getValues());
+      } else {
+        put.getPartitionKey().get().forEach(v -> tmp.put(v.getName(), v));
+        put.getClusteringKey().ifPresent(c -> c.get().forEach(v -> tmp.put(v.getName(), v)));
+      }
+      tmp.putAll(put.getValues());
+      values = ImmutableMap.copyOf(tmp);
     }
 
     @Override
@@ -488,17 +498,14 @@ public class Snapshot {
 
     @Override
     public Optional<Value<?>> getValue(String name) {
-      if (put.getValues().containsKey(name)) {
-        return Optional.of(put.getValues().get(name));
+      if (values.containsKey(name)) {
+        return Optional.of(values.get(name));
       }
-      return result.flatMap(r -> r.getValue(name));
+      return Optional.empty();
     }
 
     @Override
     public Map<String, Value<?>> getValues() {
-      Map<String, Value<?>> values = new HashMap<>();
-      result.ifPresent(r -> values.putAll(r.getValues()));
-      values.putAll(put.getValues());
       return values;
     }
   }
