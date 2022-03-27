@@ -23,6 +23,15 @@ public class JdbcDatabaseConditionalMutationIntegrationTest
   }
 
   @Override
+  protected int getThreadNum() {
+    if (rdbEngine == RdbEngine.MYSQL) {
+      // Since Deadlock error sometimes happens in MySQL, change the concurrency to 1
+      return 1;
+    }
+    return super.getThreadNum();
+  }
+
+  @Override
   protected List<OperatorAndDataType> getOperatorAndDataTypeListForTest() {
     if (rdbEngine == RdbEngine.ORACLE) {
       List<OperatorAndDataType> ret = new ArrayList<>();
