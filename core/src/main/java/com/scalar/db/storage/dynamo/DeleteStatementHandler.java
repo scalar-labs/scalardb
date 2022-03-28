@@ -1,17 +1,15 @@
 package com.scalar.db.storage.dynamo;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIfExists;
-import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -26,19 +24,17 @@ import software.amazon.awssdk.services.dynamodb.model.TransactionConflictExcepti
  * @author Yuji Ito
  */
 @ThreadSafe
-public class DeleteStatementHandler extends StatementHandler {
+public class DeleteStatementHandler {
+  private final DynamoDbClient client;
+  private final TableMetadataManager metadataManager;
 
   public DeleteStatementHandler(DynamoDbClient client, TableMetadataManager metadataManager) {
-    super(client, metadataManager);
+    this.client = checkNotNull(client);
+    this.metadataManager = checkNotNull(metadataManager);
   }
 
-  @Nonnull
-  @Override
-  public List<Map<String, AttributeValue>> handle(Operation operation) throws ExecutionException {
-    checkArgument(operation, Delete.class);
-    Delete delete = (Delete) operation;
-
-    TableMetadata tableMetadata = metadataManager.getTableMetadata(operation);
+  public void handle(Delete delete) throws ExecutionException {
+    TableMetadata tableMetadata = metadataManager.getTableMetadata(delete);
     try {
       delete(delete, tableMetadata);
     } catch (ConditionalCheckFailedException e) {
@@ -48,8 +44,6 @@ public class DeleteStatementHandler extends StatementHandler {
     } catch (DynamoDbException e) {
       throw new ExecutionException(e.getMessage(), e);
     }
-
-    return Collections.emptyList();
   }
 
   private void delete(Delete delete, TableMetadata tableMetadata) {

@@ -1,13 +1,15 @@
 package com.scalar.db.storage.dynamo;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.UnsignedBytes;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
@@ -19,7 +21,6 @@ import com.scalar.db.storage.dynamo.bytes.KeyBytesEncoder;
 import com.scalar.db.util.ScalarDbUtils;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,9 +33,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
-import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
-import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 
 /**
  * A handler class for select statement
@@ -42,7 +41,9 @@ import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
  * @author Yuji Ito, Toshihiro Suzuki
  */
 @ThreadSafe
-public class SelectStatementHandler extends StatementHandler {
+public class SelectStatementHandler {
+  private final DynamoDbClient client;
+  private final TableMetadataManager metadataManager;
 
   /**
    * Constructs a {@code SelectStatementHandler} with the specified {@link DynamoDbClient} and a new
@@ -52,31 +53,30 @@ public class SelectStatementHandler extends StatementHandler {
    * @param metadataManager {@code TableMetadataManager}
    */
   public SelectStatementHandler(DynamoDbClient client, TableMetadataManager metadataManager) {
-    super(client, metadataManager);
+    this.client = checkNotNull(client);
+    this.metadataManager = checkNotNull(metadataManager);
   }
 
   @Nonnull
-  @Override
-  public List<Map<String, AttributeValue>> handle(Operation operation) throws ExecutionException {
-    checkArgument(operation, Get.class, Scan.class);
-
-    TableMetadata tableMetadata = metadataManager.getTableMetadata(operation);
+  public Scanner handle(Selection selection) throws ExecutionException {
+    TableMetadata tableMetadata = metadataManager.getTableMetadata(selection);
     try {
-      if (ScalarDbUtils.isSecondaryIndexSpecified(operation, tableMetadata)) {
-        return executeQueryWithIndex((Selection) operation, tableMetadata);
+      if (ScalarDbUtils.isSecondaryIndexSpecified(selection, tableMetadata)) {
+        return executeQueryWithIndex(selection, tableMetadata);
       }
 
-      if (operation instanceof Get) {
-        return executeGet((Get) operation, tableMetadata);
+      if (selection instanceof Get) {
+        return executeGet((Get) selection, tableMetadata);
       } else {
-        return executeQuery((Scan) operation, tableMetadata);
+        return executeQuery((Scan) selection, tableMetadata);
       }
+
     } catch (DynamoDbException e) {
       throw new ExecutionException(e.getMessage(), e);
     }
   }
 
-  private List<Map<String, AttributeValue>> executeGet(Get get, TableMetadata tableMetadata) {
+  private Scanner executeGet(Get get, TableMetadata tableMetadata) {
     DynamoOperation dynamoOperation = new DynamoOperation(get, tableMetadata);
 
     GetItemRequest.Builder builder =
@@ -92,16 +92,11 @@ public class SelectStatementHandler extends StatementHandler {
       builder.consistentRead(true);
     }
 
-    GetItemResponse getItemResponse = client.getItem(builder.build());
-    if (getItemResponse.hasItem()) {
-      return Collections.singletonList(getItemResponse.item());
-    } else {
-      return Collections.emptyList();
-    }
+    return new GetItemScanner(
+        client, builder.build(), new ResultInterpreter(get.getProjections(), tableMetadata));
   }
 
-  private List<Map<String, AttributeValue>> executeQueryWithIndex(
-      Selection selection, TableMetadata tableMetadata) {
+  private Scanner executeQueryWithIndex(Selection selection, TableMetadata tableMetadata) {
     DynamoOperation dynamoOperation = new DynamoOperation(selection, tableMetadata);
     Column<?> keyColumn = selection.getPartitionKey().getColumns().get(0);
     String column = keyColumn.getName();
@@ -130,17 +125,17 @@ public class SelectStatementHandler extends StatementHandler {
       }
     }
 
-    QueryResponse queryResponse = client.query(builder.build());
-    return new ArrayList<>(queryResponse.items());
+    return new QueryScanner(
+        client, builder.build(), new ResultInterpreter(selection.getProjections(), tableMetadata));
   }
 
-  private List<Map<String, AttributeValue>> executeQuery(Scan scan, TableMetadata tableMetadata) {
+  private Scanner executeQuery(Scan scan, TableMetadata tableMetadata) {
     DynamoOperation dynamoOperation = new DynamoOperation(scan, tableMetadata);
     QueryRequest.Builder builder = QueryRequest.builder().tableName(dynamoOperation.getTableName());
 
     if (!setConditions(builder, scan, tableMetadata)) {
-      // if setConditions() fails, return empty list
-      return new ArrayList<>();
+      // if setConditions() fails, return an empty scanner
+      return new EmptyScanner();
     }
 
     if (!scan.getOrderings().isEmpty()) {
@@ -163,8 +158,8 @@ public class SelectStatementHandler extends StatementHandler {
       builder.consistentRead(true);
     }
 
-    QueryResponse queryResponse = client.query(builder.build());
-    return new ArrayList<>(queryResponse.items());
+    return new QueryScanner(
+        client, builder.build(), new ResultInterpreter(scan.getProjections(), tableMetadata));
   }
 
   private void projectionExpression(DynamoDbRequest.Builder builder, Selection selection) {
