@@ -17,9 +17,9 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.AbstractDistributedStorage;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.util.ScalarDbUtils;
+import java.io.IOException;
 import java.net.URI;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -30,7 +30,6 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 /**
  * A storage implementation with DynamoDB for {@link DistributedStorage}
@@ -82,16 +81,23 @@ public class Dynamo extends AbstractDistributedStorage {
     TableMetadata metadata = metadataManager.getTableMetadata(get);
     ScalarDbUtils.addProjectionsForKeys(get, metadata);
 
-    List<Map<String, AttributeValue>> items = selectStatementHandler.handle(get);
-    if (items.size() > 1) {
-      throw new IllegalArgumentException("please use scan() for non-exact match selection");
+    Scanner scanner = null;
+    try {
+      scanner = selectStatementHandler.handle(get);
+      Optional<Result> ret = scanner.one();
+      if (scanner.one().isPresent()) {
+        throw new IllegalArgumentException("please use scan() for non-exact match selection");
+      }
+      return ret;
+    } finally {
+      if (scanner != null) {
+        try {
+          scanner.close();
+        } catch (IOException e) {
+          LOGGER.warn("failed to close the scanner", e);
+        }
+      }
     }
-    if (items.isEmpty() || items.get(0) == null) {
-      return Optional.empty();
-    }
-
-    return Optional.of(
-        new ResultInterpreter(get.getProjections(), metadata).interpret(items.get(0)));
   }
 
   @Override
@@ -101,9 +107,7 @@ public class Dynamo extends AbstractDistributedStorage {
     TableMetadata metadata = metadataManager.getTableMetadata(scan);
     ScalarDbUtils.addProjectionsForKeys(scan, metadata);
 
-    List<Map<String, AttributeValue>> items = selectStatementHandler.handle(scan);
-
-    return new ScannerImpl(items, new ResultInterpreter(scan.getProjections(), metadata));
+    return selectStatementHandler.handle(scan);
   }
 
   @Override

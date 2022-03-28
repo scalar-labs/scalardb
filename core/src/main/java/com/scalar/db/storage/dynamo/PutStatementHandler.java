@@ -1,6 +1,7 @@
 package com.scalar.db.storage.dynamo;
 
-import com.scalar.db.api.Operation;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
@@ -9,10 +10,7 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -27,19 +25,17 @@ import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
  * @author Yuji Ito
  */
 @ThreadSafe
-public class PutStatementHandler extends StatementHandler {
+public class PutStatementHandler {
+  private final DynamoDbClient client;
+  private final TableMetadataManager metadataManager;
 
   public PutStatementHandler(DynamoDbClient client, TableMetadataManager metadataManager) {
-    super(client, metadataManager);
+    this.client = checkNotNull(client);
+    this.metadataManager = checkNotNull(metadataManager);
   }
 
-  @Nonnull
-  @Override
-  public List<Map<String, AttributeValue>> handle(Operation operation) throws ExecutionException {
-    checkArgument(operation, Put.class);
-    Put put = (Put) operation;
-
-    TableMetadata tableMetadata = metadataManager.getTableMetadata(operation);
+  public void handle(Put put) throws ExecutionException {
+    TableMetadata tableMetadata = metadataManager.getTableMetadata(put);
     try {
       execute(put, tableMetadata);
     } catch (ConditionalCheckFailedException e) {
@@ -49,8 +45,6 @@ public class PutStatementHandler extends StatementHandler {
     } catch (DynamoDbException e) {
       throw new ExecutionException(e.getMessage(), e);
     }
-
-    return Collections.emptyList();
   }
 
   private void execute(Put put, TableMetadata tableMetadata) {
