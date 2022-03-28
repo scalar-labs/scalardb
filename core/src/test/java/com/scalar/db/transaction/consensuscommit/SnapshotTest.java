@@ -320,6 +320,41 @@ public class SnapshotTest {
     assertThat(actual.get().getValue(ANY_NAME_3).get().getAsString().get()).isEqualTo(ANY_TEXT_5);
     assertThat(actual.get().getValue(ANY_NAME_4).get().getAsString().get()).isEqualTo(ANY_TEXT_4);
     assertThat(actual.get().getValue(Attribute.ID).get().getAsString().get()).isEqualTo(ANY_ID);
+    assertThat(actual.get().getValue(Attribute.VERSION).get().getAsInt()).isEqualTo(ANY_VERSION);
+  }
+
+  @Test
+  public void
+      get_KeyGivenContainedInWriteSetAndReadSet_AndEmptyResultInReadSet_ShouldReturnMergedResult() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_NAMESPACE_NAME)
+            .forTable(ANY_TABLE_NAME)
+            .withValue(ANY_NAME_3, ANY_TEXT_5);
+    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    snapshot.put(key, Optional.empty());
+    snapshot.put(key, put);
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.get(key);
+
+    // Assert
+    assertThat(actual).isPresent();
+    assertThat(actual.get().getValues())
+        .isEqualTo(
+            ImmutableMap.<String, Value<?>>builder()
+                .put(ANY_NAME_1, new TextValue(ANY_NAME_1, ANY_TEXT_1))
+                .put(ANY_NAME_2, new TextValue(ANY_NAME_2, ANY_TEXT_2))
+                .put(ANY_NAME_3, new TextValue(ANY_NAME_3, ANY_TEXT_5))
+                .build());
+    assertThat(actual.get().getValue(ANY_NAME_1).get().getAsString().get()).isEqualTo(ANY_TEXT_1);
+    assertThat(actual.get().getValue(ANY_NAME_2).get().getAsString().get()).isEqualTo(ANY_TEXT_2);
+    assertThat(actual.get().getValue(ANY_NAME_3).get().getAsString().get()).isEqualTo(ANY_TEXT_5);
   }
 
   @Test
