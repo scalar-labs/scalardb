@@ -12,8 +12,10 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
@@ -116,7 +118,7 @@ public class SelectStatementHandlerTest {
   }
 
   @Test
-  public void handle_GetOperationNoItemReturned_ShouldReturnEmptyList() throws Exception {
+  public void handle_GetOperationNoItemReturned_ShouldReturnEmptyScanner() throws Exception {
     // Arrange
     when(client.getItem(any(GetItemRequest.class))).thenReturn(getResponse);
     when(getResponse.hasItem()).thenReturn(false);
@@ -124,7 +126,10 @@ public class SelectStatementHandlerTest {
     Get get = prepareGet();
 
     // Act Assert
-    List<Map<String, AttributeValue>> actual = handler.handle(get);
+    List<Result> actual;
+    try (Scanner scanner = handler.handle(get)) {
+      actual = scanner.all();
+    }
 
     // Assert
     assertThat(actual).isEmpty();
