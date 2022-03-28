@@ -54,6 +54,7 @@ public abstract class StorageIntegrationTestBase {
   private static final String COL_NAME3 = "c3";
   private static final String COL_NAME4 = "c4";
   private static final String COL_NAME5 = "c5";
+  private static final String COL_NAME6 = "c6";
 
   private static boolean initialized;
   private static DistributedStorage storage;
@@ -96,6 +97,7 @@ public abstract class StorageIntegrationTestBase {
             .addColumn(COL_NAME3, DataType.INT)
             .addColumn(COL_NAME4, DataType.INT)
             .addColumn(COL_NAME5, DataType.BOOLEAN)
+            .addColumn(COL_NAME6, DataType.BLOB)
             .addPartitionKey(COL_NAME1)
             .addClusteringKey(COL_NAME4)
             .addSecondaryIndex(COL_NAME3)
@@ -1305,7 +1307,7 @@ public abstract class StorageIntegrationTestBase {
     Key partitionKey = new Key(COL_NAME1, 1);
     for (int i = 0; i < 345; i++) {
       Key clusteringKey = new Key(COL_NAME4, i);
-      storage.put(new Put(partitionKey, clusteringKey));
+      storage.put(new Put(partitionKey, clusteringKey).withValue(COL_NAME6, new byte[5000]));
     }
     Scan scan = new Scan(partitionKey);
 
@@ -1329,7 +1331,7 @@ public abstract class StorageIntegrationTestBase {
     Key partitionKey = new Key(COL_NAME1, 1);
     for (int i = 0; i < 345; i++) {
       Key clusteringKey = new Key(COL_NAME4, i);
-      storage.put(new Put(partitionKey, clusteringKey));
+      storage.put(new Put(partitionKey, clusteringKey).withValue(COL_NAME6, new byte[5000]));
     }
     Scan scan = new Scan(partitionKey).withOrdering(new Ordering(COL_NAME4, Order.ASC));
 
