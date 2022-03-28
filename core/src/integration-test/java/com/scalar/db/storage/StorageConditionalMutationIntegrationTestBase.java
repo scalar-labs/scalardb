@@ -34,6 +34,7 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.service.StorageFactory;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -42,6 +43,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,7 +68,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
 
   private static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
-          .addColumn(PARTITION_KEY, DataType.INT)
+          .addColumn(PARTITION_KEY, DataType.TEXT)
           .addColumn(COL_NAME1, DataType.BOOLEAN)
           .addColumn(COL_NAME2, DataType.INT)
           .addColumn(COL_NAME3, DataType.BIGINT)
@@ -77,6 +82,8 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
   private static final int ATTEMPT_COUNT = 5;
   private static final Random RANDOM = new Random();
 
+  private static final int THREAD_NUM = 10;
+
   private static boolean initialized;
   private static DistributedStorageAdmin admin;
   private static DistributedStorage storage;
@@ -84,6 +91,8 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
 
   private static long seed;
   private static List<OperatorAndDataType> operatorAndDataTypeList;
+
+  private static ExecutorService executorService;
 
   @Before
   public void setUp() throws Exception {
@@ -97,6 +106,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
       seed = System.currentTimeMillis();
       System.out.println("The seed used in the conditional mutation integration test is " + seed);
       operatorAndDataTypeList = getOperatorAndDataTypeListForTest();
+      executorService = Executors.newFixedThreadPool(getThreadNum());
       initialized = true;
     }
     admin.truncateTable(namespace, TABLE);
@@ -106,6 +116,10 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
 
   protected String getNamespace() {
     return NAMESPACE;
+  }
+
+  protected int getThreadNum() {
+    return THREAD_NUM;
   }
 
   protected Map<String, String> getCreateOptions() {
@@ -141,127 +155,131 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
   }
 
   @Test
-  public void put_withPutIfWithSingleCondition_shouldPutProperly() throws ExecutionException {
+  public void put_withPutIfWithSingleCondition_shouldPutProperly()
+      throws java.util.concurrent.ExecutionException, InterruptedException {
     RANDOM.setSeed(seed);
 
-    for (OperatorAndDataType operatorAndDataType : operatorAndDataTypeList) {
-      put_withPutIfWithSingleConditionWithSameValue_shouldPutProperly(
-          operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
-      put_withPutIfWithSingleConditionWithRandomValue_shouldPutProperly(
-          operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
-      put_withPutIfWithInitialDataWithNullValuesWithSingleCondition_shouldPutProperly(
-          operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
-      put_withPutIfWithInitialDataWithoutValuesWithSingleCondition_shouldPutProperly(
-          operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
-    }
+    executeInParallel(
+        (operator, dataType) -> {
+          put_withPutIfWithSingleConditionWithSameValue_shouldPutProperly(operator, dataType);
+          put_withPutIfWithSingleConditionWithRandomValue_shouldPutProperly(operator, dataType);
+          put_withPutIfWithInitialDataWithNullValuesWithSingleCondition_shouldPutProperly(
+              operator, dataType);
+          put_withPutIfWithInitialDataWithoutValuesWithSingleCondition_shouldPutProperly(
+              operator, dataType);
+        });
   }
 
   private void put_withPutIfWithSingleConditionWithSameValue_shouldPutProperly(
       Operator operator, DataType dataType) throws ExecutionException {
     // Arrange
-    Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
+    Map<String, Column<?>> initialData = putInitialDataWithRandomValues(operator, dataType);
 
     String columnName = getColumnName(dataType);
     Column<?> columnToCompare = initialData.get(columnName);
 
     MutationCondition condition =
         ConditionBuilder.putIf(buildConditionalExpression(columnToCompare, operator)).build();
-    Put put = preparePutWithRandomValues().withCondition(condition);
+    Put put = preparePutWithRandomValues(operator, dataType).withCondition(condition);
 
     boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
     // Act Assert
     put_withPutIf_shouldPutProperly(
-        initialData, put, shouldMutate, description(initialData, put, columnToCompare, operator));
+        initialData,
+        put,
+        shouldMutate,
+        prepareGet(operator, dataType),
+        description(initialData, put, columnToCompare, operator));
   }
 
   private void put_withPutIfWithSingleConditionWithRandomValue_shouldPutProperly(
       Operator operator, DataType dataType) throws ExecutionException {
     for (int i = 0; i < ATTEMPT_COUNT; i++) {
       // Arrange
-      Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
+      Map<String, Column<?>> initialData = putInitialDataWithRandomValues(operator, dataType);
 
       String columnName = getColumnName(dataType);
       Column<?> columnToCompare = getColumnWithRandomValue(RANDOM, columnName, dataType);
 
       MutationCondition condition =
           ConditionBuilder.putIf(buildConditionalExpression(columnToCompare, operator)).build();
-      Put put = preparePutWithRandomValues().withCondition(condition);
+      Put put = preparePutWithRandomValues(operator, dataType).withCondition(condition);
 
       boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
       // Act Assert
       put_withPutIf_shouldPutProperly(
-          initialData, put, shouldMutate, description(initialData, put, columnToCompare, operator));
+          initialData,
+          put,
+          shouldMutate,
+          prepareGet(operator, dataType),
+          description(initialData, put, columnToCompare, operator));
     }
   }
 
   private void put_withPutIfWithInitialDataWithNullValuesWithSingleCondition_shouldPutProperly(
       Operator operator, DataType dataType) throws ExecutionException {
     // Arrange
-    Map<String, Column<?>> initialData = putInitialDataWithNullValues();
+    Map<String, Column<?>> initialData = putInitialDataWithNullValues(operator, dataType);
 
     String columnName = getColumnName(dataType);
     Column<?> columnToCompare = getColumnWithRandomValue(RANDOM, columnName, dataType);
 
     MutationCondition condition =
         ConditionBuilder.putIf(buildConditionalExpression(columnToCompare, operator)).build();
-    Put put = preparePutWithRandomValues().withCondition(condition);
+    Put put = preparePutWithRandomValues(operator, dataType).withCondition(condition);
 
     boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
     // Act Assert
     put_withPutIf_shouldPutProperly(
-        initialData, put, shouldMutate, description(initialData, put, columnToCompare, operator));
+        initialData,
+        put,
+        shouldMutate,
+        prepareGet(operator, dataType),
+        description(initialData, put, columnToCompare, operator));
   }
 
   private void put_withPutIfWithInitialDataWithoutValuesWithSingleCondition_shouldPutProperly(
       Operator operator, DataType dataType) throws ExecutionException {
     // Arrange
-    Map<String, Column<?>> initialData = putInitialDataWithoutValues();
+    Map<String, Column<?>> initialData = putInitialDataWithoutValues(operator, dataType);
 
     String columnName = getColumnName(dataType);
     Column<?> columnToCompare = getColumnWithRandomValue(RANDOM, columnName, dataType);
 
     MutationCondition condition =
         ConditionBuilder.putIf(buildConditionalExpression(columnToCompare, operator)).build();
-    Put put = preparePutWithRandomValues().withCondition(condition);
+    Put put = preparePutWithRandomValues(operator, dataType).withCondition(condition);
 
     boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
     // Act Assert
     put_withPutIf_shouldPutProperly(
-        initialData, put, shouldMutate, description(initialData, put, columnToCompare, operator));
+        initialData,
+        put,
+        shouldMutate,
+        prepareGet(operator, dataType),
+        description(initialData, put, columnToCompare, operator));
   }
 
   @Test
-  public void put_withPutIfWithMultipleConditions_shouldPutProperly() throws ExecutionException {
+  public void put_withPutIfWithMultipleConditions_shouldPutProperly()
+      throws java.util.concurrent.ExecutionException, InterruptedException {
     RANDOM.setSeed(seed);
 
-    for (OperatorAndDataType firstOperatorAndDataType : operatorAndDataTypeList) {
-      for (OperatorAndDataType secondOperatorAndDataType : operatorAndDataTypeList) {
-        put_withPutIfWithMultipleConditionsWithSameValue_shouldPutProperly(
-            firstOperatorAndDataType.getOperator(),
-            firstOperatorAndDataType.getDataType(),
-            secondOperatorAndDataType.getOperator(),
-            secondOperatorAndDataType.getDataType());
-        put_withPutIfWithMultipleConditionsWithRandomValue_shouldPutProperly(
-            firstOperatorAndDataType.getOperator(),
-            firstOperatorAndDataType.getDataType(),
-            secondOperatorAndDataType.getOperator(),
-            secondOperatorAndDataType.getDataType());
-        put_withPutIfWithInitialDataWithNullValuesWithMultipleConditions_shouldPutProperly(
-            firstOperatorAndDataType.getOperator(),
-            firstOperatorAndDataType.getDataType(),
-            secondOperatorAndDataType.getOperator(),
-            secondOperatorAndDataType.getDataType());
-        put_withPutIfWithInitialDataWithoutValuesWithMultipleConditions_shouldPutProperly(
-            firstOperatorAndDataType.getOperator(),
-            firstOperatorAndDataType.getDataType(),
-            secondOperatorAndDataType.getOperator(),
-            secondOperatorAndDataType.getDataType());
-      }
-    }
+    executeInParallel(
+        (firstOperator, firstDataType, secondOperator, secondDataType) -> {
+          put_withPutIfWithMultipleConditionsWithSameValue_shouldPutProperly(
+              firstOperator, firstDataType, secondOperator, secondDataType);
+          put_withPutIfWithMultipleConditionsWithRandomValue_shouldPutProperly(
+              firstOperator, firstDataType, secondOperator, secondDataType);
+          put_withPutIfWithInitialDataWithNullValuesWithMultipleConditions_shouldPutProperly(
+              firstOperator, firstDataType, secondOperator, secondDataType);
+          put_withPutIfWithInitialDataWithoutValuesWithMultipleConditions_shouldPutProperly(
+              firstOperator, firstDataType, secondOperator, secondDataType);
+        });
   }
 
   private void put_withPutIfWithMultipleConditionsWithSameValue_shouldPutProperly(
@@ -271,7 +289,9 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
       DataType secondDataType)
       throws ExecutionException {
     // Arrange
-    Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
+    Map<String, Column<?>> initialData =
+        putInitialDataWithRandomValues(
+            firstOperator, firstDataType, secondOperator, secondDataType);
 
     String firstColumnName = getColumnName(firstDataType);
     Column<?> firstColumnToCompare = initialData.get(firstColumnName);
@@ -283,7 +303,9 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
         ConditionBuilder.putIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
             .and(buildConditionalExpression(secondColumnToCompare, secondOperator))
             .build();
-    Put put = preparePutWithRandomValues().withCondition(condition);
+    Put put =
+        preparePutWithRandomValues(firstOperator, firstDataType, secondOperator, secondDataType)
+            .withCondition(condition);
 
     boolean shouldMutate =
         shouldMutate(initialData.get(firstColumnName), firstColumnToCompare, firstOperator)
@@ -295,6 +317,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
         initialData,
         put,
         shouldMutate,
+        prepareGet(firstOperator, firstDataType, secondOperator, secondDataType),
         description(
             initialData,
             put,
@@ -312,7 +335,9 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
       throws ExecutionException {
     for (int i = 0; i < ATTEMPT_COUNT; i++) {
       // Arrange
-      Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
+      Map<String, Column<?>> initialData =
+          putInitialDataWithRandomValues(
+              firstOperator, firstDataType, secondOperator, secondDataType);
 
       String firstColumnName = getColumnName(firstDataType);
       Column<?> firstColumnToCompare =
@@ -326,7 +351,9 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
           ConditionBuilder.putIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
               .and(buildConditionalExpression(secondColumnToCompare, secondOperator))
               .build();
-      Put put = preparePutWithRandomValues().withCondition(condition);
+      Put put =
+          preparePutWithRandomValues(firstOperator, firstDataType, secondOperator, secondDataType)
+              .withCondition(condition);
 
       boolean shouldMutate =
           shouldMutate(initialData.get(firstColumnName), firstColumnToCompare, firstOperator)
@@ -338,6 +365,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
           initialData,
           put,
           shouldMutate,
+          prepareGet(firstOperator, firstDataType, secondOperator, secondDataType),
           description(
               initialData,
               put,
@@ -355,7 +383,8 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
       DataType secondDataType)
       throws ExecutionException {
     // Arrange
-    Map<String, Column<?>> initialData = putInitialDataWithNullValues();
+    Map<String, Column<?>> initialData =
+        putInitialDataWithNullValues(firstOperator, firstDataType, secondOperator, secondDataType);
 
     String firstColumnName = getColumnName(firstDataType);
     Column<?> firstColumnToCompare =
@@ -369,7 +398,9 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
         ConditionBuilder.putIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
             .and(buildConditionalExpression(secondColumnToCompare, secondOperator))
             .build();
-    Put put = preparePutWithRandomValues().withCondition(condition);
+    Put put =
+        preparePutWithRandomValues(firstOperator, firstDataType, secondOperator, secondDataType)
+            .withCondition(condition);
 
     boolean shouldMutate =
         shouldMutate(initialData.get(firstColumnName), firstColumnToCompare, firstOperator)
@@ -381,6 +412,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
         initialData,
         put,
         shouldMutate,
+        prepareGet(firstOperator, firstDataType, secondOperator, secondDataType),
         description(
             initialData,
             put,
@@ -397,7 +429,8 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
       DataType secondDataType)
       throws ExecutionException {
     // Arrange
-    Map<String, Column<?>> initialData = putInitialDataWithoutValues();
+    Map<String, Column<?>> initialData =
+        putInitialDataWithoutValues(firstOperator, firstDataType, secondOperator, secondDataType);
 
     String firstColumnName = getColumnName(firstDataType);
     Column<?> firstColumnToCompare =
@@ -411,7 +444,9 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
         ConditionBuilder.putIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
             .and(buildConditionalExpression(secondColumnToCompare, secondOperator))
             .build();
-    Put put = preparePutWithRandomValues().withCondition(condition);
+    Put put =
+        preparePutWithRandomValues(firstOperator, firstDataType, secondOperator, secondDataType)
+            .withCondition(condition);
 
     boolean shouldMutate =
         shouldMutate(initialData.get(firstColumnName), firstColumnToCompare, firstOperator)
@@ -423,6 +458,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
         initialData,
         put,
         shouldMutate,
+        prepareGet(firstOperator, firstDataType, secondOperator, secondDataType),
         description(
             initialData,
             put,
@@ -433,7 +469,11 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
   }
 
   private void put_withPutIf_shouldPutProperly(
-      Map<String, Column<?>> initialData, Put put, boolean shouldMutate, String description)
+      Map<String, Column<?>> initialData,
+      Put put,
+      boolean shouldMutate,
+      Get get,
+      String description)
       throws ExecutionException {
     Throwable thrown = catchThrowable(() -> storage.put(put));
     if (shouldMutate) {
@@ -442,7 +482,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
       assertThat(thrown).describedAs(description).isInstanceOf(NoMutationException.class);
     }
 
-    Optional<Result> result = storage.get(prepareGet());
+    Optional<Result> result = storage.get(get);
     assertThat(result).describedAs(description).isPresent();
     assertThat(result.get().getContainedColumnNames())
         .describedAs(description)
@@ -622,32 +662,32 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
   }
 
   @Test
-  public void delete_withDeleteIfWithSingleCondition_shouldPutProperly() throws ExecutionException {
+  public void delete_withDeleteIfWithSingleCondition_shouldPutProperly()
+      throws java.util.concurrent.ExecutionException, InterruptedException {
     RANDOM.setSeed(seed);
 
-    for (OperatorAndDataType operatorAndDataType : operatorAndDataTypeList) {
-      delete_withDeleteIfWithSingleConditionWithSameValue_shouldPutProperly(
-          operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
-      delete_withDeleteWithSingleConditionWithRandomValue_shouldPutProperly(
-          operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
-      delete_withDeleteIfWithInitialDataWithNullValuesWithSingleCondition_shouldPutProperly(
-          operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
-      delete_withDeleteIfWithInitialDataWithoutValuesWithSingleCondition_shouldPutProperly(
-          operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
-    }
+    executeInParallel(
+        (operator, dataType) -> {
+          delete_withDeleteIfWithSingleConditionWithSameValue_shouldPutProperly(operator, dataType);
+          delete_withDeleteWithSingleConditionWithRandomValue_shouldPutProperly(operator, dataType);
+          delete_withDeleteIfWithInitialDataWithNullValuesWithSingleCondition_shouldPutProperly(
+              operator, dataType);
+          delete_withDeleteIfWithInitialDataWithoutValuesWithSingleCondition_shouldPutProperly(
+              operator, dataType);
+        });
   }
 
   private void delete_withDeleteIfWithSingleConditionWithSameValue_shouldPutProperly(
       Operator operator, DataType dataType) throws ExecutionException {
     // Arrange
-    Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
+    Map<String, Column<?>> initialData = putInitialDataWithRandomValues(operator, dataType);
 
     String columnName = getColumnName(dataType);
     Column<?> columnToCompare = initialData.get(columnName);
 
     MutationCondition condition =
         ConditionBuilder.deleteIf(buildConditionalExpression(columnToCompare, operator)).build();
-    Delete delete = prepareDelete().withCondition(condition);
+    Delete delete = prepareDelete(operator, dataType).withCondition(condition);
 
     boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
@@ -656,6 +696,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
         initialData,
         delete,
         shouldMutate,
+        prepareGet(operator, dataType),
         description(initialData, delete, columnToCompare, operator));
   }
 
@@ -663,14 +704,14 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
       Operator operator, DataType dataType) throws ExecutionException {
     for (int i = 0; i < ATTEMPT_COUNT; i++) {
       // Arrange
-      Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
+      Map<String, Column<?>> initialData = putInitialDataWithRandomValues(operator, dataType);
 
       String columnName = getColumnName(dataType);
       Column<?> columnToCompare = getColumnWithRandomValue(RANDOM, columnName, dataType);
 
       MutationCondition condition =
           ConditionBuilder.deleteIf(buildConditionalExpression(columnToCompare, operator)).build();
-      Delete delete = prepareDelete().withCondition(condition);
+      Delete delete = prepareDelete(operator, dataType).withCondition(condition);
 
       boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
@@ -679,6 +720,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
           initialData,
           delete,
           shouldMutate,
+          prepareGet(operator, dataType),
           description(initialData, delete, columnToCompare, operator));
     }
   }
@@ -687,14 +729,14 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
       delete_withDeleteIfWithInitialDataWithNullValuesWithSingleCondition_shouldPutProperly(
           Operator operator, DataType dataType) throws ExecutionException {
     // Arrange
-    Map<String, Column<?>> initialData = putInitialDataWithNullValues();
+    Map<String, Column<?>> initialData = putInitialDataWithNullValues(operator, dataType);
 
     String columnName = getColumnName(dataType);
     Column<?> columnToCompare = getColumnWithRandomValue(RANDOM, columnName, dataType);
 
     MutationCondition condition =
         ConditionBuilder.deleteIf(buildConditionalExpression(columnToCompare, operator)).build();
-    Delete delete = prepareDelete().withCondition(condition);
+    Delete delete = prepareDelete(operator, dataType).withCondition(condition);
 
     boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
@@ -703,20 +745,21 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
         initialData,
         delete,
         shouldMutate,
+        prepareGet(operator, dataType),
         description(initialData, delete, columnToCompare, operator));
   }
 
   private void delete_withDeleteIfWithInitialDataWithoutValuesWithSingleCondition_shouldPutProperly(
       Operator operator, DataType dataType) throws ExecutionException {
     // Arrange
-    Map<String, Column<?>> initialData = putInitialDataWithoutValues();
+    Map<String, Column<?>> initialData = putInitialDataWithoutValues(operator, dataType);
 
     String columnName = getColumnName(dataType);
     Column<?> columnToCompare = getColumnWithRandomValue(RANDOM, columnName, dataType);
 
     MutationCondition condition =
         ConditionBuilder.deleteIf(buildConditionalExpression(columnToCompare, operator)).build();
-    Delete delete = prepareDelete().withCondition(condition);
+    Delete delete = prepareDelete(operator, dataType).withCondition(condition);
 
     boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
@@ -725,38 +768,26 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
         initialData,
         delete,
         shouldMutate,
+        prepareGet(operator, dataType),
         description(initialData, delete, columnToCompare, operator));
   }
 
   @Test
   public void delete_withDeleteIfWithMultipleConditions_shouldPutProperly()
-      throws ExecutionException {
+      throws java.util.concurrent.ExecutionException, InterruptedException {
     RANDOM.setSeed(seed);
 
-    for (OperatorAndDataType firstOperatorAndDataType : operatorAndDataTypeList) {
-      for (OperatorAndDataType secondOperatorAndDataType : operatorAndDataTypeList) {
-        delete_withDeleteIfWithMultipleConditionsWithSameValue_shouldPutProperly(
-            firstOperatorAndDataType.getOperator(),
-            firstOperatorAndDataType.getDataType(),
-            secondOperatorAndDataType.getOperator(),
-            secondOperatorAndDataType.getDataType());
-        delete_withDeleteIfWithMultipleConditionsWithRandomValue_shouldPutProperly(
-            firstOperatorAndDataType.getOperator(),
-            firstOperatorAndDataType.getDataType(),
-            secondOperatorAndDataType.getOperator(),
-            secondOperatorAndDataType.getDataType());
-        delete_withDeleteIfWithInitialDataWithNullValuesWithMultipleConditions_shouldPutProperly(
-            firstOperatorAndDataType.getOperator(),
-            firstOperatorAndDataType.getDataType(),
-            secondOperatorAndDataType.getOperator(),
-            secondOperatorAndDataType.getDataType());
-        delete_withDeleteIfWithInitialDataWithoutValuesWithMultipleConditions_shouldPutProperly(
-            firstOperatorAndDataType.getOperator(),
-            firstOperatorAndDataType.getDataType(),
-            secondOperatorAndDataType.getOperator(),
-            secondOperatorAndDataType.getDataType());
-      }
-    }
+    executeInParallel(
+        (firstOperator, firstDataType, secondOperator, secondDataType) -> {
+          delete_withDeleteIfWithMultipleConditionsWithSameValue_shouldPutProperly(
+              firstOperator, firstDataType, secondOperator, secondDataType);
+          delete_withDeleteIfWithMultipleConditionsWithRandomValue_shouldPutProperly(
+              firstOperator, firstDataType, secondOperator, secondDataType);
+          delete_withDeleteIfWithInitialDataWithNullValuesWithMultipleConditions_shouldPutProperly(
+              firstOperator, firstDataType, secondOperator, secondDataType);
+          delete_withDeleteIfWithInitialDataWithoutValuesWithMultipleConditions_shouldPutProperly(
+              firstOperator, firstDataType, secondOperator, secondDataType);
+        });
   }
 
   private void delete_withDeleteIfWithMultipleConditionsWithSameValue_shouldPutProperly(
@@ -766,7 +797,9 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
       DataType secondDataType)
       throws ExecutionException {
     // Arrange
-    Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
+    Map<String, Column<?>> initialData =
+        putInitialDataWithRandomValues(
+            firstOperator, firstDataType, secondOperator, secondDataType);
 
     String firstColumnName = getColumnName(firstDataType);
     Column<?> firstColumnToCompare = initialData.get(firstColumnName);
@@ -784,13 +817,16 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
             && shouldMutate(
                 initialData.get(secondColumnName), secondColumnToCompare, secondOperator);
 
-    Delete delete = prepareDelete().withCondition(condition);
+    Delete delete =
+        prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType)
+            .withCondition(condition);
 
     // Act Assert
     delete_withDeleteIf_shouldPutProperly(
         initialData,
         delete,
         shouldMutate,
+        prepareGet(firstOperator, firstDataType, secondOperator, secondDataType),
         description(
             initialData,
             delete,
@@ -808,7 +844,9 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
       throws ExecutionException {
     for (int i = 0; i < ATTEMPT_COUNT; i++) {
       // Arrange
-      Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
+      Map<String, Column<?>> initialData =
+          putInitialDataWithRandomValues(
+              firstOperator, firstDataType, secondOperator, secondDataType);
 
       String firstColumnName = getColumnName(firstDataType);
       Column<?> firstColumnToCompare =
@@ -828,13 +866,16 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
               && shouldMutate(
                   initialData.get(secondColumnName), secondColumnToCompare, secondOperator);
 
-      Delete delete = prepareDelete().withCondition(condition);
+      Delete delete =
+          prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType)
+              .withCondition(condition);
 
       // Act Assert
       delete_withDeleteIf_shouldPutProperly(
           initialData,
           delete,
           shouldMutate,
+          prepareGet(firstOperator, firstDataType, secondOperator, secondDataType),
           description(
               initialData,
               delete,
@@ -853,7 +894,8 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
           DataType secondDataType)
           throws ExecutionException {
     // Arrange
-    Map<String, Column<?>> initialData = putInitialDataWithNullValues();
+    Map<String, Column<?>> initialData =
+        putInitialDataWithNullValues(firstOperator, firstDataType, secondOperator, secondDataType);
 
     String firstColumnName = getColumnName(firstDataType);
     Column<?> firstColumnToCompare =
@@ -873,13 +915,16 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
             && shouldMutate(
                 initialData.get(secondColumnName), secondColumnToCompare, secondOperator);
 
-    Delete delete = prepareDelete().withCondition(condition);
+    Delete delete =
+        prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType)
+            .withCondition(condition);
 
     // Act Assert
     delete_withDeleteIf_shouldPutProperly(
         initialData,
         delete,
         shouldMutate,
+        prepareGet(firstOperator, firstDataType, secondOperator, secondDataType),
         description(
             initialData,
             delete,
@@ -897,7 +942,8 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
           DataType secondDataType)
           throws ExecutionException {
     // Arrange
-    Map<String, Column<?>> initialData = putInitialDataWithoutValues();
+    Map<String, Column<?>> initialData =
+        putInitialDataWithoutValues(firstOperator, firstDataType, secondOperator, secondDataType);
 
     String firstColumnName = getColumnName(firstDataType);
     Column<?> firstColumnToCompare =
@@ -917,13 +963,16 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
             && shouldMutate(
                 initialData.get(secondColumnName), secondColumnToCompare, secondOperator);
 
-    Delete delete = prepareDelete().withCondition(condition);
+    Delete delete =
+        prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType)
+            .withCondition(condition);
 
     // Act Assert
     delete_withDeleteIf_shouldPutProperly(
         initialData,
         delete,
         shouldMutate,
+        prepareGet(firstOperator, firstDataType, secondOperator, secondDataType),
         description(
             initialData,
             delete,
@@ -934,18 +983,22 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
   }
 
   private void delete_withDeleteIf_shouldPutProperly(
-      Map<String, Column<?>> initialData, Delete delete, boolean shouldMutate, String description)
+      Map<String, Column<?>> initialData,
+      Delete delete,
+      boolean shouldMutate,
+      Get get,
+      String description)
       throws ExecutionException {
     Throwable thrown = catchThrowable(() -> storage.delete(delete));
     if (shouldMutate) {
       assertThat(thrown).describedAs(description).isNull();
 
-      Optional<Result> result = storage.get(prepareGet());
+      Optional<Result> result = storage.get(get);
       assertThat(result).describedAs(description).isNotPresent();
     } else {
       assertThat(thrown).describedAs(description).isInstanceOf(NoMutationException.class);
 
-      Optional<Result> result = storage.get(prepareGet());
+      Optional<Result> result = storage.get(get);
       assertThat(result).describedAs(description).isPresent();
       assertThat(result.get().getContainedColumnNames())
           .describedAs(description)
@@ -1033,14 +1086,44 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
   }
 
   private Get prepareGet() {
-    return new Get(Key.ofInt(PARTITION_KEY, 1))
+    return prepareGet(Operator.EQ, DataType.INT);
+  }
+
+  private Get prepareGet(Operator operator, DataType dataType) {
+    return prepareGet(operator, dataType, null, null);
+  }
+
+  private Get prepareGet(
+      Operator firstOperator,
+      DataType firstDataType,
+      @Nullable Operator secondOperator,
+      @Nullable DataType secondDataType) {
+    return new Get(
+            Key.ofText(
+                PARTITION_KEY,
+                getPartitionKeyValue(firstOperator, firstDataType, secondOperator, secondDataType)))
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(namespace)
         .forTable(TABLE);
   }
 
   private Put preparePutWithRandomValues() {
-    return new Put(Key.ofInt(PARTITION_KEY, 1))
+    return preparePutWithRandomValues(Operator.EQ, DataType.INT);
+  }
+
+  private Put preparePutWithRandomValues(Operator operator, DataType dataType) {
+    return preparePutWithRandomValues(operator, dataType, null, null);
+  }
+
+  private Put preparePutWithRandomValues(
+      Operator firstOperator,
+      DataType firstDataType,
+      @Nullable Operator secondOperator,
+      @Nullable DataType secondDataType) {
+    return new Put(
+            Key.ofText(
+                PARTITION_KEY,
+                getPartitionKeyValue(firstOperator, firstDataType, secondOperator, secondDataType)))
         .withValue(getColumnWithRandomValue(RANDOM, COL_NAME1, DataType.BOOLEAN))
         .withValue(getColumnWithRandomValue(RANDOM, COL_NAME2, DataType.INT))
         .withValue(getColumnWithRandomValue(RANDOM, COL_NAME3, DataType.BIGINT))
@@ -1053,8 +1136,93 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
         .forTable(TABLE);
   }
 
-  private Put preparePutWithNullValues() {
-    return new Put(Key.ofInt(PARTITION_KEY, 1))
+  private Delete prepareDelete() {
+    return prepareDelete(Operator.EQ, DataType.INT);
+  }
+
+  private Delete prepareDelete(Operator operator, DataType dataType) {
+    return prepareDelete(operator, dataType, null, null);
+  }
+
+  private Delete prepareDelete(
+      Operator firstOperator,
+      DataType firstDataType,
+      @Nullable Operator secondOperator,
+      @Nullable DataType secondDataType) {
+    return new Delete(
+            Key.ofText(
+                PARTITION_KEY,
+                getPartitionKeyValue(firstOperator, firstDataType, secondOperator, secondDataType)))
+        .withConsistency(Consistency.LINEARIZABLE)
+        .forNamespace(namespace)
+        .forTable(TABLE);
+  }
+
+  private Map<String, Column<?>> putInitialDataWithRandomValues() throws ExecutionException {
+    return putInitialDataWithRandomValues(Operator.EQ, DataType.INT);
+  }
+
+  private Map<String, Column<?>> putInitialDataWithRandomValues(
+      Operator operator, DataType dataType) throws ExecutionException {
+    return putInitialDataWithRandomValues(operator, dataType, null, null);
+  }
+
+  private Map<String, Column<?>> putInitialDataWithRandomValues(
+      Operator firstOperator,
+      DataType firstDataType,
+      @Nullable Operator secondOperator,
+      @Nullable DataType secondDataType)
+      throws ExecutionException {
+    try {
+      storage.delete(
+          prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType)
+              .withCondition(ConditionBuilder.deleteIfExists()));
+    } catch (NoMutationException ignored) {
+      // ignored
+    }
+
+    Put initialPut =
+        preparePutWithRandomValues(firstOperator, firstDataType, secondOperator, secondDataType)
+            .withCondition(ConditionBuilder.putIfNotExists());
+    storage.put(initialPut);
+    return initialPut.getColumns();
+  }
+
+  private Map<String, Column<?>> putInitialDataWithNullValues(Operator operator, DataType dataType)
+      throws ExecutionException {
+    return putInitialDataWithNullValues(operator, dataType, null, null);
+  }
+
+  private Map<String, Column<?>> putInitialDataWithNullValues(
+      Operator firstOperator,
+      DataType firstDataType,
+      @Nullable Operator secondOperator,
+      @Nullable DataType secondDataType)
+      throws ExecutionException {
+    try {
+      storage.delete(
+          prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType)
+              .withCondition(ConditionBuilder.deleteIfExists()));
+    } catch (NoMutationException ignored) {
+      // ignored
+    }
+
+    Put initialPut =
+        preparePutWithNullValues(firstOperator, firstDataType, secondOperator, secondDataType)
+            .withCondition(ConditionBuilder.putIfNotExists());
+    storage.put(initialPut);
+    return initialPut.getColumns();
+  }
+
+  private Put preparePutWithNullValues(
+      Operator firstOperator,
+      DataType firstDataType,
+      @Nullable Operator secondOperator,
+      @Nullable DataType secondDataType) {
+    return new Put(
+            Key.ofText(
+                PARTITION_KEY,
+                getPartitionKeyValue(firstOperator, firstDataType, secondOperator, secondDataType)))
         .withBooleanValue(COL_NAME1, null)
         .withIntValue(COL_NAME2, null)
         .withBigIntValue(COL_NAME3, null)
@@ -1067,55 +1235,35 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
         .forTable(TABLE);
   }
 
-  private Put preparePutWithoutValues() {
-    return new Put(Key.ofInt(PARTITION_KEY, 1))
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(namespace)
-        .forTable(TABLE);
+  private Map<String, Column<?>> putInitialDataWithoutValues(Operator operator, DataType dataType)
+      throws ExecutionException {
+    return putInitialDataWithoutValues(operator, dataType, null, null);
   }
 
-  private Delete prepareDelete() {
-    return new Delete(Key.ofInt(PARTITION_KEY, 1))
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(namespace)
-        .forTable(TABLE);
-  }
-
-  private Map<String, Column<?>> putInitialDataWithRandomValues() throws ExecutionException {
+  private Map<String, Column<?>> putInitialDataWithoutValues(
+      Operator firstOperator,
+      DataType firstDataType,
+      @Nullable Operator secondOperator,
+      @Nullable DataType secondDataType)
+      throws ExecutionException {
     try {
-      storage.delete(prepareDelete().withCondition(ConditionBuilder.deleteIfExists()));
+      storage.delete(
+          prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType)
+              .withCondition(ConditionBuilder.deleteIfExists()));
     } catch (NoMutationException ignored) {
       // ignored
     }
 
-    Put initialPut = preparePutWithRandomValues().withCondition(ConditionBuilder.putIfNotExists());
-    storage.put(initialPut);
-    return initialPut.getColumns();
-  }
-
-  private Map<String, Column<?>> putInitialDataWithNullValues() throws ExecutionException {
-    try {
-      storage.delete(prepareDelete().withCondition(ConditionBuilder.deleteIfExists()));
-    } catch (NoMutationException ignored) {
-      // ignored
-    }
-
-    Put initialPut = preparePutWithNullValues().withCondition(ConditionBuilder.putIfNotExists());
-    storage.put(initialPut);
-    return initialPut.getColumns();
-  }
-
-  private Map<String, Column<?>> putInitialDataWithoutValues() throws ExecutionException {
-    try {
-      storage.delete(prepareDelete().withCondition(ConditionBuilder.deleteIfExists()));
-    } catch (NoMutationException ignored) {
-      // ignored
-    }
-
-    Put initialPut = preparePutWithoutValues().withCondition(ConditionBuilder.putIfNotExists());
+    Put initialPut =
+        preparePutWithoutValues(firstOperator, firstDataType, secondOperator, secondDataType)
+            .withCondition(ConditionBuilder.putIfNotExists());
     storage.put(initialPut);
     return ImmutableMap.<String, Column<?>>builder()
-        .put(PARTITION_KEY, IntColumn.of(PARTITION_KEY, 1))
+        .put(
+            PARTITION_KEY,
+            TextColumn.of(
+                PARTITION_KEY,
+                getPartitionKeyValue(firstOperator, firstDataType, secondOperator, secondDataType)))
         .put(COL_NAME1, BooleanColumn.ofNull(COL_NAME1))
         .put(COL_NAME2, IntColumn.ofNull(COL_NAME2))
         .put(COL_NAME3, BigIntColumn.ofNull(COL_NAME3))
@@ -1124,6 +1272,32 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
         .put(COL_NAME6, TextColumn.ofNull(COL_NAME6))
         .put(COL_NAME7, BlobColumn.ofNull(COL_NAME7))
         .build();
+  }
+
+  private Put preparePutWithoutValues(
+      Operator firstOperator,
+      DataType firstDataType,
+      @Nullable Operator secondOperator,
+      @Nullable DataType secondDataType) {
+    return new Put(
+            Key.ofText(
+                PARTITION_KEY,
+                getPartitionKeyValue(firstOperator, firstDataType, secondOperator, secondDataType)))
+        .withConsistency(Consistency.LINEARIZABLE)
+        .forNamespace(namespace)
+        .forTable(TABLE);
+  }
+
+  private String getPartitionKeyValue(
+      Operator firstOperator,
+      DataType firstDataType,
+      @Nullable Operator secondOperator,
+      @Nullable DataType secondDataType) {
+    return firstOperator.name()
+        + "-"
+        + firstDataType.name()
+        + (secondOperator == null ? "" : "-" + secondOperator.name())
+        + (secondDataType == null ? "" : "-" + secondDataType.name());
   }
 
   private String getColumnName(DataType dataType) {
@@ -1240,6 +1414,61 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
         firstOperator,
         secondColumnToCompare,
         secondOperator);
+  }
+
+  private void executeInParallel(TestForSingleCondition test)
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    List<Callable<Void>> testCallables = new ArrayList<>();
+    for (OperatorAndDataType operatorAndDataType : operatorAndDataTypeList) {
+      testCallables.add(
+          () -> {
+            test.execute(operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
+            return null;
+          });
+    }
+    executeInParallel(testCallables);
+  }
+
+  private void executeInParallel(TestForMultipleConditions test)
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    List<Callable<Void>> testCallables = new ArrayList<>();
+    for (OperatorAndDataType firstOperatorAndDataType : operatorAndDataTypeList) {
+      for (OperatorAndDataType secondOperatorAndDataType : operatorAndDataTypeList) {
+        testCallables.add(
+            () -> {
+              test.execute(
+                  firstOperatorAndDataType.getOperator(),
+                  firstOperatorAndDataType.getDataType(),
+                  secondOperatorAndDataType.getOperator(),
+                  secondOperatorAndDataType.getDataType());
+              return null;
+            });
+      }
+    }
+    executeInParallel(testCallables);
+  }
+
+  private static void executeInParallel(List<Callable<Void>> testCallables)
+      throws InterruptedException, java.util.concurrent.ExecutionException {
+    List<Future<Void>> futures = executorService.invokeAll(testCallables);
+    for (Future<Void> future : futures) {
+      future.get();
+    }
+  }
+
+  @FunctionalInterface
+  private interface TestForSingleCondition {
+    void execute(Operator operator, DataType dataType) throws Exception;
+  }
+
+  @FunctionalInterface
+  private interface TestForMultipleConditions {
+    void execute(
+        Operator firstOperator,
+        DataType firstDataType,
+        Operator secondOperator,
+        DataType secondDataType)
+        throws Exception;
   }
 
   public static class OperatorAndDataType {
