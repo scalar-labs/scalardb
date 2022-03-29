@@ -1,23 +1,23 @@
 package com.scalar.db.sql.statement;
 
-public interface DdlStatementVisitor {
-  void visit(CreateNamespaceStatement statement);
+public interface DdlStatementVisitor<R, C> {
+  R visit(CreateNamespaceStatement statement, C context);
 
-  void visit(CreateTableStatement statement);
+  R visit(CreateTableStatement statement, C context);
 
-  void visit(DropNamespaceStatement statement);
+  R visit(DropNamespaceStatement statement, C context);
 
-  void visit(DropTableStatement statement);
+  R visit(DropTableStatement statement, C context);
 
-  void visit(TruncateTableStatement statement);
+  R visit(TruncateTableStatement statement, C context);
 
-  void visit(CreateCoordinatorTableStatement statement);
+  R visit(CreateCoordinatorTableStatement statement, C context);
 
-  void visit(DropCoordinatorTableStatement statement);
+  R visit(DropCoordinatorTableStatement statement, C context);
 
-  void visit(TruncateCoordinatorTableStatement statement);
+  R visit(TruncateCoordinatorTableStatement statement, C context);
 
-  void visit(CreateIndexStatement statement);
+  R visit(CreateIndexStatement statement, C context);
 
-  void visit(DropIndexStatement statement);
+  R visit(DropIndexStatement statement, C context);
 }

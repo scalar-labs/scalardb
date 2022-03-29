@@ -21,7 +21,7 @@ import java.util.Objects;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
-public class DdlStatementExecutor implements DdlStatementVisitor {
+public class DdlStatementExecutor implements DdlStatementVisitor<Void, Void> {
 
   private final DistributedTransactionAdmin admin;
 
@@ -30,20 +30,21 @@ public class DdlStatementExecutor implements DdlStatementVisitor {
   }
 
   public void execute(DdlStatement statement) {
-    statement.accept(this);
+    statement.accept(this, null);
   }
 
   @Override
-  public void visit(CreateNamespaceStatement statement) {
+  public Void visit(CreateNamespaceStatement statement, Void context) {
     try {
       admin.createNamespace(statement.namespaceName, statement.ifNotExists, statement.options);
+      return null;
     } catch (ExecutionException e) {
       throw new SqlException("Failed to create a namespace", e);
     }
   }
 
   @Override
-  public void visit(CreateTableStatement statement) {
+  public Void visit(CreateTableStatement statement, Void context) {
     try {
       TableMetadata tableMetadata = convertCreateStatementToTableMetadata(statement);
       admin.createTable(
@@ -52,6 +53,7 @@ public class DdlStatementExecutor implements DdlStatementVisitor {
           tableMetadata,
           statement.ifNotExists,
           statement.options);
+      return null;
     } catch (ExecutionException e) {
       throw new SqlException("Failed to create a table", e);
     }
@@ -105,7 +107,7 @@ public class DdlStatementExecutor implements DdlStatementVisitor {
   }
 
   @Override
-  public void visit(DropNamespaceStatement statement) {
+  public Void visit(DropNamespaceStatement statement, Void context) {
     try {
       if (statement.cascade) {
         for (String tableName : admin.getNamespaceTableNames(statement.namespaceName)) {
@@ -113,58 +115,64 @@ public class DdlStatementExecutor implements DdlStatementVisitor {
         }
       }
       admin.dropNamespace(statement.namespaceName, statement.ifExists);
+      return null;
     } catch (ExecutionException e) {
       throw new SqlException("Failed to drop a namespace", e);
     }
   }
 
   @Override
-  public void visit(DropTableStatement statement) {
+  public Void visit(DropTableStatement statement, Void context) {
     try {
       admin.dropTable(statement.namespaceName, statement.tableName, statement.ifExists);
+      return null;
     } catch (ExecutionException e) {
       throw new SqlException("Failed to drop a table", e);
     }
   }
 
   @Override
-  public void visit(TruncateTableStatement statement) {
+  public Void visit(TruncateTableStatement statement, Void context) {
     try {
       admin.truncateTable(statement.namespaceName, statement.tableName);
+      return null;
     } catch (ExecutionException e) {
       throw new SqlException("Failed to drop a table", e);
     }
   }
 
   @Override
-  public void visit(CreateCoordinatorTableStatement statement) {
+  public Void visit(CreateCoordinatorTableStatement statement, Void context) {
     try {
       admin.createCoordinatorNamespaceAndTable(statement.ifNotExists, statement.options);
+      return null;
     } catch (ExecutionException e) {
       throw new SqlException("Failed to create a coordinator table", e);
     }
   }
 
   @Override
-  public void visit(DropCoordinatorTableStatement statement) {
+  public Void visit(DropCoordinatorTableStatement statement, Void context) {
     try {
       admin.dropCoordinatorNamespaceAndTable(statement.ifExists);
+      return null;
     } catch (ExecutionException e) {
       throw new SqlException("Failed to drop a coordinator table", e);
     }
   }
 
   @Override
-  public void visit(TruncateCoordinatorTableStatement statement) {
+  public Void visit(TruncateCoordinatorTableStatement statement, Void context) {
     try {
       admin.truncateCoordinatorTable();
+      return null;
     } catch (ExecutionException e) {
       throw new SqlException("Failed to truncate a coordinator table", e);
     }
   }
 
   @Override
-  public void visit(CreateIndexStatement statement) {
+  public Void visit(CreateIndexStatement statement, Void context) {
     try {
       admin.createIndex(
           statement.namespaceName,
@@ -172,16 +180,18 @@ public class DdlStatementExecutor implements DdlStatementVisitor {
           statement.columnName,
           statement.ifNotExists,
           statement.options);
+      return null;
     } catch (ExecutionException e) {
       throw new SqlException("Failed to create a index table", e);
     }
   }
 
   @Override
-  public void visit(DropIndexStatement statement) {
+  public Void visit(DropIndexStatement statement, Void context) {
     try {
       admin.dropIndex(
           statement.namespaceName, statement.tableName, statement.columnName, statement.ifExists);
+      return null;
     } catch (ExecutionException e) {
       throw new SqlException("Failed to drop a index table", e);
     }

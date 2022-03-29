@@ -21,13 +21,13 @@ public class DeleteStatement implements DmlStatement {
   }
 
   @Override
-  public void accept(StatementVisitor visitor) {
-    visitor.visit(this);
+  public <R, C> R accept(StatementVisitor<R, C> visitor, C context) {
+    return visitor.visit(this, context);
   }
 
   @Override
-  public void accept(DmlStatementVisitor visitor) {
-    visitor.visit(this);
+  public <R, C> R accept(DmlStatementVisitor<R, C> visitor, C context) {
+    return visitor.visit(this, context);
   }
 
   @Override

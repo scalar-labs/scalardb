@@ -29,8 +29,8 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
 
   private final DistributedTransactionAdmin admin;
   private final TwoPhaseCommitTransactionManager manager;
-  private final TableMetadataManager tableMetadataManager;
   private final StatementValidator statementValidator;
+  private final DmlStatementExecutor dmlStatementExecutor;
   private final DdlStatementExecutor ddlStatementExecutor;
 
   @Nullable private TwoPhaseCommitTransaction transaction;
@@ -51,8 +51,8 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
     this.admin = Objects.requireNonNull(admin);
     this.manager = Objects.requireNonNull(manager);
     this.transaction = transaction;
-    this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
     statementValidator = new StatementValidator(tableMetadataManager);
+    dmlStatementExecutor = new DmlStatementExecutor(tableMetadataManager);
     ddlStatementExecutor = new DdlStatementExecutor(admin);
   }
 
@@ -60,15 +60,13 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
   TwoPhaseCommitTransactionSqlSession(
       DistributedTransactionAdmin admin,
       TwoPhaseCommitTransactionManager manager,
-      @Nullable TwoPhaseCommitTransaction transaction,
-      TableMetadataManager tableMetadataManager,
       StatementValidator statementValidator,
+      DmlStatementExecutor dmlStatementExecutor,
       DdlStatementExecutor ddlStatementExecutor) {
     this.admin = Objects.requireNonNull(admin);
     this.manager = Objects.requireNonNull(manager);
-    this.transaction = transaction;
-    this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
     this.statementValidator = Objects.requireNonNull(statementValidator);
+    this.dmlStatementExecutor = Objects.requireNonNull(dmlStatementExecutor);
     this.ddlStatementExecutor = Objects.requireNonNull(ddlStatementExecutor);
   }
 
@@ -108,7 +106,7 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
       checkIfTransactionBegun();
 
       statementValidator.validate(statement);
-      resultSet = executeDmlStatement((DmlStatement) statement);
+      resultSet = dmlStatementExecutor.execute(transaction, (DmlStatement) statement);
     } else {
       throw new AssertionError();
     }
@@ -129,13 +127,8 @@ public class TwoPhaseCommitTransactionSqlSession implements SqlSession {
     checkIfTransactionBegun();
 
     statementValidator.validate(statement);
-    resultSet = executeDmlStatement(statement);
+    resultSet = dmlStatementExecutor.execute(transaction, statement);
     return resultSet;
-  }
-
-  @VisibleForTesting
-  ResultSet executeDmlStatement(DmlStatement statement) {
-    return new DmlStatementExecutor(transaction, tableMetadataManager, statement).execute();
   }
 
   @Override

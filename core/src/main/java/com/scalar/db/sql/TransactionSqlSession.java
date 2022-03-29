@@ -25,8 +25,8 @@ public class TransactionSqlSession implements SqlSession {
 
   private final DistributedTransactionAdmin admin;
   private final DistributedTransactionManager manager;
-  private final TableMetadataManager tableMetadataManager;
   private final StatementValidator statementValidator;
+  private final DmlStatementExecutor dmlStatementExecutor;
   private final DdlStatementExecutor ddlStatementExecutor;
 
   @Nullable private DistributedTransaction transaction;
@@ -38,8 +38,8 @@ public class TransactionSqlSession implements SqlSession {
       TableMetadataManager tableMetadataManager) {
     this.admin = Objects.requireNonNull(admin);
     this.manager = Objects.requireNonNull(manager);
-    this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
     statementValidator = new StatementValidator(tableMetadataManager);
+    dmlStatementExecutor = new DmlStatementExecutor(tableMetadataManager);
     ddlStatementExecutor = new DdlStatementExecutor(admin);
   }
 
@@ -47,13 +47,13 @@ public class TransactionSqlSession implements SqlSession {
   TransactionSqlSession(
       DistributedTransactionAdmin admin,
       DistributedTransactionManager manager,
-      TableMetadataManager tableMetadataManager,
       StatementValidator statementValidator,
+      DmlStatementExecutor dmlStatementExecutor,
       DdlStatementExecutor ddlStatementExecutor) {
     this.admin = Objects.requireNonNull(admin);
     this.manager = Objects.requireNonNull(manager);
-    this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
     this.statementValidator = Objects.requireNonNull(statementValidator);
+    this.dmlStatementExecutor = Objects.requireNonNull(dmlStatementExecutor);
     this.ddlStatementExecutor = Objects.requireNonNull(ddlStatementExecutor);
   }
 
@@ -87,7 +87,7 @@ public class TransactionSqlSession implements SqlSession {
       checkIfTransactionBegun();
 
       statementValidator.validate(statement);
-      resultSet = executeDmlStatement((DmlStatement) statement);
+      resultSet = dmlStatementExecutor.execute(transaction, (DmlStatement) statement);
     } else {
       throw new AssertionError();
     }
@@ -108,13 +108,8 @@ public class TransactionSqlSession implements SqlSession {
     checkIfTransactionBegun();
 
     statementValidator.validate(statement);
-    resultSet = executeDmlStatement(statement);
+    resultSet = dmlStatementExecutor.execute(transaction, statement);
     return resultSet;
-  }
-
-  @VisibleForTesting
-  ResultSet executeDmlStatement(DmlStatement statement) {
-    return new DmlStatementExecutor(transaction, tableMetadataManager, statement).execute();
   }
 
   @Override

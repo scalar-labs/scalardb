@@ -20,13 +20,13 @@ public class CreateNamespaceStatement implements DdlStatement {
   }
 
   @Override
-  public void accept(StatementVisitor visitor) {
-    visitor.visit(this);
+  public <R, C> R accept(StatementVisitor<R, C> visitor, C context) {
+    return visitor.visit(this, context);
   }
 
   @Override
-  public void accept(DdlStatementVisitor visitor) {
-    visitor.visit(this);
+  public <R, C> R accept(DdlStatementVisitor<R, C> visitor, C context) {
+    return visitor.visit(this, context);
   }
 
   @Override

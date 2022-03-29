@@ -3,18 +3,15 @@ package com.scalar.db.sql;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
-import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
@@ -37,8 +34,8 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
 
   @Mock private DistributedTransactionAdmin admin;
   @Mock private TwoPhaseCommitTransactionManager manager;
-  @Mock private TableMetadataManager tableMetadataManager;
   @Mock private StatementValidator statementValidator;
+  @Mock private DmlStatementExecutor dmlStatementExecutor;
   @Mock private DdlStatementExecutor ddlStatementExecutor;
   @Mock private TwoPhaseCommitTransaction transaction;
 
@@ -50,14 +47,8 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
 
     // Arrange
     twoPhaseCommitTransactionSqlSession =
-        spy(
-            new TwoPhaseCommitTransactionSqlSession(
-                admin,
-                manager,
-                null,
-                tableMetadataManager,
-                statementValidator,
-                ddlStatementExecutor));
+        new TwoPhaseCommitTransactionSqlSession(
+            admin, manager, statementValidator, dmlStatementExecutor, ddlStatementExecutor);
   }
 
   @Test
@@ -172,7 +163,7 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     when(manager.start()).thenReturn(transaction);
 
     ResultSet resultSet = mock(ResultSet.class);
-    doReturn(resultSet).when(twoPhaseCommitTransactionSqlSession).executeDmlStatement(dmlStatement);
+    when(dmlStatementExecutor.execute(transaction, dmlStatement)).thenReturn(resultSet);
 
     // Act Assert
     twoPhaseCommitTransactionSqlSession.beginTransaction();
@@ -180,7 +171,7 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
         .doesNotThrowAnyException();
 
     verify(statementValidator).validate(dmlStatement);
-    verify(twoPhaseCommitTransactionSqlSession).executeDmlStatement(dmlStatement);
+    verify(dmlStatementExecutor).execute(transaction, dmlStatement);
     assertThat(twoPhaseCommitTransactionSqlSession.getResultSet()).isEqualTo(resultSet);
   }
 
@@ -191,14 +182,14 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     SelectStatement dmlStatement = mock(SelectStatement.class);
 
     ResultSet resultSet = mock(ResultSet.class);
-    doReturn(resultSet).when(twoPhaseCommitTransactionSqlSession).executeDmlStatement(dmlStatement);
+    when(dmlStatementExecutor.execute(transaction, dmlStatement)).thenReturn(resultSet);
 
     // Act Assert
     assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.execute(dmlStatement))
         .isInstanceOf(IllegalStateException.class);
 
     verify(statementValidator, never()).validate(dmlStatement);
-    verify(twoPhaseCommitTransactionSqlSession, never()).executeDmlStatement(dmlStatement);
+    verify(dmlStatementExecutor, never()).execute(transaction, dmlStatement);
   }
 
   @Test
@@ -219,16 +210,14 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     when(manager.start()).thenReturn(transaction);
 
     ResultSet resultSet = mock(ResultSet.class);
-    doReturn(resultSet)
-        .when(twoPhaseCommitTransactionSqlSession)
-        .executeDmlStatement(selectStatement);
+    when(dmlStatementExecutor.execute(transaction, selectStatement)).thenReturn(resultSet);
 
     // Act Assert
     twoPhaseCommitTransactionSqlSession.beginTransaction();
     ResultSet actual = twoPhaseCommitTransactionSqlSession.executeQuery(selectStatement);
 
     verify(statementValidator).validate(selectStatement);
-    verify(twoPhaseCommitTransactionSqlSession).executeDmlStatement(selectStatement);
+    verify(dmlStatementExecutor).execute(transaction, selectStatement);
     assertThat(actual).isEqualTo(resultSet);
     assertThat(twoPhaseCommitTransactionSqlSession.getResultSet()).isEqualTo(resultSet);
   }
@@ -240,16 +229,14 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     SelectStatement selectStatement = mock(SelectStatement.class);
 
     ResultSet resultSet = mock(ResultSet.class);
-    doReturn(resultSet)
-        .when(twoPhaseCommitTransactionSqlSession)
-        .executeDmlStatement(selectStatement);
+    when(dmlStatementExecutor.execute(transaction, selectStatement)).thenReturn(resultSet);
 
     // Act Assert
     assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.executeQuery(selectStatement))
         .isInstanceOf(IllegalStateException.class);
 
     verify(statementValidator, never()).validate(selectStatement);
-    verify(twoPhaseCommitTransactionSqlSession, never()).executeDmlStatement(selectStatement);
+    verify(dmlStatementExecutor, never()).execute(transaction, selectStatement);
   }
 
   @Test

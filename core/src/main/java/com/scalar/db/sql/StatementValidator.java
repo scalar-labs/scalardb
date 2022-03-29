@@ -29,7 +29,7 @@ import java.util.Objects;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
-public class StatementValidator implements StatementVisitor {
+public class StatementValidator implements StatementVisitor<Void, Void> {
 
   private final TableMetadataManager tableMetadataManager;
 
@@ -38,41 +38,61 @@ public class StatementValidator implements StatementVisitor {
   }
 
   public void validate(Statement statement) {
-    statement.accept(this);
+    statement.accept(this, null);
   }
 
   @Override
-  public void visit(CreateNamespaceStatement statement) {}
+  public Void visit(CreateNamespaceStatement statement, Void context) {
+    return null;
+  }
 
   @Override
-  public void visit(CreateTableStatement statement) {}
+  public Void visit(CreateTableStatement statement, Void context) {
+    return null;
+  }
 
   @Override
-  public void visit(DropNamespaceStatement statement) {}
+  public Void visit(DropNamespaceStatement statement, Void context) {
+    return null;
+  }
 
   @Override
-  public void visit(DropTableStatement statement) {}
+  public Void visit(DropTableStatement statement, Void context) {
+    return null;
+  }
 
   @Override
-  public void visit(TruncateTableStatement statement) {}
+  public Void visit(TruncateTableStatement statement, Void context) {
+    return null;
+  }
 
   @Override
-  public void visit(CreateCoordinatorTableStatement statement) {}
+  public Void visit(CreateCoordinatorTableStatement statement, Void context) {
+    return null;
+  }
 
   @Override
-  public void visit(DropCoordinatorTableStatement statement) {}
+  public Void visit(DropCoordinatorTableStatement statement, Void context) {
+    return null;
+  }
 
   @Override
-  public void visit(TruncateCoordinatorTableStatement statement) {}
+  public Void visit(TruncateCoordinatorTableStatement statement, Void context) {
+    return null;
+  }
 
   @Override
-  public void visit(CreateIndexStatement statement) {}
+  public Void visit(CreateIndexStatement statement, Void context) {
+    return null;
+  }
 
   @Override
-  public void visit(DropIndexStatement statement) {}
+  public Void visit(DropIndexStatement statement, Void context) {
+    return null;
+  }
 
   @Override
-  public void visit(SelectStatement statement) {
+  public Void visit(SelectStatement statement, Void context) {
     TableMetadata tableMetadata =
         SqlUtils.getTableMetadata(
             tableMetadataManager, statement.namespaceName, statement.tableName);
@@ -93,7 +113,7 @@ public class StatementValidator implements StatementVisitor {
       if (!statement.clusteringOrderings.isEmpty()) {
         throw new IllegalArgumentException("Specifying 'order by' is not allowed in an index scan");
       }
-      return;
+      return null;
     }
 
     // check if only primary key columns are specified
@@ -110,6 +130,7 @@ public class StatementValidator implements StatementVisitor {
 
     validatePredicatesForPartitionKey(predicatesMap, tableMetadata);
     validatePredicatesForClusteringKey(predicatesMap, tableMetadata);
+    return null;
   }
 
   private void validatePredicatesForPartitionKey(
@@ -172,7 +193,7 @@ public class StatementValidator implements StatementVisitor {
   }
 
   @Override
-  public void visit(InsertStatement statement) {
+  public Void visit(InsertStatement statement, Void context) {
     TableMetadata tableMetadata =
         SqlUtils.getTableMetadata(
             tableMetadataManager, statement.namespaceName, statement.tableName);
@@ -200,22 +221,25 @@ public class StatementValidator implements StatementVisitor {
     if (!areAllPrimaryKeyColumnsSpecifiedProperly) {
       throw new IllegalArgumentException("Primary key columns are not specified properly");
     }
+    return null;
   }
 
   @Override
-  public void visit(UpdateStatement statement) {
+  public Void visit(UpdateStatement statement, Void context) {
     TableMetadata tableMetadata =
         SqlUtils.getTableMetadata(
             tableMetadataManager, statement.namespaceName, statement.tableName);
     validatePredicatesForPrimaryKey(statement.predicates, tableMetadata);
+    return null;
   }
 
   @Override
-  public void visit(DeleteStatement statement) {
+  public Void visit(DeleteStatement statement, Void context) {
     TableMetadata tableMetadata =
         SqlUtils.getTableMetadata(
             tableMetadataManager, statement.namespaceName, statement.tableName);
     validatePredicatesForPrimaryKey(statement.predicates, tableMetadata);
+    return null;
   }
 
   private void validatePredicatesForPrimaryKey(

@@ -1,11 +1,11 @@
 package com.scalar.db.sql.statement;
 
-public interface DmlStatementVisitor {
-  void visit(SelectStatement statement);
+public interface DmlStatementVisitor<R, C> {
+  R visit(SelectStatement statement, C context);
 
-  void visit(InsertStatement statement);
+  R visit(InsertStatement statement, C context);
 
-  void visit(UpdateStatement statement);
+  R visit(UpdateStatement statement, C context);
 
-  void visit(DeleteStatement statement);
+  R visit(DeleteStatement statement, C context);
 }

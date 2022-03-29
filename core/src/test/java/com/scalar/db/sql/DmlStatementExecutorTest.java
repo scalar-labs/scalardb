@@ -51,6 +51,8 @@ public class DmlStatementExecutorTest {
   @Mock private TransactionCrudOperable transaction;
   @Mock private TableMetadataManager tableMetadataManager;
 
+  private DmlStatementExecutor dmlStatementExecutor;
+
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
@@ -58,6 +60,8 @@ public class DmlStatementExecutorTest {
     // Arrange
     when(tableMetadataManager.getTableMetadata(NAMESPACE_NAME, TABLE_NAME))
         .thenReturn(TABLE_METADATA);
+
+    dmlStatementExecutor = new DmlStatementExecutor(tableMetadataManager);
   }
 
   @Test
@@ -78,14 +82,11 @@ public class DmlStatementExecutorTest {
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
             100);
 
-    DmlStatementExecutor dmlStatementExecutor =
-        new DmlStatementExecutor(transaction, tableMetadataManager, statement);
-
     Result result = mock(Result.class);
     when(transaction.get(any())).thenReturn(Optional.of(result));
 
     // Act
-    dmlStatementExecutor.execute();
+    dmlStatementExecutor.execute(transaction, statement);
 
     // Assert
     verify(transaction)
@@ -113,14 +114,11 @@ public class DmlStatementExecutorTest {
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
             100);
 
-    DmlStatementExecutor dmlStatementExecutor =
-        new DmlStatementExecutor(transaction, tableMetadataManager, statement);
-
     Result result = mock(Result.class);
     when(transaction.scan(any())).thenReturn(Arrays.asList(result, result, result));
 
     // Act
-    dmlStatementExecutor.execute();
+    dmlStatementExecutor.execute(transaction, statement);
 
     // Assert
     verify(transaction)
@@ -154,14 +152,11 @@ public class DmlStatementExecutorTest {
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
             100);
 
-    DmlStatementExecutor dmlStatementExecutor =
-        new DmlStatementExecutor(transaction, tableMetadataManager, statement);
-
     Result result = mock(Result.class);
     when(transaction.scan(any())).thenReturn(Arrays.asList(result, result, result));
 
     // Act
-    dmlStatementExecutor.execute();
+    dmlStatementExecutor.execute(transaction, statement);
 
     // Assert
     verify(transaction)
@@ -195,14 +190,11 @@ public class DmlStatementExecutorTest {
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
             100);
 
-    DmlStatementExecutor dmlStatementExecutor =
-        new DmlStatementExecutor(transaction, tableMetadataManager, statement);
-
     Result result = mock(Result.class);
     when(transaction.scan(any())).thenReturn(Arrays.asList(result, result, result));
 
     // Act
-    dmlStatementExecutor.execute();
+    dmlStatementExecutor.execute(transaction, statement);
 
     // Assert
     verify(transaction)
@@ -236,14 +228,11 @@ public class DmlStatementExecutorTest {
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
             100);
 
-    DmlStatementExecutor dmlStatementExecutor =
-        new DmlStatementExecutor(transaction, tableMetadataManager, statement);
-
     Result result = mock(Result.class);
     when(transaction.scan(any())).thenReturn(Arrays.asList(result, result, result));
 
     // Act
-    dmlStatementExecutor.execute();
+    dmlStatementExecutor.execute(transaction, statement);
 
     // Assert
     verify(transaction)
@@ -275,14 +264,11 @@ public class DmlStatementExecutorTest {
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
             100);
 
-    DmlStatementExecutor dmlStatementExecutor =
-        new DmlStatementExecutor(transaction, tableMetadataManager, statement);
-
     Result result = mock(Result.class);
     when(transaction.scan(any())).thenReturn(Arrays.asList(result, result, result));
 
     // Act
-    dmlStatementExecutor.execute();
+    dmlStatementExecutor.execute(transaction, statement);
 
     // Assert
     verify(transaction)
@@ -315,14 +301,11 @@ public class DmlStatementExecutorTest {
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
             100);
 
-    DmlStatementExecutor dmlStatementExecutor =
-        new DmlStatementExecutor(transaction, tableMetadataManager, statement);
-
     Result result = mock(Result.class);
     when(transaction.scan(any())).thenReturn(Arrays.asList(result, result, result));
 
     // Act
-    dmlStatementExecutor.execute();
+    dmlStatementExecutor.execute(transaction, statement);
 
     // Assert
     verify(transaction)
@@ -354,14 +337,11 @@ public class DmlStatementExecutorTest {
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
             100);
 
-    DmlStatementExecutor dmlStatementExecutor =
-        new DmlStatementExecutor(transaction, tableMetadataManager, statement);
-
     Result result = mock(Result.class);
     when(transaction.scan(any())).thenReturn(Arrays.asList(result, result, result));
 
     // Act
-    dmlStatementExecutor.execute();
+    dmlStatementExecutor.execute(transaction, statement);
 
     // Assert
     verify(transaction)
@@ -388,14 +368,11 @@ public class DmlStatementExecutorTest {
             ImmutableList.of(),
             100);
 
-    DmlStatementExecutor dmlStatementExecutor =
-        new DmlStatementExecutor(transaction, tableMetadataManager, statement);
-
     Result result = mock(Result.class);
     when(transaction.scan(any())).thenReturn(Arrays.asList(result, result, result));
 
     // Act
-    dmlStatementExecutor.execute();
+    dmlStatementExecutor.execute(transaction, statement);
 
     // Assert
     verify(transaction)
@@ -422,11 +399,8 @@ public class DmlStatementExecutorTest {
                 Assignment.column("col1").value(Value.ofText("eee")),
                 Assignment.column("col2").value(Value.ofText("fff"))));
 
-    DmlStatementExecutor dmlStatementExecutor =
-        new DmlStatementExecutor(transaction, tableMetadataManager, statement);
-
     // Act
-    ResultSet resultSet = dmlStatementExecutor.execute();
+    ResultSet resultSet = dmlStatementExecutor.execute(transaction, statement);
 
     // Assert
     verify(transaction)
@@ -455,11 +429,8 @@ public class DmlStatementExecutorTest {
                 Predicate.column("c1").isEqualTo(Value.ofText("ccc")),
                 Predicate.column("c2").isEqualTo(Value.ofText("ddd"))));
 
-    DmlStatementExecutor dmlStatementExecutor =
-        new DmlStatementExecutor(transaction, tableMetadataManager, statement);
-
     // Act
-    ResultSet resultSet = dmlStatementExecutor.execute();
+    ResultSet resultSet = dmlStatementExecutor.execute(transaction, statement);
 
     // Assert
     verify(transaction)
@@ -485,11 +456,8 @@ public class DmlStatementExecutorTest {
                 Predicate.column("c1").isEqualTo(Value.ofText("ccc")),
                 Predicate.column("c2").isEqualTo(Value.ofText("ddd"))));
 
-    DmlStatementExecutor dmlStatementExecutor =
-        new DmlStatementExecutor(transaction, tableMetadataManager, statement);
-
     // Act
-    ResultSet resultSet = dmlStatementExecutor.execute();
+    ResultSet resultSet = dmlStatementExecutor.execute(transaction, statement);
 
     // Assert
     verify(transaction)

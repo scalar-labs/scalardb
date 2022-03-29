@@ -3,18 +3,15 @@ package com.scalar.db.sql;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
-import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -33,8 +30,8 @@ public class TransactionSqlSessionTest {
 
   @Mock private DistributedTransactionAdmin admin;
   @Mock private DistributedTransactionManager manager;
-  @Mock private TableMetadataManager tableMetadataManager;
   @Mock private StatementValidator statementValidator;
+  @Mock private DmlStatementExecutor dmlStatementExecutor;
   @Mock private DdlStatementExecutor ddlStatementExecutor;
   @Mock private DistributedTransaction transaction;
 
@@ -46,9 +43,8 @@ public class TransactionSqlSessionTest {
 
     // Arrange
     transactionSqlSession =
-        spy(
-            new TransactionSqlSession(
-                admin, manager, tableMetadataManager, statementValidator, ddlStatementExecutor));
+        new TransactionSqlSession(
+            admin, manager, statementValidator, dmlStatementExecutor, ddlStatementExecutor);
   }
 
   @Test
@@ -133,14 +129,14 @@ public class TransactionSqlSessionTest {
     when(manager.start()).thenReturn(transaction);
 
     ResultSet resultSet = mock(ResultSet.class);
-    doReturn(resultSet).when(transactionSqlSession).executeDmlStatement(dmlStatement);
+    when(dmlStatementExecutor.execute(transaction, dmlStatement)).thenReturn(resultSet);
 
     // Act Assert
     transactionSqlSession.beginTransaction();
     assertThatCode(() -> transactionSqlSession.execute(dmlStatement)).doesNotThrowAnyException();
 
     verify(statementValidator).validate(dmlStatement);
-    verify(transactionSqlSession).executeDmlStatement(dmlStatement);
+    verify(dmlStatementExecutor).execute(transaction, dmlStatement);
     assertThat(transactionSqlSession.getResultSet()).isEqualTo(resultSet);
   }
 
@@ -151,14 +147,14 @@ public class TransactionSqlSessionTest {
     SelectStatement dmlStatement = mock(SelectStatement.class);
 
     ResultSet resultSet = mock(ResultSet.class);
-    doReturn(resultSet).when(transactionSqlSession).executeDmlStatement(dmlStatement);
+    when(dmlStatementExecutor.execute(transaction, dmlStatement)).thenReturn(resultSet);
 
     // Act Assert
     assertThatThrownBy(() -> transactionSqlSession.execute(dmlStatement))
         .isInstanceOf(IllegalStateException.class);
 
     verify(statementValidator, never()).validate(dmlStatement);
-    verify(transactionSqlSession, never()).executeDmlStatement(dmlStatement);
+    verify(dmlStatementExecutor, never()).execute(transaction, dmlStatement);
   }
 
   @Test
@@ -179,14 +175,14 @@ public class TransactionSqlSessionTest {
     when(manager.start()).thenReturn(transaction);
 
     ResultSet resultSet = mock(ResultSet.class);
-    doReturn(resultSet).when(transactionSqlSession).executeDmlStatement(selectStatement);
+    when(dmlStatementExecutor.execute(transaction, selectStatement)).thenReturn(resultSet);
 
     // Act Assert
     transactionSqlSession.beginTransaction();
     ResultSet actual = transactionSqlSession.executeQuery(selectStatement);
 
     verify(statementValidator).validate(selectStatement);
-    verify(transactionSqlSession).executeDmlStatement(selectStatement);
+    verify(dmlStatementExecutor).execute(transaction, selectStatement);
     assertThat(actual).isEqualTo(resultSet);
     assertThat(transactionSqlSession.getResultSet()).isEqualTo(resultSet);
   }
@@ -198,14 +194,14 @@ public class TransactionSqlSessionTest {
     SelectStatement selectStatement = mock(SelectStatement.class);
 
     ResultSet resultSet = mock(ResultSet.class);
-    doReturn(resultSet).when(transactionSqlSession).executeDmlStatement(selectStatement);
+    when(dmlStatementExecutor.execute(transaction, selectStatement)).thenReturn(resultSet);
 
     // Act Assert
     assertThatThrownBy(() -> transactionSqlSession.executeQuery(selectStatement))
         .isInstanceOf(IllegalStateException.class);
 
     verify(statementValidator, never()).validate(selectStatement);
-    verify(transactionSqlSession, never()).executeDmlStatement(selectStatement);
+    verify(dmlStatementExecutor, never()).execute(transaction, selectStatement);
   }
 
   @Test

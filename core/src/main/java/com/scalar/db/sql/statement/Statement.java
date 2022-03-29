@@ -1,5 +1,5 @@
 package com.scalar.db.sql.statement;
 
 public interface Statement {
-  void accept(StatementVisitor visitor);
+  <R, C> R accept(StatementVisitor<R, C> visitor, C context);
 }

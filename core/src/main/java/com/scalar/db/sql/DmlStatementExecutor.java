@@ -33,33 +33,24 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import javax.annotation.concurrent.NotThreadSafe;
+import javax.annotation.concurrent.ThreadSafe;
 
-@NotThreadSafe
-public class DmlStatementExecutor implements DmlStatementVisitor {
+@ThreadSafe
+public class DmlStatementExecutor
+    implements DmlStatementVisitor<ResultSet, TransactionCrudOperable> {
 
-  private final TransactionCrudOperable transaction;
   private final TableMetadataManager tableMetadataManager;
-  private final DmlStatement statement;
 
-  private ResultSet resultSet;
-
-  DmlStatementExecutor(
-      TransactionCrudOperable transaction,
-      TableMetadataManager tableMetadataManager,
-      DmlStatement statement) {
-    this.transaction = transaction;
+  DmlStatementExecutor(TableMetadataManager tableMetadataManager) {
     this.tableMetadataManager = tableMetadataManager;
-    this.statement = statement;
   }
 
-  public ResultSet execute() {
-    statement.accept(this);
-    return resultSet;
+  public ResultSet execute(TransactionCrudOperable transaction, DmlStatement statement) {
+    return statement.accept(this, transaction);
   }
 
   @Override
-  public void visit(SelectStatement statement) {
+  public ResultSet visit(SelectStatement statement, TransactionCrudOperable transaction) {
     com.scalar.db.api.TableMetadata metadata =
         SqlUtils.getTableMetadata(
             tableMetadataManager, statement.namespaceName, statement.tableName);
@@ -74,17 +65,16 @@ public class DmlStatementExecutor implements DmlStatementVisitor {
     try {
       if (selection instanceof Get) {
         Optional<Result> result = transaction.get((Get) selection);
-        resultSet =
-            result
-                .map(
-                    r ->
-                        (ResultSet)
-                            new ResultIteratorResultSet(
-                                Collections.singletonList(r).iterator(), projectedColumnNames))
-                .orElse(EmptyResultSet.INSTANCE);
+        return result
+            .map(
+                r ->
+                    (ResultSet)
+                        new ResultIteratorResultSet(
+                            Collections.singletonList(r).iterator(), projectedColumnNames))
+            .orElse(EmptyResultSet.INSTANCE);
       } else {
         List<Result> results = transaction.scan((Scan) selection);
-        resultSet = new ResultIteratorResultSet(results.iterator(), projectedColumnNames);
+        return new ResultIteratorResultSet(results.iterator(), projectedColumnNames);
       }
     } catch (CrudConflictException e) {
       throw new TransactionConflictException("Conflict happened during selecting a record", e);
@@ -94,14 +84,14 @@ public class DmlStatementExecutor implements DmlStatementVisitor {
   }
 
   @Override
-  public void visit(InsertStatement statement) {
+  public ResultSet visit(InsertStatement statement, TransactionCrudOperable transaction) {
     com.scalar.db.api.TableMetadata metadata =
         SqlUtils.getTableMetadata(
             tableMetadataManager, statement.namespaceName, statement.tableName);
     Put put = convertInsertStatementToPut(statement, metadata);
     try {
       transaction.put(put);
-      resultSet = EmptyResultSet.INSTANCE;
+      return EmptyResultSet.INSTANCE;
     } catch (CrudConflictException e) {
       throw new TransactionConflictException("Conflict happened during inserting a record", e);
     } catch (CrudException e) {
@@ -110,14 +100,14 @@ public class DmlStatementExecutor implements DmlStatementVisitor {
   }
 
   @Override
-  public void visit(UpdateStatement statement) {
+  public ResultSet visit(UpdateStatement statement, TransactionCrudOperable transaction) {
     com.scalar.db.api.TableMetadata metadata =
         SqlUtils.getTableMetadata(
             tableMetadataManager, statement.namespaceName, statement.tableName);
     Put put = convertUpdateStatementToPut(statement, metadata);
     try {
       transaction.put(put);
-      resultSet = EmptyResultSet.INSTANCE;
+      return EmptyResultSet.INSTANCE;
     } catch (CrudConflictException e) {
       throw new TransactionConflictException("Conflict happened during updating a record", e);
     } catch (CrudException e) {
@@ -126,14 +116,14 @@ public class DmlStatementExecutor implements DmlStatementVisitor {
   }
 
   @Override
-  public void visit(DeleteStatement statement) {
+  public ResultSet visit(DeleteStatement statement, TransactionCrudOperable transaction) {
     TableMetadata metadata =
         SqlUtils.getTableMetadata(
             tableMetadataManager, statement.namespaceName, statement.tableName);
     Delete delete = convertDeleteStatementToDelete(statement, metadata);
     try {
       transaction.delete(delete);
-      resultSet = EmptyResultSet.INSTANCE;
+      return EmptyResultSet.INSTANCE;
     } catch (CrudConflictException e) {
       throw new TransactionConflictException("Conflict happened during deleting a record", e);
     } catch (CrudException e) {
