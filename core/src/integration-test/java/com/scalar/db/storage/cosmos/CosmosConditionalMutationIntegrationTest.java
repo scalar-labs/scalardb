@@ -24,6 +24,11 @@ public class CosmosConditionalMutationIntegrationTest
   }
 
   @Override
+  protected int getThreadNum() {
+    return 3;
+  }
+
+  @Override
   protected Map<String, String> getCreateOptions() {
     return CosmosEnv.getCreateOptions();
   }

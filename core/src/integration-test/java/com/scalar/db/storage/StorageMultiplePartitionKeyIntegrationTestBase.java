@@ -123,8 +123,8 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
     // We firstly execute the first one and then the rest. This is because the first table creation
     // creates the metadata table, and this process can't be handled in multiple threads/processes
     // at the same time.
-    execute(testCallables.subList(0, 1));
-    execute(testCallables.subList(1, testCallables.size()));
+    executeInParallel(testCallables.subList(0, 1));
+    executeInParallel(testCallables.subList(1, testCallables.size()));
   }
 
   private void createTable(
@@ -171,8 +171,8 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
     // We firstly execute the callables without the last one. And then we execute the last one. This
     // is because the last table deletion deletes the metadata table, and this process can't be
     // handled in multiple threads/processes at the same time.
-    execute(testCallables.subList(0, testCallables.size() - 1));
-    execute(testCallables.subList(testCallables.size() - 1, testCallables.size()));
+    executeInParallel(testCallables.subList(0, testCallables.size() - 1));
+    executeInParallel(testCallables.subList(testCallables.size() - 1, testCallables.size()));
   }
 
   private void truncateTable(DataType firstPartitionKeyType, DataType secondPartitionKeyType)
@@ -191,7 +191,7 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
     return namespaceBaseName + firstPartitionKeyType;
   }
 
-  private static void execute(List<Callable<Void>> testCallables)
+  private static void executeInParallel(List<Callable<Void>> testCallables)
       throws InterruptedException, java.util.concurrent.ExecutionException {
     List<Future<Void>> futures = executorService.invokeAll(testCallables);
     for (Future<Void> future : futures) {

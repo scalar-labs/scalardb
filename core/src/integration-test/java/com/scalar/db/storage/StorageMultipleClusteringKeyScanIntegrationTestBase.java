@@ -151,8 +151,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
     // We firstly execute the first one and then the rest. This is because the first table creation
     // creates the metadata table, and this process can't be handled in multiple threads/processes
     // at the same time.
-    execute(testCallables.subList(0, 1));
-    execute(testCallables.subList(1, testCallables.size()));
+    executeInParallel(testCallables.subList(0, 1));
+    executeInParallel(testCallables.subList(1, testCallables.size()));
   }
 
   private void createTable(
@@ -219,8 +219,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
     // We firstly execute the callables without the last one. And then we execute the last one. This
     // is because the last table deletion deletes the metadata table, and this process can't be
     // handled in multiple threads/processes at the same time.
-    execute(testCallables.subList(0, testCallables.size() - 1));
-    execute(testCallables.subList(testCallables.size() - 1, testCallables.size()));
+    executeInParallel(testCallables.subList(0, testCallables.size() - 1));
+    executeInParallel(testCallables.subList(testCallables.size() - 1, testCallables.size()));
   }
 
   private void truncateTable(
@@ -255,18 +255,10 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
     return namespaceBaseName + firstClusteringKeyType;
   }
 
-  private static void execute(List<Callable<Void>> testCallables)
-      throws InterruptedException, java.util.concurrent.ExecutionException {
-    List<Future<Void>> futures = executorService.invokeAll(testCallables);
-    for (Future<Void> future : futures) {
-      future.get();
-    }
-  }
-
   @Test
   public void scan_WithoutClusteringKeyRange_ShouldReturnProperResult()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    execute(
+    executeInParallel(
         (clusteringKeys,
             firstClusteringKeyType,
             firstClusteringKeyOrder,
@@ -339,7 +331,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
   @Test
   public void scan_WithFirstClusteringKeyRange_ShouldReturnProperResult()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    execute(
+    executeInParallel(
         (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
           for (boolean startInclusive : Arrays.asList(true, false)) {
             for (boolean endInclusive : Arrays.asList(true, false)) {
@@ -432,7 +424,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
   @Test
   public void scan_WithFirstClusteringKeyRangeWithSameValues_ShouldReturnProperResult()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    execute(
+    executeInParallel(
         (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
           for (boolean startInclusive : Arrays.asList(true, false)) {
             for (boolean endInclusive : Arrays.asList(true, false)) {
@@ -520,7 +512,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
   @Test
   public void scan_WithFirstClusteringKeyRangeWithMinAndMaxValue_ShouldReturnProperResult()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    execute(
+    executeInParallel(
         (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
           for (boolean startInclusive : Arrays.asList(true, false)) {
             for (boolean endInclusive : Arrays.asList(true, false)) {
@@ -603,7 +595,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
   @Test
   public void scan_WithFirstClusteringKeyStartRange_ShouldReturnProperResult()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    execute(
+    executeInParallel(
         (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
           for (boolean startInclusive : Arrays.asList(true, false)) {
             for (OrderingType orderingType : OrderingType.values()) {
@@ -681,7 +673,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
   @Test
   public void scan_WithFirstClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    execute(
+    executeInParallel(
         (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
           for (boolean startInclusive : Arrays.asList(true, false)) {
             for (OrderingType orderingType : OrderingType.values()) {
@@ -752,7 +744,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
   @Test
   public void scan_WithFirstClusteringKeyEndRange_ShouldReturnProperResult()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    execute(
+    executeInParallel(
         (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
           for (boolean endInclusive : Arrays.asList(true, false)) {
             for (OrderingType orderingType : OrderingType.values()) {
@@ -830,7 +822,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
   @Test
   public void scan_WithFirstClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    execute(
+    executeInParallel(
         (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
           for (boolean endInclusive : Arrays.asList(true, false)) {
             for (OrderingType orderingType : OrderingType.values()) {
@@ -901,7 +893,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
   @Test
   public void scan_WithSecondClusteringKeyRange_ShouldReturnProperResult()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    execute(
+    executeInParallel(
         (clusteringKeys,
             firstClusteringKeyType,
             firstClusteringKeyOrder,
@@ -1017,7 +1009,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
   @Test
   public void scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    execute(
+    executeInParallel(
         (clusteringKeys,
             firstClusteringKeyType,
             firstClusteringKeyOrder,
@@ -1128,7 +1120,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
   @Test
   public void scan_WithSecondClusteringKeyRangeWithMinAndMaxValues_ShouldReturnProperResult()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    execute(
+    executeInParallel(
         (clusteringKeys,
             firstClusteringKeyType,
             firstClusteringKeyOrder,
@@ -1233,7 +1225,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
   @Test
   public void scan_WithSecondClusteringKeyStartRange_ShouldReturnProperResult()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    execute(
+    executeInParallel(
         (clusteringKeys,
             firstClusteringKeyType,
             firstClusteringKeyOrder,
@@ -1334,7 +1326,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
   @Test
   public void scan_WithSecondClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    execute(
+    executeInParallel(
         (clusteringKeys,
             firstClusteringKeyType,
             firstClusteringKeyOrder,
@@ -1419,7 +1411,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
   @Test
   public void scan_WithSecondClusteringKeyEndRange_ShouldReturnProperResult()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    execute(
+    executeInParallel(
         (clusteringKeys,
             firstClusteringKeyType,
             firstClusteringKeyOrder,
@@ -1520,7 +1512,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
   @Test
   public void scan_WithSecondClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    execute(
+    executeInParallel(
         (clusteringKeys,
             firstClusteringKeyType,
             firstClusteringKeyOrder,
@@ -1981,7 +1973,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
     };
   }
 
-  private void execute(TestForFirstClusteringKeyScan test)
+  private void executeInParallel(TestForFirstClusteringKeyScan test)
       throws java.util.concurrent.ExecutionException, InterruptedException {
     List<Callable<Void>> testCallables = new ArrayList<>();
     for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
@@ -2000,10 +1992,10 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       }
     }
 
-    execute(testCallables);
+    executeInParallel(testCallables);
   }
 
-  private void execute(TestForSecondClusteringKeyScan test)
+  private void executeInParallel(TestForSecondClusteringKeyScan test)
       throws java.util.concurrent.ExecutionException, InterruptedException {
     List<Callable<Void>> testCallables = new ArrayList<>();
     for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
@@ -2037,7 +2029,15 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         }
       }
     }
-    execute(testCallables);
+    executeInParallel(testCallables);
+  }
+
+  private static void executeInParallel(List<Callable<Void>> testCallables)
+      throws InterruptedException, java.util.concurrent.ExecutionException {
+    List<Future<Void>> futures = executorService.invokeAll(testCallables);
+    for (Future<Void> future : futures) {
+      future.get();
+    }
   }
 
   @FunctionalInterface
