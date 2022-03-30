@@ -808,6 +808,15 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
       return this;
     }
 
+    /**
+     * Returns the current number of the elements of Key.
+     *
+     * @return the current number of the elements of Key
+     */
+    public int size() {
+      return columns.size();
+    }
+
     public Key build() {
       return new Key(columns);
     }
