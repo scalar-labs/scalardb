@@ -55,7 +55,7 @@ public class Cosmos extends AbstractDistributedStorage {
 
     metadataManager =
         new TableMetadataManager(
-            new CosmosAdmin(client, config), config.getTableMetadataCacheExpirationTimeSecs());
+            new CosmosAdmin(client, config), config.getMetadataCacheExpirationTimeSecs());
     operationChecker = new OperationChecker(metadataManager);
 
     selectStatementHandler = new SelectStatementHandler(client, metadataManager);

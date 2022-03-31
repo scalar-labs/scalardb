@@ -40,7 +40,7 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
     TableMetadataManager tableMetadataManager =
         new TableMetadataManager(
             new JdbcAdmin(tableMetadataDataSource, config),
-            config.getTableMetadataCacheExpirationTimeSecs());
+            config.getMetadataCacheExpirationTimeSecs());
 
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
