@@ -30,7 +30,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public class TwoPhaseCommitTransactionSqlSessionTest {
+public class TwoPhaseCommitTransactionSessionTest {
 
   @Mock private DistributedTransactionAdmin admin;
   @Mock private TwoPhaseCommitTransactionManager manager;
@@ -39,88 +39,119 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
   @Mock private DdlStatementExecutor ddlStatementExecutor;
   @Mock private TwoPhaseCommitTransaction transaction;
 
-  private TwoPhaseCommitTransactionSqlSession twoPhaseCommitTransactionSqlSession;
+  private TwoPhaseCommitTransactionSession twoPhaseCommitTransactionSession;
 
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    twoPhaseCommitTransactionSqlSession =
-        new TwoPhaseCommitTransactionSqlSession(
+    twoPhaseCommitTransactionSession =
+        new TwoPhaseCommitTransactionSession(
             admin, manager, statementValidator, dmlStatementExecutor, ddlStatementExecutor);
   }
 
   @Test
-  public void beginTransaction_CalledOnce_ShouldNotThrowAnyException() throws TransactionException {
+  public void begin_CalledOnce_ShouldNotThrowAnyException() throws TransactionException {
     // Arrange
     when(manager.start()).thenReturn(transaction);
 
     // Act Assert
-    assertThatCode(() -> twoPhaseCommitTransactionSqlSession.beginTransaction())
-        .doesNotThrowAnyException();
+    assertThatCode(() -> twoPhaseCommitTransactionSession.begin()).doesNotThrowAnyException();
     verify(manager).start();
   }
 
   @Test
-  public void beginTransaction_CalledTwice_ShouldThrowIllegalStateException()
-      throws TransactionException {
+  public void begin_CalledTwice_ShouldThrowIllegalStateException() throws TransactionException {
     // Arrange
     when(manager.start()).thenReturn(transaction);
 
     // Act Assert
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.beginTransaction())
+    twoPhaseCommitTransactionSession.begin();
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.begin())
         .isInstanceOf(IllegalStateException.class);
     verify(manager).start();
   }
 
   @Test
-  public void beginTransaction_WhenManagerThrowsTransactionException_ShouldThrowSqlException()
+  public void begin_WhenManagerThrowsTransactionException_ShouldThrowSqlException()
       throws TransactionException {
     // Arrange
     when(manager.start()).thenThrow(TransactionException.class);
 
     // Act Assert
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.beginTransaction())
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.begin())
         .isInstanceOf(SqlException.class);
     verify(manager).start();
   }
 
   @Test
-  public void joinTransaction_CalledOnce_ShouldNotThrowAnyException() throws TransactionException {
+  public void join_CalledOnce_ShouldNotThrowAnyException() throws TransactionException {
     // Arrange
     when(manager.join("txId")).thenReturn(transaction);
 
     // Act Assert
-    assertThatCode(() -> twoPhaseCommitTransactionSqlSession.joinTransaction("txId"))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> twoPhaseCommitTransactionSession.join("txId")).doesNotThrowAnyException();
     verify(manager).join("txId");
   }
 
   @Test
-  public void joinTransaction_CalledTwice_ShouldIllegalStateException()
-      throws TransactionException {
+  public void join_CalledTwice_ShouldIllegalStateException() throws TransactionException {
     // Arrange
     when(manager.join("txId")).thenReturn(transaction);
 
     // Act Assert
-    twoPhaseCommitTransactionSqlSession.joinTransaction("txId");
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.joinTransaction("txId"))
+    twoPhaseCommitTransactionSession.join("txId");
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.join("txId"))
         .isInstanceOf(IllegalStateException.class);
     verify(manager).join("txId");
   }
 
   @Test
-  public void joinTransaction_WhenManagerThrowsTransactionException_ShouldThrowSqlException()
+  public void join_WhenManagerThrowsTransactionException_ShouldThrowSqlException()
       throws TransactionException {
     // Arrange
     when(manager.join("txId")).thenThrow(TransactionException.class);
 
     // Act Assert
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.joinTransaction("txId"))
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.join("txId"))
         .isInstanceOf(SqlException.class);
     verify(manager).join("txId");
+  }
+
+  @Test
+  public void resume_CalledOnce_ShouldNotThrowAnyException() throws TransactionException {
+    // Arrange
+    when(manager.resume("txId")).thenReturn(transaction);
+
+    // Act Assert
+    assertThatCode(() -> twoPhaseCommitTransactionSession.resume("txId"))
+        .doesNotThrowAnyException();
+    verify(manager).resume("txId");
+  }
+
+  @Test
+  public void resume_CalledTwice_ShouldIllegalStateException() throws TransactionException {
+    // Arrange
+    when(manager.resume("txId")).thenReturn(transaction);
+
+    // Act Assert
+    twoPhaseCommitTransactionSession.resume("txId");
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.resume("txId"))
+        .isInstanceOf(IllegalStateException.class);
+    verify(manager).resume("txId");
+  }
+
+  @Test
+  public void resume_WhenManagerThrowsTransactionException_ShouldThrowSqlException()
+      throws TransactionException {
+    // Arrange
+    when(manager.resume("txId")).thenThrow(TransactionException.class);
+
+    // Act Assert
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.resume("txId"))
+        .isInstanceOf(SqlException.class);
+    verify(manager).resume("txId");
   }
 
   @Test
@@ -129,13 +160,11 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     CreateTableStatement ddlStatement = mock(CreateTableStatement.class);
 
     // Act Assert
-    assertThatCode(() -> twoPhaseCommitTransactionSqlSession.execute(ddlStatement))
-        .doesNotThrowAnyException();
+    ResultSet actual = twoPhaseCommitTransactionSession.execute(ddlStatement);
 
     verify(statementValidator).validate(ddlStatement);
     verify(ddlStatementExecutor).execute(ddlStatement);
-    assertThat(twoPhaseCommitTransactionSqlSession.getResultSet())
-        .isEqualTo(EmptyResultSet.INSTANCE);
+    assertThat(actual).isEqualTo(EmptyResultSet.INSTANCE);
   }
 
   @Test
@@ -147,8 +176,8 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     when(manager.start()).thenReturn(transaction);
 
     // Act Assert
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.execute(ddlStatement))
+    twoPhaseCommitTransactionSession.begin();
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.execute(ddlStatement))
         .isInstanceOf(IllegalStateException.class);
 
     verify(statementValidator, never()).validate(ddlStatement);
@@ -166,13 +195,12 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     when(dmlStatementExecutor.execute(transaction, dmlStatement)).thenReturn(resultSet);
 
     // Act Assert
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    assertThatCode(() -> twoPhaseCommitTransactionSqlSession.execute(dmlStatement))
-        .doesNotThrowAnyException();
+    twoPhaseCommitTransactionSession.begin();
+    ResultSet actual = twoPhaseCommitTransactionSession.execute(dmlStatement);
 
     verify(statementValidator).validate(dmlStatement);
     verify(dmlStatementExecutor).execute(transaction, dmlStatement);
-    assertThat(twoPhaseCommitTransactionSqlSession.getResultSet()).isEqualTo(resultSet);
+    assertThat(actual).isEqualTo(resultSet);
   }
 
   @Test
@@ -185,58 +213,11 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     when(dmlStatementExecutor.execute(transaction, dmlStatement)).thenReturn(resultSet);
 
     // Act Assert
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.execute(dmlStatement))
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.execute(dmlStatement))
         .isInstanceOf(IllegalStateException.class);
 
     verify(statementValidator, never()).validate(dmlStatement);
     verify(dmlStatementExecutor, never()).execute(transaction, dmlStatement);
-  }
-
-  @Test
-  public void getResultSet_BeforeExecutingStatement_ShouldThrowIllegalStateException() {
-    // Arrange
-
-    // Act Assert
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.getResultSet())
-        .isInstanceOf(IllegalStateException.class);
-  }
-
-  @Test
-  public void executeQuery_SelectStatementGiven_ShouldNotThrowAnyException()
-      throws TransactionException {
-    // Arrange
-    SelectStatement selectStatement = mock(SelectStatement.class);
-
-    when(manager.start()).thenReturn(transaction);
-
-    ResultSet resultSet = mock(ResultSet.class);
-    when(dmlStatementExecutor.execute(transaction, selectStatement)).thenReturn(resultSet);
-
-    // Act Assert
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    ResultSet actual = twoPhaseCommitTransactionSqlSession.executeQuery(selectStatement);
-
-    verify(statementValidator).validate(selectStatement);
-    verify(dmlStatementExecutor).execute(transaction, selectStatement);
-    assertThat(actual).isEqualTo(resultSet);
-    assertThat(twoPhaseCommitTransactionSqlSession.getResultSet()).isEqualTo(resultSet);
-  }
-
-  @Test
-  public void
-      executeQuery_SelectStatementGivenBeforeBeginningTransaction_ShouldThrowIllegalStateException() {
-    // Arrange
-    SelectStatement selectStatement = mock(SelectStatement.class);
-
-    ResultSet resultSet = mock(ResultSet.class);
-    when(dmlStatementExecutor.execute(transaction, selectStatement)).thenReturn(resultSet);
-
-    // Act Assert
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.executeQuery(selectStatement))
-        .isInstanceOf(IllegalStateException.class);
-
-    verify(statementValidator, never()).validate(selectStatement);
-    verify(dmlStatementExecutor, never()).execute(transaction, selectStatement);
   }
 
   @Test
@@ -245,8 +226,8 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     when(manager.start()).thenReturn(transaction);
 
     // Act Assert
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    assertThatCode(() -> twoPhaseCommitTransactionSqlSession.prepare()).doesNotThrowAnyException();
+    twoPhaseCommitTransactionSession.begin();
+    assertThatCode(() -> twoPhaseCommitTransactionSession.prepare()).doesNotThrowAnyException();
 
     verify(transaction).prepare();
   }
@@ -257,7 +238,7 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.prepare())
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.prepare())
         .isInstanceOf(IllegalStateException.class);
 
     verify(transaction, never()).prepare();
@@ -272,8 +253,8 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     doThrow(PreparationConflictException.class).when(transaction).prepare();
 
     // Act Assert
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.prepare())
+    twoPhaseCommitTransactionSession.begin();
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.prepare())
         .isInstanceOf(TransactionConflictException.class);
 
     verify(transaction).prepare();
@@ -287,8 +268,8 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     doThrow(PreparationException.class).when(transaction).prepare();
 
     // Act Assert
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.prepare())
+    twoPhaseCommitTransactionSession.begin();
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.prepare())
         .isInstanceOf(SqlException.class);
 
     verify(transaction).prepare();
@@ -300,8 +281,8 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     when(manager.start()).thenReturn(transaction);
 
     // Act Assert
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    assertThatCode(() -> twoPhaseCommitTransactionSqlSession.validate()).doesNotThrowAnyException();
+    twoPhaseCommitTransactionSession.begin();
+    assertThatCode(() -> twoPhaseCommitTransactionSession.validate()).doesNotThrowAnyException();
 
     verify(transaction).validate();
   }
@@ -312,7 +293,7 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.validate())
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.validate())
         .isInstanceOf(IllegalStateException.class);
 
     verify(transaction, never()).validate();
@@ -327,8 +308,8 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     doThrow(ValidationConflictException.class).when(transaction).validate();
 
     // Act Assert
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.validate())
+    twoPhaseCommitTransactionSession.begin();
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.validate())
         .isInstanceOf(TransactionConflictException.class);
 
     verify(transaction).validate();
@@ -342,8 +323,8 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     doThrow(ValidationException.class).when(transaction).validate();
 
     // Act Assert
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.validate())
+    twoPhaseCommitTransactionSession.begin();
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.validate())
         .isInstanceOf(SqlException.class);
 
     verify(transaction).validate();
@@ -355,8 +336,8 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     when(manager.start()).thenReturn(transaction);
 
     // Act Assert
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    assertThatCode(() -> twoPhaseCommitTransactionSqlSession.commit()).doesNotThrowAnyException();
+    twoPhaseCommitTransactionSession.begin();
+    assertThatCode(() -> twoPhaseCommitTransactionSession.commit()).doesNotThrowAnyException();
 
     verify(transaction).commit();
   }
@@ -367,7 +348,7 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.commit())
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.commit())
         .isInstanceOf(IllegalStateException.class);
 
     verify(transaction, never()).commit();
@@ -382,8 +363,8 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     doThrow(CommitConflictException.class).when(transaction).commit();
 
     // Act Assert
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.commit())
+    twoPhaseCommitTransactionSession.begin();
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.commit())
         .isInstanceOf(TransactionConflictException.class);
 
     verify(transaction).commit();
@@ -397,8 +378,8 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     doThrow(CommitException.class).when(transaction).commit();
 
     // Act Assert
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.commit())
+    twoPhaseCommitTransactionSession.begin();
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.commit())
         .isInstanceOf(SqlException.class);
 
     verify(transaction).commit();
@@ -415,8 +396,8 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
         .commit();
 
     // Act Assert
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.commit())
+    twoPhaseCommitTransactionSession.begin();
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.commit())
         .isInstanceOf(UnknownTransactionStatusException.class);
 
     verify(transaction).commit();
@@ -428,8 +409,8 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     when(manager.start()).thenReturn(transaction);
 
     // Act Assert
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    assertThatCode(() -> twoPhaseCommitTransactionSqlSession.rollback()).doesNotThrowAnyException();
+    twoPhaseCommitTransactionSession.begin();
+    assertThatCode(() -> twoPhaseCommitTransactionSession.rollback()).doesNotThrowAnyException();
 
     verify(transaction).rollback();
   }
@@ -440,7 +421,7 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.rollback())
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.rollback())
         .isInstanceOf(IllegalStateException.class);
 
     verify(transaction, never()).rollback();
@@ -454,8 +435,8 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     doThrow(RollbackException.class).when(transaction).rollback();
 
     // Act Assert
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.rollback())
+    twoPhaseCommitTransactionSession.begin();
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.rollback())
         .isInstanceOf(SqlException.class);
 
     verify(transaction).rollback();
@@ -468,8 +449,8 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     when(transaction.getId()).thenReturn("txId");
 
     // Act
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    String transactionId = twoPhaseCommitTransactionSqlSession.getTransactionId();
+    twoPhaseCommitTransactionSession.begin();
+    String transactionId = twoPhaseCommitTransactionSession.getTransactionId();
 
     // Assert
     assertThat(transactionId).isEqualTo("txId");
@@ -480,7 +461,7 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.getTransactionId())
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.getTransactionId())
         .isInstanceOf(IllegalStateException.class);
   }
 
@@ -490,8 +471,7 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     when(manager.start()).thenReturn(transaction);
 
     // Act Assert
-    assertThatCode(() -> twoPhaseCommitTransactionSqlSession.getMetadata())
-        .doesNotThrowAnyException();
+    assertThatCode(() -> twoPhaseCommitTransactionSession.getMetadata()).doesNotThrowAnyException();
   }
 
   @Test
@@ -501,8 +481,8 @@ public class TwoPhaseCommitTransactionSqlSessionTest {
     when(manager.start()).thenReturn(transaction);
 
     // Act Assert
-    twoPhaseCommitTransactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> twoPhaseCommitTransactionSqlSession.getMetadata())
+    twoPhaseCommitTransactionSession.begin();
+    assertThatThrownBy(() -> twoPhaseCommitTransactionSession.getMetadata())
         .isInstanceOf(IllegalStateException.class);
   }
 }

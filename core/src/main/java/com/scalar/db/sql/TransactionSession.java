@@ -14,14 +14,13 @@ import com.scalar.db.sql.exception.TransactionConflictException;
 import com.scalar.db.sql.exception.UnknownTransactionStatusException;
 import com.scalar.db.sql.statement.DdlStatement;
 import com.scalar.db.sql.statement.DmlStatement;
-import com.scalar.db.sql.statement.SelectStatement;
 import com.scalar.db.sql.statement.Statement;
 import java.util.Objects;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-public class TransactionSqlSession implements SqlSession {
+public class TransactionSession implements SqlStatementSession {
 
   private final DistributedTransactionAdmin admin;
   private final DistributedTransactionManager manager;
@@ -30,9 +29,8 @@ public class TransactionSqlSession implements SqlSession {
   private final DdlStatementExecutor ddlStatementExecutor;
 
   @Nullable private DistributedTransaction transaction;
-  @Nullable private ResultSet resultSet;
 
-  TransactionSqlSession(
+  TransactionSession(
       DistributedTransactionAdmin admin,
       DistributedTransactionManager manager,
       TableMetadataManager tableMetadataManager) {
@@ -44,7 +42,7 @@ public class TransactionSqlSession implements SqlSession {
   }
 
   @VisibleForTesting
-  TransactionSqlSession(
+  TransactionSession(
       DistributedTransactionAdmin admin,
       DistributedTransactionManager manager,
       StatementValidator statementValidator,
@@ -58,58 +56,44 @@ public class TransactionSqlSession implements SqlSession {
   }
 
   @Override
-  public void beginTransaction() {
+  public void begin() {
     checkIfTransactionInProgress();
 
     try {
       transaction = manager.start();
-      resultSet = null;
     } catch (TransactionException e) {
       throw new SqlException("Failed to begin a transaction", e);
     }
   }
 
   @Override
-  public void joinTransaction(String transactionId) {
+  public void join(String transactionId) {
     throw new UnsupportedOperationException(
         "Joining a transaction is not supported in transaction mode");
   }
 
   @Override
-  public void execute(Statement statement) {
+  public void resume(String transactionId) {
+    throw new UnsupportedOperationException(
+        "Resuming a transaction is not supported in transaction mode");
+  }
+
+  @Override
+  public ResultSet execute(Statement statement) {
     if (statement instanceof DdlStatement) {
       checkIfTransactionInProgress();
 
       statementValidator.validate(statement);
       ddlStatementExecutor.execute((DdlStatement) statement);
-      resultSet = EmptyResultSet.INSTANCE;
+      return EmptyResultSet.INSTANCE;
     } else if (statement instanceof DmlStatement) {
       checkIfTransactionBegun();
 
       statementValidator.validate(statement);
-      resultSet = dmlStatementExecutor.execute(transaction, (DmlStatement) statement);
+      return dmlStatementExecutor.execute(transaction, (DmlStatement) statement);
     } else {
       throw new AssertionError();
     }
-  }
-
-  @Nullable
-  @Override
-  public ResultSet getResultSet() {
-    if (resultSet == null) {
-      throw new IllegalStateException("No query executed yet");
-    }
-
-    return resultSet;
-  }
-
-  @Override
-  public ResultSet executeQuery(SelectStatement statement) {
-    checkIfTransactionBegun();
-
-    statementValidator.validate(statement);
-    resultSet = dmlStatementExecutor.execute(transaction, statement);
-    return resultSet;
   }
 
   @Override
@@ -132,7 +116,6 @@ public class TransactionSqlSession implements SqlSession {
     try {
       transaction.commit();
       transaction = null;
-      resultSet = null;
     } catch (CommitConflictException e) {
       throw new TransactionConflictException(
           "Conflict happened during committing a transaction", e);
@@ -154,7 +137,6 @@ public class TransactionSqlSession implements SqlSession {
       throw new SqlException("Failed to abort a transaction", e);
     } finally {
       transaction = null;
-      resultSet = null;
     }
   }
 
@@ -166,13 +148,18 @@ public class TransactionSqlSession implements SqlSession {
   }
 
   @Override
+  public boolean isTransactionInProgress() {
+    return transaction != null;
+  }
+
+  @Override
   public Metadata getMetadata() {
     checkIfTransactionInProgress();
     return new Metadata(admin);
   }
 
   private void checkIfTransactionInProgress() {
-    if (transaction != null) {
+    if (isTransactionInProgress()) {
       throw new IllegalStateException(
           "The previous transaction is still in progress. Commit or rollback it first");
     }
