@@ -16,6 +16,10 @@ public class CreateCoordinatorTableStatementBuilder {
     public Buildable ifNotExists() {
       return new Buildable(true);
     }
+
+    public Buildable ifNotExists(boolean ifNotExists) {
+      return new Buildable(ifNotExists);
+    }
   }
 
   public static class Buildable {
