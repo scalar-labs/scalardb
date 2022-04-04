@@ -20,6 +20,10 @@ public class CreateTableStatementBuilder {
     public WithPartitionKey ifNotExists() {
       return new WithPartitionKey(namespaceName, tableName, true);
     }
+
+    public WithPartitionKey ifNotExists(boolean ifNotExists) {
+      return new WithPartitionKey(namespaceName, tableName, ifNotExists);
+    }
   }
 
   public static class WithPartitionKey {

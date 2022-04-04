@@ -14,6 +14,10 @@ public class DropCoordinatorTableStatementBuilder {
     public Buildable ifExists() {
       return new Buildable(true);
     }
+
+    public Buildable ifExists(boolean ifExists) {
+      return new Buildable(ifExists);
+    }
   }
 
   public static class Buildable {

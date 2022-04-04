@@ -2,13 +2,10 @@ package com.scalar.db.sql;
 
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
-import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.service.TransactionFactory;
-import com.scalar.db.sql.exception.SqlException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -22,14 +19,14 @@ import java.util.Properties;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
-public final class SqlSessionFactory implements AutoCloseable {
+public final class SqlStatementSessionFactory implements AutoCloseable {
 
   private final DistributedTransactionAdmin transactionAdmin;
   private final DistributedTransactionManager transactionManager;
   private final TwoPhaseCommitTransactionManager twoPhaseCommitTransactionManager;
   private final TableMetadataManager tableMetadataManager;
 
-  private SqlSessionFactory(DatabaseConfig config) {
+  private SqlStatementSessionFactory(DatabaseConfig config) {
     TransactionFactory transactionFactory = new TransactionFactory(Objects.requireNonNull(config));
     transactionAdmin = transactionFactory.getTransactionAdmin();
     transactionManager = transactionFactory.getTransactionManager();
@@ -38,24 +35,13 @@ public final class SqlSessionFactory implements AutoCloseable {
         new TableMetadataManager(transactionAdmin, config.getMetadataCacheExpirationTimeSecs());
   }
 
-  public SqlSession getTransactionSession() {
-    return new TransactionSqlSession(transactionAdmin, transactionManager, tableMetadataManager);
+  public SqlStatementSession getTransactionSession() {
+    return new TransactionSession(transactionAdmin, transactionManager, tableMetadataManager);
   }
 
-  public SqlSession getTwoPhaseCommitTransactionSession() {
-    return new TwoPhaseCommitTransactionSqlSession(
+  public SqlStatementSession getTwoPhaseCommitTransactionSession() {
+    return new TwoPhaseCommitTransactionSession(
         transactionAdmin, twoPhaseCommitTransactionManager, tableMetadataManager);
-  }
-
-  public SqlSession resumeTwoPhaseCommitTransactionSession(String transactionId) {
-    try {
-      TwoPhaseCommitTransaction transaction =
-          twoPhaseCommitTransactionManager.resume(transactionId);
-      return new TwoPhaseCommitTransactionSqlSession(
-          transactionAdmin, twoPhaseCommitTransactionManager, transaction, tableMetadataManager);
-    } catch (TransactionException e) {
-      throw new SqlException("Failed to resume a two-phase commit transaction");
-    }
   }
 
   @Override
@@ -126,11 +112,11 @@ public final class SqlSessionFactory implements AutoCloseable {
       return this;
     }
 
-    public SqlSessionFactory build() {
+    public SqlStatementSessionFactory build() {
       if (!contactPoints.isEmpty()) {
         properties.put(DatabaseConfig.CONTACT_POINTS, String.join(",", contactPoints));
       }
-      return new SqlSessionFactory(new DatabaseConfig(properties));
+      return new SqlStatementSessionFactory(new DatabaseConfig(properties));
     }
   }
 }

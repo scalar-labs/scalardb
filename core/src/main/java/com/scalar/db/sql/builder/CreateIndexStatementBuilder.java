@@ -16,6 +16,10 @@ public class CreateIndexStatementBuilder {
     public OnTable ifNotExists() {
       return new OnTable(true);
     }
+
+    public OnTable ifNotExists(boolean ifNotExists) {
+      return new OnTable(ifNotExists);
+    }
   }
 
   public static class OnTable {
