@@ -69,7 +69,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
     blockingStub = DistributedTransactionGrpc.newBlockingStub(channel);
     metadataManager =
         new TableMetadataManager(
-            new GrpcAdmin(channel, config), config.getTableMetadataCacheExpirationTimeSecs());
+            new GrpcAdmin(channel, config), config.getMetadataCacheExpirationTimeSecs());
   }
 
   @VisibleForTesting

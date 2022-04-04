@@ -53,7 +53,7 @@ public class ConsensusCommitConfig {
   private boolean asyncCommitEnabled;
   private boolean asyncRollbackEnabled;
 
-  private long tableMetadataCacheExpirationTimeSecs;
+  private long metadataCacheExpirationTimeSecs;
 
   // for two-phase consensus commit
   public static final String TWO_PHASE_CONSENSUS_COMMIT_PREFIX = PREFIX + "2pcc.";
@@ -132,10 +132,10 @@ public class ConsensusCommitConfig {
     asyncCommitEnabled = getBoolean(getProperties(), ASYNC_COMMIT_ENABLED, false);
     asyncRollbackEnabled = getBoolean(getProperties(), ASYNC_ROLLBACK_ENABLED, asyncCommitEnabled);
 
-    // Use the same property as the table metadata cache expiration time for the transactional table
+    // Use the same property as the metadata cache expiration time for the transactional table
     // metadata expiration time
-    tableMetadataCacheExpirationTimeSecs =
-        getLong(getProperties(), DatabaseConfig.TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS, -1);
+    metadataCacheExpirationTimeSecs =
+        getLong(getProperties(), DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, -1);
   }
 
   public Isolation getIsolation() {
@@ -182,7 +182,7 @@ public class ConsensusCommitConfig {
     return asyncRollbackEnabled;
   }
 
-  public long getTableMetadataCacheExpirationTimeSecs() {
-    return tableMetadataCacheExpirationTimeSecs;
+  public long getMetadataCacheExpirationTimeSecs() {
+    return metadataCacheExpirationTimeSecs;
   }
 }

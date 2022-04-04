@@ -61,7 +61,7 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
     blockingStub = TwoPhaseCommitTransactionGrpc.newBlockingStub(channel);
     metadataManager =
         new TableMetadataManager(
-            new GrpcAdmin(channel, config), config.getTableMetadataCacheExpirationTimeSecs());
+            new GrpcAdmin(channel, config), config.getMetadataCacheExpirationTimeSecs());
     if (config.isActiveTransactionsManagementEnabled()) {
       activeTransactions =
           new ActiveExpiringMap<>(

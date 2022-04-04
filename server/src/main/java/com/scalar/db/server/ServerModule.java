@@ -81,7 +81,6 @@ public class ServerModule extends AbstractModule {
   @Provides
   @Singleton
   TableMetadataManager provideTableMetadataManager(DistributedStorageAdmin admin) {
-    return new TableMetadataManager(
-        admin, databaseConfig.getTableMetadataCacheExpirationTimeSecs());
+    return new TableMetadataManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
   }
 }

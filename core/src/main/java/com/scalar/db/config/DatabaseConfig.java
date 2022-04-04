@@ -56,7 +56,7 @@ public class DatabaseConfig {
   private Class<? extends DistributedTransactionManager> transactionManagerClass;
   private Class<? extends DistributedTransactionAdmin> transactionAdminClass;
   private Class<? extends TwoPhaseCommitTransactionManager> twoPhaseCommitTransactionManagerClass;
-  private long tableMetadataCacheExpirationTimeSecs;
+  private long metadataCacheExpirationTimeSecs;
 
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
@@ -65,8 +65,8 @@ public class DatabaseConfig {
   public static final String PASSWORD = PREFIX + "password";
   public static final String STORAGE = PREFIX + "storage";
   public static final String TRANSACTION_MANAGER = PREFIX + "transaction_manager";
-  public static final String TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS =
-      PREFIX + "table_metadata.cache_expiration_time_secs";
+  public static final String METADATA_CACHE_EXPIRATION_TIME_SECS =
+      PREFIX + "metadata.cache_expiration_time_secs";
 
   public DatabaseConfig(File propertiesFile) throws IOException {
     try (FileInputStream stream = new FileInputStream(propertiesFile)) {
@@ -171,8 +171,8 @@ public class DatabaseConfig {
             "transaction manager '" + transactionManager + "' isn't supported");
     }
 
-    tableMetadataCacheExpirationTimeSecs =
-        getLong(getProperties(), TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS, -1);
+    metadataCacheExpirationTimeSecs =
+        getLong(getProperties(), METADATA_CACHE_EXPIRATION_TIME_SECS, -1);
   }
 
   public List<String> getContactPoints() {
@@ -212,7 +212,7 @@ public class DatabaseConfig {
     return twoPhaseCommitTransactionManagerClass;
   }
 
-  public long getTableMetadataCacheExpirationTimeSecs() {
-    return tableMetadataCacheExpirationTimeSecs;
+  public long getMetadataCacheExpirationTimeSecs() {
+    return metadataCacheExpirationTimeSecs;
   }
 }

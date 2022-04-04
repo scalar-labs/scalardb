@@ -32,8 +32,7 @@ public final class SqlStatementSessionFactory implements AutoCloseable {
     transactionManager = transactionFactory.getTransactionManager();
     twoPhaseCommitTransactionManager = transactionFactory.getTwoPhaseCommitTransactionManager();
     tableMetadataManager =
-        new TableMetadataManager(
-            transactionAdmin, config.getTableMetadataCacheExpirationTimeSecs());
+        new TableMetadataManager(transactionAdmin, config.getMetadataCacheExpirationTimeSecs());
   }
 
   public SqlStatementSession getTransactionSession() {

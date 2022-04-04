@@ -56,7 +56,7 @@ public class DatabaseConfigTest {
     assertThat(config.getTransactionAdminClass()).isEqualTo(ConsensusCommitAdmin.class);
     assertThat(config.getTwoPhaseCommitTransactionManagerClass())
         .isEqualTo(TwoPhaseConsensusCommitManager.class);
-    assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
+    assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
   @Test
@@ -82,7 +82,7 @@ public class DatabaseConfigTest {
     assertThat(config.getTransactionAdminClass()).isEqualTo(ConsensusCommitAdmin.class);
     assertThat(config.getTwoPhaseCommitTransactionManagerClass())
         .isEqualTo(TwoPhaseConsensusCommitManager.class);
-    assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
+    assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
   @Test
@@ -108,7 +108,7 @@ public class DatabaseConfigTest {
     assertThat(config.getTransactionAdminClass()).isEqualTo(ConsensusCommitAdmin.class);
     assertThat(config.getTwoPhaseCommitTransactionManagerClass())
         .isEqualTo(TwoPhaseConsensusCommitManager.class);
-    assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
+    assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
   @Test
@@ -136,7 +136,7 @@ public class DatabaseConfigTest {
     assertThat(config.getTransactionAdminClass()).isEqualTo(ConsensusCommitAdmin.class);
     assertThat(config.getTwoPhaseCommitTransactionManagerClass())
         .isEqualTo(TwoPhaseConsensusCommitManager.class);
-    assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
+    assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
   @Test
@@ -433,7 +433,7 @@ public class DatabaseConfigTest {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
     props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
-    props.setProperty(DatabaseConfig.TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS, "3600");
+    props.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "3600");
 
     // Act
     DatabaseConfig config = new DatabaseConfig(props);
@@ -445,6 +445,6 @@ public class DatabaseConfigTest {
     assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
-    assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(3600);
+    assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(3600);
   }
 }

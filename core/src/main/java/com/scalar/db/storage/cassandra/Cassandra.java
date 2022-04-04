@@ -61,7 +61,7 @@ public class Cassandra extends AbstractDistributedStorage {
     metadataManager =
         new TableMetadataManager(
             new CassandraAdmin(clusterManager, config),
-            config.getTableMetadataCacheExpirationTimeSecs());
+            config.getMetadataCacheExpirationTimeSecs());
     operationChecker = new OperationChecker(metadataManager);
   }
 
