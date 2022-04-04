@@ -2,13 +2,14 @@ package com.scalar.db.sql;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Result;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
@@ -16,158 +17,178 @@ import javax.annotation.concurrent.Immutable;
 public class ResultRecord implements Record {
 
   private final Result result;
-  private final Supplier<ImmutableMap<Integer, String>> projectedColumnNamesMap;
+  private final Supplier<ImmutableMap<String, String>> projectionAliasMap;
+  private final Supplier<ImmutableMap<Integer, String>> projectionIndexMap;
 
-  ResultRecord(Result result, ImmutableList<String> projectedColumnNames) {
+  ResultRecord(Result result, List<Projection> projections) {
     this.result = Objects.requireNonNull(result);
 
-    Objects.requireNonNull(projectedColumnNames);
-    projectedColumnNamesMap =
+    Objects.requireNonNull(projections);
+
+    projectionAliasMap =
+        Suppliers.memoize(
+            () ->
+                ImmutableMap.copyOf(
+                    projections.stream()
+                        .collect(
+                            Collectors.toMap(
+                                p -> p.alias != null ? p.alias : p.columnName,
+                                p -> p.columnName))));
+
+    projectionIndexMap =
         Suppliers.memoize(
             () -> {
               ImmutableMap.Builder<Integer, String> builder = ImmutableMap.builder();
-              for (int i = 0; i < projectedColumnNames.size(); i++) {
-                builder.put(i, projectedColumnNames.get(i));
+              for (int i = 0; i < projections.size(); i++) {
+                builder.put(i, projections.get(i).columnName);
               }
               return builder.build();
             });
   }
 
   @Override
-  public boolean isNull(String columnName) {
-    return result.isNull(columnName);
+  public boolean isNull(String columnNameOrAlias) {
+    return result.isNull(getActualColumnName(columnNameOrAlias));
   }
 
   @Override
   public boolean isNull(int i) {
-    return result.isNull(getColumnName(i));
+    return result.isNull(getColumnNameByIndex(i));
   }
 
   @Override
-  public boolean getBoolean(String columnName) {
-    return result.getBoolean(columnName);
+  public boolean getBoolean(String columnNameOrAlias) {
+    return result.getBoolean(getActualColumnName(columnNameOrAlias));
   }
 
   @Override
   public boolean getBoolean(int i) {
-    return result.getBoolean(getColumnName(i));
+    return result.getBoolean(getColumnNameByIndex(i));
   }
 
   @Override
-  public int getInt(String columnName) {
-    return result.getInt(columnName);
+  public int getInt(String columnNameOrAlias) {
+    return result.getInt(getActualColumnName(columnNameOrAlias));
   }
 
   @Override
   public int getInt(int i) {
-    return result.getInt(getColumnName(i));
+    return result.getInt(getColumnNameByIndex(i));
   }
 
   @Override
-  public long getBigInt(String columnName) {
-    return result.getBigInt(columnName);
+  public long getBigInt(String columnNameOrAlias) {
+    return result.getBigInt(getActualColumnName(columnNameOrAlias));
   }
 
   @Override
   public long getBigInt(int i) {
-    return result.getBigInt(getColumnName(i));
+    return result.getBigInt(getColumnNameByIndex(i));
   }
 
   @Override
-  public float getFloat(String columnName) {
-    return result.getFloat(columnName);
+  public float getFloat(String columnNameOrAlias) {
+    return result.getFloat(getActualColumnName(columnNameOrAlias));
   }
 
   @Override
   public float getFloat(int i) {
-    return result.getFloat(getColumnName(i));
+    return result.getFloat(getColumnNameByIndex(i));
   }
 
   @Override
-  public double getDouble(String columnName) {
-    return result.getDouble(columnName);
+  public double getDouble(String columnNameOrAlias) {
+    return result.getDouble(getActualColumnName(columnNameOrAlias));
   }
 
   @Override
   public double getDouble(int i) {
-    return result.getDouble(getColumnName(i));
+    return result.getDouble(getColumnNameByIndex(i));
   }
 
   @Nullable
   @Override
-  public String getText(String columnName) {
-    return result.getText(columnName);
+  public String getText(String columnNameOrAlias) {
+    return result.getText(getActualColumnName(columnNameOrAlias));
   }
 
   @Nullable
   @Override
   public String getText(int i) {
-    return result.getText(getColumnName(i));
+    return result.getText(getColumnNameByIndex(i));
   }
 
   @Nullable
   @Override
-  public ByteBuffer getBlobAsByteBuffer(String columnName) {
-    return result.getBlobAsByteBuffer(columnName);
+  public ByteBuffer getBlobAsByteBuffer(String columnNameOrAlias) {
+    return result.getBlobAsByteBuffer(getActualColumnName(columnNameOrAlias));
   }
 
   @Nullable
   @Override
   public ByteBuffer getBlobAsByteBuffer(int i) {
-    return result.getBlobAsByteBuffer(getColumnName(i));
+    return result.getBlobAsByteBuffer(getColumnNameByIndex(i));
   }
 
   @Nullable
   @Override
-  public byte[] getBlobAsBytes(String columnName) {
-    return result.getBlobAsBytes(columnName);
+  public byte[] getBlobAsBytes(String columnNameOrAlias) {
+    return result.getBlobAsBytes(getActualColumnName(columnNameOrAlias));
   }
 
   @Nullable
   @Override
   public byte[] getBlobAsBytes(int i) {
-    return result.getBlobAsBytes(getColumnName(i));
+    return result.getBlobAsBytes(getColumnNameByIndex(i));
   }
 
   @Nullable
   @Override
-  public Object getAsObject(String columnName) {
-    return result.getAsObject(columnName);
+  public Object getAsObject(String columnNameOrAlias) {
+    return result.getAsObject(getActualColumnName(columnNameOrAlias));
   }
 
   @Nullable
   @Override
   public Object getAsObject(int i) {
-    return result.getAsObject(getColumnName(i));
+    return result.getAsObject(getColumnNameByIndex(i));
   }
 
   @Override
-  public boolean contains(String columnName) {
-    return result.contains(columnName);
+  public boolean contains(String columnNameOrAlias) {
+    return result.contains(getActualColumnName(columnNameOrAlias));
   }
 
   @Override
   public Set<String> getContainedColumnNames() {
-    return result.getContainedColumnNames();
+    return projectionAliasMap.get().keySet();
   }
 
   @Override
   public int size() {
-    return projectedColumnNamesMap.get().size();
+    return projectionIndexMap.get().size();
   }
 
-  private String getColumnName(int i) {
-    if (!projectedColumnNamesMap.get().containsKey(i)) {
+  private String getActualColumnName(String columnNameOrAlias) {
+    if (!projectionAliasMap.get().containsKey(columnNameOrAlias)) {
+      throw new IllegalArgumentException(columnNameOrAlias + " doesn't exist");
+    }
+    return projectionAliasMap.get().get(columnNameOrAlias);
+  }
+
+  private String getColumnNameByIndex(int i) {
+    if (!projectionIndexMap.get().containsKey(i)) {
       throw new IndexOutOfBoundsException("Index: " + i + ", Size: " + size());
     }
-    return projectedColumnNamesMap.get().get(i);
+    return projectionIndexMap.get().get(i);
   }
 
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
-        .add("columns", result.getColumns())
-        .add("projectedColumnNamesMap", projectedColumnNamesMap)
+        .add("result", result)
+        .add("projectionAliasMap", projectionAliasMap)
+        .add("projectionIndexMap", projectionIndexMap)
         .toString();
   }
 

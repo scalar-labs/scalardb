@@ -3,6 +3,7 @@ package com.scalar.db.sql.builder;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.sql.ClusteringOrdering;
 import com.scalar.db.sql.Predicate;
+import com.scalar.db.sql.Projection;
 import com.scalar.db.sql.statement.SelectStatement;
 import java.util.List;
 
@@ -11,25 +12,25 @@ public final class SelectStatementBuilder {
   private SelectStatementBuilder() {}
 
   public static class Start {
-    private final ImmutableList<String> projectedColumnNames;
+    private final ImmutableList<Projection> projections;
 
-    Start(List<String> projectedColumnNames) {
-      this.projectedColumnNames = ImmutableList.copyOf(projectedColumnNames);
+    Start(List<Projection> projections) {
+      this.projections = ImmutableList.copyOf(projections);
     }
 
     public WhereStart from(String namespaceName, String tableName) {
-      return new WhereStart(projectedColumnNames, namespaceName, tableName);
+      return new WhereStart(projections, namespaceName, tableName);
     }
   }
 
   public static class WhereStart {
-    private final ImmutableList<String> projectedColumnNames;
+    private final ImmutableList<Projection> projections;
     private final String namespaceName;
     private final String tableName;
 
     private WhereStart(
-        ImmutableList<String> projectedColumnNames, String namespaceName, String tableName) {
-      this.projectedColumnNames = projectedColumnNames;
+        ImmutableList<Projection> projections, String namespaceName, String tableName) {
+      this.projections = projections;
       this.namespaceName = namespaceName;
       this.tableName = tableName;
     }
@@ -37,23 +38,23 @@ public final class SelectStatementBuilder {
     public OngoingWhere where(Predicate predicate) {
       ImmutableList.Builder<Predicate> predicatesBuilder = ImmutableList.builder();
       predicatesBuilder.add(predicate);
-      return new OngoingWhere(projectedColumnNames, namespaceName, tableName, predicatesBuilder);
+      return new OngoingWhere(projections, namespaceName, tableName, predicatesBuilder);
     }
 
     public Buildable where(List<Predicate> predicates) {
       ImmutableList.Builder<Predicate> predicatesBuilder = ImmutableList.builder();
       predicatesBuilder.addAll(predicates);
-      return new Buildable(projectedColumnNames, namespaceName, tableName, predicatesBuilder);
+      return new Buildable(projections, namespaceName, tableName, predicatesBuilder);
     }
   }
 
   public static class OngoingWhere extends Buildable {
     private OngoingWhere(
-        ImmutableList<String> projectedColumnNames,
+        ImmutableList<Projection> projections,
         String namespaceName,
         String tableName,
         ImmutableList.Builder<Predicate> predicatesBuilder) {
-      super(projectedColumnNames, namespaceName, tableName, predicatesBuilder);
+      super(projections, namespaceName, tableName, predicatesBuilder);
     }
 
     public OngoingWhere and(Predicate predicate) {
@@ -63,7 +64,7 @@ public final class SelectStatementBuilder {
   }
 
   public static class Buildable {
-    private final ImmutableList<String> projectedColumnNames;
+    private final ImmutableList<Projection> projections;
     private final String namespaceName;
     private final String tableName;
     protected final ImmutableList.Builder<Predicate> predicatesBuilder;
@@ -71,11 +72,11 @@ public final class SelectStatementBuilder {
     private int limit;
 
     private Buildable(
-        ImmutableList<String> projectedColumnNames,
+        ImmutableList<Projection> projections,
         String namespaceName,
         String tableName,
         ImmutableList.Builder<Predicate> predicatesBuilder) {
-      this.projectedColumnNames = projectedColumnNames;
+      this.projections = projections;
       this.namespaceName = namespaceName;
       this.tableName = tableName;
       this.predicatesBuilder = predicatesBuilder;
@@ -100,7 +101,7 @@ public final class SelectStatementBuilder {
       return SelectStatement.of(
           namespaceName,
           tableName,
-          projectedColumnNames,
+          projections,
           predicatesBuilder.build(),
           clusteringOrderings,
           limit);

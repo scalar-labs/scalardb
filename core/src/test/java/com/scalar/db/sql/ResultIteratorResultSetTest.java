@@ -71,7 +71,11 @@ public class ResultIteratorResultSetTest {
     resultIteratorResultSet =
         new ResultIteratorResultSet(
             Arrays.asList(result1, result2, result3).iterator(),
-            ImmutableList.of(COLUMN_NAME_1, COLUMN_NAME_2, COLUMN_NAME_3, COLUMN_NAME_4));
+            ImmutableList.of(
+                Projection.column(COLUMN_NAME_1),
+                Projection.column(COLUMN_NAME_2),
+                Projection.column(COLUMN_NAME_3),
+                Projection.column(COLUMN_NAME_4)));
   }
 
   @Test

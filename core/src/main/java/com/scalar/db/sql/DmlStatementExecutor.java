@@ -57,10 +57,12 @@ public class DmlStatementExecutor
 
     Selection selection = convertSelectStatementToSelection(statement, metadata);
 
-    ImmutableList<String> projectedColumnNames =
-        statement.projectedColumnNames.isEmpty()
-            ? ImmutableList.copyOf(metadata.getColumnNames())
-            : statement.projectedColumnNames;
+    List<Projection> projections =
+        statement.projections.isEmpty()
+            ? metadata.getColumnNames().stream()
+                .map(Projection::column)
+                .collect(Collectors.toList())
+            : statement.projections;
 
     try {
       if (selection instanceof Get) {
@@ -70,11 +72,11 @@ public class DmlStatementExecutor
                 r ->
                     (ResultSet)
                         new ResultIteratorResultSet(
-                            Collections.singletonList(r).iterator(), projectedColumnNames))
+                            Collections.singletonList(r).iterator(), projections))
             .orElse(EmptyResultSet.INSTANCE);
       } else {
         List<Result> results = transaction.scan((Scan) selection);
-        return new ResultIteratorResultSet(results.iterator(), projectedColumnNames);
+        return new ResultIteratorResultSet(results.iterator(), projections);
       }
     } catch (CrudConflictException e) {
       throw new TransactionConflictException("Conflict happened during selecting a record", e);
@@ -136,13 +138,16 @@ public class DmlStatementExecutor
     ImmutableListMultimap<String, Predicate> predicatesMap =
         Multimaps.index(statement.predicates, c -> c.columnName);
 
+    List<String> projectedColumnNames =
+        statement.projections.stream().map(p -> p.columnName).collect(Collectors.toList());
+
     if (SqlUtils.isIndexScan(predicatesMap, metadata)) {
       String indexColumnName = predicatesMap.keySet().iterator().next();
       Scan scan =
           new Scan(
                   createKeyFromPredicatesMap(
                       predicatesMap, Collections.singletonList(indexColumnName)))
-              .withProjections(statement.projectedColumnNames)
+              .withProjections(projectedColumnNames)
               .forNamespace(statement.namespaceName)
               .forTable(statement.tableName);
       if (statement.limit > 0) {
@@ -159,13 +164,13 @@ public class DmlStatementExecutor
         clusteringKey = createKeyFromPredicatesMap(predicatesMap, metadata.getClusteringKeyNames());
       }
       return new Get(partitionKey, clusteringKey)
-          .withProjections(statement.projectedColumnNames)
+          .withProjections(projectedColumnNames)
           .forNamespace(statement.namespaceName)
           .forTable(statement.tableName);
     } else {
       Scan scan =
           new Scan(partitionKey)
-              .withProjections(statement.projectedColumnNames)
+              .withProjections(projectedColumnNames)
               .forNamespace(statement.namespaceName)
               .forTable(statement.tableName);
       setClusteringKeyRangeForScan(scan, predicatesMap, metadata);
