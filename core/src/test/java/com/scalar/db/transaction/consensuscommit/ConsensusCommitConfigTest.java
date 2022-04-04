@@ -30,7 +30,7 @@ public class ConsensusCommitConfigTest {
     assertThat(config.isParallelRollbackEnabled()).isEqualTo(false);
     assertThat(config.isAsyncCommitEnabled()).isEqualTo(false);
     assertThat(config.isAsyncRollbackEnabled()).isEqualTo(false);
-    assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
+    assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
   @Test
@@ -212,13 +212,13 @@ public class ConsensusCommitConfigTest {
   public void constructor_TableMetadataCacheExpirationTimeGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(DatabaseConfig.TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS, "3600");
+    props.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "3600");
 
     // Act
     ConsensusCommitConfig config = new ConsensusCommitConfig(props);
 
     // Assert
-    assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(3600);
+    assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(3600);
   }
 
   @Test
@@ -226,7 +226,7 @@ public class ConsensusCommitConfigTest {
       constructor_InvalidTableMetadataCacheExpirationTimeGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(DatabaseConfig.TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS, "aaa");
+    props.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "aaa");
 
     // Act Assert
     assertThatThrownBy(() -> new ConsensusCommitConfig(props))

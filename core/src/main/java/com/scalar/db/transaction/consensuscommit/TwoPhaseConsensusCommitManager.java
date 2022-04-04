@@ -47,8 +47,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     this.admin = admin;
     this.config = config;
     tableMetadataManager =
-        new TransactionalTableMetadataManager(
-            admin, config.getTableMetadataCacheExpirationTimeSecs());
+        new TransactionalTableMetadataManager(admin, config.getMetadataCacheExpirationTimeSecs());
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
@@ -85,8 +84,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     this.admin = admin;
     this.config = config;
     tableMetadataManager =
-        new TransactionalTableMetadataManager(
-            admin, config.getTableMetadataCacheExpirationTimeSecs());
+        new TransactionalTableMetadataManager(admin, config.getMetadataCacheExpirationTimeSecs());
     this.coordinator = coordinator;
     this.parallelExecutor = parallelExecutor;
     this.recovery = recovery;
