@@ -14,6 +14,10 @@ public class DropTableStatementBuilder {
     public Buildable ifExists() {
       return new Buildable(namespaceName, tableName, true);
     }
+
+    public Buildable ifExists(boolean ifExists) {
+      return new Buildable(namespaceName, tableName, ifExists);
+    }
   }
 
   public static class Buildable {

@@ -14,6 +14,10 @@ public class DropNamespaceStatementBuilder {
     public Cascade ifExists() {
       return new Cascade(namespaceName, true);
     }
+
+    public Cascade ifExists(boolean ifExists) {
+      return new Cascade(namespaceName, ifExists);
+    }
   }
 
   public static class Cascade extends Buildable {
@@ -23,6 +27,10 @@ public class DropNamespaceStatementBuilder {
 
     public Buildable cascade() {
       return new Buildable(namespaceName, ifExists, true);
+    }
+
+    public Buildable cascade(boolean cascade) {
+      return new Buildable(namespaceName, ifExists, cascade);
     }
   }
 
