@@ -14,6 +14,10 @@ public class DropIndexStatementBuilder {
     public OnTable ifExists() {
       return new OnTable(true);
     }
+
+    public OnTable ifExists(boolean ifExists) {
+      return new OnTable(ifExists);
+    }
   }
 
   public static class OnTable {

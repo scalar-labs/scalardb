@@ -16,6 +16,10 @@ public class CreateNamespaceStatementBuilder {
     public Buildable ifNotExists() {
       return new Buildable(namespaceName, true);
     }
+
+    public Buildable ifNotExists(boolean ifNotExists) {
+      return new Buildable(namespaceName, ifNotExists);
+    }
   }
 
   public static class Buildable {

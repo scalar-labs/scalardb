@@ -35,36 +35,37 @@ public class StatementBuilderTest {
     // Arrange
 
     // Act
-    CreateCoordinatorTableStatement statement =
+    CreateCoordinatorTableStatement statement1 =
         StatementBuilder.createCoordinatorTable()
             .withOption("opt1", "val1")
             .withOptions(ImmutableMap.of("opt2", "val2", "opt3", "val3"))
             .build();
-
-    // Assert
-    assertThat(statement)
-        .isEqualTo(
-            CreateCoordinatorTableStatement.of(
-                false, ImmutableMap.of("opt1", "val1", "opt2", "val2", "opt3", "val3")));
-  }
-
-  @Test
-  public void createCoordinatorTable_ifNotExists_ShouldBuildProperStatement() {
-    // Arrange
-
-    // Act
-    CreateCoordinatorTableStatement statement =
+    CreateCoordinatorTableStatement statement2 =
         StatementBuilder.createCoordinatorTable()
             .ifNotExists()
             .withOption("opt1", "val1")
             .withOptions(ImmutableMap.of("opt2", "val2", "opt3", "val3"))
             .build();
+    CreateCoordinatorTableStatement statement3 =
+        StatementBuilder.createCoordinatorTable()
+            .ifNotExists(false)
+            .withOption("opt1", "val1")
+            .withOptions(ImmutableMap.of("opt2", "val2", "opt3", "val3"))
+            .build();
 
     // Assert
-    assertThat(statement)
+    assertThat(statement1)
+        .isEqualTo(
+            CreateCoordinatorTableStatement.of(
+                false, ImmutableMap.of("opt1", "val1", "opt2", "val2", "opt3", "val3")));
+    assertThat(statement2)
         .isEqualTo(
             CreateCoordinatorTableStatement.of(
                 true, ImmutableMap.of("opt1", "val1", "opt2", "val2", "opt3", "val3")));
+    assertThat(statement3)
+        .isEqualTo(
+            CreateCoordinatorTableStatement.of(
+                false, ImmutableMap.of("opt1", "val1", "opt2", "val2", "opt3", "val3")));
   }
 
   @Test
@@ -72,8 +73,24 @@ public class StatementBuilderTest {
     // Arrange
 
     // Act
-    CreateIndexStatement statement =
+    CreateIndexStatement statement1 =
         StatementBuilder.createIndex()
+            .onTable("ns", "tbl")
+            .column("col")
+            .withOption("opt1", "val1")
+            .withOptions(ImmutableMap.of("opt2", "val2", "opt3", "val3"))
+            .build();
+    CreateIndexStatement statement2 =
+        StatementBuilder.createIndex()
+            .ifNotExists()
+            .onTable("ns", "tbl")
+            .column("col")
+            .withOption("opt1", "val1")
+            .withOptions(ImmutableMap.of("opt2", "val2", "opt3", "val3"))
+            .build();
+    CreateIndexStatement statement3 =
+        StatementBuilder.createIndex()
+            .ifNotExists(false)
             .onTable("ns", "tbl")
             .column("col")
             .withOption("opt1", "val1")
@@ -81,7 +98,23 @@ public class StatementBuilderTest {
             .build();
 
     // Assert
-    assertThat(statement)
+    assertThat(statement1)
+        .isEqualTo(
+            CreateIndexStatement.of(
+                "ns",
+                "tbl",
+                "col",
+                false,
+                ImmutableMap.of("opt1", "val1", "opt2", "val2", "opt3", "val3")));
+    assertThat(statement2)
+        .isEqualTo(
+            CreateIndexStatement.of(
+                "ns",
+                "tbl",
+                "col",
+                true,
+                ImmutableMap.of("opt1", "val1", "opt2", "val2", "opt3", "val3")));
+    assertThat(statement3)
         .isEqualTo(
             CreateIndexStatement.of(
                 "ns",
@@ -92,65 +125,41 @@ public class StatementBuilderTest {
   }
 
   @Test
-  public void createIndex_ifNotExists_ShouldBuildProperStatement() {
-    // Arrange
-
-    // Act
-    CreateIndexStatement statement =
-        StatementBuilder.createIndex()
-            .ifNotExists()
-            .onTable("ns", "tbl")
-            .column("col")
-            .withOption("opt1", "val1")
-            .withOptions(ImmutableMap.of("opt2", "val2", "opt3", "val3"))
-            .build();
-
-    // Assert
-    assertThat(statement)
-        .isEqualTo(
-            CreateIndexStatement.of(
-                "ns",
-                "tbl",
-                "col",
-                true,
-                ImmutableMap.of("opt1", "val1", "opt2", "val2", "opt3", "val3")));
-  }
-
-  @Test
   public void createNamespace_ShouldBuildProperStatement() {
     // Arrange
 
     // Act
-    CreateNamespaceStatement statement =
+    CreateNamespaceStatement statement1 =
         StatementBuilder.createNamespace("ns")
             .withOption("opt1", "val1")
             .withOptions(ImmutableMap.of("opt2", "val2", "opt3", "val3"))
             .build();
-
-    // Assert
-    assertThat(statement)
-        .isEqualTo(
-            CreateNamespaceStatement.of(
-                "ns", false, ImmutableMap.of("opt1", "val1", "opt2", "val2", "opt3", "val3")));
-  }
-
-  @Test
-  public void createNamespace_ifNotExists_ShouldBuildProperStatement() {
-    // Arrange
-
-    // Act
-    CreateNamespaceStatement statement =
+    CreateNamespaceStatement statement2 =
         StatementBuilder.createNamespace("ns")
             .ifNotExists()
             .withOption("opt1", "val1")
             .withOptions(ImmutableMap.of("opt2", "val2", "opt3", "val3"))
             .build();
+    CreateNamespaceStatement statement3 =
+        StatementBuilder.createNamespace("ns")
+            .ifNotExists(false)
+            .withOption("opt1", "val1")
+            .withOptions(ImmutableMap.of("opt2", "val2", "opt3", "val3"))
+            .build();
 
     // Assert
-    assertThat(statement)
+    assertThat(statement1)
+        .isEqualTo(
+            CreateNamespaceStatement.of(
+                "ns", false, ImmutableMap.of("opt1", "val1", "opt2", "val2", "opt3", "val3")));
+    assertThat(statement2)
         .isEqualTo(
             CreateNamespaceStatement.of(
                 "ns", true, ImmutableMap.of("opt1", "val1", "opt2", "val2", "opt3", "val3")));
+    assertThat(statement3)
+        .isEqualTo(
+            CreateNamespaceStatement.of(
+                "ns", false, ImmutableMap.of("opt1", "val1", "opt2", "val2", "opt3", "val3")));
   }
 
   @Test
@@ -158,7 +167,7 @@ public class StatementBuilderTest {
     // Arrange
 
     // Act
-    CreateTableStatement statement =
+    CreateTableStatement statement1 =
         StatementBuilder.createTable("ns", "tbl")
             .withPartitionKey("p1", DataType.INT)
             .withPartitionKey(ImmutableMap.of("p2", DataType.TEXT, "p3", DataType.BIGINT))
@@ -174,9 +183,43 @@ public class StatementBuilderTest {
             .withOption("opt1", "val1")
             .withOptions(ImmutableMap.of("opt2", "val2", "opt3", "val3"))
             .build();
+    CreateTableStatement statement2 =
+        StatementBuilder.createTable("ns", "tbl")
+            .ifNotExists()
+            .withPartitionKey(ImmutableMap.of("p1", DataType.TEXT, "p2", DataType.BIGINT))
+            .withPartitionKey("p3", DataType.INT)
+            .withClusteringKey("c1", DataType.TEXT)
+            .withClusteringKey(ImmutableMap.of("c2", DataType.INT, "c3", DataType.FLOAT))
+            .withColumn("col1", DataType.BOOLEAN)
+            .withColumns(ImmutableMap.of("col2", DataType.BLOB, "col3", DataType.DOUBLE))
+            .withClusteringOrder("c1", ClusteringOrder.DESC)
+            .withClusteringOrders(
+                ImmutableMap.of("c2", ClusteringOrder.ASC, "c3", ClusteringOrder.DESC))
+            .withIndex("col1")
+            .withIndexes(ImmutableSet.of("col2", "col3"))
+            .withOption("opt1", "val1")
+            .withOptions(ImmutableMap.of("opt2", "val2", "opt3", "val3"))
+            .build();
+    CreateTableStatement statement3 =
+        StatementBuilder.createTable("ns", "tbl")
+            .ifNotExists(false)
+            .withPartitionKey(ImmutableMap.of("p1", DataType.TEXT, "p2", DataType.BIGINT))
+            .withPartitionKey("p3", DataType.INT)
+            .withClusteringKey("c1", DataType.TEXT)
+            .withClusteringKey(ImmutableMap.of("c2", DataType.INT, "c3", DataType.FLOAT))
+            .withColumn("col1", DataType.BOOLEAN)
+            .withColumns(ImmutableMap.of("col2", DataType.BLOB, "col3", DataType.DOUBLE))
+            .withClusteringOrder("c1", ClusteringOrder.DESC)
+            .withClusteringOrders(
+                ImmutableMap.of("c2", ClusteringOrder.ASC, "c3", ClusteringOrder.DESC))
+            .withIndex("col1")
+            .withIndexes(ImmutableSet.of("col2", "col3"))
+            .withOption("opt1", "val1")
+            .withOptions(ImmutableMap.of("opt2", "val2", "opt3", "val3"))
+            .build();
 
     // Assert
-    assertThat(statement)
+    assertThat(statement1)
         .isEqualTo(
             CreateTableStatement.of(
                 "ns",
@@ -204,38 +247,40 @@ public class StatementBuilderTest {
                     ClusteringOrder.DESC),
                 ImmutableSet.of("col1", "col2", "col3"),
                 ImmutableMap.of("opt1", "val1", "opt2", "val2", "opt3", "val3")));
-  }
-
-  @Test
-  public void createTable_ifNotExists_ShouldBuildProperStatement() {
-    // Arrange
-
-    // Act
-    CreateTableStatement statement =
-        StatementBuilder.createTable("ns", "tbl")
-            .ifNotExists()
-            .withPartitionKey(ImmutableMap.of("p1", DataType.TEXT, "p2", DataType.BIGINT))
-            .withPartitionKey("p3", DataType.INT)
-            .withClusteringKey("c1", DataType.TEXT)
-            .withClusteringKey(ImmutableMap.of("c2", DataType.INT, "c3", DataType.FLOAT))
-            .withColumn("col1", DataType.BOOLEAN)
-            .withColumns(ImmutableMap.of("col2", DataType.BLOB, "col3", DataType.DOUBLE))
-            .withClusteringOrder("c1", ClusteringOrder.DESC)
-            .withClusteringOrders(
-                ImmutableMap.of("c2", ClusteringOrder.ASC, "c3", ClusteringOrder.DESC))
-            .withIndex("col1")
-            .withIndexes(ImmutableSet.of("col2", "col3"))
-            .withOption("opt1", "val1")
-            .withOptions(ImmutableMap.of("opt2", "val2", "opt3", "val3"))
-            .build();
-
-    // Assert
-    assertThat(statement)
+    assertThat(statement2)
         .isEqualTo(
             CreateTableStatement.of(
                 "ns",
                 "tbl",
                 true,
+                ImmutableMap.<String, DataType>builder()
+                    .put("p1", DataType.TEXT)
+                    .put("p2", DataType.BIGINT)
+                    .put("p3", DataType.INT)
+                    .put("c1", DataType.TEXT)
+                    .put("c2", DataType.INT)
+                    .put("c3", DataType.FLOAT)
+                    .put("col1", DataType.BOOLEAN)
+                    .put("col2", DataType.BLOB)
+                    .put("col3", DataType.DOUBLE)
+                    .build(),
+                ImmutableSet.of("p1", "p2", "p3"),
+                ImmutableSet.of("c1", "c2", "c3"),
+                ImmutableMap.of(
+                    "c1",
+                    ClusteringOrder.DESC,
+                    "c2",
+                    ClusteringOrder.ASC,
+                    "c3",
+                    ClusteringOrder.DESC),
+                ImmutableSet.of("col1", "col2", "col3"),
+                ImmutableMap.of("opt1", "val1", "opt2", "val2", "opt3", "val3")));
+    assertThat(statement3)
+        .isEqualTo(
+            CreateTableStatement.of(
+                "ns",
+                "tbl",
+                false,
                 ImmutableMap.<String, DataType>builder()
                     .put("p1", DataType.TEXT)
                     .put("p2", DataType.BIGINT)
@@ -304,22 +349,16 @@ public class StatementBuilderTest {
     // Arrange
 
     // Act
-    DropCoordinatorTableStatement statement = StatementBuilder.dropCoordinatorTable().build();
-
-    // Assert
-    assertThat(statement).isEqualTo(DropCoordinatorTableStatement.of(false));
-  }
-
-  @Test
-  public void dropCoordinatorTable_ifExists_ShouldBuildProperStatement() {
-    // Arrange
-
-    // Act
-    DropCoordinatorTableStatement statement =
+    DropCoordinatorTableStatement statement1 = StatementBuilder.dropCoordinatorTable().build();
+    DropCoordinatorTableStatement statement2 =
         StatementBuilder.dropCoordinatorTable().ifExists().build();
+    DropCoordinatorTableStatement statement3 =
+        StatementBuilder.dropCoordinatorTable().ifExists(false).build();
 
     // Assert
-    assertThat(statement).isEqualTo(DropCoordinatorTableStatement.of(true));
+    assertThat(statement1).isEqualTo(DropCoordinatorTableStatement.of(false));
+    assertThat(statement2).isEqualTo(DropCoordinatorTableStatement.of(true));
+    assertThat(statement3).isEqualTo(DropCoordinatorTableStatement.of(false));
   }
 
   @Test
@@ -327,23 +366,17 @@ public class StatementBuilderTest {
     // Arrange
 
     // Act
-    DropIndexStatement statement =
+    DropIndexStatement statement1 =
         StatementBuilder.dropIndex().onTable("ns", "tbl").column("col").build();
-
-    // Assert
-    assertThat(statement).isEqualTo(DropIndexStatement.of("ns", "tbl", "col", false));
-  }
-
-  @Test
-  public void dropIndex_ifExists_ShouldBuildProperStatement() {
-    // Arrange
-
-    // Act
-    DropIndexStatement statement =
+    DropIndexStatement statement2 =
         StatementBuilder.dropIndex().ifExists().onTable("ns", "tbl").column("col").build();
+    DropIndexStatement statement3 =
+        StatementBuilder.dropIndex().ifExists(false).onTable("ns", "tbl").column("col").build();
 
     // Assert
-    assertThat(statement).isEqualTo(DropIndexStatement.of("ns", "tbl", "col", true));
+    assertThat(statement1).isEqualTo(DropIndexStatement.of("ns", "tbl", "col", false));
+    assertThat(statement2).isEqualTo(DropIndexStatement.of("ns", "tbl", "col", true));
+    assertThat(statement3).isEqualTo(DropIndexStatement.of("ns", "tbl", "col", false));
   }
 
   @Test
@@ -351,32 +384,17 @@ public class StatementBuilderTest {
     // Arrange
 
     // Act
-    DropNamespaceStatement statement = StatementBuilder.dropNamespace("ns").build();
+    DropNamespaceStatement statement1 = StatementBuilder.dropNamespace("ns").build();
+    DropNamespaceStatement statement2 = StatementBuilder.dropNamespace("ns").ifExists().build();
+    DropNamespaceStatement statement3 = StatementBuilder.dropNamespace("ns").cascade().build();
+    DropNamespaceStatement statement4 =
+        StatementBuilder.dropNamespace("ns").ifExists(false).cascade(false).build();
 
     // Assert
-    assertThat(statement).isEqualTo(DropNamespaceStatement.of("ns", false, false));
-  }
-
-  @Test
-  public void dropNamespace_ifExists_ShouldBuildProperStatement() {
-    // Arrange
-
-    // Act
-    DropNamespaceStatement statement = StatementBuilder.dropNamespace("ns").ifExists().build();
-
-    // Assert
-    assertThat(statement).isEqualTo(DropNamespaceStatement.of("ns", true, false));
-  }
-
-  @Test
-  public void dropNamespace_cascade_ShouldBuildProperStatement() {
-    // Arrange
-
-    // Act
-    DropNamespaceStatement statement = StatementBuilder.dropNamespace("ns").cascade().build();
-
-    // Assert
-    assertThat(statement).isEqualTo(DropNamespaceStatement.of("ns", false, true));
+    assertThat(statement1).isEqualTo(DropNamespaceStatement.of("ns", false, false));
+    assertThat(statement2).isEqualTo(DropNamespaceStatement.of("ns", true, false));
+    assertThat(statement3).isEqualTo(DropNamespaceStatement.of("ns", false, true));
+    assertThat(statement4).isEqualTo(DropNamespaceStatement.of("ns", false, false));
   }
 
   @Test
@@ -384,21 +402,14 @@ public class StatementBuilderTest {
     // Arrange
 
     // Act
-    DropTableStatement statement = StatementBuilder.dropTable("ns", "tbl").build();
+    DropTableStatement statement1 = StatementBuilder.dropTable("ns", "tbl").build();
+    DropTableStatement statement2 = StatementBuilder.dropTable("ns", "tbl").ifExists().build();
+    DropTableStatement statement3 = StatementBuilder.dropTable("ns", "tbl").ifExists(false).build();
 
     // Assert
-    assertThat(statement).isEqualTo(DropTableStatement.of("ns", "tbl", false));
-  }
-
-  @Test
-  public void dropTable_ifExists_ShouldBuildProperStatement() {
-    // Arrange
-
-    // Act
-    DropTableStatement statement = StatementBuilder.dropTable("ns", "tbl").ifExists().build();
-
-    // Assert
-    assertThat(statement).isEqualTo(DropTableStatement.of("ns", "tbl", true));
+    assertThat(statement1).isEqualTo(DropTableStatement.of("ns", "tbl", false));
+    assertThat(statement2).isEqualTo(DropTableStatement.of("ns", "tbl", true));
+    assertThat(statement3).isEqualTo(DropTableStatement.of("ns", "tbl", false));
   }
 
   @Test
