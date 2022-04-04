@@ -276,4 +276,9 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
       throw new IllegalArgumentException("Primary key columns are not specified properly");
     }
   }
+
+  @Override
+  public Void visit(Statement statement, Void context) {
+    return null;
+  }
 }

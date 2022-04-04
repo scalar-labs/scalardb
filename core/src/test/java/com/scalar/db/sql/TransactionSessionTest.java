@@ -26,7 +26,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public class TransactionSqlSessionTest {
+public class TransactionSessionTest {
 
   @Mock private DistributedTransactionAdmin admin;
   @Mock private DistributedTransactionManager manager;
@@ -35,59 +35,65 @@ public class TransactionSqlSessionTest {
   @Mock private DdlStatementExecutor ddlStatementExecutor;
   @Mock private DistributedTransaction transaction;
 
-  private TransactionSqlSession transactionSqlSession;
+  private TransactionSession transactionSession;
 
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    transactionSqlSession =
-        new TransactionSqlSession(
+    transactionSession =
+        new TransactionSession(
             admin, manager, statementValidator, dmlStatementExecutor, ddlStatementExecutor);
   }
 
   @Test
-  public void beginTransaction_CalledOnce_ShouldNotThrowAnyException() throws TransactionException {
+  public void begin_CalledOnce_ShouldNotThrowAnyException() throws TransactionException {
     // Arrange
     when(manager.start()).thenReturn(transaction);
 
     // Act Assert
-    assertThatCode(() -> transactionSqlSession.beginTransaction()).doesNotThrowAnyException();
+    assertThatCode(() -> transactionSession.begin()).doesNotThrowAnyException();
     verify(manager).start();
   }
 
   @Test
-  public void beginTransaction_CalledTwice_ShouldThrowIllegalStateException()
-      throws TransactionException {
+  public void begin_CalledTwice_ShouldThrowIllegalStateException() throws TransactionException {
     // Arrange
     when(manager.start()).thenReturn(transaction);
 
     // Act Assert
-    transactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> transactionSqlSession.beginTransaction())
-        .isInstanceOf(IllegalStateException.class);
+    transactionSession.begin();
+    assertThatThrownBy(() -> transactionSession.begin()).isInstanceOf(IllegalStateException.class);
     verify(manager).start();
   }
 
   @Test
-  public void beginTransaction_WhenManagerThrowsTransactionException_ShouldThrowSqlException()
+  public void begin_WhenManagerThrowsTransactionException_ShouldThrowSqlException()
       throws TransactionException {
     // Arrange
     when(manager.start()).thenThrow(TransactionException.class);
 
     // Act Assert
-    assertThatThrownBy(() -> transactionSqlSession.beginTransaction())
-        .isInstanceOf(SqlException.class);
+    assertThatThrownBy(() -> transactionSession.begin()).isInstanceOf(SqlException.class);
     verify(manager).start();
   }
 
   @Test
-  public void joinTransaction_ShouldThrowUnsupportedOperationException() {
+  public void join_ShouldThrowUnsupportedOperationException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> transactionSqlSession.joinTransaction("txId"))
+    assertThatThrownBy(() -> transactionSession.join("txId"))
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void resume_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> transactionSession.resume("txId"))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
@@ -97,11 +103,11 @@ public class TransactionSqlSessionTest {
     CreateTableStatement ddlStatement = mock(CreateTableStatement.class);
 
     // Act Assert
-    assertThatCode(() -> transactionSqlSession.execute(ddlStatement)).doesNotThrowAnyException();
+    ResultSet actual = transactionSession.execute(ddlStatement);
 
     verify(statementValidator).validate(ddlStatement);
     verify(ddlStatementExecutor).execute(ddlStatement);
-    assertThat(transactionSqlSession.getResultSet()).isEqualTo(EmptyResultSet.INSTANCE);
+    assertThat(actual).isEqualTo(EmptyResultSet.INSTANCE);
   }
 
   @Test
@@ -113,8 +119,8 @@ public class TransactionSqlSessionTest {
     when(manager.start()).thenReturn(transaction);
 
     // Act Assert
-    transactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> transactionSqlSession.execute(ddlStatement))
+    transactionSession.begin();
+    assertThatThrownBy(() -> transactionSession.execute(ddlStatement))
         .isInstanceOf(IllegalStateException.class);
 
     verify(statementValidator, never()).validate(ddlStatement);
@@ -132,12 +138,12 @@ public class TransactionSqlSessionTest {
     when(dmlStatementExecutor.execute(transaction, dmlStatement)).thenReturn(resultSet);
 
     // Act Assert
-    transactionSqlSession.beginTransaction();
-    assertThatCode(() -> transactionSqlSession.execute(dmlStatement)).doesNotThrowAnyException();
+    transactionSession.begin();
+    ResultSet actual = transactionSession.execute(dmlStatement);
 
     verify(statementValidator).validate(dmlStatement);
     verify(dmlStatementExecutor).execute(transaction, dmlStatement);
-    assertThat(transactionSqlSession.getResultSet()).isEqualTo(resultSet);
+    assertThat(actual).isEqualTo(resultSet);
   }
 
   @Test
@@ -150,7 +156,7 @@ public class TransactionSqlSessionTest {
     when(dmlStatementExecutor.execute(transaction, dmlStatement)).thenReturn(resultSet);
 
     // Act Assert
-    assertThatThrownBy(() -> transactionSqlSession.execute(dmlStatement))
+    assertThatThrownBy(() -> transactionSession.execute(dmlStatement))
         .isInstanceOf(IllegalStateException.class);
 
     verify(statementValidator, never()).validate(dmlStatement);
@@ -158,58 +164,11 @@ public class TransactionSqlSessionTest {
   }
 
   @Test
-  public void getResultSet_BeforeExecutingStatement_ShouldThrowIllegalStateException() {
-    // Arrange
-
-    // Act Assert
-    assertThatThrownBy(() -> transactionSqlSession.getResultSet())
-        .isInstanceOf(IllegalStateException.class);
-  }
-
-  @Test
-  public void executeQuery_SelectStatementGiven_ShouldNotThrowAnyException()
-      throws TransactionException {
-    // Arrange
-    SelectStatement selectStatement = mock(SelectStatement.class);
-
-    when(manager.start()).thenReturn(transaction);
-
-    ResultSet resultSet = mock(ResultSet.class);
-    when(dmlStatementExecutor.execute(transaction, selectStatement)).thenReturn(resultSet);
-
-    // Act Assert
-    transactionSqlSession.beginTransaction();
-    ResultSet actual = transactionSqlSession.executeQuery(selectStatement);
-
-    verify(statementValidator).validate(selectStatement);
-    verify(dmlStatementExecutor).execute(transaction, selectStatement);
-    assertThat(actual).isEqualTo(resultSet);
-    assertThat(transactionSqlSession.getResultSet()).isEqualTo(resultSet);
-  }
-
-  @Test
-  public void
-      executeQuery_SelectStatementGivenBeforeBeginningTransaction_ShouldThrowIllegalStateException() {
-    // Arrange
-    SelectStatement selectStatement = mock(SelectStatement.class);
-
-    ResultSet resultSet = mock(ResultSet.class);
-    when(dmlStatementExecutor.execute(transaction, selectStatement)).thenReturn(resultSet);
-
-    // Act Assert
-    assertThatThrownBy(() -> transactionSqlSession.executeQuery(selectStatement))
-        .isInstanceOf(IllegalStateException.class);
-
-    verify(statementValidator, never()).validate(selectStatement);
-    verify(dmlStatementExecutor, never()).execute(transaction, selectStatement);
-  }
-
-  @Test
   public void prepare_ShouldThrowUnsupportedOperationException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> transactionSqlSession.prepare())
+    assertThatThrownBy(() -> transactionSession.prepare())
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
@@ -218,7 +177,7 @@ public class TransactionSqlSessionTest {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> transactionSqlSession.validate())
+    assertThatThrownBy(() -> transactionSession.validate())
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
@@ -228,8 +187,8 @@ public class TransactionSqlSessionTest {
     when(manager.start()).thenReturn(transaction);
 
     // Act Assert
-    transactionSqlSession.beginTransaction();
-    assertThatCode(() -> transactionSqlSession.commit()).doesNotThrowAnyException();
+    transactionSession.begin();
+    assertThatCode(() -> transactionSession.commit()).doesNotThrowAnyException();
 
     verify(transaction).commit();
   }
@@ -240,8 +199,7 @@ public class TransactionSqlSessionTest {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> transactionSqlSession.commit())
-        .isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> transactionSession.commit()).isInstanceOf(IllegalStateException.class);
 
     verify(transaction, never()).commit();
   }
@@ -255,8 +213,8 @@ public class TransactionSqlSessionTest {
     doThrow(CommitConflictException.class).when(transaction).commit();
 
     // Act Assert
-    transactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> transactionSqlSession.commit())
+    transactionSession.begin();
+    assertThatThrownBy(() -> transactionSession.commit())
         .isInstanceOf(TransactionConflictException.class);
 
     verify(transaction).commit();
@@ -270,8 +228,8 @@ public class TransactionSqlSessionTest {
     doThrow(CommitException.class).when(transaction).commit();
 
     // Act Assert
-    transactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> transactionSqlSession.commit()).isInstanceOf(SqlException.class);
+    transactionSession.begin();
+    assertThatThrownBy(() -> transactionSession.commit()).isInstanceOf(SqlException.class);
 
     verify(transaction).commit();
   }
@@ -287,8 +245,8 @@ public class TransactionSqlSessionTest {
         .commit();
 
     // Act Assert
-    transactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> transactionSqlSession.commit())
+    transactionSession.begin();
+    assertThatThrownBy(() -> transactionSession.commit())
         .isInstanceOf(UnknownTransactionStatusException.class);
 
     verify(transaction).commit();
@@ -300,8 +258,8 @@ public class TransactionSqlSessionTest {
     when(manager.start()).thenReturn(transaction);
 
     // Act Assert
-    transactionSqlSession.beginTransaction();
-    assertThatCode(() -> transactionSqlSession.rollback()).doesNotThrowAnyException();
+    transactionSession.begin();
+    assertThatCode(() -> transactionSession.rollback()).doesNotThrowAnyException();
 
     verify(transaction).abort();
   }
@@ -312,7 +270,7 @@ public class TransactionSqlSessionTest {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> transactionSqlSession.rollback())
+    assertThatThrownBy(() -> transactionSession.rollback())
         .isInstanceOf(IllegalStateException.class);
 
     verify(transaction, never()).abort();
@@ -326,8 +284,8 @@ public class TransactionSqlSessionTest {
     doThrow(AbortException.class).when(transaction).abort();
 
     // Act Assert
-    transactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> transactionSqlSession.rollback()).isInstanceOf(SqlException.class);
+    transactionSession.begin();
+    assertThatThrownBy(() -> transactionSession.rollback()).isInstanceOf(SqlException.class);
 
     verify(transaction).abort();
   }
@@ -339,8 +297,8 @@ public class TransactionSqlSessionTest {
     when(transaction.getId()).thenReturn("txId");
 
     // Act
-    transactionSqlSession.beginTransaction();
-    String transactionId = transactionSqlSession.getTransactionId();
+    transactionSession.begin();
+    String transactionId = transactionSession.getTransactionId();
 
     // Assert
     assertThat(transactionId).isEqualTo("txId");
@@ -351,7 +309,7 @@ public class TransactionSqlSessionTest {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> transactionSqlSession.getTransactionId())
+    assertThatThrownBy(() -> transactionSession.getTransactionId())
         .isInstanceOf(IllegalStateException.class);
   }
 
@@ -361,7 +319,7 @@ public class TransactionSqlSessionTest {
     when(manager.start()).thenReturn(transaction);
 
     // Act Assert
-    assertThatCode(() -> transactionSqlSession.getMetadata()).doesNotThrowAnyException();
+    assertThatCode(() -> transactionSession.getMetadata()).doesNotThrowAnyException();
   }
 
   @Test
@@ -371,8 +329,8 @@ public class TransactionSqlSessionTest {
     when(manager.start()).thenReturn(transaction);
 
     // Act Assert
-    transactionSqlSession.beginTransaction();
-    assertThatThrownBy(() -> transactionSqlSession.getMetadata())
+    transactionSession.begin();
+    assertThatThrownBy(() -> transactionSession.getMetadata())
         .isInstanceOf(IllegalStateException.class);
   }
 }
