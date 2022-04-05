@@ -10,6 +10,7 @@ import com.scalar.db.sql.ClusteringOrder;
 import com.scalar.db.sql.ClusteringOrdering;
 import com.scalar.db.sql.DataType;
 import com.scalar.db.sql.Predicate;
+import com.scalar.db.sql.Projection;
 import com.scalar.db.sql.Value;
 import com.scalar.db.sql.statement.CreateCoordinatorTableStatement;
 import com.scalar.db.sql.statement.CreateIndexStatement;
@@ -469,7 +470,7 @@ public class StatementBuilderTest {
             .build();
 
     SelectStatement statement2 =
-        StatementBuilder.select(Arrays.asList("col2", "col3"))
+        StatementBuilder.select(Projection.column("col2"), Projection.column("col3"))
             .from("ns2", "tbl2")
             .where(
                 Arrays.asList(
@@ -483,13 +484,31 @@ public class StatementBuilderTest {
             .limit(10)
             .build();
 
+    SelectStatement statement3 =
+        StatementBuilder.select(
+                Arrays.asList(Projection.column("col2").as("a"), Projection.column("col3").as("b")))
+            .from("ns3", "tbl3")
+            .where(
+                Arrays.asList(
+                    Predicate.column("col1").isEqualTo(Value.ofInt(20)),
+                    Predicate.column("col2").isEqualTo(Value.ofText("aaa"))))
+            .orderBy(
+                Arrays.asList(
+                    ClusteringOrdering.column("col2").desc(),
+                    ClusteringOrdering.column("col3").desc()))
+            .limit(10)
+            .build();
+
     // Assert
     assertThat(statement1)
         .isEqualTo(
             SelectStatement.of(
                 "ns1",
                 "tbl1",
-                ImmutableList.of("col1", "col2", "col3"),
+                ImmutableList.of(
+                    Projection.column("col1"),
+                    Projection.column("col2"),
+                    Projection.column("col3")),
                 ImmutableList.of(
                     Predicate.column("col1").isEqualTo(Value.ofInt(10)),
                     Predicate.column("col2").isGreaterThan(Value.ofText("aaa")),
@@ -504,7 +523,7 @@ public class StatementBuilderTest {
             SelectStatement.of(
                 "ns2",
                 "tbl2",
-                ImmutableList.of("col2", "col3"),
+                ImmutableList.of(Projection.column("col2"), Projection.column("col3")),
                 ImmutableList.of(
                     Predicate.column("col1").isEqualTo(Value.ofInt(20)),
                     Predicate.column("col2").isGreaterThan(Value.ofText("ddd")),
@@ -512,6 +531,21 @@ public class StatementBuilderTest {
                 ImmutableList.of(
                     ClusteringOrdering.column("col2").desc(),
                     ClusteringOrdering.column("col3").asc()),
+                10));
+
+    assertThat(statement3)
+        .isEqualTo(
+            SelectStatement.of(
+                "ns3",
+                "tbl3",
+                ImmutableList.of(
+                    Projection.column("col2").as("a"), Projection.column("col3").as("b")),
+                ImmutableList.of(
+                    Predicate.column("col1").isEqualTo(Value.ofInt(20)),
+                    Predicate.column("col2").isEqualTo(Value.ofText("aaa"))),
+                ImmutableList.of(
+                    ClusteringOrdering.column("col2").desc(),
+                    ClusteringOrdering.column("col3").desc()),
                 10));
   }
 

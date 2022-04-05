@@ -100,10 +100,9 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
     ImmutableListMultimap<String, Predicate> predicatesMap =
         Multimaps.index(statement.predicates, c -> c.columnName);
 
-    // duplication check for projected column names
-    ImmutableSet<String> projectedColumnNamesSet =
-        ImmutableSet.copyOf(statement.projectedColumnNames);
-    if (statement.projectedColumnNames.size() != projectedColumnNamesSet.size()) {
+    // duplication check for projections
+    ImmutableSet<Projection> projectionSet = ImmutableSet.copyOf(statement.projections);
+    if (statement.projections.size() != projectionSet.size()) {
       throw new IllegalArgumentException(
           "Specifying duplicated projected column names is not allowed");
     }

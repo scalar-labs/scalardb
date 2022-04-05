@@ -1,8 +1,8 @@
 package com.scalar.db.sql;
 
-import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Result;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -11,34 +11,34 @@ import javax.annotation.concurrent.NotThreadSafe;
 public class ResultIteratorResultSet implements ResultSet {
 
   private final Iterator<Result> iterator;
-  private final ImmutableList<String> projectedColumnNames;
+  private final List<Projection> projections;
 
-  ResultIteratorResultSet(Iterator<Result> iterator, ImmutableList<String> projectedColumnNames) {
+  ResultIteratorResultSet(Iterator<Result> iterator, List<Projection> projections) {
     this.iterator = Objects.requireNonNull(iterator);
-    this.projectedColumnNames = Objects.requireNonNull(projectedColumnNames);
+    this.projections = Objects.requireNonNull(projections);
   }
 
   @Override
   public Optional<Record> one() {
     if (iterator.hasNext()) {
-      return Optional.of(new ResultRecord(iterator.next(), projectedColumnNames));
+      return Optional.of(new ResultRecord(iterator.next(), projections));
     }
     return Optional.empty();
   }
 
   @Override
   public Iterator<Record> iterator() {
-    return new ResultIterator(iterator, projectedColumnNames);
+    return new ResultIterator(iterator, projections);
   }
 
   private static class ResultIterator implements Iterator<Record> {
 
     private final Iterator<Result> iterator;
-    private final ImmutableList<String> projectedColumnNames;
+    private final List<Projection> projections;
 
-    public ResultIterator(Iterator<Result> iterator, ImmutableList<String> projectedColumnNames) {
+    public ResultIterator(Iterator<Result> iterator, List<Projection> projections) {
       this.iterator = iterator;
-      this.projectedColumnNames = projectedColumnNames;
+      this.projections = projections;
     }
 
     @Override
@@ -48,7 +48,7 @@ public class ResultIteratorResultSet implements ResultSet {
 
     @Override
     public Record next() {
-      return new ResultRecord(iterator.next(), projectedColumnNames);
+      return new ResultRecord(iterator.next(), projections);
     }
   }
 }

@@ -72,7 +72,12 @@ public class DmlStatementExecutorTest {
         SelectStatement.of(
             NAMESPACE_NAME,
             TABLE_NAME,
-            ImmutableList.of("p1", "p2", "c1", "c2", "col1"),
+            ImmutableList.of(
+                Projection.column("p1"),
+                Projection.column("p2"),
+                Projection.column("c1"),
+                Projection.column("c2"),
+                Projection.column("col1")),
             ImmutableList.of(
                 Predicate.column("p1").isEqualTo(Value.ofText("aaa")),
                 Predicate.column("p2").isEqualTo(Value.ofText("bbb")),
@@ -141,7 +146,12 @@ public class DmlStatementExecutorTest {
         SelectStatement.of(
             NAMESPACE_NAME,
             TABLE_NAME,
-            ImmutableList.of("p1", "p2", "c1", "c2", "col2"),
+            ImmutableList.of(
+                Projection.column("p1").as("a"),
+                Projection.column("p2").as("b"),
+                Projection.column("c1").as("c"),
+                Projection.column("c2").as("d"),
+                Projection.column("col2").as("e")),
             ImmutableList.of(
                 Predicate.column("p1").isEqualTo(Value.ofText("aaa")),
                 Predicate.column("p2").isEqualTo(Value.ofText("bbb")),
@@ -180,7 +190,12 @@ public class DmlStatementExecutorTest {
         SelectStatement.of(
             NAMESPACE_NAME,
             TABLE_NAME,
-            ImmutableList.of("p1", "p2", "c1", "c2", "col2"),
+            ImmutableList.of(
+                Projection.column("p1"),
+                Projection.column("p2"),
+                Projection.column("c1"),
+                Projection.column("c2"),
+                Projection.column("col2")),
             ImmutableList.of(
                 Predicate.column("p1").isEqualTo(Value.ofText("aaa")),
                 Predicate.column("p2").isEqualTo(Value.ofText("bbb")),
@@ -218,7 +233,12 @@ public class DmlStatementExecutorTest {
         SelectStatement.of(
             NAMESPACE_NAME,
             TABLE_NAME,
-            ImmutableList.of("p1", "p2", "c1", "c2", "col2"),
+            ImmutableList.of(
+                Projection.column("p1"),
+                Projection.column("p2"),
+                Projection.column("c1"),
+                Projection.column("c2"),
+                Projection.column("col2")),
             ImmutableList.of(
                 Predicate.column("p1").isEqualTo(Value.ofText("aaa")),
                 Predicate.column("p2").isEqualTo(Value.ofText("bbb")),
@@ -255,7 +275,12 @@ public class DmlStatementExecutorTest {
         SelectStatement.of(
             NAMESPACE_NAME,
             TABLE_NAME,
-            ImmutableList.of("p1", "p2", "c1", "c2", "col2"),
+            ImmutableList.of(
+                Projection.column("p1"),
+                Projection.column("p2"),
+                Projection.column("c1"),
+                Projection.column("c2"),
+                Projection.column("col2")),
             ImmutableList.of(
                 Predicate.column("p1").isEqualTo(Value.ofText("aaa")),
                 Predicate.column("p2").isEqualTo(Value.ofText("bbb")),
@@ -291,7 +316,12 @@ public class DmlStatementExecutorTest {
         SelectStatement.of(
             NAMESPACE_NAME,
             TABLE_NAME,
-            ImmutableList.of("p1", "p2", "c1", "c2", "col2"),
+            ImmutableList.of(
+                Projection.column("p1"),
+                Projection.column("p2"),
+                Projection.column("c1"),
+                Projection.column("c2"),
+                Projection.column("col2")),
             ImmutableList.of(
                 Predicate.column("p1").isEqualTo(Value.ofText("aaa")),
                 Predicate.column("p2").isEqualTo(Value.ofText("bbb")),
@@ -328,7 +358,12 @@ public class DmlStatementExecutorTest {
         SelectStatement.of(
             NAMESPACE_NAME,
             TABLE_NAME,
-            ImmutableList.of("p1", "p2", "c1", "c2", "col2"),
+            ImmutableList.of(
+                Projection.column("p1"),
+                Projection.column("p2"),
+                Projection.column("c1"),
+                Projection.column("c2"),
+                Projection.column("col2")),
             ImmutableList.of(
                 Predicate.column("p1").isEqualTo(Value.ofText("aaa")),
                 Predicate.column("p2").isEqualTo(Value.ofText("bbb")),
@@ -363,7 +398,12 @@ public class DmlStatementExecutorTest {
         SelectStatement.of(
             NAMESPACE_NAME,
             TABLE_NAME,
-            ImmutableList.of("col2", "p1", "p2", "c1", "c2"),
+            ImmutableList.of(
+                Projection.column("col2"),
+                Projection.column("p1"),
+                Projection.column("p2"),
+                Projection.column("c1"),
+                Projection.column("c2")),
             ImmutableList.of(Predicate.column("col2").isEqualTo(Value.ofText("aaa"))),
             ImmutableList.of(),
             100);
