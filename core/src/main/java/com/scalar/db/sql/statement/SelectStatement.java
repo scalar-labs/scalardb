@@ -4,6 +4,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.sql.ClusteringOrdering;
 import com.scalar.db.sql.Predicate;
+import com.scalar.db.sql.Projection;
 import java.util.Objects;
 import javax.annotation.concurrent.Immutable;
 
@@ -12,7 +13,7 @@ public class SelectStatement implements DmlStatement {
 
   public final String namespaceName;
   public final String tableName;
-  public final ImmutableList<String> projectedColumnNames;
+  public final ImmutableList<Projection> projections;
   public final ImmutableList<Predicate> predicates;
   public final ImmutableList<ClusteringOrdering> clusteringOrderings;
   public final int limit;
@@ -20,13 +21,13 @@ public class SelectStatement implements DmlStatement {
   private SelectStatement(
       String namespaceName,
       String tableName,
-      ImmutableList<String> projectedColumnNames,
+      ImmutableList<Projection> projections,
       ImmutableList<Predicate> predicates,
       ImmutableList<ClusteringOrdering> clusteringOrderings,
       int limit) {
     this.namespaceName = Objects.requireNonNull(namespaceName);
     this.tableName = Objects.requireNonNull(tableName);
-    this.projectedColumnNames = Objects.requireNonNull(projectedColumnNames);
+    this.projections = Objects.requireNonNull(projections);
     this.predicates = Objects.requireNonNull(predicates);
     this.clusteringOrderings = Objects.requireNonNull(clusteringOrderings);
     this.limit = limit;
@@ -47,7 +48,7 @@ public class SelectStatement implements DmlStatement {
     return MoreObjects.toStringHelper(this)
         .add("namespaceName", namespaceName)
         .add("tableName", tableName)
-        .add("projectedColumnNames", projectedColumnNames)
+        .add("projectedColumnNames", projections)
         .add("predicates", predicates)
         .add("clusteringOrderings", clusteringOrderings)
         .add("limit", limit)
@@ -66,7 +67,7 @@ public class SelectStatement implements DmlStatement {
     return limit == that.limit
         && Objects.equals(namespaceName, that.namespaceName)
         && Objects.equals(tableName, that.tableName)
-        && Objects.equals(projectedColumnNames, that.projectedColumnNames)
+        && Objects.equals(projections, that.projections)
         && Objects.equals(predicates, that.predicates)
         && Objects.equals(clusteringOrderings, that.clusteringOrderings);
   }
@@ -74,17 +75,17 @@ public class SelectStatement implements DmlStatement {
   @Override
   public int hashCode() {
     return Objects.hash(
-        namespaceName, tableName, projectedColumnNames, predicates, clusteringOrderings, limit);
+        namespaceName, tableName, projections, predicates, clusteringOrderings, limit);
   }
 
   public static SelectStatement of(
       String namespaceName,
       String tableName,
-      ImmutableList<String> projectedColumnNames,
+      ImmutableList<Projection> projections,
       ImmutableList<Predicate> predicates,
       ImmutableList<ClusteringOrdering> clusteringOrderings,
       int limit) {
     return new SelectStatement(
-        namespaceName, tableName, projectedColumnNames, predicates, clusteringOrderings, limit);
+        namespaceName, tableName, projections, predicates, clusteringOrderings, limit);
   }
 }

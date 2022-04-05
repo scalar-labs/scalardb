@@ -1,7 +1,9 @@
 package com.scalar.db.sql.builder;
 
+import com.scalar.db.sql.Projection;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public final class StatementBuilder {
 
@@ -50,11 +52,16 @@ public final class StatementBuilder {
   }
 
   public static SelectStatementBuilder.Start select(String... projectedColumnNames) {
-    return new SelectStatementBuilder.Start(Arrays.asList(projectedColumnNames));
+    return new SelectStatementBuilder.Start(
+        Arrays.stream(projectedColumnNames).map(Projection::column).collect(Collectors.toList()));
   }
 
-  public static SelectStatementBuilder.Start select(List<String> projectedColumnNames) {
-    return new SelectStatementBuilder.Start(projectedColumnNames);
+  public static SelectStatementBuilder.Start select(Projection... projections) {
+    return new SelectStatementBuilder.Start(Arrays.asList(projections));
+  }
+
+  public static SelectStatementBuilder.Start select(List<Projection> projections) {
+    return new SelectStatementBuilder.Start(projections);
   }
 
   public static InsertStatementBuilder.Start insertInto(String namespaceName, String tableName) {
