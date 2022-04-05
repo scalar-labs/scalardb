@@ -9,15 +9,16 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionCrudOperable;
-import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.io.Key;
 import com.scalar.db.sql.Predicate.Operator;
 import com.scalar.db.sql.exception.SqlException;
 import com.scalar.db.sql.exception.TransactionConflictException;
+import com.scalar.db.sql.metadata.ColumnMetadata;
+import com.scalar.db.sql.metadata.Metadata;
+import com.scalar.db.sql.metadata.TableMetadata;
 import com.scalar.db.sql.statement.DeleteStatement;
 import com.scalar.db.sql.statement.DmlStatement;
 import com.scalar.db.sql.statement.DmlStatementVisitor;
@@ -25,24 +26,25 @@ import com.scalar.db.sql.statement.InsertStatement;
 import com.scalar.db.sql.statement.SelectStatement;
 import com.scalar.db.sql.statement.UpdateStatement;
 import java.nio.ByteBuffer;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
 public class DmlStatementExecutor
     implements DmlStatementVisitor<ResultSet, TransactionCrudOperable> {
 
-  private final TableMetadataManager tableMetadataManager;
+  private final Metadata metadata;
 
-  DmlStatementExecutor(TableMetadataManager tableMetadataManager) {
-    this.tableMetadataManager = tableMetadataManager;
+  DmlStatementExecutor(Metadata metadata) {
+    this.metadata = Objects.requireNonNull(metadata);
   }
 
   public ResultSet execute(TransactionCrudOperable transaction, DmlStatement statement) {
@@ -51,15 +53,13 @@ public class DmlStatementExecutor
 
   @Override
   public ResultSet visit(SelectStatement statement, TransactionCrudOperable transaction) {
-    com.scalar.db.api.TableMetadata metadata =
-        SqlUtils.getTableMetadata(
-            tableMetadataManager, statement.namespaceName, statement.tableName);
-
-    Selection selection = convertSelectStatementToSelection(statement, metadata);
+    TableMetadata tableMetadata =
+        SqlUtils.getTableMetadata(metadata, statement.namespaceName, statement.tableName);
+    Selection selection = convertSelectStatementToSelection(statement, tableMetadata);
 
     List<Projection> projections =
         statement.projections.isEmpty()
-            ? metadata.getColumnNames().stream()
+            ? tableMetadata.getColumns().keySet().stream()
                 .map(Projection::column)
                 .collect(Collectors.toList())
             : statement.projections;
@@ -87,10 +87,9 @@ public class DmlStatementExecutor
 
   @Override
   public ResultSet visit(InsertStatement statement, TransactionCrudOperable transaction) {
-    com.scalar.db.api.TableMetadata metadata =
-        SqlUtils.getTableMetadata(
-            tableMetadataManager, statement.namespaceName, statement.tableName);
-    Put put = convertInsertStatementToPut(statement, metadata);
+    TableMetadata tableMetadata =
+        SqlUtils.getTableMetadata(metadata, statement.namespaceName, statement.tableName);
+    Put put = convertInsertStatementToPut(statement, tableMetadata);
     try {
       transaction.put(put);
       return EmptyResultSet.INSTANCE;
@@ -103,10 +102,9 @@ public class DmlStatementExecutor
 
   @Override
   public ResultSet visit(UpdateStatement statement, TransactionCrudOperable transaction) {
-    com.scalar.db.api.TableMetadata metadata =
-        SqlUtils.getTableMetadata(
-            tableMetadataManager, statement.namespaceName, statement.tableName);
-    Put put = convertUpdateStatementToPut(statement, metadata);
+    TableMetadata tableMetadata =
+        SqlUtils.getTableMetadata(metadata, statement.namespaceName, statement.tableName);
+    Put put = convertUpdateStatementToPut(statement, tableMetadata);
     try {
       transaction.put(put);
       return EmptyResultSet.INSTANCE;
@@ -119,10 +117,9 @@ public class DmlStatementExecutor
 
   @Override
   public ResultSet visit(DeleteStatement statement, TransactionCrudOperable transaction) {
-    TableMetadata metadata =
-        SqlUtils.getTableMetadata(
-            tableMetadataManager, statement.namespaceName, statement.tableName);
-    Delete delete = convertDeleteStatementToDelete(statement, metadata);
+    TableMetadata tableMetadata =
+        SqlUtils.getTableMetadata(metadata, statement.namespaceName, statement.tableName);
+    Delete delete = convertDeleteStatementToDelete(statement, tableMetadata);
     try {
       transaction.delete(delete);
       return EmptyResultSet.INSTANCE;
@@ -134,19 +131,17 @@ public class DmlStatementExecutor
   }
 
   private Selection convertSelectStatementToSelection(
-      SelectStatement statement, com.scalar.db.api.TableMetadata metadata) {
+      SelectStatement statement, TableMetadata tableMetadata) {
     ImmutableListMultimap<String, Predicate> predicatesMap =
         Multimaps.index(statement.predicates, c -> c.columnName);
 
     List<String> projectedColumnNames =
         statement.projections.stream().map(p -> p.columnName).collect(Collectors.toList());
 
-    if (SqlUtils.isIndexScan(predicatesMap, metadata)) {
+    if (SqlUtils.isIndexScan(predicatesMap, tableMetadata)) {
       String indexColumnName = predicatesMap.keySet().iterator().next();
       Scan scan =
-          new Scan(
-                  createKeyFromPredicatesMap(
-                      predicatesMap, Collections.singletonList(indexColumnName)))
+          new Scan(createKeyFromPredicatesMap(predicatesMap, Stream.of(indexColumnName)))
               .withProjections(projectedColumnNames)
               .forNamespace(statement.namespaceName)
               .forTable(statement.tableName);
@@ -156,12 +151,17 @@ public class DmlStatementExecutor
       return scan;
     }
 
-    Key partitionKey = createKeyFromPredicatesMap(predicatesMap, metadata.getPartitionKeyNames());
+    Key partitionKey =
+        createKeyFromPredicatesMap(
+            predicatesMap, tableMetadata.getPartitionKey().stream().map(ColumnMetadata::getName));
 
-    if (isGet(predicatesMap, metadata)) {
+    if (isGet(predicatesMap, tableMetadata)) {
       Key clusteringKey = null;
-      if (!metadata.getClusteringKeyNames().isEmpty()) {
-        clusteringKey = createKeyFromPredicatesMap(predicatesMap, metadata.getClusteringKeyNames());
+      if (!tableMetadata.getClusteringKey().isEmpty()) {
+        clusteringKey =
+            createKeyFromPredicatesMap(
+                predicatesMap,
+                tableMetadata.getClusteringKey().keySet().stream().map(ColumnMetadata::getName));
       }
       return new Get(partitionKey, clusteringKey)
           .withProjections(projectedColumnNames)
@@ -173,7 +173,7 @@ public class DmlStatementExecutor
               .withProjections(projectedColumnNames)
               .forNamespace(statement.namespaceName)
               .forTable(statement.tableName);
-      setClusteringKeyRangeForScan(scan, predicatesMap, metadata);
+      setClusteringKeyRangeForScan(scan, predicatesMap, tableMetadata);
       if (!statement.clusteringOrderings.isEmpty()) {
         statement.clusteringOrderings.forEach(o -> scan.withOrdering(convertOrdering(o)));
       }
@@ -185,9 +185,9 @@ public class DmlStatementExecutor
   }
 
   private boolean isGet(
-      ImmutableListMultimap<String, Predicate> predicatesMap,
-      com.scalar.db.api.TableMetadata metadata) {
-    return metadata.getClusteringKeyNames().stream()
+      ImmutableListMultimap<String, Predicate> predicatesMap, TableMetadata tableMetadata) {
+    return tableMetadata.getClusteringKey().keySet().stream()
+        .map(ColumnMetadata::getName)
         .allMatch(
             n ->
                 predicatesMap.containsKey(n)
@@ -196,9 +196,9 @@ public class DmlStatementExecutor
   }
 
   private Key createKeyFromPredicatesMap(
-      ImmutableListMultimap<String, Predicate> predicatesMap, Collection<String> keyColumnNames) {
+      ImmutableListMultimap<String, Predicate> predicatesMap, Stream<String> keyColumnNamesStream) {
     Key.Builder builder = Key.newBuilder();
-    keyColumnNames.forEach(
+    keyColumnNamesStream.forEach(
         n -> {
           Predicate predicate = predicatesMap.get(n).get(0);
           switch (predicate.operator) {
@@ -219,11 +219,12 @@ public class DmlStatementExecutor
   private void setClusteringKeyRangeForScan(
       Scan scan,
       ImmutableListMultimap<String, Predicate> predicatesMap,
-      com.scalar.db.api.TableMetadata metadata) {
+      TableMetadata tableMetadata) {
     Key.Builder startClusteringKeyBuilder = Key.newBuilder();
     Key.Builder endClusteringKeyBuilder = Key.newBuilder();
 
-    Iterator<String> clusteringKeyNamesIterator = metadata.getClusteringKeyNames().iterator();
+    Iterator<String> clusteringKeyNamesIterator =
+        tableMetadata.getClusteringKey().keySet().stream().map(ColumnMetadata::getName).iterator();
     while (clusteringKeyNamesIterator.hasNext()) {
       String clusteringKeyName = clusteringKeyNamesIterator.next();
 
@@ -285,92 +286,92 @@ public class DmlStatementExecutor
     }
   }
 
-  private Put convertInsertStatementToPut(
-      InsertStatement statement, com.scalar.db.api.TableMetadata metadata) {
+  private Put convertInsertStatementToPut(InsertStatement statement, TableMetadata tableMetadata) {
     Key partitionKey =
-        createKeyFromAssignments(statement.assignments, metadata.getPartitionKeyNames());
+        createKeyFromAssignments(statement.assignments, tableMetadata.getPartitionKey().stream());
     Key clusteringKey = null;
-    if (!metadata.getClusteringKeyNames().isEmpty()) {
+    if (!tableMetadata.getClusteringKey().isEmpty()) {
       clusteringKey =
-          createKeyFromAssignments(statement.assignments, metadata.getClusteringKeyNames());
+          createKeyFromAssignments(
+              statement.assignments, tableMetadata.getClusteringKey().keySet().stream());
     }
     Put put =
         new Put(partitionKey, clusteringKey)
             .forNamespace(statement.namespaceName)
             .forTable(statement.tableName);
     statement.assignments.stream()
-        .filter(a -> !metadata.getPartitionKeyNames().contains(a.columnName))
-        .filter(a -> !metadata.getClusteringKeyNames().contains(a.columnName))
-        .forEach(a -> addValueToPut(put, a.columnName, a.value, metadata));
+        .filter(a -> !tableMetadata.isPrimaryKeyColumn(a.columnName))
+        .forEach(a -> addValueToPut(put, a.columnName, a.value, tableMetadata));
     return put;
   }
 
-  private Put convertUpdateStatementToPut(
-      UpdateStatement statement, com.scalar.db.api.TableMetadata metadata) {
+  private Key createKeyFromAssignments(
+      List<Assignment> assignments, Stream<ColumnMetadata> keyColumnStream) {
+    Map<String, Assignment> assignmentMap =
+        assignments.stream().collect(Collectors.toMap(a -> a.columnName, Function.identity()));
+
+    Key.Builder builder = Key.newBuilder();
+    keyColumnStream
+        .map(ColumnMetadata::getName)
+        .forEach(n -> addToKeyBuilder(builder, n, assignmentMap.get(n).value));
+    return builder.build();
+  }
+
+  private Put convertUpdateStatementToPut(UpdateStatement statement, TableMetadata tableMetadata) {
     Key partitionKey =
-        createKeyFromPredicates(statement.predicates, metadata.getPartitionKeyNames());
+        createKeyFromPredicates(statement.predicates, tableMetadata.getPartitionKey().stream());
     Key clusteringKey = null;
-    if (!metadata.getClusteringKeyNames().isEmpty()) {
+    if (!tableMetadata.getClusteringKey().isEmpty()) {
       clusteringKey =
-          createKeyFromPredicates(statement.predicates, metadata.getClusteringKeyNames());
+          createKeyFromPredicates(
+              statement.predicates, tableMetadata.getClusteringKey().keySet().stream());
     }
     Put put =
         new Put(partitionKey, clusteringKey)
             .forNamespace(statement.namespaceName)
             .forTable(statement.tableName);
-    statement.assignments.forEach(a -> addValueToPut(put, a.columnName, a.value, metadata));
+    statement.assignments.forEach(a -> addValueToPut(put, a.columnName, a.value, tableMetadata));
     return put;
   }
 
   private Delete convertDeleteStatementToDelete(
-      DeleteStatement statement, com.scalar.db.api.TableMetadata metadata) {
+      DeleteStatement statement, TableMetadata tableMetadata) {
     Key partitionKey =
-        createKeyFromPredicates(statement.predicates, metadata.getPartitionKeyNames());
+        createKeyFromPredicates(statement.predicates, tableMetadata.getPartitionKey().stream());
     Key clusteringKey = null;
-    if (!metadata.getClusteringKeyNames().isEmpty()) {
+    if (!tableMetadata.getClusteringKey().isEmpty()) {
       clusteringKey =
-          createKeyFromPredicates(statement.predicates, metadata.getClusteringKeyNames());
+          createKeyFromPredicates(
+              statement.predicates, tableMetadata.getClusteringKey().keySet().stream());
     }
     return new Delete(partitionKey, clusteringKey)
         .forNamespace(statement.namespaceName)
         .forTable(statement.tableName);
   }
 
-  private Key createKeyFromAssignments(
-      List<Assignment> assignments, Collection<String> keyColumnNames) {
-    Map<String, Assignment> assignmentMap =
-        assignments.stream()
-            .filter(a -> keyColumnNames.contains(a.columnName))
-            .collect(Collectors.toMap(a -> a.columnName, Function.identity()));
-
-    Key.Builder builder = Key.newBuilder();
-    keyColumnNames.forEach(n -> addToKeyBuilder(builder, n, assignmentMap.get(n).value));
-    return builder.build();
-  }
-
   private Key createKeyFromPredicates(
-      List<Predicate> predicates, Collection<String> keyColumnNames) {
+      List<Predicate> predicates, Stream<ColumnMetadata> keyColumnStream) {
     Map<String, Predicate> predicatesMap =
-        predicates.stream()
-            .filter(c -> keyColumnNames.contains(c.columnName))
-            .collect(Collectors.toMap(a -> a.columnName, Function.identity()));
+        predicates.stream().collect(Collectors.toMap(a -> a.columnName, Function.identity()));
 
     Key.Builder builder = Key.newBuilder();
-    keyColumnNames.forEach(
-        n -> {
-          Predicate predicate = predicatesMap.get(n);
-          switch (predicate.operator) {
-            case EQUAL_TO:
-              addToKeyBuilder(builder, n, predicate.value);
-              break;
-            case GREATER_THAN:
-            case GREATER_THAN_OR_EQUAL_TO:
-            case LESS_THAN:
-            case LESS_THAN_OR_EQUAL_TO:
-            default:
-              throw new AssertionError();
-          }
-        });
+    keyColumnStream
+        .map(ColumnMetadata::getName)
+        .forEach(
+            n -> {
+              Predicate predicate = predicatesMap.get(n);
+              switch (predicate.operator) {
+                case EQUAL_TO:
+                  addToKeyBuilder(builder, n, predicate.value);
+                  break;
+                case GREATER_THAN:
+                case GREATER_THAN_OR_EQUAL_TO:
+                case LESS_THAN:
+                case LESS_THAN_OR_EQUAL_TO:
+                default:
+                  throw new AssertionError();
+              }
+            });
     return builder.build();
   }
 
@@ -414,8 +415,7 @@ public class DmlStatementExecutor
     }
   }
 
-  private void addValueToPut(
-      Put put, String columnName, Value value, com.scalar.db.api.TableMetadata metadata) {
+  private void addValueToPut(Put put, String columnName, Value value, TableMetadata tableMetadata) {
     switch (value.type) {
       case BOOLEAN:
         assert value.value instanceof Boolean;
@@ -450,7 +450,11 @@ public class DmlStatementExecutor
         put.withBlobValue(columnName, (byte[]) value.value);
         break;
       case NULL:
-        switch (metadata.getColumnDataType(columnName)) {
+        ColumnMetadata column =
+            tableMetadata
+                .getColumn(columnName)
+                .orElseThrow(() -> new SqlException(columnName + " is not found"));
+        switch (column.getDataType()) {
           case BOOLEAN:
             put.withBooleanValue(columnName, null);
             break;

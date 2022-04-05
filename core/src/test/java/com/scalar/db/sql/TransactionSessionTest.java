@@ -10,7 +10,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedTransaction;
-import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -19,6 +18,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.sql.exception.SqlException;
 import com.scalar.db.sql.exception.TransactionConflictException;
 import com.scalar.db.sql.exception.UnknownTransactionStatusException;
+import com.scalar.db.sql.metadata.Metadata;
 import com.scalar.db.sql.statement.CreateTableStatement;
 import com.scalar.db.sql.statement.SelectStatement;
 import org.junit.Before;
@@ -28,8 +28,8 @@ import org.mockito.MockitoAnnotations;
 
 public class TransactionSessionTest {
 
-  @Mock private DistributedTransactionAdmin admin;
   @Mock private DistributedTransactionManager manager;
+  @Mock private Metadata metadata;
   @Mock private StatementValidator statementValidator;
   @Mock private DmlStatementExecutor dmlStatementExecutor;
   @Mock private DdlStatementExecutor ddlStatementExecutor;
@@ -44,7 +44,7 @@ public class TransactionSessionTest {
     // Arrange
     transactionSession =
         new TransactionSession(
-            admin, manager, statementValidator, dmlStatementExecutor, ddlStatementExecutor);
+            manager, metadata, statementValidator, dmlStatementExecutor, ddlStatementExecutor);
   }
 
   @Test

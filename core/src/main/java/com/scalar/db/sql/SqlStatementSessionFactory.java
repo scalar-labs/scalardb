@@ -3,9 +3,9 @@ package com.scalar.db.sql;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
-import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.sql.metadata.Metadata;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -24,24 +24,23 @@ public final class SqlStatementSessionFactory implements AutoCloseable {
   private final DistributedTransactionAdmin transactionAdmin;
   private final DistributedTransactionManager transactionManager;
   private final TwoPhaseCommitTransactionManager twoPhaseCommitTransactionManager;
-  private final TableMetadataManager tableMetadataManager;
+  private final Metadata metadata;
 
   private SqlStatementSessionFactory(DatabaseConfig config) {
     TransactionFactory transactionFactory = new TransactionFactory(Objects.requireNonNull(config));
     transactionAdmin = transactionFactory.getTransactionAdmin();
     transactionManager = transactionFactory.getTransactionManager();
     twoPhaseCommitTransactionManager = transactionFactory.getTwoPhaseCommitTransactionManager();
-    tableMetadataManager =
-        new TableMetadataManager(transactionAdmin, config.getMetadataCacheExpirationTimeSecs());
+    metadata = Metadata.create(transactionAdmin, config.getMetadataCacheExpirationTimeSecs());
   }
 
   public SqlStatementSession getTransactionSession() {
-    return new TransactionSession(transactionAdmin, transactionManager, tableMetadataManager);
+    return new TransactionSession(transactionAdmin, transactionManager, metadata);
   }
 
   public SqlStatementSession getTwoPhaseCommitTransactionSession() {
     return new TwoPhaseCommitTransactionSession(
-        transactionAdmin, twoPhaseCommitTransactionManager, tableMetadataManager);
+        transactionAdmin, twoPhaseCommitTransactionManager, metadata);
   }
 
   @Override
