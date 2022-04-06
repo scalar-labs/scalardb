@@ -2,7 +2,6 @@ package com.scalar.db.storage.dynamo;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.UnsignedBytes;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Get;
@@ -85,7 +84,9 @@ public class SelectStatementHandler {
             .key(dynamoOperation.getKeyMap());
 
     if (!get.getProjections().isEmpty()) {
-      projectionExpression(builder, get);
+      Map<String, String> expressionAttributeNames = new HashMap<>();
+      projectionExpression(builder, get, expressionAttributeNames);
+      builder.expressionAttributeNames(expressionAttributeNames);
     }
 
     if (get.getConsistency() != Consistency.EVENTUAL) {
@@ -109,14 +110,16 @@ public class SelectStatementHandler {
     ValueBinder binder = new ValueBinder(DynamoOperation.VALUE_ALIAS);
     keyValue.accept(binder);
     Map<String, AttributeValue> bindMap = binder.build();
-    builder
-        .keyConditionExpression(condition)
-        .expressionAttributeValues(bindMap)
-        .expressionAttributeNames(ImmutableMap.of(expressionColumnName, column));
+    builder.keyConditionExpression(condition).expressionAttributeValues(bindMap);
+
+    Map<String, String> expressionAttributeNames = new HashMap<>();
+    expressionAttributeNames.put(expressionColumnName, column);
 
     if (!selection.getProjections().isEmpty()) {
-      projectionExpression(builder, selection);
+      projectionExpression(builder, selection, expressionAttributeNames);
     }
+
+    builder.expressionAttributeNames(expressionAttributeNames);
 
     if (selection instanceof Scan) {
       Scan scan = (Scan) selection;
@@ -151,7 +154,9 @@ public class SelectStatementHandler {
     }
 
     if (!scan.getProjections().isEmpty()) {
-      projectionExpression(builder, scan);
+      Map<String, String> expressionAttributeNames = new HashMap<>();
+      projectionExpression(builder, scan, expressionAttributeNames);
+      builder.expressionAttributeNames(expressionAttributeNames);
     }
 
     if (scan.getConsistency() != Consistency.EVENTUAL) {
@@ -162,24 +167,24 @@ public class SelectStatementHandler {
         client, builder.build(), new ResultInterpreter(scan.getProjections(), tableMetadata));
   }
 
-  private void projectionExpression(DynamoDbRequest.Builder builder, Selection selection) {
+  private void projectionExpression(
+      DynamoDbRequest.Builder builder,
+      Selection selection,
+      Map<String, String> expressionAttributeNames) {
     assert builder instanceof GetItemRequest.Builder || builder instanceof QueryRequest.Builder;
 
-    Map<String, String> columnMap = new HashMap<>();
     List<String> projections = new ArrayList<>(selection.getProjections().size());
-    for (int i = 0; i < selection.getProjections().size(); i++) {
-      String alias = DynamoOperation.COLUMN_NAME_ALIAS + i;
+    for (String projection : selection.getProjections()) {
+      String alias = DynamoOperation.COLUMN_NAME_ALIAS + expressionAttributeNames.size();
       projections.add(alias);
-      columnMap.put(alias, selection.getProjections().get(i));
+      expressionAttributeNames.put(alias, projection);
     }
     String projectionExpression = String.join(",", projections);
 
     if (builder instanceof GetItemRequest.Builder) {
       ((GetItemRequest.Builder) builder).projectionExpression(projectionExpression);
-      ((GetItemRequest.Builder) builder).expressionAttributeNames(columnMap);
     } else {
       ((QueryRequest.Builder) builder).projectionExpression(projectionExpression);
-      ((QueryRequest.Builder) builder).expressionAttributeNames(columnMap);
     }
   }
 
