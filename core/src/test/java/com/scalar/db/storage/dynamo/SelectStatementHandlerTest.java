@@ -211,6 +211,45 @@ public class SelectStatementHandlerTest {
   }
 
   @Test
+  public void handle_ScanOperationWithIndexGiven_WithProjections_ShouldCallQuery() {
+    // Arrange
+    when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
+    when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
+
+    Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
+    Scan scan =
+        new Scan(indexKey)
+            .withProjection(ANY_NAME_1)
+            .withProjection(ANY_NAME_2)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+    String expectedKeyCondition =
+        DynamoOperation.COLUMN_NAME_ALIAS + "0 = " + DynamoOperation.VALUE_ALIAS + "0";
+    Map<String, AttributeValue> expectedBindMap = new HashMap<>();
+    expectedBindMap.put(
+        DynamoOperation.VALUE_ALIAS + "0", AttributeValue.builder().s(ANY_TEXT_3).build());
+    Map<String, String> expectedExpressionAttributeNames = new HashMap<>();
+    expectedExpressionAttributeNames.put(DynamoOperation.COLUMN_NAME_ALIAS + "0", ANY_NAME_3);
+    expectedExpressionAttributeNames.put(DynamoOperation.COLUMN_NAME_ALIAS + "1", ANY_NAME_1);
+    expectedExpressionAttributeNames.put(DynamoOperation.COLUMN_NAME_ALIAS + "2", ANY_NAME_2);
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
+
+    // Assert
+    ArgumentCaptor<QueryRequest> captor = ArgumentCaptor.forClass(QueryRequest.class);
+    verify(client).query(captor.capture());
+    QueryRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedKeyCondition);
+    assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.expressionAttributeNames())
+        .isEqualTo(expectedExpressionAttributeNames);
+    assertThat(actualRequest.projectionExpression())
+        .isEqualTo(
+            DynamoOperation.COLUMN_NAME_ALIAS + "1," + DynamoOperation.COLUMN_NAME_ALIAS + "2");
+  }
+
+  @Test
   public void handle_ScanOperationCosmosExceptionThrown_ShouldThrowExecutionException() {
     // Arrange
     DynamoDbException toThrow = mock(DynamoDbException.class);
