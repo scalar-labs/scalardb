@@ -259,6 +259,9 @@ public class SelectStatementHandlerTest {
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
     assertThat(actualRequest.expressionAttributeNames())
         .isEqualTo(expectedExpressionAttributeNames);
+    assertThat(actualRequest.projectionExpression())
+        .isEqualTo(
+            DynamoOperation.COLUMN_NAME_ALIAS + "1," + DynamoOperation.COLUMN_NAME_ALIAS + "2");
   }
 
   @Test
