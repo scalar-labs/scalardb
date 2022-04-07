@@ -527,13 +527,13 @@ jobs:
 
       - run:
           name: Run integration test
-          command: gradle integrationTestTwoPhaseConsesnsusCommit
+          command: gradle integrationTestTwoPhaseConsensusCommit
 
       - run:
           name: Save Gradle integration test reports
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
-            cp -a core/build/reports/tests/integrationTestTwoPhaseConsesnsusCommit /tmp/gradle_integration_test_reports/
+            cp -a core/build/reports/tests/integrationTestTwoPhaseConsensusCommit /tmp/gradle_integration_test_reports/
           when: always
 
       - store_artifacts:
