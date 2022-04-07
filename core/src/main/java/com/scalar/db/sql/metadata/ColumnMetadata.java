@@ -1,6 +1,7 @@
-package com.scalar.db.sql;
+package com.scalar.db.sql.metadata;
 
 import com.google.common.base.MoreObjects;
+import com.scalar.db.sql.DataType;
 import java.util.Objects;
 import javax.annotation.concurrent.Immutable;
 

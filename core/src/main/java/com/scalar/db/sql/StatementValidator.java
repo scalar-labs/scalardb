@@ -5,8 +5,9 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Streams;
-import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.sql.metadata.ColumnMetadata;
+import com.scalar.db.sql.metadata.Metadata;
+import com.scalar.db.sql.metadata.TableMetadata;
 import com.scalar.db.sql.statement.CreateCoordinatorTableStatement;
 import com.scalar.db.sql.statement.CreateIndexStatement;
 import com.scalar.db.sql.statement.CreateNamespaceStatement;
@@ -31,10 +32,10 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class StatementValidator implements StatementVisitor<Void, Void> {
 
-  private final TableMetadataManager tableMetadataManager;
+  private final Metadata metadata;
 
-  public StatementValidator(TableMetadataManager tableMetadataManager) {
-    this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
+  public StatementValidator(Metadata metadata) {
+    this.metadata = Objects.requireNonNull(metadata);
   }
 
   public void validate(Statement statement) {
@@ -94,8 +95,7 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
   @Override
   public Void visit(SelectStatement statement, Void context) {
     TableMetadata tableMetadata =
-        SqlUtils.getTableMetadata(
-            tableMetadataManager, statement.namespaceName, statement.tableName);
+        SqlUtils.getTableMetadata(metadata, statement.namespaceName, statement.tableName);
 
     ImmutableListMultimap<String, Predicate> predicatesMap =
         Multimaps.index(statement.predicates, c -> c.columnName);
@@ -120,8 +120,7 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
         .keys()
         .forEach(
             c -> {
-              if (!tableMetadata.getPartitionKeyNames().contains(c)
-                  && !tableMetadata.getClusteringKeyNames().contains(c)) {
+              if (!tableMetadata.isPrimaryKeyColumn(c)) {
                 throw new IllegalArgumentException(
                     "A column, " + c + " is not a primary key column");
               }
@@ -136,7 +135,8 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
       ImmutableListMultimap<String, Predicate> predicatesMap, TableMetadata tableMetadata) {
     // check if all columns of the partition key are specified properly
     boolean areAllPartitionKeyColumnsSpecifiedProperly =
-        tableMetadata.getPartitionKeyNames().stream()
+        tableMetadata.getPartitionKey().stream()
+            .map(ColumnMetadata::getName)
             .allMatch(
                 n ->
                     predicatesMap.get(n).size() == 1
@@ -150,8 +150,8 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
   private void validatePredicatesForClusteringKey(
       ImmutableListMultimap<String, Predicate> predicatesMap, TableMetadata tableMetadata) {
     boolean finished = false;
-    for (String clusteringKeyName : tableMetadata.getClusteringKeyNames()) {
-      ImmutableList<Predicate> predicates = predicatesMap.get(clusteringKeyName);
+    for (ColumnMetadata column : tableMetadata.getClusteringKey().keySet()) {
+      ImmutableList<Predicate> predicates = predicatesMap.get(column.getName());
       if (predicates.isEmpty()) {
         finished = true;
         continue;
@@ -194,8 +194,7 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
   @Override
   public Void visit(InsertStatement statement, Void context) {
     TableMetadata tableMetadata =
-        SqlUtils.getTableMetadata(
-            tableMetadataManager, statement.namespaceName, statement.tableName);
+        SqlUtils.getTableMetadata(metadata, statement.namespaceName, statement.tableName);
 
     Map<String, Assignment> assignmentsMap = new HashMap<>(statement.assignments.size());
     statement.assignments.forEach(
@@ -211,8 +210,9 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
     // check if all columns of the primary key are specified properly
     boolean areAllPrimaryKeyColumnsSpecifiedProperly =
         Streams.concat(
-                tableMetadata.getPartitionKeyNames().stream(),
-                tableMetadata.getClusteringKeyNames().stream())
+                tableMetadata.getPartitionKey().stream(),
+                tableMetadata.getClusteringKey().keySet().stream())
+            .map(ColumnMetadata::getName)
             .allMatch(
                 n ->
                     assignmentsMap.containsKey(n)
@@ -226,8 +226,7 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
   @Override
   public Void visit(UpdateStatement statement, Void context) {
     TableMetadata tableMetadata =
-        SqlUtils.getTableMetadata(
-            tableMetadataManager, statement.namespaceName, statement.tableName);
+        SqlUtils.getTableMetadata(metadata, statement.namespaceName, statement.tableName);
     validatePredicatesForPrimaryKey(statement.predicates, tableMetadata);
     return null;
   }
@@ -235,8 +234,7 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
   @Override
   public Void visit(DeleteStatement statement, Void context) {
     TableMetadata tableMetadata =
-        SqlUtils.getTableMetadata(
-            tableMetadataManager, statement.namespaceName, statement.tableName);
+        SqlUtils.getTableMetadata(metadata, statement.namespaceName, statement.tableName);
     validatePredicatesForPrimaryKey(statement.predicates, tableMetadata);
     return null;
   }
@@ -247,8 +245,7 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
     predicates.forEach(
         p -> {
           // check if only primary key columns are specified
-          if (!tableMetadata.getPartitionKeyNames().contains(p.columnName)
-              && !tableMetadata.getClusteringKeyNames().contains(p.columnName)) {
+          if (!tableMetadata.isPrimaryKeyColumn(p.columnName)) {
             throw new IllegalArgumentException(
                 "A column, " + p.columnName + " is not a primary key column");
           }
@@ -264,8 +261,9 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
     // check if all columns of the primary key are specified properly
     boolean areAllPrimaryKeyColumnsSpecifiedProperly =
         Streams.concat(
-                tableMetadata.getPartitionKeyNames().stream(),
-                tableMetadata.getClusteringKeyNames().stream())
+                tableMetadata.getPartitionKey().stream(),
+                tableMetadata.getClusteringKey().keySet().stream())
+            .map(ColumnMetadata::getName)
             .allMatch(
                 n ->
                     predicatesMap.containsKey(n)

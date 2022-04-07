@@ -2,7 +2,6 @@ package com.scalar.db.sql;
 
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.sql.exception.SqlException;
 import com.scalar.db.sql.statement.CreateCoordinatorTableStatement;
@@ -46,7 +45,8 @@ public class DdlStatementExecutor implements DdlStatementVisitor<Void, Void> {
   @Override
   public Void visit(CreateTableStatement statement, Void context) {
     try {
-      TableMetadata tableMetadata = convertCreateStatementToTableMetadata(statement);
+      com.scalar.db.api.TableMetadata tableMetadata =
+          convertCreateStatementToTableMetadata(statement);
       admin.createTable(
           statement.namespaceName,
           statement.tableName,

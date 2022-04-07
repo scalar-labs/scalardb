@@ -1,4 +1,4 @@
-package com.scalar.db.sql;
+package com.scalar.db.sql.metadata;
 
 import com.google.common.base.MoreObjects;
 import java.util.Objects;
