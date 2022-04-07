@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
@@ -28,12 +27,10 @@ public class ResultRecord implements Record {
     projectionAliasMap =
         Suppliers.memoize(
             () ->
-                ImmutableMap.copyOf(
-                    projections.stream()
-                        .collect(
-                            Collectors.toMap(
-                                p -> p.alias != null ? p.alias : p.columnName,
-                                p -> p.columnName))));
+                projections.stream()
+                    .collect(
+                        ImmutableMap.toImmutableMap(
+                            p -> p.alias != null ? p.alias : p.columnName, p -> p.columnName)));
 
     projectionIndexMap =
         Suppliers.memoize(
