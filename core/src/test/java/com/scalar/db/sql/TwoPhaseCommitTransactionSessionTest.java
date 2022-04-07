@@ -9,7 +9,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -23,6 +22,7 @@ import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.sql.exception.SqlException;
 import com.scalar.db.sql.exception.TransactionConflictException;
 import com.scalar.db.sql.exception.UnknownTransactionStatusException;
+import com.scalar.db.sql.metadata.Metadata;
 import com.scalar.db.sql.statement.CreateTableStatement;
 import com.scalar.db.sql.statement.SelectStatement;
 import org.junit.Before;
@@ -32,8 +32,8 @@ import org.mockito.MockitoAnnotations;
 
 public class TwoPhaseCommitTransactionSessionTest {
 
-  @Mock private DistributedTransactionAdmin admin;
   @Mock private TwoPhaseCommitTransactionManager manager;
+  @Mock private Metadata metadata;
   @Mock private StatementValidator statementValidator;
   @Mock private DmlStatementExecutor dmlStatementExecutor;
   @Mock private DdlStatementExecutor ddlStatementExecutor;
@@ -48,7 +48,7 @@ public class TwoPhaseCommitTransactionSessionTest {
     // Arrange
     twoPhaseCommitTransactionSession =
         new TwoPhaseCommitTransactionSession(
-            admin, manager, statementValidator, dmlStatementExecutor, ddlStatementExecutor);
+            manager, metadata, statementValidator, dmlStatementExecutor, ddlStatementExecutor);
   }
 
   @Test

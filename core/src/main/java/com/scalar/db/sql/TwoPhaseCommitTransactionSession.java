@@ -4,7 +4,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
-import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
@@ -16,6 +15,7 @@ import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.sql.exception.SqlException;
 import com.scalar.db.sql.exception.TransactionConflictException;
 import com.scalar.db.sql.exception.UnknownTransactionStatusException;
+import com.scalar.db.sql.metadata.Metadata;
 import com.scalar.db.sql.statement.DdlStatement;
 import com.scalar.db.sql.statement.DmlStatement;
 import com.scalar.db.sql.statement.Statement;
@@ -26,9 +26,9 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public class TwoPhaseCommitTransactionSession implements SqlStatementSession {
 
-  private final DistributedTransactionAdmin admin;
   private final TwoPhaseCommitTransactionManager manager;
   private final StatementValidator statementValidator;
+  private final Metadata metadata;
   private final DmlStatementExecutor dmlStatementExecutor;
   private final DdlStatementExecutor ddlStatementExecutor;
 
@@ -37,23 +37,23 @@ public class TwoPhaseCommitTransactionSession implements SqlStatementSession {
   TwoPhaseCommitTransactionSession(
       DistributedTransactionAdmin admin,
       TwoPhaseCommitTransactionManager manager,
-      TableMetadataManager tableMetadataManager) {
-    this.admin = Objects.requireNonNull(admin);
+      Metadata metadata) {
     this.manager = Objects.requireNonNull(manager);
-    statementValidator = new StatementValidator(tableMetadataManager);
-    dmlStatementExecutor = new DmlStatementExecutor(tableMetadataManager);
+    this.metadata = Objects.requireNonNull(metadata);
+    statementValidator = new StatementValidator(metadata);
+    dmlStatementExecutor = new DmlStatementExecutor(metadata);
     ddlStatementExecutor = new DdlStatementExecutor(admin);
   }
 
   @VisibleForTesting
   TwoPhaseCommitTransactionSession(
-      DistributedTransactionAdmin admin,
       TwoPhaseCommitTransactionManager manager,
+      Metadata metadata,
       StatementValidator statementValidator,
       DmlStatementExecutor dmlStatementExecutor,
       DdlStatementExecutor ddlStatementExecutor) {
-    this.admin = Objects.requireNonNull(admin);
     this.manager = Objects.requireNonNull(manager);
+    this.metadata = Objects.requireNonNull(metadata);
     this.statementValidator = Objects.requireNonNull(statementValidator);
     this.dmlStatementExecutor = Objects.requireNonNull(dmlStatementExecutor);
     this.ddlStatementExecutor = Objects.requireNonNull(ddlStatementExecutor);
@@ -186,7 +186,7 @@ public class TwoPhaseCommitTransactionSession implements SqlStatementSession {
   @Override
   public Metadata getMetadata() {
     checkIfTransactionInProgress();
-    return new Metadata(admin);
+    return metadata;
   }
 
   private void checkIfTransactionInProgress() {

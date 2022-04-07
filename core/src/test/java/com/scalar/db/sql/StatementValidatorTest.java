@@ -5,9 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.sql.metadata.Metadata;
 import com.scalar.db.sql.statement.DeleteStatement;
 import com.scalar.db.sql.statement.InsertStatement;
 import com.scalar.db.sql.statement.SelectStatement;
@@ -36,7 +37,7 @@ public class StatementValidatorTest {
           .addSecondaryIndex("col2")
           .build();
 
-  @Mock private TableMetadataManager tableMetadataManager;
+  @Mock private DistributedTransactionAdmin admin;
 
   private StatementValidator statementValidator;
 
@@ -45,10 +46,10 @@ public class StatementValidatorTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    when(tableMetadataManager.getTableMetadata(NAMESPACE_NAME, TABLE_NAME))
-        .thenReturn(TABLE_METADATA);
+    when(admin.namespaceExists(NAMESPACE_NAME)).thenReturn(true);
+    when(admin.getTableMetadata(NAMESPACE_NAME, TABLE_NAME)).thenReturn(TABLE_METADATA);
 
-    statementValidator = new StatementValidator(tableMetadataManager);
+    statementValidator = new StatementValidator(Metadata.create(admin, -1));
   }
 
   @Test
