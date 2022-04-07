@@ -1,12 +1,15 @@
-package com.scalar.db.sql;
+package com.scalar.db.sql.metadata;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.sql.ClusteringOrder;
+import com.scalar.db.sql.DataType;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -25,7 +28,7 @@ public class MetadataTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    metadata = new Metadata(admin);
+    metadata = Metadata.create(admin, -1);
   }
 
   @Test
@@ -49,6 +52,23 @@ public class MetadataTest {
     Optional<NamespaceMetadata> namespace = metadata.getNamespace("ns");
 
     // Assert
+    assertThat(namespace).isPresent();
+    assertThat(namespace.get().getName()).isEqualTo("ns");
+  }
+
+  @Test
+  public void getNamespace_CalledTwice_ExistingNamespaceGiven_ShouldGetFromCacheAtSecondTime()
+      throws ExecutionException {
+    // Arrange
+    when(admin.namespaceExists("ns")).thenReturn(true);
+
+    // Act
+    metadata.getNamespace("ns");
+    Optional<NamespaceMetadata> namespace = metadata.getNamespace("ns");
+
+    // Assert
+    verify(admin).namespaceExists("ns");
+
     assertThat(namespace).isPresent();
     assertThat(namespace.get().getName()).isEqualTo("ns");
   }
@@ -80,6 +100,59 @@ public class MetadataTest {
     Optional<TableMetadata> table4 = namespace.get().getTable("tbl4");
 
     // Assert
+    assertThat(tables.keySet()).isEqualTo(ImmutableSet.of("tbl1", "tbl2", "tbl3"));
+    assertThat(tables.get("tbl1").getNamespaceName()).isEqualTo("ns");
+    assertThat(tables.get("tbl1").getName()).isEqualTo("tbl1");
+    assertThat(tables.get("tbl2").getNamespaceName()).isEqualTo("ns");
+    assertThat(tables.get("tbl2").getName()).isEqualTo("tbl2");
+    assertThat(tables.get("tbl3").getNamespaceName()).isEqualTo("ns");
+    assertThat(tables.get("tbl3").getName()).isEqualTo("tbl3");
+
+    assertThat(table1).isPresent();
+    assertThat(table1.get().getNamespaceName()).isEqualTo("ns");
+    assertThat(table1.get().getName()).isEqualTo("tbl1");
+    assertThat(table2).isPresent();
+    assertThat(table2.get().getNamespaceName()).isEqualTo("ns");
+    assertThat(table2.get().getName()).isEqualTo("tbl2");
+    assertThat(table3).isPresent();
+    assertThat(table3.get().getNamespaceName()).isEqualTo("ns");
+    assertThat(table3.get().getName()).isEqualTo("tbl3");
+    assertThat(table4).isNotPresent();
+  }
+
+  @Test
+  public void getTables_CalledTwice_ShouldGetFromCacheAtSecondTime() throws ExecutionException {
+    // Arrange
+    when(admin.namespaceExists("ns")).thenReturn(true);
+    when(admin.getNamespaceTableNames("ns")).thenReturn(ImmutableSet.of("tbl1", "tbl2", "tbl3"));
+
+    com.scalar.db.api.TableMetadata metadata =
+        com.scalar.db.api.TableMetadata.newBuilder()
+            .addColumn("col1", com.scalar.db.io.DataType.INT)
+            .addColumn("col2", com.scalar.db.io.DataType.TEXT)
+            .addPartitionKey("col1")
+            .build();
+    when(admin.getTableMetadata("ns", "tbl1")).thenReturn(metadata);
+    when(admin.getTableMetadata("ns", "tbl2")).thenReturn(metadata);
+    when(admin.getTableMetadata("ns", "tbl3")).thenReturn(metadata);
+
+    Optional<NamespaceMetadata> namespace = this.metadata.getNamespace("ns");
+    assertThat(namespace).isPresent();
+
+    // Act
+    namespace.get().getTables();
+    Map<String, TableMetadata> tables = namespace.get().getTables();
+    Optional<TableMetadata> table1 = namespace.get().getTable("tbl1");
+    Optional<TableMetadata> table2 = namespace.get().getTable("tbl2");
+    Optional<TableMetadata> table3 = namespace.get().getTable("tbl3");
+    Optional<TableMetadata> table4 = namespace.get().getTable("tbl4");
+
+    // Assert
+    verify(admin).getNamespaceTableNames("ns");
+    verify(admin).getTableMetadata("ns", "tbl1");
+    verify(admin).getTableMetadata("ns", "tbl2");
+    verify(admin).getTableMetadata("ns", "tbl3");
+
     assertThat(tables.keySet()).isEqualTo(ImmutableSet.of("tbl1", "tbl2", "tbl3"));
     assertThat(tables.get("tbl1").getNamespaceName()).isEqualTo("ns");
     assertThat(tables.get("tbl1").getName()).isEqualTo("tbl1");
@@ -136,11 +209,19 @@ public class MetadataTest {
     assertThat(table.get().getPrimaryKey().get(1).getName()).isEqualTo("col2");
     assertThat(table.get().getPrimaryKey().get(1).getDataType()).isEqualTo(DataType.TEXT);
 
+    assertThat(table.get().isPrimaryKeyColumn("col1")).isTrue();
+    assertThat(table.get().isPrimaryKeyColumn("col2")).isTrue();
+    assertThat(table.get().isPrimaryKeyColumn("col3")).isFalse();
+
     assertThat(table.get().getPartitionKey().size()).isEqualTo(1);
     assertThat(table.get().getPartitionKey().get(0).getNamespaceName()).isEqualTo("ns");
     assertThat(table.get().getPartitionKey().get(0).getTableName()).isEqualTo("tbl");
     assertThat(table.get().getPartitionKey().get(0).getName()).isEqualTo("col1");
     assertThat(table.get().getPartitionKey().get(0).getDataType()).isEqualTo(DataType.INT);
+
+    assertThat(table.get().isPartitionKeyColumn("col1")).isTrue();
+    assertThat(table.get().isPartitionKeyColumn("col2")).isFalse();
+    assertThat(table.get().isPartitionKeyColumn("col3")).isFalse();
 
     assertThat(table.get().getClusteringKey().size()).isEqualTo(1);
     Entry<ColumnMetadata, ClusteringOrder> entry =
@@ -150,6 +231,10 @@ public class MetadataTest {
     assertThat(entry.getKey().getName()).isEqualTo("col2");
     assertThat(entry.getKey().getDataType()).isEqualTo(DataType.TEXT);
     assertThat(entry.getValue()).isEqualTo(ClusteringOrder.DESC);
+
+    assertThat(table.get().isClusteringKeyColumn("col1")).isFalse();
+    assertThat(table.get().isClusteringKeyColumn("col2")).isTrue();
+    assertThat(table.get().isClusteringKeyColumn("col3")).isFalse();
 
     Map<String, ColumnMetadata> columns = table.get().getColumns();
     assertThat(columns.keySet()).isEqualTo(ImmutableSet.of("col1", "col2", "col3"));

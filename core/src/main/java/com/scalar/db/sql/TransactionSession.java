@@ -4,7 +4,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
-import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -12,6 +11,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.sql.exception.SqlException;
 import com.scalar.db.sql.exception.TransactionConflictException;
 import com.scalar.db.sql.exception.UnknownTransactionStatusException;
+import com.scalar.db.sql.metadata.Metadata;
 import com.scalar.db.sql.statement.DdlStatement;
 import com.scalar.db.sql.statement.DmlStatement;
 import com.scalar.db.sql.statement.Statement;
@@ -22,8 +22,8 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public class TransactionSession implements SqlStatementSession {
 
-  private final DistributedTransactionAdmin admin;
   private final DistributedTransactionManager manager;
+  private final Metadata metadata;
   private final StatementValidator statementValidator;
   private final DmlStatementExecutor dmlStatementExecutor;
   private final DdlStatementExecutor ddlStatementExecutor;
@@ -31,25 +31,23 @@ public class TransactionSession implements SqlStatementSession {
   @Nullable private DistributedTransaction transaction;
 
   TransactionSession(
-      DistributedTransactionAdmin admin,
-      DistributedTransactionManager manager,
-      TableMetadataManager tableMetadataManager) {
-    this.admin = Objects.requireNonNull(admin);
+      DistributedTransactionAdmin admin, DistributedTransactionManager manager, Metadata metadata) {
     this.manager = Objects.requireNonNull(manager);
-    statementValidator = new StatementValidator(tableMetadataManager);
-    dmlStatementExecutor = new DmlStatementExecutor(tableMetadataManager);
+    this.metadata = Objects.requireNonNull(metadata);
+    statementValidator = new StatementValidator(metadata);
+    dmlStatementExecutor = new DmlStatementExecutor(metadata);
     ddlStatementExecutor = new DdlStatementExecutor(admin);
   }
 
   @VisibleForTesting
   TransactionSession(
-      DistributedTransactionAdmin admin,
       DistributedTransactionManager manager,
+      Metadata metadata,
       StatementValidator statementValidator,
       DmlStatementExecutor dmlStatementExecutor,
       DdlStatementExecutor ddlStatementExecutor) {
-    this.admin = Objects.requireNonNull(admin);
     this.manager = Objects.requireNonNull(manager);
+    this.metadata = Objects.requireNonNull(metadata);
     this.statementValidator = Objects.requireNonNull(statementValidator);
     this.dmlStatementExecutor = Objects.requireNonNull(dmlStatementExecutor);
     this.ddlStatementExecutor = Objects.requireNonNull(ddlStatementExecutor);
@@ -155,7 +153,7 @@ public class TransactionSession implements SqlStatementSession {
   @Override
   public Metadata getMetadata() {
     checkIfTransactionInProgress();
-    return new Metadata(admin);
+    return metadata;
   }
 
   private void checkIfTransactionInProgress() {
