@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
@@ -33,43 +32,37 @@ public class TableMetadata {
     this.name = Objects.requireNonNull(name);
 
     partitionKey =
-        ImmutableList.copyOf(
-            tableMetadata.getPartitionKeyNames().stream()
-                .map(
-                    c ->
-                        new ColumnMetadata(
-                            namespaceName,
-                            name,
-                            c,
-                            convertDataType(tableMetadata.getColumnDataType(c))))
-                .collect(Collectors.toList()));
+        tableMetadata.getPartitionKeyNames().stream()
+            .map(
+                c ->
+                    new ColumnMetadata(
+                        namespaceName,
+                        name,
+                        c,
+                        convertDataType(tableMetadata.getColumnDataType(c))))
+            .collect(ImmutableList.toImmutableList());
 
     partitionKeyColumnNames =
-        ImmutableSet.copyOf(
-            partitionKey.stream().map(ColumnMetadata::getName).collect(Collectors.toList()));
+        partitionKey.stream().map(ColumnMetadata::getName).collect(ImmutableSet.toImmutableSet());
 
     clusteringKey =
-        ImmutableMap.copyOf(
-            tableMetadata.getClusteringKeyNames().stream()
-                .map(
-                    c ->
-                        new ColumnMetadata(
-                            namespaceName,
-                            name,
-                            c,
-                            convertDataType(tableMetadata.getColumnDataType(c))))
-                .collect(
-                    Collectors.toMap(
-                        Function.identity(),
-                        c ->
-                            convertClusteringOrder(
-                                tableMetadata.getClusteringOrder(c.getName())))));
+        tableMetadata.getClusteringKeyNames().stream()
+            .map(
+                c ->
+                    new ColumnMetadata(
+                        namespaceName,
+                        name,
+                        c,
+                        convertDataType(tableMetadata.getColumnDataType(c))))
+            .collect(
+                ImmutableMap.toImmutableMap(
+                    Function.identity(),
+                    c -> convertClusteringOrder(tableMetadata.getClusteringOrder(c.getName()))));
 
     clusteringKeyColumnNames =
-        ImmutableSet.copyOf(
-            clusteringKey.keySet().stream()
-                .map(ColumnMetadata::getName)
-                .collect(Collectors.toList()));
+        clusteringKey.keySet().stream()
+            .map(ColumnMetadata::getName)
+            .collect(ImmutableSet.toImmutableSet());
 
     primaryKey =
         ImmutableList.<ColumnMetadata>builder()
@@ -78,23 +71,21 @@ public class TableMetadata {
             .build();
 
     columns =
-        ImmutableMap.copyOf(
-            tableMetadata.getColumnNames().stream()
-                .map(
-                    c ->
-                        new ColumnMetadata(
-                            namespaceName,
-                            name,
-                            c,
-                            convertDataType(tableMetadata.getColumnDataType(c))))
-                .collect(Collectors.toMap(ColumnMetadata::getName, Function.identity())));
+        tableMetadata.getColumnNames().stream()
+            .map(
+                c ->
+                    new ColumnMetadata(
+                        namespaceName,
+                        name,
+                        c,
+                        convertDataType(tableMetadata.getColumnDataType(c))))
+            .collect(ImmutableMap.toImmutableMap(ColumnMetadata::getName, Function.identity()));
 
     indexes =
-        ImmutableMap.copyOf(
-            tableMetadata.getSecondaryIndexNames().stream()
-                .collect(
-                    Collectors.toMap(
-                        Function.identity(), c -> new IndexMetadata(namespaceName, name, c))));
+        tableMetadata.getSecondaryIndexNames().stream()
+            .collect(
+                ImmutableMap.toImmutableMap(
+                    Function.identity(), c -> new IndexMetadata(namespaceName, name, c)));
   }
 
   private DataType convertDataType(com.scalar.db.io.DataType dataType) {
