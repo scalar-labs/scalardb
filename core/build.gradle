@@ -73,7 +73,7 @@ sourceSets {
         }
         resources.srcDir file('src/integration-test/resources')
     }
-    integrationTestTwoPhaseConsesnsusCommit {
+    integrationTestTwoPhaseConsensusCommit {
         java {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
@@ -103,9 +103,9 @@ configurations {
     integrationTestMultiStorageImplementation.extendsFrom testImplementation
     integrationTestMultiStorageRuntimeOnly.extendsFrom testRuntimeOnly
     integrationTestMultiStorageCompileOnly.extendsFrom testCompileOnly
-    integrationTestTwoPhaseConsesnsusCommitImplementation.extendsFrom testImplementation
-    integrationTestTwoPhaseConsesnsusCommitRuntimeOnly.extendsFrom testRuntimeOnly
-    integrationTestTwoPhaseConsesnsusCommitCompileOnly.extendsFrom testCompileOnly
+    integrationTestTwoPhaseConsensusCommitImplementation.extendsFrom testImplementation
+    integrationTestTwoPhaseConsensusCommitRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestTwoPhaseConsensusCommitCompileOnly.extendsFrom testCompileOnly
 }
 
 dependencies {
@@ -198,11 +198,11 @@ task integrationTestMultiStorage(type: Test) {
     }
 }
 
-task integrationTestTwoPhaseConsesnsusCommit(type: Test) {
+task integrationTestTwoPhaseConsensusCommit(type: Test) {
     description = 'Runs the integration tests for two-phase consensus commit.'
     group = 'verification'
-    testClassesDirs = sourceSets.integrationTestTwoPhaseConsesnsusCommit.output.classesDirs
-    classpath = sourceSets.integrationTestTwoPhaseConsesnsusCommit.runtimeClasspath
+    testClassesDirs = sourceSets.integrationTestTwoPhaseConsensusCommit.output.classesDirs
+    classpath = sourceSets.integrationTestTwoPhaseConsensusCommit.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties())
