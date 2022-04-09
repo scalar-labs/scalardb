@@ -4,6 +4,8 @@ import com.google.common.collect.ImmutableList;
 import com.scalar.db.sql.ClusteringOrdering;
 import com.scalar.db.sql.Predicate;
 import com.scalar.db.sql.Projection;
+import com.scalar.db.sql.Term;
+import com.scalar.db.sql.Value;
 import com.scalar.db.sql.statement.SelectStatement;
 import java.util.List;
 
@@ -69,7 +71,7 @@ public final class SelectStatementBuilder {
     private final String tableName;
     protected final ImmutableList.Builder<Predicate> predicatesBuilder;
     private ImmutableList<ClusteringOrdering> clusteringOrderings = ImmutableList.of();
-    private int limit;
+    private Term limit;
 
     private Buildable(
         ImmutableList<Projection> projections,
@@ -93,6 +95,11 @@ public final class SelectStatementBuilder {
     }
 
     public Buildable limit(int limit) {
+      this.limit = Value.ofInt(limit);
+      return this;
+    }
+
+    public Buildable limit(Term limit) {
       this.limit = limit;
       return this;
     }

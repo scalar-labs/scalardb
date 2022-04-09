@@ -9,7 +9,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.io.TextColumn;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -26,15 +25,14 @@ public class ResultIteratorResultSetTest {
   private static final String COLUMN_NAME_4 = "col4";
 
   private static final com.scalar.db.api.TableMetadata TABLE_METADATA =
-      ConsensusCommitUtils.buildTransactionalTableMetadata(
-          TableMetadata.newBuilder()
-              .addColumn(COLUMN_NAME_1, com.scalar.db.io.DataType.TEXT)
-              .addColumn(COLUMN_NAME_2, com.scalar.db.io.DataType.TEXT)
-              .addColumn(COLUMN_NAME_3, com.scalar.db.io.DataType.TEXT)
-              .addColumn(COLUMN_NAME_4, com.scalar.db.io.DataType.TEXT)
-              .addPartitionKey(COLUMN_NAME_1)
-              .addClusteringKey(COLUMN_NAME_2)
-              .build());
+      TableMetadata.newBuilder()
+          .addColumn(COLUMN_NAME_1, com.scalar.db.io.DataType.TEXT)
+          .addColumn(COLUMN_NAME_2, com.scalar.db.io.DataType.TEXT)
+          .addColumn(COLUMN_NAME_3, com.scalar.db.io.DataType.TEXT)
+          .addColumn(COLUMN_NAME_4, com.scalar.db.io.DataType.TEXT)
+          .addPartitionKey(COLUMN_NAME_1)
+          .addClusteringKey(COLUMN_NAME_2)
+          .build();
 
   private ResultIteratorResultSet resultIteratorResultSet;
 

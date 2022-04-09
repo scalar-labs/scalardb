@@ -7,7 +7,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
-public class Value {
+public class Value implements Term {
 
   public final Type type;
   @Nullable public final Object value;

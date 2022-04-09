@@ -17,4 +17,17 @@ public class AssignmentTest {
     assertThat(actual.columnName).isEqualTo("col");
     assertThat(actual.value).isEqualTo(Value.ofInt(10));
   }
+
+  @Test
+  public void replaceValue_ShouldBuildProperly() {
+    // Arrange
+    Assignment assignment = Assignment.column("col").value(BindMarker.of());
+
+    // Act
+    Assignment actual = assignment.replaceValue(Value.ofInt(20));
+
+    // Assert
+    assertThat(actual.columnName).isEqualTo("col");
+    assertThat(actual.value).isEqualTo(Value.ofInt(20));
+  }
 }

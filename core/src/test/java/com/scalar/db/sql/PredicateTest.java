@@ -35,4 +35,18 @@ public class PredicateTest {
     assertThat(predicate5.operator).isEqualTo(Operator.LESS_THAN_OR_EQUAL_TO);
     assertThat(predicate5.value).isEqualTo(Value.ofInt(50));
   }
+
+  @Test
+  public void replaceValue_ShouldBuildProperly() {
+    // Arrange
+    Predicate predicate = Predicate.column("col1").isEqualTo(BindMarker.of());
+
+    // Act
+    Predicate actual = predicate.replaceValue(Value.ofInt(20));
+
+    // Assert
+    assertThat(actual.columnName).isEqualTo("col1");
+    assertThat(actual.operator).isEqualTo(Operator.EQUAL_TO);
+    assertThat(actual.value).isEqualTo(Value.ofInt(20));
+  }
 }
