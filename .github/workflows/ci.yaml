@@ -4,7 +4,6 @@ on: [ push ]
 
 env:
   TERM: dumb
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -99,7 +98,7 @@ jobs:
           path: /tmp/gradle_integration_test_reports
 
   integration-test-for-cosmos:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v3
