@@ -4,7 +4,7 @@ on: [ push ]
 
 env:
   TERM: dumb
-
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
 jobs:
   check:
     runs-on: ubuntu-latest
