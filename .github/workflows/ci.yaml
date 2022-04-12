@@ -100,9 +100,6 @@ jobs:
   integration-test-for-cosmos:
     runs-on: ubuntu-latest
 
-
-
-
     steps:
       - uses: actions/checkout@v3
 
@@ -171,7 +168,7 @@ jobs:
           path: /tmp/gradle_integration_test_reports
 
   integration-test-for-jdbc-mysql:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     services:
       mysql:
