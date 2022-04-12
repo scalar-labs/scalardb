@@ -79,7 +79,7 @@ jobs:
 
       - name: Setup and execute Gradle 'integrationTestCassandra' task
         uses: gradle/gradle-build-action@v2
-      with:
+        with:
           arguments: integrationTestCassandra
 
       - name: Save Gradle test reports
@@ -99,8 +99,6 @@ jobs:
 
   integration-test-for-cosmos:
     runs-on: ubuntu-latest
-
-
 
     steps:
       - uses: actions/checkout@v3
