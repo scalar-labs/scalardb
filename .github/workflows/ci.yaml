@@ -5,8 +5,10 @@ on: [ push ]
 env:
   TERM: dumb
 jobs:
-  check-1:
+
+  integration-test-for-cosmos-1:
     runs-on: self-hosted
+
     steps:
       - uses: actions/checkout@v3
 
@@ -16,47 +18,28 @@ jobs:
           java-version: '8'
           distribution: 'temurin'
 
-
-      - name: Setup and execute Gradle 'check' task
+      - name: Setup and execute Gradle 'integrationTestCosmos' task
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: check
+          arguments: integrationTestCosmos -Dscalardb.cosmos.uri=${{ secrets.COSMOS_URI }} -Dscalardb.cosmos.password=${{ secrets.COSMOS_PASSWORD }} -Dscalardb.cosmos.database_prefix=${{ github.run_id }}
 
       - name: Save Gradle test reports
         if: always()
         run: |
-          mkdir -p /tmp/gradle_test_reports/core
-          mkdir -p /tmp/gradle_test_reports/server
-          mkdir -p /tmp/gradle_test_reports/schema-loader
-          cp -a core/build/reports/tests/test /tmp/gradle_test_reports/core/
-          cp -a server/build/reports/tests/test /tmp/gradle_test_reports/server/
-          cp -a schema-loader/build/reports/tests/test /tmp/gradle_test_reports/schema-loader/
-
-      - name: Save SpotBugs reports
-        if: always()
-        run: |
-          mkdir -p /tmp/gradle_spotbugs_reports/core
-          mkdir -p /tmp/gradle_spotbugs_reports/server
-          mkdir -p /tmp/gradle_spotbugs_reports/schema-loader
-          cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/core/
-          cp -a server/build/reports/spotbugs /tmp/gradle_spotbugs_reports/server/
-          cp -a schema-loader/build/reports/spotbugs /tmp/gradle_spotbugs_reports/schema-loader/
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/schema-loader/
 
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: gradle_test_reports
-          path: /tmp/gradle_test_reports
-
-      - name: Upload Spotbugs reports
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: gradle_spotbugs_reports
-          path: /tmp/gradle_spotbugs_reports
-  check-2:
+          name: gradle_cosmos_integration_test_reports
+          path: /tmp/gradle_integration_test_reports
+  integration-test-for-cosmos-2:
     runs-on: self-hosted
+
     steps:
       - uses: actions/checkout@v3
 
@@ -66,47 +49,29 @@ jobs:
           java-version: '8'
           distribution: 'temurin'
 
-
-      - name: Setup and execute Gradle 'check' task
+      - name: Setup and execute Gradle 'integrationTestCosmos' task
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: check
+          arguments: integrationTestCosmos -Dscalardb.cosmos.uri=${{ secrets.COSMOS_URI }} -Dscalardb.cosmos.password=${{ secrets.COSMOS_PASSWORD }} -Dscalardb.cosmos.database_prefix=${{ github.run_id }}
 
       - name: Save Gradle test reports
         if: always()
         run: |
-          mkdir -p /tmp/gradle_test_reports/core
-          mkdir -p /tmp/gradle_test_reports/server
-          mkdir -p /tmp/gradle_test_reports/schema-loader
-          cp -a core/build/reports/tests/test /tmp/gradle_test_reports/core/
-          cp -a server/build/reports/tests/test /tmp/gradle_test_reports/server/
-          cp -a schema-loader/build/reports/tests/test /tmp/gradle_test_reports/schema-loader/
-
-      - name: Save SpotBugs reports
-        if: always()
-        run: |
-          mkdir -p /tmp/gradle_spotbugs_reports/core
-          mkdir -p /tmp/gradle_spotbugs_reports/server
-          mkdir -p /tmp/gradle_spotbugs_reports/schema-loader
-          cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/core/
-          cp -a server/build/reports/spotbugs /tmp/gradle_spotbugs_reports/server/
-          cp -a schema-loader/build/reports/spotbugs /tmp/gradle_spotbugs_reports/schema-loader/
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/schema-loader/
 
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: gradle_test_reports
-          path: /tmp/gradle_test_reports
+          name: gradle_cosmos_integration_test_reports
+          path: /tmp/gradle_integration_test_reports
 
-      - name: Upload Spotbugs reports
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: gradle_spotbugs_reports
-          path: /tmp/gradle_spotbugs_reports
-  check-3:
+  integration-test-for-cosmos-3:
     runs-on: self-hosted
+
     steps:
       - uses: actions/checkout@v3
 
@@ -116,42 +81,23 @@ jobs:
           java-version: '8'
           distribution: 'temurin'
 
-
-      - name: Setup and execute Gradle 'check' task
+      - name: Setup and execute Gradle 'integrationTestCosmos' task
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: check
+          arguments: integrationTestCosmos -Dscalardb.cosmos.uri=${{ secrets.COSMOS_URI }} -Dscalardb.cosmos.password=${{ secrets.COSMOS_PASSWORD }} -Dscalardb.cosmos.database_prefix=${{ github.run_id }}
 
       - name: Save Gradle test reports
         if: always()
         run: |
-          mkdir -p /tmp/gradle_test_reports/core
-          mkdir -p /tmp/gradle_test_reports/server
-          mkdir -p /tmp/gradle_test_reports/schema-loader
-          cp -a core/build/reports/tests/test /tmp/gradle_test_reports/core/
-          cp -a server/build/reports/tests/test /tmp/gradle_test_reports/server/
-          cp -a schema-loader/build/reports/tests/test /tmp/gradle_test_reports/schema-loader/
-
-      - name: Save SpotBugs reports
-        if: always()
-        run: |
-          mkdir -p /tmp/gradle_spotbugs_reports/core
-          mkdir -p /tmp/gradle_spotbugs_reports/server
-          mkdir -p /tmp/gradle_spotbugs_reports/schema-loader
-          cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/core/
-          cp -a server/build/reports/spotbugs /tmp/gradle_spotbugs_reports/server/
-          cp -a schema-loader/build/reports/spotbugs /tmp/gradle_spotbugs_reports/schema-loader/
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/schema-loader/
 
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: gradle_test_reports
-          path: /tmp/gradle_test_reports
+          name: gradle_cosmos_integration_test_reports
+          path: /tmp/gradle_integration_test_reports
 
-      - name: Upload Spotbugs reports
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: gradle_spotbugs_reports
-          path: /tmp/gradle_spotbugs_reports
