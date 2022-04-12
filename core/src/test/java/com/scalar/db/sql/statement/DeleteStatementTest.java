@@ -25,9 +25,9 @@ public class DeleteStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of()),
-                Predicate.column("col2").isEqualTo(BindMarker.of()),
-                Predicate.column("col3").isEqualTo(BindMarker.of())));
+                Predicate.column("col1").isEqualTo(BindMarker.positional()),
+                Predicate.column("col2").isEqualTo(BindMarker.positional()),
+                Predicate.column("col3").isEqualTo(BindMarker.positional())));
     List<Value> positionalValues1 =
         Arrays.asList(Value.ofInt(10), Value.ofText("aaa"), Value.ofText("bbb"));
 
@@ -36,9 +36,9 @@ public class DeleteStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of()),
-                Predicate.column("col2").isEqualTo(BindMarker.of()),
-                Predicate.column("col3").isEqualTo(BindMarker.of())));
+                Predicate.column("col1").isEqualTo(BindMarker.positional()),
+                Predicate.column("col2").isEqualTo(BindMarker.positional()),
+                Predicate.column("col3").isEqualTo(BindMarker.positional())));
     List<Value> positionalValues2 = Arrays.asList(Value.ofInt(10), Value.ofText("aaa"));
 
     DeleteStatement statement3 =
@@ -46,9 +46,9 @@ public class DeleteStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of()),
-                Predicate.column("col2").isEqualTo(BindMarker.of()),
-                Predicate.column("col3").isEqualTo(BindMarker.of())));
+                Predicate.column("col1").isEqualTo(BindMarker.positional()),
+                Predicate.column("col2").isEqualTo(BindMarker.positional()),
+                Predicate.column("col3").isEqualTo(BindMarker.positional())));
     List<Value> positionalValues3 =
         Arrays.asList(
             Value.ofInt(10), Value.ofText("aaa"), Value.ofText("bbb"), Value.ofText("ccc"));
@@ -76,7 +76,7 @@ public class DeleteStatementTest {
                 ImmutableList.of(
                     Predicate.column("col1").isEqualTo(Value.ofInt(10)),
                     Predicate.column("col2").isEqualTo(Value.ofText("aaa")),
-                    Predicate.column("col3").isEqualTo(BindMarker.of()))));
+                    Predicate.column("col3").isEqualTo(BindMarker.positional()))));
     assertThat(actual3)
         .isEqualTo(
             DeleteStatement.of(
@@ -97,9 +97,9 @@ public class DeleteStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of()),
-                Predicate.column("col2").isEqualTo(BindMarker.of()),
-                Predicate.column("col3").isEqualTo(BindMarker.of())));
+                Predicate.column("col1").isEqualTo(BindMarker.positional()),
+                Predicate.column("col2").isEqualTo(BindMarker.positional()),
+                Predicate.column("col3").isEqualTo(BindMarker.positional())));
     Map<String, Value> namedValues =
         ImmutableMap.of(
             "name1", Value.ofInt(10), "name2", Value.ofText("aaa"), "name3", Value.ofText("bbb"));
@@ -117,9 +117,9 @@ public class DeleteStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of("name1")),
-                Predicate.column("col2").isEqualTo(BindMarker.of("name2")),
-                Predicate.column("col3").isEqualTo(BindMarker.of("name3"))));
+                Predicate.column("col1").isEqualTo(BindMarker.named("name1")),
+                Predicate.column("col2").isEqualTo(BindMarker.named("name2")),
+                Predicate.column("col3").isEqualTo(BindMarker.named("name3"))));
     Map<String, Value> namedValues1 =
         ImmutableMap.of(
             "name1", Value.ofInt(10), "name2", Value.ofText("aaa"), "name3", Value.ofText("bbb"));
@@ -129,9 +129,9 @@ public class DeleteStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of("name1")),
-                Predicate.column("col2").isEqualTo(BindMarker.of("name2")),
-                Predicate.column("col3").isEqualTo(BindMarker.of("name3"))));
+                Predicate.column("col1").isEqualTo(BindMarker.named("name1")),
+                Predicate.column("col2").isEqualTo(BindMarker.named("name2")),
+                Predicate.column("col3").isEqualTo(BindMarker.named("name3"))));
     Map<String, Value> namedValues2 =
         ImmutableMap.of("name1", Value.ofInt(10), "name2", Value.ofText("aaa"));
 
@@ -140,9 +140,9 @@ public class DeleteStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of("name1")),
-                Predicate.column("col2").isEqualTo(BindMarker.of("name2")),
-                Predicate.column("col3").isEqualTo(BindMarker.of("name3"))));
+                Predicate.column("col1").isEqualTo(BindMarker.named("name1")),
+                Predicate.column("col2").isEqualTo(BindMarker.named("name2")),
+                Predicate.column("col3").isEqualTo(BindMarker.named("name3"))));
     Map<String, Value> namedValues3 =
         ImmutableMap.of(
             "name1",
@@ -159,9 +159,9 @@ public class DeleteStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of("name1")),
-                Predicate.column("col2").isEqualTo(BindMarker.of("name2")),
-                Predicate.column("col3").isEqualTo(BindMarker.of("name2"))));
+                Predicate.column("col1").isEqualTo(BindMarker.named("name1")),
+                Predicate.column("col2").isEqualTo(BindMarker.named("name2")),
+                Predicate.column("col3").isEqualTo(BindMarker.named("name2"))));
     Map<String, Value> namedValues4 =
         ImmutableMap.of("name1", Value.ofInt(10), "name2", Value.ofText("aaa"));
 
@@ -189,7 +189,7 @@ public class DeleteStatementTest {
                 ImmutableList.of(
                     Predicate.column("col1").isEqualTo(Value.ofInt(10)),
                     Predicate.column("col2").isEqualTo(Value.ofText("aaa")),
-                    Predicate.column("col3").isEqualTo(BindMarker.of("name3")))));
+                    Predicate.column("col3").isEqualTo(BindMarker.named("name3")))));
     assertThat(actual3)
         .isEqualTo(
             DeleteStatement.of(
@@ -219,9 +219,9 @@ public class DeleteStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of("name1")),
-                Predicate.column("col2").isEqualTo(BindMarker.of("name2")),
-                Predicate.column("col3").isEqualTo(BindMarker.of("name3"))));
+                Predicate.column("col1").isEqualTo(BindMarker.named("name1")),
+                Predicate.column("col2").isEqualTo(BindMarker.named("name2")),
+                Predicate.column("col3").isEqualTo(BindMarker.named("name3"))));
     List<Value> positionalValues =
         Arrays.asList(Value.ofInt(10), Value.ofText("aaa"), Value.ofText("bbb"));
 

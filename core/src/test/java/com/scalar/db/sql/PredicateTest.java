@@ -39,7 +39,7 @@ public class PredicateTest {
   @Test
   public void replaceValue_ShouldBuildProperly() {
     // Arrange
-    Predicate predicate = Predicate.column("col1").isEqualTo(BindMarker.of());
+    Predicate predicate = Predicate.column("col1").isEqualTo(BindMarker.positional());
 
     // Act
     Predicate actual = predicate.replaceValue(Value.ofInt(20));

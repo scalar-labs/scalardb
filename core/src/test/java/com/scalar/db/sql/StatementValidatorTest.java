@@ -863,12 +863,12 @@ public class StatementValidatorTest {
             NAMESPACE_NAME,
             TABLE_NAME,
             ImmutableList.of(
-                Assignment.column("p1").value(BindMarker.of()),
-                Assignment.column("p2").value(BindMarker.of()),
-                Assignment.column("c1").value(BindMarker.of("name1")),
-                Assignment.column("c2").value(BindMarker.of("name2")),
-                Assignment.column("col1").value(BindMarker.of()),
-                Assignment.column("col2").value(BindMarker.of())));
+                Assignment.column("p1").value(BindMarker.positional()),
+                Assignment.column("p2").value(BindMarker.positional()),
+                Assignment.column("c1").value(BindMarker.named("name1")),
+                Assignment.column("c2").value(BindMarker.named("name2")),
+                Assignment.column("col1").value(BindMarker.positional()),
+                Assignment.column("col2").value(BindMarker.positional())));
 
     // Act Assert
     assertThatThrownBy(() -> statementValidator.validate(statement))
@@ -883,8 +883,8 @@ public class StatementValidatorTest {
             NAMESPACE_NAME,
             TABLE_NAME,
             ImmutableList.of(
-                Assignment.column("col1").value(BindMarker.of()),
-                Assignment.column("col2").value(BindMarker.of("name1"))),
+                Assignment.column("col1").value(BindMarker.positional()),
+                Assignment.column("col2").value(BindMarker.named("name1"))),
             ImmutableList.of(
                 Predicate.column("p1").isEqualTo(Value.ofText("aaa")),
                 Predicate.column("p2").isEqualTo(Value.ofText("bbb")),
@@ -899,10 +899,10 @@ public class StatementValidatorTest {
                 Assignment.column("col1").value(Value.ofText("aaa")),
                 Assignment.column("col2").value(Value.ofText("bbb"))),
             ImmutableList.of(
-                Predicate.column("p1").isEqualTo(BindMarker.of()),
-                Predicate.column("p2").isEqualTo(BindMarker.of()),
-                Predicate.column("c1").isEqualTo(BindMarker.of("name1")),
-                Predicate.column("c2").isEqualTo(BindMarker.of("name2"))));
+                Predicate.column("p1").isEqualTo(BindMarker.positional()),
+                Predicate.column("p2").isEqualTo(BindMarker.positional()),
+                Predicate.column("c1").isEqualTo(BindMarker.named("name1")),
+                Predicate.column("c2").isEqualTo(BindMarker.named("name2"))));
 
     // Act Assert
     assertThatThrownBy(() -> statementValidator.validate(statement1))
@@ -919,10 +919,10 @@ public class StatementValidatorTest {
             NAMESPACE_NAME,
             TABLE_NAME,
             ImmutableList.of(
-                Predicate.column("p1").isEqualTo(BindMarker.of()),
-                Predicate.column("p2").isEqualTo(BindMarker.of()),
-                Predicate.column("c1").isEqualTo(BindMarker.of("name1")),
-                Predicate.column("c2").isEqualTo(BindMarker.of("name2"))));
+                Predicate.column("p1").isEqualTo(BindMarker.positional()),
+                Predicate.column("p2").isEqualTo(BindMarker.positional()),
+                Predicate.column("c1").isEqualTo(BindMarker.named("name1")),
+                Predicate.column("c2").isEqualTo(BindMarker.named("name2"))));
 
     // Act Assert
     assertThatThrownBy(() -> statementValidator.validate(statement))
@@ -943,10 +943,10 @@ public class StatementValidatorTest {
                 Projection.column("c2"),
                 Projection.column("col1")),
             ImmutableList.of(
-                Predicate.column("p1").isEqualTo(BindMarker.of()),
-                Predicate.column("p2").isEqualTo(BindMarker.of()),
-                Predicate.column("c1").isEqualTo(BindMarker.of("name1")),
-                Predicate.column("c2").isEqualTo(BindMarker.of("name2"))),
+                Predicate.column("p1").isEqualTo(BindMarker.positional()),
+                Predicate.column("p2").isEqualTo(BindMarker.positional()),
+                Predicate.column("c1").isEqualTo(BindMarker.named("name1")),
+                Predicate.column("c2").isEqualTo(BindMarker.named("name2"))),
             ImmutableList.of(
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
             Value.ofInt(100));
@@ -968,7 +968,7 @@ public class StatementValidatorTest {
                 Predicate.column("c2").isEqualTo(Value.ofText("ddd"))),
             ImmutableList.of(
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
-            BindMarker.of());
+            BindMarker.positional());
 
     // Act Assert
     assertThatThrownBy(() -> statementValidator.validate(statement1))

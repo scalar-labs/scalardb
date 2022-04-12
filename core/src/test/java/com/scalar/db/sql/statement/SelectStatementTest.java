@@ -29,11 +29,11 @@ public class SelectStatementTest {
             ImmutableList.of(
                 Projection.column("col1"), Projection.column("col2"), Projection.column("col3")),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of()),
-                Predicate.column("col2").isGreaterThan(BindMarker.of()),
-                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.of())),
+                Predicate.column("col1").isEqualTo(BindMarker.positional()),
+                Predicate.column("col2").isGreaterThan(BindMarker.positional()),
+                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.positional())),
             ImmutableList.of(ClusteringOrdering.column("col2").desc()),
-            BindMarker.of());
+            BindMarker.positional());
     List<Value> positionalValues1 =
         Arrays.asList(Value.ofInt(10), Value.ofText("aaa"), Value.ofText("bbb"), Value.ofInt(100));
 
@@ -44,11 +44,11 @@ public class SelectStatementTest {
             ImmutableList.of(
                 Projection.column("col1"), Projection.column("col2"), Projection.column("col3")),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of()),
-                Predicate.column("col2").isGreaterThan(BindMarker.of()),
-                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.of())),
+                Predicate.column("col1").isEqualTo(BindMarker.positional()),
+                Predicate.column("col2").isGreaterThan(BindMarker.positional()),
+                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.positional())),
             ImmutableList.of(ClusteringOrdering.column("col2").desc()),
-            BindMarker.of());
+            BindMarker.positional());
     List<Value> positionalValues2 = Arrays.asList(Value.ofInt(10), Value.ofText("aaa"));
 
     SelectStatement statement3 =
@@ -58,11 +58,11 @@ public class SelectStatementTest {
             ImmutableList.of(
                 Projection.column("col1"), Projection.column("col2"), Projection.column("col3")),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of()),
-                Predicate.column("col2").isGreaterThan(BindMarker.of()),
-                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.of())),
+                Predicate.column("col1").isEqualTo(BindMarker.positional()),
+                Predicate.column("col2").isGreaterThan(BindMarker.positional()),
+                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.positional())),
             ImmutableList.of(ClusteringOrdering.column("col2").desc()),
-            BindMarker.of());
+            BindMarker.positional());
     List<Value> positionalValues3 =
         Arrays.asList(
             Value.ofInt(10),
@@ -104,9 +104,9 @@ public class SelectStatementTest {
                 ImmutableList.of(
                     Predicate.column("col1").isEqualTo(Value.ofInt(10)),
                     Predicate.column("col2").isGreaterThan(Value.ofText("aaa")),
-                    Predicate.column("col2").isLessThanOrEqualTo(BindMarker.of())),
+                    Predicate.column("col2").isLessThanOrEqualTo(BindMarker.positional())),
                 ImmutableList.of(ClusteringOrdering.column("col2").desc()),
-                BindMarker.of()));
+                BindMarker.positional()));
     assertThat(actual3)
         .isEqualTo(
             SelectStatement.of(
@@ -135,11 +135,11 @@ public class SelectStatementTest {
             ImmutableList.of(
                 Projection.column("col1"), Projection.column("col2"), Projection.column("col3")),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of()),
-                Predicate.column("col2").isGreaterThan(BindMarker.of()),
-                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.of())),
+                Predicate.column("col1").isEqualTo(BindMarker.positional()),
+                Predicate.column("col2").isGreaterThan(BindMarker.positional()),
+                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.positional())),
             ImmutableList.of(ClusteringOrdering.column("col2").desc()),
-            BindMarker.of());
+            BindMarker.positional());
     Map<String, Value> namedValues =
         ImmutableMap.of(
             "name1",
@@ -166,11 +166,11 @@ public class SelectStatementTest {
             ImmutableList.of(
                 Projection.column("col1"), Projection.column("col2"), Projection.column("col3")),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of("name1")),
-                Predicate.column("col2").isGreaterThan(BindMarker.of("name2")),
-                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.of("name3"))),
+                Predicate.column("col1").isEqualTo(BindMarker.named("name1")),
+                Predicate.column("col2").isGreaterThan(BindMarker.named("name2")),
+                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.named("name3"))),
             ImmutableList.of(ClusteringOrdering.column("col2").desc()),
-            BindMarker.of("name4"));
+            BindMarker.named("name4"));
     Map<String, Value> namedValues1 =
         ImmutableMap.of(
             "name1",
@@ -189,11 +189,11 @@ public class SelectStatementTest {
             ImmutableList.of(
                 Projection.column("col1"), Projection.column("col2"), Projection.column("col3")),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of("name1")),
-                Predicate.column("col2").isGreaterThan(BindMarker.of("name2")),
-                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.of("name3"))),
+                Predicate.column("col1").isEqualTo(BindMarker.named("name1")),
+                Predicate.column("col2").isGreaterThan(BindMarker.named("name2")),
+                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.named("name3"))),
             ImmutableList.of(ClusteringOrdering.column("col2").desc()),
-            BindMarker.of("name4"));
+            BindMarker.named("name4"));
     Map<String, Value> namedValues2 =
         ImmutableMap.of("name1", Value.ofInt(10), "name2", Value.ofText("aaa"));
 
@@ -204,11 +204,11 @@ public class SelectStatementTest {
             ImmutableList.of(
                 Projection.column("col1"), Projection.column("col2"), Projection.column("col3")),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of("name1")),
-                Predicate.column("col2").isGreaterThan(BindMarker.of("name2")),
-                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.of("name3"))),
+                Predicate.column("col1").isEqualTo(BindMarker.named("name1")),
+                Predicate.column("col2").isGreaterThan(BindMarker.named("name2")),
+                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.named("name3"))),
             ImmutableList.of(ClusteringOrdering.column("col2").desc()),
-            BindMarker.of("name4"));
+            BindMarker.named("name4"));
     Map<String, Value> namedValues3 =
         ImmutableMap.of(
             "name1",
@@ -229,11 +229,11 @@ public class SelectStatementTest {
             ImmutableList.of(
                 Projection.column("col1"), Projection.column("col2"), Projection.column("col3")),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of("name1")),
-                Predicate.column("col2").isGreaterThan(BindMarker.of("name2")),
-                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.of("name2"))),
+                Predicate.column("col1").isEqualTo(BindMarker.named("name1")),
+                Predicate.column("col2").isGreaterThan(BindMarker.named("name2")),
+                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.named("name2"))),
             ImmutableList.of(ClusteringOrdering.column("col2").desc()),
-            BindMarker.of("name3"));
+            BindMarker.named("name3"));
     Map<String, Value> namedValues4 =
         ImmutableMap.of(
             "name1", Value.ofInt(10), "name2", Value.ofText("aaa"), "name3", Value.ofInt(100));
@@ -272,9 +272,9 @@ public class SelectStatementTest {
                 ImmutableList.of(
                     Predicate.column("col1").isEqualTo(Value.ofInt(10)),
                     Predicate.column("col2").isGreaterThan(Value.ofText("aaa")),
-                    Predicate.column("col2").isLessThanOrEqualTo(BindMarker.of("name3"))),
+                    Predicate.column("col2").isLessThanOrEqualTo(BindMarker.named("name3"))),
                 ImmutableList.of(ClusteringOrdering.column("col2").desc()),
-                BindMarker.of("name4")));
+                BindMarker.named("name4")));
     assertThat(actual3)
         .isEqualTo(
             SelectStatement.of(
@@ -318,11 +318,11 @@ public class SelectStatementTest {
             ImmutableList.of(
                 Projection.column("col1"), Projection.column("col2"), Projection.column("col3")),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of("name1")),
-                Predicate.column("col2").isGreaterThan(BindMarker.of("name2")),
-                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.of("name3"))),
+                Predicate.column("col1").isEqualTo(BindMarker.named("name1")),
+                Predicate.column("col2").isGreaterThan(BindMarker.named("name2")),
+                Predicate.column("col2").isLessThanOrEqualTo(BindMarker.named("name3"))),
             ImmutableList.of(ClusteringOrdering.column("col2").desc()),
-            BindMarker.of("name4"));
+            BindMarker.named("name4"));
     List<Value> positionalValues =
         Arrays.asList(Value.ofInt(10), Value.ofText("aaa"), Value.ofText("bbb"), Value.ofInt(100));
 

@@ -26,13 +26,13 @@ public class UpdateStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col4").value(BindMarker.of()),
-                Assignment.column("col5").value(BindMarker.of()),
-                Assignment.column("col6").value(BindMarker.of())),
+                Assignment.column("col4").value(BindMarker.positional()),
+                Assignment.column("col5").value(BindMarker.positional()),
+                Assignment.column("col6").value(BindMarker.positional())),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of()),
-                Predicate.column("col2").isEqualTo(BindMarker.of()),
-                Predicate.column("col3").isEqualTo(BindMarker.of())));
+                Predicate.column("col1").isEqualTo(BindMarker.positional()),
+                Predicate.column("col2").isEqualTo(BindMarker.positional()),
+                Predicate.column("col3").isEqualTo(BindMarker.positional())));
     List<Value> positionalValues1 =
         Arrays.asList(
             Value.ofBoolean(true),
@@ -47,13 +47,13 @@ public class UpdateStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col4").value(BindMarker.of()),
-                Assignment.column("col5").value(BindMarker.of()),
-                Assignment.column("col6").value(BindMarker.of())),
+                Assignment.column("col4").value(BindMarker.positional()),
+                Assignment.column("col5").value(BindMarker.positional()),
+                Assignment.column("col6").value(BindMarker.positional())),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of()),
-                Predicate.column("col2").isEqualTo(BindMarker.of()),
-                Predicate.column("col3").isEqualTo(BindMarker.of())));
+                Predicate.column("col1").isEqualTo(BindMarker.positional()),
+                Predicate.column("col2").isEqualTo(BindMarker.positional()),
+                Predicate.column("col3").isEqualTo(BindMarker.positional())));
     List<Value> positionalValues2 =
         Arrays.asList(
             Value.ofBoolean(true),
@@ -67,13 +67,13 @@ public class UpdateStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col4").value(BindMarker.of()),
-                Assignment.column("col5").value(BindMarker.of()),
-                Assignment.column("col6").value(BindMarker.of())),
+                Assignment.column("col4").value(BindMarker.positional()),
+                Assignment.column("col5").value(BindMarker.positional()),
+                Assignment.column("col6").value(BindMarker.positional())),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of()),
-                Predicate.column("col2").isEqualTo(BindMarker.of()),
-                Predicate.column("col3").isEqualTo(BindMarker.of())));
+                Predicate.column("col1").isEqualTo(BindMarker.positional()),
+                Predicate.column("col2").isEqualTo(BindMarker.positional()),
+                Predicate.column("col3").isEqualTo(BindMarker.positional())));
     List<Value> positionalValues3 = Arrays.asList(Value.ofBoolean(true), Value.ofFloat(1.23F));
 
     UpdateStatement statement4 =
@@ -81,13 +81,13 @@ public class UpdateStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col4").value(BindMarker.of()),
-                Assignment.column("col5").value(BindMarker.of()),
-                Assignment.column("col6").value(BindMarker.of())),
+                Assignment.column("col4").value(BindMarker.positional()),
+                Assignment.column("col5").value(BindMarker.positional()),
+                Assignment.column("col6").value(BindMarker.positional())),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of()),
-                Predicate.column("col2").isEqualTo(BindMarker.of()),
-                Predicate.column("col3").isEqualTo(BindMarker.of())));
+                Predicate.column("col1").isEqualTo(BindMarker.positional()),
+                Predicate.column("col2").isEqualTo(BindMarker.positional()),
+                Predicate.column("col3").isEqualTo(BindMarker.positional())));
     List<Value> positionalValues4 =
         Arrays.asList(
             Value.ofBoolean(true),
@@ -130,7 +130,7 @@ public class UpdateStatementTest {
                 ImmutableList.of(
                     Predicate.column("col1").isEqualTo(Value.ofInt(10)),
                     Predicate.column("col2").isEqualTo(Value.ofText("aaa")),
-                    Predicate.column("col3").isEqualTo(BindMarker.of()))));
+                    Predicate.column("col3").isEqualTo(BindMarker.positional()))));
     assertThat(actual3)
         .isEqualTo(
             UpdateStatement.of(
@@ -139,11 +139,11 @@ public class UpdateStatementTest {
                 ImmutableList.of(
                     Assignment.column("col4").value(Value.ofBoolean(true)),
                     Assignment.column("col5").value(Value.ofFloat(1.23F)),
-                    Assignment.column("col6").value(BindMarker.of())),
+                    Assignment.column("col6").value(BindMarker.positional())),
                 ImmutableList.of(
-                    Predicate.column("col1").isEqualTo(BindMarker.of()),
-                    Predicate.column("col2").isEqualTo(BindMarker.of()),
-                    Predicate.column("col3").isEqualTo(BindMarker.of()))));
+                    Predicate.column("col1").isEqualTo(BindMarker.positional()),
+                    Predicate.column("col2").isEqualTo(BindMarker.positional()),
+                    Predicate.column("col3").isEqualTo(BindMarker.positional()))));
     assertThat(actual4)
         .isEqualTo(
             UpdateStatement.of(
@@ -168,13 +168,13 @@ public class UpdateStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col4").value(BindMarker.of()),
-                Assignment.column("col5").value(BindMarker.of()),
-                Assignment.column("col6").value(BindMarker.of())),
+                Assignment.column("col4").value(BindMarker.positional()),
+                Assignment.column("col5").value(BindMarker.positional()),
+                Assignment.column("col6").value(BindMarker.positional())),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of()),
-                Predicate.column("col2").isEqualTo(BindMarker.of()),
-                Predicate.column("col3").isEqualTo(BindMarker.of())));
+                Predicate.column("col1").isEqualTo(BindMarker.positional()),
+                Predicate.column("col2").isEqualTo(BindMarker.positional()),
+                Predicate.column("col3").isEqualTo(BindMarker.positional())));
     Map<String, Value> namedValues =
         ImmutableMap.<String, Value>builder()
             .put("name1", Value.ofBoolean(true))
@@ -198,13 +198,13 @@ public class UpdateStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col4").value(BindMarker.of("name1")),
-                Assignment.column("col5").value(BindMarker.of("name2")),
-                Assignment.column("col6").value(BindMarker.of("name3"))),
+                Assignment.column("col4").value(BindMarker.named("name1")),
+                Assignment.column("col5").value(BindMarker.named("name2")),
+                Assignment.column("col6").value(BindMarker.named("name3"))),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of("name4")),
-                Predicate.column("col2").isEqualTo(BindMarker.of("name5")),
-                Predicate.column("col3").isEqualTo(BindMarker.of("name6"))));
+                Predicate.column("col1").isEqualTo(BindMarker.named("name4")),
+                Predicate.column("col2").isEqualTo(BindMarker.named("name5")),
+                Predicate.column("col3").isEqualTo(BindMarker.named("name6"))));
     Map<String, Value> namedValues1 =
         ImmutableMap.<String, Value>builder()
             .put("name1", Value.ofBoolean(true))
@@ -220,13 +220,13 @@ public class UpdateStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col4").value(BindMarker.of("name1")),
-                Assignment.column("col5").value(BindMarker.of("name2")),
-                Assignment.column("col6").value(BindMarker.of("name3"))),
+                Assignment.column("col4").value(BindMarker.named("name1")),
+                Assignment.column("col5").value(BindMarker.named("name2")),
+                Assignment.column("col6").value(BindMarker.named("name3"))),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of("name4")),
-                Predicate.column("col2").isEqualTo(BindMarker.of("name5")),
-                Predicate.column("col3").isEqualTo(BindMarker.of("name6"))));
+                Predicate.column("col1").isEqualTo(BindMarker.named("name4")),
+                Predicate.column("col2").isEqualTo(BindMarker.named("name5")),
+                Predicate.column("col3").isEqualTo(BindMarker.named("name6"))));
     Map<String, Value> namedValues2 =
         ImmutableMap.<String, Value>builder()
             .put("name1", Value.ofBoolean(true))
@@ -241,13 +241,13 @@ public class UpdateStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col4").value(BindMarker.of("name1")),
-                Assignment.column("col5").value(BindMarker.of("name2")),
-                Assignment.column("col6").value(BindMarker.of("name3"))),
+                Assignment.column("col4").value(BindMarker.named("name1")),
+                Assignment.column("col5").value(BindMarker.named("name2")),
+                Assignment.column("col6").value(BindMarker.named("name3"))),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of("name4")),
-                Predicate.column("col2").isEqualTo(BindMarker.of("name5")),
-                Predicate.column("col3").isEqualTo(BindMarker.of("name6"))));
+                Predicate.column("col1").isEqualTo(BindMarker.named("name4")),
+                Predicate.column("col2").isEqualTo(BindMarker.named("name5")),
+                Predicate.column("col3").isEqualTo(BindMarker.named("name6"))));
     Map<String, Value> namedValues3 =
         ImmutableMap.of("name1", Value.ofBoolean(true), "name2", Value.ofFloat(1.23F));
 
@@ -256,13 +256,13 @@ public class UpdateStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col4").value(BindMarker.of("name1")),
-                Assignment.column("col5").value(BindMarker.of("name2")),
-                Assignment.column("col6").value(BindMarker.of("name3"))),
+                Assignment.column("col4").value(BindMarker.named("name1")),
+                Assignment.column("col5").value(BindMarker.named("name2")),
+                Assignment.column("col6").value(BindMarker.named("name3"))),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of("name4")),
-                Predicate.column("col2").isEqualTo(BindMarker.of("name5")),
-                Predicate.column("col3").isEqualTo(BindMarker.of("name6"))));
+                Predicate.column("col1").isEqualTo(BindMarker.named("name4")),
+                Predicate.column("col2").isEqualTo(BindMarker.named("name5")),
+                Predicate.column("col3").isEqualTo(BindMarker.named("name6"))));
     Map<String, Value> namedValues4 =
         ImmutableMap.<String, Value>builder()
             .put("name1", Value.ofBoolean(true))
@@ -279,13 +279,13 @@ public class UpdateStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col4").value(BindMarker.of("name1")),
-                Assignment.column("col5").value(BindMarker.of("name2")),
-                Assignment.column("col6").value(BindMarker.of("name3"))),
+                Assignment.column("col4").value(BindMarker.named("name1")),
+                Assignment.column("col5").value(BindMarker.named("name2")),
+                Assignment.column("col6").value(BindMarker.named("name3"))),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of("name1")),
-                Predicate.column("col2").isEqualTo(BindMarker.of("name2")),
-                Predicate.column("col3").isEqualTo(BindMarker.of("name3"))));
+                Predicate.column("col1").isEqualTo(BindMarker.named("name1")),
+                Predicate.column("col2").isEqualTo(BindMarker.named("name2")),
+                Predicate.column("col3").isEqualTo(BindMarker.named("name3"))));
     Map<String, Value> namedValues5 =
         ImmutableMap.<String, Value>builder()
             .put("name1", Value.ofInt(10))
@@ -326,7 +326,7 @@ public class UpdateStatementTest {
                 ImmutableList.of(
                     Predicate.column("col1").isEqualTo(Value.ofInt(10)),
                     Predicate.column("col2").isEqualTo(Value.ofText("aaa")),
-                    Predicate.column("col3").isEqualTo(BindMarker.of("name6")))));
+                    Predicate.column("col3").isEqualTo(BindMarker.named("name6")))));
     assertThat(actual3)
         .isEqualTo(
             UpdateStatement.of(
@@ -335,11 +335,11 @@ public class UpdateStatementTest {
                 ImmutableList.of(
                     Assignment.column("col4").value(Value.ofBoolean(true)),
                     Assignment.column("col5").value(Value.ofFloat(1.23F)),
-                    Assignment.column("col6").value(BindMarker.of("name3"))),
+                    Assignment.column("col6").value(BindMarker.named("name3"))),
                 ImmutableList.of(
-                    Predicate.column("col1").isEqualTo(BindMarker.of("name4")),
-                    Predicate.column("col2").isEqualTo(BindMarker.of("name5")),
-                    Predicate.column("col3").isEqualTo(BindMarker.of("name6")))));
+                    Predicate.column("col1").isEqualTo(BindMarker.named("name4")),
+                    Predicate.column("col2").isEqualTo(BindMarker.named("name5")),
+                    Predicate.column("col3").isEqualTo(BindMarker.named("name6")))));
     assertThat(actual4)
         .isEqualTo(
             UpdateStatement.of(
@@ -377,13 +377,13 @@ public class UpdateStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col4").value(BindMarker.of("name1")),
-                Assignment.column("col5").value(BindMarker.of("name2")),
-                Assignment.column("col6").value(BindMarker.of("name3"))),
+                Assignment.column("col4").value(BindMarker.named("name1")),
+                Assignment.column("col5").value(BindMarker.named("name2")),
+                Assignment.column("col6").value(BindMarker.named("name3"))),
             ImmutableList.of(
-                Predicate.column("col1").isEqualTo(BindMarker.of("name4")),
-                Predicate.column("col2").isEqualTo(BindMarker.of("name5")),
-                Predicate.column("col3").isEqualTo(BindMarker.of("name6"))));
+                Predicate.column("col1").isEqualTo(BindMarker.named("name4")),
+                Predicate.column("col2").isEqualTo(BindMarker.named("name5")),
+                Predicate.column("col3").isEqualTo(BindMarker.named("name6"))));
     List<Value> positionalValues =
         Arrays.asList(
             Value.ofBoolean(true),

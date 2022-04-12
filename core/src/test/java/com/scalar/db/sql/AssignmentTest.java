@@ -21,7 +21,7 @@ public class AssignmentTest {
   @Test
   public void replaceValue_ShouldBuildProperly() {
     // Arrange
-    Assignment assignment = Assignment.column("col").value(BindMarker.of());
+    Assignment assignment = Assignment.column("col").value(BindMarker.positional());
 
     // Act
     Assignment actual = assignment.replaceValue(Value.ofInt(20));

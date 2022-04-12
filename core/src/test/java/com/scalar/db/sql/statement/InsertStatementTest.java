@@ -25,9 +25,9 @@ public class InsertStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col1").value(BindMarker.of()),
-                Assignment.column("col2").value(BindMarker.of()),
-                Assignment.column("col3").value(BindMarker.of())));
+                Assignment.column("col1").value(BindMarker.positional()),
+                Assignment.column("col2").value(BindMarker.positional()),
+                Assignment.column("col3").value(BindMarker.positional())));
     List<Value> positionalValues1 =
         Arrays.asList(Value.ofInt(10), Value.ofText("aaa"), Value.ofText("bbb"));
 
@@ -36,9 +36,9 @@ public class InsertStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col1").value(BindMarker.of()),
-                Assignment.column("col2").value(BindMarker.of()),
-                Assignment.column("col3").value(BindMarker.of())));
+                Assignment.column("col1").value(BindMarker.positional()),
+                Assignment.column("col2").value(BindMarker.positional()),
+                Assignment.column("col3").value(BindMarker.positional())));
     List<Value> positionalValues2 = Arrays.asList(Value.ofInt(10), Value.ofText("aaa"));
 
     InsertStatement statement3 =
@@ -46,9 +46,9 @@ public class InsertStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col1").value(BindMarker.of()),
-                Assignment.column("col2").value(BindMarker.of()),
-                Assignment.column("col3").value(BindMarker.of())));
+                Assignment.column("col1").value(BindMarker.positional()),
+                Assignment.column("col2").value(BindMarker.positional()),
+                Assignment.column("col3").value(BindMarker.positional())));
     List<Value> positionalValues3 =
         Arrays.asList(
             Value.ofInt(10), Value.ofText("aaa"), Value.ofText("bbb"), Value.ofText("ccc"));
@@ -76,7 +76,7 @@ public class InsertStatementTest {
                 ImmutableList.of(
                     Assignment.column("col1").value(Value.ofInt(10)),
                     Assignment.column("col2").value(Value.ofText("aaa")),
-                    Assignment.column("col3").value(BindMarker.of()))));
+                    Assignment.column("col3").value(BindMarker.positional()))));
     assertThat(actual3)
         .isEqualTo(
             InsertStatement.of(
@@ -97,9 +97,9 @@ public class InsertStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col1").value(BindMarker.of()),
-                Assignment.column("col2").value(BindMarker.of()),
-                Assignment.column("col3").value(BindMarker.of())));
+                Assignment.column("col1").value(BindMarker.positional()),
+                Assignment.column("col2").value(BindMarker.positional()),
+                Assignment.column("col3").value(BindMarker.positional())));
     Map<String, Value> namedValues =
         ImmutableMap.of(
             "name1", Value.ofInt(10), "name2", Value.ofText("aaa"), "name3", Value.ofText("bbb"));
@@ -117,9 +117,9 @@ public class InsertStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col1").value(BindMarker.of("name1")),
-                Assignment.column("col2").value(BindMarker.of("name2")),
-                Assignment.column("col3").value(BindMarker.of("name3"))));
+                Assignment.column("col1").value(BindMarker.named("name1")),
+                Assignment.column("col2").value(BindMarker.named("name2")),
+                Assignment.column("col3").value(BindMarker.named("name3"))));
     Map<String, Value> namedValues1 =
         ImmutableMap.of(
             "name1", Value.ofInt(10), "name2", Value.ofText("aaa"), "name3", Value.ofText("bbb"));
@@ -129,9 +129,9 @@ public class InsertStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col1").value(BindMarker.of("name1")),
-                Assignment.column("col2").value(BindMarker.of("name2")),
-                Assignment.column("col3").value(BindMarker.of("name3"))));
+                Assignment.column("col1").value(BindMarker.named("name1")),
+                Assignment.column("col2").value(BindMarker.named("name2")),
+                Assignment.column("col3").value(BindMarker.named("name3"))));
     Map<String, Value> namedValues2 =
         ImmutableMap.of("name1", Value.ofInt(10), "name2", Value.ofText("aaa"));
 
@@ -140,9 +140,9 @@ public class InsertStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col1").value(BindMarker.of("name1")),
-                Assignment.column("col2").value(BindMarker.of("name2")),
-                Assignment.column("col3").value(BindMarker.of("name3"))));
+                Assignment.column("col1").value(BindMarker.named("name1")),
+                Assignment.column("col2").value(BindMarker.named("name2")),
+                Assignment.column("col3").value(BindMarker.named("name3"))));
     Map<String, Value> namedValues3 =
         ImmutableMap.of(
             "name1",
@@ -159,9 +159,9 @@ public class InsertStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col1").value(BindMarker.of("name1")),
-                Assignment.column("col2").value(BindMarker.of("name2")),
-                Assignment.column("col3").value(BindMarker.of("name2"))));
+                Assignment.column("col1").value(BindMarker.named("name1")),
+                Assignment.column("col2").value(BindMarker.named("name2")),
+                Assignment.column("col3").value(BindMarker.named("name2"))));
     Map<String, Value> namedValues4 =
         ImmutableMap.of("name1", Value.ofInt(10), "name2", Value.ofText("aaa"));
 
@@ -189,7 +189,7 @@ public class InsertStatementTest {
                 ImmutableList.of(
                     Assignment.column("col1").value(Value.ofInt(10)),
                     Assignment.column("col2").value(Value.ofText("aaa")),
-                    Assignment.column("col3").value(BindMarker.of("name3")))));
+                    Assignment.column("col3").value(BindMarker.named("name3")))));
     assertThat(actual3)
         .isEqualTo(
             InsertStatement.of(
@@ -219,9 +219,9 @@ public class InsertStatementTest {
             "ns",
             "table",
             ImmutableList.of(
-                Assignment.column("col1").value(BindMarker.of("name1")),
-                Assignment.column("col2").value(BindMarker.of("name2")),
-                Assignment.column("col3").value(BindMarker.of("name3"))));
+                Assignment.column("col1").value(BindMarker.named("name1")),
+                Assignment.column("col2").value(BindMarker.named("name2")),
+                Assignment.column("col3").value(BindMarker.named("name3"))));
     List<Value> positionalValues =
         Arrays.asList(Value.ofInt(10), Value.ofText("aaa"), Value.ofText("bbb"));
 
