@@ -1,7 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -27,8 +26,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.apache.commons.dbcp2.BasicDataSource;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -41,7 +40,7 @@ public class JdbcAdminTest {
   @Mock private Connection connection;
   @Mock private JdbcConfig config;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
   }
@@ -1186,7 +1185,7 @@ public class JdbcAdminTest {
 
     // Act
     // Assert
-    assertTrue(admin.namespaceExists(namespace));
+    assertThat(admin.namespaceExists(namespace)).isTrue();
 
     verify(selectStatement).executeQuery();
     verify(connection).prepareStatement(expectedSelectStatement);

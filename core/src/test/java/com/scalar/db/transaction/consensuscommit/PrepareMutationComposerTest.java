@@ -26,8 +26,8 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
 import java.util.List;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class PrepareMutationComposerTest {
   private static final String ANY_NAMESPACE_NAME = "namespace";
@@ -62,7 +62,7 @@ public class PrepareMutationComposerTest {
   private PrepareMutationComposer composer;
   private List<Mutation> mutations;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     mutations = new ArrayList<>();
     composer = new PrepareMutationComposer(ANY_ID_3, mutations, ANY_TIME_5);

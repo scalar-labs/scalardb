@@ -40,9 +40,9 @@ subprojects {
         dropwizardMetricsVersion = '4.2.2'
         prometheusVersion = '0.12.0'
         jettyVersion = '9.4.43.v20210629'
-        junitVersion = '4.12'
+        junitVersion = '5.8.2'
         commonsLangVersion = '3.12.0'
-        assertjVersion = '3.9.1'
+        assertjVersion = '3.22.0'
         mockitoVersion = '3.12.4'
         spotbugsVersion = '4.3.0'
         errorproneVersion = '2.10.0'
@@ -56,8 +56,7 @@ subprojects {
     }
 
     test {
-        maxHeapSize "512m"
-        testLogging.showStandardStreams = true
+        useJUnitPlatform()
     }
 
     sourceCompatibility = 1.8

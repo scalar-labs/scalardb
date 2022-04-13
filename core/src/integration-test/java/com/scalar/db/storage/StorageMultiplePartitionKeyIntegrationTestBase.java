@@ -15,7 +15,6 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -31,11 +30,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.IntStream;
 import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
-@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
 
   private static final String TEST_NAME = "mul_pkey";
@@ -51,33 +51,29 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
 
   private static final int THREAD_NUM = 10;
 
-  private static boolean initialized;
-  private static DistributedStorageAdmin admin;
-  private static DistributedStorage storage;
-  private static String namespaceBaseName;
+  private DistributedStorageAdmin admin;
+  private DistributedStorage storage;
+  private String namespaceBaseName;
 
   // Key: firstPartitionKeyType, Value: secondPartitionKeyType
-  private static ListMultimap<DataType, DataType> partitionKeyTypes;
+  private ListMultimap<DataType, DataType> partitionKeyTypes;
 
-  private static long seed;
+  private long seed;
 
-  private static ExecutorService executorService;
+  private ExecutorService executorService;
 
-  @Before
-  public void setUp() throws Exception {
-    if (!initialized) {
-      StorageFactory factory =
-          new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
-      admin = factory.getAdmin();
-      namespaceBaseName = getNamespaceBaseName();
-      partitionKeyTypes = getPartitionKeyTypes();
-      executorService = Executors.newFixedThreadPool(getThreadNum());
-      createTables();
-      storage = factory.getStorage();
-      seed = System.currentTimeMillis();
-      System.out.println("The seed used in the multiple partition key integration test is " + seed);
-      initialized = true;
-    }
+  @BeforeAll
+  public void beforeAll() throws java.util.concurrent.ExecutionException, InterruptedException {
+    StorageFactory factory =
+        new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+    admin = factory.getAdmin();
+    namespaceBaseName = getNamespaceBaseName();
+    partitionKeyTypes = getPartitionKeyTypes();
+    executorService = Executors.newFixedThreadPool(getThreadNum());
+    createTables();
+    storage = factory.getStorage();
+    seed = System.currentTimeMillis();
+    System.out.println("The seed used in the multiple partition key integration test is " + seed);
   }
 
   protected abstract DatabaseConfig getDatabaseConfig();
@@ -98,10 +94,6 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
 
   protected int getThreadNum() {
     return THREAD_NUM;
-  }
-
-  protected Map<String, String> getCreateOptions() {
-    return Collections.emptyMap();
   }
 
   private void createTables() throws java.util.concurrent.ExecutionException, InterruptedException {
@@ -127,6 +119,10 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
     executeInParallel(testCallables.subList(1, testCallables.size()));
   }
 
+  protected Map<String, String> getCreateOptions() {
+    return Collections.emptyMap();
+  }
+
   private void createTable(
       DataType firstPartitionKeyType, DataType secondPartitionKeyType, Map<String, String> options)
       throws ExecutionException {
@@ -144,15 +140,14 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
         options);
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  @AfterAll
+  public void afterAll() throws java.util.concurrent.ExecutionException, InterruptedException {
     deleteTables();
     admin.close();
     storage.close();
   }
 
-  private static void deleteTables()
-      throws java.util.concurrent.ExecutionException, InterruptedException {
+  private void deleteTables() throws java.util.concurrent.ExecutionException, InterruptedException {
     List<Callable<Void>> testCallables = new ArrayList<>();
     for (DataType firstPartitionKeyType : partitionKeyTypes.keySet()) {
       Callable<Void> testCallable =
@@ -182,16 +177,15 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
         getTableName(firstPartitionKeyType, secondPartitionKeyType));
   }
 
-  private static String getTableName(
-      DataType firstPartitionKeyType, DataType secondPartitionKeyType) {
+  private String getTableName(DataType firstPartitionKeyType, DataType secondPartitionKeyType) {
     return String.join("_", firstPartitionKeyType.toString(), secondPartitionKeyType.toString());
   }
 
-  private static String getNamespaceName(DataType firstPartitionKeyType) {
+  private String getNamespaceName(DataType firstPartitionKeyType) {
     return namespaceBaseName + firstPartitionKeyType;
   }
 
-  private static void executeInParallel(List<Callable<Void>> testCallables)
+  private void executeInParallel(List<Callable<Void>> testCallables)
       throws InterruptedException, java.util.concurrent.ExecutionException {
     List<Future<Void>> futures = executorService.invokeAll(testCallables);
     for (Future<Void> future : futures) {

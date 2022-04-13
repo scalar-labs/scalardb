@@ -12,9 +12,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import picocli.CommandLine;
@@ -37,7 +37,7 @@ public class SchemaLoaderCommandTest {
   private CommandLine commandLine;
   private StringWriter stringWriter;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     closeable = MockitoAnnotations.openMocks(this);
     schemaLoaderMockedStatic = mockStatic(SchemaLoader.class);
@@ -49,7 +49,7 @@ public class SchemaLoaderCommandTest {
     commandLine.setErr(printWriter);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     schemaLoaderMockedStatic.close();
     closeable.close();

@@ -18,7 +18,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,11 +29,12 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.IntStream;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
-@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class StorageSingleClusteringKeyScanIntegrationTestBase {
 
   private enum OrderingType {
@@ -53,29 +53,25 @@ public abstract class StorageSingleClusteringKeyScanIntegrationTestBase {
 
   private static final Random RANDOM = new Random();
 
-  private static boolean initialized;
-  private static DistributedStorageAdmin admin;
-  private static DistributedStorage storage;
-  private static String namespace;
-  private static Set<DataType> clusteringKeyTypes;
+  private DistributedStorageAdmin admin;
+  private DistributedStorage storage;
+  private String namespace;
+  private Set<DataType> clusteringKeyTypes;
 
-  private static long seed;
+  private long seed;
 
-  @Before
-  public void setUp() throws Exception {
-    if (!initialized) {
-      StorageFactory factory =
-          new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
-      admin = factory.getAdmin();
-      namespace = getNamespace();
-      clusteringKeyTypes = getClusteringKeyTypes();
-      createTables();
-      storage = factory.getStorage();
-      seed = System.currentTimeMillis();
-      System.out.println(
-          "The seed used in the single clustering key scan integration test is " + seed);
-      initialized = true;
-    }
+  @BeforeAll
+  public void beforeAll() throws ExecutionException {
+    StorageFactory factory =
+        new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+    admin = factory.getAdmin();
+    namespace = getNamespace();
+    clusteringKeyTypes = getClusteringKeyTypes();
+    createTables();
+    storage = factory.getStorage();
+    seed = System.currentTimeMillis();
+    System.out.println(
+        "The seed used in the single clustering key scan integration test is " + seed);
   }
 
   protected abstract DatabaseConfig getDatabaseConfig();
@@ -88,10 +84,6 @@ public abstract class StorageSingleClusteringKeyScanIntegrationTestBase {
     return new HashSet<>(Arrays.asList(DataType.values()));
   }
 
-  protected Map<String, String> getCreateOptions() {
-    return Collections.emptyMap();
-  }
-
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreateOptions();
     admin.createNamespace(namespace, true, options);
@@ -100,6 +92,10 @@ public abstract class StorageSingleClusteringKeyScanIntegrationTestBase {
         createTable(clusteringKeyType, clusteringOrder, options);
       }
     }
+  }
+
+  protected Map<String, String> getCreateOptions() {
+    return Collections.emptyMap();
   }
 
   private void createTable(
@@ -119,14 +115,14 @@ public abstract class StorageSingleClusteringKeyScanIntegrationTestBase {
         options);
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  @AfterAll
+  public void afterAll() throws ExecutionException {
     deleteTables();
     admin.close();
     storage.close();
   }
 
-  private static void deleteTables() throws ExecutionException {
+  private void deleteTables() throws ExecutionException {
     for (DataType clusteringKeyType : clusteringKeyTypes) {
       for (Order clusteringOrder : Order.values()) {
         admin.dropTable(namespace, getTableName(clusteringKeyType, clusteringOrder));
@@ -140,7 +136,7 @@ public abstract class StorageSingleClusteringKeyScanIntegrationTestBase {
     admin.truncateTable(namespace, getTableName(clusteringKeyType, clusteringOrder));
   }
 
-  private static String getTableName(DataType clusteringKeyType, Order clusteringOrder) {
+  private String getTableName(DataType clusteringKeyType, Order clusteringOrder) {
     return clusteringKeyType + "_" + clusteringOrder;
   }
 

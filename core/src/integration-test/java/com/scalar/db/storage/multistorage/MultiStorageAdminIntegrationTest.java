@@ -12,10 +12,12 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import java.util.Arrays;
 import java.util.Properties;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class MultiStorageAdminIntegrationTest {
 
   private static final String NAMESPACE1 = "integration_testing1";
@@ -30,18 +32,18 @@ public class MultiStorageAdminIntegrationTest {
   private static final String COL_NAME4 = "c4";
   private static final String COL_NAME5 = "c5";
 
-  private static DistributedStorageAdmin admin1;
-  private static DistributedStorageAdmin admin2;
-  private static MultiStorageAdmin multiStorageAdmin;
+  private DistributedStorageAdmin admin1;
+  private DistributedStorageAdmin admin2;
+  private MultiStorageAdmin multiStorageAdmin;
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws ExecutionException {
+  @BeforeAll
+  public void beforeAll() throws ExecutionException {
     initAdmin1();
     initAdmin2();
     initMultiStorageAdmin();
   }
 
-  private static void initAdmin1() throws ExecutionException {
+  private void initAdmin1() throws ExecutionException {
     StorageFactory factory = new StorageFactory(MultiStorageEnv.getDatabaseConfigForStorage1());
     admin1 = factory.getAdmin();
 
@@ -65,7 +67,7 @@ public class MultiStorageAdminIntegrationTest {
     admin1.createTable(NAMESPACE2, TABLE1, tableMetadata, true);
   }
 
-  private static void initAdmin2() throws ExecutionException {
+  private void initAdmin2() throws ExecutionException {
     StorageFactory factory = new StorageFactory(MultiStorageEnv.getDatabaseConfigForStorage2());
     admin2 = factory.getAdmin();
 
@@ -86,7 +88,7 @@ public class MultiStorageAdminIntegrationTest {
     admin2.createTable(NAMESPACE2, TABLE1, tableMetadata, true);
   }
 
-  private static void initMultiStorageAdmin() {
+  private void initMultiStorageAdmin() {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
 
@@ -147,14 +149,14 @@ public class MultiStorageAdminIntegrationTest {
     multiStorageAdmin = new MultiStorageAdmin(new MultiStorageConfig(props));
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws ExecutionException {
+  @AfterAll
+  public void afterAll() throws ExecutionException {
     multiStorageAdmin.close();
     cleanUp(admin1);
     cleanUp(admin2);
   }
 
-  private static void cleanUp(DistributedStorageAdmin admin) throws ExecutionException {
+  private void cleanUp(DistributedStorageAdmin admin) throws ExecutionException {
     for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
       admin.dropTable(NAMESPACE1, table);
     }

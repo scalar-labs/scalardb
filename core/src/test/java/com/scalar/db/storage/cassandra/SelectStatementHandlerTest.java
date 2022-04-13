@@ -23,8 +23,8 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -49,7 +49,7 @@ public class SelectStatementHandlerTest {
   @Mock private PreparedStatement prepared;
   @Mock private BoundStatement bound;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 

@@ -4,11 +4,11 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.StorageIntegrationTestBase;
 import java.io.IOException;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
 
 public class DistributedStorageServiceIntegrationTest extends StorageIntegrationTestBase {
 
-  private static ScalarDbServer server;
+  private ScalarDbServer server;
 
   @Override
   protected void initialize() throws IOException {
@@ -24,9 +24,10 @@ public class DistributedStorageServiceIntegrationTest extends StorageIntegration
     return ServerEnv.getGrpcConfig();
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws ExecutionException {
-    StorageIntegrationTestBase.tearDownAfterClass();
+  @AfterAll
+  @Override
+  public void afterAll() throws ExecutionException {
+    super.afterAll();
     if (server != null) {
       server.shutdown();
       server.blockUntilShutdown();

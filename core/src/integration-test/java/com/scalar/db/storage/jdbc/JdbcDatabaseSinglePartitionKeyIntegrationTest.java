@@ -8,7 +8,8 @@ import java.util.Random;
 
 public class JdbcDatabaseSinglePartitionKeyIntegrationTest
     extends StorageSinglePartitionKeyIntegrationTestBase {
-  private static RdbEngine rdbEngine;
+
+  private RdbEngine rdbEngine;
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {

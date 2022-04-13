@@ -16,8 +16,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -30,7 +30,7 @@ public class ConsensusCommitAdminTest {
   @Mock private ConsensusCommitConfig config;
   private ConsensusCommitAdmin admin;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
     admin = new ConsensusCommitAdmin(distributedStorageAdmin, config);

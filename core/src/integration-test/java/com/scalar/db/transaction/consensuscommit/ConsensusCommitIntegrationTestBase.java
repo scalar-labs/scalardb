@@ -35,7 +35,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.storage.TestUtils;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -44,11 +43,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
 import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
-@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class ConsensusCommitIntegrationTestBase {
 
   private static final String TEST_NAME = "cc";
@@ -65,14 +66,13 @@ public abstract class ConsensusCommitIntegrationTestBase {
   private static final String ANY_ID_1 = "id1";
   private static final String ANY_ID_2 = "id2";
 
-  private static boolean initialized;
-  private static DistributedStorage originalStorage;
-  private static DistributedStorageAdmin admin;
-  private static ConsensusCommitConfig consensusCommitConfig;
-  private static ConsensusCommitAdmin consensusCommitAdmin;
-  private static String namespace1;
-  private static String namespace2;
-  private static ParallelExecutor parallelExecutor;
+  private DistributedStorage originalStorage;
+  private DistributedStorageAdmin admin;
+  private ConsensusCommitConfig consensusCommitConfig;
+  private ConsensusCommitAdmin consensusCommitAdmin;
+  private String namespace1;
+  private String namespace2;
+  private ParallelExecutor parallelExecutor;
 
   private ConsensusCommitManager manager;
   private DistributedStorage storage;
@@ -80,33 +80,19 @@ public abstract class ConsensusCommitIntegrationTestBase {
   private RecoveryHandler recovery;
   private CommitHandler commit;
 
-  @Before
-  public void setUp() throws Exception {
-    if (!initialized) {
-      initialize();
-      DatabaseConfig config = TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME);
-      StorageFactory factory = new StorageFactory(config);
-      admin = factory.getAdmin();
-      consensusCommitConfig = new ConsensusCommitConfig(config.getProperties());
-      consensusCommitAdmin = new ConsensusCommitAdmin(admin, consensusCommitConfig);
-      namespace1 = getNamespace1();
-      namespace2 = getNamespace2();
-      createTables();
-      originalStorage = factory.getStorage();
-      parallelExecutor = new ParallelExecutor(consensusCommitConfig);
-      initialized = true;
-    }
-
-    truncateTables();
-    storage = spy(originalStorage);
-    coordinator = spy(new Coordinator(storage, consensusCommitConfig));
-    TransactionalTableMetadataManager tableMetadataManager =
-        new TransactionalTableMetadataManager(admin, -1);
-    recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
-    commit = spy(new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor));
-    manager =
-        new ConsensusCommitManager(
-            storage, admin, consensusCommitConfig, coordinator, parallelExecutor, recovery, commit);
+  @BeforeAll
+  public void beforeAll() throws Exception {
+    initialize();
+    DatabaseConfig config = TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME);
+    StorageFactory factory = new StorageFactory(config);
+    admin = factory.getAdmin();
+    consensusCommitConfig = new ConsensusCommitConfig(config.getProperties());
+    consensusCommitAdmin = new ConsensusCommitAdmin(admin, consensusCommitConfig);
+    namespace1 = getNamespace1();
+    namespace2 = getNamespace2();
+    createTables();
+    originalStorage = factory.getStorage();
+    parallelExecutor = new ParallelExecutor(consensusCommitConfig);
   }
 
   protected void initialize() throws Exception {}
@@ -142,21 +128,35 @@ public abstract class ConsensusCommitIntegrationTestBase {
     return Collections.emptyMap();
   }
 
+  @BeforeEach
+  public void setUp() throws ExecutionException {
+    truncateTables();
+    storage = spy(originalStorage);
+    coordinator = spy(new Coordinator(storage, consensusCommitConfig));
+    TransactionalTableMetadataManager tableMetadataManager =
+        new TransactionalTableMetadataManager(admin, -1);
+    recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
+    commit = spy(new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor));
+    manager =
+        new ConsensusCommitManager(
+            storage, admin, consensusCommitConfig, coordinator, parallelExecutor, recovery, commit);
+  }
+
   private void truncateTables() throws ExecutionException {
     consensusCommitAdmin.truncateTable(namespace1, TABLE_1);
     consensusCommitAdmin.truncateTable(namespace2, TABLE_2);
     consensusCommitAdmin.truncateCoordinatorTable();
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws ExecutionException {
+  @AfterAll
+  public void afterAll() throws ExecutionException {
     deleteTables();
     consensusCommitAdmin.close();
     originalStorage.close();
     parallelExecutor.close();
   }
 
-  private static void deleteTables() throws ExecutionException {
+  private void deleteTables() throws ExecutionException {
     consensusCommitAdmin.dropTable(namespace1, TABLE_1);
     consensusCommitAdmin.dropNamespace(namespace1);
     consensusCommitAdmin.dropTable(namespace2, TABLE_2);

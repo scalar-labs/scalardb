@@ -8,7 +8,7 @@ import com.scalar.db.schemaloader.SchemaOperator;
 import com.scalar.db.schemaloader.SchemaParser;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import picocli.CommandLine;
@@ -21,7 +21,7 @@ public abstract class StorageSpecificCommandTestBase {
   protected CommandLine commandLine;
   protected StringWriter stringWriter;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 

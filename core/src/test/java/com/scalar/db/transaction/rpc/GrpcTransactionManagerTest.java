@@ -15,8 +15,8 @@ import com.scalar.db.rpc.GetTransactionStateResponse;
 import com.scalar.db.rpc.TransactionState;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import io.grpc.Status;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -31,7 +31,7 @@ public class GrpcTransactionManagerTest {
 
   private GrpcTransactionManager manager;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 

@@ -13,8 +13,8 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -29,7 +29,7 @@ public class ValueBinderTest {
 
   @Mock private BoundStatement bound;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
   }

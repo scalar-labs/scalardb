@@ -25,8 +25,8 @@ import com.scalar.db.sql.exception.UnknownTransactionStatusException;
 import com.scalar.db.sql.metadata.Metadata;
 import com.scalar.db.sql.statement.CreateTableStatement;
 import com.scalar.db.sql.statement.SelectStatement;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -41,7 +41,7 @@ public class TwoPhaseCommitTransactionSessionTest {
 
   private TwoPhaseCommitTransactionSession twoPhaseCommitTransactionSession;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 

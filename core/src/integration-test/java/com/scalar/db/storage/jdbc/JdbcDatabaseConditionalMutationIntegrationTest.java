@@ -13,7 +13,7 @@ import java.util.Random;
 public class JdbcDatabaseConditionalMutationIntegrationTest
     extends StorageConditionalMutationIntegrationTestBase {
 
-  private static RdbEngine rdbEngine;
+  private RdbEngine rdbEngine;
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {

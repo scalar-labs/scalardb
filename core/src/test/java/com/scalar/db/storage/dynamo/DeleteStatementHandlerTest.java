@@ -19,8 +19,8 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.LinkedHashSet;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -44,7 +44,7 @@ public class DeleteStatementHandlerTest {
   @Mock private TableMetadata metadata;
   @Mock private DeleteItemResponse response;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 

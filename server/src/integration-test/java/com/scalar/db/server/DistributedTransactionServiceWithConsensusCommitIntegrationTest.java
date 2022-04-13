@@ -34,11 +34,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
   static final String NAMESPACE = "integration_testing";
@@ -51,13 +53,13 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
   static final int NUM_ACCOUNTS = 4;
   static final int NUM_TYPES = 4;
 
-  private static ScalarDbServer server;
-  private static DistributedStorageAdmin admin;
-  private static ConsensusCommitAdmin consensusCommitAdmin;
-  private static GrpcTransactionManager manager;
+  private ScalarDbServer server;
+  private DistributedStorageAdmin admin;
+  private ConsensusCommitAdmin consensusCommitAdmin;
+  private GrpcTransactionManager manager;
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws ExecutionException, IOException {
+  @BeforeAll
+  public void beforeAll() throws ExecutionException, IOException {
     ServerConfig serverConfig = ServerEnv.getServerConfig();
     if (serverConfig != null) {
       server = new ScalarDbServer(serverConfig);
@@ -89,7 +91,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     consensusCommitAdmin.createCoordinatorNamespaceAndTable();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws ExecutionException {
     truncateTables(admin, consensusCommitAdmin);
   }
@@ -102,8 +104,8 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     consensusCommitAdmin.truncateCoordinatorTable();
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws ExecutionException {
+  @AfterAll
+  public void tearDown() throws ExecutionException {
     deleteTables(admin, consensusCommitAdmin);
     admin.close();
     manager.close();
