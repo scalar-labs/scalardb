@@ -86,7 +86,7 @@ public class DmlStatementExecutorTest {
                 Predicate.column("c2").isEqualTo(Value.ofText("ddd"))),
             ImmutableList.of(
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
-            100);
+            Value.ofInt(100));
 
     Result result = mock(Result.class);
     when(transaction.get(any())).thenReturn(Optional.of(result));
@@ -118,7 +118,7 @@ public class DmlStatementExecutorTest {
                 Predicate.column("c1").isEqualTo(Value.ofText("ccc"))),
             ImmutableList.of(
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
-            100);
+            Value.ofInt(100));
 
     Result result = mock(Result.class);
     when(transaction.scan(any())).thenReturn(Arrays.asList(result, result, result));
@@ -161,7 +161,7 @@ public class DmlStatementExecutorTest {
                 Predicate.column("c2").isLessThan(Value.ofText("eee"))),
             ImmutableList.of(
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
-            100);
+            Value.ofInt(100));
 
     Result result = mock(Result.class);
     when(transaction.scan(any())).thenReturn(Arrays.asList(result, result, result));
@@ -204,7 +204,7 @@ public class DmlStatementExecutorTest {
                 Predicate.column("c1").isLessThanOrEqualTo(Value.ofText("ddd"))),
             ImmutableList.of(
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
-            100);
+            Value.ofInt(100));
 
     Result result = mock(Result.class);
     when(transaction.scan(any())).thenReturn(Arrays.asList(result, result, result));
@@ -247,7 +247,7 @@ public class DmlStatementExecutorTest {
                 Predicate.column("c2").isGreaterThan(Value.ofText("ddd"))),
             ImmutableList.of(
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
-            100);
+            Value.ofInt(100));
 
     Result result = mock(Result.class);
     when(transaction.scan(any())).thenReturn(Arrays.asList(result, result, result));
@@ -288,7 +288,7 @@ public class DmlStatementExecutorTest {
                 Predicate.column("c1").isGreaterThanOrEqualTo(Value.ofText("ccc"))),
             ImmutableList.of(
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
-            100);
+            Value.ofInt(100));
 
     Result result = mock(Result.class);
     when(transaction.scan(any())).thenReturn(Arrays.asList(result, result, result));
@@ -330,7 +330,7 @@ public class DmlStatementExecutorTest {
                 Predicate.column("c2").isLessThanOrEqualTo(Value.ofText("ddd"))),
             ImmutableList.of(
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
-            100);
+            Value.ofInt(100));
 
     Result result = mock(Result.class);
     when(transaction.scan(any())).thenReturn(Arrays.asList(result, result, result));
@@ -371,7 +371,7 @@ public class DmlStatementExecutorTest {
                 Predicate.column("c1").isLessThan(Value.ofText("ccc"))),
             ImmutableList.of(
                 ClusteringOrdering.column("c1").asc(), ClusteringOrdering.column("c2").desc()),
-            100);
+            Value.ofInt(100));
 
     Result result = mock(Result.class);
     when(transaction.scan(any())).thenReturn(Arrays.asList(result, result, result));
@@ -407,7 +407,7 @@ public class DmlStatementExecutorTest {
                 Projection.column("c2")),
             ImmutableList.of(Predicate.column("col2").isEqualTo(Value.ofText("aaa"))),
             ImmutableList.of(),
-            100);
+            Value.ofInt(100));
 
     Result result = mock(Result.class);
     when(transaction.scan(any())).thenReturn(Arrays.asList(result, result, result));

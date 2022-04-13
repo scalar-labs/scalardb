@@ -8,11 +8,15 @@ import javax.annotation.concurrent.Immutable;
 public class Assignment {
 
   public final String columnName;
-  public final Value value;
+  public final Term value;
 
-  private Assignment(String columnName, Value value) {
+  private Assignment(String columnName, Term value) {
     this.columnName = Objects.requireNonNull(columnName);
     this.value = Objects.requireNonNull(value);
+  }
+
+  public Assignment replaceValue(Term newValue) {
+    return new Assignment(columnName, newValue);
   }
 
   @Override
@@ -51,7 +55,7 @@ public class Assignment {
       this.columnName = columnName;
     }
 
-    public Assignment value(Value value) {
+    public Assignment value(Term value) {
       return new Assignment(columnName, value);
     }
   }
