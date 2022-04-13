@@ -21,6 +21,9 @@ import com.scalar.db.sql.exception.UnknownTransactionStatusException;
 import com.scalar.db.sql.metadata.Metadata;
 import com.scalar.db.sql.statement.CreateTableStatement;
 import com.scalar.db.sql.statement.SelectStatement;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -161,6 +164,54 @@ public class TransactionSessionTest {
 
     verify(statementValidator, never()).validate(dmlStatement);
     verify(dmlStatementExecutor, never()).execute(transaction, dmlStatement);
+  }
+
+  @Test
+  public void execute_BindableStatementAndPositionalValuesGiven_ShouldThrowIllegalStateException()
+      throws TransactionException {
+    // Arrange
+    when(manager.start()).thenReturn(transaction);
+
+    SelectStatement bindableStatement = mock(SelectStatement.class);
+    List<Value> positionalValues = Collections.emptyList();
+
+    SelectStatement boundStatement = mock(SelectStatement.class);
+    when(bindableStatement.bind(positionalValues)).thenReturn(boundStatement);
+
+    ResultSet resultSet = mock(ResultSet.class);
+    when(dmlStatementExecutor.execute(transaction, boundStatement)).thenReturn(resultSet);
+
+    // Act
+    transactionSession.begin();
+    transactionSession.execute(bindableStatement, positionalValues);
+
+    // Assert
+    verify(statementValidator).validate(boundStatement);
+    verify(dmlStatementExecutor).execute(transaction, boundStatement);
+  }
+
+  @Test
+  public void execute_BindableStatementAndNamedValuesGiven_ShouldThrowIllegalStateException()
+      throws TransactionException {
+    // Arrange
+    when(manager.start()).thenReturn(transaction);
+
+    SelectStatement bindableStatement = mock(SelectStatement.class);
+    Map<String, Value> namedValues = Collections.emptyMap();
+
+    SelectStatement boundStatement = mock(SelectStatement.class);
+    when(bindableStatement.bind(namedValues)).thenReturn(boundStatement);
+
+    ResultSet resultSet = mock(ResultSet.class);
+    when(dmlStatementExecutor.execute(transaction, boundStatement)).thenReturn(resultSet);
+
+    // Act
+    transactionSession.begin();
+    transactionSession.execute(bindableStatement, namedValues);
+
+    // Assert
+    verify(statementValidator).validate(boundStatement);
+    verify(dmlStatementExecutor).execute(transaction, boundStatement);
   }
 
   @Test

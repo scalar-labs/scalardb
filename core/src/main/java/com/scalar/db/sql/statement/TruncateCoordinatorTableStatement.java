@@ -28,10 +28,7 @@ public class TruncateCoordinatorTableStatement implements DdlStatement {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    return o instanceof TruncateCoordinatorTableStatement;
+    return this == o;
   }
 
   @Override

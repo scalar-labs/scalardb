@@ -3,11 +3,15 @@ package com.scalar.db.sql.statement;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.sql.Predicate;
+import com.scalar.db.sql.SqlUtils;
+import com.scalar.db.sql.Value;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
-public class DeleteStatement implements DmlStatement {
+public class DeleteStatement implements DmlStatement, BindableStatement<DeleteStatement> {
 
   public final String namespaceName;
   public final String tableName;
@@ -18,6 +22,18 @@ public class DeleteStatement implements DmlStatement {
     this.namespaceName = Objects.requireNonNull(namespaceName);
     this.tableName = Objects.requireNonNull(tableName);
     this.predicates = Objects.requireNonNull(predicates);
+  }
+
+  @Override
+  public DeleteStatement bind(List<Value> positionalValues) {
+    return new DeleteStatement(
+        namespaceName, tableName, SqlUtils.bindPredicates(predicates, positionalValues.iterator()));
+  }
+
+  @Override
+  public DeleteStatement bind(Map<String, Value> namedValues) {
+    return new DeleteStatement(
+        namespaceName, tableName, SqlUtils.bindPredicates(predicates, namedValues));
   }
 
   @Override
