@@ -41,6 +41,7 @@ jobs:
         with:
           name: gradle_cosmos_integration_test_reports
           path: /tmp/gradle_integration_test_reports
+
   integration-test-for-cosmos-2:
     runs-on: self-hosted
 
@@ -53,10 +54,14 @@ jobs:
           java-version: '8'
           distribution: 'temurin'
 
+      - name: Generate unique prefix using the epoch
+        run: |
+          echo "db_prefix=$(date +%s%3N)" >> $GITHUB_ENV
+
       - name: Setup and execute Gradle 'integrationTestCosmos' task
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: integrationTestCosmos -Dscalardb.cosmos.uri=${{ secrets.COSMOS_URI }} -Dscalardb.cosmos.password=${{ secrets.COSMOS_PASSWORD }} -Dscalardb.cosmos.database_prefix=${{ github.run_id }}
+          arguments: integrationTestCosmos -Dscalardb.cosmos.uri=${{ secrets.COSMOS_URI }} -Dscalardb.cosmos.password=${{ secrets.COSMOS_PASSWORD }} -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}
 
       - name: Save Gradle test reports
         if: always()
@@ -73,6 +78,7 @@ jobs:
           name: gradle_cosmos_integration_test_reports
           path: /tmp/gradle_integration_test_reports
 
+
   integration-test-for-cosmos-3:
     runs-on: self-hosted
 
@@ -85,10 +91,14 @@ jobs:
           java-version: '8'
           distribution: 'temurin'
 
+      - name: Generate unique prefix using the epoch
+        run: |
+          echo "db_prefix=$(date +%s%3N)" >> $GITHUB_ENV
+
       - name: Setup and execute Gradle 'integrationTestCosmos' task
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: integrationTestCosmos -Dscalardb.cosmos.uri=${{ secrets.COSMOS_URI }} -Dscalardb.cosmos.password=${{ secrets.COSMOS_PASSWORD }} -Dscalardb.cosmos.database_prefix=${{ github.run_id }}
+          arguments: integrationTestCosmos -Dscalardb.cosmos.uri=${{ secrets.COSMOS_URI }} -Dscalardb.cosmos.password=${{ secrets.COSMOS_PASSWORD }} -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}
 
       - name: Save Gradle test reports
         if: always()
