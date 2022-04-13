@@ -5,10 +5,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.sql.metadata.Metadata;
+import com.scalar.db.sql.statement.CreateTableStatement;
 import com.scalar.db.sql.statement.DeleteStatement;
 import com.scalar.db.sql.statement.InsertStatement;
 import com.scalar.db.sql.statement.SelectStatement;
@@ -50,6 +53,155 @@ public class StatementValidatorTest {
     when(admin.getTableMetadata(NAMESPACE_NAME, TABLE_NAME)).thenReturn(TABLE_METADATA);
 
     statementValidator = new StatementValidator(Metadata.create(admin, -1));
+  }
+
+  @Test
+  public void validate_ProperCreateTableStatementGiven_ShouldNotThrowAnyException() {
+    // Arrange
+    CreateTableStatement statement1 =
+        CreateTableStatement.of(
+            NAMESPACE_NAME,
+            TABLE_NAME,
+            true,
+            ImmutableMap.of(
+                "col1",
+                DataType.INT,
+                "col2",
+                DataType.TEXT,
+                "col3",
+                DataType.BIGINT,
+                "col4",
+                DataType.FLOAT,
+                "col5",
+                DataType.DOUBLE),
+            ImmutableSet.of("col1"),
+            ImmutableSet.of("col2", "col3", "col4"),
+            ImmutableMap.of(
+                "col2",
+                ClusteringOrder.ASC,
+                "col3",
+                ClusteringOrder.DESC,
+                "col4",
+                ClusteringOrder.ASC),
+            ImmutableSet.of("col5"),
+            ImmutableMap.of("name1", "val1", "name2", "val2", "name3", "val3"));
+
+    CreateTableStatement statement2 =
+        CreateTableStatement.of(
+            NAMESPACE_NAME,
+            TABLE_NAME,
+            true,
+            ImmutableMap.of(
+                "col1",
+                DataType.INT,
+                "col2",
+                DataType.TEXT,
+                "col3",
+                DataType.BIGINT,
+                "col4",
+                DataType.FLOAT,
+                "col5",
+                DataType.DOUBLE),
+            ImmutableSet.of("col1"),
+            ImmutableSet.of("col2", "col3", "col4"),
+            ImmutableMap.of("col2", ClusteringOrder.ASC, "col3", ClusteringOrder.DESC),
+            ImmutableSet.of("col5"),
+            ImmutableMap.of("name1", "val1", "name2", "val2", "name3", "val3"));
+
+    // Act Assert
+    assertThatCode(() -> statementValidator.validate(statement1)).doesNotThrowAnyException();
+    assertThatCode(() -> statementValidator.validate(statement2)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      validate_CreateTableStatementWithInvalidClusteringOrdersGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    CreateTableStatement statement1 =
+        CreateTableStatement.of(
+            NAMESPACE_NAME,
+            TABLE_NAME,
+            true,
+            ImmutableMap.of(
+                "col1",
+                DataType.INT,
+                "col2",
+                DataType.TEXT,
+                "col3",
+                DataType.BIGINT,
+                "col4",
+                DataType.FLOAT,
+                "col5",
+                DataType.DOUBLE),
+            ImmutableSet.of("col1"),
+            ImmutableSet.of("col2", "col3", "col4"),
+            ImmutableMap.of("col3", ClusteringOrder.DESC, "col4", ClusteringOrder.ASC),
+            ImmutableSet.of("col3"),
+            ImmutableMap.of("name1", "val1", "name2", "val2", "name3", "val3"));
+
+    CreateTableStatement statement2 =
+        CreateTableStatement.of(
+            NAMESPACE_NAME,
+            TABLE_NAME,
+            true,
+            ImmutableMap.of(
+                "col1",
+                DataType.INT,
+                "col2",
+                DataType.TEXT,
+                "col3",
+                DataType.BIGINT,
+                "col4",
+                DataType.FLOAT,
+                "col5",
+                DataType.DOUBLE),
+            ImmutableSet.of("col1"),
+            ImmutableSet.of("col2", "col3", "col4"),
+            ImmutableMap.of(
+                "col3",
+                ClusteringOrder.DESC,
+                "col4",
+                ClusteringOrder.ASC,
+                "col2",
+                ClusteringOrder.ASC),
+            ImmutableSet.of("col3"),
+            ImmutableMap.of("name1", "val1", "name2", "val2", "name3", "val3"));
+
+    CreateTableStatement statement3 =
+        CreateTableStatement.of(
+            NAMESPACE_NAME,
+            TABLE_NAME,
+            true,
+            ImmutableMap.of(
+                "col1",
+                DataType.INT,
+                "col2",
+                DataType.TEXT,
+                "col3",
+                DataType.BIGINT,
+                "col4",
+                DataType.FLOAT,
+                "col5",
+                DataType.DOUBLE),
+            ImmutableSet.of("col1"),
+            ImmutableSet.of("col2", "col3", "col4"),
+            ImmutableMap.of(
+                "col1",
+                ClusteringOrder.ASC,
+                "col2",
+                ClusteringOrder.DESC,
+                "col3",
+                ClusteringOrder.ASC),
+            ImmutableSet.of("col3"),
+            ImmutableMap.of("name1", "val1", "name2", "val2", "name3", "val3"));
+
+    // Act Assert
+    assertThatThrownBy(() -> statementValidator.validate(statement1))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> statementValidator.validate(statement2))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> statementValidator.validate(statement3))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
