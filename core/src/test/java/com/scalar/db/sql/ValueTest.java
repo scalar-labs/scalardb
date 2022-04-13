@@ -115,4 +115,44 @@ public class ValueTest {
     assertThat(value.type).isEqualTo(Value.Type.NULL);
     assertThat(value.value).isNull();
   }
+
+  @Test
+  public void equals_ShouldBehaveCorrectly() {
+    // Arrange
+
+    // Act Assert
+    assertThat(Value.ofBoolean(true).equals(Value.ofBoolean(true))).isTrue();
+    assertThat(Value.ofInt(10).equals(Value.ofInt(10))).isTrue();
+    assertThat(Value.ofBigInt(100L).equals(Value.ofBigInt(100L))).isTrue();
+    assertThat(Value.ofFloat(1.23F).equals(Value.ofFloat(1.23F))).isTrue();
+    assertThat(Value.ofDouble(4.56).equals(Value.ofDouble(4.56))).isTrue();
+    assertThat(Value.ofText("text").equals(Value.ofText("text"))).isTrue();
+    assertThat(
+            Value.ofBlob(ByteBuffer.wrap("blob1".getBytes(StandardCharsets.UTF_8)))
+                .equals(Value.ofBlob(ByteBuffer.wrap("blob1".getBytes(StandardCharsets.UTF_8)))))
+        .isTrue();
+    assertThat(
+            Value.ofBlob("blob2".getBytes(StandardCharsets.UTF_8))
+                .equals(Value.ofBlob("blob2".getBytes(StandardCharsets.UTF_8))))
+        .isTrue();
+
+    assertThat(Value.ofBoolean(true).equals(Value.ofInt(10))).isFalse();
+    assertThat(Value.ofBigInt(100L).equals(Value.ofFloat(1.23F))).isFalse();
+    assertThat(Value.ofDouble(4.56).equals(Value.ofText("text"))).isFalse();
+
+    assertThat(Value.ofBoolean(true).equals(Value.ofBoolean(false))).isFalse();
+    assertThat(Value.ofInt(10).equals(Value.ofInt(11))).isFalse();
+    assertThat(Value.ofBigInt(100L).equals(Value.ofBigInt(101L))).isFalse();
+    assertThat(Value.ofFloat(1.23F).equals(Value.ofFloat(1.24F))).isFalse();
+    assertThat(Value.ofDouble(4.56).equals(Value.ofDouble(4.57))).isFalse();
+    assertThat(Value.ofText("text").equals(Value.ofText("text2"))).isFalse();
+    assertThat(
+            Value.ofBlob(ByteBuffer.wrap("blob1".getBytes(StandardCharsets.UTF_8)))
+                .equals(Value.ofBlob(ByteBuffer.wrap("blob2".getBytes(StandardCharsets.UTF_8)))))
+        .isFalse();
+    assertThat(
+            Value.ofBlob("blob1".getBytes(StandardCharsets.UTF_8))
+                .equals(Value.ofBlob("blob2".getBytes(StandardCharsets.UTF_8))))
+        .isFalse();
+  }
 }
