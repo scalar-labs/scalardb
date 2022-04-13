@@ -8,7 +8,7 @@ import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.sql.metadata.Metadata;
+import com.scalar.db.sql.metadata.CachedMetadata;
 import com.scalar.db.sql.statement.DeleteStatement;
 import com.scalar.db.sql.statement.InsertStatement;
 import com.scalar.db.sql.statement.SelectStatement;
@@ -49,7 +49,7 @@ public class StatementValidatorTest {
     when(admin.namespaceExists(NAMESPACE_NAME)).thenReturn(true);
     when(admin.getTableMetadata(NAMESPACE_NAME, TABLE_NAME)).thenReturn(TABLE_METADATA);
 
-    statementValidator = new StatementValidator(Metadata.create(admin, -1));
+    statementValidator = new StatementValidator(CachedMetadata.create(admin, -1));
   }
 
   @Test

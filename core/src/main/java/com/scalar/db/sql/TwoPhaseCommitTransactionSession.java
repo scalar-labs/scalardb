@@ -42,7 +42,7 @@ public class TwoPhaseCommitTransactionSession implements SqlStatementSession {
     this.metadata = Objects.requireNonNull(metadata);
     statementValidator = new StatementValidator(metadata);
     dmlStatementExecutor = new DmlStatementExecutor(metadata);
-    ddlStatementExecutor = new DdlStatementExecutor(admin);
+    ddlStatementExecutor = new DdlStatementExecutor(admin, metadata);
   }
 
   @VisibleForTesting
