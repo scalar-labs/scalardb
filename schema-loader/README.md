@@ -337,7 +337,7 @@ You can check the version of `schema-loader` from [maven central repository](htt
 For example in Gradle, you can add the following dependency to your build.gradle. Please replace the `<version>` with the version you want to use.
 ```gradle
 dependencies {
-    implementation group: 'com.scalar-labs', name: 'scalardb-schema-loader', version: '<version>'
+    implementation 'com.scalar-labs:scalardb-schema-loader:<version>'
 }
 ```
 

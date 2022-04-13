@@ -3,10 +3,10 @@ plugins {
 }
 
 dependencies {
-    api group: 'io.grpc', name: 'grpc-netty', version: "${grpcVersion}"
-    api group: 'io.grpc', name: 'grpc-protobuf', version: "${grpcVersion}"
-    api group: 'io.grpc', name: 'grpc-stub', version: "${grpcVersion}"
-    api group: 'io.grpc', name: 'grpc-services', version: "${grpcVersion}"
+    api "io.grpc:grpc-netty:${grpcVersion}"
+    api "io.grpc:grpc-protobuf:${grpcVersion}"
+    api "io.grpc:grpc-stub:${grpcVersion}"
+    api "io.grpc:grpc-services:${grpcVersion}"
 }
 
 javadoc {

@@ -107,20 +107,22 @@ evaluationDependsOn ':server'
 
 dependencies {
     implementation project(':core')
-    implementation group: 'com.google.guava', name: 'guava', version: "${guavaVersion}"
-    implementation group: 'org.slf4j', name: 'slf4j-simple', version: "${slf4jVersion}"
-    implementation group: 'com.google.code.gson', name: 'gson', version: "${gsonVersion}"
-    implementation group: 'info.picocli', name: 'picocli', version: "${picocliVersion}"
-    testImplementation group: 'junit', name: 'junit', version: "${junitVersion}"
-    testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
-    testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
-    testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
+    implementation "com.google.guava:guava:${guavaVersion}"
+    implementation "org.slf4j:slf4j-simple:${slf4jVersion}"
+    implementation "com.google.code.gson:gson:${gsonVersion}"
+    implementation "info.picocli:picocli:${picocliVersion}"
+    testImplementation "junit:junit:${junitVersion}"
+    testImplementation "org.assertj:assertj-core:${assertjVersion}"
+    testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+    testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
     testImplementation project(':core').sourceSets.integrationTestAll.output
     testImplementation project(':server')
     testImplementation project(':server').sourceSets.integrationTestScalarDbServer.output
+
     // for SpotBugs
-    compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
-    testCompileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
+    compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
+    testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
+
     // for Error Prone
     errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
     errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
