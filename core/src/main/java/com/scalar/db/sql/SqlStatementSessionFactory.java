@@ -5,6 +5,7 @@ import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.sql.metadata.CachedMetadata;
 import com.scalar.db.sql.metadata.Metadata;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,7 +32,7 @@ public final class SqlStatementSessionFactory implements AutoCloseable {
     transactionAdmin = transactionFactory.getTransactionAdmin();
     transactionManager = transactionFactory.getTransactionManager();
     twoPhaseCommitTransactionManager = transactionFactory.getTwoPhaseCommitTransactionManager();
-    metadata = Metadata.create(transactionAdmin, config.getMetadataCacheExpirationTimeSecs());
+    metadata = CachedMetadata.create(transactionAdmin, config.getMetadataCacheExpirationTimeSecs());
   }
 
   public SqlStatementSession getTransactionSession() {

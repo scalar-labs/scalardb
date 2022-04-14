@@ -18,7 +18,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.io.Key;
-import com.scalar.db.sql.metadata.Metadata;
+import com.scalar.db.sql.metadata.CachedMetadata;
 import com.scalar.db.sql.statement.DeleteStatement;
 import com.scalar.db.sql.statement.InsertStatement;
 import com.scalar.db.sql.statement.SelectStatement;
@@ -62,7 +62,7 @@ public class DmlStatementExecutorTest {
     when(admin.namespaceExists(NAMESPACE_NAME)).thenReturn(true);
     when(admin.getTableMetadata(NAMESPACE_NAME, TABLE_NAME)).thenReturn(TABLE_METADATA);
 
-    dmlStatementExecutor = new DmlStatementExecutor(Metadata.create(admin, -1));
+    dmlStatementExecutor = new DmlStatementExecutor(CachedMetadata.create(admin, -1));
   }
 
   @Test
