@@ -58,16 +58,16 @@ public class DdlStatementExecutor implements DdlStatementVisitor<Void, Void> {
           tableMetadata,
           statement.ifNotExists,
           statement.options);
-
+      return null;
+    } catch (ExecutionException e) {
+      throw new SqlException("Failed to create a table", e);
+    } finally {
       // Invalidate the metadata cache
       metadata
           .getNamespace(statement.namespaceName)
           .filter(n -> n instanceof CachedNamespaceMetadata)
           .map(n -> (CachedNamespaceMetadata) n)
           .ifPresent(CachedNamespaceMetadata::invalidateTableNamesCache);
-      return null;
-    } catch (ExecutionException e) {
-      throw new SqlException("Failed to create a table", e);
     }
   }
 
@@ -127,14 +127,14 @@ public class DdlStatementExecutor implements DdlStatementVisitor<Void, Void> {
         }
       }
       admin.dropNamespace(statement.namespaceName, statement.ifExists);
-
+      return null;
+    } catch (ExecutionException e) {
+      throw new SqlException("Failed to drop a namespace", e);
+    } finally {
       // Invalidate the metadata cache
       if (metadata instanceof CachedMetadata) {
         ((CachedMetadata) metadata).invalidateCache(statement.namespaceName);
       }
-      return null;
-    } catch (ExecutionException e) {
-      throw new SqlException("Failed to drop a namespace", e);
     }
   }
 
@@ -142,7 +142,10 @@ public class DdlStatementExecutor implements DdlStatementVisitor<Void, Void> {
   public Void visit(DropTableStatement statement, Void context) {
     try {
       admin.dropTable(statement.namespaceName, statement.tableName, statement.ifExists);
-
+      return null;
+    } catch (ExecutionException e) {
+      throw new SqlException("Failed to drop a table", e);
+    } finally {
       // Invalidate the metadata cache
       metadata
           .getNamespace(statement.namespaceName)
@@ -153,9 +156,6 @@ public class DdlStatementExecutor implements DdlStatementVisitor<Void, Void> {
                 n.invalidateTableNamesCache();
                 n.invalidateTableMetadataCache(statement.tableName);
               });
-      return null;
-    } catch (ExecutionException e) {
-      throw new SqlException("Failed to drop a table", e);
     }
   }
 
@@ -208,16 +208,16 @@ public class DdlStatementExecutor implements DdlStatementVisitor<Void, Void> {
           statement.columnName,
           statement.ifNotExists,
           statement.options);
-
+      return null;
+    } catch (ExecutionException e) {
+      throw new SqlException("Failed to create a index table", e);
+    } finally {
       // Invalidate the metadata cache
       metadata
           .getNamespace(statement.namespaceName)
           .filter(n -> n instanceof CachedNamespaceMetadata)
           .map(n -> (CachedNamespaceMetadata) n)
           .ifPresent(n -> n.invalidateTableMetadataCache(statement.tableName));
-      return null;
-    } catch (ExecutionException e) {
-      throw new SqlException("Failed to create a index table", e);
     }
   }
 
@@ -226,16 +226,16 @@ public class DdlStatementExecutor implements DdlStatementVisitor<Void, Void> {
     try {
       admin.dropIndex(
           statement.namespaceName, statement.tableName, statement.columnName, statement.ifExists);
-
+      return null;
+    } catch (ExecutionException e) {
+      throw new SqlException("Failed to drop a index table", e);
+    } finally {
       // Invalidate the metadata cache
       metadata
           .getNamespace(statement.namespaceName)
           .filter(n -> n instanceof CachedNamespaceMetadata)
           .map(n -> (CachedNamespaceMetadata) n)
           .ifPresent(n -> n.invalidateTableMetadataCache(statement.tableName));
-      return null;
-    } catch (ExecutionException e) {
-      throw new SqlException("Failed to drop a index table", e);
     }
   }
 }
