@@ -387,6 +387,52 @@ public class QueryBuilderTest {
   }
 
   @Test
+  public void selectQueryWithTableWithoutClusteringKeyTest() throws SQLException {
+    TableMetadata tableMetadataWithoutClusteringKey =
+        TableMetadata.newBuilder()
+            .addColumn("p1", DataType.TEXT)
+            .addColumn("p2", DataType.INT)
+            .addColumn("v1", DataType.TEXT)
+            .addColumn("v2", DataType.TEXT)
+            .addColumn("v3", DataType.TEXT)
+            .addPartitionKey("p1")
+            .addPartitionKey("p2")
+            .build();
+
+    SelectQuery query;
+    PreparedStatement preparedStatement;
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Arrays.asList("c1", "c2"))
+            .from(NAMESPACE, TABLE, tableMetadataWithoutClusteringKey)
+            .where(Key.of("p1", "p1Value", "p2", "p2Value"), Optional.empty())
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND p2=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "p2Value");
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Arrays.asList("c1", "c2"))
+            .from(NAMESPACE, TABLE, tableMetadataWithoutClusteringKey)
+            .where(
+                Key.of("p1", "p1Value", "p2", "p2Value"),
+                Optional.empty(),
+                false,
+                Optional.empty(),
+                false)
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND p2=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "p2Value");
+  }
+
+  @Test
   public void insertQueryTest() throws SQLException {
     InsertQuery query;
     PreparedStatement preparedStatement;
