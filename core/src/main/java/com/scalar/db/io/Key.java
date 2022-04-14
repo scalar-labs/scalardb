@@ -587,6 +587,15 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
   }
 
   /**
+   * Create an empty {@code Key} object
+   *
+   * @return an empty {@code Key} object
+   */
+  public static Key of() {
+    return new Key();
+  }
+
+  /**
    * Create a {@code Key} object with two columns
    *
    * @param n1 a column name of the 1st column
