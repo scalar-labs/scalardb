@@ -316,6 +316,45 @@ public class QueryBuilderTest {
   }
 
   @Test
+  public void selectQueryWithTableWithoutClusteringKeyTest() {
+    TableMetadata tableMetadataWithoutClusteringKey =
+        TableMetadata.newBuilder()
+            .addColumn("p1", DataType.TEXT)
+            .addColumn("p2", DataType.INT)
+            .addColumn("v1", DataType.TEXT)
+            .addColumn("v2", DataType.TEXT)
+            .addColumn("v3", DataType.TEXT)
+            .addPartitionKey("p1")
+            .addPartitionKey("p2")
+            .build();
+
+    assertThat(
+            queryBuilder
+                .select(Arrays.asList("c1", "c2"))
+                .from(NAMESPACE, TABLE, tableMetadataWithoutClusteringKey)
+                .where(
+                    new Key(new TextValue("p1", "p1Value"), new TextValue("p2", "p2Value")),
+                    Optional.empty())
+                .build()
+                .toString())
+        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND p2=?"));
+
+    assertThat(
+            queryBuilder
+                .select(Arrays.asList("c1", "c2"))
+                .from(NAMESPACE, TABLE, tableMetadataWithoutClusteringKey)
+                .where(
+                    new Key(new TextValue("p1", "p1Value"), new TextValue("p2", "p2Value")),
+                    Optional.empty(),
+                    false,
+                    Optional.empty(),
+                    false)
+                .build()
+                .toString())
+        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND p2=?"));
+  }
+
+  @Test
   public void insertQueryTest() {
     Map<String, Value<?>> values = new HashMap<>();
     values.put("v1", new TextValue("aaa"));
