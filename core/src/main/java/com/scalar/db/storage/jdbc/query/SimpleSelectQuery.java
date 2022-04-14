@@ -86,7 +86,9 @@ public class SimpleSelectQuery implements SelectQuery {
   }
 
   private String orderBySqlString() {
-    if (!isRangeQuery || indexedColumn.isPresent()) {
+    if (!isRangeQuery
+        || indexedColumn.isPresent()
+        || tableMetadata.getClusteringKeyNames().isEmpty()) {
       return "";
     }
 
