@@ -18,7 +18,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public class MetadataTest {
+public class CachedMetadataTest {
 
   @Mock private DistributedTransactionAdmin admin;
   private Metadata metadata;
@@ -28,7 +28,7 @@ public class MetadataTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    metadata = Metadata.create(admin, -1);
+    metadata = CachedMetadata.create(admin, -1);
   }
 
   @Test

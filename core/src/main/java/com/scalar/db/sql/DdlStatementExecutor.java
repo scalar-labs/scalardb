@@ -4,6 +4,9 @@ import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.sql.exception.SqlException;
+import com.scalar.db.sql.metadata.CachedMetadata;
+import com.scalar.db.sql.metadata.CachedNamespaceMetadata;
+import com.scalar.db.sql.metadata.Metadata;
 import com.scalar.db.sql.statement.CreateCoordinatorTableStatement;
 import com.scalar.db.sql.statement.CreateIndexStatement;
 import com.scalar.db.sql.statement.CreateNamespaceStatement;
@@ -23,9 +26,11 @@ import javax.annotation.concurrent.ThreadSafe;
 public class DdlStatementExecutor implements DdlStatementVisitor<Void, Void> {
 
   private final DistributedTransactionAdmin admin;
+  private final Metadata metadata;
 
-  DdlStatementExecutor(DistributedTransactionAdmin admin) {
+  DdlStatementExecutor(DistributedTransactionAdmin admin, Metadata metadata) {
     this.admin = Objects.requireNonNull(admin);
+    this.metadata = Objects.requireNonNull(metadata);
   }
 
   public void execute(DdlStatement statement) {
@@ -56,6 +61,13 @@ public class DdlStatementExecutor implements DdlStatementVisitor<Void, Void> {
       return null;
     } catch (ExecutionException e) {
       throw new SqlException("Failed to create a table", e);
+    } finally {
+      // Invalidate the metadata cache
+      metadata
+          .getNamespace(statement.namespaceName)
+          .filter(n -> n instanceof CachedNamespaceMetadata)
+          .map(n -> (CachedNamespaceMetadata) n)
+          .ifPresent(CachedNamespaceMetadata::invalidateTableNamesCache);
     }
   }
 
@@ -118,6 +130,11 @@ public class DdlStatementExecutor implements DdlStatementVisitor<Void, Void> {
       return null;
     } catch (ExecutionException e) {
       throw new SqlException("Failed to drop a namespace", e);
+    } finally {
+      // Invalidate the metadata cache
+      if (metadata instanceof CachedMetadata) {
+        ((CachedMetadata) metadata).invalidateCache(statement.namespaceName);
+      }
     }
   }
 
@@ -128,6 +145,17 @@ public class DdlStatementExecutor implements DdlStatementVisitor<Void, Void> {
       return null;
     } catch (ExecutionException e) {
       throw new SqlException("Failed to drop a table", e);
+    } finally {
+      // Invalidate the metadata cache
+      metadata
+          .getNamespace(statement.namespaceName)
+          .filter(n -> n instanceof CachedNamespaceMetadata)
+          .map(n -> (CachedNamespaceMetadata) n)
+          .ifPresent(
+              n -> {
+                n.invalidateTableNamesCache();
+                n.invalidateTableMetadataCache(statement.tableName);
+              });
     }
   }
 
@@ -183,6 +211,13 @@ public class DdlStatementExecutor implements DdlStatementVisitor<Void, Void> {
       return null;
     } catch (ExecutionException e) {
       throw new SqlException("Failed to create a index table", e);
+    } finally {
+      // Invalidate the metadata cache
+      metadata
+          .getNamespace(statement.namespaceName)
+          .filter(n -> n instanceof CachedNamespaceMetadata)
+          .map(n -> (CachedNamespaceMetadata) n)
+          .ifPresent(n -> n.invalidateTableMetadataCache(statement.tableName));
     }
   }
 
@@ -194,6 +229,13 @@ public class DdlStatementExecutor implements DdlStatementVisitor<Void, Void> {
       return null;
     } catch (ExecutionException e) {
       throw new SqlException("Failed to drop a index table", e);
+    } finally {
+      // Invalidate the metadata cache
+      metadata
+          .getNamespace(statement.namespaceName)
+          .filter(n -> n instanceof CachedNamespaceMetadata)
+          .map(n -> (CachedNamespaceMetadata) n)
+          .ifPresent(n -> n.invalidateTableMetadataCache(statement.tableName));
     }
   }
 }

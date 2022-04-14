@@ -27,31 +27,33 @@ evaluationDependsOn ':core'
 dependencies {
     implementation project(':core')
     implementation project(':rpc')
-    implementation group: 'com.google.guava', name: 'guava', version: "${guavaVersion}"
-    implementation group: 'com.google.inject', name: 'guice', version: "${guiceVersion}"
-    implementation group: 'org.slf4j', name: 'slf4j-api', version: "${slf4jVersion}"
-    implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: "${log4jVersion}"
-    implementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: "${log4jVersion}"
-    implementation group: 'com.google.protobuf', name: 'protobuf-java-util', version: "${protobufVersion}"
-    implementation group: 'info.picocli', name: 'picocli', version: "${picocliVersion}"
-    implementation(group: 'com.scalar-labs', name: 'scalar-admin', version: "${scalarAdminVersion}") {
+    implementation "com.google.guava:guava:${guavaVersion}"
+    implementation "com.google.inject:guice:${guiceVersion}"
+    implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+    implementation "org.apache.logging.log4j:log4j-core:${log4jVersion}"
+    implementation "org.apache.logging.log4j:log4j-slf4j-impl:${log4jVersion}"
+    implementation "com.google.protobuf:protobuf-java-util:${protobufVersion}"
+    implementation "info.picocli:picocli:${picocliVersion}"
+    implementation("com.scalar-labs:scalar-admin:${scalarAdminVersion}") {
         exclude group: 'io.grpc'
         exclude group: 'org.slf4j'
     }
-    implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: "${dropwizardMetricsVersion}"
-    implementation group: 'io.dropwizard.metrics', name: 'metrics-jmx', version: "${dropwizardMetricsVersion}"
-    implementation group: 'io.prometheus', name: 'simpleclient_dropwizard', version: "${prometheusVersion}"
-    implementation group: 'io.prometheus', name: 'simpleclient_servlet', version: "${prometheusVersion}"
-    implementation group: 'io.prometheus', name: 'simpleclient_hotspot', version: "${prometheusVersion}"
-    implementation group: 'org.eclipse.jetty', name: 'jetty-servlet', version: "${jettyVersion}"
-    testImplementation group: 'junit', name: 'junit', version: "${junitVersion}"
-    testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
-    testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
-    testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
+    implementation "io.dropwizard.metrics:metrics-core:${dropwizardMetricsVersion}"
+    implementation "io.dropwizard.metrics:metrics-jmx:${dropwizardMetricsVersion}"
+    implementation "io.prometheus:simpleclient_dropwizard:${prometheusVersion}"
+    implementation "io.prometheus:simpleclient_servlet:${prometheusVersion}"
+    implementation "io.prometheus:simpleclient_hotspot:${prometheusVersion}"
+    implementation "org.eclipse.jetty:jetty-servlet:${jettyVersion}"
+    testImplementation "junit:junit:${junitVersion}"
+    testImplementation "org.assertj:assertj-core:${assertjVersion}"
+    testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+    testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
     integrationTestScalarDbServerImplementation project(':core').sourceSets.integrationTestAll.output
+
     // for SpotBugs
-    compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
-    testCompileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
+    compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
+    testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
+
     // for Error Prone
     errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
     errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
