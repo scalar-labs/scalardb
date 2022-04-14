@@ -15,7 +15,6 @@ import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import org.junit.Before;
@@ -40,17 +39,16 @@ public class ResultRecordTest {
   private static final String ALIAS_7 = "alias7";
 
   private static final com.scalar.db.api.TableMetadata TABLE_METADATA =
-      ConsensusCommitUtils.buildTransactionalTableMetadata(
-          TableMetadata.newBuilder()
-              .addColumn(COLUMN_NAME_1, com.scalar.db.io.DataType.INT)
-              .addColumn(COLUMN_NAME_2, com.scalar.db.io.DataType.BOOLEAN)
-              .addColumn(COLUMN_NAME_3, com.scalar.db.io.DataType.BIGINT)
-              .addColumn(COLUMN_NAME_4, com.scalar.db.io.DataType.FLOAT)
-              .addColumn(COLUMN_NAME_5, com.scalar.db.io.DataType.DOUBLE)
-              .addColumn(COLUMN_NAME_6, com.scalar.db.io.DataType.TEXT)
-              .addColumn(COLUMN_NAME_7, com.scalar.db.io.DataType.BLOB)
-              .addPartitionKey(COLUMN_NAME_1)
-              .build());
+      TableMetadata.newBuilder()
+          .addColumn(COLUMN_NAME_1, com.scalar.db.io.DataType.INT)
+          .addColumn(COLUMN_NAME_2, com.scalar.db.io.DataType.BOOLEAN)
+          .addColumn(COLUMN_NAME_3, com.scalar.db.io.DataType.BIGINT)
+          .addColumn(COLUMN_NAME_4, com.scalar.db.io.DataType.FLOAT)
+          .addColumn(COLUMN_NAME_5, com.scalar.db.io.DataType.DOUBLE)
+          .addColumn(COLUMN_NAME_6, com.scalar.db.io.DataType.TEXT)
+          .addColumn(COLUMN_NAME_7, com.scalar.db.io.DataType.BLOB)
+          .addPartitionKey(COLUMN_NAME_1)
+          .build();
 
   private ResultRecord resultRecord;
 

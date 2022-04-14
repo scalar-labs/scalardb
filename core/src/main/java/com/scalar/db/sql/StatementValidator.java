@@ -25,6 +25,7 @@ import com.scalar.db.sql.statement.TruncateCoordinatorTableStatement;
 import com.scalar.db.sql.statement.TruncateTableStatement;
 import com.scalar.db.sql.statement.UpdateStatement;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import javax.annotation.concurrent.ThreadSafe;
@@ -94,6 +95,9 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
 
   @Override
   public Void visit(SelectStatement statement, Void context) {
+    validatePredicates(statement.predicates);
+    validateLimit(statement.limit);
+
     TableMetadata tableMetadata =
         SqlUtils.getTableMetadata(metadata, statement.namespaceName, statement.tableName);
 
@@ -141,7 +145,7 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
                 n ->
                     predicatesMap.get(n).size() == 1
                         && predicatesMap.get(n).get(0).operator == Predicate.Operator.EQUAL_TO
-                        && predicatesMap.get(n).get(0).value.type != Value.Type.NULL);
+                        && ((Value) predicatesMap.get(n).get(0).value).type != Value.Type.NULL);
     if (!areAllPartitionKeyColumnsSpecifiedProperly) {
       throw new IllegalArgumentException("Partition key columns are not specified properly");
     }
@@ -193,6 +197,8 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
 
   @Override
   public Void visit(InsertStatement statement, Void context) {
+    validateAssignments(statement.assignments);
+
     TableMetadata tableMetadata =
         SqlUtils.getTableMetadata(metadata, statement.namespaceName, statement.tableName);
 
@@ -216,7 +222,7 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
             .allMatch(
                 n ->
                     assignmentsMap.containsKey(n)
-                        && assignmentsMap.get(n).value.type != Value.Type.NULL);
+                        && ((Value) assignmentsMap.get(n).value).type != Value.Type.NULL);
     if (!areAllPrimaryKeyColumnsSpecifiedProperly) {
       throw new IllegalArgumentException("Primary key columns are not specified properly");
     }
@@ -225,6 +231,9 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
 
   @Override
   public Void visit(UpdateStatement statement, Void context) {
+    validateAssignments(statement.assignments);
+    validatePredicates(statement.predicates);
+
     TableMetadata tableMetadata =
         SqlUtils.getTableMetadata(metadata, statement.namespaceName, statement.tableName);
     validatePredicatesForPrimaryKey(statement.predicates, tableMetadata);
@@ -233,6 +242,8 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
 
   @Override
   public Void visit(DeleteStatement statement, Void context) {
+    validatePredicates(statement.predicates);
+
     TableMetadata tableMetadata =
         SqlUtils.getTableMetadata(metadata, statement.namespaceName, statement.tableName);
     validatePredicatesForPrimaryKey(statement.predicates, tableMetadata);
@@ -268,10 +279,38 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
                 n ->
                     predicatesMap.containsKey(n)
                         && predicatesMap.get(n).operator == Predicate.Operator.EQUAL_TO
-                        && predicatesMap.get(n).value.type != Value.Type.NULL);
+                        && ((Value) predicatesMap.get(n).value).type != Value.Type.NULL);
     if (!areAllPrimaryKeyColumnsSpecifiedProperly) {
       throw new IllegalArgumentException("Primary key columns are not specified properly");
     }
+  }
+
+  private void validatePredicates(List<Predicate> predicates) {
+    predicates.forEach(
+        p -> {
+          if (p.value instanceof BindMarker) {
+            throw new IllegalArgumentException("An unbound bind marker is still in the predicates");
+          }
+        });
+  }
+
+  private void validateLimit(Term limit) {
+    if (limit instanceof BindMarker) {
+      throw new IllegalArgumentException("An unbound bind marker is still in the limit clause");
+    }
+    if (((Value) limit).type != Value.Type.INT) {
+      throw new IllegalArgumentException("A limit should be a INT type");
+    }
+  }
+
+  private void validateAssignments(List<Assignment> assignments) {
+    assignments.forEach(
+        a -> {
+          if (a.value instanceof BindMarker) {
+            throw new IllegalArgumentException(
+                "An unbound bind marker is still in the assignments");
+          }
+        });
   }
 
   @Override

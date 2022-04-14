@@ -9,12 +9,16 @@ public class Predicate {
 
   public final String columnName;
   public final Operator operator;
-  public final Value value;
+  public final Term value;
 
-  private Predicate(String columnName, Operator operator, Value value) {
+  private Predicate(String columnName, Operator operator, Term value) {
     this.columnName = Objects.requireNonNull(columnName);
     this.operator = Objects.requireNonNull(operator);
     this.value = Objects.requireNonNull(value);
+  }
+
+  public Predicate replaceValue(Term newValue) {
+    return new Predicate(columnName, operator, newValue);
   }
 
   @Override
@@ -56,23 +60,23 @@ public class Predicate {
       this.columnName = columnName;
     }
 
-    public Predicate isEqualTo(Value value) {
+    public Predicate isEqualTo(Term value) {
       return new Predicate(columnName, Operator.EQUAL_TO, value);
     }
 
-    public Predicate isGreaterThan(Value value) {
+    public Predicate isGreaterThan(Term value) {
       return new Predicate(columnName, Operator.GREATER_THAN, value);
     }
 
-    public Predicate isGreaterThanOrEqualTo(Value value) {
+    public Predicate isGreaterThanOrEqualTo(Term value) {
       return new Predicate(columnName, Operator.GREATER_THAN_OR_EQUAL_TO, value);
     }
 
-    public Predicate isLessThan(Value value) {
+    public Predicate isLessThan(Term value) {
       return new Predicate(columnName, Operator.LESS_THAN, value);
     }
 
-    public Predicate isLessThanOrEqualTo(Value value) {
+    public Predicate isLessThanOrEqualTo(Term value) {
       return new Predicate(columnName, Operator.LESS_THAN_OR_EQUAL_TO, value);
     }
   }
