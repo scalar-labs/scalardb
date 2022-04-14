@@ -25,6 +25,7 @@ import com.scalar.db.sql.statement.TruncateCoordinatorTableStatement;
 import com.scalar.db.sql.statement.TruncateTableStatement;
 import com.scalar.db.sql.statement.UpdateStatement;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -50,6 +51,37 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
 
   @Override
   public Void visit(CreateTableStatement statement, Void context) {
+    Iterator<String> clusteringKeyColumnNameIterator =
+        statement.clusteringKeyColumnNames.iterator();
+    statement
+        .clusteringOrders
+        .keySet()
+        .forEach(
+            c -> {
+              if (!statement.clusteringKeyColumnNames.contains(c)) {
+                throw new IllegalArgumentException(
+                    "Only clustering key columns can be defined in CLUSTERING ORDER directive");
+              }
+              if (clusteringKeyColumnNameIterator.hasNext()) {
+                String clusteringKeyColumnName = clusteringKeyColumnNameIterator.next();
+                if (!c.equals(clusteringKeyColumnName)) {
+                  if (statement.clusteringOrders.containsKey(clusteringKeyColumnName)) {
+                    throw new IllegalArgumentException(
+                        "The order of columns in the CLUSTERING ORDER directive must be the one of the clustering key ("
+                            + clusteringKeyColumnName
+                            + " must appear before "
+                            + c
+                            + ")");
+                  } else {
+                    throw new IllegalArgumentException(
+                        "Missing CLUSTERING ORDER for column " + clusteringKeyColumnName);
+                  }
+                }
+              } else {
+                throw new IllegalArgumentException(
+                    "Only clustering key columns can be defined in CLUSTERING ORDER directive");
+              }
+            });
     return null;
   }
 
