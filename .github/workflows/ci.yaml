@@ -77,22 +77,22 @@ jobs:
 
       - name: Setup and execute Gradle 'integrationTestCassandra' task
         uses: gradle/gradle-build-action@v2
-      with:
-        arguments: integrationTestCassandra
+        with:
+          arguments: integrationTestCassandra
 
-        - name: Save Gradle test reports
-          if: always()
-          run: |
-            mkdir -p /tmp/gradle_integration_test_reports/core
-            mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-            cp -a core/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/core/
-            cp -a schema-loader/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/schema-loader/
-        - name: Upload Gradle test reports
-          if: always()
-          uses: actions/upload-artifact@v3
-          with:
-            name: gradle_cassandra_integration_test_reports
-            path: /tmp/gradle_integration_test_reports
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/schema-loader/
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: gradle_cassandra_integration_test_reports
+          path: /tmp/gradle_integration_test_reports
 
   integration-test-for-cosmos:
     runs-on: self-hosted
