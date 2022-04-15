@@ -31,6 +31,7 @@ jobs:
           cp -a core/build/reports/tests/test /tmp/gradle_test_reports/core/
           cp -a server/build/reports/tests/test /tmp/gradle_test_reports/server/
           cp -a schema-loader/build/reports/tests/test /tmp/gradle_test_reports/schema-loader/
+
       - name: Save SpotBugs reports
         if: always()
         run: |
@@ -40,6 +41,7 @@ jobs:
           cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/core/
           cp -a server/build/reports/spotbugs /tmp/gradle_spotbugs_reports/server/
           cp -a schema-loader/build/reports/spotbugs /tmp/gradle_spotbugs_reports/schema-loader/
+
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v3
@@ -87,6 +89,7 @@ jobs:
           mkdir -p /tmp/gradle_integration_test_reports/schema-loader
           cp -a core/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/core/
           cp -a schema-loader/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/schema-loader/
+
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v3
@@ -122,6 +125,7 @@ jobs:
           mkdir -p /tmp/gradle_integration_test_reports/schema-loader
           cp -a core/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/core/
           cp -a schema-loader/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/schema-loader/
+
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v3
@@ -159,6 +163,7 @@ jobs:
           mkdir -p /tmp/gradle_integration_test_reports/schema-loader
           cp -a core/build/reports/tests/integrationTestDynamo /tmp/gradle_integration_test_reports/core/
           cp -a schema-loader/build/reports/tests/integrationTestDynamo /tmp/gradle_integration_test_reports/schema-loader/
+
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v3
@@ -198,6 +203,7 @@ jobs:
           mkdir -p /tmp/gradle_integration_test_reports/schema-loader
           cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
           cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
+
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v3
@@ -238,6 +244,7 @@ jobs:
           mkdir -p /tmp/gradle_integration_test_reports/schema-loader
           cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
           cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
+
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v3
@@ -275,6 +282,7 @@ jobs:
       - name: Retrieve then store the oracle container ip address in an environment variable.
         run: |
           echo "oracle_db_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}'  $(docker ps -aq))" >> $GITHUB_ENV
+
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v2
         #       Addressing the Oracle container with "@localhost" in the JDBC url cause the JDBC connection to fail for an unknown reason. As a workaround, using instead the container ip address is working.
@@ -288,6 +296,7 @@ jobs:
           mkdir -p /tmp/gradle_integration_test_reports/schema-loader
           cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
           cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
+
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v3
@@ -329,6 +338,7 @@ jobs:
           mkdir -p /tmp/gradle_integration_test_reports/schema-loader
           cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
           cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
+
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v3
@@ -375,6 +385,7 @@ jobs:
           mkdir -p /tmp/gradle_integration_test_reports/schema-loader
           cp -a core/build/reports/tests/integrationTestMultiStorage /tmp/gradle_integration_test_reports/core/
           cp -a schema-loader/build/reports/tests/integrationTestMultiStorage /tmp/gradle_integration_test_reports/schema-loader/
+
       - name: Upload Gradle test reports
         uses: actions/upload-artifact@v3
         if : always()
@@ -414,6 +425,7 @@ jobs:
           mkdir -p /tmp/gradle_integration_test_reports/schema-loader
           cp -a server/build/reports/tests/integrationTestScalarDbServer /tmp/gradle_integration_test_reports/server/
           cp -a schema-loader/build/reports/tests/integrationTestScalarDbServer /tmp/gradle_integration_test_reports/schema-loader/
+
       - name: Upload Gradle test reports
         uses: actions/upload-artifact@v3
         if : always()
@@ -451,6 +463,7 @@ jobs:
         run: |
           mkdir -p /tmp/gradle_integration_test_reports
           cp -a core/build/reports/tests/integrationTestTwoPhaseConsensusCommit /tmp/gradle_integration_test_reports/
+
       - name: Upload Gradle test reports
         uses: actions/upload-artifact@v3
         if: always()
