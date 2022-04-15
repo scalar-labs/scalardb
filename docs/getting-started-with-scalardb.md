@@ -17,7 +17,7 @@ Or you can download from [maven central repository](https://mvnrepository.com/ar
 For example in Gradle, you can add the following dependency to your build.gradle. Please replace the `<version>` with the version you want to use.
 ```
 dependencies {
-    implementation group: 'com.scalar-labs', name: 'scalardb', version: '<version>'
+    implementation 'com.scalar-labs:scalardb:<version>'
 }
 ```
 

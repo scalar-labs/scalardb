@@ -9,6 +9,8 @@ import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.sql.metadata.CachedMetadata;
+import com.scalar.db.sql.metadata.CachedNamespaceMetadata;
 import com.scalar.db.sql.statement.CreateCoordinatorTableStatement;
 import com.scalar.db.sql.statement.CreateIndexStatement;
 import com.scalar.db.sql.statement.CreateNamespaceStatement;
@@ -19,6 +21,7 @@ import com.scalar.db.sql.statement.DropNamespaceStatement;
 import com.scalar.db.sql.statement.DropTableStatement;
 import com.scalar.db.sql.statement.TruncateCoordinatorTableStatement;
 import com.scalar.db.sql.statement.TruncateTableStatement;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -27,6 +30,9 @@ import org.mockito.MockitoAnnotations;
 public class DdlStatementExecutorTest {
 
   @Mock private DistributedTransactionAdmin admin;
+  @Mock private CachedMetadata metadata;
+  @Mock private CachedNamespaceMetadata namespaceMetadata;
+
   private DdlStatementExecutor ddlStatementExecutor;
 
   @Before
@@ -34,7 +40,8 @@ public class DdlStatementExecutorTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    ddlStatementExecutor = new DdlStatementExecutor(admin);
+    when(metadata.getNamespace("ns")).thenReturn(Optional.of(namespaceMetadata));
+    ddlStatementExecutor = new DdlStatementExecutor(admin, metadata);
   }
 
   @Test
@@ -93,6 +100,8 @@ public class DdlStatementExecutorTest {
                 .build(),
             true,
             ImmutableMap.of("name1", "value1", "name2", "value2"));
+
+    verify(namespaceMetadata).invalidateTableNamesCache();
   }
 
   @Test
@@ -110,6 +119,8 @@ public class DdlStatementExecutorTest {
     verify(admin).dropTable("ns", "tbl2");
     verify(admin).dropTable("ns", "tbl3");
     verify(admin).dropNamespace("ns", true);
+
+    verify(metadata).invalidateCache("ns");
   }
 
   @Test
@@ -122,6 +133,9 @@ public class DdlStatementExecutorTest {
 
     // Assert
     verify(admin).dropTable("ns", "tbl", true);
+
+    verify(namespaceMetadata).invalidateTableNamesCache();
+    verify(namespaceMetadata).invalidateTableMetadataCache("tbl");
   }
 
   @Test
@@ -195,6 +209,8 @@ public class DdlStatementExecutorTest {
     verify(admin)
         .createIndex(
             "ns", "tbl", "col", true, ImmutableMap.of("name1", "value1", "name2", "value2"));
+
+    verify(namespaceMetadata).invalidateTableMetadataCache("tbl");
   }
 
   @Test
@@ -207,5 +223,7 @@ public class DdlStatementExecutorTest {
 
     // Assert
     verify(admin).dropIndex("ns", "tbl", "col", true);
+
+    verify(namespaceMetadata).invalidateTableMetadataCache("tbl");
   }
 }

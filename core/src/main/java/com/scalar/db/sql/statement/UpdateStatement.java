@@ -4,11 +4,16 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.sql.Assignment;
 import com.scalar.db.sql.Predicate;
+import com.scalar.db.sql.SqlUtils;
+import com.scalar.db.sql.Value;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
-public class UpdateStatement implements DmlStatement {
+public class UpdateStatement implements DmlStatement, BindableStatement<UpdateStatement> {
 
   public final String namespaceName;
   public final String tableName;
@@ -24,6 +29,25 @@ public class UpdateStatement implements DmlStatement {
     this.tableName = Objects.requireNonNull(tableName);
     this.assignments = Objects.requireNonNull(assignments);
     this.predicates = Objects.requireNonNull(predicates);
+  }
+
+  @Override
+  public UpdateStatement bind(List<Value> positionalValues) {
+    Iterator<Value> positionalValueIterator = positionalValues.iterator();
+    return new UpdateStatement(
+        namespaceName,
+        tableName,
+        SqlUtils.bindAssignments(assignments, positionalValueIterator),
+        SqlUtils.bindPredicates(predicates, positionalValueIterator));
+  }
+
+  @Override
+  public UpdateStatement bind(Map<String, Value> namedValues) {
+    return new UpdateStatement(
+        namespaceName,
+        tableName,
+        SqlUtils.bindAssignments(assignments, namedValues),
+        SqlUtils.bindPredicates(predicates, namedValues));
   }
 
   @Override

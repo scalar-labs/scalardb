@@ -145,8 +145,9 @@ public class DmlStatementExecutor
               .withProjections(projectedColumnNames)
               .forNamespace(statement.namespaceName)
               .forTable(statement.tableName);
-      if (statement.limit > 0) {
-        scan.withLimit(statement.limit);
+      int limit = getLimit((Value) statement.limit);
+      if (limit > 0) {
+        scan.withLimit(limit);
       }
       return scan;
     }
@@ -177,8 +178,9 @@ public class DmlStatementExecutor
       if (!statement.clusteringOrderings.isEmpty()) {
         statement.clusteringOrderings.forEach(o -> scan.withOrdering(convertOrdering(o)));
       }
-      if (statement.limit > 0) {
-        scan.withLimit(statement.limit);
+      int limit = getLimit((Value) statement.limit);
+      if (limit > 0) {
+        scan.withLimit(limit);
       }
       return scan;
     }
@@ -203,7 +205,7 @@ public class DmlStatementExecutor
           Predicate predicate = predicatesMap.get(n).get(0);
           switch (predicate.operator) {
             case EQUAL_TO:
-              addToKeyBuilder(builder, n, predicate.value);
+              addToKeyBuilder(builder, n, (Value) predicate.value);
               break;
             case GREATER_THAN:
             case GREATER_THAN_OR_EQUAL_TO:
@@ -230,8 +232,10 @@ public class DmlStatementExecutor
 
       ImmutableList<Predicate> predicates = predicatesMap.get(clusteringKeyName);
       if (predicates.size() == 1 && predicates.get(0).operator == Operator.EQUAL_TO) {
-        addToKeyBuilder(startClusteringKeyBuilder, clusteringKeyName, predicates.get(0).value);
-        addToKeyBuilder(endClusteringKeyBuilder, clusteringKeyName, predicates.get(0).value);
+        addToKeyBuilder(
+            startClusteringKeyBuilder, clusteringKeyName, (Value) predicates.get(0).value);
+        addToKeyBuilder(
+            endClusteringKeyBuilder, clusteringKeyName, (Value) predicates.get(0).value);
         if (!clusteringKeyNamesIterator.hasNext()) {
           scan.withStart(startClusteringKeyBuilder.build(), true);
           scan.withEnd(endClusteringKeyBuilder.build(), true);
@@ -249,19 +253,19 @@ public class DmlStatementExecutor
             c -> {
               switch (c.operator) {
                 case GREATER_THAN:
-                  addToKeyBuilder(startClusteringKeyBuilder, c.columnName, c.value);
+                  addToKeyBuilder(startClusteringKeyBuilder, c.columnName, (Value) c.value);
                   scan.withStart(startClusteringKeyBuilder.build(), false);
                   break;
                 case GREATER_THAN_OR_EQUAL_TO:
-                  addToKeyBuilder(startClusteringKeyBuilder, c.columnName, c.value);
+                  addToKeyBuilder(startClusteringKeyBuilder, c.columnName, (Value) c.value);
                   scan.withStart(startClusteringKeyBuilder.build(), true);
                   break;
                 case LESS_THAN:
-                  addToKeyBuilder(endClusteringKeyBuilder, c.columnName, c.value);
+                  addToKeyBuilder(endClusteringKeyBuilder, c.columnName, (Value) c.value);
                   scan.withEnd(endClusteringKeyBuilder.build(), false);
                   break;
                 case LESS_THAN_OR_EQUAL_TO:
-                  addToKeyBuilder(endClusteringKeyBuilder, c.columnName, c.value);
+                  addToKeyBuilder(endClusteringKeyBuilder, c.columnName, (Value) c.value);
                   scan.withEnd(endClusteringKeyBuilder.build(), true);
                   break;
                 default:
@@ -286,6 +290,11 @@ public class DmlStatementExecutor
     }
   }
 
+  private int getLimit(Value limitValue) {
+    assert limitValue.value != null;
+    return (int) limitValue.value;
+  }
+
   private Put convertInsertStatementToPut(InsertStatement statement, TableMetadata tableMetadata) {
     Key partitionKey =
         createKeyFromAssignments(statement.assignments, tableMetadata.getPartitionKey().stream());
@@ -301,7 +310,7 @@ public class DmlStatementExecutor
             .forTable(statement.tableName);
     statement.assignments.stream()
         .filter(a -> !tableMetadata.isPrimaryKeyColumn(a.columnName))
-        .forEach(a -> addValueToPut(put, a.columnName, a.value, tableMetadata));
+        .forEach(a -> addValueToPut(put, a.columnName, (Value) a.value, tableMetadata));
     return put;
   }
 
@@ -313,7 +322,7 @@ public class DmlStatementExecutor
     Key.Builder builder = Key.newBuilder();
     keyColumnStream
         .map(ColumnMetadata::getName)
-        .forEach(n -> addToKeyBuilder(builder, n, assignmentMap.get(n).value));
+        .forEach(n -> addToKeyBuilder(builder, n, (Value) assignmentMap.get(n).value));
     return builder.build();
   }
 
@@ -330,7 +339,8 @@ public class DmlStatementExecutor
         new Put(partitionKey, clusteringKey)
             .forNamespace(statement.namespaceName)
             .forTable(statement.tableName);
-    statement.assignments.forEach(a -> addValueToPut(put, a.columnName, a.value, tableMetadata));
+    statement.assignments.forEach(
+        a -> addValueToPut(put, a.columnName, (Value) a.value, tableMetadata));
     return put;
   }
 
@@ -362,7 +372,7 @@ public class DmlStatementExecutor
               Predicate predicate = predicatesMap.get(n);
               switch (predicate.operator) {
                 case EQUAL_TO:
-                  addToKeyBuilder(builder, n, predicate.value);
+                  addToKeyBuilder(builder, n, (Value) predicate.value);
                   break;
                 case GREATER_THAN:
                 case GREATER_THAN_OR_EQUAL_TO:

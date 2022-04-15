@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.sql.Assignment;
+import com.scalar.db.sql.BindMarker;
 import com.scalar.db.sql.ClusteringOrder;
 import com.scalar.db.sql.ClusteringOrdering;
 import com.scalar.db.sql.DataType;
@@ -325,6 +326,18 @@ public class StatementBuilderTest {
                     Predicate.column("col2").isEqualTo(Value.ofText("bbb"))))
             .build();
 
+    DeleteStatement statement3 =
+        StatementBuilder.deleteFrom("ns1", "tbl1")
+            .where(Predicate.column("col1").isEqualTo(BindMarker.positional()))
+            .and(Predicate.column("col2").isEqualTo(BindMarker.positional()))
+            .build();
+
+    DeleteStatement statement4 =
+        StatementBuilder.deleteFrom("ns1", "tbl1")
+            .where(Predicate.column("col1").isEqualTo(BindMarker.named("name1")))
+            .and(Predicate.column("col2").isEqualTo(BindMarker.named("name2")))
+            .build();
+
     // Assert
     assertThat(statement1)
         .isEqualTo(
@@ -343,6 +356,24 @@ public class StatementBuilderTest {
                 ImmutableList.of(
                     Predicate.column("col1").isEqualTo(Value.ofInt(20)),
                     Predicate.column("col2").isEqualTo(Value.ofText("bbb")))));
+
+    assertThat(statement3)
+        .isEqualTo(
+            DeleteStatement.of(
+                "ns1",
+                "tbl1",
+                ImmutableList.of(
+                    Predicate.column("col1").isEqualTo(BindMarker.positional()),
+                    Predicate.column("col2").isEqualTo(BindMarker.positional()))));
+
+    assertThat(statement4)
+        .isEqualTo(
+            DeleteStatement.of(
+                "ns1",
+                "tbl1",
+                ImmutableList.of(
+                    Predicate.column("col1").isEqualTo(BindMarker.named("name1")),
+                    Predicate.column("col2").isEqualTo(BindMarker.named("name2")))));
   }
 
   @Test
@@ -433,6 +464,20 @@ public class StatementBuilderTest {
                     Assignment.column("col2").value(Value.ofText("bbb"))))
             .build();
 
+    InsertStatement statement3 =
+        StatementBuilder.insertInto("ns2", "tbl2")
+            .values(
+                Assignment.column("col1").value(BindMarker.positional()),
+                Assignment.column("col2").value(BindMarker.positional()))
+            .build();
+
+    InsertStatement statement4 =
+        StatementBuilder.insertInto("ns2", "tbl2")
+            .values(
+                Assignment.column("col1").value(BindMarker.named("name1")),
+                Assignment.column("col2").value(BindMarker.named("name2")))
+            .build();
+
     // Assert
     assertThat(statement1)
         .isEqualTo(
@@ -451,6 +496,24 @@ public class StatementBuilderTest {
                 ImmutableList.of(
                     Assignment.column("col1").value(Value.ofInt(20)),
                     Assignment.column("col2").value(Value.ofText("bbb")))));
+
+    assertThat(statement3)
+        .isEqualTo(
+            InsertStatement.of(
+                "ns2",
+                "tbl2",
+                ImmutableList.of(
+                    Assignment.column("col1").value(BindMarker.positional()),
+                    Assignment.column("col2").value(BindMarker.positional()))));
+
+    assertThat(statement4)
+        .isEqualTo(
+            InsertStatement.of(
+                "ns2",
+                "tbl2",
+                ImmutableList.of(
+                    Assignment.column("col1").value(BindMarker.named("name1")),
+                    Assignment.column("col2").value(BindMarker.named("name2")))));
   }
 
   @Test
@@ -499,6 +562,28 @@ public class StatementBuilderTest {
             .limit(10)
             .build();
 
+    SelectStatement statement4 =
+        StatementBuilder.select("col1", "col2", "col3")
+            .from("ns1", "tbl1")
+            .where(Predicate.column("col1").isEqualTo(BindMarker.positional()))
+            .and(Predicate.column("col2").isGreaterThan(BindMarker.positional()))
+            .and(Predicate.column("col2").isLessThan(BindMarker.positional()))
+            .orderBy(
+                ClusteringOrdering.column("col2").desc(), ClusteringOrdering.column("col3").desc())
+            .limit(BindMarker.positional())
+            .build();
+
+    SelectStatement statement5 =
+        StatementBuilder.select("col1", "col2", "col3")
+            .from("ns1", "tbl1")
+            .where(Predicate.column("col1").isEqualTo(BindMarker.named("name1")))
+            .and(Predicate.column("col2").isGreaterThan(BindMarker.named("name2")))
+            .and(Predicate.column("col2").isLessThan(BindMarker.named("name3")))
+            .orderBy(
+                ClusteringOrdering.column("col2").desc(), ClusteringOrdering.column("col3").desc())
+            .limit(BindMarker.named("name4"))
+            .build();
+
     // Assert
     assertThat(statement1)
         .isEqualTo(
@@ -516,7 +601,7 @@ public class StatementBuilderTest {
                 ImmutableList.of(
                     ClusteringOrdering.column("col2").desc(),
                     ClusteringOrdering.column("col3").desc()),
-                10));
+                Value.ofInt(10)));
 
     assertThat(statement2)
         .isEqualTo(
@@ -531,7 +616,7 @@ public class StatementBuilderTest {
                 ImmutableList.of(
                     ClusteringOrdering.column("col2").desc(),
                     ClusteringOrdering.column("col3").asc()),
-                10));
+                Value.ofInt(10)));
 
     assertThat(statement3)
         .isEqualTo(
@@ -546,7 +631,43 @@ public class StatementBuilderTest {
                 ImmutableList.of(
                     ClusteringOrdering.column("col2").desc(),
                     ClusteringOrdering.column("col3").desc()),
-                10));
+                Value.ofInt(10)));
+
+    assertThat(statement4)
+        .isEqualTo(
+            SelectStatement.of(
+                "ns1",
+                "tbl1",
+                ImmutableList.of(
+                    Projection.column("col1"),
+                    Projection.column("col2"),
+                    Projection.column("col3")),
+                ImmutableList.of(
+                    Predicate.column("col1").isEqualTo(BindMarker.positional()),
+                    Predicate.column("col2").isGreaterThan(BindMarker.positional()),
+                    Predicate.column("col2").isLessThan(BindMarker.positional())),
+                ImmutableList.of(
+                    ClusteringOrdering.column("col2").desc(),
+                    ClusteringOrdering.column("col3").desc()),
+                BindMarker.positional()));
+
+    assertThat(statement5)
+        .isEqualTo(
+            SelectStatement.of(
+                "ns1",
+                "tbl1",
+                ImmutableList.of(
+                    Projection.column("col1"),
+                    Projection.column("col2"),
+                    Projection.column("col3")),
+                ImmutableList.of(
+                    Predicate.column("col1").isEqualTo(BindMarker.named("name1")),
+                    Predicate.column("col2").isGreaterThan(BindMarker.named("name2")),
+                    Predicate.column("col2").isLessThan(BindMarker.named("name3"))),
+                ImmutableList.of(
+                    ClusteringOrdering.column("col2").desc(),
+                    ClusteringOrdering.column("col3").desc()),
+                BindMarker.named("name4")));
   }
 
   @Test
@@ -598,6 +719,24 @@ public class StatementBuilderTest {
                     Predicate.column("col2").isEqualTo(Value.ofText("ccc"))))
             .build();
 
+    UpdateStatement statement3 =
+        StatementBuilder.update("ns1", "tbl1")
+            .set(
+                Assignment.column("col3").value(BindMarker.positional()),
+                Assignment.column("col4").value(BindMarker.positional()))
+            .where(Predicate.column("col1").isEqualTo(BindMarker.positional()))
+            .and(Predicate.column("col2").isEqualTo(BindMarker.positional()))
+            .build();
+
+    UpdateStatement statement4 =
+        StatementBuilder.update("ns1", "tbl1")
+            .set(
+                Assignment.column("col3").value(BindMarker.named("name1")),
+                Assignment.column("col4").value(BindMarker.named("name2")))
+            .where(Predicate.column("col1").isEqualTo(BindMarker.named("name3")))
+            .and(Predicate.column("col2").isEqualTo(BindMarker.named("name4")))
+            .build();
+
     // Assert
     assertThat(statement1)
         .isEqualTo(
@@ -622,5 +761,29 @@ public class StatementBuilderTest {
                 ImmutableList.of(
                     Predicate.column("col1").isEqualTo(Value.ofInt(40)),
                     Predicate.column("col2").isEqualTo(Value.ofText("ccc")))));
+
+    assertThat(statement3)
+        .isEqualTo(
+            UpdateStatement.of(
+                "ns1",
+                "tbl1",
+                ImmutableList.of(
+                    Assignment.column("col3").value(BindMarker.positional()),
+                    Assignment.column("col4").value(BindMarker.positional())),
+                ImmutableList.of(
+                    Predicate.column("col1").isEqualTo(BindMarker.positional()),
+                    Predicate.column("col2").isEqualTo(BindMarker.positional()))));
+
+    assertThat(statement4)
+        .isEqualTo(
+            UpdateStatement.of(
+                "ns1",
+                "tbl1",
+                ImmutableList.of(
+                    Assignment.column("col3").value(BindMarker.named("name1")),
+                    Assignment.column("col4").value(BindMarker.named("name2"))),
+                ImmutableList.of(
+                    Predicate.column("col1").isEqualTo(BindMarker.named("name3")),
+                    Predicate.column("col2").isEqualTo(BindMarker.named("name4")))));
   }
 }

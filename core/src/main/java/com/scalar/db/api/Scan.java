@@ -16,7 +16,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  * is defined with a starting clustering key and an ending clustering key. {@link Ordering} can also
  * be specified to return {@link Result}s in ascending order or descending order of clustering keys.
  * The number of {@link Result} can also be limited. If none of these are set, it will return all
- * the {@link Result}s with a specified partition key in some order.
+ * the {@link Result}s with a specified partition key in default clustering orders.
  *
  * @author Hiroyuki Yamada
  */

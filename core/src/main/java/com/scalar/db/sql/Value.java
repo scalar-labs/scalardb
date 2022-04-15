@@ -2,12 +2,13 @@ package com.scalar.db.sql;
 
 import com.google.common.base.MoreObjects;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
-public class Value {
+public class Value implements Term {
 
   public final Type type;
   @Nullable public final Object value;
@@ -30,8 +31,14 @@ public class Value {
     if (!(o instanceof Value)) {
       return false;
     }
-    Value value1 = (Value) o;
-    return type == value1.type && Objects.equals(value, value1.value);
+    Value that = (Value) o;
+    if (type != that.type) {
+      return false;
+    }
+    if (type == Type.BLOB_BYTES) {
+      return Arrays.equals((byte[]) value, (byte[]) that.value);
+    }
+    return Objects.equals(value, that.value);
   }
 
   @Override

@@ -3,11 +3,15 @@ package com.scalar.db.sql.statement;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.sql.Assignment;
+import com.scalar.db.sql.SqlUtils;
+import com.scalar.db.sql.Value;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
-public class InsertStatement implements DmlStatement {
+public class InsertStatement implements DmlStatement, BindableStatement<InsertStatement> {
 
   public final String namespaceName;
   public final String tableName;
@@ -18,6 +22,20 @@ public class InsertStatement implements DmlStatement {
     this.namespaceName = Objects.requireNonNull(namespaceName);
     this.tableName = Objects.requireNonNull(tableName);
     this.assignments = Objects.requireNonNull(assignments);
+  }
+
+  @Override
+  public InsertStatement bind(List<Value> positionalValues) {
+    return new InsertStatement(
+        namespaceName,
+        tableName,
+        SqlUtils.bindAssignments(assignments, positionalValues.iterator()));
+  }
+
+  @Override
+  public InsertStatement bind(Map<String, Value> namedValues) {
+    return new InsertStatement(
+        namespaceName, tableName, SqlUtils.bindAssignments(assignments, namedValues));
   }
 
   @Override

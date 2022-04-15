@@ -13,7 +13,7 @@ You can install it in your application using your build tool such as Gradle and 
 To add a dependency on Scalar DB using Gradle, use the following:
 ```gradle
 dependencies {
-    implementation group: 'com.scalar-labs', name: 'scalardb', version: '3.5.1'
+    implementation 'com.scalar-labs:scalardb:3.5.1'
 }
 ```
 
