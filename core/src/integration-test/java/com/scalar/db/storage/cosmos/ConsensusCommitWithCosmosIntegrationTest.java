@@ -1,7 +1,7 @@
-package com.scalar.db.transaction.consensuscommit;
+package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.cosmos.CosmosEnv;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestBase;
 import java.util.Map;
 import java.util.Optional;
 

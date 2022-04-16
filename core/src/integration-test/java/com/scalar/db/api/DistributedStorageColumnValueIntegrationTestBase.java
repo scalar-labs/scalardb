@@ -1,13 +1,7 @@
-package com.scalar.db.storage;
+package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.DistributedStorageAdmin;
-import com.scalar.db.api.Get;
-import com.scalar.db.api.Put;
-import com.scalar.db.api.Result;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntValue;
@@ -21,6 +15,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.util.TestUtils;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -35,7 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class StorageColumnValueIntegrationTestBase {
+public abstract class DistributedStorageColumnValueIntegrationTestBase {
 
   private static final String TEST_NAME = "col_val";
   private static final String NAMESPACE = "integration_testing_" + TEST_NAME;

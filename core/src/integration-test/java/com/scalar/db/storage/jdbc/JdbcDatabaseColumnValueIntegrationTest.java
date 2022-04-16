@@ -1,13 +1,14 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.api.DistributedStorageColumnValueIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.StorageColumnValueIntegrationTestBase;
-import com.scalar.db.storage.TestUtils;
+import com.scalar.db.util.TestUtils;
 import java.util.Random;
 
-public class JdbcDatabaseColumnValueIntegrationTest extends StorageColumnValueIntegrationTestBase {
+public class JdbcDatabaseColumnValueIntegrationTest
+    extends DistributedStorageColumnValueIntegrationTestBase {
 
   private RdbEngine rdbEngine;
 

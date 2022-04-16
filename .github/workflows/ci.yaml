@@ -16,7 +16,6 @@ jobs:
           java-version: '8'
           distribution: 'temurin'
 
-
       - name: Setup and execute Gradle 'check' task
         uses: gradle/gradle-build-action@v2
         with:
@@ -431,42 +430,4 @@ jobs:
         if : always()
         with:
           name: gradle_scalardb_server_integration_test_reports
-          path: /tmp/gradle_integration_test_reports
-
-  integration-test-for-two-phase-consensus-commit:
-    runs-on: ubuntu-latest
-
-    services:
-      mysql:
-        image: mysql:8
-        env:
-          MYSQL_ROOT_PASSWORD: mysql
-        ports:
-          - 3306:3306
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up JDK 8
-        uses: actions/setup-java@v3
-        with:
-          java-version: '8'
-          distribution: 'temurin'
-
-      - name: Setup and execute Gradle 'integrationTestTwoPhaseConsensusCommit' task
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: integrationTestTwoPhaseConsensusCommit
-
-      - name: Save Gradle test reports
-        if: always()
-        run: |
-          mkdir -p /tmp/gradle_integration_test_reports
-          cp -a core/build/reports/tests/integrationTestTwoPhaseConsensusCommit /tmp/gradle_integration_test_reports/
-
-      - name: Upload Gradle test reports
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: gradle_two_phase_consensus_commit_integration_test_reports
           path: /tmp/gradle_integration_test_reports

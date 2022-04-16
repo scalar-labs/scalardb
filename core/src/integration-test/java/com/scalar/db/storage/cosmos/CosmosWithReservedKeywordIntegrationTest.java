@@ -1,12 +1,12 @@
 package com.scalar.db.storage.cosmos;
 
+import com.scalar.db.api.DistributedStorageWithReservedKeywordIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.StorageWithReservedKeywordIntegrationTestBase;
 import java.util.Map;
 import java.util.Optional;
 
 public class CosmosWithReservedKeywordIntegrationTest
-    extends StorageWithReservedKeywordIntegrationTestBase {
+    extends DistributedStorageWithReservedKeywordIntegrationTestBase {
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {

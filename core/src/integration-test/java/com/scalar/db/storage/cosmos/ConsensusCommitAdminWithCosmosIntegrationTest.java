@@ -1,14 +1,15 @@
 package com.scalar.db.storage.cosmos;
 
-import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
 import java.util.Map;
 import java.util.Optional;
 
-public class CosmosAdminIntegrationTest extends DistributedStorageAdminIntegrationTestBase {
+public class ConsensusCommitAdminWithCosmosIntegrationTest
+    extends ConsensusCommitAdminIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
+  protected DatabaseConfig getDbConfig() {
     return CosmosEnv.getCosmosConfig();
   }
 

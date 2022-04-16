@@ -34,7 +34,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.storage.TestUtils;
+import com.scalar.db.util.TestUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;

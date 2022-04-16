@@ -1,20 +1,20 @@
-package com.scalar.db.transaction.jdbc;
+package com.scalar.db.transaction.consensuscommit;
 
 import com.scalar.db.api.DistributedTransactionAdminIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.jdbc.JdbcConfig;
-import com.scalar.db.storage.jdbc.JdbcEnv;
 import java.util.Properties;
 
-public class JdbcTransactionAdminIntegrationTest
+public abstract class ConsensusCommitAdminIntegrationTestBase
     extends DistributedTransactionAdminIntegrationTestBase {
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {
-    JdbcConfig jdbcConfig = JdbcEnv.getJdbcConfig();
+    DatabaseConfig config = getDbConfig();
     Properties properties = new Properties();
-    properties.putAll(jdbcConfig.getProperties());
-    properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "jdbc");
+    properties.putAll(config.getProperties());
+    properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "consensus-commit");
     return new DatabaseConfig(properties);
   }
+
+  protected abstract DatabaseConfig getDbConfig();
 }

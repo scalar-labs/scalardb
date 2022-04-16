@@ -1,15 +1,16 @@
 package com.scalar.db.storage.dynamo;
 
-import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
 import java.util.Map;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrationTestBase {
+public class ConsensusCommitAdminWithDynamoIntegrationTest
+    extends ConsensusCommitAdminIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
+  protected DatabaseConfig getDbConfig() {
     return DynamoEnv.getDynamoConfig();
   }
 
