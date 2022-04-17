@@ -5,7 +5,7 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegration
 import java.util.Map;
 import java.util.Optional;
 
-public class ConsensusCommitAdminWithCosmosIntegrationTest
+public class ConsensusCommitAdminIntegrationTestWithCosmos
     extends ConsensusCommitAdminIntegrationTestBase {
 
   @Override
