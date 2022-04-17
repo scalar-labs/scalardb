@@ -1,8 +1,7 @@
-package com.scalar.db.schemaloader.cassandra;
+package com.scalar.db.storage.cassandra;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
-import com.scalar.db.storage.cassandra.CassandraEnv;
 
 public class CassandraSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTestBase {
 

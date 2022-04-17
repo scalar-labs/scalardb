@@ -1,9 +1,8 @@
-package com.scalar.db.schemaloader.cassandra;
+package com.scalar.db.storage.cassandra;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
-import com.scalar.db.storage.cassandra.CassandraEnv;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;

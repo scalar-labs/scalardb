@@ -1,9 +1,8 @@
-package com.scalar.db.schemaloader.cosmos;
+package com.scalar.db.storage.cosmos;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
-import com.scalar.db.storage.cosmos.CosmosEnv;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
