@@ -74,7 +74,8 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
   private ExecutorService executorService;
 
   @BeforeAll
-  public void beforeAll() throws java.util.concurrent.ExecutionException, InterruptedException {
+  public void beforeAll() throws Exception {
+    initialize();
     StorageFactory factory =
         new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
     admin = factory.getAdmin();
@@ -87,6 +88,8 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     System.out.println(
         "The seed used in the multiple clustering key scan integration test is " + seed);
   }
+
+  protected void initialize() throws Exception {}
 
   protected abstract DatabaseConfig getDatabaseConfig();
 
