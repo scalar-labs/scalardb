@@ -153,7 +153,10 @@ public class ResultRecord implements Record {
 
   @Override
   public boolean contains(String columnNameOrAlias) {
-    return result.contains(getActualColumnName(columnNameOrAlias));
+    if (!projectionAliasMap.get().containsKey(columnNameOrAlias)) {
+      return false;
+    }
+    return result.contains(projectionAliasMap.get().get(columnNameOrAlias));
   }
 
   @Override

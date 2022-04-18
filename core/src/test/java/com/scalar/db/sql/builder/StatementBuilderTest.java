@@ -563,7 +563,7 @@ public class StatementBuilderTest {
             .build();
 
     SelectStatement statement4 =
-        StatementBuilder.select("col1", "col2", "col3")
+        StatementBuilder.select()
             .from("ns1", "tbl1")
             .where(Predicate.column("col1").isEqualTo(BindMarker.positional()))
             .and(Predicate.column("col2").isGreaterThan(BindMarker.positional()))
@@ -638,10 +638,7 @@ public class StatementBuilderTest {
             SelectStatement.of(
                 "ns1",
                 "tbl1",
-                ImmutableList.of(
-                    Projection.column("col1"),
-                    Projection.column("col2"),
-                    Projection.column("col3")),
+                ImmutableList.of(),
                 ImmutableList.of(
                     Predicate.column("col1").isEqualTo(BindMarker.positional()),
                     Predicate.column("col2").isGreaterThan(BindMarker.positional()),

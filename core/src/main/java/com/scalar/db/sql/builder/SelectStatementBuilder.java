@@ -111,7 +111,7 @@ public final class SelectStatementBuilder {
           projections,
           predicatesBuilder.build(),
           clusteringOrderings,
-          limit);
+          limit != null ? limit : Value.ofInt(0));
     }
   }
 }
