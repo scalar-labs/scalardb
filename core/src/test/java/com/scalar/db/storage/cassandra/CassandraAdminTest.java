@@ -35,9 +35,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -52,7 +51,7 @@ public class CassandraAdminTest {
   @Mock private Metadata metadata;
   @Mock private KeyspaceMetadata keyspaceMetadata;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
     when(clusterManager.getSession()).thenReturn(cassandraSession);
@@ -478,7 +477,7 @@ public class CassandraAdminTest {
 
     // Act
     // Assert
-    Assert.assertTrue(cassandraAdmin.namespaceExists(namespace));
+    assertThat(cassandraAdmin.namespaceExists(namespace)).isTrue();
 
     verify(metadata).getKeyspace(namespace);
   }

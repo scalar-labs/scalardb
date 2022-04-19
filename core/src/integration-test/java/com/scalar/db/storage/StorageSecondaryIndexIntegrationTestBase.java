@@ -15,7 +15,6 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -24,11 +23,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
-@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class StorageSecondaryIndexIntegrationTestBase {
 
   private static final String TEST_NAME = "secondary_idx";
@@ -42,28 +42,24 @@ public abstract class StorageSecondaryIndexIntegrationTestBase {
 
   private static final Random RANDOM = new Random();
 
-  private static boolean initialized;
-  private static DistributedStorageAdmin admin;
-  private static DistributedStorage storage;
-  private static String namespace;
-  private static Set<DataType> secondaryIndexTypes;
+  private DistributedStorageAdmin admin;
+  private DistributedStorage storage;
+  private String namespace;
+  private Set<DataType> secondaryIndexTypes;
 
-  private static long seed;
+  private long seed;
 
-  @Before
-  public void setUp() throws Exception {
-    if (!initialized) {
-      StorageFactory factory =
-          new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
-      admin = factory.getAdmin();
-      namespace = getNamespace();
-      secondaryIndexTypes = getSecondaryIndexTypes();
-      createTables();
-      storage = factory.getStorage();
-      seed = System.currentTimeMillis();
-      System.out.println("The seed used in the secondary index integration test is " + seed);
-      initialized = true;
-    }
+  @BeforeAll
+  public void beforeAll() throws ExecutionException {
+    StorageFactory factory =
+        new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+    admin = factory.getAdmin();
+    namespace = getNamespace();
+    secondaryIndexTypes = getSecondaryIndexTypes();
+    createTables();
+    storage = factory.getStorage();
+    seed = System.currentTimeMillis();
+    System.out.println("The seed used in the secondary index integration test is " + seed);
   }
 
   protected abstract DatabaseConfig getDatabaseConfig();
@@ -76,16 +72,16 @@ public abstract class StorageSecondaryIndexIntegrationTestBase {
     return new HashSet<>(Arrays.asList(DataType.values()));
   }
 
-  protected Map<String, String> getCreateOptions() {
-    return Collections.emptyMap();
-  }
-
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreateOptions();
     admin.createNamespace(namespace, true, options);
     for (DataType secondaryIndexType : secondaryIndexTypes) {
       createTable(secondaryIndexType, options);
     }
+  }
+
+  protected Map<String, String> getCreateOptions() {
+    return Collections.emptyMap();
   }
 
   private void createTable(DataType secondaryIndexType, Map<String, String> options)
@@ -104,14 +100,14 @@ public abstract class StorageSecondaryIndexIntegrationTestBase {
         options);
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  @AfterAll
+  public void afterAll() throws ExecutionException {
     deleteTables();
     admin.close();
     storage.close();
   }
 
-  private static void deleteTables() throws ExecutionException {
+  private void deleteTables() throws ExecutionException {
     for (DataType secondaryIndexType : secondaryIndexTypes) {
       admin.dropTable(namespace, getTableName(secondaryIndexType));
     }
@@ -122,7 +118,7 @@ public abstract class StorageSecondaryIndexIntegrationTestBase {
     admin.truncateTable(namespace, getTableName(secondaryIndexType));
   }
 
-  private static String getTableName(DataType secondaryIndexType) {
+  private String getTableName(DataType secondaryIndexType) {
     return secondaryIndexType.toString();
   }
 

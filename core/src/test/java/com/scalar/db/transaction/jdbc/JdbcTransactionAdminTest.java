@@ -13,8 +13,8 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
 import java.util.Collections;
 import java.util.Set;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -23,7 +23,7 @@ public class JdbcTransactionAdminTest {
   @Mock private JdbcAdmin jdbcAdmin;
   private JdbcTransactionAdmin admin;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
     admin = new JdbcTransactionAdmin(jdbcAdmin);

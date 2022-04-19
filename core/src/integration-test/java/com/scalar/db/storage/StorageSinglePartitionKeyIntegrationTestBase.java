@@ -13,7 +13,6 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -25,11 +24,12 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.IntStream;
 import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
-@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class StorageSinglePartitionKeyIntegrationTestBase {
 
   private static final String TEST_NAME = "single_pkey";
@@ -41,28 +41,24 @@ public abstract class StorageSinglePartitionKeyIntegrationTestBase {
 
   private static final Random RANDOM = new Random();
 
-  private static boolean initialized;
-  private static DistributedStorageAdmin admin;
-  private static DistributedStorage storage;
-  private static String namespace;
-  private static Set<DataType> partitionKeyTypes;
+  private DistributedStorageAdmin admin;
+  private DistributedStorage storage;
+  private String namespace;
+  private Set<DataType> partitionKeyTypes;
 
-  private static long seed;
+  private long seed;
 
-  @Before
-  public void setUp() throws Exception {
-    if (!initialized) {
-      StorageFactory factory =
-          new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
-      admin = factory.getAdmin();
-      namespace = getNamespace();
-      partitionKeyTypes = getPartitionKeyTypes();
-      createTables();
-      storage = factory.getStorage();
-      seed = System.currentTimeMillis();
-      System.out.println("The seed used in the single partition key integration test is " + seed);
-      initialized = true;
-    }
+  @BeforeAll
+  public void beforeAll() throws ExecutionException {
+    StorageFactory factory =
+        new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+    admin = factory.getAdmin();
+    namespace = getNamespace();
+    partitionKeyTypes = getPartitionKeyTypes();
+    createTables();
+    storage = factory.getStorage();
+    seed = System.currentTimeMillis();
+    System.out.println("The seed used in the single partition key integration test is " + seed);
   }
 
   protected abstract DatabaseConfig getDatabaseConfig();
@@ -75,16 +71,16 @@ public abstract class StorageSinglePartitionKeyIntegrationTestBase {
     return new HashSet<>(Arrays.asList(DataType.values()));
   }
 
-  protected Map<String, String> getCreateOptions() {
-    return Collections.emptyMap();
-  }
-
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreateOptions();
     admin.createNamespace(namespace, true, options);
     for (DataType partitionKeyType : partitionKeyTypes) {
       createTable(partitionKeyType, options);
     }
+  }
+
+  protected Map<String, String> getCreateOptions() {
+    return Collections.emptyMap();
   }
 
   private void createTable(DataType partitionKeyType, Map<String, String> options)
@@ -101,14 +97,14 @@ public abstract class StorageSinglePartitionKeyIntegrationTestBase {
         options);
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  @AfterAll
+  public void afterAll() throws ExecutionException {
     deleteTables();
     admin.close();
     storage.close();
   }
 
-  private static void deleteTables() throws ExecutionException {
+  private void deleteTables() throws ExecutionException {
     for (DataType partitionKeyType : partitionKeyTypes) {
       admin.dropTable(namespace, getTableName(partitionKeyType));
     }
@@ -120,7 +116,7 @@ public abstract class StorageSinglePartitionKeyIntegrationTestBase {
     admin.truncateTable(namespace, getTableName(partitionKeyType));
   }
 
-  private static String getTableName(DataType partitionKeyType) {
+  private String getTableName(DataType partitionKeyType) {
     return partitionKeyType.toString();
   }
 

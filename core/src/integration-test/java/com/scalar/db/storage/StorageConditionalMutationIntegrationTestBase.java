@@ -35,7 +35,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.service.StorageFactory;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -47,11 +46,13 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
-@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class StorageConditionalMutationIntegrationTestBase {
 
   private static final String TEST_NAME = "cond_mutation";
@@ -84,32 +85,27 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
 
   private static final int THREAD_NUM = 10;
 
-  private static boolean initialized;
-  private static DistributedStorageAdmin admin;
-  private static DistributedStorage storage;
-  private static String namespace;
+  private DistributedStorageAdmin admin;
+  private DistributedStorage storage;
+  private String namespace;
 
-  private static long seed;
-  private static List<OperatorAndDataType> operatorAndDataTypeList;
+  private long seed;
+  private List<OperatorAndDataType> operatorAndDataTypeList;
 
-  private static ExecutorService executorService;
+  private ExecutorService executorService;
 
-  @Before
-  public void setUp() throws Exception {
-    if (!initialized) {
-      StorageFactory factory =
-          new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
-      admin = factory.getAdmin();
-      namespace = getNamespace();
-      createTable();
-      storage = factory.getStorage();
-      seed = System.currentTimeMillis();
-      System.out.println("The seed used in the conditional mutation integration test is " + seed);
-      operatorAndDataTypeList = getOperatorAndDataTypeListForTest();
-      executorService = Executors.newFixedThreadPool(getThreadNum());
-      initialized = true;
-    }
-    admin.truncateTable(namespace, TABLE);
+  @BeforeAll
+  public void beforeAll() throws ExecutionException {
+    StorageFactory factory =
+        new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+    admin = factory.getAdmin();
+    namespace = getNamespace();
+    createTable();
+    storage = factory.getStorage();
+    seed = System.currentTimeMillis();
+    System.out.println("The seed used in the conditional mutation integration test is " + seed);
+    operatorAndDataTypeList = getOperatorAndDataTypeListForTest();
+    executorService = Executors.newFixedThreadPool(getThreadNum());
   }
 
   protected abstract DatabaseConfig getDatabaseConfig();
@@ -122,24 +118,29 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
     return THREAD_NUM;
   }
 
-  protected Map<String, String> getCreateOptions() {
-    return Collections.emptyMap();
-  }
-
   private void createTable() throws ExecutionException {
     Map<String, String> options = getCreateOptions();
     admin.createNamespace(namespace, true, options);
     admin.createTable(namespace, TABLE, TABLE_METADATA, true, options);
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  protected Map<String, String> getCreateOptions() {
+    return Collections.emptyMap();
+  }
+
+  @BeforeEach
+  public void setUp() throws ExecutionException {
+    admin.truncateTable(namespace, TABLE);
+  }
+
+  @AfterAll
+  public void afterAll() throws ExecutionException {
     deleteTable();
     admin.close();
     storage.close();
   }
 
-  private static void deleteTable() throws ExecutionException {
+  private void deleteTable() throws ExecutionException {
     admin.dropTable(namespace, TABLE);
     admin.dropNamespace(namespace);
   }
@@ -1448,7 +1449,7 @@ public abstract class StorageConditionalMutationIntegrationTestBase {
     executeInParallel(testCallables);
   }
 
-  private static void executeInParallel(List<Callable<Void>> testCallables)
+  private void executeInParallel(List<Callable<Void>> testCallables)
       throws InterruptedException, java.util.concurrent.ExecutionException {
     List<Future<Void>> futures = executorService.invokeAll(testCallables);
     for (Future<Void> future : futures) {

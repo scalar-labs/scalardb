@@ -31,11 +31,13 @@ import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class TwoPhaseConsensusCommitIntegrationTest {
 
   private static final String PROP_CONTACT_POINTS = "scalardb.contact_points";
@@ -61,13 +63,13 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   private static final String ANY_ID_1 = "id1";
   private static final String ANY_ID_2 = "id2";
 
-  private static TwoPhaseConsensusCommitManager manager;
-  private static DistributedStorage storage;
-  private static DistributedStorageAdmin admin;
-  private static ConsensusCommitAdmin consensusCommitAdmin;
-  private static Coordinator coordinator;
+  private TwoPhaseConsensusCommitManager manager;
+  private DistributedStorage storage;
+  private DistributedStorageAdmin admin;
+  private ConsensusCommitAdmin consensusCommitAdmin;
+  private Coordinator coordinator;
 
-  private static DatabaseConfig getDatabaseConfig() {
+  private DatabaseConfig getDatabaseConfig() {
     String contactPoints = System.getProperty(PROP_CONTACT_POINTS, DEFAULT_CONTACT_POINTS);
     String contactPort = System.getProperty(PROP_CONTACT_PORT);
     String username = System.getProperty(PROP_USERNAME, DEFAULT_USERNAME);
@@ -85,15 +87,15 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     return new DatabaseConfig(properties);
   }
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws ExecutionException {
+  @BeforeAll
+  public void beforeAll() throws ExecutionException {
     DatabaseConfig config = getDatabaseConfig();
     initStorageAndAdmin(config);
     createTables();
     initManagerAndCoordinator(config);
   }
 
-  private static void initStorageAndAdmin(DatabaseConfig config) {
+  private void initStorageAndAdmin(DatabaseConfig config) {
     StorageFactory factory = new StorageFactory(config);
     storage = factory.getStorage();
     admin = factory.getAdmin();
@@ -101,7 +103,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
         new ConsensusCommitAdmin(admin, new ConsensusCommitConfig(config.getProperties()));
   }
 
-  private static void createTables() throws ExecutionException {
+  private void createTables() throws ExecutionException {
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(ACCOUNT_ID, DataType.INT)
@@ -116,13 +118,13 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     consensusCommitAdmin.createCoordinatorNamespaceAndTable();
   }
 
-  private static void initManagerAndCoordinator(DatabaseConfig config) {
+  private void initManagerAndCoordinator(DatabaseConfig config) {
     ConsensusCommitConfig consensusCommitConfig = new ConsensusCommitConfig(config.getProperties());
     manager = new TwoPhaseConsensusCommitManager(storage, admin, consensusCommitConfig);
     coordinator = new Coordinator(storage, consensusCommitConfig);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws ExecutionException {
     truncateTables();
   }
@@ -133,15 +135,15 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     consensusCommitAdmin.truncateCoordinatorTable();
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws ExecutionException {
+  @AfterAll
+  public void afterAll() throws ExecutionException {
     deleteTables();
     admin.close();
     storage.close();
     manager.close();
   }
 
-  private static void deleteTables() throws ExecutionException {
+  private void deleteTables() throws ExecutionException {
     admin.dropTable(NAMESPACE, TABLE_1);
     admin.dropTable(NAMESPACE, TABLE_2);
     admin.dropNamespace(NAMESPACE);

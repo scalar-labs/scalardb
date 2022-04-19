@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.io.DataType;
 import java.util.Iterator;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TableMetadataTest {
 

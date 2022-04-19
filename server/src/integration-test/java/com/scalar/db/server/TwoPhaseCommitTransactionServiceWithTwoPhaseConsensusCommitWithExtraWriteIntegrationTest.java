@@ -29,21 +29,23 @@ import com.scalar.db.transaction.rpc.GrpcTwoPhaseCommitTransactionManager;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public
 class TwoPhaseCommitTransactionServiceWithTwoPhaseConsensusCommitWithExtraWriteIntegrationTest {
 
-  private static ScalarDbServer server;
-  private static DistributedStorageAdmin admin;
-  private static ConsensusCommitAdmin consensusCommitAdmin;
-  private static GrpcTwoPhaseCommitTransactionManager manager;
+  private ScalarDbServer server;
+  private DistributedStorageAdmin admin;
+  private ConsensusCommitAdmin consensusCommitAdmin;
+  private GrpcTwoPhaseCommitTransactionManager manager;
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws ExecutionException, IOException {
+  @BeforeAll
+  public void beforeAll() throws ExecutionException, IOException {
     ServerConfig serverConfig =
         ServerEnv.getServerConfig(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     if (serverConfig != null) {
@@ -60,13 +62,13 @@ class TwoPhaseCommitTransactionServiceWithTwoPhaseConsensusCommitWithExtraWriteI
     manager = new GrpcTwoPhaseCommitTransactionManager(grpcConfig);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws ExecutionException {
     truncateTables(admin, consensusCommitAdmin);
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws ExecutionException {
+  @AfterAll
+  public void afterAll() throws ExecutionException {
     deleteTables(admin, consensusCommitAdmin);
     admin.close();
     manager.close();

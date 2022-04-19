@@ -15,8 +15,8 @@ import com.scalar.db.io.Key;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -32,7 +32,7 @@ public class CosmosOperationTest {
 
   @Mock private TableMetadata metadata;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
   }

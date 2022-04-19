@@ -9,7 +9,7 @@ import java.util.Random;
 public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
     extends StorageMultipleClusteringKeyScanIntegrationTestBase {
 
-  private static RdbEngine rdbEngine;
+  private RdbEngine rdbEngine;
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {

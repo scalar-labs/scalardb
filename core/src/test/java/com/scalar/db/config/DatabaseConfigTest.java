@@ -24,7 +24,7 @@ import com.scalar.db.transaction.rpc.GrpcTransactionManager;
 import com.scalar.db.transaction.rpc.GrpcTwoPhaseCommitTransactionManager;
 import java.util.Collections;
 import java.util.Properties;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class DatabaseConfigTest {
   private static final String ANY_HOST = "localhost";

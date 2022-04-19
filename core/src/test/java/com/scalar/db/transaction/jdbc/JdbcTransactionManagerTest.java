@@ -25,8 +25,8 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import org.apache.commons.dbcp2.BasicDataSource;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -43,7 +43,7 @@ public class JdbcTransactionManagerTest {
 
   private JdbcTransactionManager manager;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 

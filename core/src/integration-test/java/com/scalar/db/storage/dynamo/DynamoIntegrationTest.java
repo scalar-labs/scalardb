@@ -3,7 +3,7 @@ package com.scalar.db.storage.dynamo;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.StorageIntegrationTestBase;
 import java.util.Map;
-import jdk.nashorn.internal.ir.annotations.Ignore;
+import org.junit.jupiter.api.Disabled;
 
 public class DynamoIntegrationTest extends StorageIntegrationTestBase {
 
@@ -18,7 +18,7 @@ public class DynamoIntegrationTest extends StorageIntegrationTestBase {
   }
 
   // DynamoDB doesn't support putting a null value for a secondary index column
-  @Ignore
+  @Disabled
   @Override
   public void put_PutGivenForIndexedColumnWithNullValue_ShouldPut() {}
 }

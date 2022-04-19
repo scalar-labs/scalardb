@@ -44,7 +44,8 @@ dependencies {
     implementation "io.prometheus:simpleclient_servlet:${prometheusVersion}"
     implementation "io.prometheus:simpleclient_hotspot:${prometheusVersion}"
     implementation "org.eclipse.jetty:jetty-servlet:${jettyVersion}"
-    testImplementation "junit:junit:${junitVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
     testImplementation "org.assertj:assertj-core:${assertjVersion}"
     testImplementation "org.mockito:mockito-core:${mockitoVersion}"
     testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
@@ -74,6 +75,7 @@ docker {
 }
 
 task integrationTestScalarDbServer(type: Test) {
+    useJUnitPlatform()
     description = 'Runs the integration tests for the Scalar DB server.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestScalarDbServer.output.classesDirs

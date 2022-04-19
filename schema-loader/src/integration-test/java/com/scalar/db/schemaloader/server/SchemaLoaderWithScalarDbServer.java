@@ -7,11 +7,11 @@ import com.scalar.db.server.ScalarDbServer;
 import com.scalar.db.server.ServerConfig;
 import com.scalar.db.server.ServerEnv;
 import java.io.IOException;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
 
 public class SchemaLoaderWithScalarDbServer extends SchemaLoaderIntegrationTestBase {
 
-  private static ScalarDbServer server;
+  private ScalarDbServer server;
 
   @Override
   protected void initialize() throws IOException {
@@ -27,9 +27,10 @@ public class SchemaLoaderWithScalarDbServer extends SchemaLoaderIntegrationTestB
     return ServerEnv.getGrpcConfig();
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws ExecutionException {
-    SchemaLoaderIntegrationTestBase.tearDownAfterClass();
+  @AfterAll
+  @Override
+  public void afterAll() throws ExecutionException {
+    super.afterAll();
     if (server != null) {
       server.shutdown();
       server.blockUntilShutdown();

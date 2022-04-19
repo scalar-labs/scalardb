@@ -28,7 +28,6 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.service.StorageFactory;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,43 +36,38 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
-@SuppressFBWarnings({"ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class StorageWithReservedKeywordIntegrationTestBase {
-  private static boolean initialized;
-  private static DistributedStorage storage;
-  private static DistributedStorageAdmin admin;
+  private DistributedStorage storage;
+  private DistributedStorageAdmin admin;
 
-  private static String namespace;
-  private static String tableName;
-  private static String columnName1;
-  private static String columnName2;
-  private static String columnName3;
-  private static String columnName4;
-  private static String columnName5;
+  private String namespace;
+  private String tableName;
+  private String columnName1;
+  private String columnName2;
+  private String columnName3;
+  private String columnName4;
+  private String columnName5;
 
-  @Before
-  public void setUp() throws Exception {
-    if (!initialized) {
-      StorageFactory factory = new StorageFactory(getDatabaseConfig());
-      admin = factory.getAdmin();
-      namespace = getNamespace();
-      tableName = getTableName();
-      columnName1 = getColumnName1();
-      columnName2 = getColumnName2();
-      columnName3 = getColumnName3();
-      columnName4 = getColumnName4();
-      columnName5 = getColumnName5();
-      createTable();
-      storage = factory.getStorage();
-      initialized = true;
-    }
-
-    truncateTable();
-    storage.with(namespace, tableName);
+  @BeforeAll
+  public void beforeAll() throws ExecutionException {
+    StorageFactory factory = new StorageFactory(getDatabaseConfig());
+    admin = factory.getAdmin();
+    namespace = getNamespace();
+    tableName = getTableName();
+    columnName1 = getColumnName1();
+    columnName2 = getColumnName2();
+    columnName3 = getColumnName3();
+    columnName4 = getColumnName4();
+    columnName5 = getColumnName5();
+    createTable();
+    storage = factory.getStorage();
   }
 
   protected abstract DatabaseConfig getDatabaseConfig();
@@ -116,18 +110,24 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     return Collections.emptyMap();
   }
 
+  @BeforeEach
+  public void setUp() throws ExecutionException {
+    truncateTable();
+    storage.with(namespace, tableName);
+  }
+
   private void truncateTable() throws ExecutionException {
     admin.truncateTable(namespace, tableName);
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws ExecutionException {
+  @AfterAll
+  public void afterAll() throws ExecutionException {
     deleteTable();
     admin.close();
     storage.close();
   }
 
-  private static void deleteTable() throws ExecutionException {
+  private void deleteTable() throws ExecutionException {
     admin.dropTable(namespace, tableName);
     admin.dropNamespace(namespace);
   }

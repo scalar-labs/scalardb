@@ -26,11 +26,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class JdbcTransactionIntegrationTest {
 
   private static final String TEST_NAME = "jdbc_tx";
@@ -43,11 +45,11 @@ public class JdbcTransactionIntegrationTest {
   private static final int NUM_ACCOUNTS = 4;
   private static final int NUM_TYPES = 4;
 
-  private static DistributedStorageAdmin admin;
-  private static JdbcTransactionManager manager;
+  private DistributedStorageAdmin admin;
+  private JdbcTransactionManager manager;
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws ExecutionException {
+  @BeforeAll
+  public void beforeAll() throws ExecutionException {
     DatabaseConfig databaseConfig = TestUtils.addSuffix(JdbcEnv.getJdbcConfig(), TEST_NAME);
     JdbcConfig config = new JdbcConfig(databaseConfig.getProperties());
     StorageFactory factory = new StorageFactory(config);
@@ -68,13 +70,13 @@ public class JdbcTransactionIntegrationTest {
     manager = new JdbcTransactionManager(config);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws ExecutionException {
     admin.truncateTable(NAMESPACE, TABLE);
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws ExecutionException {
+  @AfterAll
+  public void afterAll() throws ExecutionException {
     admin.dropTable(NAMESPACE, TABLE);
     admin.dropNamespace(NAMESPACE);
     admin.close();

@@ -31,8 +31,8 @@ import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
@@ -62,7 +62,7 @@ public class PutStatementHandlerTest {
 
   @Captor ArgumentCaptor<List<Object>> captor;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 

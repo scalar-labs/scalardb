@@ -3,7 +3,7 @@ package com.scalar.db.storage.dynamo.bytes;
 import java.nio.ByteBuffer;
 import java.util.Optional;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class BytesUtilsTest {
 

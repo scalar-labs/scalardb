@@ -17,8 +17,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class FilteredResultTest {
 
@@ -56,7 +56,7 @@ public class FilteredResultTest {
 
   private Result result;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     // Arrange
     Map<String, Column<?>> columns =

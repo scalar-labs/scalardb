@@ -35,8 +35,8 @@ import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -72,7 +72,7 @@ public class RollbackMutationComposerTest {
   @Mock private DistributedStorage storage;
   @Mock private TransactionalTableMetadataManager tableMetadataManager;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     mutations = new ArrayList<>();
     MockitoAnnotations.openMocks(this).close();

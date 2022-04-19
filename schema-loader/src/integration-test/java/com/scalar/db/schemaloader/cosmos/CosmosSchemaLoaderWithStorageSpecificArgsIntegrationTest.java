@@ -8,7 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 
 public class CosmosSchemaLoaderWithStorageSpecificArgsIntegrationTest
     extends SchemaLoaderIntegrationTestBase {
@@ -57,7 +57,7 @@ public class CosmosSchemaLoaderWithStorageSpecificArgsIntegrationTest
     return builder.build();
   }
 
-  @Ignore
+  @Disabled
   @Override
   public void createTablesThenDeleteTables_ShouldExecuteProperly() {}
 }
