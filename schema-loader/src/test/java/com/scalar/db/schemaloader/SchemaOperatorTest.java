@@ -12,8 +12,8 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -25,7 +25,7 @@ public class SchemaOperatorTest {
 
   private SchemaOperator operator;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 

@@ -31,7 +31,6 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.service.StorageFactory;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,11 +41,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
-@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class StorageIntegrationTestBase {
 
   private static final String NAMESPACE = "integration_testing";
@@ -58,25 +59,18 @@ public abstract class StorageIntegrationTestBase {
   private static final String COL_NAME5 = "c5";
   private static final String COL_NAME6 = "c6";
 
-  private static boolean initialized;
-  private static DistributedStorage storage;
-  private static DistributedStorageAdmin admin;
-  private static String namespace;
+  private DistributedStorage storage;
+  private DistributedStorageAdmin admin;
+  private String namespace;
 
-  @Before
-  public void setUp() throws Exception {
-    if (!initialized) {
-      initialize();
-      StorageFactory factory = new StorageFactory(getDatabaseConfig());
-      admin = factory.getAdmin();
-      namespace = getNamespace();
-      createTable();
-      storage = factory.getStorage();
-      initialized = true;
-    }
-
-    truncateTable();
-    storage.with(namespace, TABLE);
+  @BeforeAll
+  public void beforeAll() throws Exception {
+    initialize();
+    StorageFactory factory = new StorageFactory(getDatabaseConfig());
+    admin = factory.getAdmin();
+    namespace = getNamespace();
+    createTable();
+    storage = factory.getStorage();
   }
 
   protected void initialize() throws Exception {}
@@ -112,18 +106,24 @@ public abstract class StorageIntegrationTestBase {
     return Collections.emptyMap();
   }
 
+  @BeforeEach
+  public void setUp() throws ExecutionException {
+    truncateTable();
+    storage.with(namespace, TABLE);
+  }
+
   private void truncateTable() throws ExecutionException {
     admin.truncateTable(namespace, TABLE);
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws ExecutionException {
+  @AfterAll
+  public void afterAll() throws ExecutionException {
     deleteTable();
     admin.close();
     storage.close();
   }
 
-  private static void deleteTable() throws ExecutionException {
+  private void deleteTable() throws ExecutionException {
     admin.dropTable(namespace, TABLE);
     admin.dropNamespace(namespace);
   }

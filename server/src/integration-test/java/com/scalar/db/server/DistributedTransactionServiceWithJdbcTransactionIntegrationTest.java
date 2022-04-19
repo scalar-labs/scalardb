@@ -26,11 +26,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
 
   private static final String NAMESPACE = "integration_testing";
@@ -42,12 +44,12 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
   private static final int NUM_ACCOUNTS = 4;
   private static final int NUM_TYPES = 4;
 
-  private static ScalarDbServer server;
-  private static DistributedStorageAdmin admin;
-  private static GrpcTransactionManager manager;
+  private ScalarDbServer server;
+  private DistributedStorageAdmin admin;
+  private GrpcTransactionManager manager;
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws ExecutionException, IOException {
+  @BeforeAll
+  public void beforeAll() throws ExecutionException, IOException {
     ServerConfig serverConfig = ServerEnv.getServerConfigWithJdbc();
     if (serverConfig != null) {
       server = new ScalarDbServer(serverConfig);
@@ -61,7 +63,7 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
     manager = new GrpcTransactionManager(grpcConfig);
   }
 
-  private static void createTable() throws ExecutionException {
+  private void createTable() throws ExecutionException {
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(ACCOUNT_ID, DataType.INT)
@@ -74,7 +76,7 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
     admin.createTable(NAMESPACE, TABLE, tableMetadata, true);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws ExecutionException {
     truncateTable();
   }
@@ -83,8 +85,8 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
     admin.truncateTable(NAMESPACE, TABLE);
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws ExecutionException {
+  @AfterAll
+  public void afterAll() throws ExecutionException {
     deleteTable();
     admin.close();
     manager.close();
@@ -94,7 +96,7 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
     }
   }
 
-  private static void deleteTable() throws ExecutionException {
+  private void deleteTable() throws ExecutionException {
     admin.dropTable(NAMESPACE, TABLE);
     admin.dropNamespace(NAMESPACE);
   }

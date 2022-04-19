@@ -20,8 +20,8 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.Optional;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -45,7 +45,7 @@ public class RecoveryHandlerTest {
 
   private RecoveryHandler handler;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 

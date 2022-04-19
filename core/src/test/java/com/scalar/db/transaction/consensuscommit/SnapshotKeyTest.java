@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.api.Get;
 import com.scalar.db.io.Key;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class SnapshotKeyTest {
   private static final String ANY_NAMESPACE_NAME = "namespace";

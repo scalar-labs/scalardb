@@ -3,8 +3,8 @@ package com.scalar.db.storage.dynamo;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.StorageAdminIntegrationTestBase;
 import java.util.Map;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 public class DynamoAdminIntegrationTest extends StorageAdminIntegrationTestBase {
 
@@ -19,19 +19,19 @@ public class DynamoAdminIntegrationTest extends StorageAdminIntegrationTestBase 
   }
 
   // Since DynamoDB doesn't have the namespace concept, some behaviors around the namespace are
-  // different from the other adapters. So ignore several tests that check such behaviors
+  // different from the other adapters. So disable several tests that check such behaviors
 
-  @Ignore
+  @Disabled
   @Test
   @Override
   public void createNamespace_ForNonExistingNamespace_ShouldCreateNamespaceProperly() {}
 
-  @Ignore
+  @Disabled
   @Test
   @Override
   public void createNamespace_ForExistingNamespace_ShouldExecutionException() {}
 
-  @Ignore
+  @Disabled
   @Test
   @Override
   public void dropNamespace_ForNonExistingNamespace_ShouldExecutionException() {}

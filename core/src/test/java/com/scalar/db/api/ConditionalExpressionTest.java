@@ -19,7 +19,7 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class ConditionalExpressionTest {
 

@@ -13,9 +13,9 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
@@ -34,7 +34,7 @@ public class SchemaLoaderTest {
   @Mock private Path serializedSchemaJson;
   @Mock private Map<String, String> options;
 
-  @Before
+  @BeforeEach
   public void setUp() throws SchemaLoaderException {
     closeable = MockitoAnnotations.openMocks(this);
 
@@ -48,7 +48,7 @@ public class SchemaLoaderTest {
     when(parser.parse()).thenReturn(Collections.emptyList());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     schemaLoaderMockedStatic.close();
     closeable.close();

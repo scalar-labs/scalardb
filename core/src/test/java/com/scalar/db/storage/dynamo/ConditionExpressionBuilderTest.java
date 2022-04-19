@@ -8,8 +8,8 @@ import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.io.IntValue;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.MockitoAnnotations;
 
 public class ConditionExpressionBuilderTest {
@@ -20,7 +20,7 @@ public class ConditionExpressionBuilderTest {
   private static final int ANY_INT = 1;
   private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT);
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
   }

@@ -23,11 +23,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class MultiStorageIntegrationTest {
 
   private static final String NAMESPACE1 = "integration_testing1";
@@ -52,34 +54,34 @@ public class MultiStorageIntegrationTest {
           .addClusteringKey(COL_NAME4)
           .build();
 
-  private static DistributedStorage storage1;
-  private static DistributedStorageAdmin admin1;
-  private static DistributedStorage storage2;
-  private static DistributedStorageAdmin admin2;
-  private static MultiStorage multiStorage;
+  private DistributedStorage storage1;
+  private DistributedStorageAdmin admin1;
+  private DistributedStorage storage2;
+  private DistributedStorageAdmin admin2;
+  private MultiStorage multiStorage;
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws ExecutionException {
+  @BeforeAll
+  public void beforeAll() throws ExecutionException {
     initStorage1AndAdmin1();
     initStorage2AndAdmin2();
     initMultiStorage();
   }
 
-  private static void initStorage1AndAdmin1() throws ExecutionException {
+  private void initStorage1AndAdmin1() throws ExecutionException {
     StorageFactory factory = new StorageFactory(MultiStorageEnv.getDatabaseConfigForStorage1());
     admin1 = factory.getAdmin();
     createTables(admin1);
     storage1 = factory.getStorage();
   }
 
-  private static void initStorage2AndAdmin2() throws ExecutionException {
+  private void initStorage2AndAdmin2() throws ExecutionException {
     StorageFactory factory = new StorageFactory(MultiStorageEnv.getDatabaseConfigForStorage2());
     admin2 = factory.getAdmin();
     createTables(admin2);
     storage2 = factory.getStorage();
   }
 
-  private static void createTables(DistributedStorageAdmin admin) throws ExecutionException {
+  private void createTables(DistributedStorageAdmin admin) throws ExecutionException {
     admin.createNamespace(NAMESPACE1, true);
     for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
       admin.createTable(NAMESPACE1, table, TABLE_METADATA, true);
@@ -88,7 +90,7 @@ public class MultiStorageIntegrationTest {
     admin.createTable(NAMESPACE2, TABLE1, TABLE_METADATA, true);
   }
 
-  private static void initMultiStorage() {
+  private void initMultiStorage() {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
 
@@ -147,7 +149,7 @@ public class MultiStorageIntegrationTest {
     multiStorage = new MultiStorage(new MultiStorageConfig(props));
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws ExecutionException {
     truncateTables(admin1);
     truncateTables(admin2);
@@ -160,14 +162,14 @@ public class MultiStorageIntegrationTest {
     admin.truncateTable(NAMESPACE2, TABLE1);
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws ExecutionException {
+  @AfterAll
+  public void afterAll() throws ExecutionException {
     multiStorage.close();
     cleanUp(storage1, admin1);
     cleanUp(storage2, admin2);
   }
 
-  private static void cleanUp(DistributedStorage storage, DistributedStorageAdmin admin)
+  private void cleanUp(DistributedStorage storage, DistributedStorageAdmin admin)
       throws ExecutionException {
     storage.close();
     for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {

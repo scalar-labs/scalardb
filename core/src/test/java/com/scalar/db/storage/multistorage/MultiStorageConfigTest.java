@@ -8,7 +8,7 @@ import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
 import java.util.Collections;
 import java.util.Properties;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class MultiStorageConfigTest {
 

@@ -24,8 +24,8 @@ import com.scalar.db.io.TextValue;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.Optional;
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -38,7 +38,7 @@ public class CoordinatorTest {
   @Mock private ConsensusCommitConfig config;
   private Coordinator coordinator;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
     coordinator = new Coordinator(storage, config);

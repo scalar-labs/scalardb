@@ -22,8 +22,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class MergedResultTest {
 
@@ -60,7 +60,7 @@ public class MergedResultTest {
 
   private TransactionResult result;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     // Arrange
     result =

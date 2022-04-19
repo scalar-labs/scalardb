@@ -26,11 +26,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
-@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class SchemaLoaderIntegrationTestBase {
   private static final String CONFIG_FILE = "config.properties";
   private static final String SCHEMA_FILE = "schema.json";
@@ -43,28 +45,28 @@ public abstract class SchemaLoaderIntegrationTestBase {
   private static final String schemaLoaderJarPath =
       System.getProperty("scalardb.schemaloader.jar_path");
 
-  private static boolean initialized;
-  private static DistributedStorageAdmin admin;
-  private static ConsensusCommitAdmin consensusCommitAdmin;
-  private static String namespace1;
-  private static String namespace2;
+  private DistributedStorageAdmin admin;
+  private ConsensusCommitAdmin consensusCommitAdmin;
+  private String namespace1;
+  private String namespace2;
 
-  @Before
-  public void setUp() throws Exception {
-    if (!initialized) {
-      initialize();
-      DatabaseConfig config = getDatabaseConfig();
-      namespace1 = getNamespace1();
-      namespace2 = getNamespace2();
-      writeConfigFile(config.getProperties());
-      Map<String, Object> schemaJsonMap = getSchemaJsonMap();
-      writeSchemaFile(schemaJsonMap);
-      StorageFactory factory = new StorageFactory(config);
-      admin = factory.getAdmin();
-      consensusCommitAdmin =
-          new ConsensusCommitAdmin(admin, new ConsensusCommitConfig(config.getProperties()));
-      initialized = true;
-    }
+  @BeforeAll
+  public void beforeAll() throws Exception {
+    initialize();
+    DatabaseConfig config = getDatabaseConfig();
+    namespace1 = getNamespace1();
+    namespace2 = getNamespace2();
+    writeConfigFile(config.getProperties());
+    Map<String, Object> schemaJsonMap = getSchemaJsonMap();
+    writeSchemaFile(schemaJsonMap);
+    StorageFactory factory = new StorageFactory(config);
+    admin = factory.getAdmin();
+    consensusCommitAdmin =
+        new ConsensusCommitAdmin(admin, new ConsensusCommitConfig(config.getProperties()));
+  }
+
+  @BeforeEach
+  public void setUp() throws ExecutionException {
     dropTablesIfExist();
   }
 
@@ -165,8 +167,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
         .build();
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws ExecutionException {
+  @AfterAll
+  public void afterAll() throws ExecutionException {
     dropTablesIfExist();
     admin.close();
 
@@ -177,11 +179,9 @@ public abstract class SchemaLoaderIntegrationTestBase {
     if (!new File(SCHEMA_FILE).delete()) {
       System.err.println("failed to delete " + SCHEMA_FILE);
     }
-
-    initialized = false;
   }
 
-  private static void dropTablesIfExist() throws ExecutionException {
+  private void dropTablesIfExist() throws ExecutionException {
     admin.dropTable(namespace1, TABLE_1, true);
     admin.dropNamespace(namespace1, true);
     admin.dropTable(namespace2, TABLE_2, true);

@@ -3,15 +3,15 @@ package com.scalar.db.storage.cosmos;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.common.TableMetadataManager;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class StatementHandlerTest {
   @Mock private TableMetadataManager metadataManager;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
   }

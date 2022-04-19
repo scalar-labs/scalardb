@@ -16,7 +16,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import picocli.CommandLine.ExitCode;
 
 public class DynamoCommandTest extends StorageSpecificCommandTestBase {

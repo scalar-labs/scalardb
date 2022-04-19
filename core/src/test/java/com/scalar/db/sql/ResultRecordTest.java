@@ -17,8 +17,8 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ResultRecordTest {
 
@@ -52,7 +52,7 @@ public class ResultRecordTest {
 
   private ResultRecord resultRecord;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     // Arrange
     resultRecord =

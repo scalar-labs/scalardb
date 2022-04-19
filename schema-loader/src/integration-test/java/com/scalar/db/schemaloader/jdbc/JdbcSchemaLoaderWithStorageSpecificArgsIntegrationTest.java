@@ -7,7 +7,7 @@ import com.scalar.db.storage.jdbc.JdbcEnv;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 
 public class JdbcSchemaLoaderWithStorageSpecificArgsIntegrationTest
     extends SchemaLoaderIntegrationTestBase {
@@ -33,7 +33,7 @@ public class JdbcSchemaLoaderWithStorageSpecificArgsIntegrationTest
         config.getPassword().get());
   }
 
-  @Ignore
+  @Disabled
   @Override
   public void createTablesThenDeleteTables_ShouldExecuteProperly() {}
 }

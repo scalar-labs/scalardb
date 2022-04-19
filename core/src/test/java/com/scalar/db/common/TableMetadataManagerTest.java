@@ -15,8 +15,8 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.concurrent.TimeUnit;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -25,7 +25,7 @@ public class TableMetadataManagerTest {
 
   @Mock private DistributedStorageAdmin admin;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
   }

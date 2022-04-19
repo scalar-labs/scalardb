@@ -7,7 +7,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Properties;
 import org.apache.commons.dbcp2.BasicDataSource;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class JdbcUtilsTest {
 

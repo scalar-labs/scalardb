@@ -8,7 +8,7 @@ import com.scalar.db.io.Key;
 import java.util.Arrays;
 import java.util.List;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class PartitionedMutationsTest {
   private static final String ANY_NAMESPACE_NAME = "namespace";

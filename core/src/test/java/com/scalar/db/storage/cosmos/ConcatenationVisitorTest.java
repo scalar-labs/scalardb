@@ -11,8 +11,8 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ConcatenationVisitorTest {
   private static final boolean ANY_BOOLEAN = false;
@@ -32,7 +32,7 @@ public class ConcatenationVisitorTest {
   private static final BlobValue ANY_BLOB_VALUE = new BlobValue("any_blob", ANY_BLOB);
   private ConcatenationVisitor visitor;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     visitor = new ConcatenationVisitor();
   }

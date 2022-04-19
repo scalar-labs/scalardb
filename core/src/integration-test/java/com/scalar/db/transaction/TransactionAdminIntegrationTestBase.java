@@ -18,7 +18,6 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.storage.TestUtils;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -27,11 +26,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
-@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class TransactionAdminIntegrationTestBase {
 
   private static final String TEST_NAME = "tx_admin";
@@ -75,27 +75,23 @@ public abstract class TransactionAdminIntegrationTestBase {
           .addSecondaryIndex(COL_NAME6)
           .build();
 
-  private static boolean initialized;
-  private static DistributedTransactionAdmin admin;
-  private static DistributedTransactionManager manager;
-  private static String namespace1;
-  private static String namespace2;
-  private static String namespace3;
+  private DistributedTransactionAdmin admin;
+  private DistributedTransactionManager manager;
+  private String namespace1;
+  private String namespace2;
+  private String namespace3;
 
-  @Before
-  public void setUp() throws Exception {
-    if (!initialized) {
-      initialize();
-      TransactionFactory factory =
-          new TransactionFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
-      admin = factory.getTransactionAdmin();
-      namespace1 = getNamespace1();
-      namespace2 = getNamespace2();
-      namespace3 = getNamespace3();
-      createTables();
-      manager = factory.getTransactionManager();
-      initialized = true;
-    }
+  @BeforeAll
+  public void beforeAll() throws Exception {
+    initialize();
+    TransactionFactory factory =
+        new TransactionFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+    admin = factory.getTransactionAdmin();
+    namespace1 = getNamespace1();
+    namespace2 = getNamespace2();
+    namespace3 = getNamespace3();
+    createTables();
+    manager = factory.getTransactionManager();
   }
 
   protected void initialize() throws Exception {}
@@ -133,14 +129,13 @@ public abstract class TransactionAdminIntegrationTestBase {
     return Collections.emptyMap();
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws ExecutionException {
+  @AfterAll
+  public void afterAll() throws ExecutionException {
     dropTables();
     admin.close();
-    initialized = false;
   }
 
-  private static void dropTables() throws ExecutionException {
+  private void dropTables() throws ExecutionException {
     for (String namespace : Arrays.asList(namespace1, namespace2)) {
       for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
         admin.dropTable(namespace, table);

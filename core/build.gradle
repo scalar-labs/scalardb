@@ -126,7 +126,9 @@ dependencies {
     implementation "org.postgresql:postgresql:${postgresqlDriverVersion}"
     implementation "com.oracle.database.jdbc:ojdbc8-production:${oracleDriverVersion}"
     implementation "com.microsoft.sqlserver:mssql-jdbc:${sqlserverDriverVersion}"
-    testImplementation "junit:junit:${junitVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
     testImplementation "org.assertj:assertj-core:${assertjVersion}"
     testImplementation "org.mockito:mockito-core:${mockitoVersion}"
     testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
@@ -146,6 +148,7 @@ javadoc {
 }
 
 task integrationTestCassandra(type: Test) {
+    useJUnitPlatform()
     description = 'Runs the integration tests for Cassandra.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestCassandra.output.classesDirs
@@ -157,6 +160,7 @@ task integrationTestCassandra(type: Test) {
 }
 
 task integrationTestCosmos(type: Test) {
+    useJUnitPlatform()
     description = 'Runs the integration tests for Cosmos DB.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestCosmos.output.classesDirs
@@ -169,6 +173,7 @@ task integrationTestCosmos(type: Test) {
 }
 
 task integrationTestDynamo(type: Test) {
+    useJUnitPlatform()
     description = 'Runs the integration tests for DynamoDB.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestDynamo.output.classesDirs
@@ -181,6 +186,7 @@ task integrationTestDynamo(type: Test) {
 }
 
 task integrationTestJdbc(type: Test) {
+    useJUnitPlatform()
     description = 'Runs the integration tests for a JDBC database.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestJdbc.output.classesDirs
@@ -192,6 +198,7 @@ task integrationTestJdbc(type: Test) {
 }
 
 task integrationTestMultiStorage(type: Test) {
+    useJUnitPlatform()
     description = 'Runs the integration tests for multi-storage.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestMultiStorage.output.classesDirs
@@ -203,6 +210,7 @@ task integrationTestMultiStorage(type: Test) {
 }
 
 task integrationTestTwoPhaseConsensusCommit(type: Test) {
+    useJUnitPlatform()
     description = 'Runs the integration tests for two-phase consensus commit.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestTwoPhaseConsensusCommit.output.classesDirs

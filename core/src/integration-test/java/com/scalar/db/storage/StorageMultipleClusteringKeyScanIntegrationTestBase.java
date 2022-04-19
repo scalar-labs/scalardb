@@ -21,7 +21,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,11 +38,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
-@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
 
   private enum OrderingType {
@@ -68,34 +68,30 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
 
   private static final int THREAD_NUM = 10;
 
-  private static boolean initialized;
-  private static DistributedStorageAdmin admin;
-  private static DistributedStorage storage;
-  private static String namespaceBaseName;
+  private DistributedStorageAdmin admin;
+  private DistributedStorage storage;
+  private String namespaceBaseName;
 
   // Key: firstClusteringKeyType, Value: secondClusteringKeyType
-  private static ListMultimap<DataType, DataType> clusteringKeyTypes;
+  private ListMultimap<DataType, DataType> clusteringKeyTypes;
 
-  private static long seed;
+  private long seed;
 
-  private static ExecutorService executorService;
+  private ExecutorService executorService;
 
-  @Before
-  public void setUp() throws Exception {
-    if (!initialized) {
-      StorageFactory factory =
-          new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
-      admin = factory.getAdmin();
-      namespaceBaseName = getNamespaceBaseName();
-      clusteringKeyTypes = getClusteringKeyTypes();
-      executorService = Executors.newFixedThreadPool(getThreadNum());
-      createTables();
-      storage = factory.getStorage();
-      seed = System.currentTimeMillis();
-      System.out.println(
-          "The seed used in the multiple clustering key scan integration test is " + seed);
-      initialized = true;
-    }
+  @BeforeAll
+  public void beforeAll() throws java.util.concurrent.ExecutionException, InterruptedException {
+    StorageFactory factory =
+        new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+    admin = factory.getAdmin();
+    namespaceBaseName = getNamespaceBaseName();
+    clusteringKeyTypes = getClusteringKeyTypes();
+    executorService = Executors.newFixedThreadPool(getThreadNum());
+    createTables();
+    storage = factory.getStorage();
+    seed = System.currentTimeMillis();
+    System.out.println(
+        "The seed used in the multiple clustering key scan integration test is " + seed);
   }
 
   protected abstract DatabaseConfig getDatabaseConfig();
@@ -118,11 +114,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
     return THREAD_NUM;
   }
 
-  protected Map<String, String> getCreateOptions() {
-    return Collections.emptyMap();
-  }
-
-  private void createTables() throws InterruptedException, java.util.concurrent.ExecutionException {
+  private void createTables() throws java.util.concurrent.ExecutionException, InterruptedException {
     List<Callable<Void>> testCallables = new ArrayList<>();
 
     Map<String, String> options = getCreateOptions();
@@ -155,6 +147,10 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
     executeInParallel(testCallables.subList(1, testCallables.size()));
   }
 
+  protected Map<String, String> getCreateOptions() {
+    return Collections.emptyMap();
+  }
+
   private void createTable(
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
@@ -182,16 +178,15 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         options);
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  @AfterAll
+  public void afterAll() throws Exception {
     deleteTables();
     admin.close();
     storage.close();
     executorService.shutdown();
   }
 
-  private static void deleteTables()
-      throws java.util.concurrent.ExecutionException, InterruptedException {
+  private void deleteTables() throws java.util.concurrent.ExecutionException, InterruptedException {
     List<Callable<Void>> testCallables = new ArrayList<>();
     for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
       Callable<Void> testCallable =
@@ -238,7 +233,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             secondClusteringOrder));
   }
 
-  private static String getTableName(
+  private String getTableName(
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
       DataType secondClusteringKeyType,
@@ -251,7 +246,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         secondClusteringOrder.toString());
   }
 
-  private static String getNamespaceName(DataType firstClusteringKeyType) {
+  private String getNamespaceName(DataType firstClusteringKeyType) {
     return namespaceBaseName + firstClusteringKeyType;
   }
 
@@ -2032,7 +2027,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
     executeInParallel(testCallables);
   }
 
-  private static void executeInParallel(List<Callable<Void>> testCallables)
+  private void executeInParallel(List<Callable<Void>> testCallables)
       throws InterruptedException, java.util.concurrent.ExecutionException {
     List<Future<Void>> futures = executorService.invokeAll(testCallables);
     for (Future<Void> future : futures) {

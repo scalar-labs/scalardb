@@ -21,7 +21,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -29,11 +28,13 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
-@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class StorageColumnValueIntegrationTestBase {
 
   private static final String TEST_NAME = "col_val";
@@ -51,37 +52,28 @@ public abstract class StorageColumnValueIntegrationTestBase {
   private static final int ATTEMPT_COUNT = 50;
   private static final Random RANDOM = new Random();
 
-  private static boolean initialized;
-  private static DistributedStorageAdmin admin;
-  private static DistributedStorage storage;
-  private static String namespace;
+  private DistributedStorageAdmin admin;
+  private DistributedStorage storage;
+  private String namespace;
 
-  private static long seed;
+  private long seed;
 
-  @Before
-  public void setUp() throws Exception {
-    if (!initialized) {
-      StorageFactory factory =
-          new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
-      admin = factory.getAdmin();
-      namespace = getNamespace();
-      createTable();
-      storage = factory.getStorage();
-      seed = System.currentTimeMillis();
-      System.out.println("The seed used in the column value integration test is " + seed);
-      initialized = true;
-    }
-    admin.truncateTable(namespace, TABLE);
+  @BeforeAll
+  public void beforeAll() throws ExecutionException {
+    StorageFactory factory =
+        new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+    admin = factory.getAdmin();
+    namespace = getNamespace();
+    createTable();
+    storage = factory.getStorage();
+    seed = System.currentTimeMillis();
+    System.out.println("The seed used in the column value integration test is " + seed);
   }
 
   protected abstract DatabaseConfig getDatabaseConfig();
 
   protected String getNamespace() {
     return NAMESPACE;
-  }
-
-  protected Map<String, String> getCreateOptions() {
-    return Collections.emptyMap();
   }
 
   private void createTable() throws ExecutionException {
@@ -105,14 +97,23 @@ public abstract class StorageColumnValueIntegrationTestBase {
         options);
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  protected Map<String, String> getCreateOptions() {
+    return Collections.emptyMap();
+  }
+
+  @BeforeEach
+  public void setUp() throws ExecutionException {
+    admin.truncateTable(namespace, TABLE);
+  }
+
+  @AfterAll
+  public void afterAll() throws ExecutionException {
     deleteTable();
     admin.close();
     storage.close();
   }
 
-  private static void deleteTable() throws ExecutionException {
+  private void deleteTable() throws ExecutionException {
     admin.dropTable(namespace, TABLE);
     admin.dropNamespace(namespace);
   }

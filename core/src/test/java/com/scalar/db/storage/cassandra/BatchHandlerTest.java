@@ -25,8 +25,8 @@ import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
 import java.util.List;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -55,7 +55,7 @@ public class BatchHandlerTest {
   @Mock private BoundStatement bound;
   @Mock private ResultSet results;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 

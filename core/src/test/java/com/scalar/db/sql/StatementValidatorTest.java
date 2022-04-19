@@ -16,8 +16,8 @@ import com.scalar.db.sql.statement.DeleteStatement;
 import com.scalar.db.sql.statement.InsertStatement;
 import com.scalar.db.sql.statement.SelectStatement;
 import com.scalar.db.sql.statement.UpdateStatement;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -44,7 +44,7 @@ public class StatementValidatorTest {
 
   private StatementValidator statementValidator;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 

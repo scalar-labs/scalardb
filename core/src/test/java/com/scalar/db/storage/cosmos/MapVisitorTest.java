@@ -11,8 +11,8 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class MapVisitorTest {
   private static final boolean ANY_BOOLEAN = false;
@@ -32,7 +32,7 @@ public class MapVisitorTest {
   private static final BlobColumn ANY_BLOB_COLUMN = BlobColumn.of("any_blob", ANY_BLOB);
   private MapVisitor visitor;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     visitor = new MapVisitor();
   }

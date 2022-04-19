@@ -20,18 +20,13 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.mockito.MockitoAnnotations;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
-@RunWith(Parameterized.class)
 public class QueryBuilderTest {
 
   private static final String NAMESPACE = "n1";
@@ -55,37 +50,11 @@ public class QueryBuilderTest {
           .addSecondaryIndex("v2")
           .build();
 
-  @Parameterized.Parameter public RdbEngine rdbEngine;
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void selectQueryTest(RdbEngine rdbEngine) throws SQLException {
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
-  private QueryBuilder queryBuilder;
-
-  @Parameterized.Parameters(name = "RDB={0}")
-  public static Collection<RdbEngine> jdbcConnectionInfos() {
-    return Arrays.asList(
-        RdbEngine.MYSQL, RdbEngine.POSTGRESQL, RdbEngine.ORACLE, RdbEngine.SQL_SERVER);
-  }
-
-  @Before
-  public void setUp() throws Exception {
-    MockitoAnnotations.openMocks(this).close();
-    queryBuilder = new QueryBuilder(rdbEngine);
-  }
-
-  private String encloseSql(String sql) {
-    return sql.replace("n1.t1", enclose("n1", rdbEngine) + "." + enclose("t1", rdbEngine))
-        .replace("p1", enclose("p1", rdbEngine))
-        .replace("p2", enclose("p2", rdbEngine))
-        .replace("c1", enclose("c1", rdbEngine))
-        .replace("c2", enclose("c2", rdbEngine))
-        .replace("v1", enclose("v1", rdbEngine))
-        .replace("v2", enclose("v2", rdbEngine))
-        .replace("v3", enclose("v3", rdbEngine))
-        .replace("v4", enclose("v4", rdbEngine))
-        .replace("v5", enclose("v5", rdbEngine));
-  }
-
-  @Test
-  public void selectQueryTest() throws SQLException {
     SelectQuery query;
     PreparedStatement preparedStatement;
 
@@ -96,7 +65,7 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(new Key("p1", "p1Value"), Optional.empty())
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=?"));
+    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
 
@@ -107,7 +76,8 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(new Key("p1", "p1Value", "p2", "p2Value"), Optional.empty())
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql("SELECT * FROM n1.t1 WHERE p1=? AND p2=?"));
+    assertThat(query.sql())
+        .isEqualTo(encloseSql("SELECT * FROM n1.t1 WHERE p1=? AND p2=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "p2Value");
@@ -119,7 +89,8 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")))
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1=?"));
+    assertThat(query.sql())
+        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "c1Value");
@@ -132,7 +103,7 @@ public class QueryBuilderTest {
             .where(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value", "c2", "c2Value")))
             .build();
     assertThat(query.sql())
-        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1=? AND c2=?"));
+        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1=? AND c2=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "c1Value");
@@ -153,7 +124,8 @@ public class QueryBuilderTest {
     assertThat(query.sql())
         .isEqualTo(
             encloseSql(
-                "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 ASC,c2 DESC"));
+                "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 ASC,c2 DESC",
+                rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "c1StartValue");
@@ -173,7 +145,9 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql())
         .isEqualTo(
-            encloseSql("SELECT * FROM n1.t1 WHERE p1=? AND c1>? AND c1<? ORDER BY c1 ASC,c2 DESC"));
+            encloseSql(
+                "SELECT * FROM n1.t1 WHERE p1=? AND c1>? AND c1<? ORDER BY c1 ASC,c2 DESC",
+                rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "c1StartValue");
@@ -195,7 +169,8 @@ public class QueryBuilderTest {
         .isEqualTo(
             encloseSql(
                 "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1=? AND c2>=? AND c2<? "
-                    + "ORDER BY c1 ASC,c2 DESC"));
+                    + "ORDER BY c1 ASC,c2 DESC",
+                rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "c1Value");
@@ -218,7 +193,8 @@ public class QueryBuilderTest {
     assertThat(query.sql())
         .isEqualTo(
             encloseSql(
-                "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 ASC,c2 DESC"));
+                "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 ASC,c2 DESC",
+                rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "c1StartValue");
@@ -243,7 +219,8 @@ public class QueryBuilderTest {
     assertThat(query.sql())
         .isEqualTo(
             encloseSql(
-                "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 ASC,c2 DESC"));
+                "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 ASC,c2 DESC",
+                rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "c1StartValue");
@@ -265,7 +242,8 @@ public class QueryBuilderTest {
     assertThat(query.sql())
         .isEqualTo(
             encloseSql(
-                "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 DESC,c2 ASC"));
+                "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 DESC,c2 ASC",
+                rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "c1StartValue");
@@ -290,7 +268,8 @@ public class QueryBuilderTest {
     assertThat(query.sql())
         .isEqualTo(
             encloseSql(
-                "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 DESC,c2 ASC"));
+                "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 DESC,c2 ASC",
+                rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "c1StartValue");
@@ -329,15 +308,18 @@ public class QueryBuilderTest {
                 true)
             .limit(10)
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
+    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "c1StartValue");
     verify(preparedStatement).setString(3, "c1EndValue");
   }
 
-  @Test
-  public void selectQueryWithIndexedColumnTest() throws SQLException {
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void selectQueryWithIndexedColumnTest(RdbEngine rdbEngine) throws SQLException {
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+
     SelectQuery query;
     PreparedStatement preparedStatement;
 
@@ -348,7 +330,7 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(new Key("v1", "v1Value"), Optional.empty())
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v1=?"));
+    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v1=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "v1Value");
 
@@ -359,7 +341,7 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(new Key("v1", "v1Value"), Optional.empty(), false, Optional.empty(), false)
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v1=?"));
+    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v1=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "v1Value");
 
@@ -370,7 +352,7 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(new Key("v2", "v2Value"), Optional.empty())
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v2=?"));
+    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v2=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "v2Value");
 
@@ -381,13 +363,17 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(new Key("v2", "v2Value"), Optional.empty(), false, Optional.empty(), false)
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v2=?"));
+    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v2=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "v2Value");
   }
 
-  @Test
-  public void selectQueryWithTableWithoutClusteringKeyTest() throws SQLException {
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void selectQueryWithTableWithoutClusteringKeyTest(RdbEngine rdbEngine)
+      throws SQLException {
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+
     TableMetadata tableMetadataWithoutClusteringKey =
         TableMetadata.newBuilder()
             .addColumn("p1", DataType.TEXT)
@@ -409,7 +395,8 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, tableMetadataWithoutClusteringKey)
             .where(Key.of("p1", "p1Value", "p2", "p2Value"), Optional.empty())
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND p2=?"));
+    assertThat(query.sql())
+        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND p2=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "p2Value");
@@ -426,14 +413,18 @@ public class QueryBuilderTest {
                 Optional.empty(),
                 false)
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND p2=?"));
+    assertThat(query.sql())
+        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND p2=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "p2Value");
   }
 
-  @Test
-  public void insertQueryTest() throws SQLException {
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void insertQueryTest(RdbEngine rdbEngine) throws SQLException {
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+
     InsertQuery query;
     PreparedStatement preparedStatement;
 
@@ -449,7 +440,7 @@ public class QueryBuilderTest {
             .values(new Key("p1", "p1Value"), Optional.empty(), columns)
             .build();
     assertThat(query.sql())
-        .isEqualTo(encloseSql("INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?)"));
+        .isEqualTo(encloseSql("INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?)", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "v1Value");
@@ -463,7 +454,7 @@ public class QueryBuilderTest {
             .values(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")), columns)
             .build();
     assertThat(query.sql())
-        .isEqualTo(encloseSql("INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)"));
+        .isEqualTo(encloseSql("INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "c1Value");
@@ -483,7 +474,8 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql())
         .isEqualTo(
-            encloseSql("INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?)"));
+            encloseSql(
+                "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?)", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "p2Value");
@@ -507,7 +499,8 @@ public class QueryBuilderTest {
     assertThat(query.sql())
         .isEqualTo(
             encloseSql(
-                "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4,v5) VALUES (?,?,?,?,?,?,?,?,?)"));
+                "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4,v5) VALUES (?,?,?,?,?,?,?,?,?)",
+                rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "p2Value");
@@ -520,8 +513,11 @@ public class QueryBuilderTest {
     verify(preparedStatement).setNull(9, Types.VARCHAR);
   }
 
-  @Test
-  public void updateQueryTest() throws SQLException {
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void updateQueryTest(RdbEngine rdbEngine) throws SQLException {
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+
     UpdateQuery query;
     PreparedStatement preparedStatement;
 
@@ -537,7 +533,8 @@ public class QueryBuilderTest {
             .set(columns)
             .where(new Key("p1", "p1Value"), Optional.empty())
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=?"));
+    assertThat(query.sql())
+        .isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "v1Value");
     verify(preparedStatement).setString(2, "v2Value");
@@ -552,7 +549,7 @@ public class QueryBuilderTest {
             .where(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")))
             .build();
     assertThat(query.sql())
-        .isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=?"));
+        .isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "v1Value");
     verify(preparedStatement).setString(2, "v2Value");
@@ -571,7 +568,9 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql())
         .isEqualTo(
-            encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND p2=? AND c1=? AND c2=?"));
+            encloseSql(
+                "UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND p2=? AND c1=? AND c2=?",
+                rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "v1Value");
     verify(preparedStatement).setString(2, "v2Value");
@@ -594,7 +593,8 @@ public class QueryBuilderTest {
                         "v1", new TextValue("v1ConditionValue"), Operator.EQ)))
             .build();
     assertThat(query.sql())
-        .isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=? AND v1=?"));
+        .isEqualTo(
+            encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=? AND v1=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "v1Value");
     verify(preparedStatement).setString(2, "v2Value");
@@ -620,7 +620,8 @@ public class QueryBuilderTest {
     assertThat(query.sql())
         .isEqualTo(
             encloseSql(
-                "UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=? AND v1<>? AND v2>? AND v3<=?"));
+                "UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=? AND v1<>? AND v2>? AND v3<=?",
+                rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "v1Value");
     verify(preparedStatement).setString(2, "v2Value");
@@ -646,7 +647,8 @@ public class QueryBuilderTest {
     assertThat(query.sql())
         .isEqualTo(
             encloseSql(
-                "UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=? AND v1 IS NULL AND v2 IS NOT NULL"));
+                "UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=? AND v1 IS NULL AND v2 IS NOT NULL",
+                rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "v1Value");
     verify(preparedStatement).setString(2, "v2Value");
@@ -663,7 +665,8 @@ public class QueryBuilderTest {
             .where(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")))
             .build();
     assertThat(query.sql())
-        .isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=?,v4=? WHERE p1=? AND c1=?"));
+        .isEqualTo(
+            encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=?,v4=? WHERE p1=? AND c1=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "v1Value");
     verify(preparedStatement).setString(2, "v2Value");
@@ -673,8 +676,11 @@ public class QueryBuilderTest {
     verify(preparedStatement).setString(6, "c1Value");
   }
 
-  @Test
-  public void deleteQueryTest() throws SQLException {
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void deleteQueryTest(RdbEngine rdbEngine) throws SQLException {
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+
     DeleteQuery query;
     PreparedStatement preparedStatement;
 
@@ -684,7 +690,7 @@ public class QueryBuilderTest {
             .deleteFrom(NAMESPACE, TABLE, TABLE_METADATA)
             .where(new Key("p1", "p1Value"), Optional.empty())
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=?"));
+    assertThat(query.sql()).isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
 
@@ -694,7 +700,8 @@ public class QueryBuilderTest {
             .deleteFrom(NAMESPACE, TABLE, TABLE_METADATA)
             .where(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")))
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=?"));
+    assertThat(query.sql())
+        .isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "c1Value");
@@ -708,7 +715,8 @@ public class QueryBuilderTest {
                 Optional.of(new Key("c1", "c1Value", "c2", "c2Value")))
             .build();
     assertThat(query.sql())
-        .isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND p2=? AND c1=? AND c2=?"));
+        .isEqualTo(
+            encloseSql("DELETE FROM n1.t1 WHERE p1=? AND p2=? AND c1=? AND c2=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "p2Value");
@@ -726,7 +734,8 @@ public class QueryBuilderTest {
                     new ConditionalExpression(
                         "v1", new TextValue("v1ConditionValue"), Operator.EQ)))
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=? AND v1=?"));
+    assertThat(query.sql())
+        .isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=? AND v1=?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "c1Value");
@@ -748,7 +757,8 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql())
         .isEqualTo(
-            encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=? AND v1<>? AND v2>=? AND v3<?"));
+            encloseSql(
+                "DELETE FROM n1.t1 WHERE p1=? AND c1=? AND v1<>? AND v2>=? AND v3<?", rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "c1Value");
@@ -769,14 +779,19 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql())
         .isEqualTo(
-            encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=? AND v1 IS NULL AND v2 IS NOT NULL"));
+            encloseSql(
+                "DELETE FROM n1.t1 WHERE p1=? AND c1=? AND v1 IS NULL AND v2 IS NOT NULL",
+                rdbEngine));
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "c1Value");
   }
 
-  @Test
-  public void upsertQueryTest() throws SQLException {
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void upsertQueryTest(RdbEngine rdbEngine) throws SQLException {
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+
     String expectedQuery;
     UpsertQuery query;
     PreparedStatement preparedStatement;
@@ -817,7 +832,7 @@ public class QueryBuilderTest {
             .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
             .values(new Key("p1", "p1Value"), Optional.empty(), columns)
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
+    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
     switch (rdbEngine) {
       case MYSQL:
@@ -876,7 +891,7 @@ public class QueryBuilderTest {
             .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
             .values(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")), columns)
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
+    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
     switch (rdbEngine) {
       case MYSQL:
@@ -943,7 +958,7 @@ public class QueryBuilderTest {
                 Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
                 columns)
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
+    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
     switch (rdbEngine) {
       case MYSQL:
@@ -1021,7 +1036,7 @@ public class QueryBuilderTest {
                 Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
                 columns)
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
+    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
     switch (rdbEngine) {
       case MYSQL:
@@ -1065,8 +1080,11 @@ public class QueryBuilderTest {
     }
   }
 
-  @Test
-  public void upsertQueryWithoutValuesTest() throws SQLException {
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void upsertQueryWithoutValuesTest(RdbEngine rdbEngine) throws SQLException {
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+
     String expectedQuery;
     UpsertQuery query;
     PreparedStatement preparedStatement;
@@ -1096,7 +1114,7 @@ public class QueryBuilderTest {
             .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
             .values(new Key("p1", "p1Value"), Optional.empty(), Collections.emptyMap())
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
+    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
     switch (rdbEngine) {
       case MYSQL:
@@ -1140,7 +1158,7 @@ public class QueryBuilderTest {
                 Optional.of(new Key("c1", "c1Value")),
                 Collections.emptyMap())
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
+    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
     switch (rdbEngine) {
       case MYSQL:
@@ -1189,7 +1207,7 @@ public class QueryBuilderTest {
                 Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
                 Collections.emptyMap())
             .build();
-    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
+    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
     switch (rdbEngine) {
       case MYSQL:
@@ -1211,5 +1229,18 @@ public class QueryBuilderTest {
         verify(preparedStatement).setString(8, "c2Value");
         break;
     }
+  }
+
+  private String encloseSql(String sql, RdbEngine rdbEngine) {
+    return sql.replace("n1.t1", enclose("n1", rdbEngine) + "." + enclose("t1", rdbEngine))
+        .replace("p1", enclose("p1", rdbEngine))
+        .replace("p2", enclose("p2", rdbEngine))
+        .replace("c1", enclose("c1", rdbEngine))
+        .replace("c2", enclose("c2", rdbEngine))
+        .replace("v1", enclose("v1", rdbEngine))
+        .replace("v2", enclose("v2", rdbEngine))
+        .replace("v3", enclose("v3", rdbEngine))
+        .replace("v4", enclose("v4", rdbEngine))
+        .replace("v5", enclose("v5", rdbEngine));
   }
 }

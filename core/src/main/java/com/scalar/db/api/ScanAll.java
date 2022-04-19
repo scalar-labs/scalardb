@@ -49,6 +49,7 @@ public class ScanAll extends Scan {
     throw new UnsupportedOperationException();
   }
 
+  @Override
   public ScanAll withLimit(int limit) {
     return (ScanAll) super.withLimit(limit);
   }

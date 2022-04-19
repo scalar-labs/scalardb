@@ -15,7 +15,6 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -24,11 +23,12 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
-@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class StorageAdminIntegrationTestBase {
 
   private static final String TEST_NAME = "storage_admin";
@@ -72,27 +72,23 @@ public abstract class StorageAdminIntegrationTestBase {
           .addSecondaryIndex(COL_NAME6)
           .build();
 
-  private static boolean initialized;
-  private static DistributedStorageAdmin admin;
-  private static DistributedStorage storage;
-  private static String namespace1;
-  private static String namespace2;
-  private static String namespace3;
+  private DistributedStorageAdmin admin;
+  private DistributedStorage storage;
+  private String namespace1;
+  private String namespace2;
+  private String namespace3;
 
-  @Before
-  public void setUp() throws Exception {
-    if (!initialized) {
-      initialize();
-      StorageFactory factory =
-          new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
-      admin = factory.getAdmin();
-      namespace1 = getNamespace1();
-      namespace2 = getNamespace2();
-      namespace3 = getNamespace3();
-      createTables();
-      storage = factory.getStorage();
-      initialized = true;
-    }
+  @BeforeAll
+  public void beforeAll() throws Exception {
+    initialize();
+    StorageFactory factory =
+        new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+    admin = factory.getAdmin();
+    namespace1 = getNamespace1();
+    namespace2 = getNamespace2();
+    namespace3 = getNamespace3();
+    createTables();
+    storage = factory.getStorage();
   }
 
   protected void initialize() throws Exception {}
@@ -125,13 +121,13 @@ public abstract class StorageAdminIntegrationTestBase {
     return Collections.emptyMap();
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws ExecutionException {
+  @AfterAll
+  public void afterAll() throws ExecutionException {
     dropTables();
     admin.close();
   }
 
-  private static void dropTables() throws ExecutionException {
+  private void dropTables() throws ExecutionException {
     for (String namespace : Arrays.asList(namespace1, namespace2)) {
       for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
         admin.dropTable(namespace, table);

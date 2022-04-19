@@ -13,8 +13,8 @@ import com.scalar.db.sql.DataType;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -23,7 +23,7 @@ public class CachedMetadataTest {
   @Mock private DistributedTransactionAdmin admin;
   private Metadata metadata;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 

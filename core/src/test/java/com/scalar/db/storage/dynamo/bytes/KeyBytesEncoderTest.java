@@ -32,8 +32,8 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class KeyBytesEncoderTest {
 
@@ -59,8 +59,8 @@ public class KeyBytesEncoderTest {
           DataType.BLOB);
   private static long seed;
 
-  @BeforeClass
-  public static void setUpBeforeClass() {
+  @BeforeAll
+  public static void beforeAll() {
     seed = System.currentTimeMillis();
     System.out.println("The seed used in KeyBytesEncoderTest is " + seed);
   }

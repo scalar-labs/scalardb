@@ -12,7 +12,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_INFERRED")
 public class DeleteStatementTest {

@@ -7,7 +7,7 @@ import com.scalar.db.storage.cassandra.CassandraEnv;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 
 public class CassandraSchemaLoaderWithStorageSpecificArgsIntegrationTest
     extends SchemaLoaderIntegrationTestBase {
@@ -33,7 +33,7 @@ public class CassandraSchemaLoaderWithStorageSpecificArgsIntegrationTest
         config.getPassword().get());
   }
 
-  @Ignore
+  @Disabled
   @Override
   public void createTablesThenDeleteTables_ShouldExecuteProperly() {}
 }

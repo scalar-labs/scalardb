@@ -8,7 +8,7 @@ import com.scalar.db.storage.dynamo.DynamoEnv;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 
 public class DynamoSchemaLoaderWithStorageSpecificArgsIntegrationTest
     extends SchemaLoaderIntegrationTestBase {
@@ -38,7 +38,7 @@ public class DynamoSchemaLoaderWithStorageSpecificArgsIntegrationTest
         "--no-backup");
   }
 
-  @Ignore
+  @Disabled
   @Override
   public void createTablesThenDeleteTables_ShouldExecuteProperly() {}
 }

@@ -14,8 +14,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ResultIteratorResultSetTest {
 
@@ -36,7 +36,7 @@ public class ResultIteratorResultSetTest {
 
   private ResultIteratorResultSet resultIteratorResultSet;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     // Arrange
     Result result1 =

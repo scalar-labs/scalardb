@@ -111,7 +111,8 @@ dependencies {
     implementation "org.slf4j:slf4j-simple:${slf4jVersion}"
     implementation "com.google.code.gson:gson:${gsonVersion}"
     implementation "info.picocli:picocli:${picocliVersion}"
-    testImplementation "junit:junit:${junitVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
     testImplementation "org.assertj:assertj-core:${assertjVersion}"
     testImplementation "org.mockito:mockito-core:${mockitoVersion}"
     testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
@@ -152,6 +153,7 @@ def schemaLoaderJarPath = "${project.buildDir}/libs/${archivesBaseName}-${projec
 
 task integrationTestCassandra(type: Test) {
     dependsOn shadowJar
+    useJUnitPlatform()
     description = 'Runs the schema loader integration tests for Cassandra.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestCassandra.output.classesDirs
@@ -165,6 +167,7 @@ task integrationTestCassandra(type: Test) {
 
 task integrationTestCosmos(type: Test) {
     dependsOn shadowJar
+    useJUnitPlatform()
     description = 'Runs the schema loader integration tests for Cosmos DB.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestCosmos.output.classesDirs
@@ -178,6 +181,7 @@ task integrationTestCosmos(type: Test) {
 
 task integrationTestDynamo(type: Test) {
     dependsOn shadowJar
+    useJUnitPlatform()
     description = 'Runs the schema loader integration tests for DynamoDB.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestDynamo.output.classesDirs
@@ -191,6 +195,7 @@ task integrationTestDynamo(type: Test) {
 
 task integrationTestJdbc(type: Test) {
     dependsOn shadowJar
+    useJUnitPlatform()
     description = 'Runs the schema loader integration tests for a JDBC database.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestJdbc.output.classesDirs
@@ -204,6 +209,7 @@ task integrationTestJdbc(type: Test) {
 
 task integrationTestMultiStorage(type: Test) {
     dependsOn shadowJar
+    useJUnitPlatform()
     description = 'Runs the schema loader integration tests for multi-storage.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestMultiStorage.output.classesDirs
@@ -217,6 +223,7 @@ task integrationTestMultiStorage(type: Test) {
 
 task integrationTestScalarDbServer(type: Test) {
     dependsOn shadowJar
+    useJUnitPlatform()
     description = 'Runs the schema loader integration tests with Scalar DB Server.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestScalarDbServer.output.classesDirs
