@@ -1,6 +1,6 @@
 ## Scalar DB
 
-[![CircleCI](https://circleci.com/gh/scalar-labs/scalardb/tree/master.svg?style=svg&circle-token=672f70ce7f2c4f8d9e71f7c9db8ae824e2cfaeca)](https://circleci.com/gh/scalar-labs/scalardb/tree/master)
+[![CI](https://github.com/scalar-labs/scalardb/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/scalar-labs/scalardb/actions/workflows/ci.yaml)
 
 Scalar DB is a universal transaction manager that achieves:
 - database/storage-agnostic ACID transactions in a scalable manner even if an underlying database or storage is not ACID-compliant.
