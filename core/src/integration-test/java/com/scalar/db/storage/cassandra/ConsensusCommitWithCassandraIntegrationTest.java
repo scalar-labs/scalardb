@@ -1,7 +1,7 @@
-package com.scalar.db.transaction.consensuscommit;
+package com.scalar.db.storage.cassandra;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.cassandra.CassandraEnv;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestBase;
 
 public class ConsensusCommitWithCassandraIntegrationTest
     extends ConsensusCommitIntegrationTestBase {

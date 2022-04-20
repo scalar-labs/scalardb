@@ -1,10 +1,10 @@
 package com.scalar.db.storage.cassandra;
 
+import com.scalar.db.api.DistributedStorageMultiplePartitionKeyIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.StorageMultiplePartitionKeyIntegrationTestBase;
 
 public class CassandraMultiplePartitionKeyIntegrationTest
-    extends StorageMultiplePartitionKeyIntegrationTestBase {
+    extends DistributedStorageMultiplePartitionKeyIntegrationTestBase {
   @Override
   protected DatabaseConfig getDatabaseConfig() {
     return CassandraEnv.getDatabaseConfig();

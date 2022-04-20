@@ -1,16 +1,17 @@
 package com.scalar.db.storage.dynamo;
 
+import com.scalar.db.api.DistributedStorageSecondaryIndexIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.StorageSecondaryIndexIntegrationTestBase;
-import com.scalar.db.storage.TestUtils;
+import com.scalar.db.util.TestUtils;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-public class DynamoSecondaryIndexIntegrationTest extends StorageSecondaryIndexIntegrationTestBase {
+public class DynamoSecondaryIndexIntegrationTest
+    extends DistributedStorageSecondaryIndexIntegrationTestBase {
   @Override
   protected DatabaseConfig getDatabaseConfig() {
     return DynamoEnv.getDynamoConfig();

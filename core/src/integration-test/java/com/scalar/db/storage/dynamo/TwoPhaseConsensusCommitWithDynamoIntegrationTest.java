@@ -1,10 +1,11 @@
-package com.scalar.db.transaction.consensuscommit;
+package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.dynamo.DynamoEnv;
+import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitIntegrationTestBase;
 import java.util.Map;
 
-public class ConsensusCommitWithDynamoIntegrationTest extends ConsensusCommitIntegrationTestBase {
+public class TwoPhaseConsensusCommitWithDynamoIntegrationTest
+    extends TwoPhaseConsensusCommitIntegrationTestBase {
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {

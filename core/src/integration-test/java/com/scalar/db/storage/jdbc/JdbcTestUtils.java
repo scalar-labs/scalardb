@@ -5,7 +5,7 @@ import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.TestUtils;
+import com.scalar.db.util.TestUtils;
 import java.util.Random;
 import java.util.stream.IntStream;
 

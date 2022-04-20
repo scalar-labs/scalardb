@@ -1,29 +1,21 @@
-package com.scalar.db.transaction;
+package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.scalar.db.api.DistributedTransaction;
-import com.scalar.db.api.DistributedTransactionAdmin;
-import com.scalar.db.api.DistributedTransactionManager;
-import com.scalar.db.api.Put;
-import com.scalar.db.api.Result;
-import com.scalar.db.api.Scan;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import com.scalar.db.service.TransactionFactory;
-import com.scalar.db.storage.TestUtils;
+import com.scalar.db.service.StorageFactory;
+import com.scalar.db.util.TestUtils;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
@@ -32,9 +24,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class TransactionAdminIntegrationTestBase {
+public abstract class DistributedStorageAdminIntegrationTestBase {
 
-  private static final String TEST_NAME = "tx_admin";
+  private static final String TEST_NAME = "storage_admin";
   private static final String NAMESPACE1 = "integration_testing_" + TEST_NAME + "1";
   private static final String NAMESPACE2 = "integration_testing_" + TEST_NAME + "2";
   private static final String NAMESPACE3 = "integration_testing_" + TEST_NAME + "3";
@@ -75,8 +67,8 @@ public abstract class TransactionAdminIntegrationTestBase {
           .addSecondaryIndex(COL_NAME6)
           .build();
 
-  private DistributedTransactionAdmin admin;
-  private DistributedTransactionManager manager;
+  private DistributedStorageAdmin admin;
+  private DistributedStorage storage;
   private String namespace1;
   private String namespace2;
   private String namespace3;
@@ -84,14 +76,14 @@ public abstract class TransactionAdminIntegrationTestBase {
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize();
-    TransactionFactory factory =
-        new TransactionFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
-    admin = factory.getTransactionAdmin();
+    StorageFactory factory =
+        new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+    admin = factory.getAdmin();
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
     namespace3 = getNamespace3();
     createTables();
-    manager = factory.getTransactionManager();
+    storage = factory.getStorage();
   }
 
   protected void initialize() throws Exception {}
@@ -118,11 +110,6 @@ public abstract class TransactionAdminIntegrationTestBase {
         admin.createTable(namespace, table, TABLE_METADATA, true, options);
       }
     }
-    try {
-      admin.createCoordinatorNamespaceAndTable(options);
-    } catch (UnsupportedOperationException ignored) {
-      // ignore
-    }
   }
 
   protected Map<String, String> getCreateOptions() {
@@ -141,11 +128,6 @@ public abstract class TransactionAdminIntegrationTestBase {
         admin.dropTable(namespace, table);
       }
       admin.dropNamespace(namespace, true);
-    }
-    try {
-      admin.dropCoordinatorNamespaceAndTable();
-    } catch (UnsupportedOperationException ignored) {
-      // ignore
     }
   }
 
@@ -360,13 +342,11 @@ public abstract class TransactionAdminIntegrationTestBase {
   }
 
   @Test
-  public void truncateTable_ShouldTruncateProperly()
-      throws ExecutionException, TransactionException {
+  public void truncateTable_ShouldTruncateProperly() throws ExecutionException, IOException {
     // Arrange
     Key partitionKey = new Key(COL_NAME2, "aaa", COL_NAME1, 1);
     Key clusteringKey = new Key(COL_NAME4, 2, COL_NAME3, "bbb");
-    DistributedTransaction transaction = manager.start();
-    transaction.put(
+    storage.put(
         new Put(partitionKey, clusteringKey)
             .withValue(COL_NAME5, 3)
             .withValue(COL_NAME6, "ccc")
@@ -377,17 +357,15 @@ public abstract class TransactionAdminIntegrationTestBase {
             .withValue(COL_NAME11, "ddd".getBytes(StandardCharsets.UTF_8))
             .forNamespace(namespace1)
             .forTable(TABLE1));
-    transaction.commit();
 
     // Act
     admin.truncateTable(namespace1, TABLE1);
 
     // Assert
-    transaction = manager.start();
-    List<Result> results =
-        transaction.scan(new Scan(partitionKey).forNamespace(namespace1).forTable(TABLE1));
-    assertThat(results).isEmpty();
-    transaction.commit();
+    Scanner scanner =
+        storage.scan(new Scan(partitionKey).forNamespace(namespace1).forTable(TABLE1));
+    assertThat(scanner.all()).isEmpty();
+    scanner.close();
   }
 
   @Test

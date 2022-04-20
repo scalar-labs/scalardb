@@ -1,11 +1,11 @@
 package com.scalar.db.storage.dynamo;
 
+import com.scalar.db.api.DistributedStorageIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.StorageIntegrationTestBase;
 import java.util.Map;
 import org.junit.jupiter.api.Disabled;
 
-public class DynamoIntegrationTest extends StorageIntegrationTestBase {
+public class DynamoIntegrationTest extends DistributedStorageIntegrationTestBase {
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {

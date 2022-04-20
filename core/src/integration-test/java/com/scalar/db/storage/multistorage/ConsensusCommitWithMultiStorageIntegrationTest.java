@@ -1,8 +1,8 @@
-package com.scalar.db.transaction.consensuscommit;
+package com.scalar.db.storage.multistorage;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.multistorage.MultiStorageConfig;
-import com.scalar.db.storage.multistorage.MultiStorageEnv;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestBase;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Properties;
 
 public class ConsensusCommitWithMultiStorageIntegrationTest
