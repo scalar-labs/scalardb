@@ -1,12 +1,13 @@
 package com.scalar.db.storage.cosmos;
 
-import com.scalar.db.api.DistributedStorageSecondaryIndexIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitIntegrationTestBase;
 import java.util.Map;
 import java.util.Optional;
 
-public class CosmosSecondaryIndexIntegrationTest
-    extends DistributedStorageSecondaryIndexIntegrationTestBase {
+public class TwoPhaseConsensusCommitWithCosmosIntegrationTest
+    extends TwoPhaseConsensusCommitIntegrationTestBase {
+
   @Override
   protected DatabaseConfig getDatabaseConfig() {
     return CosmosEnv.getCosmosConfig();

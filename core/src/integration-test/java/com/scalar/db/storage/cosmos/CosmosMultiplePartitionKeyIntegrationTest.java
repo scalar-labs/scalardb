@@ -1,12 +1,12 @@
 package com.scalar.db.storage.cosmos;
 
+import com.scalar.db.api.DistributedStorageMultiplePartitionKeyIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.StorageMultiplePartitionKeyIntegrationTestBase;
 import java.util.Map;
 import java.util.Optional;
 
 public class CosmosMultiplePartitionKeyIntegrationTest
-    extends StorageMultiplePartitionKeyIntegrationTestBase {
+    extends DistributedStorageMultiplePartitionKeyIntegrationTestBase {
   @Override
   protected DatabaseConfig getDatabaseConfig() {
     return CosmosEnv.getCosmosConfig();

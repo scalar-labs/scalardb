@@ -1,4 +1,4 @@
-package com.scalar.db.storage;
+package com.scalar.db.util;
 
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.config.DatabaseConfig;

@@ -1,13 +1,13 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.api.DistributedStorageMultipleClusteringKeyScanIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.StorageMultipleClusteringKeyScanIntegrationTestBase;
 import java.util.Random;
 
 public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
-    extends StorageMultipleClusteringKeyScanIntegrationTestBase {
+    extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
 
   private RdbEngine rdbEngine;
 

@@ -1,13 +1,14 @@
 package com.scalar.db.storage.dynamo;
 
+import com.scalar.db.api.DistributedStorageColumnValueIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.StorageColumnValueIntegrationTestBase;
 import java.util.Map;
 import java.util.Random;
 
-public class DynamoColumnValueIntegrationTest extends StorageColumnValueIntegrationTestBase {
+public class DynamoColumnValueIntegrationTest
+    extends DistributedStorageColumnValueIntegrationTestBase {
   @Override
   protected DatabaseConfig getDatabaseConfig() {
     return DynamoEnv.getDynamoConfig();
