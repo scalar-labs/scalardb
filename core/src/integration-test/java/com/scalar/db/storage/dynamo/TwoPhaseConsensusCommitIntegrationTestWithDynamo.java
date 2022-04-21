@@ -4,11 +4,11 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitIntegrationTestBase;
 import java.util.Map;
 
-public class TwoPhaseConsensusCommitWithDynamoIntegrationTest
+public class TwoPhaseConsensusCommitIntegrationTestWithDynamo
     extends TwoPhaseConsensusCommitIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
+  protected DatabaseConfig getDbConfig() {
     return DynamoEnv.getDynamoConfig();
   }
 

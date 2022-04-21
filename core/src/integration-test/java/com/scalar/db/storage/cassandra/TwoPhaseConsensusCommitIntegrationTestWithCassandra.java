@@ -1,13 +1,12 @@
-package com.scalar.db.storage.jdbc;
+package com.scalar.db.storage.cassandra;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitIntegrationTestBase;
 
-public class TwoPhaseConsensusCommitWithJdbcDatabaseIntegrationTest
+public class TwoPhaseConsensusCommitIntegrationTestWithCassandra
     extends TwoPhaseConsensusCommitIntegrationTestBase {
-
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return JdbcEnv.getJdbcConfig();
+  protected DatabaseConfig getDbConfig() {
+    return CassandraEnv.getDatabaseConfig();
   }
 }
