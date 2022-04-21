@@ -1,6 +1,6 @@
 FROM ghcr.io/scalar-labs/jre8:1.1.1
 
-ADD scalardb-schema-loader-*.jar /app.jar
+COPY scalardb-schema-loader-*.jar /app.jar
 
 RUN groupadd -r --gid 201 scalar && \
     useradd -r --uid 201 -g scalar scalar
