@@ -2,12 +2,12 @@ package com.scalar.db.server;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestBase;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitSpecificIntegrationTestBase;
 import java.io.IOException;
 import org.junit.jupiter.api.AfterAll;
 
-public class ConsensusCommitWithDistributedStorageServiceIntegrationTest
-    extends ConsensusCommitIntegrationTestBase {
+public class ConsensusCommitSpecificIntegrationTestWithDistributedStorageService
+    extends ConsensusCommitSpecificIntegrationTestBase {
 
   private ScalarDbServer server;
 
