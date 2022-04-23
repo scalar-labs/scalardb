@@ -139,19 +139,38 @@ public class GrpcAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
+    dropTable(namespace, table, false);
+  }
+
+  @Override
+  public void dropTable(String namespace, String table, boolean ifExists)
+      throws ExecutionException {
     execute(
         () ->
             stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
                 .dropTable(
-                    DropTableRequest.newBuilder().setNamespace(namespace).setTable(table).build()));
+                    DropTableRequest.newBuilder()
+                        .setNamespace(namespace)
+                        .setTable(table)
+                        .setIfExists(ifExists)
+                        .build()));
   }
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
+    dropNamespace(namespace, false);
+  }
+
+  @Override
+  public void dropNamespace(String namespace, boolean ifExists) throws ExecutionException {
     execute(
         () ->
             stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
-                .dropNamespace(DropNamespaceRequest.newBuilder().setNamespace(namespace).build()));
+                .dropNamespace(
+                    DropNamespaceRequest.newBuilder()
+                        .setNamespace(namespace)
+                        .setIfExists(ifExists)
+                        .build()));
   }
 
   @Override
@@ -167,8 +186,31 @@ public class GrpcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void createIndex(String namespace, String table, String columnName)
+      throws ExecutionException {
+    createIndex(namespace, table, columnName, false, Collections.emptyMap());
+  }
+
+  @Override
+  public void createIndex(String namespace, String table, String columnName, boolean ifNotExists)
+      throws ExecutionException {
+    createIndex(namespace, table, columnName, ifNotExists, Collections.emptyMap());
+  }
+
+  @Override
   public void createIndex(
       String namespace, String table, String columnName, Map<String, String> options)
+      throws ExecutionException {
+    createIndex(namespace, table, columnName, false, options);
+  }
+
+  @Override
+  public void createIndex(
+      String namespace,
+      String table,
+      String columnName,
+      boolean ifNotExists,
+      Map<String, String> options)
       throws ExecutionException {
     execute(
         () ->
@@ -178,12 +220,19 @@ public class GrpcAdmin implements DistributedStorageAdmin {
                         .setNamespace(namespace)
                         .setTable(table)
                         .setColumnName(columnName)
+                        .setIfNotExists(ifNotExists)
                         .putAllOptions(options)
                         .build()));
   }
 
   @Override
   public void dropIndex(String namespace, String table, String columnName)
+      throws ExecutionException {
+    dropIndex(namespace, table, columnName, false);
+  }
+
+  @Override
+  public void dropIndex(String namespace, String table, String columnName, boolean ifExists)
       throws ExecutionException {
     execute(
         () ->
@@ -193,6 +242,7 @@ public class GrpcAdmin implements DistributedStorageAdmin {
                         .setNamespace(namespace)
                         .setTable(table)
                         .setColumnName(columnName)
+                        .setIfExists(ifExists)
                         .build()));
   }
 

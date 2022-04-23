@@ -203,6 +203,7 @@ message CreateNamespaceRequest {
 
 message DropNamespaceRequest {
   string namespace = 1;
+  bool if_exists = 2;
 }
 
 message CreateTableRequest {
@@ -216,6 +217,7 @@ message CreateTableRequest {
 message DropTableRequest {
   string namespace = 1;
   string table = 2;
+  bool if_exists = 3;
 }
 
 message TruncateTableRequest {
@@ -228,12 +230,14 @@ message CreateIndexRequest {
   string table = 2;
   string column_name = 3;
   map<string, string> options = 4;
+  bool if_not_exists = 5;
 }
 
 message DropIndexRequest {
   string namespace = 1;
   string table = 2;
   string column_name = 3;
+  bool if_exists = 4;
 }
 
 message GetTableMetadataRequest {

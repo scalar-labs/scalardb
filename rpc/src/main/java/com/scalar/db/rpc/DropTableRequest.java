@@ -62,6 +62,11 @@ private static final long serialVersionUID = 0L;
             table_ = s;
             break;
           }
+          case 24: {
+
+            ifExists_ = input.readBool();
+            break;
+          }
           default: {
             if (!parseUnknownField(
                 input, unknownFields, extensionRegistry, tag)) {
@@ -170,6 +175,17 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int IF_EXISTS_FIELD_NUMBER = 3;
+  private boolean ifExists_;
+  /**
+   * <code>bool if_exists = 3;</code>
+   * @return The ifExists.
+   */
+  @java.lang.Override
+  public boolean getIfExists() {
+    return ifExists_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -190,6 +206,9 @@ private static final long serialVersionUID = 0L;
     if (!getTableBytes().isEmpty()) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 2, table_);
     }
+    if (ifExists_ != false) {
+      output.writeBool(3, ifExists_);
+    }
     unknownFields.writeTo(output);
   }
 
@@ -204,6 +223,10 @@ private static final long serialVersionUID = 0L;
     }
     if (!getTableBytes().isEmpty()) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, table_);
+    }
+    if (ifExists_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(3, ifExists_);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -224,6 +247,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getNamespace())) return false;
     if (!getTable()
         .equals(other.getTable())) return false;
+    if (getIfExists()
+        != other.getIfExists()) return false;
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -239,6 +264,9 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getNamespace().hashCode();
     hash = (37 * hash) + TABLE_FIELD_NUMBER;
     hash = (53 * hash) + getTable().hashCode();
+    hash = (37 * hash) + IF_EXISTS_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getIfExists());
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -376,6 +404,8 @@ private static final long serialVersionUID = 0L;
 
       table_ = "";
 
+      ifExists_ = false;
+
       return this;
     }
 
@@ -404,6 +434,7 @@ private static final long serialVersionUID = 0L;
       com.scalar.db.rpc.DropTableRequest result = new com.scalar.db.rpc.DropTableRequest(this);
       result.namespace_ = namespace_;
       result.table_ = table_;
+      result.ifExists_ = ifExists_;
       onBuilt();
       return result;
     }
@@ -459,6 +490,9 @@ private static final long serialVersionUID = 0L;
       if (!other.getTable().isEmpty()) {
         table_ = other.table_;
         onChanged();
+      }
+      if (other.getIfExists() != false) {
+        setIfExists(other.getIfExists());
       }
       this.mergeUnknownFields(other.unknownFields);
       onChanged();
@@ -637,6 +671,37 @@ private static final long serialVersionUID = 0L;
   checkByteStringIsUtf8(value);
       
       table_ = value;
+      onChanged();
+      return this;
+    }
+
+    private boolean ifExists_ ;
+    /**
+     * <code>bool if_exists = 3;</code>
+     * @return The ifExists.
+     */
+    @java.lang.Override
+    public boolean getIfExists() {
+      return ifExists_;
+    }
+    /**
+     * <code>bool if_exists = 3;</code>
+     * @param value The ifExists to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIfExists(boolean value) {
+      
+      ifExists_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool if_exists = 3;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIfExists() {
+      
+      ifExists_ = false;
       onChanged();
       return this;
     }

@@ -61,7 +61,7 @@ public class DistributedStorageAdminService
   public void dropNamespace(DropNamespaceRequest request, StreamObserver<Empty> responseObserver) {
     execute(
         () -> {
-          admin.dropNamespace(request.getNamespace());
+          admin.dropNamespace(request.getNamespace(), request.getIfExists());
           responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();
         },
@@ -90,7 +90,7 @@ public class DistributedStorageAdminService
   public void dropTable(DropTableRequest request, StreamObserver<Empty> responseObserver) {
     execute(
         () -> {
-          admin.dropTable(request.getNamespace(), request.getTable());
+          admin.dropTable(request.getNamespace(), request.getTable(), request.getIfExists());
           responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();
         },
@@ -118,6 +118,7 @@ public class DistributedStorageAdminService
               request.getNamespace(),
               request.getTable(),
               request.getColumnName(),
+              request.getIfNotExists(),
               request.getOptionsMap());
           responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();
@@ -130,7 +131,11 @@ public class DistributedStorageAdminService
   public void dropIndex(DropIndexRequest request, StreamObserver<Empty> responseObserver) {
     execute(
         () -> {
-          admin.dropIndex(request.getNamespace(), request.getTable(), request.getColumnName());
+          admin.dropIndex(
+              request.getNamespace(),
+              request.getTable(),
+              request.getColumnName(),
+              request.getIfExists());
           responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();
         },

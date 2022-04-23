@@ -76,7 +76,7 @@ public class DistributedStorageAdminServiceTest {
     adminService.dropNamespace(request, responseObserver);
 
     // Assert
-    verify(admin).dropNamespace(any());
+    verify(admin).dropNamespace(any(), anyBoolean());
     verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }
@@ -123,7 +123,7 @@ public class DistributedStorageAdminServiceTest {
     adminService.dropTable(request, responseObserver);
 
     // Assert
-    verify(admin).dropTable(any(), any());
+    verify(admin).dropTable(any(), any(), anyBoolean());
     verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }
@@ -163,7 +163,7 @@ public class DistributedStorageAdminServiceTest {
     adminService.createIndex(request, responseObserver);
 
     // Assert
-    verify(admin).createIndex(any(), any(), any(), anyMap());
+    verify(admin).createIndex(any(), any(), any(), anyBoolean(), anyMap());
     verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }
@@ -185,7 +185,7 @@ public class DistributedStorageAdminServiceTest {
     adminService.dropIndex(request, responseObserver);
 
     // Assert
-    verify(admin).dropIndex(any(), any(), any());
+    verify(admin).dropIndex(any(), any(), any(), anyBoolean());
     verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }
