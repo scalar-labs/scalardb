@@ -94,10 +94,3 @@ jobs:
           asset_path: schema-loader/build/libs/scalardb-schema-loader-${{ steps.version.outputs.version }}.jar
           asset_name: scalardb-schema-loader-${{ steps.version.outputs.version }}.jar
           asset_content_type: application/java-archive
-
-      - name: Cleanup Gradle cache
-        # Remove some files from the Gradle cache, so they aren't cached by GitHub Actions.
-        # Restoring these files from a GitHub Actions cache might cause problems for future builds.
-        run: |
-          rm -f ~/.gradle/caches/modules-2/modules-2.lock
-          rm -f ~/.gradle/caches/modules-2/gc.properties
