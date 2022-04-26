@@ -1,8 +1,7 @@
-package com.scalar.db.schemaloader.jdbc;
+package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
-import com.scalar.db.storage.jdbc.JdbcEnv;
 
 public class JdbcSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTestBase {
 

@@ -1,9 +1,8 @@
-package com.scalar.db.schemaloader.dynamo;
+package com.scalar.db.storage.dynamo;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
-import com.scalar.db.storage.dynamo.DynamoEnv;
 import java.util.List;
 
 public class DynamoSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTestBase {
