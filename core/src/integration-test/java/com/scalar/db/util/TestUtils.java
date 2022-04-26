@@ -242,36 +242,6 @@ public final class TestUtils {
     }
   }
 
-  //  public static void assertResultsContainsExactly(
-  //      List<Result> results, List<ExpectedResult> expectedResults) {
-  //    for (Result r : results) {
-  //      boolean match = false;
-  //      System.out.println("ers size" + expectedResults.size());
-  //      for (ExpectedResult er : expectedResults) {
-  //        match =
-  //            r.getPartitionKey().orElse(Key.of()).equals(er.getPartitionKey())
-  //                && (er.getClusteringKey().isPresent()
-  //                    &&
-  // er.getClusteringKey().orElse(Key.of()).equals(er.getClusteringKey().get()))
-  //                && r.getContainedColumnNames().size() == er.getColumnsSize();
-  //        for (Column<?> erc : er.getNonKeyColumns()) {
-  //          match = match && Objects.equals(r.getAsObject(erc.getName()), erc.getValueAsObject());
-  //        }
-  //        if (match) {
-  //          System.out.println("Remove " + er);
-  //          expectedResults.remove(er);
-  //          break;
-  //        }
-  //      }
-  //      if (!match) {
-  //        Assertions.fail("The result " + r + " is not expected");
-  //      }
-  //    }
-  //    if (!expectedResults.isEmpty()) {
-  //      Assertions.fail("The given expected results are missing " + expectedResults);
-  //    }
-  //  }
-
   /**
    * Find and return an expected result that matches the result
    *
@@ -335,18 +305,6 @@ public final class TestUtils {
 
   /** Utility class used in testing to facilitate the comparison of {@link Result} */
   public static class ExpectedResult {
-    public Optional<Key> getPartitionKey() {
-      return partitionKey;
-    }
-
-    public Optional<Key> getClusteringKey() {
-      return clusteringKey;
-    }
-
-    public Set<Column<?>> getColumns() {
-      return columns;
-    }
-
     private final Optional<Key> partitionKey;
     private final Optional<Key> clusteringKey;
     private final Set<Column<?>> columns;
@@ -360,6 +318,18 @@ public final class TestUtils {
       }
       partitionKey.ifPresent(pk -> this.columns.addAll(pk.getColumns()));
       clusteringKey.ifPresent(ck -> this.columns.addAll(ck.getColumns()));
+    }
+
+    public Optional<Key> getPartitionKey() {
+      return partitionKey;
+    }
+
+    public Optional<Key> getClusteringKey() {
+      return clusteringKey;
+    }
+
+    public Set<Column<?>> getColumns() {
+      return columns;
     }
 
     /**
