@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
-import static com.scalar.db.util.TestUtils.*;
+import static com.scalar.db.util.TestUtils.assertResultsAreASubsetOf;
+import static com.scalar.db.util.TestUtils.assertResultsContainsExactlyInAnyOrder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
