@@ -21,4 +21,20 @@ public class DynamoIntegrationTest extends StorageIntegrationTestBase {
   @Disabled
   @Override
   public void put_PutGivenForIndexedColumnWithNullValue_ShouldPut() {}
+
+  @Override
+  @Disabled("ScanAll is not yet implemented for Dynamo DB")
+  public void scanAll_NoLimitGiven_ShouldRetrieveAllRecords() {}
+
+  @Override
+  @Disabled("ScanAll is not yet implemented for Dynamo DB")
+  public void scanAll_ScanAllWithLimitGiven_ShouldRetrieveExpectedRecords() {}
+
+  @Override
+  @Disabled("ScanAll is not yet implemented for Dynamo DB")
+  public void scanAll_ScanAllWithProjectionsGiven_ShouldRetrieveSpecifiedValues() {}
+
+  @Override
+  @Disabled("ScanAll is not yet implemented for Dynamo DB")
+  public void scanAll_ScanAllWithLargeData_ShouldRetrieveExpectedValues() {}
 }

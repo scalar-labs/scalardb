@@ -12,6 +12,7 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageFactory;
@@ -93,6 +94,12 @@ public class MultiStorage extends AbstractDistributedStorage {
   public Scanner scan(Scan scan) throws ExecutionException {
     scan = copyAndSetTargetToIfNot(scan);
     return getStorage(scan).scan(scan);
+  }
+
+  @Override
+  public Scanner scanAll(ScanAll scanAll) throws ExecutionException {
+    // TODO Implement ScanAll
+    throw new UnsupportedOperationException();
   }
 
   @Override

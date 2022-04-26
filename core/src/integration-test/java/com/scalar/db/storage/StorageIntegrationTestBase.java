@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
@@ -19,18 +20,24 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.storage.TestUtils.ExpectedResult;
+import com.scalar.db.storage.TestUtils.ExpectedResult.ExpectedResultBuilder;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1433,6 +1440,142 @@ public abstract class StorageIntegrationTestBase {
     }
   }
 
+  @Test
+  public void scanAll_NoLimitGiven_ShouldRetrieveAllRecords()
+      throws ExecutionException, IOException {
+    // Arrange
+    populateRecords();
+    ScanAll scanAll = new ScanAll();
+
+    // Act
+    List<Result> results = scanAll(scanAll);
+
+    // Assert
+    List<ExpectedResult> expectedResults = new ArrayList<>();
+    IntStream.range(0, 5)
+        .forEach(
+            i ->
+                IntStream.range(0, 3)
+                    .forEach(
+                        j -> {
+                          ExpectedResultBuilder erBuilder =
+                              new ExpectedResultBuilder()
+                                  .partitionKey(Key.ofInt(COL_NAME1, i))
+                                  .clusteringKey(Key.ofInt(COL_NAME4, j))
+                                  .nonKeyColumns(
+                                      ImmutableList.of(
+                                          TextColumn.of(COL_NAME2, Integer.toString(i + j)),
+                                          IntColumn.of(COL_NAME3, i + j),
+                                          BooleanColumn.of(COL_NAME5, j % 2 == 0)));
+                          expectedResults.add(erBuilder.build());
+                        }));
+    TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
+  }
+
+  @Test
+  public void scanAll_ScanAllWithLimitGiven_ShouldRetrieveExpectedRecords()
+      throws ExecutionException, IOException {
+    // Arrange
+    Put p1 = new Put(Key.ofInt(COL_NAME1, 1), Key.ofInt(COL_NAME4, 1));
+    Put p2 = new Put(Key.ofInt(COL_NAME1, 1), Key.ofInt(COL_NAME4, 2));
+    Put p3 = new Put(Key.ofInt(COL_NAME1, 2), Key.ofInt(COL_NAME4, 1));
+    Put p4 = new Put(Key.ofInt(COL_NAME1, 3), Key.ofInt(COL_NAME4, 0));
+    storage.put(ImmutableList.of(p1, p2));
+    storage.put(p3);
+    storage.put(p4);
+    ScanAll scanAll = new ScanAll().withLimit(2);
+
+    // Act
+    List<Result> results = scanAll(scanAll);
+
+    // Assert
+    TestUtils.assertResultsAreASubsetOf(
+        results,
+        ImmutableList.of(
+            new ExpectedResultBuilder()
+                .partitionKey(Key.ofInt(COL_NAME1, 1))
+                .clusteringKey(Key.ofInt(COL_NAME4, 1))
+                .build(),
+            new ExpectedResultBuilder()
+                .partitionKey(Key.ofInt(COL_NAME1, 1))
+                .clusteringKey(Key.ofInt(COL_NAME4, 2))
+                .build(),
+            new ExpectedResultBuilder()
+                .partitionKey(Key.ofInt(COL_NAME1, 2))
+                .clusteringKey(Key.ofInt(COL_NAME4, 1))
+                .build(),
+            new ExpectedResultBuilder()
+                .partitionKey(Key.ofInt(COL_NAME1, 3))
+                .clusteringKey(Key.ofInt(COL_NAME4, 0))
+                .build()));
+    assertThat(results).hasSize(2);
+  }
+
+  @Test
+  public void scanAll_ScanAllWithProjectionsGiven_ShouldRetrieveSpecifiedValues()
+      throws IOException, ExecutionException {
+    // Arrange
+    populateRecords();
+
+    // Act
+    ScanAll scanAll =
+        new ScanAll().withProjection(COL_NAME1).withProjection(COL_NAME2).withProjection(COL_NAME3);
+    List<Result> actualResults = scanAll(scanAll);
+
+    // Assert
+    List<ExpectedResult> expectedResults = new ArrayList<>();
+    IntStream.range(0, 5)
+        .forEach(
+            i ->
+                IntStream.range(0, 3)
+                    .forEach(
+                        j -> {
+                          ExpectedResultBuilder erBuilder =
+                              new ExpectedResultBuilder().partitionKey(Key.ofInt(COL_NAME1, i));
+                          erBuilder.clusteringKey(Key.ofInt(COL_NAME4, j));
+                          erBuilder.nonKeyColumns(
+                              ImmutableList.of(
+                                  TextColumn.of(COL_NAME2, Integer.toString(i + j)),
+                                  IntColumn.of(COL_NAME3, i + j)));
+                          expectedResults.add(erBuilder.build());
+                        }));
+    TestUtils.assertResultsContainsExactlyInAnyOrder(actualResults, expectedResults);
+    actualResults.forEach(
+        actualResult -> {
+          assertThat(actualResult.contains(COL_NAME5)).isFalse();
+          assertThat(actualResult.contains(COL_NAME6)).isFalse();
+        });
+  }
+
+  @Test
+  public void scanAll_ScanAllWithLargeData_ShouldRetrieveExpectedValues()
+      throws ExecutionException, IOException {
+    // Arrange
+    for (int i = 0; i < 345; i++) {
+      Key partitionKey = new Key(COL_NAME1, i % 4);
+      Key clusteringKey = new Key(COL_NAME4, i);
+      storage.put(new Put(partitionKey, clusteringKey).withBlobValue(COL_NAME6, new byte[5000]));
+    }
+    Scan scan = new ScanAll();
+
+    // Act
+    List<Result> results = scanAll(scan);
+
+    // Assert
+    List<ExpectedResult> expectedResults = new ArrayList<>();
+    for (int i = 0; i < 345; i++) {
+      Key partitionKey = new Key(COL_NAME1, i % 4);
+      Key clusteringKey = new Key(COL_NAME4, i);
+      expectedResults.add(
+          new ExpectedResultBuilder()
+              .partitionKey(partitionKey)
+              .clusteringKey(clusteringKey)
+              .nonKeyColumns(Collections.singletonList(BlobColumn.of(COL_NAME6, new byte[5000])))
+              .build());
+    }
+    TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
+  }
+
   private void populateRecords() {
     List<Put> puts = preparePuts();
     puts.forEach(p -> assertThatCode(() -> storage.put(p)).doesNotThrowAnyException());
@@ -1491,7 +1634,8 @@ public abstract class StorageIntegrationTestBase {
   }
 
   private List<Result> scanAll(Scan scan) throws ExecutionException, IOException {
-    try (Scanner scanner = storage.scan(scan)) {
+    try (Scanner scanner =
+        scan instanceof ScanAll ? storage.scanAll((ScanAll) scan) : storage.scan(scan)) {
       return scanner.all();
     }
   }

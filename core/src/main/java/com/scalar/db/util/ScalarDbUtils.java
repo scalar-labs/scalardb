@@ -7,6 +7,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.BigIntColumn;
@@ -60,6 +61,13 @@ public final class ScalarDbUtils {
   public static Scan copyAndSetTargetToIfNot(
       Scan scan, Optional<String> namespace, Optional<String> tableName) {
     Scan ret = new Scan(scan); // copy
+    setTargetToIfNot(ret, namespace, tableName);
+    return ret;
+  }
+
+  public static ScanAll copyAndSetTargetToIfNot(
+      ScanAll scanAll, Optional<String> namespace, Optional<String> tableName) {
+    ScanAll ret = new ScanAll(scanAll); // copy
     setTargetToIfNot(ret, namespace, tableName);
     return ret;
   }

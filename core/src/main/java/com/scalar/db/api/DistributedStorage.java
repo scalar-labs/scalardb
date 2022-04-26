@@ -122,6 +122,16 @@ public interface DistributedStorage {
   Scanner scan(Scan scan) throws ExecutionException;
 
   /**
+   * Retrieves all the records from the storage with the specified {@link ScanAll} command and
+   * returns {@link Scanner} to iterate the results.
+   *
+   * @param scanAll a {@code ScanAll} command
+   * @return {@link Scanner} to iterate results
+   * @throws ExecutionException if the operation failed
+   */
+  Scanner scanAll(ScanAll scanAll) throws ExecutionException;
+
+  /**
    * Inserts/Updates an entry to the storage with the specified {@link Put} command.
    *
    * @param put a {@code Put} command

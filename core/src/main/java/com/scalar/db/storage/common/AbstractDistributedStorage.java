@@ -6,6 +6,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
@@ -61,6 +62,10 @@ public abstract class AbstractDistributedStorage implements DistributedStorage {
 
   protected Scan copyAndSetTargetToIfNot(Scan scan) {
     return ScalarDbUtils.copyAndSetTargetToIfNot(scan, namespace, tableName);
+  }
+
+  protected ScanAll copyAndSetTargetToIfNot(ScanAll scanAll) {
+    return ScalarDbUtils.copyAndSetTargetToIfNot(scanAll, namespace, tableName);
   }
 
   protected Put copyAndSetTargetToIfNot(Put put) {

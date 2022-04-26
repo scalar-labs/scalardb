@@ -13,6 +13,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
@@ -96,6 +97,18 @@ public class Cassandra extends AbstractDistributedStorage {
     ResultSet results = handlers.select().handle(scan);
 
     return new ScannerImpl(results, new ResultInterpreter(scan.getProjections(), metadata));
+  }
+
+  @Override
+  public Scanner scanAll(ScanAll scanAll) throws ExecutionException {
+    scanAll = copyAndSetTargetToIfNot(scanAll);
+    operationChecker.check(scanAll);
+    TableMetadata metadata = metadataManager.getTableMetadata(scanAll);
+    ScalarDbUtils.addProjectionsForKeys(scanAll, metadata);
+
+    ResultSet results = handlers.select().handle(scanAll);
+
+    return new ScannerImpl(results, new ResultInterpreter(scanAll.getProjections(), metadata));
   }
 
   @Override

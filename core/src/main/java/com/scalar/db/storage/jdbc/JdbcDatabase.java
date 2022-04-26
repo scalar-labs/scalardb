@@ -9,6 +9,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -96,6 +97,12 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       close(connection);
       throw new ExecutionException("scan operation failed", e);
     }
+  }
+
+  @Override
+  public Scanner scanAll(ScanAll scanAll) throws ExecutionException {
+    // TODO Implement ScanAll
+    throw new UnsupportedOperationException();
   }
 
   @Override

@@ -19,6 +19,7 @@ import com.datastax.driver.core.querybuilder.Select;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
@@ -55,11 +56,13 @@ public class SelectStatementHandler extends StatementHandler {
   @Override
   @Nonnull
   protected PreparedStatement prepare(Operation operation) {
-    checkArgument(operation, Get.class, Scan.class);
+    checkArgument(operation, Get.class, Scan.class, ScanAll.class);
     Select select;
 
     if (operation instanceof Get) {
       select = prepare((Get) operation);
+    } else if (operation instanceof ScanAll) {
+      select = prepare((ScanAll) operation);
     } else {
       select = prepare((Scan) operation);
     }
@@ -73,6 +76,8 @@ public class SelectStatementHandler extends StatementHandler {
     checkArgument(operation, Get.class, Scan.class);
     if (operation instanceof Get) {
       return bind(prepared.bind(), (Get) operation);
+    } else if (operation instanceof ScanAll) {
+      return bind(prepared.bind(), (ScanAll) operation);
     } else {
       return bind(prepared.bind(), (Scan) operation);
     }
@@ -107,6 +112,16 @@ public class SelectStatementHandler extends StatementHandler {
 
     if (scan.getLimit() > 0) {
       select.limit(scan.getLimit());
+    }
+
+    return select;
+  }
+
+  private Select prepare(ScanAll scanAll) {
+    Select select = getSelect(scanAll);
+
+    if (scanAll.getLimit() > 0) {
+      select.limit(scanAll.getLimit());
     }
 
     return select;

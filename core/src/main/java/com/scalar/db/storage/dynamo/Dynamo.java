@@ -10,6 +10,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
@@ -108,6 +109,12 @@ public class Dynamo extends AbstractDistributedStorage {
     ScalarDbUtils.addProjectionsForKeys(scan, metadata);
 
     return selectStatementHandler.handle(scan);
+  }
+
+  @Override
+  public Scanner scanAll(ScanAll scanAll) throws ExecutionException {
+    // TODO Implement ScanAll
+    throw new UnsupportedOperationException();
   }
 
   @Override
