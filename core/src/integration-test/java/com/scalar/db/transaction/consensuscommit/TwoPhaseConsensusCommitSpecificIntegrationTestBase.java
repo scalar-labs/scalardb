@@ -28,9 +28,11 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import com.scalar.db.util.TestUtils;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,20 +40,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class TwoPhaseConsensusCommitIntegrationTest {
+public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
-  private static final String PROP_CONTACT_POINTS = "scalardb.contact_points";
-  private static final String PROP_CONTACT_PORT = "scalardb.contact_port";
-  private static final String PROP_USERNAME = "scalardb.username";
-  private static final String PROP_PASSWORD = "scalardb.password";
-  private static final String PROP_STORAGE = "scalardb.storage";
-
-  private static final String DEFAULT_CONTACT_POINTS = "jdbc:mysql://localhost:3306/";
-  private static final String DEFAULT_USERNAME = "root";
-  private static final String DEFAULT_PASSWORD = "mysql";
-  private static final String DEFAULT_STORAGE = "jdbc";
-
-  private static final String NAMESPACE = "integration_testing";
+  private static final String TEST_NAME = "2pcc";
+  private static final String NAMESPACE = "integration_testing_" + TEST_NAME;
   private static final String TABLE_1 = "tx_test_table1";
   private static final String TABLE_2 = "tx_test_table2";
   private static final String ACCOUNT_ID = "account_id";
@@ -68,42 +60,29 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   private DistributedStorageAdmin admin;
   private ConsensusCommitAdmin consensusCommitAdmin;
   private Coordinator coordinator;
-
-  private DatabaseConfig getDatabaseConfig() {
-    String contactPoints = System.getProperty(PROP_CONTACT_POINTS, DEFAULT_CONTACT_POINTS);
-    String contactPort = System.getProperty(PROP_CONTACT_PORT);
-    String username = System.getProperty(PROP_USERNAME, DEFAULT_USERNAME);
-    String password = System.getProperty(PROP_PASSWORD, DEFAULT_PASSWORD);
-    String storage = System.getProperty(PROP_STORAGE, DEFAULT_STORAGE);
-
-    Properties properties = new Properties();
-    properties.setProperty(DatabaseConfig.CONTACT_POINTS, contactPoints);
-    if (contactPort != null) {
-      properties.setProperty(DatabaseConfig.CONTACT_PORT, contactPort);
-    }
-    properties.setProperty(DatabaseConfig.USERNAME, username);
-    properties.setProperty(DatabaseConfig.PASSWORD, password);
-    properties.setProperty(DatabaseConfig.STORAGE, storage);
-    return new DatabaseConfig(properties);
-  }
+  private String namespace;
 
   @BeforeAll
   public void beforeAll() throws ExecutionException {
-    DatabaseConfig config = getDatabaseConfig();
-    initStorageAndAdmin(config);
-    createTables();
-    initManagerAndCoordinator(config);
-  }
-
-  private void initStorageAndAdmin(DatabaseConfig config) {
+    DatabaseConfig config = TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME);
+    namespace = getNamespace();
     StorageFactory factory = new StorageFactory(config);
-    storage = factory.getStorage();
     admin = factory.getAdmin();
     consensusCommitAdmin =
         new ConsensusCommitAdmin(admin, new ConsensusCommitConfig(config.getProperties()));
+    createTables();
+    storage = factory.getStorage();
+    initManagerAndCoordinator(config);
+  }
+
+  protected abstract DatabaseConfig getDatabaseConfig();
+
+  protected String getNamespace() {
+    return NAMESPACE;
   }
 
   private void createTables() throws ExecutionException {
+    Map<String, String> options = getCreateOptions();
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(ACCOUNT_ID, DataType.INT)
@@ -112,10 +91,14 @@ public class TwoPhaseConsensusCommitIntegrationTest {
             .addPartitionKey(ACCOUNT_ID)
             .addClusteringKey(ACCOUNT_TYPE)
             .build();
-    admin.createNamespace(NAMESPACE, true);
-    consensusCommitAdmin.createTable(NAMESPACE, TABLE_1, tableMetadata, true);
-    consensusCommitAdmin.createTable(NAMESPACE, TABLE_2, tableMetadata, true);
-    consensusCommitAdmin.createCoordinatorNamespaceAndTable();
+    admin.createNamespace(namespace, true, options);
+    consensusCommitAdmin.createTable(namespace, TABLE_1, tableMetadata, true, options);
+    consensusCommitAdmin.createTable(namespace, TABLE_2, tableMetadata, true, options);
+    consensusCommitAdmin.createCoordinatorNamespaceAndTable(options);
+  }
+
+  protected Map<String, String> getCreateOptions() {
+    return Collections.emptyMap();
   }
 
   private void initManagerAndCoordinator(DatabaseConfig config) {
@@ -130,8 +113,8 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   }
 
   private void truncateTables() throws ExecutionException {
-    admin.truncateTable(NAMESPACE, TABLE_1);
-    admin.truncateTable(NAMESPACE, TABLE_2);
+    admin.truncateTable(namespace, TABLE_1);
+    admin.truncateTable(namespace, TABLE_2);
     consensusCommitAdmin.truncateCoordinatorTable();
   }
 
@@ -144,9 +127,9 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   }
 
   private void deleteTables() throws ExecutionException {
-    admin.dropTable(NAMESPACE, TABLE_1);
-    admin.dropTable(NAMESPACE, TABLE_2);
-    admin.dropNamespace(NAMESPACE);
+    admin.dropTable(namespace, TABLE_1);
+    admin.dropTable(namespace, TABLE_2);
+    admin.dropNamespace(namespace);
     consensusCommitAdmin.dropCoordinatorNamespaceAndTable();
   }
 
@@ -2329,7 +2312,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, 0));
     Put put =
         new Put(partitionKey, clusteringKey)
-            .forNamespace(NAMESPACE)
+            .forNamespace(namespace)
             .forTable(table)
             .withValue(new IntValue(BALANCE, INITIAL_BALANCE))
             .withValue(Attribute.toIdValue(ANY_ID_2))
@@ -2394,7 +2377,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Get(partitionKey, clusteringKey)
-        .forNamespace(NAMESPACE)
+        .forNamespace(namespace)
         .forTable(table)
         .withConsistency(Consistency.LINEARIZABLE);
   }
@@ -2402,7 +2385,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   private Scan prepareScan(int id, int fromType, int toType, String table) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     return new Scan(partitionKey)
-        .forNamespace(NAMESPACE)
+        .forNamespace(namespace)
         .forTable(table)
         .withConsistency(Consistency.LINEARIZABLE)
         .withStart(new Key(ACCOUNT_TYPE, fromType))
@@ -2412,7 +2395,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   private Scan prepareScan(int id, String table) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     return new Scan(partitionKey)
-        .forNamespace(NAMESPACE)
+        .forNamespace(namespace)
         .forTable(table)
         .withConsistency(Consistency.LINEARIZABLE);
   }
@@ -2421,7 +2404,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Put(partitionKey, clusteringKey)
-        .forNamespace(NAMESPACE)
+        .forNamespace(namespace)
         .forTable(table)
         .withConsistency(Consistency.LINEARIZABLE);
   }
@@ -2430,7 +2413,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Delete(partitionKey, clusteringKey)
-        .forNamespace(NAMESPACE)
+        .forNamespace(namespace)
         .forTable(table)
         .withConsistency(Consistency.LINEARIZABLE);
   }

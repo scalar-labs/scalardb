@@ -1,18 +1,12 @@
-package com.scalar.db.storage;
+package com.scalar.db.api;
 
-import com.scalar.db.api.Delete;
-import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.DistributedStorageAdmin;
-import com.scalar.db.api.Get;
-import com.scalar.db.api.Put;
-import com.scalar.db.api.Result;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.util.TestUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -30,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class StorageSinglePartitionKeyIntegrationTestBase {
+public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
 
   private static final String TEST_NAME = "single_pkey";
   private static final String NAMESPACE = "integration_testing_" + TEST_NAME;

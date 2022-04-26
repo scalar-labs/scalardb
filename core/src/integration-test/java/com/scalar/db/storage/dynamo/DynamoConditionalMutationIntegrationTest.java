@@ -2,17 +2,17 @@ package com.scalar.db.storage.dynamo;
 
 import com.google.common.collect.Ordering;
 import com.scalar.db.api.ConditionalExpression.Operator;
+import com.scalar.db.api.DistributedStorageConditionalMutationIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.StorageConditionalMutationIntegrationTestBase;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
 public class DynamoConditionalMutationIntegrationTest
-    extends StorageConditionalMutationIntegrationTestBase {
+    extends DistributedStorageConditionalMutationIntegrationTestBase {
   @Override
   protected DatabaseConfig getDatabaseConfig() {
     return DynamoEnv.getDynamoConfig();

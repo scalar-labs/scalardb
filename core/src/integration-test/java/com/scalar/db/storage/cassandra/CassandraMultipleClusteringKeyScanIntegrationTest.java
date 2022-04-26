@@ -1,10 +1,10 @@
 package com.scalar.db.storage.cassandra;
 
+import com.scalar.db.api.DistributedStorageMultipleClusteringKeyScanIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.StorageMultipleClusteringKeyScanIntegrationTestBase;
 
 public class CassandraMultipleClusteringKeyScanIntegrationTest
-    extends StorageMultipleClusteringKeyScanIntegrationTestBase {
+    extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {

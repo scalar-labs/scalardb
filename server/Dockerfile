@@ -1,6 +1,6 @@
 FROM docker.io/busybox:1.32 AS tools
 
-ENV GRPC_HEALTH_PROBE_VERSION v0.3.2
+ENV GRPC_HEALTH_PROBE_VERSION v0.4.11
 ENV DOCKERIZE_VERSION v0.6.1
 
 # Install grpc_health_probe for kubernetes.
@@ -16,7 +16,7 @@ RUN set -x && \
     tar -xzvf "dockerize-linux-amd64-${DOCKERIZE_VERSION}.tar.gz" && \
     ./dockerize --version
 
-FROM ghcr.io/scalar-labs/jre8:1.1.0
+FROM ghcr.io/scalar-labs/jre8:1.1.1
 
 COPY --from=tools dockerize /usr/local/bin/
 COPY --from=tools grpc_health_probe /usr/local/bin/

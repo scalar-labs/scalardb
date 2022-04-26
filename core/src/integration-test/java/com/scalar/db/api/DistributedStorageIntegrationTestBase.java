@@ -1,28 +1,13 @@
-package com.scalar.db.storage;
+package com.scalar.db.api;
 
+import static com.scalar.db.util.TestUtils.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
-import com.scalar.db.api.ConditionalExpression;
-import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
-import com.scalar.db.api.DeleteIfExists;
-import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.DistributedStorageAdmin;
-import com.scalar.db.api.Get;
-import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIf;
-import com.scalar.db.api.PutIfExists;
-import com.scalar.db.api.PutIfNotExists;
-import com.scalar.db.api.Result;
-import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
-import com.scalar.db.api.ScanAll;
-import com.scalar.db.api.Scanner;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
@@ -38,6 +23,8 @@ import com.scalar.db.io.TextValue;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.storage.TestUtils.ExpectedResult;
 import com.scalar.db.storage.TestUtils.ExpectedResult.ExpectedResultBuilder;
+import com.scalar.db.util.TestUtils.ExpectedResult;
+import com.scalar.db.util.TestUtils.ExpectedResult.ExpectedResultBuilder;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -55,7 +42,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class StorageIntegrationTestBase {
+public abstract class DistributedStorageIntegrationTestBase {
 
   private static final String NAMESPACE = "integration_testing";
   private static final String TABLE = "test_table";
@@ -1469,7 +1456,7 @@ public abstract class StorageIntegrationTestBase {
                                           BooleanColumn.of(COL_NAME5, j % 2 == 0)));
                           expectedResults.add(erBuilder.build());
                         }));
-    TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
+    assertResultsContainsExactlyInAnyOrder(results, expectedResults);
   }
 
   @Test
@@ -1489,7 +1476,7 @@ public abstract class StorageIntegrationTestBase {
     List<Result> results = scanAll(scanAll);
 
     // Assert
-    TestUtils.assertResultsAreASubsetOf(
+    assertResultsAreASubsetOf(
         results,
         ImmutableList.of(
             new ExpectedResultBuilder()
@@ -1539,7 +1526,7 @@ public abstract class StorageIntegrationTestBase {
                                   IntColumn.of(COL_NAME3, i + j)));
                           expectedResults.add(erBuilder.build());
                         }));
-    TestUtils.assertResultsContainsExactlyInAnyOrder(actualResults, expectedResults);
+    assertResultsContainsExactlyInAnyOrder(actualResults, expectedResults);
     actualResults.forEach(
         actualResult -> {
           assertThat(actualResult.contains(COL_NAME5)).isFalse();
@@ -1573,7 +1560,7 @@ public abstract class StorageIntegrationTestBase {
               .nonKeyColumns(Collections.singletonList(BlobColumn.of(COL_NAME6, new byte[5000])))
               .build());
     }
-    TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
+    assertResultsContainsExactlyInAnyOrder(results, expectedResults);
   }
 
   private void populateRecords() {
