@@ -1,12 +1,13 @@
 package com.scalar.db.transaction.jdbc;
 
+import com.scalar.db.api.DistributedTransactionAdminIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcEnv;
-import com.scalar.db.transaction.TransactionAdminIntegrationTestBase;
 import java.util.Properties;
 
-public class JdbcTransactionAdminIntegrationTest extends TransactionAdminIntegrationTestBase {
+public class JdbcTransactionAdminIntegrationTest
+    extends DistributedTransactionAdminIntegrationTestBase {
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {

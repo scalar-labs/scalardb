@@ -1,10 +1,10 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.api.DistributedStorageWithReservedKeywordIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.StorageWithReservedKeywordIntegrationTestBase;
 
 public class JdbcDatabaseWithReservedKeywordIntegrationTest
-    extends StorageWithReservedKeywordIntegrationTestBase {
+    extends DistributedStorageWithReservedKeywordIntegrationTestBase {
 
   @Override
   protected String getNamespace() {

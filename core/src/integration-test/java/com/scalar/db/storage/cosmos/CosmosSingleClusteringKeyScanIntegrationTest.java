@@ -1,15 +1,15 @@
 package com.scalar.db.storage.cosmos;
 
+import com.scalar.db.api.DistributedStorageSingleClusteringKeyScanIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.StorageSingleClusteringKeyScanIntegrationTestBase;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 public class CosmosSingleClusteringKeyScanIntegrationTest
-    extends StorageSingleClusteringKeyScanIntegrationTestBase {
+    extends DistributedStorageSingleClusteringKeyScanIntegrationTestBase {
   @Override
   protected DatabaseConfig getDatabaseConfig() {
     return CosmosEnv.getCosmosConfig();

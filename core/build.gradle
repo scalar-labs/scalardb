@@ -17,10 +17,10 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
-            include '**/com/scalar/db/storage/*.java'
+            include '**/com/scalar/db/api/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/*.java'
+            include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/cassandra/*.java'
-            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
-            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithCassandraIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -29,10 +29,10 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
-            include '**/com/scalar/db/storage/*.java'
+            include '**/com/scalar/db/api/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/*.java'
+            include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/cosmos/*.java'
-            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
-            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithCosmosIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -41,10 +41,10 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
-            include '**/com/scalar/db/storage/*.java'
+            include '**/com/scalar/db/api/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/*.java'
+            include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/dynamo/*.java'
-            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
-            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithDynamoIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -53,12 +53,10 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
-            include '**/com/scalar/db/storage/*.java'
+            include '**/com/scalar/db/api/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/*.java'
+            include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/jdbc/*.java'
-            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
-            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithJdbcDatabaseIntegrationTest.java'
-            include '**/com/scalar/db/transaction/TransactionAdminIntegrationTestBase.java'
-            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitAdminWithJdbcDatabaseIntegrationTest.java'
             include '**/com/scalar/db/transaction/jdbc/*.java'
         }
         resources.srcDir file('src/integration-test/resources')
@@ -68,19 +66,10 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
-            include '**/com/scalar/db/storage/*.java'
+            include '**/com/scalar/db/api/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/*.java'
+            include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/multistorage/*.java'
-            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
-            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithMultiStorageIntegrationTest.java'
-        }
-        resources.srcDir file('src/integration-test/resources')
-    }
-    integrationTestTwoPhaseConsensusCommit {
-        java {
-            compileClasspath += main.output + test.output
-            runtimeClasspath += main.output + test.output
-            srcDir file('src/integration-test/java')
-            include '**/com/scalar/db/transaction/consensuscommit/TwoPhaseConsensusCommitIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -105,9 +94,6 @@ configurations {
     integrationTestMultiStorageImplementation.extendsFrom testImplementation
     integrationTestMultiStorageRuntimeOnly.extendsFrom testRuntimeOnly
     integrationTestMultiStorageCompileOnly.extendsFrom testCompileOnly
-    integrationTestTwoPhaseConsensusCommitImplementation.extendsFrom testImplementation
-    integrationTestTwoPhaseConsensusCommitRuntimeOnly.extendsFrom testRuntimeOnly
-    integrationTestTwoPhaseConsensusCommitCompileOnly.extendsFrom testCompileOnly
 }
 
 dependencies {
@@ -203,18 +189,6 @@ task integrationTestMultiStorage(type: Test) {
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestMultiStorage.output.classesDirs
     classpath = sourceSets.integrationTestMultiStorage.runtimeClasspath
-    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
-    options {
-        systemProperties(System.getProperties())
-    }
-}
-
-task integrationTestTwoPhaseConsensusCommit(type: Test) {
-    useJUnitPlatform()
-    description = 'Runs the integration tests for two-phase consensus commit.'
-    group = 'verification'
-    testClassesDirs = sourceSets.integrationTestTwoPhaseConsensusCommit.output.classesDirs
-    classpath = sourceSets.integrationTestTwoPhaseConsensusCommit.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties())

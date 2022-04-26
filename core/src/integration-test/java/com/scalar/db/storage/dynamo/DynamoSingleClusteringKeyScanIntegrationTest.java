@@ -1,16 +1,16 @@
 package com.scalar.db.storage.dynamo;
 
+import com.scalar.db.api.DistributedStorageSingleClusteringKeyScanIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.StorageSingleClusteringKeyScanIntegrationTestBase;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
 public class DynamoSingleClusteringKeyScanIntegrationTest
-    extends StorageSingleClusteringKeyScanIntegrationTestBase {
+    extends DistributedStorageSingleClusteringKeyScanIntegrationTestBase {
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {

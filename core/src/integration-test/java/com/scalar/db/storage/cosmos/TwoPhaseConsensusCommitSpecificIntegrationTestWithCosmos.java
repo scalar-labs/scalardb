@@ -1,11 +1,12 @@
-package com.scalar.db.transaction.consensuscommit;
+package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.cosmos.CosmosEnv;
+import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitSpecificIntegrationTestBase;
 import java.util.Map;
 import java.util.Optional;
 
-public class ConsensusCommitWithCosmosIntegrationTest extends ConsensusCommitIntegrationTestBase {
+public class TwoPhaseConsensusCommitSpecificIntegrationTestWithCosmos
+    extends TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {
@@ -13,16 +14,8 @@ public class ConsensusCommitWithCosmosIntegrationTest extends ConsensusCommitInt
   }
 
   @Override
-  protected String getNamespace1() {
-    return getNamespace(super.getNamespace1());
-  }
-
-  @Override
-  protected String getNamespace2() {
-    return getNamespace(super.getNamespace2());
-  }
-
-  private String getNamespace(String namespace) {
+  protected String getNamespace() {
+    String namespace = super.getNamespace();
     Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
     return databasePrefix.map(prefix -> prefix + namespace).orElse(namespace);
   }

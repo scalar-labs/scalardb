@@ -1,4 +1,4 @@
-package com.scalar.db.storage;
+package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -7,19 +7,7 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Ordering;
-import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
-import com.scalar.db.api.Consistency;
-import com.scalar.db.api.Delete;
-import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.DistributedStorageAdmin;
-import com.scalar.db.api.Get;
-import com.scalar.db.api.Mutation;
-import com.scalar.db.api.MutationCondition;
-import com.scalar.db.api.Put;
-import com.scalar.db.api.Result;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
@@ -34,6 +22,7 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.util.TestUtils;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -53,7 +42,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class StorageConditionalMutationIntegrationTestBase {
+public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
   private static final String TEST_NAME = "cond_mutation";
   private static final String NAMESPACE = "integration_testing_" + TEST_NAME;

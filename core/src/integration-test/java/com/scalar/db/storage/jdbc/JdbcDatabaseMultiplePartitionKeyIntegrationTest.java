@@ -1,13 +1,13 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.api.DistributedStorageMultiplePartitionKeyIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.StorageMultiplePartitionKeyIntegrationTestBase;
 import java.util.Random;
 
 public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
-    extends StorageMultiplePartitionKeyIntegrationTestBase {
+    extends DistributedStorageMultiplePartitionKeyIntegrationTestBase {
 
   private RdbEngine rdbEngine;
 

@@ -1,11 +1,12 @@
 package com.scalar.db.storage.cosmos;
 
+import com.scalar.db.api.DistributedStorageSecondaryIndexIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.StorageSecondaryIndexIntegrationTestBase;
 import java.util.Map;
 import java.util.Optional;
 
-public class CosmosSecondaryIndexIntegrationTest extends StorageSecondaryIndexIntegrationTestBase {
+public class CosmosSecondaryIndexIntegrationTest
+    extends DistributedStorageSecondaryIndexIntegrationTestBase {
   @Override
   protected DatabaseConfig getDatabaseConfig() {
     return CosmosEnv.getCosmosConfig();

@@ -1,17 +1,17 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.ConditionalExpression.Operator;
+import com.scalar.db.api.DistributedStorageConditionalMutationIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.StorageConditionalMutationIntegrationTestBase;
-import com.scalar.db.storage.TestUtils;
+import com.scalar.db.util.TestUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 public class JdbcDatabaseConditionalMutationIntegrationTest
-    extends StorageConditionalMutationIntegrationTestBase {
+    extends DistributedStorageConditionalMutationIntegrationTestBase {
 
   private RdbEngine rdbEngine;
 
