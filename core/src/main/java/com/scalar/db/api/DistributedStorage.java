@@ -111,25 +111,21 @@ public interface DistributedStorage {
   Optional<Result> get(Get get) throws ExecutionException;
 
   /**
-   * Retrieves results from the storage with the specified {@link Scan} command with a partition key
-   * and returns {@link Scanner} to iterate the results within the partition. Results can be
-   * filtered by specifying a range of clustering keys.
+   * Retrieves results from the storage with the specified {@link Scan} or {@link ScanAll} command
+   * and returns {@link Scanner} to iterate the results.
    *
-   * @param scan a {@code Scan} command
+   * <ul>
+   *   <li>{@link Scan} : by specifying a partition key, it will return results within the
+   *       partition. Results can be filtered by specifying a range of clustering keys.
+   *   <li>{@link ScanAll} : for a given table, it will return all its records even if they
+   *       span several partitions.
+   * </ul>
+   *
+   * @param scan a {@code Scan} or {@code ScanAll} command
    * @return {@link Scanner} to iterate results
    * @throws ExecutionException if the operation failed
    */
   Scanner scan(Scan scan) throws ExecutionException;
-
-  /**
-   * Retrieves all the records from the storage with the specified {@link ScanAll} command and
-   * returns {@link Scanner} to iterate the results.
-   *
-   * @param scanAll a {@code ScanAll} command
-   * @return {@link Scanner} to iterate results
-   * @throws ExecutionException if the operation failed
-   */
-  Scanner scanAll(ScanAll scanAll) throws ExecutionException;
 
   /**
    * Inserts/Updates an entry to the storage with the specified {@link Put} command.

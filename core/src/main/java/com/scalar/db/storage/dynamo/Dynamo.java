@@ -103,18 +103,16 @@ public class Dynamo extends AbstractDistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
+    if (scan instanceof ScanAll) {
+      throw new UnsupportedOperationException();
+    }
+
     scan = copyAndSetTargetToIfNot(scan);
     operationChecker.check(scan);
     TableMetadata metadata = metadataManager.getTableMetadata(scan);
     ScalarDbUtils.addProjectionsForKeys(scan, metadata);
 
     return selectStatementHandler.handle(scan);
-  }
-
-  @Override
-  public Scanner scanAll(ScanAll scanAll) throws ExecutionException {
-    // TODO Implement ScanAll
-    throw new UnsupportedOperationException();
   }
 
   @Override

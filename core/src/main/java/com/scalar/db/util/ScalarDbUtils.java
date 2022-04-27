@@ -60,14 +60,12 @@ public final class ScalarDbUtils {
 
   public static Scan copyAndSetTargetToIfNot(
       Scan scan, Optional<String> namespace, Optional<String> tableName) {
-    Scan ret = new Scan(scan); // copy
-    setTargetToIfNot(ret, namespace, tableName);
-    return ret;
-  }
-
-  public static ScanAll copyAndSetTargetToIfNot(
-      ScanAll scanAll, Optional<String> namespace, Optional<String> tableName) {
-    ScanAll ret = new ScanAll(scanAll); // copy
+    Scan ret;
+    if (scan instanceof ScanAll) {
+      ret = new ScanAll((ScanAll) scan); // copy
+    } else {
+      ret = new Scan(scan); // copy
+    }
     setTargetToIfNot(ret, namespace, tableName);
     return ret;
   }

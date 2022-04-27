@@ -8,7 +8,6 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.List;
@@ -64,11 +63,6 @@ public class StorageService implements DistributedStorage {
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
     return storage.scan(scan);
-  }
-
-  @Override
-  public Scanner scanAll(ScanAll scanAll) throws ExecutionException {
-    return storage.scanAll(scanAll);
   }
 
   @Override

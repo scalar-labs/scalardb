@@ -90,25 +90,18 @@ public class Cassandra extends AbstractDistributedStorage {
   @Nonnull
   public Scanner scan(Scan scan) throws ExecutionException {
     scan = copyAndSetTargetToIfNot(scan);
-    operationChecker.check(scan);
+    if (scan instanceof ScanAll) {
+      operationChecker.check((ScanAll) scan);
+    } else {
+      operationChecker.check(scan);
+    }
+
     TableMetadata metadata = metadataManager.getTableMetadata(scan);
     ScalarDbUtils.addProjectionsForKeys(scan, metadata);
 
     ResultSet results = handlers.select().handle(scan);
 
     return new ScannerImpl(results, new ResultInterpreter(scan.getProjections(), metadata));
-  }
-
-  @Override
-  public Scanner scanAll(ScanAll scanAll) throws ExecutionException {
-    scanAll = copyAndSetTargetToIfNot(scanAll);
-    operationChecker.check(scanAll);
-    TableMetadata metadata = metadataManager.getTableMetadata(scanAll);
-    ScalarDbUtils.addProjectionsForKeys(scanAll, metadata);
-
-    ResultSet results = handlers.select().handle(scanAll);
-
-    return new ScannerImpl(results, new ResultInterpreter(scanAll.getProjections(), metadata));
   }
 
   @Override

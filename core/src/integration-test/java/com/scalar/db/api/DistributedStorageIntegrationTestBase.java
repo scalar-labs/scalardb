@@ -1427,7 +1427,7 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   @Test
-  public void scanAll_NoLimitGiven_ShouldRetrieveAllRecords()
+  public void scan_ScanAllWithNoLimitGiven_ShouldRetrieveAllRecords()
       throws ExecutionException, IOException {
     // Arrange
     populateRecords();
@@ -1459,7 +1459,7 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   @Test
-  public void scanAll_ScanAllWithLimitGiven_ShouldRetrieveExpectedRecords()
+  public void scan_ScanAllWithLimitGiven_ShouldRetrieveExpectedRecords()
       throws ExecutionException, IOException {
     // Arrange
     Put p1 = new Put(Key.ofInt(COL_NAME1, 1), Key.ofInt(COL_NAME4, 1));
@@ -1498,7 +1498,7 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   @Test
-  public void scanAll_ScanAllWithProjectionsGiven_ShouldRetrieveSpecifiedValues()
+  public void scan_ScanAllWithProjectionsGiven_ShouldRetrieveSpecifiedValues()
       throws IOException, ExecutionException {
     // Arrange
     populateRecords();
@@ -1534,7 +1534,7 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   @Test
-  public void scanAll_ScanAllWithLargeData_ShouldRetrieveExpectedValues()
+  public void scan_ScanAllWithLargeData_ShouldRetrieveExpectedValues()
       throws ExecutionException, IOException {
     // Arrange
     for (int i = 0; i < 345; i++) {
@@ -1620,8 +1620,7 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   private List<Result> scanAll(Scan scan) throws ExecutionException, IOException {
-    try (Scanner scanner =
-        scan instanceof ScanAll ? storage.scanAll((ScanAll) scan) : storage.scan(scan)) {
+    try (Scanner scanner = storage.scan(scan)) {
       return scanner.all();
     }
   }

@@ -88,6 +88,10 @@ public class JdbcDatabase extends AbstractDistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
+    if (scan instanceof ScanAll) {
+      throw new UnsupportedOperationException();
+    }
+
     scan = copyAndSetTargetToIfNot(scan);
     Connection connection = null;
     try {
@@ -97,12 +101,6 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       close(connection);
       throw new ExecutionException("scan operation failed", e);
     }
-  }
-
-  @Override
-  public Scanner scanAll(ScanAll scanAll) throws ExecutionException {
-    // TODO Implement ScanAll
-    throw new UnsupportedOperationException();
   }
 
   @Override

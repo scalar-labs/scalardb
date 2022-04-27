@@ -108,6 +108,10 @@ public class GrpcStorage extends AbstractDistributedStorage {
 
   @Override
   public Scanner scan(Scan originalScan) throws ExecutionException {
+    if (originalScan instanceof ScanAll) {
+      throw new UnsupportedOperationException();
+    }
+
     Scan scan = copyAndSetTargetToIfNot(originalScan);
     return executeWithRetries(
         () -> {
@@ -115,12 +119,6 @@ public class GrpcStorage extends AbstractDistributedStorage {
           return new ScannerImpl(config, scan, stub, tableMetadata);
         },
         EXCEPTION_FACTORY);
-  }
-
-  @Override
-  public Scanner scanAll(ScanAll scanAll) throws ExecutionException {
-    // TODO Implement ScanAll
-    return null;
   }
 
   @Override

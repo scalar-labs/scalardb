@@ -38,17 +38,17 @@ public class DistributedStorageServiceIntegrationTest
 
   @Override
   @Disabled("ScanAll is not yet implemented for GRPC")
-  public void scanAll_NoLimitGiven_ShouldRetrieveAllRecords() {}
+  public void scan_ScanAllWithNoLimitGiven_ShouldRetrieveAllRecords() {}
 
   @Override
   @Disabled("ScanAll is not yet implemented for GRPC")
-  public void scanAll_ScanAllWithLimitGiven_ShouldRetrieveExpectedRecords() {}
+  public void scan_ScanAllWithLimitGiven_ShouldRetrieveExpectedRecords() {}
 
   @Override
   @Disabled("ScanAll is not yet implemented for GRPC")
-  public void scanAll_ScanAllWithProjectionsGiven_ShouldRetrieveSpecifiedValues() {}
+  public void scan_ScanAllWithProjectionsGiven_ShouldRetrieveSpecifiedValues() {}
 
   @Override
   @Disabled("ScanAll is not yet implemented for GRPC")
-  public void scanAll_ScanAllWithLargeData_ShouldRetrieveExpectedValues() {}
+  public void scan_ScanAllWithLargeData_ShouldRetrieveExpectedValues() {}
 }
