@@ -76,4 +76,10 @@ public interface CreateIndexRequestOrBuilder extends
 
   java.lang.String getOptionsOrThrow(
       java.lang.String key);
+
+  /**
+   * <code>bool if_not_exists = 5;</code>
+   * @return The ifNotExists.
+   */
+  boolean getIfNotExists();
 }
