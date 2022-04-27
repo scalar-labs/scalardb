@@ -42,4 +42,10 @@ public interface DropIndexRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getColumnNameBytes();
+
+  /**
+   * <code>bool if_exists = 4;</code>
+   * @return The ifExists.
+   */
+  boolean getIfExists();
 }

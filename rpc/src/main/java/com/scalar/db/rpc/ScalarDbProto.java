@@ -415,23 +415,25 @@ public final class ScalarDbProto {
       "\t\0229\n\007options\030\002 \003(\0132(.rpc.CreateNamespace" +
       "Request.OptionsEntry\022\025\n\rif_not_exists\030\003 " +
       "\001(\010\032.\n\014OptionsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005valu" +
-      "e\030\002 \001(\t:\0028\001\")\n\024DropNamespaceRequest\022\021\n\tn" +
-      "amespace\030\001 \001(\t\"\340\001\n\022CreateTableRequest\022\021\n" +
-      "\tnamespace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\022*\n\016table" +
-      "_metadata\030\003 \001(\0132\022.rpc.TableMetadata\0225\n\007o" +
-      "ptions\030\004 \003(\0132$.rpc.CreateTableRequest.Op" +
-      "tionsEntry\022\025\n\rif_not_exists\030\005 \001(\010\032.\n\014Opt" +
-      "ionsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028" +
-      "\001\"4\n\020DropTableRequest\022\021\n\tnamespace\030\001 \001(\t" +
-      "\022\r\n\005table\030\002 \001(\t\"8\n\024TruncateTableRequest\022" +
-      "\021\n\tnamespace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\"\262\001\n\022Cr" +
-      "eateIndexRequest\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005t" +
-      "able\030\002 \001(\t\022\023\n\013column_name\030\003 \001(\t\0225\n\007optio" +
-      "ns\030\004 \003(\0132$.rpc.CreateIndexRequest.Option" +
-      "sEntry\032.\n\014OptionsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005v" +
-      "alue\030\002 \001(\t:\0028\001\"I\n\020DropIndexRequest\022\021\n\tna" +
-      "mespace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\022\023\n\013column_n" +
-      "ame\030\003 \001(\t\";\n\027GetTableMetadataRequest\022\021\n\t" +
+      "e\030\002 \001(\t:\0028\001\"<\n\024DropNamespaceRequest\022\021\n\tn" +
+      "amespace\030\001 \001(\t\022\021\n\tif_exists\030\002 \001(\010\"\340\001\n\022Cr" +
+      "eateTableRequest\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005t" +
+      "able\030\002 \001(\t\022*\n\016table_metadata\030\003 \001(\0132\022.rpc" +
+      ".TableMetadata\0225\n\007options\030\004 \003(\0132$.rpc.Cr" +
+      "eateTableRequest.OptionsEntry\022\025\n\rif_not_" +
+      "exists\030\005 \001(\010\032.\n\014OptionsEntry\022\013\n\003key\030\001 \001(" +
+      "\t\022\r\n\005value\030\002 \001(\t:\0028\001\"G\n\020DropTableRequest" +
+      "\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\022\021\n\tif" +
+      "_exists\030\003 \001(\010\"8\n\024TruncateTableRequest\022\021\n" +
+      "\tnamespace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\"\311\001\n\022Crea" +
+      "teIndexRequest\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005tab" +
+      "le\030\002 \001(\t\022\023\n\013column_name\030\003 \001(\t\0225\n\007options" +
+      "\030\004 \003(\0132$.rpc.CreateIndexRequest.OptionsE" +
+      "ntry\022\025\n\rif_not_exists\030\005 \001(\010\032.\n\014OptionsEn" +
+      "try\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"\\\n\020D" +
+      "ropIndexRequest\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005ta" +
+      "ble\030\002 \001(\t\022\023\n\013column_name\030\003 \001(\t\022\021\n\tif_exi" +
+      "sts\030\004 \001(\010\";\n\027GetTableMetadataRequest\022\021\n\t" +
       "namespace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\"F\n\030GetTab" +
       "leMetadataResponse\022*\n\016table_metadata\030\001 \001" +
       "(\0132\022.rpc.TableMetadata\"2\n\035GetNamespaceTa" +
@@ -703,7 +705,7 @@ public final class ScalarDbProto {
     internal_static_rpc_DropNamespaceRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_DropNamespaceRequest_descriptor,
-        new java.lang.String[] { "Namespace", });
+        new java.lang.String[] { "Namespace", "IfExists", });
     internal_static_rpc_CreateTableRequest_descriptor =
       getDescriptor().getMessageTypes().get(17);
     internal_static_rpc_CreateTableRequest_fieldAccessorTable = new
@@ -721,7 +723,7 @@ public final class ScalarDbProto {
     internal_static_rpc_DropTableRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_DropTableRequest_descriptor,
-        new java.lang.String[] { "Namespace", "Table", });
+        new java.lang.String[] { "Namespace", "Table", "IfExists", });
     internal_static_rpc_TruncateTableRequest_descriptor =
       getDescriptor().getMessageTypes().get(19);
     internal_static_rpc_TruncateTableRequest_fieldAccessorTable = new
@@ -733,7 +735,7 @@ public final class ScalarDbProto {
     internal_static_rpc_CreateIndexRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_CreateIndexRequest_descriptor,
-        new java.lang.String[] { "Namespace", "Table", "ColumnName", "Options", });
+        new java.lang.String[] { "Namespace", "Table", "ColumnName", "Options", "IfNotExists", });
     internal_static_rpc_CreateIndexRequest_OptionsEntry_descriptor =
       internal_static_rpc_CreateIndexRequest_descriptor.getNestedTypes().get(0);
     internal_static_rpc_CreateIndexRequest_OptionsEntry_fieldAccessorTable = new
@@ -745,7 +747,7 @@ public final class ScalarDbProto {
     internal_static_rpc_DropIndexRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_DropIndexRequest_descriptor,
-        new java.lang.String[] { "Namespace", "Table", "ColumnName", });
+        new java.lang.String[] { "Namespace", "Table", "ColumnName", "IfExists", });
     internal_static_rpc_GetTableMetadataRequest_descriptor =
       getDescriptor().getMessageTypes().get(22);
     internal_static_rpc_GetTableMetadataRequest_fieldAccessorTable = new

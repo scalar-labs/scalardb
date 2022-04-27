@@ -30,4 +30,10 @@ public interface DropTableRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getTableBytes();
+
+  /**
+   * <code>bool if_exists = 3;</code>
+   * @return The ifExists.
+   */
+  boolean getIfExists();
 }

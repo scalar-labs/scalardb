@@ -18,4 +18,10 @@ public interface DropNamespaceRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getNamespaceBytes();
+
+  /**
+   * <code>bool if_exists = 2;</code>
+   * @return The ifExists.
+   */
+  boolean getIfExists();
 }

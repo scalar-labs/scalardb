@@ -1,21 +1,36 @@
 package com.scalar.db.storage.rpc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.LazyStringArrayList;
+import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.rpc.CreateIndexRequest;
+import com.scalar.db.rpc.CreateNamespaceRequest;
+import com.scalar.db.rpc.CreateTableRequest;
 import com.scalar.db.rpc.DistributedStorageAdminGrpc;
+import com.scalar.db.rpc.DropIndexRequest;
+import com.scalar.db.rpc.DropNamespaceRequest;
+import com.scalar.db.rpc.DropTableRequest;
+import com.scalar.db.rpc.GetNamespaceTableNamesRequest;
 import com.scalar.db.rpc.GetNamespaceTableNamesResponse;
+import com.scalar.db.rpc.GetTableMetadataRequest;
 import com.scalar.db.rpc.GetTableMetadataResponse;
+import com.scalar.db.rpc.NamespaceExistsRequest;
 import com.scalar.db.rpc.NamespaceExistsResponse;
+import com.scalar.db.rpc.TruncateTableRequest;
+import com.scalar.db.util.ProtoUtils;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -39,35 +54,42 @@ public class GrpcAdminTest {
   }
 
   @Test
-  public void createNamespace_IsCalledWithProperArguments_StubShouldBeCalledProperly()
+  public void createNamespace_CalledWithProperArguments_StubShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
     String namespace = "namespace";
-    boolean ifNotExists = false;
     Map<String, String> options = Collections.emptyMap();
 
     // Act
-    admin.createNamespace(namespace, ifNotExists, options);
+    admin.createNamespace(namespace, true, options);
 
     // Assert
-    verify(stub).createNamespace(any());
+    verify(stub)
+        .createNamespace(
+            CreateNamespaceRequest.newBuilder()
+                .setNamespace(namespace)
+                .putAllOptions(options)
+                .setIfNotExists(true)
+                .build());
   }
 
   @Test
-  public void dropNamespace_IsCalledWithProperArguments_StubShouldBeCalledProperly()
+  public void dropNamespace_CalledWithProperArguments_StubShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
     String namespace = "namespace";
 
     // Act
-    admin.dropNamespace(namespace);
+    admin.dropNamespace(namespace, true);
 
     // Assert
-    verify(stub).dropNamespace(any());
+    verify(stub)
+        .dropNamespace(
+            DropNamespaceRequest.newBuilder().setNamespace(namespace).setIfExists(true).build());
   }
 
   @Test
-  public void createTable_IsCalledWithProperArguments_StubShouldBeCalledProperly()
+  public void createTable_CalledWithProperArguments_StubShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
     String namespace = "namespace";
@@ -78,32 +100,91 @@ public class GrpcAdminTest {
             .addColumn("col2", DataType.INT)
             .addPartitionKey("col1")
             .build();
-    boolean ifNotExists = false;
     Map<String, String> options = Collections.emptyMap();
 
     // Act
-    admin.createTable(namespace, table, metadata, ifNotExists, options);
+    admin.createTable(namespace, table, metadata, true, options);
 
     // Assert
-    verify(stub).createTable(any());
+    verify(stub)
+        .createTable(
+            CreateTableRequest.newBuilder()
+                .setNamespace(namespace)
+                .setTable(table)
+                .setTableMetadata(ProtoUtils.toTableMetadata(metadata))
+                .setIfNotExists(true)
+                .putAllOptions(options)
+                .build());
   }
 
   @Test
-  public void dropTable_IsCalledWithProperArguments_StubShouldBeCalledProperly()
+  public void dropTable_CalledWithProperArguments_StubShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
     String namespace = "namespace";
     String table = "table";
 
     // Act
-    admin.dropTable(namespace, table);
+    admin.dropTable(namespace, table, true);
 
     // Assert
-    verify(stub).dropTable(any());
+    verify(stub)
+        .dropTable(
+            DropTableRequest.newBuilder()
+                .setNamespace(namespace)
+                .setTable(table)
+                .setIfExists(true)
+                .build());
   }
 
   @Test
-  public void truncateTable_IsCalledWithProperArguments_StubShouldBeCalledProperly()
+  public void createIndex_CalledWithProperArguments_StubShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "namespace";
+    String table = "table";
+    String column = "col";
+    Map<String, String> options = Collections.emptyMap();
+
+    // Act
+    admin.createIndex(namespace, table, column, true, options);
+
+    // Assert
+    verify(stub)
+        .createIndex(
+            CreateIndexRequest.newBuilder()
+                .setNamespace(namespace)
+                .setTable(table)
+                .setColumnName(column)
+                .setIfNotExists(true)
+                .putAllOptions(options)
+                .build());
+  }
+
+  @Test
+  public void dropIndex_CalledWithProperArguments_StubShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "namespace";
+    String table = "table";
+    String column = "col";
+
+    // Act
+    admin.dropIndex(namespace, table, column, true);
+
+    // Assert
+    verify(stub)
+        .dropIndex(
+            DropIndexRequest.newBuilder()
+                .setNamespace(namespace)
+                .setTable(table)
+                .setColumnName(column)
+                .setIfExists(true)
+                .build());
+  }
+
+  @Test
+  public void truncateTable_CalledWithProperArguments_StubShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
     String namespace = "namespace";
@@ -113,43 +194,75 @@ public class GrpcAdminTest {
     admin.truncateTable(namespace, table);
 
     // Assert
-    verify(stub).truncateTable(any());
+    verify(stub)
+        .truncateTable(
+            TruncateTableRequest.newBuilder().setNamespace(namespace).setTable(table).build());
   }
 
   @Test
-  public void getTableMetadata_IsCalledWithProperArguments_MetadataManagerShouldBeCalledProperly()
+  public void getTableMetadata_CalledWithProperArguments_MetadataManagerShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
     String namespace = "namespace";
     String table = "table";
     GetTableMetadataResponse response = mock(GetTableMetadataResponse.class);
     when(stub.getTableMetadata(any())).thenReturn(response);
+    when(response.hasTableMetadata()).thenReturn(true);
+    when(response.getTableMetadata())
+        .thenReturn(
+            com.scalar.db.rpc.TableMetadata.newBuilder()
+                .putColumn("col1", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
+                .putColumn("col2", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
+                .putColumn("col3", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
+                .addPartitionKeyName("col1")
+                .addClusteringKeyName("col2")
+                .putClusteringOrder("col2", com.scalar.db.rpc.Order.ORDER_DESC)
+                .build());
 
     // Act
-    admin.getTableMetadata(namespace, table);
+    TableMetadata tableMetadata = admin.getTableMetadata(namespace, table);
 
     // Assert
-    verify(stub).getTableMetadata(any());
+    verify(stub)
+        .getTableMetadata(
+            GetTableMetadataRequest.newBuilder().setNamespace(namespace).setTable(table).build());
+    assertThat(tableMetadata)
+        .isEqualTo(
+            TableMetadata.newBuilder()
+                .addColumn("col1", DataType.INT)
+                .addColumn("col2", DataType.INT)
+                .addColumn("col3", DataType.INT)
+                .addPartitionKey("col1")
+                .addClusteringKey("col2", Scan.Ordering.Order.DESC)
+                .build());
   }
 
   @Test
-  public void getNamespaceTableNames_IsCalledWithProperArguments_StubShouldBeCalledProperly()
+  public void getNamespaceTableNames_CalledWithProperArguments_StubShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
     String namespace = "namespace";
     GetNamespaceTableNamesResponse response = mock(GetNamespaceTableNamesResponse.class);
     when(stub.getNamespaceTableNames(any())).thenReturn(response);
-    when(response.getTableNameList()).thenReturn(new LazyStringArrayList());
+
+    LazyStringArrayList tableNames = new LazyStringArrayList();
+    tableNames.add("tbl1");
+    tableNames.add("tbl2");
+    tableNames.add("tbl3");
+    when(response.getTableNameList()).thenReturn(tableNames);
 
     // Act
-    admin.getNamespaceTableNames(namespace);
+    Set<String> results = admin.getNamespaceTableNames(namespace);
 
     // Assert
-    verify(stub).getNamespaceTableNames(any());
+    verify(stub)
+        .getNamespaceTableNames(
+            GetNamespaceTableNamesRequest.newBuilder().setNamespace(namespace).build());
+    assertThat(results).isEqualTo(ImmutableSet.of("tbl1", "tbl2", "tbl3"));
   }
 
   @Test
-  public void namespaceExists_IsCalledWithProperArguments_StubShouldBeCalledProperly()
+  public void namespaceExists_CalledWithProperArguments_StubShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
     String namespace = "namespace";
@@ -158,9 +271,11 @@ public class GrpcAdminTest {
     when(response.getExists()).thenReturn(false);
 
     // Act
-    admin.namespaceExists(namespace);
+    boolean result = admin.namespaceExists(namespace);
 
     // Assert
-    verify(stub).namespaceExists(any());
+    verify(stub)
+        .namespaceExists(NamespaceExistsRequest.newBuilder().setNamespace(namespace).build());
+    assertThat(result).isFalse();
   }
 }
