@@ -63,7 +63,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   private String namespace;
 
   @BeforeAll
-  public void beforeAll() throws ExecutionException {
+  public void beforeAll() throws Exception {
+    initialize();
     DatabaseConfig config = TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME);
     namespace = getNamespace();
     StorageFactory factory = new StorageFactory(config);
@@ -74,6 +75,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     storage = factory.getStorage();
     initManagerAndCoordinator(config);
   }
+
+  protected void initialize() throws Exception {}
 
   protected abstract DatabaseConfig getDatabaseConfig();
 
