@@ -18,6 +18,7 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/api/*.java'
+            include '**/com/scalar/db/sql/*.java'
             include '**/com/scalar/db/transaction/consensuscommit/*.java'
             include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/cassandra/*.java'
@@ -30,6 +31,7 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/api/*.java'
+            include '**/com/scalar/db/sql/*.java'
             include '**/com/scalar/db/transaction/consensuscommit/*.java'
             include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/cosmos/*.java'
@@ -42,6 +44,7 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/api/*.java'
+            include '**/com/scalar/db/sql/*.java'
             include '**/com/scalar/db/transaction/consensuscommit/*.java'
             include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/dynamo/*.java'
@@ -54,6 +57,7 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/api/*.java'
+            include '**/com/scalar/db/sql/*.java'
             include '**/com/scalar/db/transaction/consensuscommit/*.java'
             include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/jdbc/*.java'
@@ -67,6 +71,7 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/api/*.java'
+            include '**/com/scalar/db/sql/*.java'
             include '**/com/scalar/db/transaction/consensuscommit/*.java'
             include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/multistorage/*.java'
@@ -133,8 +138,8 @@ javadoc {
     title = "Scalar DB"
 }
 
+
 task integrationTestCassandra(type: Test) {
-    useJUnitPlatform()
     description = 'Runs the integration tests for Cassandra.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestCassandra.output.classesDirs
@@ -146,7 +151,6 @@ task integrationTestCassandra(type: Test) {
 }
 
 task integrationTestCosmos(type: Test) {
-    useJUnitPlatform()
     description = 'Runs the integration tests for Cosmos DB.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestCosmos.output.classesDirs
@@ -156,10 +160,10 @@ task integrationTestCosmos(type: Test) {
         systemProperties(System.getProperties())
     }
     maxParallelForks = 3
+    jvmArgs '-XX:MaxDirectMemorySize=1g'
 }
 
 task integrationTestDynamo(type: Test) {
-    useJUnitPlatform()
     description = 'Runs the integration tests for DynamoDB.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestDynamo.output.classesDirs
@@ -172,7 +176,6 @@ task integrationTestDynamo(type: Test) {
 }
 
 task integrationTestJdbc(type: Test) {
-    useJUnitPlatform()
     description = 'Runs the integration tests for a JDBC database.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestJdbc.output.classesDirs
@@ -184,7 +187,6 @@ task integrationTestJdbc(type: Test) {
 }
 
 task integrationTestMultiStorage(type: Test) {
-    useJUnitPlatform()
     description = 'Runs the integration tests for multi-storage.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestMultiStorage.output.classesDirs
