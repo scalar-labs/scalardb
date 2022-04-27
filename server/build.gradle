@@ -71,6 +71,11 @@ docker {
     files tasks.distTar.outputs, 'conf/log4j2.properties', 'conf/database.properties.tmpl', 'docker-entrypoint.sh'
 }
 
+task dockerfileLint(type: Exec) {
+    description 'Lint the Dockerfile'
+    commandLine "${project.rootDir}/ci/scripts/dockerfile_lint.sh"
+}
+
 task integrationTestScalarDbServer(type: Test) {
     description = 'Runs the integration tests for the Scalar DB server.'
     group = 'verification'
