@@ -117,8 +117,8 @@ public interface DistributedStorage {
    * <ul>
    *   <li>{@link Scan} : by specifying a partition key, it will return results within the
    *       partition. Results can be filtered by specifying a range of clustering keys.
-   *   <li>{@link ScanAll} : for a given table, it will return all its records even if they
-   *       span several partitions.
+   *   <li>{@link ScanAll} : for a given table, it will return all its records even if they span
+   *       several partitions.
    * </ul>
    *
    * @param scan a {@code Scan} or {@code ScanAll} command
