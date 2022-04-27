@@ -14,6 +14,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.util.TestUtils;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,6 +31,9 @@ import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
+
+  private static final String TEST_NAME = "reserved_kw";
+
   private DistributedStorage storage;
   private DistributedStorageAdmin admin;
 
@@ -43,7 +47,8 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
 
   @BeforeAll
   public void beforeAll() throws ExecutionException {
-    StorageFactory factory = new StorageFactory(getDatabaseConfig());
+    StorageFactory factory =
+        new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
     admin = factory.getAdmin();
     namespace = getNamespace();
     tableName = getTableName();

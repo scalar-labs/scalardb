@@ -55,8 +55,9 @@ subprojects {
         mavenCentral()
     }
 
-    test {
+    tasks.withType(Test) {
         useJUnitPlatform()
+        testLogging.showStandardStreams = true
     }
 
     sourceCompatibility = 1.8

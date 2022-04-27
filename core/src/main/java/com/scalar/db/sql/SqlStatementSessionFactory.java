@@ -82,6 +82,11 @@ public final class SqlStatementSessionFactory implements AutoCloseable {
       return this;
     }
 
+    public Builder withProperties(Properties properties) {
+      this.properties.putAll(properties);
+      return this;
+    }
+
     public Builder addContactPoint(String contactPoint) {
       contactPoints.add(contactPoint);
       return this;
