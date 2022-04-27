@@ -55,7 +55,8 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   private long seed;
 
   @BeforeAll
-  public void beforeAll() throws ExecutionException {
+  public void beforeAll() throws Exception {
+    initialize();
     StorageFactory factory =
         new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
     admin = factory.getAdmin();
@@ -67,6 +68,8 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
     System.out.println(
         "The seed used in the single clustering key scan integration test is " + seed);
   }
+
+  protected void initialize() throws Exception {}
 
   protected abstract DatabaseConfig getDatabaseConfig();
 

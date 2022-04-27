@@ -47,7 +47,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   private String namespace;
 
   @BeforeAll
-  public void beforeAll() throws ExecutionException {
+  public void beforeAll() throws Exception {
+    initialize();
     String testName = getTestName();
     DatabaseConfig config = TestUtils.addSuffix(getDatabaseConfig(), testName);
     TransactionFactory factory = new TransactionFactory(config);

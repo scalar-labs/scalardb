@@ -50,6 +50,7 @@ dependencies {
     testImplementation "org.mockito:mockito-core:${mockitoVersion}"
     testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
     integrationTestScalarDbServerImplementation project(':core').sourceSets.integrationTestAll.output
+    testImplementation "org.apache.commons:commons-lang3:${commonsLangVersion}"
 
     // for SpotBugs
     compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
