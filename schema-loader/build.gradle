@@ -136,6 +136,11 @@ docker {
     files tasks.shadowJar.outputs
 }
 
+task dockerfileLint(type: Exec) {
+    description 'Lint the Dockerfile'
+    commandLine "${project.rootDir}/ci/scripts/dockerfile_lint.sh"
+}
+
 // Build a fat jar
 shadowJar {
     archiveClassifier.set("")
