@@ -5,6 +5,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.common.TableMetadataManager;
@@ -70,6 +71,12 @@ public class ServerModule extends AbstractModule {
   @Singleton
   TwoPhaseCommitTransactionManager provideTwoPhaseCommitTransactionManager() {
     return transactionFactory.getTwoPhaseCommitTransactionManager();
+  }
+
+  @Provides
+  @Singleton
+  DistributedTransactionAdmin provideDistributedTransactionAdmin() {
+    return transactionFactory.getTransactionAdmin();
   }
 
   @Provides
