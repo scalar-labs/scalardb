@@ -127,37 +127,38 @@ public class SchemaOperator {
     }
   }
 
-  public void createCoordinatorTable(Map<String, String> options) throws SchemaLoaderException {
-    if (coordinatorTableExists()) {
-      LOGGER.warn("The coordinator table already exists.");
+  public void createCoordinatorTables(Map<String, String> options) throws SchemaLoaderException {
+    if (coordinatorTablesExist()) {
+      LOGGER.warn("The coordinator tables already exist.");
       return;
     }
     try {
-      transactionAdmin.createCoordinatorNamespaceAndTable(options);
-      LOGGER.info("Creating the coordinator table succeeded.");
+      transactionAdmin.createCoordinatorTables(options);
+      LOGGER.info("Creating the coordinator tables succeeded.");
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException("Creating the coordinator table failed.", e);
+      throw new SchemaLoaderException("Creating the coordinator tables failed.", e);
     }
   }
 
-  public void dropCoordinatorTable() throws SchemaLoaderException {
-    if (!coordinatorTableExists()) {
-      LOGGER.warn("The coordinator table doesn't exist.");
+  public void dropCoordinatorTables() throws SchemaLoaderException {
+    if (!coordinatorTablesExist()) {
+      LOGGER.warn("The coordinator tables don't exist.");
       return;
     }
     try {
-      transactionAdmin.dropCoordinatorNamespaceAndTable();
-      LOGGER.info("Deleting the coordinator table succeeded.");
+      transactionAdmin.dropCoordinatorTables();
+      LOGGER.info("Deleting the coordinator tables succeeded.");
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException("Deleting the coordinator table failed.", e);
+      throw new SchemaLoaderException("Deleting the coordinator tables failed.", e);
     }
   }
 
-  private boolean coordinatorTableExists() throws SchemaLoaderException {
+  private boolean coordinatorTablesExist() throws SchemaLoaderException {
     try {
-      return transactionAdmin.coordinatorTableExists();
+      return transactionAdmin.coordinatorTablesExist();
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException("Checking the existence of the coordinator table failed.", e);
+      throw new SchemaLoaderException(
+          "Checking the existence of the coordinator tables failed.", e);
     }
   }
 

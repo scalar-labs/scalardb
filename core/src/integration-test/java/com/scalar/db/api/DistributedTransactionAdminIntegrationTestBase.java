@@ -111,11 +111,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
         admin.createTable(namespace, table, TABLE_METADATA, true, options);
       }
     }
-    try {
-      admin.createCoordinatorNamespaceAndTable(options);
-    } catch (UnsupportedOperationException ignored) {
-      // ignore
-    }
+    admin.createCoordinatorTables(true, options);
   }
 
   protected Map<String, String> getCreateOptions() {
@@ -133,13 +129,9 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
         admin.dropTable(namespace, table);
       }
-      admin.dropNamespace(namespace, true);
+      admin.dropNamespace(namespace);
     }
-    try {
-      admin.dropCoordinatorNamespaceAndTable();
-    } catch (UnsupportedOperationException ignored) {
-      // ignore
-    }
+    admin.dropCoordinatorTables();
   }
 
   @Test

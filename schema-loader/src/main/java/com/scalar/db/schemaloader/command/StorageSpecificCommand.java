@@ -46,12 +46,12 @@ public abstract class StorageSpecificCommand {
       if (!deleteTables) {
         operator.createTables(tableSchemaList);
         if (hasTransactionalTable) {
-          operator.createCoordinatorTable(options);
+          operator.createCoordinatorTables(options);
         }
       } else {
         operator.deleteTables(tableSchemaList);
         if (hasTransactionalTable) {
-          operator.dropCoordinatorTable();
+          operator.dropCoordinatorTables();
         }
       }
     } finally {

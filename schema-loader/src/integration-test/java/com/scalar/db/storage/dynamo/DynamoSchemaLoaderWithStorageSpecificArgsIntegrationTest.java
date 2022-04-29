@@ -17,7 +17,7 @@ public class DynamoSchemaLoaderWithStorageSpecificArgsIntegrationTest
   }
 
   @Override
-  protected List<String> getCommandArgsForCreationWithCoordinatorTable(
+  protected List<String> getCommandArgsForCreationWithCoordinator(
       String configFile, String schemaFile) throws IOException {
     DynamoConfig config = new DynamoConfig(new File(configFile));
     return ImmutableList.of(

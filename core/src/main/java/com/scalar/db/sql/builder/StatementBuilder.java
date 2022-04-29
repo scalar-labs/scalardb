@@ -32,16 +32,16 @@ public final class StatementBuilder {
     return new TruncateTableStatementBuilder.Start(namespaceName, tableName);
   }
 
-  public static CreateCoordinatorTableStatementBuilder.Start createCoordinatorTable() {
-    return new CreateCoordinatorTableStatementBuilder.Start();
+  public static CreateCoordinatorTablesStatementBuilder.Start createCoordinatorTables() {
+    return new CreateCoordinatorTablesStatementBuilder.Start();
   }
 
-  public static DropCoordinatorTableStatementBuilder.Start dropCoordinatorTable() {
-    return new DropCoordinatorTableStatementBuilder.Start();
+  public static DropCoordinatorTablesStatementBuilder.Start dropCoordinatorTables() {
+    return new DropCoordinatorTablesStatementBuilder.Start();
   }
 
-  public static TruncateCoordinatorTableStatementBuilder.Start truncateCoordinatorTable() {
-    return new TruncateCoordinatorTableStatementBuilder.Start();
+  public static TruncateCoordinatorTablesStatementBuilder.Start truncateCoordinatorTables() {
+    return new TruncateCoordinatorTablesStatementBuilder.Start();
   }
 
   public static CreateIndexStatementBuilder.Start createIndex() {

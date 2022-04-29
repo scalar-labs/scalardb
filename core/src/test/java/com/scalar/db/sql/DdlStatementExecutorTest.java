@@ -11,15 +11,15 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.sql.metadata.CachedMetadata;
 import com.scalar.db.sql.metadata.CachedNamespaceMetadata;
-import com.scalar.db.sql.statement.CreateCoordinatorTableStatement;
+import com.scalar.db.sql.statement.CreateCoordinatorTablesStatement;
 import com.scalar.db.sql.statement.CreateIndexStatement;
 import com.scalar.db.sql.statement.CreateNamespaceStatement;
 import com.scalar.db.sql.statement.CreateTableStatement;
-import com.scalar.db.sql.statement.DropCoordinatorTableStatement;
+import com.scalar.db.sql.statement.DropCoordinatorTablesStatement;
 import com.scalar.db.sql.statement.DropIndexStatement;
 import com.scalar.db.sql.statement.DropNamespaceStatement;
 import com.scalar.db.sql.statement.DropTableStatement;
-import com.scalar.db.sql.statement.TruncateCoordinatorTableStatement;
+import com.scalar.db.sql.statement.TruncateCoordinatorTablesStatement;
 import com.scalar.db.sql.statement.TruncateTableStatement;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -155,8 +155,8 @@ public class DdlStatementExecutorTest {
   public void execute_CreateCoordinatorTableStatementGiven_ShouldCallAdminProperly()
       throws ExecutionException {
     // Arrange
-    CreateCoordinatorTableStatement statement =
-        CreateCoordinatorTableStatement.of(
+    CreateCoordinatorTablesStatement statement =
+        CreateCoordinatorTablesStatement.of(
             true, ImmutableMap.of("name1", "value1", "name2", "value2"));
 
     // Act
@@ -164,34 +164,33 @@ public class DdlStatementExecutorTest {
 
     // Assert
     verify(admin)
-        .createCoordinatorNamespaceAndTable(
-            true, ImmutableMap.of("name1", "value1", "name2", "value2"));
+        .createCoordinatorTables(true, ImmutableMap.of("name1", "value1", "name2", "value2"));
   }
 
   @Test
   public void execute_DropCoordinatorTableStatementGiven_ShouldCallAdminProperly()
       throws ExecutionException {
     // Arrange
-    DropCoordinatorTableStatement statement = DropCoordinatorTableStatement.of(true);
+    DropCoordinatorTablesStatement statement = DropCoordinatorTablesStatement.of(true);
 
     // Act
     ddlStatementExecutor.execute(statement);
 
     // Assert
-    verify(admin).dropCoordinatorNamespaceAndTable(true);
+    verify(admin).dropCoordinatorTables(true);
   }
 
   @Test
   public void execute_TruncateCoordinatorTableStatementGiven_ShouldCallAdminProperly()
       throws ExecutionException {
     // Arrange
-    TruncateCoordinatorTableStatement statement = TruncateCoordinatorTableStatement.of();
+    TruncateCoordinatorTablesStatement statement = TruncateCoordinatorTablesStatement.of();
 
     // Act
     ddlStatementExecutor.execute(statement);
 
     // Assert
-    verify(admin).truncateCoordinatorTable();
+    verify(admin).truncateCoordinatorTables();
   }
 
   @Test

@@ -121,7 +121,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     consensusCommitAdmin.createTable(namespace1, TABLE_1, tableMetadata, true, options);
     consensusCommitAdmin.createNamespace(namespace2, true, options);
     consensusCommitAdmin.createTable(namespace2, TABLE_2, tableMetadata, true, options);
-    consensusCommitAdmin.createCoordinatorNamespaceAndTable(options);
+    consensusCommitAdmin.createCoordinatorTables(true, options);
   }
 
   protected Map<String, String> getCreateOptions() {
@@ -145,23 +145,23 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private void truncateTables() throws ExecutionException {
     consensusCommitAdmin.truncateTable(namespace1, TABLE_1);
     consensusCommitAdmin.truncateTable(namespace2, TABLE_2);
-    consensusCommitAdmin.truncateCoordinatorTable();
+    consensusCommitAdmin.truncateCoordinatorTables();
   }
 
   @AfterAll
   public void afterAll() throws ExecutionException {
-    deleteTables();
+    dropTables();
     consensusCommitAdmin.close();
     originalStorage.close();
     parallelExecutor.close();
   }
 
-  private void deleteTables() throws ExecutionException {
+  private void dropTables() throws ExecutionException {
     consensusCommitAdmin.dropTable(namespace1, TABLE_1);
     consensusCommitAdmin.dropNamespace(namespace1);
     consensusCommitAdmin.dropTable(namespace2, TABLE_2);
     consensusCommitAdmin.dropNamespace(namespace2);
-    consensusCommitAdmin.dropCoordinatorNamespaceAndTable();
+    consensusCommitAdmin.dropCoordinatorTables();
   }
 
   @Test
