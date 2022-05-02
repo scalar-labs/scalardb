@@ -18,7 +18,6 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/api/*.java'
-            include '**/com/scalar/db/sql/*.java'
             include '**/com/scalar/db/transaction/consensuscommit/*.java'
             include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/cassandra/*.java'
@@ -31,7 +30,6 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/api/*.java'
-            include '**/com/scalar/db/sql/*.java'
             include '**/com/scalar/db/transaction/consensuscommit/*.java'
             include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/cosmos/*.java'
@@ -44,7 +42,6 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/api/*.java'
-            include '**/com/scalar/db/sql/*.java'
             include '**/com/scalar/db/transaction/consensuscommit/*.java'
             include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/dynamo/*.java'
@@ -57,7 +54,6 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/api/*.java'
-            include '**/com/scalar/db/sql/*.java'
             include '**/com/scalar/db/transaction/consensuscommit/*.java'
             include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/jdbc/*.java'
@@ -71,7 +67,6 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/api/*.java'
-            include '**/com/scalar/db/sql/*.java'
             include '**/com/scalar/db/transaction/consensuscommit/*.java'
             include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/multistorage/*.java'
