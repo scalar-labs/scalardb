@@ -1,7 +1,7 @@
 package com.scalar.db.transaction.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -151,38 +151,38 @@ public class JdbcTransactionAdminTest {
   }
 
   @Test
-  public void createCoordinatorNamespaceAndTable_ShouldThrowUnsupportedOperationException() {
+  public void createCoordinatorTables_ShouldDoNothing() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> admin.createCoordinatorNamespaceAndTable(Collections.emptyMap()))
-        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatCode(() -> admin.createCoordinatorTables(Collections.emptyMap()))
+        .doesNotThrowAnyException();
   }
 
   @Test
-  public void dropCoordinatorNamespaceAndTable_ShouldThrowUnsupportedOperationException() {
+  public void dropCoordinatorTables_ShouldDoNothing() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> admin.dropCoordinatorNamespaceAndTable())
-        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatCode(() -> admin.dropCoordinatorTables()).doesNotThrowAnyException();
   }
 
   @Test
-  public void truncateCoordinatorTable_ShouldThrowUnsupportedOperationException() {
+  public void truncateCoordinatorTables_ShouldDoNothing() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> admin.truncateCoordinatorTable())
-        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatCode(() -> admin.truncateCoordinatorTables()).doesNotThrowAnyException();
   }
 
   @Test
-  public void coordinatorTableExists_ShouldThrowUnsupportedOperationException() {
+  public void coordinatorTablesExist_ShouldReturnTrue() {
     // Arrange
 
-    // Act Assert
-    assertThatThrownBy(() -> admin.coordinatorTableExists())
-        .isInstanceOf(UnsupportedOperationException.class);
+    // Act
+    boolean actual = admin.coordinatorTablesExist();
+
+    // Assert
+    assertThat(actual).isTrue();
   }
 }

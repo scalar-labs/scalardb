@@ -17,7 +17,7 @@ public class JdbcSchemaLoaderWithStorageSpecificArgsIntegrationTest
   }
 
   @Override
-  protected List<String> getCommandArgsForCreationWithCoordinatorTable(
+  protected List<String> getCommandArgsForCreationWithCoordinator(
       String configFile, String schemaFile) throws IOException {
     DatabaseConfig config = new DatabaseConfig(new File(configFile));
     return ImmutableList.of(

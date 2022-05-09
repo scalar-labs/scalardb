@@ -177,13 +177,13 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
 
   @AfterAll
   public void afterAll() throws Exception {
-    deleteTables();
+    dropTables();
     admin.close();
     storage.close();
     executorService.shutdown();
   }
 
-  private void deleteTables() throws java.util.concurrent.ExecutionException, InterruptedException {
+  private void dropTables() throws java.util.concurrent.ExecutionException, InterruptedException {
     List<Callable<Void>> testCallables = new ArrayList<>();
     for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
       Callable<Void> testCallable =

@@ -5,12 +5,12 @@ import java.util.Objects;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
-public class DropCoordinatorTableStatement implements DdlStatement {
+public class DropCoordinatorTablesStatement implements DdlStatement {
 
-  public final boolean ifExists;
+  public final boolean ifExist;
 
-  private DropCoordinatorTableStatement(boolean ifExists) {
-    this.ifExists = ifExists;
+  private DropCoordinatorTablesStatement(boolean ifExist) {
+    this.ifExist = ifExist;
   }
 
   @Override
@@ -25,7 +25,7 @@ public class DropCoordinatorTableStatement implements DdlStatement {
 
   @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this).add("ifExists", ifExists).toString();
+    return MoreObjects.toStringHelper(this).add("ifExist", ifExist).toString();
   }
 
   @Override
@@ -33,19 +33,19 @@ public class DropCoordinatorTableStatement implements DdlStatement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof DropCoordinatorTableStatement)) {
+    if (!(o instanceof DropCoordinatorTablesStatement)) {
       return false;
     }
-    DropCoordinatorTableStatement that = (DropCoordinatorTableStatement) o;
-    return ifExists == that.ifExists;
+    DropCoordinatorTablesStatement that = (DropCoordinatorTablesStatement) o;
+    return ifExist == that.ifExist;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(ifExists);
+    return Objects.hash(ifExist);
   }
 
-  public static DropCoordinatorTableStatement of(boolean ifExists) {
-    return new DropCoordinatorTableStatement(ifExists);
+  public static DropCoordinatorTablesStatement of(boolean ifExist) {
+    return new DropCoordinatorTablesStatement(ifExist);
   }
 }

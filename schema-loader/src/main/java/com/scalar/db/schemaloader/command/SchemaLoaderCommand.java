@@ -55,7 +55,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
 
   @Option(
       names = "--coordinator",
-      description = "Create/delete coordinator table",
+      description = "Create/delete coordinator tables",
       defaultValue = "false")
   private boolean coordinator;
 

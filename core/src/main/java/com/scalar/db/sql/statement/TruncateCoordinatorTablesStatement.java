@@ -4,12 +4,12 @@ import com.google.common.base.MoreObjects;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
-public class TruncateCoordinatorTableStatement implements DdlStatement {
+public class TruncateCoordinatorTablesStatement implements DdlStatement {
 
-  private static final TruncateCoordinatorTableStatement INSTANCE =
-      new TruncateCoordinatorTableStatement();
+  private static final TruncateCoordinatorTablesStatement INSTANCE =
+      new TruncateCoordinatorTablesStatement();
 
-  private TruncateCoordinatorTableStatement() {}
+  private TruncateCoordinatorTablesStatement() {}
 
   @Override
   public <R, C> R accept(StatementVisitor<R, C> visitor, C context) {
@@ -36,7 +36,7 @@ public class TruncateCoordinatorTableStatement implements DdlStatement {
     return 0;
   }
 
-  public static TruncateCoordinatorTableStatement of() {
+  public static TruncateCoordinatorTablesStatement of() {
     return INSTANCE;
   }
 }

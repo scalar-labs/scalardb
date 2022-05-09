@@ -114,12 +114,12 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
 
   @AfterAll
   public void afterAll() throws ExecutionException {
-    deleteTables();
+    dropTables();
     admin.close();
     storage.close();
   }
 
-  private void deleteTables() throws ExecutionException {
+  private void dropTables() throws ExecutionException {
     for (DataType clusteringKeyType : clusteringKeyTypes) {
       for (Order clusteringOrder : Order.values()) {
         admin.dropTable(namespace, getTableName(clusteringKeyType, clusteringOrder));

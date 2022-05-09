@@ -7,17 +7,17 @@ import com.scalar.db.sql.exception.SqlException;
 import com.scalar.db.sql.metadata.CachedMetadata;
 import com.scalar.db.sql.metadata.CachedNamespaceMetadata;
 import com.scalar.db.sql.metadata.Metadata;
-import com.scalar.db.sql.statement.CreateCoordinatorTableStatement;
+import com.scalar.db.sql.statement.CreateCoordinatorTablesStatement;
 import com.scalar.db.sql.statement.CreateIndexStatement;
 import com.scalar.db.sql.statement.CreateNamespaceStatement;
 import com.scalar.db.sql.statement.CreateTableStatement;
 import com.scalar.db.sql.statement.DdlStatement;
 import com.scalar.db.sql.statement.DdlStatementVisitor;
-import com.scalar.db.sql.statement.DropCoordinatorTableStatement;
+import com.scalar.db.sql.statement.DropCoordinatorTablesStatement;
 import com.scalar.db.sql.statement.DropIndexStatement;
 import com.scalar.db.sql.statement.DropNamespaceStatement;
 import com.scalar.db.sql.statement.DropTableStatement;
-import com.scalar.db.sql.statement.TruncateCoordinatorTableStatement;
+import com.scalar.db.sql.statement.TruncateCoordinatorTablesStatement;
 import com.scalar.db.sql.statement.TruncateTableStatement;
 import java.util.Objects;
 import javax.annotation.concurrent.ThreadSafe;
@@ -170,32 +170,32 @@ public class DdlStatementExecutor implements DdlStatementVisitor<Void, Void> {
   }
 
   @Override
-  public Void visit(CreateCoordinatorTableStatement statement, Void context) {
+  public Void visit(CreateCoordinatorTablesStatement statement, Void context) {
     try {
-      admin.createCoordinatorNamespaceAndTable(statement.ifNotExists, statement.options);
+      admin.createCoordinatorTables(statement.ifNotExist, statement.options);
       return null;
     } catch (ExecutionException e) {
-      throw new SqlException("Failed to create a coordinator table", e);
+      throw new SqlException("Failed to create a coordinator tables", e);
     }
   }
 
   @Override
-  public Void visit(DropCoordinatorTableStatement statement, Void context) {
+  public Void visit(DropCoordinatorTablesStatement statement, Void context) {
     try {
-      admin.dropCoordinatorNamespaceAndTable(statement.ifExists);
+      admin.dropCoordinatorTables(statement.ifExist);
       return null;
     } catch (ExecutionException e) {
-      throw new SqlException("Failed to drop a coordinator table", e);
+      throw new SqlException("Failed to drop a coordinator tables", e);
     }
   }
 
   @Override
-  public Void visit(TruncateCoordinatorTableStatement statement, Void context) {
+  public Void visit(TruncateCoordinatorTablesStatement statement, Void context) {
     try {
-      admin.truncateCoordinatorTable();
+      admin.truncateCoordinatorTables();
       return null;
     } catch (ExecutionException e) {
-      throw new SqlException("Failed to truncate a coordinator table", e);
+      throw new SqlException("Failed to truncate a coordinator tables", e);
     }
   }
 
