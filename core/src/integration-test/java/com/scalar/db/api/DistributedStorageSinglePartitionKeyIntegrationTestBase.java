@@ -96,12 +96,12 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
 
   @AfterAll
   public void afterAll() throws ExecutionException {
-    deleteTables();
+    dropTables();
     admin.close();
     storage.close();
   }
 
-  private void deleteTables() throws ExecutionException {
+  private void dropTables() throws ExecutionException {
     for (DataType partitionKeyType : partitionKeyTypes) {
       admin.dropTable(namespace, getTableName(partitionKeyType));
     }

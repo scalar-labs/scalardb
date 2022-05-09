@@ -25,25 +25,24 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
-  public void createCoordinatorNamespaceAndTable(Map<String, String> options)
-      throws ExecutionException {
+  public void createCoordinatorTables(Map<String, String> options) throws ExecutionException {
     admin.createNamespace(coordinatorNamespace, options);
     admin.createTable(coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
   }
 
   @Override
-  public void dropCoordinatorNamespaceAndTable() throws ExecutionException {
+  public void dropCoordinatorTables() throws ExecutionException {
     admin.dropTable(coordinatorNamespace, Coordinator.TABLE);
     admin.dropNamespace(coordinatorNamespace);
   }
 
   @Override
-  public void truncateCoordinatorTable() throws ExecutionException {
+  public void truncateCoordinatorTables() throws ExecutionException {
     admin.truncateTable(coordinatorNamespace, Coordinator.TABLE);
   }
 
   @Override
-  public boolean coordinatorTableExists() throws ExecutionException {
+  public boolean coordinatorTablesExist() throws ExecutionException {
     return admin.tableExists(coordinatorNamespace, Coordinator.TABLE);
   }
 

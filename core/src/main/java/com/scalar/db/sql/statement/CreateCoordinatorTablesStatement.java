@@ -6,14 +6,14 @@ import java.util.Objects;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
-public class CreateCoordinatorTableStatement implements DdlStatement {
+public class CreateCoordinatorTablesStatement implements DdlStatement {
 
-  public final boolean ifNotExists;
+  public final boolean ifNotExist;
   public final ImmutableMap<String, String> options;
 
-  private CreateCoordinatorTableStatement(
-      boolean ifNotExists, ImmutableMap<String, String> options) {
-    this.ifNotExists = ifNotExists;
+  private CreateCoordinatorTablesStatement(
+      boolean ifNotExist, ImmutableMap<String, String> options) {
+    this.ifNotExist = ifNotExist;
     this.options = Objects.requireNonNull(options);
   }
 
@@ -30,7 +30,7 @@ public class CreateCoordinatorTableStatement implements DdlStatement {
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
-        .add("ifNotExists", ifNotExists)
+        .add("ifNotExist", ifNotExist)
         .add("options", options)
         .toString();
   }
@@ -40,20 +40,20 @@ public class CreateCoordinatorTableStatement implements DdlStatement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof CreateCoordinatorTableStatement)) {
+    if (!(o instanceof CreateCoordinatorTablesStatement)) {
       return false;
     }
-    CreateCoordinatorTableStatement that = (CreateCoordinatorTableStatement) o;
-    return ifNotExists == that.ifNotExists && Objects.equals(options, that.options);
+    CreateCoordinatorTablesStatement that = (CreateCoordinatorTablesStatement) o;
+    return ifNotExist == that.ifNotExist && Objects.equals(options, that.options);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(ifNotExists, options);
+    return Objects.hash(ifNotExist, options);
   }
 
-  public static CreateCoordinatorTableStatement of(
-      boolean ifNotExists, ImmutableMap<String, String> options) {
-    return new CreateCoordinatorTableStatement(ifNotExists, options);
+  public static CreateCoordinatorTablesStatement of(
+      boolean ifNotExist, ImmutableMap<String, String> options) {
+    return new CreateCoordinatorTablesStatement(ifNotExist, options);
   }
 }

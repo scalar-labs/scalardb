@@ -80,18 +80,18 @@ public class SchemaLoader {
    * @param configProperties Scalar DB config properties.
    * @param schemaFilePath path to schema file.
    * @param options specific options for creating tables.
-   * @param createCoordinatorTable create coordinator table or not.
+   * @param createCoordinatorTables create coordinator tables or not.
    * @throws SchemaLoaderException thrown when creating tables failed.
    */
   public static void load(
       Properties configProperties,
       @Nullable Path schemaFilePath,
       Map<String, String> options,
-      boolean createCoordinatorTable)
+      boolean createCoordinatorTables)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Right<>(configProperties);
     Either<Path, String> schema = new Left<>(schemaFilePath);
-    load(config, schema, options, createCoordinatorTable);
+    load(config, schema, options, createCoordinatorTables);
   }
 
   /**
@@ -100,18 +100,18 @@ public class SchemaLoader {
    * @param configFilePath path to Scalar DB config file.
    * @param schemaFilePath path to schema file.
    * @param options specific options for creating tables.
-   * @param createCoordinatorTable create coordinator table or not.
+   * @param createCoordinatorTables create coordinator tables or not.
    * @throws SchemaLoaderException thrown when creating tables failed.
    */
   public static void load(
       Path configFilePath,
       @Nullable Path schemaFilePath,
       Map<String, String> options,
-      boolean createCoordinatorTable)
+      boolean createCoordinatorTables)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Left<>(configFilePath);
     Either<Path, String> schema = new Left<>(schemaFilePath);
-    load(config, schema, options, createCoordinatorTable);
+    load(config, schema, options, createCoordinatorTables);
   }
 
   /**
@@ -120,18 +120,18 @@ public class SchemaLoader {
    * @param configProperties Scalar DB config properties.
    * @param serializedSchemaJson serialized json string schema.
    * @param options specific options for creating tables.
-   * @param createCoordinatorTable create coordinator table or not.
+   * @param createCoordinatorTables create coordinator tables or not.
    * @throws SchemaLoaderException thrown when creating tables failed.
    */
   public static void load(
       Properties configProperties,
       @Nullable String serializedSchemaJson,
       Map<String, String> options,
-      boolean createCoordinatorTable)
+      boolean createCoordinatorTables)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Right<>(configProperties);
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
-    load(config, schema, options, createCoordinatorTable);
+    load(config, schema, options, createCoordinatorTables);
   }
 
   /**
@@ -140,18 +140,18 @@ public class SchemaLoader {
    * @param configFilePath path to Scalar DB config file.
    * @param serializedSchemaJson serialized json string schema.
    * @param options specific options for creating tables.
-   * @param createCoordinatorTable create coordinator table or not.
+   * @param createCoordinatorTables create coordinator tables or not.
    * @throws SchemaLoaderException thrown when creating tables failed.
    */
   public static void load(
       Path configFilePath,
       @Nullable String serializedSchemaJson,
       Map<String, String> options,
-      boolean createCoordinatorTable)
+      boolean createCoordinatorTables)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Left<>(configFilePath);
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
-    load(config, schema, options, createCoordinatorTable);
+    load(config, schema, options, createCoordinatorTables);
   }
 
   /**
@@ -160,14 +160,14 @@ public class SchemaLoader {
    * @param config Scalar DB config.
    * @param schema schema definition.
    * @param options specific options for creating tables.
-   * @param createCoordinatorTable create coordinator table or not.
+   * @param createCoordinatorTables create coordinator tables or not.
    * @throws SchemaLoaderException thrown when creating tables failed.
    */
   private static void load(
       Either<Path, Properties> config,
       Either<Path, String> schema,
       Map<String, String> options,
-      boolean createCoordinatorTable)
+      boolean createCoordinatorTables)
       throws SchemaLoaderException {
     // Parse the schema
     List<TableSchema> tableSchemaList = getTableSchemaList(schema, options);
@@ -176,8 +176,8 @@ public class SchemaLoader {
     SchemaOperator operator = getSchemaOperator(config);
     try {
       operator.createTables(tableSchemaList);
-      if (createCoordinatorTable) {
-        operator.createCoordinatorTable(options);
+      if (createCoordinatorTables) {
+        operator.createCoordinatorTables(options);
       }
     } finally {
       operator.close();
@@ -189,15 +189,15 @@ public class SchemaLoader {
    *
    * @param configProperties Scalar DB config properties.
    * @param schemaFilePath path to schema json file.
-   * @param deleteCoordinatorTable delete coordinator table or not.
+   * @param deleteCoordinatorTables delete coordinator tables or not.
    * @throws SchemaLoaderException thrown when deleting tables failed.
    */
   public static void unload(
-      Properties configProperties, @Nullable Path schemaFilePath, boolean deleteCoordinatorTable)
+      Properties configProperties, @Nullable Path schemaFilePath, boolean deleteCoordinatorTables)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Right<>(configProperties);
     Either<Path, String> schema = new Left<>(schemaFilePath);
-    unload(config, schema, deleteCoordinatorTable);
+    unload(config, schema, deleteCoordinatorTables);
   }
 
   /**
@@ -205,15 +205,15 @@ public class SchemaLoader {
    *
    * @param configFilePath path to Scalar DB config file.
    * @param schemaFilePath path to schema json file.
-   * @param deleteCoordinatorTable delete coordinator table or not.
+   * @param deleteCoordinatorTables delete coordinator tables or not.
    * @throws SchemaLoaderException thrown when deleting tables failed.
    */
   public static void unload(
-      Path configFilePath, @Nullable Path schemaFilePath, boolean deleteCoordinatorTable)
+      Path configFilePath, @Nullable Path schemaFilePath, boolean deleteCoordinatorTables)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Left<>(configFilePath);
     Either<Path, String> schema = new Left<>(schemaFilePath);
-    unload(config, schema, deleteCoordinatorTable);
+    unload(config, schema, deleteCoordinatorTables);
   }
 
   /**
@@ -221,17 +221,17 @@ public class SchemaLoader {
    *
    * @param configProperties Scalar DB config properties.
    * @param serializedSchemaJson serialized json string schema.
-   * @param deleteCoordinatorTable delete coordinator table or not.
+   * @param deleteCoordinatorTables delete coordinator tables or not.
    * @throws SchemaLoaderException thrown when deleting tables failed.
    */
   public static void unload(
       Properties configProperties,
       @Nullable String serializedSchemaJson,
-      boolean deleteCoordinatorTable)
+      boolean deleteCoordinatorTables)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Right<>(configProperties);
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
-    unload(config, schema, deleteCoordinatorTable);
+    unload(config, schema, deleteCoordinatorTables);
   }
 
   /**
@@ -239,15 +239,15 @@ public class SchemaLoader {
    *
    * @param configFilePath path to Scalar DB config file.
    * @param serializedSchemaJson serialized json string schema.
-   * @param deleteCoordinatorTable delete coordinator table or not.
+   * @param deleteCoordinatorTables delete coordinator tables or not.
    * @throws SchemaLoaderException thrown when deleting tables failed.
    */
   public static void unload(
-      Path configFilePath, @Nullable String serializedSchemaJson, boolean deleteCoordinatorTable)
+      Path configFilePath, @Nullable String serializedSchemaJson, boolean deleteCoordinatorTables)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Left<>(configFilePath);
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
-    unload(config, schema, deleteCoordinatorTable);
+    unload(config, schema, deleteCoordinatorTables);
   }
 
   /**
@@ -255,11 +255,11 @@ public class SchemaLoader {
    *
    * @param config Scalar DB config.
    * @param schema schema definition.
-   * @param deleteCoordinatorTable delete coordinator table or not.
+   * @param deleteCoordinatorTables delete coordinator tables or not.
    * @throws SchemaLoaderException thrown when deleting tables failed.
    */
   private static void unload(
-      Either<Path, Properties> config, Either<Path, String> schema, boolean deleteCoordinatorTable)
+      Either<Path, Properties> config, Either<Path, String> schema, boolean deleteCoordinatorTables)
       throws SchemaLoaderException {
     // Parse the schema
     List<TableSchema> tableSchemaList = getTableSchemaList(schema, Collections.emptyMap());
@@ -268,8 +268,8 @@ public class SchemaLoader {
     SchemaOperator operator = getSchemaOperator(config);
     try {
       operator.deleteTables(tableSchemaList);
-      if (deleteCoordinatorTable) {
-        operator.dropCoordinatorTable();
+      if (deleteCoordinatorTables) {
+        operator.dropCoordinatorTables();
       }
     } finally {
       operator.close();

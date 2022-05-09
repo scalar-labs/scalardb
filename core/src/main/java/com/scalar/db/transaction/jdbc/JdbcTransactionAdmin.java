@@ -83,23 +83,24 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
-  public void createCoordinatorNamespaceAndTable(Map<String, String> options) {
-    throw new UnsupportedOperationException("this method is not supported in JDBC transaction");
+  public void createCoordinatorTables(Map<String, String> options) {
+    // Do nothing since JDBC transactions don't have coordinator tables
   }
 
   @Override
-  public void dropCoordinatorNamespaceAndTable() {
-    throw new UnsupportedOperationException("this method is not supported in JDBC transaction");
+  public void dropCoordinatorTables() {
+    // Do nothing since JDBC transactions don't have coordinator tables
   }
 
   @Override
-  public void truncateCoordinatorTable() {
-    throw new UnsupportedOperationException("this method is not supported in JDBC transaction");
+  public void truncateCoordinatorTables() {
+    // Do nothing since JDBC transactions don't have coordinator tables
   }
 
   @Override
-  public boolean coordinatorTableExists() {
-    throw new UnsupportedOperationException("this method is not supported in JDBC transaction");
+  public boolean coordinatorTablesExist() {
+    // Always return true since JDBC transactions don't have coordinator tables
+    return true;
   }
 
   @Override

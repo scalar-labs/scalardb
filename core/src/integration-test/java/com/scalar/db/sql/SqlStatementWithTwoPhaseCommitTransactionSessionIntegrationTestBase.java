@@ -70,12 +70,8 @@ public abstract class SqlStatementWithTwoPhaseCommitTransactionSessionIntegratio
               .column(SOME_COLUMN)
               .withOptions(options)
               .build());
-      try {
-        session.execute(
-            StatementBuilder.createCoordinatorTable().ifNotExists().withOptions(options).build());
-      } catch (UnsupportedOperationException ignored) {
-        // ignore
-      }
+      session.execute(
+          StatementBuilder.createCoordinatorTables().ifNotExist().withOptions(options).build());
     }
   }
 
@@ -87,11 +83,7 @@ public abstract class SqlStatementWithTwoPhaseCommitTransactionSessionIntegratio
   public void setUp() {
     SqlStatementSession session = sqlStatementSessionFactory.getTwoPhaseCommitTransactionSession();
     session.execute(StatementBuilder.truncateTable(namespace, TABLE).build());
-    try {
-      session.execute(StatementBuilder.truncateCoordinatorTable().build());
-    } catch (UnsupportedOperationException ignored) {
-      // ignore
-    }
+    session.execute(StatementBuilder.truncateCoordinatorTables().build());
   }
 
   @AfterAll
@@ -102,13 +94,9 @@ public abstract class SqlStatementWithTwoPhaseCommitTransactionSessionIntegratio
 
   private void dropTables() {
     SqlStatementSession session = sqlStatementSessionFactory.getTwoPhaseCommitTransactionSession();
-    session.execute(StatementBuilder.dropTable(namespace, TABLE).ifExists().build());
-    session.execute(StatementBuilder.dropNamespace(namespace).ifExists().build());
-    try {
-      session.execute(StatementBuilder.dropCoordinatorTable().ifExists().build());
-    } catch (UnsupportedOperationException ignored) {
-      // ignore
-    }
+    session.execute(StatementBuilder.dropTable(namespace, TABLE).build());
+    session.execute(StatementBuilder.dropNamespace(namespace).build());
+    session.execute(StatementBuilder.dropCoordinatorTables().build());
   }
 
   @Test

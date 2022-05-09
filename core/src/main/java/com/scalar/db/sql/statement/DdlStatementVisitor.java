@@ -11,11 +11,11 @@ public interface DdlStatementVisitor<R, C> {
 
   R visit(TruncateTableStatement statement, C context);
 
-  R visit(CreateCoordinatorTableStatement statement, C context);
+  R visit(CreateCoordinatorTablesStatement statement, C context);
 
-  R visit(DropCoordinatorTableStatement statement, C context);
+  R visit(DropCoordinatorTablesStatement statement, C context);
 
-  R visit(TruncateCoordinatorTableStatement statement, C context);
+  R visit(TruncateCoordinatorTablesStatement statement, C context);
 
   R visit(CreateIndexStatement statement, C context);
 

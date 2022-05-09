@@ -113,12 +113,12 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
 
   @AfterAll
   public void afterAll() throws ExecutionException {
-    deleteTable();
+    dropTable();
     admin.close();
     storage.close();
   }
 
-  private void deleteTable() throws ExecutionException {
+  private void dropTable() throws ExecutionException {
     admin.dropTable(namespace, tableName);
     admin.dropNamespace(namespace);
   }

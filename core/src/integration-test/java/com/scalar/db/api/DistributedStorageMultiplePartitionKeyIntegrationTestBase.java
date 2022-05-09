@@ -139,12 +139,12 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
 
   @AfterAll
   public void afterAll() throws Exception {
-    deleteTables();
+    dropTables();
     admin.close();
     storage.close();
   }
 
-  private void deleteTables() throws java.util.concurrent.ExecutionException, InterruptedException {
+  private void dropTables() throws java.util.concurrent.ExecutionException, InterruptedException {
     List<Callable<Void>> testCallables = new ArrayList<>();
     for (DataType firstPartitionKeyType : partitionKeyTypes.keySet()) {
       Callable<Void> testCallable =
