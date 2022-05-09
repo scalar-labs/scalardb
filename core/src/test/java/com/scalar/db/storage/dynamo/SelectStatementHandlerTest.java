@@ -15,6 +15,7 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
@@ -43,6 +44,8 @@ import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
+import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
+import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 
 public class SelectStatementHandlerTest {
   private static final String ANY_NAMESPACE_NAME = "namespace";
@@ -50,6 +53,7 @@ public class SelectStatementHandlerTest {
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_NAME_3 = "name3";
+  private static final String ANY_NAME_4 = "name4";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
   private static final String ANY_TEXT_3 = "text3";
@@ -64,6 +68,7 @@ public class SelectStatementHandlerTest {
   @Mock private TableMetadata metadata;
   @Mock private GetItemResponse getResponse;
   @Mock private QueryResponse queryResponse;
+  @Mock private ScanResponse scanResponse;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -93,6 +98,10 @@ public class SelectStatementHandlerTest {
   private Scan prepareScan() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     return new Scan(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+  }
+
+  private ScanAll prepareScanAll() {
+    return new ScanAll().forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
   @Test
@@ -1883,5 +1892,72 @@ public class SelectStatementHandlerTest {
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
     assertThat(actualRequest.scanIndexForward()).isNull();
     assertThat(actualRequest.limit()).isEqualTo(ANY_LIMIT);
+  }
+
+  @Test
+  public void prepare_ScanAllOperationWithLimit_ShouldPrepareProperQuery() {
+    // Arrange
+    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
+    when(scanResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
+
+    ScanAll scanAll = prepareScanAll().withLimit(ANY_LIMIT);
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(scanAll)).doesNotThrowAnyException();
+
+    // Assert
+    ArgumentCaptor<ScanRequest> captor = ArgumentCaptor.forClass(ScanRequest.class);
+    verify(client).scan(captor.capture());
+    ScanRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.limit()).isEqualTo(ANY_LIMIT);
+  }
+
+  @Test
+  public void prepare_ScanAllOperationWithoutLimit_ShouldPrepareProperQuery() {
+    // Arrange
+    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
+    when(scanResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
+
+    ScanAll scanAll = prepareScanAll();
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(scanAll)).doesNotThrowAnyException();
+
+    // Assert
+    ArgumentCaptor<ScanRequest> captor = ArgumentCaptor.forClass(ScanRequest.class);
+    verify(client).scan(captor.capture());
+    ScanRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.limit()).isEqualTo(null);
+  }
+
+  @Test
+  public void prepare_ScanAllOperationWithProjectedColumns_ShouldPrepareProperQuery() {
+    // Arrange
+    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
+    when(scanResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
+
+    ScanAll scanAll =
+        prepareScanAll()
+            .withProjection(ANY_NAME_1)
+            .withProjection(ANY_NAME_2)
+            .forNamespace(ANY_NAMESPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+
+    Map<String, String> expectedExpressionAttributeNames = new HashMap<>();
+    expectedExpressionAttributeNames.put(DynamoOperation.COLUMN_NAME_ALIAS + "0", ANY_NAME_1);
+    expectedExpressionAttributeNames.put(DynamoOperation.COLUMN_NAME_ALIAS + "1", ANY_NAME_2);
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(scanAll)).doesNotThrowAnyException();
+
+    // Assert
+    ArgumentCaptor<ScanRequest> captor = ArgumentCaptor.forClass(ScanRequest.class);
+    verify(client).scan(captor.capture());
+    ScanRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.expressionAttributeNames())
+        .isEqualTo(expectedExpressionAttributeNames);
+    assertThat(actualRequest.projectionExpression())
+        .isEqualTo(
+            DynamoOperation.COLUMN_NAME_ALIAS + "0," + DynamoOperation.COLUMN_NAME_ALIAS + "1");
   }
 }

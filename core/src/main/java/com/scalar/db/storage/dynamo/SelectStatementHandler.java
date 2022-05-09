@@ -8,6 +8,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
@@ -33,6 +34,7 @@ import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
+import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 
 /**
  * A handler class for select statement
@@ -60,12 +62,15 @@ public class SelectStatementHandler {
   public Scanner handle(Selection selection) throws ExecutionException {
     TableMetadata tableMetadata = metadataManager.getTableMetadata(selection);
     try {
-      if (ScalarDbUtils.isSecondaryIndexSpecified(selection, tableMetadata)) {
+      if (!(selection instanceof ScanAll)
+          && ScalarDbUtils.isSecondaryIndexSpecified(selection, tableMetadata)) {
         return executeQueryWithIndex(selection, tableMetadata);
       }
 
       if (selection instanceof Get) {
         return executeGet((Get) selection, tableMetadata);
+      } else if (selection instanceof ScanAll) {
+        return executeScan((ScanAll) selection, tableMetadata);
       } else {
         return executeQuery((Scan) selection, tableMetadata);
       }
@@ -127,9 +132,10 @@ public class SelectStatementHandler {
         builder.limit(scan.getLimit());
       }
     }
-
+    com.scalar.db.storage.dynamo.request.QueryRequest request =
+        new com.scalar.db.storage.dynamo.request.QueryRequest(client, builder.build());
     return new QueryScanner(
-        client, builder.build(), new ResultInterpreter(selection.getProjections(), tableMetadata));
+        request, new ResultInterpreter(selection.getProjections(), tableMetadata));
   }
 
   private Scanner executeQuery(Scan scan, TableMetadata tableMetadata) {
@@ -162,16 +168,42 @@ public class SelectStatementHandler {
     if (scan.getConsistency() != Consistency.EVENTUAL) {
       builder.consistentRead(true);
     }
-
+    com.scalar.db.storage.dynamo.request.QueryRequest queryRequest =
+        new com.scalar.db.storage.dynamo.request.QueryRequest(client, builder.build());
     return new QueryScanner(
-        client, builder.build(), new ResultInterpreter(scan.getProjections(), tableMetadata));
+        queryRequest, new ResultInterpreter(scan.getProjections(), tableMetadata));
+  }
+
+  private Scanner executeScan(ScanAll scan, TableMetadata tableMetadata) {
+    DynamoOperation dynamoOperation = new DynamoOperation(scan, tableMetadata);
+    ScanRequest.Builder builder = ScanRequest.builder().tableName(dynamoOperation.getTableName());
+
+    if (scan.getLimit() > 0) {
+      builder.limit(scan.getLimit());
+    }
+
+    if (!scan.getProjections().isEmpty()) {
+      Map<String, String> expressionAttributeNames = new HashMap<>();
+      projectionExpression(builder, scan, expressionAttributeNames);
+      builder.expressionAttributeNames(expressionAttributeNames);
+    }
+
+    if (scan.getConsistency() != Consistency.EVENTUAL) {
+      builder.consistentRead(true);
+    }
+    com.scalar.db.storage.dynamo.request.ScanRequest requestWrapper =
+        new com.scalar.db.storage.dynamo.request.ScanRequest(client, builder.build());
+    return new QueryScanner(
+        requestWrapper, new ResultInterpreter(scan.getProjections(), tableMetadata));
   }
 
   private void projectionExpression(
       DynamoDbRequest.Builder builder,
       Selection selection,
       Map<String, String> expressionAttributeNames) {
-    assert builder instanceof GetItemRequest.Builder || builder instanceof QueryRequest.Builder;
+    assert builder instanceof GetItemRequest.Builder
+        || builder instanceof QueryRequest.Builder
+        || builder instanceof ScanRequest.Builder;
 
     List<String> projections = new ArrayList<>(selection.getProjections().size());
     for (String projection : selection.getProjections()) {
@@ -183,8 +215,10 @@ public class SelectStatementHandler {
 
     if (builder instanceof GetItemRequest.Builder) {
       ((GetItemRequest.Builder) builder).projectionExpression(projectionExpression);
-    } else {
+    } else if (builder instanceof QueryRequest.Builder) {
       ((QueryRequest.Builder) builder).projectionExpression(projectionExpression);
+    } else {
+      ((ScanRequest.Builder) builder).projectionExpression(projectionExpression);
     }
   }
 

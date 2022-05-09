@@ -3,6 +3,8 @@ package com.scalar.db.storage.dynamo;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.storage.common.ScannerIterator;
+import com.scalar.db.storage.dynamo.request.PaginatedRequest;
+import com.scalar.db.storage.dynamo.request.PaginatedRequestResponse;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -10,15 +12,11 @@ import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
-import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 
 public class QueryScanner implements Scanner {
 
-  private final DynamoDbClient client;
-  private final QueryRequest request;
+  private final PaginatedRequest request;
   private final ResultInterpreter resultInterpreter;
 
   private Iterator<Map<String, AttributeValue>> itemsIterator;
@@ -27,13 +25,11 @@ public class QueryScanner implements Scanner {
 
   private ScannerIterator scannerIterator;
 
-  public QueryScanner(
-      DynamoDbClient client, QueryRequest request, ResultInterpreter resultInterpreter) {
-    this.client = client;
+  public QueryScanner(PaginatedRequest request, ResultInterpreter resultInterpreter) {
     this.request = request;
     this.resultInterpreter = resultInterpreter;
 
-    query(request);
+    handleResponse(request.execute());
   }
 
   @Override
@@ -51,16 +47,13 @@ public class QueryScanner implements Scanner {
       return true;
     }
     if (lastEvaluatedKey != null) {
-      QueryRequest.Builder builder = request.toBuilder();
-      builder.exclusiveStartKey(lastEvaluatedKey);
-      query(builder.build());
+      handleResponse(request.execute(lastEvaluatedKey));
       return itemsIterator.hasNext();
     }
     return false;
   }
 
-  private void query(QueryRequest request) {
-    QueryResponse response = client.query(request);
+  private void handleResponse(PaginatedRequestResponse response) {
     List<Map<String, AttributeValue>> items = response.items();
     totalResultCount += items.size();
     itemsIterator = items.iterator();
