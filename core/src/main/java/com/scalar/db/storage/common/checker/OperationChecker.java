@@ -6,6 +6,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
@@ -83,6 +84,16 @@ public class OperationChecker {
     }
 
     checkOrderings(scan, metadata);
+  }
+
+  public void check(ScanAll scanAll) throws ExecutionException {
+    TableMetadata metadata = getMetadata(scanAll);
+
+    checkProjections(scanAll, metadata);
+
+    if (scanAll.getLimit() < 0) {
+      throw new IllegalArgumentException("The limit cannot be negative. Operation: " + scanAll);
+    }
   }
 
   private void checkProjections(Selection selection, TableMetadata metadata) {
