@@ -53,7 +53,6 @@ public class SelectStatementHandlerTest {
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_NAME_3 = "name3";
-  private static final String ANY_NAME_4 = "name4";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
   private static final String ANY_TEXT_3 = "text3";
