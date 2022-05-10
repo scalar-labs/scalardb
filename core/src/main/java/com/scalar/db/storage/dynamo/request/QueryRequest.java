@@ -7,8 +7,8 @@ import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 
 public class QueryRequest implements PaginatedRequest {
 
-  final software.amazon.awssdk.services.dynamodb.model.QueryRequest dynamoRequest;
-  final DynamoDbClient client;
+  private final software.amazon.awssdk.services.dynamodb.model.QueryRequest dynamoRequest;
+  private final DynamoDbClient client;
 
   public QueryRequest(
       DynamoDbClient client,
