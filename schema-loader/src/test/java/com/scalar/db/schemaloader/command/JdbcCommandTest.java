@@ -53,7 +53,7 @@ public class JdbcCommandTest extends StorageSpecificCommandTestBase {
     verify(parser).parse();
     verify(command).getSchemaOperator(properties);
     verify(operator).createTables(anyList());
-    verify(operator).createCoordinatorTable(options);
+    verify(operator).createCoordinatorTables(options);
   }
 
   @Test
@@ -81,7 +81,7 @@ public class JdbcCommandTest extends StorageSpecificCommandTestBase {
     verify(parser).parse();
     verify(command).getSchemaOperator(properties);
     verify(operator).createTables(anyList());
-    verify(operator, never()).createCoordinatorTable(options);
+    verify(operator, never()).createCoordinatorTables(options);
   }
 
   @Test
@@ -107,7 +107,7 @@ public class JdbcCommandTest extends StorageSpecificCommandTestBase {
     verify(parser).parse();
     verify(command).getSchemaOperator(properties);
     verify(operator).deleteTables(anyList());
-    verify(operator).dropCoordinatorTable();
+    verify(operator).dropCoordinatorTables();
   }
 
   @Test
@@ -133,7 +133,7 @@ public class JdbcCommandTest extends StorageSpecificCommandTestBase {
     verify(parser).parse();
     verify(command).getSchemaOperator(properties);
     verify(operator).deleteTables(anyList());
-    verify(operator, never()).dropCoordinatorTable();
+    verify(operator, never()).dropCoordinatorTables();
   }
 
   @Test

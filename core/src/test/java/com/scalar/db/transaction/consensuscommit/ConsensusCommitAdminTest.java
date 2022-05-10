@@ -37,20 +37,20 @@ public class ConsensusCommitAdminTest {
   }
 
   @Test
-  public void createCoordinatorNamespaceAndTable_shouldCreateCoordinatorTableProperly()
+  public void createCoordinatorTables_shouldCreateCoordinatorTableProperly()
       throws ExecutionException {
-    createCoordinatorNamespaceAndTable_shouldCreateCoordinatorTableProperly(Optional.empty());
+    createCoordinatorTables_shouldCreateCoordinatorTableProperly(Optional.empty());
   }
 
   @Test
   public void
-      createCoordinatorNamespaceAndTable_WithCoordinatorNamespaceChanged_shouldCreateWithChangedNamespace()
+      createCoordinatorTables_WithCoordinatorNamespaceChanged_shouldCreateWithChangedNamespace()
           throws ExecutionException {
-    createCoordinatorNamespaceAndTable_shouldCreateCoordinatorTableProperly(
+    createCoordinatorTables_shouldCreateCoordinatorTableProperly(
         Optional.of("changed_coordinator"));
   }
 
-  private void createCoordinatorNamespaceAndTable_shouldCreateCoordinatorTableProperly(
+  private void createCoordinatorTables_shouldCreateCoordinatorTableProperly(
       Optional<String> coordinatorNamespace) throws ExecutionException {
     // Arrange
     String coordinatorNamespaceName = coordinatorNamespace.orElse(Coordinator.NAMESPACE);
@@ -60,7 +60,7 @@ public class ConsensusCommitAdminTest {
     }
 
     // Act
-    admin.createCoordinatorNamespaceAndTable();
+    admin.createCoordinatorTables();
 
     // Assert
     verify(distributedStorageAdmin)
@@ -74,21 +74,20 @@ public class ConsensusCommitAdminTest {
   }
 
   @Test
-  public void createCoordinatorNamespaceAndTable_WithOptions_shouldCreateCoordinatorTableProperly()
+  public void createCoordinatorTables_WithOptions_shouldCreateCoordinatorTableProperly()
       throws ExecutionException {
-    createCoordinatorNamespaceAndTable_WithOptions_shouldCreateCoordinatorTableProperly(
-        Optional.empty());
+    createCoordinatorTables_WithOptions_shouldCreateCoordinatorTableProperly(Optional.empty());
   }
 
   @Test
   public void
-      createCoordinatorNamespaceAndTable_WithOptionsWithCoordinatorNamespaceChanged_shouldCreateWithChangedNamespace()
+      createCoordinatorTables_WithOptionsWithCoordinatorNamespaceChanged_shouldCreateWithChangedNamespace()
           throws ExecutionException {
-    createCoordinatorNamespaceAndTable_WithOptions_shouldCreateCoordinatorTableProperly(
+    createCoordinatorTables_WithOptions_shouldCreateCoordinatorTableProperly(
         Optional.of("changed_coordinator"));
   }
 
-  private void createCoordinatorNamespaceAndTable_WithOptions_shouldCreateCoordinatorTableProperly(
+  private void createCoordinatorTables_WithOptions_shouldCreateCoordinatorTableProperly(
       Optional<String> coordinatorNamespace) throws ExecutionException {
     // Arrange
     String coordinatorNamespaceName = coordinatorNamespace.orElse(Coordinator.NAMESPACE);
@@ -100,7 +99,7 @@ public class ConsensusCommitAdminTest {
     Map<String, String> options = ImmutableMap.of("name", "value");
 
     // Act
-    admin.createCoordinatorNamespaceAndTable(options);
+    admin.createCoordinatorTables(options);
 
     // Assert
     verify(distributedStorageAdmin).createNamespace(coordinatorNamespaceName, options);
@@ -110,20 +109,20 @@ public class ConsensusCommitAdminTest {
   }
 
   @Test
-  public void truncateCoordinatorTable_shouldTruncateCoordinatorTableProperly()
+  public void truncateCoordinatorTables_shouldTruncateCoordinatorTableProperly()
       throws ExecutionException {
-    truncateCoordinatorTable_shouldTruncateCoordinatorTableProperly(Optional.empty());
+    truncateCoordinatorTables_shouldTruncateCoordinatorTableProperly(Optional.empty());
   }
 
   @Test
   public void
-      truncateCoordinatorTable_WithCoordinatorNamespaceChanged_shouldTruncateCoordinatorTableProperly()
+      truncateCoordinatorTables_WithCoordinatorNamespaceChanged_shouldTruncateCoordinatorTableProperly()
           throws ExecutionException {
-    truncateCoordinatorTable_shouldTruncateCoordinatorTableProperly(
+    truncateCoordinatorTables_shouldTruncateCoordinatorTableProperly(
         Optional.of("changed_coordinator"));
   }
 
-  private void truncateCoordinatorTable_shouldTruncateCoordinatorTableProperly(
+  private void truncateCoordinatorTables_shouldTruncateCoordinatorTableProperly(
       Optional<String> coordinatorNamespace) throws ExecutionException {
     // Arrange
     String coordinatorNamespaceName = coordinatorNamespace.orElse(Coordinator.NAMESPACE);
@@ -133,27 +132,25 @@ public class ConsensusCommitAdminTest {
     }
 
     // Act
-    admin.truncateCoordinatorTable();
+    admin.truncateCoordinatorTables();
 
     // Assert
     verify(distributedStorageAdmin).truncateTable(coordinatorNamespaceName, Coordinator.TABLE);
   }
 
   @Test
-  public void dropCoordinatorNamespaceAndTable_shouldDropCoordinatorTableProperly()
-      throws ExecutionException {
-    dropCoordinatorNamespaceAndTable_shouldDropCoordinatorTableProperly(Optional.empty());
+  public void dropCoordinatorTables_shouldDropCoordinatorTableProperly() throws ExecutionException {
+    dropCoordinatorTables_shouldDropCoordinatorTableProperly(Optional.empty());
   }
 
   @Test
   public void
-      dropCoordinatorNamespaceAndTable_WithCoordinatorNamespaceChanged_shouldDropCoordinatorTableProperly()
+      dropCoordinatorTables_WithCoordinatorNamespaceChanged_shouldDropCoordinatorTableProperly()
           throws ExecutionException {
-    dropCoordinatorNamespaceAndTable_shouldDropCoordinatorTableProperly(
-        Optional.of("changed_coordinator"));
+    dropCoordinatorTables_shouldDropCoordinatorTableProperly(Optional.of("changed_coordinator"));
   }
 
-  private void dropCoordinatorNamespaceAndTable_shouldDropCoordinatorTableProperly(
+  private void dropCoordinatorTables_shouldDropCoordinatorTableProperly(
       Optional<String> coordinatorNamespace) throws ExecutionException {
     // Arrange
     String coordinatorNamespaceName = coordinatorNamespace.orElse(Coordinator.NAMESPACE);
@@ -163,7 +160,7 @@ public class ConsensusCommitAdminTest {
     }
 
     // Act
-    admin.dropCoordinatorNamespaceAndTable();
+    admin.dropCoordinatorTables();
 
     // Assert
     verify(distributedStorageAdmin).dropTable(coordinatorNamespaceName, Coordinator.TABLE);
@@ -171,14 +168,14 @@ public class ConsensusCommitAdminTest {
   }
 
   @Test
-  public void coordinatorTableExists_WhenCoordinatorTableNotExist_shouldReturnFalse()
+  public void coordinatorTablesExist_WhenCoordinatorTableNotExist_shouldReturnFalse()
       throws ExecutionException {
     // Arrange
     when(distributedStorageAdmin.tableExists(Coordinator.NAMESPACE, Coordinator.TABLE))
         .thenReturn(false);
 
     // Act
-    boolean actual = admin.coordinatorTableExists();
+    boolean actual = admin.coordinatorTablesExist();
 
     // Assert
     verify(distributedStorageAdmin).tableExists(Coordinator.NAMESPACE, Coordinator.TABLE);
@@ -186,14 +183,14 @@ public class ConsensusCommitAdminTest {
   }
 
   @Test
-  public void coordinatorTableExists_WhenCoordinatorTableExists_shouldReturnTrue()
+  public void coordinatorTablesExist_WhenCoordinatorTableExists_shouldReturnTrue()
       throws ExecutionException {
     // Arrange
     when(distributedStorageAdmin.tableExists(Coordinator.NAMESPACE, Coordinator.TABLE))
         .thenReturn(true);
 
     // Act
-    boolean actual = admin.coordinatorTableExists();
+    boolean actual = admin.coordinatorTablesExist();
 
     // Assert
     verify(distributedStorageAdmin).tableExists(Coordinator.NAMESPACE, Coordinator.TABLE);

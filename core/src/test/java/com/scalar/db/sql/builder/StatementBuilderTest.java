@@ -13,18 +13,18 @@ import com.scalar.db.sql.DataType;
 import com.scalar.db.sql.Predicate;
 import com.scalar.db.sql.Projection;
 import com.scalar.db.sql.Value;
-import com.scalar.db.sql.statement.CreateCoordinatorTableStatement;
+import com.scalar.db.sql.statement.CreateCoordinatorTablesStatement;
 import com.scalar.db.sql.statement.CreateIndexStatement;
 import com.scalar.db.sql.statement.CreateNamespaceStatement;
 import com.scalar.db.sql.statement.CreateTableStatement;
 import com.scalar.db.sql.statement.DeleteStatement;
-import com.scalar.db.sql.statement.DropCoordinatorTableStatement;
+import com.scalar.db.sql.statement.DropCoordinatorTablesStatement;
 import com.scalar.db.sql.statement.DropIndexStatement;
 import com.scalar.db.sql.statement.DropNamespaceStatement;
 import com.scalar.db.sql.statement.DropTableStatement;
 import com.scalar.db.sql.statement.InsertStatement;
 import com.scalar.db.sql.statement.SelectStatement;
-import com.scalar.db.sql.statement.TruncateCoordinatorTableStatement;
+import com.scalar.db.sql.statement.TruncateCoordinatorTablesStatement;
 import com.scalar.db.sql.statement.TruncateTableStatement;
 import com.scalar.db.sql.statement.UpdateStatement;
 import java.util.Arrays;
@@ -33,24 +33,24 @@ import org.junit.jupiter.api.Test;
 public class StatementBuilderTest {
 
   @Test
-  public void createCoordinatorTable_ShouldBuildProperStatement() {
+  public void createCoordinatorTables_ShouldBuildProperStatement() {
     // Arrange
 
     // Act
-    CreateCoordinatorTableStatement statement1 =
-        StatementBuilder.createCoordinatorTable()
+    CreateCoordinatorTablesStatement statement1 =
+        StatementBuilder.createCoordinatorTables()
             .withOption("opt1", "val1")
             .withOptions(ImmutableMap.of("opt2", "val2", "opt3", "val3"))
             .build();
-    CreateCoordinatorTableStatement statement2 =
-        StatementBuilder.createCoordinatorTable()
-            .ifNotExists()
+    CreateCoordinatorTablesStatement statement2 =
+        StatementBuilder.createCoordinatorTables()
+            .ifNotExist()
             .withOption("opt1", "val1")
             .withOptions(ImmutableMap.of("opt2", "val2", "opt3", "val3"))
             .build();
-    CreateCoordinatorTableStatement statement3 =
-        StatementBuilder.createCoordinatorTable()
-            .ifNotExists(false)
+    CreateCoordinatorTablesStatement statement3 =
+        StatementBuilder.createCoordinatorTables()
+            .ifNotExist(false)
             .withOption("opt1", "val1")
             .withOptions(ImmutableMap.of("opt2", "val2", "opt3", "val3"))
             .build();
@@ -58,15 +58,15 @@ public class StatementBuilderTest {
     // Assert
     assertThat(statement1)
         .isEqualTo(
-            CreateCoordinatorTableStatement.of(
+            CreateCoordinatorTablesStatement.of(
                 false, ImmutableMap.of("opt1", "val1", "opt2", "val2", "opt3", "val3")));
     assertThat(statement2)
         .isEqualTo(
-            CreateCoordinatorTableStatement.of(
+            CreateCoordinatorTablesStatement.of(
                 true, ImmutableMap.of("opt1", "val1", "opt2", "val2", "opt3", "val3")));
     assertThat(statement3)
         .isEqualTo(
-            CreateCoordinatorTableStatement.of(
+            CreateCoordinatorTablesStatement.of(
                 false, ImmutableMap.of("opt1", "val1", "opt2", "val2", "opt3", "val3")));
   }
 
@@ -377,20 +377,20 @@ public class StatementBuilderTest {
   }
 
   @Test
-  public void dropCoordinatorTable_ShouldBuildProperStatement() {
+  public void dropCoordinatorTables_ShouldBuildProperStatement() {
     // Arrange
 
     // Act
-    DropCoordinatorTableStatement statement1 = StatementBuilder.dropCoordinatorTable().build();
-    DropCoordinatorTableStatement statement2 =
-        StatementBuilder.dropCoordinatorTable().ifExists().build();
-    DropCoordinatorTableStatement statement3 =
-        StatementBuilder.dropCoordinatorTable().ifExists(false).build();
+    DropCoordinatorTablesStatement statement1 = StatementBuilder.dropCoordinatorTables().build();
+    DropCoordinatorTablesStatement statement2 =
+        StatementBuilder.dropCoordinatorTables().ifExist().build();
+    DropCoordinatorTablesStatement statement3 =
+        StatementBuilder.dropCoordinatorTables().ifExist(false).build();
 
     // Assert
-    assertThat(statement1).isEqualTo(DropCoordinatorTableStatement.of(false));
-    assertThat(statement2).isEqualTo(DropCoordinatorTableStatement.of(true));
-    assertThat(statement3).isEqualTo(DropCoordinatorTableStatement.of(false));
+    assertThat(statement1).isEqualTo(DropCoordinatorTablesStatement.of(false));
+    assertThat(statement2).isEqualTo(DropCoordinatorTablesStatement.of(true));
+    assertThat(statement3).isEqualTo(DropCoordinatorTablesStatement.of(false));
   }
 
   @Test
@@ -563,7 +563,7 @@ public class StatementBuilderTest {
             .build();
 
     SelectStatement statement4 =
-        StatementBuilder.select("col1", "col2", "col3")
+        StatementBuilder.select()
             .from("ns1", "tbl1")
             .where(Predicate.column("col1").isEqualTo(BindMarker.positional()))
             .and(Predicate.column("col2").isGreaterThan(BindMarker.positional()))
@@ -638,10 +638,7 @@ public class StatementBuilderTest {
             SelectStatement.of(
                 "ns1",
                 "tbl1",
-                ImmutableList.of(
-                    Projection.column("col1"),
-                    Projection.column("col2"),
-                    Projection.column("col3")),
+                ImmutableList.of(),
                 ImmutableList.of(
                     Predicate.column("col1").isEqualTo(BindMarker.positional()),
                     Predicate.column("col2").isGreaterThan(BindMarker.positional()),
@@ -671,15 +668,15 @@ public class StatementBuilderTest {
   }
 
   @Test
-  public void truncateCoordinatorTable_ShouldBuildProperStatement() {
+  public void truncateCoordinatorTables_ShouldBuildProperStatement() {
     // Arrange
 
     // Act
-    TruncateCoordinatorTableStatement statement =
-        StatementBuilder.truncateCoordinatorTable().build();
+    TruncateCoordinatorTablesStatement statement =
+        StatementBuilder.truncateCoordinatorTables().build();
 
     // Assert
-    assertThat(statement).isEqualTo(TruncateCoordinatorTableStatement.of());
+    assertThat(statement).isEqualTo(TruncateCoordinatorTablesStatement.of());
   }
 
   @Test

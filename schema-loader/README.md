@@ -54,7 +54,7 @@ Create/Delete schemas in the storage defined in the config file
       --compaction-strategy=<compactionStrategy>
                       The compaction strategy, must be LCS, STCS or TWCS
                         (supported in Cassandra)
-      --coordinator   Create/delete coordinator table
+      --coordinator   Create/delete coordinator tables
   -D, --delete-all    Delete tables
   -f, --schema-file=<schemaFile>
                       Path to the schema json file
@@ -147,7 +147,7 @@ For using a config file (Sample config file can be found [here](../conf/database
 ```console
 $ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json [--coordinator]
 ```
-  - if `--coordinator` is specified, the coordinator table will be created.
+  - if `--coordinator` is specified, the coordinator tables will be created.
 
 For using CLI arguments fully for configuration (Deprecated. Please use the command using a config file instead):
 ```console
@@ -155,7 +155,7 @@ For using CLI arguments fully for configuration (Deprecated. Please use the comm
 $ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json [-r BASE_RESOURCE_UNIT]
 ```
   - `<COSMOS_DB_KEY>` you can use a primary key or a secondary key.
-  - `-r BASE_RESOURCE_UNIT` is an option. You can specify the RU of each database. The maximum RU in tables in the database will be set. If you don't specify RU of tables, the database RU will be set with this option. When you use transaction function, the RU of the coordinator table of Scalar DB is specified by this option. By default, it's 400.
+  - `-r BASE_RESOURCE_UNIT` is an option. You can specify the RU of each database. The maximum RU in tables in the database will be set. If you don't specify RU of tables, the database RU will be set with this option. When you use transaction function, the RU of the coordinator tables of Scalar DB is specified by this option. By default, it's 400.
 
 ```console
 # For DynamoDB
@@ -184,7 +184,7 @@ For using config file (Sample config file can be found [here](../conf/database.p
 ```console
 $ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json [--coordinator] -D 
 ```
-  - if `--coordinator` is specified, the coordinator table will be deleted.
+  - if `--coordinator` is specified, the coordinator tables will be deleted.
   
 For using CLI arguments fully for configuration (Deprecated. Please use the command using a config file instead):
 ```console
@@ -349,8 +349,8 @@ public class SchemaLoaderSample {
   public static int main(String... args) throws SchemaLoaderException {
     Path configFilePath = Paths.get("database.properties");
     Path schemaFilePath = Paths.get("sample_schema.json");
-    boolean createCoordinatorTable = true; // whether creating the coordinator table or not
-    boolean deleteCoordinatorTable = true; // whether deleting the coordinator table or not
+    boolean createCoordinatorTables = true; // whether creating the coordinator tables or not
+    boolean deleteCoordinatorTables = true; // whether deleting the coordinator tables or not
 
     Map<String, String> options = new HashMap<>();
 
@@ -364,10 +364,10 @@ public class SchemaLoaderSample {
     options.put(DynamoAdmin.NO_BACKUP, "true");
 
     // Create tables
-    SchemaLoader.load(configFilePath, schemaFilePath, options, createCoordinatorTable);
+    SchemaLoader.load(configFilePath, schemaFilePath, options, createCoordinatorTables);
 
     // Delete tables
-    SchemaLoader.unload(configFilePath, schemaFilePath, deleteCoordinatorTable);
+    SchemaLoader.unload(configFilePath, schemaFilePath, deleteCoordinatorTables);
 
     return 0;
   }
@@ -377,17 +377,17 @@ public class SchemaLoaderSample {
 You can also create and delete a schema by passing a serialized schema JSON string (the raw text of a schema file).
 ```java
 // Create tables
-SchemaLoader.load(configFilePath, serializedSchemaJson, options, createCoordinatorTable);
+SchemaLoader.load(configFilePath, serializedSchemaJson, options, createCoordinatorTables);
 
 // Delete tables
-SchemaLoader.unload(configFilePath, serializedSchemaJson, deleteCoordinatorTable);
+SchemaLoader.unload(configFilePath, serializedSchemaJson, deleteCoordinatorTables);
 ```
 
 For Scalar DB configuration, a `Properties` object can be used as well.
 ```java
 // Create tables
-SchemaLoader.load(properties, serializedSchemaJson, options, createCoordinatorTable);
+SchemaLoader.load(properties, serializedSchemaJson, options, createCoordinatorTables);
 
 // Delete tables
-SchemaLoader.unload(properties, serializedSchemaJson, deleteCoordinatorTable);
+SchemaLoader.unload(properties, serializedSchemaJson, deleteCoordinatorTables);
 ```

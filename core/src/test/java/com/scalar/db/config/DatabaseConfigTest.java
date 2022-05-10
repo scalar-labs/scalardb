@@ -20,6 +20,7 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
 import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager;
 import com.scalar.db.transaction.jdbc.JdbcTransactionAdmin;
 import com.scalar.db.transaction.jdbc.JdbcTransactionManager;
+import com.scalar.db.transaction.rpc.GrpcTransactionAdmin;
 import com.scalar.db.transaction.rpc.GrpcTransactionManager;
 import com.scalar.db.transaction.rpc.GrpcTwoPhaseCommitTransactionManager;
 import java.util.Collections;
@@ -405,7 +406,7 @@ public class DatabaseConfigTest {
     assertThat(config.getStorageClass()).isEqualTo(GrpcStorage.class);
     assertThat(config.getStorageAdminClass()).isEqualTo(GrpcAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(GrpcTransactionManager.class);
-    assertThat(config.getTransactionAdminClass()).isNull();
+    assertThat(config.getTransactionAdminClass()).isEqualTo(GrpcTransactionAdmin.class);
     assertThat(config.getTwoPhaseCommitTransactionManagerClass())
         .isEqualTo(GrpcTwoPhaseCommitTransactionManager.class);
   }

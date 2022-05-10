@@ -83,6 +83,11 @@ private static final long serialVersionUID = 0L;
                 options__.getKey(), options__.getValue());
             break;
           }
+          case 40: {
+
+            ifNotExists_ = input.readBool();
+            break;
+          }
           default: {
             if (!parseUnknownField(
                 input, unknownFields, extensionRegistry, tag)) {
@@ -322,6 +327,17 @@ private static final long serialVersionUID = 0L;
     return map.get(key);
   }
 
+  public static final int IF_NOT_EXISTS_FIELD_NUMBER = 5;
+  private boolean ifNotExists_;
+  /**
+   * <code>bool if_not_exists = 5;</code>
+   * @return The ifNotExists.
+   */
+  @java.lang.Override
+  public boolean getIfNotExists() {
+    return ifNotExists_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -351,6 +367,9 @@ private static final long serialVersionUID = 0L;
         internalGetOptions(),
         OptionsDefaultEntryHolder.defaultEntry,
         4);
+    if (ifNotExists_ != false) {
+      output.writeBool(5, ifNotExists_);
+    }
     unknownFields.writeTo(output);
   }
 
@@ -379,6 +398,10 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(4, options__);
     }
+    if (ifNotExists_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(5, ifNotExists_);
+    }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
     return size;
@@ -402,6 +425,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getColumnName())) return false;
     if (!internalGetOptions().equals(
         other.internalGetOptions())) return false;
+    if (getIfNotExists()
+        != other.getIfNotExists()) return false;
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -423,6 +448,9 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + OPTIONS_FIELD_NUMBER;
       hash = (53 * hash) + internalGetOptions().hashCode();
     }
+    hash = (37 * hash) + IF_NOT_EXISTS_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getIfNotExists());
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -585,6 +613,8 @@ private static final long serialVersionUID = 0L;
       columnName_ = "";
 
       internalGetMutableOptions().clear();
+      ifNotExists_ = false;
+
       return this;
     }
 
@@ -617,6 +647,7 @@ private static final long serialVersionUID = 0L;
       result.columnName_ = columnName_;
       result.options_ = internalGetOptions();
       result.options_.makeImmutable();
+      result.ifNotExists_ = ifNotExists_;
       onBuilt();
       return result;
     }
@@ -679,6 +710,9 @@ private static final long serialVersionUID = 0L;
       }
       internalGetMutableOptions().mergeFrom(
           other.internalGetOptions());
+      if (other.getIfNotExists() != false) {
+        setIfNotExists(other.getIfNotExists());
+      }
       this.mergeUnknownFields(other.unknownFields);
       onChanged();
       return this;
@@ -1062,6 +1096,37 @@ private static final long serialVersionUID = 0L;
         java.util.Map<java.lang.String, java.lang.String> values) {
       internalGetMutableOptions().getMutableMap()
           .putAll(values);
+      return this;
+    }
+
+    private boolean ifNotExists_ ;
+    /**
+     * <code>bool if_not_exists = 5;</code>
+     * @return The ifNotExists.
+     */
+    @java.lang.Override
+    public boolean getIfNotExists() {
+      return ifNotExists_;
+    }
+    /**
+     * <code>bool if_not_exists = 5;</code>
+     * @param value The ifNotExists to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIfNotExists(boolean value) {
+      
+      ifNotExists_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool if_not_exists = 5;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIfNotExists() {
+      
+      ifNotExists_ = false;
+      onChanged();
       return this;
     }
     @java.lang.Override

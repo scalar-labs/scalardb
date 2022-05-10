@@ -74,31 +74,33 @@ public class SchemaOperatorTest {
   }
 
   @Test
-  public void createCoordinatorTable_IfCoordinatorTableNotExist_ShouldCallCreateCoordinatorTable()
-      throws Exception {
+  public void
+      createCoordinatorTables_IfCoordinatorTablesNotExist_ShouldCallCreateCoordinatorTables()
+          throws Exception {
     // Arrange
-    when(consensusCommitAdmin.coordinatorTableExists()).thenReturn(false);
+    when(consensusCommitAdmin.coordinatorTablesExist()).thenReturn(false);
 
     // Act
-    operator.createCoordinatorTable(options);
+    operator.createCoordinatorTables(options);
 
     // Assert
-    verify(consensusCommitAdmin).coordinatorTableExists();
-    verify(consensusCommitAdmin).createCoordinatorNamespaceAndTable(options);
+    verify(consensusCommitAdmin).coordinatorTablesExist();
+    verify(consensusCommitAdmin).createCoordinatorTables(options);
   }
 
   @Test
-  public void createCoordinatorTable_IfCoordinatorTableExists_ShouldNotCallCreateCoordinatorTable()
-      throws Exception {
+  public void
+      createCoordinatorTables_IfCoordinatorTablesExist_ShouldNotCallCreateCoordinatorTables()
+          throws Exception {
     // Arrange
-    when(consensusCommitAdmin.coordinatorTableExists()).thenReturn(true);
+    when(consensusCommitAdmin.coordinatorTablesExist()).thenReturn(true);
 
     // Act
-    operator.createCoordinatorTable(options);
+    operator.createCoordinatorTables(options);
 
     // Assert
-    verify(consensusCommitAdmin).coordinatorTableExists();
-    verify(consensusCommitAdmin, never()).createCoordinatorNamespaceAndTable(options);
+    verify(consensusCommitAdmin).coordinatorTablesExist();
+    verify(consensusCommitAdmin, never()).createCoordinatorTables(options);
   }
 
   @Test
@@ -123,30 +125,30 @@ public class SchemaOperatorTest {
   }
 
   @Test
-  public void dropCoordinatorTable_IfCoordinatorTableExists_ShouldCallDropCoordinatorTable()
+  public void dropCoordinatorTables_IfCoordinatorTablesExist_ShouldCallDropCoordinatorTables()
       throws Exception {
     // Arrange
-    when(consensusCommitAdmin.coordinatorTableExists()).thenReturn(true);
+    when(consensusCommitAdmin.coordinatorTablesExist()).thenReturn(true);
 
     // Act
-    operator.dropCoordinatorTable();
+    operator.dropCoordinatorTables();
 
     // Assert
-    verify(consensusCommitAdmin).coordinatorTableExists();
-    verify(consensusCommitAdmin).dropCoordinatorNamespaceAndTable();
+    verify(consensusCommitAdmin).coordinatorTablesExist();
+    verify(consensusCommitAdmin).dropCoordinatorTables();
   }
 
   @Test
-  public void dropCoordinatorTable_IfCoordinatorTableNotExist_ShouldCallNotDropCoordinatorTable()
+  public void dropCoordinatorTables_IfCoordinatorTablesNotExist_ShouldCallNotDropCoordinatorTables()
       throws Exception {
     // Arrange
-    when(consensusCommitAdmin.coordinatorTableExists()).thenReturn(false);
+    when(consensusCommitAdmin.coordinatorTablesExist()).thenReturn(false);
 
     // Act
-    operator.dropCoordinatorTable();
+    operator.dropCoordinatorTables();
 
     // Assert
-    verify(consensusCommitAdmin).coordinatorTableExists();
-    verify(consensusCommitAdmin, never()).dropCoordinatorNamespaceAndTable();
+    verify(consensusCommitAdmin).coordinatorTablesExist();
+    verify(consensusCommitAdmin, never()).dropCoordinatorTables();
   }
 }

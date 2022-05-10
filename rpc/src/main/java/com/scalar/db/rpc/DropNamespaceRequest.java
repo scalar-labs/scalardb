@@ -55,6 +55,11 @@ private static final long serialVersionUID = 0L;
             namespace_ = s;
             break;
           }
+          case 16: {
+
+            ifExists_ = input.readBool();
+            break;
+          }
           default: {
             if (!parseUnknownField(
                 input, unknownFields, extensionRegistry, tag)) {
@@ -125,6 +130,17 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int IF_EXISTS_FIELD_NUMBER = 2;
+  private boolean ifExists_;
+  /**
+   * <code>bool if_exists = 2;</code>
+   * @return The ifExists.
+   */
+  @java.lang.Override
+  public boolean getIfExists() {
+    return ifExists_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -142,6 +158,9 @@ private static final long serialVersionUID = 0L;
     if (!getNamespaceBytes().isEmpty()) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 1, namespace_);
     }
+    if (ifExists_ != false) {
+      output.writeBool(2, ifExists_);
+    }
     unknownFields.writeTo(output);
   }
 
@@ -153,6 +172,10 @@ private static final long serialVersionUID = 0L;
     size = 0;
     if (!getNamespaceBytes().isEmpty()) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, namespace_);
+    }
+    if (ifExists_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(2, ifExists_);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -171,6 +194,8 @@ private static final long serialVersionUID = 0L;
 
     if (!getNamespace()
         .equals(other.getNamespace())) return false;
+    if (getIfExists()
+        != other.getIfExists()) return false;
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -184,6 +209,9 @@ private static final long serialVersionUID = 0L;
     hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + NAMESPACE_FIELD_NUMBER;
     hash = (53 * hash) + getNamespace().hashCode();
+    hash = (37 * hash) + IF_EXISTS_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getIfExists());
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -319,6 +347,8 @@ private static final long serialVersionUID = 0L;
       super.clear();
       namespace_ = "";
 
+      ifExists_ = false;
+
       return this;
     }
 
@@ -346,6 +376,7 @@ private static final long serialVersionUID = 0L;
     public com.scalar.db.rpc.DropNamespaceRequest buildPartial() {
       com.scalar.db.rpc.DropNamespaceRequest result = new com.scalar.db.rpc.DropNamespaceRequest(this);
       result.namespace_ = namespace_;
+      result.ifExists_ = ifExists_;
       onBuilt();
       return result;
     }
@@ -397,6 +428,9 @@ private static final long serialVersionUID = 0L;
       if (!other.getNamespace().isEmpty()) {
         namespace_ = other.namespace_;
         onChanged();
+      }
+      if (other.getIfExists() != false) {
+        setIfExists(other.getIfExists());
       }
       this.mergeUnknownFields(other.unknownFields);
       onChanged();
@@ -499,6 +533,37 @@ private static final long serialVersionUID = 0L;
   checkByteStringIsUtf8(value);
       
       namespace_ = value;
+      onChanged();
+      return this;
+    }
+
+    private boolean ifExists_ ;
+    /**
+     * <code>bool if_exists = 2;</code>
+     * @return The ifExists.
+     */
+    @java.lang.Override
+    public boolean getIfExists() {
+      return ifExists_;
+    }
+    /**
+     * <code>bool if_exists = 2;</code>
+     * @param value The ifExists to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIfExists(boolean value) {
+      
+      ifExists_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool if_exists = 2;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIfExists() {
+      
+      ifExists_ = false;
       onChanged();
       return this;
     }

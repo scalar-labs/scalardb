@@ -1084,20 +1084,27 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    boolean namespaceExists = false;
     try {
-      ListTablesResponse listTablesResponse = client.listTables();
-      List<String> tableNames = listTablesResponse.tableNames();
-      for (String tableName : tableNames) {
-        if (tableName.startsWith(namespace)) {
-          namespaceExists = true;
-          break;
+      boolean namespaceExists = false;
+      String lastEvaluatedTableName = null;
+      do {
+        ListTablesRequest listTablesRequest =
+            ListTablesRequest.builder().exclusiveStartTableName(lastEvaluatedTableName).build();
+        ListTablesResponse listTablesResponse = client.listTables(listTablesRequest);
+        lastEvaluatedTableName = listTablesResponse.lastEvaluatedTableName();
+        List<String> tableNames = listTablesResponse.tableNames();
+        for (String tableName : tableNames) {
+          if (tableName.startsWith(namespace)) {
+            namespaceExists = true;
+            break;
+          }
         }
-      }
+      } while (lastEvaluatedTableName != null);
+
+      return namespaceExists;
     } catch (DynamoDbException e) {
-      throw new ExecutionException("getting list of namespaces failed", e);
+      throw new ExecutionException("checking the namespace existence failed", e);
     }
-    return namespaceExists;
   }
 
   @Override

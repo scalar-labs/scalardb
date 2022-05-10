@@ -63,7 +63,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   private String namespace;
 
   @BeforeAll
-  public void beforeAll() throws ExecutionException {
+  public void beforeAll() throws Exception {
+    initialize();
     DatabaseConfig config = TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME);
     namespace = getNamespace();
     StorageFactory factory = new StorageFactory(config);
@@ -74,6 +75,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     storage = factory.getStorage();
     initManagerAndCoordinator(config);
   }
+
+  protected void initialize() throws Exception {}
 
   protected abstract DatabaseConfig getDatabaseConfig();
 
@@ -94,7 +97,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     admin.createNamespace(namespace, true, options);
     consensusCommitAdmin.createTable(namespace, TABLE_1, tableMetadata, true, options);
     consensusCommitAdmin.createTable(namespace, TABLE_2, tableMetadata, true, options);
-    consensusCommitAdmin.createCoordinatorNamespaceAndTable(options);
+    consensusCommitAdmin.createCoordinatorTables(true, options);
   }
 
   protected Map<String, String> getCreateOptions() {
@@ -115,22 +118,22 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   private void truncateTables() throws ExecutionException {
     admin.truncateTable(namespace, TABLE_1);
     admin.truncateTable(namespace, TABLE_2);
-    consensusCommitAdmin.truncateCoordinatorTable();
+    consensusCommitAdmin.truncateCoordinatorTables();
   }
 
   @AfterAll
   public void afterAll() throws ExecutionException {
-    deleteTables();
+    dropTables();
     admin.close();
     storage.close();
     manager.close();
   }
 
-  private void deleteTables() throws ExecutionException {
+  private void dropTables() throws ExecutionException {
     admin.dropTable(namespace, TABLE_1);
     admin.dropTable(namespace, TABLE_2);
     admin.dropNamespace(namespace);
-    consensusCommitAdmin.dropCoordinatorNamespaceAndTable();
+    consensusCommitAdmin.dropCoordinatorTables();
   }
 
   @Test

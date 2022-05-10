@@ -73,11 +73,11 @@ public class SelectStatementHandler extends StatementHandler {
   @Override
   @Nonnull
   protected BoundStatement bind(PreparedStatement prepared, Operation operation) {
-    checkArgument(operation, Get.class, Scan.class);
+    checkArgument(operation, Get.class, Scan.class, ScanAll.class);
     if (operation instanceof Get) {
       return bind(prepared.bind(), (Get) operation);
     } else if (operation instanceof ScanAll) {
-      return bind(prepared.bind(), (ScanAll) operation);
+      return prepared.bind();
     } else {
       return bind(prepared.bind(), (Scan) operation);
     }
