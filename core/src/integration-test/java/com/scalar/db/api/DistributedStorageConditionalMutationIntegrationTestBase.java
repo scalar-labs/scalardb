@@ -84,7 +84,8 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   private ExecutorService executorService;
 
   @BeforeAll
-  public void beforeAll() throws ExecutionException {
+  public void beforeAll() throws Exception {
+    initialize();
     StorageFactory factory =
         new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
     admin = factory.getAdmin();
@@ -96,6 +97,8 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     operatorAndDataTypeList = getOperatorAndDataTypeListForTest();
     executorService = Executors.newFixedThreadPool(getThreadNum());
   }
+
+  protected void initialize() throws Exception {}
 
   protected abstract DatabaseConfig getDatabaseConfig();
 
@@ -124,12 +127,12 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
   @AfterAll
   public void afterAll() throws ExecutionException {
-    deleteTable();
+    dropTable();
     admin.close();
     storage.close();
   }
 
-  private void deleteTable() throws ExecutionException {
+  private void dropTable() throws ExecutionException {
     admin.dropTable(namespace, TABLE);
     admin.dropNamespace(namespace);
   }

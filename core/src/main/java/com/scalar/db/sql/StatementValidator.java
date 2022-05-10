@@ -8,12 +8,12 @@ import com.google.common.collect.Streams;
 import com.scalar.db.sql.metadata.ColumnMetadata;
 import com.scalar.db.sql.metadata.Metadata;
 import com.scalar.db.sql.metadata.TableMetadata;
-import com.scalar.db.sql.statement.CreateCoordinatorTableStatement;
+import com.scalar.db.sql.statement.CreateCoordinatorTablesStatement;
 import com.scalar.db.sql.statement.CreateIndexStatement;
 import com.scalar.db.sql.statement.CreateNamespaceStatement;
 import com.scalar.db.sql.statement.CreateTableStatement;
 import com.scalar.db.sql.statement.DeleteStatement;
-import com.scalar.db.sql.statement.DropCoordinatorTableStatement;
+import com.scalar.db.sql.statement.DropCoordinatorTablesStatement;
 import com.scalar.db.sql.statement.DropIndexStatement;
 import com.scalar.db.sql.statement.DropNamespaceStatement;
 import com.scalar.db.sql.statement.DropTableStatement;
@@ -21,7 +21,7 @@ import com.scalar.db.sql.statement.InsertStatement;
 import com.scalar.db.sql.statement.SelectStatement;
 import com.scalar.db.sql.statement.Statement;
 import com.scalar.db.sql.statement.StatementVisitor;
-import com.scalar.db.sql.statement.TruncateCoordinatorTableStatement;
+import com.scalar.db.sql.statement.TruncateCoordinatorTablesStatement;
 import com.scalar.db.sql.statement.TruncateTableStatement;
 import com.scalar.db.sql.statement.UpdateStatement;
 import java.util.HashMap;
@@ -101,17 +101,17 @@ public class StatementValidator implements StatementVisitor<Void, Void> {
   }
 
   @Override
-  public Void visit(CreateCoordinatorTableStatement statement, Void context) {
+  public Void visit(CreateCoordinatorTablesStatement statement, Void context) {
     return null;
   }
 
   @Override
-  public Void visit(DropCoordinatorTableStatement statement, Void context) {
+  public Void visit(DropCoordinatorTablesStatement statement, Void context) {
     return null;
   }
 
   @Override
-  public Void visit(TruncateCoordinatorTableStatement statement, Void context) {
+  public Void visit(TruncateCoordinatorTablesStatement statement, Void context) {
     return null;
   }
 

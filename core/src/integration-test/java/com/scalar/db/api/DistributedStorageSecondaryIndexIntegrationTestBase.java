@@ -44,7 +44,8 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
   private long seed;
 
   @BeforeAll
-  public void beforeAll() throws ExecutionException {
+  public void beforeAll() throws Exception {
+    initialize();
     StorageFactory factory =
         new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
     admin = factory.getAdmin();
@@ -55,6 +56,8 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
     seed = System.currentTimeMillis();
     System.out.println("The seed used in the secondary index integration test is " + seed);
   }
+
+  protected void initialize() throws Exception {}
 
   protected abstract DatabaseConfig getDatabaseConfig();
 
@@ -96,12 +99,12 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
 
   @AfterAll
   public void afterAll() throws ExecutionException {
-    deleteTables();
+    dropTables();
     admin.close();
     storage.close();
   }
 
-  private void deleteTables() throws ExecutionException {
+  private void dropTables() throws ExecutionException {
     for (DataType secondaryIndexType : secondaryIndexTypes) {
       admin.dropTable(namespace, getTableName(secondaryIndexType));
     }

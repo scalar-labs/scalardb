@@ -111,12 +111,12 @@ public abstract class DistributedStorageIntegrationTestBase {
 
   @AfterAll
   public void afterAll() throws ExecutionException {
-    deleteTable();
+    dropTable();
     admin.close();
     storage.close();
   }
 
-  private void deleteTable() throws ExecutionException {
+  private void dropTable() throws ExecutionException {
     admin.dropTable(namespace, TABLE);
     admin.dropNamespace(namespace);
   }

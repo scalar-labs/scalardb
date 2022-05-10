@@ -404,9 +404,9 @@ public final class ProtoUtils {
       case LTE:
         return ConditionalExpression.Operator.LTE;
       case IS_NULL:
-        return ConditionalExpression.Operator.IS_NOT_NULL;
-      case IS_NOT_NULL:
         return ConditionalExpression.Operator.IS_NULL;
+      case IS_NOT_NULL:
+        return ConditionalExpression.Operator.IS_NOT_NULL;
       default:
         throw new AssertionError();
     }

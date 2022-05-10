@@ -22,7 +22,7 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/schemaloader/*.java'
-            include '**/com/scalar/db/schemaloader/cassandra/*.java'
+            include '**/com/scalar/db/storage/cassandra/*.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -32,7 +32,7 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/schemaloader/*.java'
-            include '**/com/scalar/db/schemaloader/cosmos/*.java'
+            include '**/com/scalar/db/storage/cosmos/*.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -42,7 +42,7 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/schemaloader/*.java'
-            include '**/com/scalar/db/schemaloader/dynamo/*.java'
+            include '**/com/scalar/db/storage/dynamo/*.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -52,7 +52,7 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/schemaloader/*.java'
-            include '**/com/scalar/db/schemaloader/jdbc/*.java'
+            include '**/com/scalar/db/storage/jdbc/*.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -62,7 +62,7 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/schemaloader/*.java'
-            include '**/com/scalar/db/schemaloader/multistorage/*.java'
+            include '**/com/scalar/db/storage/multistorage/*.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -72,7 +72,7 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/schemaloader/*.java'
-            include '**/com/scalar/db/schemaloader/server/*.java'
+            include '**/com/scalar/db/server/*.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -137,6 +137,11 @@ docker {
     dependsOn shadowJar
     name "ghcr.io/scalar-labs/scalardb-schema-loader:${project.version}"
     files tasks.shadowJar.outputs
+}
+
+task dockerfileLint(type: Exec) {
+    description 'Lint the Dockerfile'
+    commandLine "${project.rootDir}/ci/scripts/dockerfile_lint.sh"
 }
 
 // Build a fat jar

@@ -57,7 +57,8 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
   private ExecutorService executorService;
 
   @BeforeAll
-  public void beforeAll() throws java.util.concurrent.ExecutionException, InterruptedException {
+  public void beforeAll() throws Exception {
+    initialize();
     StorageFactory factory =
         new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
     admin = factory.getAdmin();
@@ -69,6 +70,8 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
     seed = System.currentTimeMillis();
     System.out.println("The seed used in the multiple partition key integration test is " + seed);
   }
+
+  protected void initialize() throws Exception {}
 
   protected abstract DatabaseConfig getDatabaseConfig();
 
@@ -135,13 +138,13 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
   }
 
   @AfterAll
-  public void afterAll() throws java.util.concurrent.ExecutionException, InterruptedException {
-    deleteTables();
+  public void afterAll() throws Exception {
+    dropTables();
     admin.close();
     storage.close();
   }
 
-  private void deleteTables() throws java.util.concurrent.ExecutionException, InterruptedException {
+  private void dropTables() throws java.util.concurrent.ExecutionException, InterruptedException {
     List<Callable<Void>> testCallables = new ArrayList<>();
     for (DataType firstPartitionKeyType : partitionKeyTypes.keySet()) {
       Callable<Void> testCallable =

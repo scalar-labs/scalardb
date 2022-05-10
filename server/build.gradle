@@ -50,6 +50,7 @@ dependencies {
     testImplementation "org.mockito:mockito-core:${mockitoVersion}"
     testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
     integrationTestScalarDbServerImplementation project(':core').sourceSets.integrationTestAll.output
+    testImplementation "org.apache.commons:commons-lang3:${commonsLangVersion}"
 
     // for SpotBugs
     compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
@@ -72,6 +73,11 @@ application {
 docker {
     name "ghcr.io/scalar-labs/scalardb-server:${project.version}"
     files tasks.distTar.outputs, 'conf/log4j2.properties', 'conf/database.properties.tmpl', 'docker-entrypoint.sh'
+}
+
+task dockerfileLint(type: Exec) {
+    description 'Lint the Dockerfile'
+    commandLine "${project.rootDir}/ci/scripts/dockerfile_lint.sh"
 }
 
 task integrationTestScalarDbServer(type: Test) {

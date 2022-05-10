@@ -47,7 +47,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   private String namespace;
 
   @BeforeAll
-  public void beforeAll() throws ExecutionException {
+  public void beforeAll() throws Exception {
+    initialize();
     String testName = getTestName();
     DatabaseConfig config = TestUtils.addSuffix(getDatabaseConfig(), testName);
     TransactionFactory factory = new TransactionFactory(config);
@@ -84,11 +85,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .build(),
         true,
         options);
-    try {
-      admin.createCoordinatorNamespaceAndTable(options);
-    } catch (UnsupportedOperationException ignored) {
-      // ignore
-    }
+    admin.createCoordinatorTables(true, options);
   }
 
   protected Map<String, String> getCreateOptions() {
@@ -98,11 +95,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   @BeforeEach
   public void setUp() throws ExecutionException {
     admin.truncateTable(namespace, TABLE);
-    try {
-      admin.truncateCoordinatorTable();
-    } catch (UnsupportedOperationException ignored) {
-      // ignore
-    }
+    admin.truncateCoordinatorTables();
   }
 
   @AfterAll
@@ -115,11 +108,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   private void dropTables() throws ExecutionException {
     admin.dropTable(namespace, TABLE);
     admin.dropNamespace(namespace);
-    try {
-      admin.dropCoordinatorNamespaceAndTable();
-    } catch (UnsupportedOperationException ignored) {
-      // ignore
-    }
+    admin.dropCoordinatorTables();
   }
 
   @Test

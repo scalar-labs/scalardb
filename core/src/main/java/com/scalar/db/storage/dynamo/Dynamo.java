@@ -103,6 +103,10 @@ public class Dynamo extends AbstractDistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
+    if (scan instanceof ScanAll) {
+      throw new UnsupportedOperationException();
+    }
+
     scan = copyAndSetTargetToIfNot(scan);
     if (scan instanceof ScanAll) {
       operationChecker.check((ScanAll) scan);

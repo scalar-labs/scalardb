@@ -2,6 +2,7 @@ package com.scalar.db.sql.builder;
 
 import com.scalar.db.sql.Projection;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,16 +32,16 @@ public final class StatementBuilder {
     return new TruncateTableStatementBuilder.Start(namespaceName, tableName);
   }
 
-  public static CreateCoordinatorTableStatementBuilder.Start createCoordinatorTable() {
-    return new CreateCoordinatorTableStatementBuilder.Start();
+  public static CreateCoordinatorTablesStatementBuilder.Start createCoordinatorTables() {
+    return new CreateCoordinatorTablesStatementBuilder.Start();
   }
 
-  public static DropCoordinatorTableStatementBuilder.Start dropCoordinatorTable() {
-    return new DropCoordinatorTableStatementBuilder.Start();
+  public static DropCoordinatorTablesStatementBuilder.Start dropCoordinatorTables() {
+    return new DropCoordinatorTablesStatementBuilder.Start();
   }
 
-  public static TruncateCoordinatorTableStatementBuilder.Start truncateCoordinatorTable() {
-    return new TruncateCoordinatorTableStatementBuilder.Start();
+  public static TruncateCoordinatorTablesStatementBuilder.Start truncateCoordinatorTables() {
+    return new TruncateCoordinatorTablesStatementBuilder.Start();
   }
 
   public static CreateIndexStatementBuilder.Start createIndex() {
@@ -49,6 +50,10 @@ public final class StatementBuilder {
 
   public static DropIndexStatementBuilder.Start dropIndex() {
     return new DropIndexStatementBuilder.Start();
+  }
+
+  public static SelectStatementBuilder.Start select() {
+    return new SelectStatementBuilder.Start(Collections.emptyList());
   }
 
   public static SelectStatementBuilder.Start select(String... projectedColumnNames) {
