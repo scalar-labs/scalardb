@@ -21,8 +21,10 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
+import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -78,6 +80,10 @@ public class SelectStatementHandlerTest {
   private Scan prepareScan() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     return new Scan(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+  }
+
+  private ScanAll prepareScanAll() {
+    return new ScanAll().forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
   private void configureBehavior(String expected) {
@@ -521,5 +527,72 @@ public class SelectStatementHandlerTest {
     // Act Assert
     assertThatThrownBy(() -> new SelectStatementHandler(null))
         .isInstanceOf(NullPointerException.class);
+  }
+
+  @Test
+  public void prepare_ScanAllOperationWithLimit_ShouldPrepareProperQuery() {
+    // Arrange
+    String expected =
+        Joiner.on(" ")
+            .skipNulls()
+            .join(
+                new String[] {
+                  "SELECT * FROM",
+                  ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME,
+                  "LIMIT",
+                  ANY_LIMIT + ";",
+                });
+    configureBehavior(expected);
+    ScanAll scanAll = prepareScanAll();
+    scanAll.withLimit(ANY_LIMIT);
+
+    // Act
+    handler.prepare(scanAll);
+
+    // Assert
+    verify(session).prepare(expected);
+  }
+
+  @Test
+  public void prepare_ScanAllOperationWithoutLimit_ShouldPrepareProperQuery() {
+    // Arrange
+    String expected =
+        Joiner.on(" ")
+            .skipNulls()
+            .join(
+                new String[] {
+                  "SELECT * FROM", ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME + ";",
+                });
+    configureBehavior(expected);
+    ScanAll scanAll = prepareScanAll();
+
+    // Act
+    handler.prepare(scanAll);
+
+    // Assert
+    verify(session).prepare(expected);
+  }
+
+  @Test
+  public void prepare_ScanAllOperationWithProjectedColumns_ShouldPrepareProperQuery() {
+    // Arrange
+    String expected =
+        Joiner.on(" ")
+            .skipNulls()
+            .join(
+                new String[] {
+                  "SELECT",
+                  ANY_NAME_1 + "," + ANY_NAME_2,
+                  "FROM",
+                  ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME + ";",
+                });
+    configureBehavior(expected);
+    ScanAll scanAll = prepareScanAll().withProjections(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
+
+    // Act
+    handler.prepare(scanAll);
+
+    // Assert
+    verify(session).prepare(expected);
   }
 }
