@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.config.DatabaseConfig;
-import java.util.Collections;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
@@ -39,17 +38,14 @@ public class JdbcConfigTest {
     props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_TOTAL, "200");
 
     // Act
-    JdbcConfig config = new JdbcConfig(props);
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_JDBC_URL));
-    assertThat(config.getContactPort()).isEqualTo(0);
+    assertThat(config.getJdbcUrl()).isEqualTo(ANY_JDBC_URL);
     assertThat(config.getUsername().isPresent()).isTrue();
     assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
-    assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
-    assertThat(config.getStorageAdminClass()).isEqualTo(JdbcAdmin.class);
     assertThat(config.getConnectionPoolMinIdle()).isEqualTo(1);
     assertThat(config.getConnectionPoolMaxIdle()).isEqualTo(100);
     assertThat(config.getConnectionPoolMaxTotal()).isEqualTo(500);
@@ -78,17 +74,14 @@ public class JdbcConfigTest {
     props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
 
     // Act
-    JdbcConfig config = new JdbcConfig(props);
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_JDBC_URL));
-    assertThat(config.getContactPort()).isEqualTo(0);
+    assertThat(config.getJdbcUrl()).isEqualTo(ANY_JDBC_URL);
     assertThat(config.getUsername().isPresent()).isTrue();
     assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
-    assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
-    assertThat(config.getStorageAdminClass()).isEqualTo(JdbcAdmin.class);
     assertThat(config.getConnectionPoolMinIdle())
         .isEqualTo(JdbcConfig.DEFAULT_CONNECTION_POOL_MIN_IDLE);
     assertThat(config.getConnectionPoolMaxIdle())
@@ -119,7 +112,8 @@ public class JdbcConfigTest {
     props.setProperty(DatabaseConfig.STORAGE, "aaa");
 
     // Act Assert
-    assertThatThrownBy(() -> new JdbcConfig(props)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new JdbcConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -138,7 +132,8 @@ public class JdbcConfigTest {
     props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "eee");
 
     // Act Assert
-    assertThatThrownBy(() -> new JdbcConfig(props)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new JdbcConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -154,7 +149,8 @@ public class JdbcConfigTest {
     props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "eee");
 
     // Act Assert
-    assertThatThrownBy(() -> new JdbcConfig(props)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new JdbcConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -169,7 +165,8 @@ public class JdbcConfigTest {
     props.setProperty(JdbcConfig.ISOLATION_LEVEL, "aaa");
 
     // Act Assert
-    assertThatThrownBy(() -> new JdbcConfig(props)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new JdbcConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -186,7 +183,8 @@ public class JdbcConfigTest {
     props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL, "ccc");
 
     // Act Assert
-    assertThatThrownBy(() -> new JdbcConfig(props)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new JdbcConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -203,6 +201,7 @@ public class JdbcConfigTest {
     props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_TOTAL, "ccc");
 
     // Act Assert
-    assertThatThrownBy(() -> new JdbcConfig(props)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new JdbcConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }

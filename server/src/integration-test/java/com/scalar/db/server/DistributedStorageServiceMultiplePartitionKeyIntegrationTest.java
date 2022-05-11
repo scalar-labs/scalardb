@@ -1,8 +1,8 @@
 package com.scalar.db.server;
 
 import com.scalar.db.api.DistributedStorageMultiplePartitionKeyIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
 import java.io.IOException;
+import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 
 public class DistributedStorageServiceMultiplePartitionKeyIntegrationTest
@@ -20,8 +20,8 @@ public class DistributedStorageServiceMultiplePartitionKeyIntegrationTest
   }
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return ServerEnv.getGrpcConfig();
+  protected Properties getProperties() {
+    return ServerEnv.getProperties();
   }
 
   @AfterAll

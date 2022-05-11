@@ -1,16 +1,16 @@
 package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.api.DistributedStorageIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 
 public class CosmosIntegrationTest extends DistributedStorageIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return CosmosEnv.getCosmosConfig();
+  protected Properties getProperties() {
+    return CosmosEnv.getProperties();
   }
 
   @Override

@@ -29,7 +29,7 @@ public final class MultiStorageEnv {
 
   private MultiStorageEnv() {}
 
-  public static DatabaseConfig getDatabaseConfigForStorage1() {
+  public static Properties getPropertiesForStorage1() {
     String contactPoints =
         System.getProperty(PROP_STORAGE1_CONTACT_POINTS, DEFAULT_STORAGE1_CONTACT_POINT);
     String contactPort = System.getProperty(PROP_STORAGE1_CONTACT_PORT);
@@ -45,10 +45,10 @@ public final class MultiStorageEnv {
     properties.setProperty(DatabaseConfig.USERNAME, username);
     properties.setProperty(DatabaseConfig.PASSWORD, password);
     properties.setProperty(DatabaseConfig.STORAGE, storage);
-    return new DatabaseConfig(properties);
+    return properties;
   }
 
-  public static DatabaseConfig getDatabaseConfigForStorage2() {
+  public static Properties getPropertiesForStorage2() {
     String contactPoints =
         System.getProperty(PROP_STORAGE2_CONTACT_POINTS, DEFAULT_STORAGE2_CONTACT_POINT);
     String contactPort = System.getProperty(PROP_STORAGE2_CONTACT_PORT);
@@ -64,6 +64,6 @@ public final class MultiStorageEnv {
     properties.setProperty(DatabaseConfig.USERNAME, username);
     properties.setProperty(DatabaseConfig.PASSWORD, password);
     properties.setProperty(DatabaseConfig.STORAGE, storage);
-    return new DatabaseConfig(properties);
+    return properties;
   }
 }

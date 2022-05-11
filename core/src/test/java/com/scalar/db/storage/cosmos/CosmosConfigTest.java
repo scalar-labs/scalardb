@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.config.DatabaseConfig;
-import java.util.Collections;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
@@ -25,14 +24,11 @@ public class CosmosConfigTest {
     props.setProperty(CosmosConfig.TABLE_METADATA_DATABASE, ANY_TABLE_METADATA_DATABASE);
 
     // Act
-    CosmosConfig config = new CosmosConfig(props);
+    CosmosConfig config = new CosmosConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_ENDPOINT));
-    assertThat(config.getPassword().isPresent()).isTrue();
-    assertThat(config.getPassword().get()).isEqualTo(ANY_KEY);
-    assertThat(config.getStorageClass()).isEqualTo(Cosmos.class);
-    assertThat(config.getStorageAdminClass()).isEqualTo(CosmosAdmin.class);
+    assertThat(config.getEndpoint()).isEqualTo(ANY_ENDPOINT);
+    assertThat(config.getKey()).isEqualTo(ANY_KEY);
     assertThat(config.getTableMetadataDatabase()).isPresent();
     assertThat(config.getTableMetadataDatabase().get()).isEqualTo(ANY_TABLE_METADATA_DATABASE);
   }
@@ -46,7 +42,8 @@ public class CosmosConfigTest {
     props.setProperty(CosmosConfig.TABLE_METADATA_DATABASE, ANY_TABLE_METADATA_DATABASE);
 
     // Act Assert
-    assertThatThrownBy(() -> new CosmosConfig(props)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new CosmosConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -58,14 +55,11 @@ public class CosmosConfigTest {
     props.setProperty(DatabaseConfig.STORAGE, COSMOS_STORAGE);
 
     // Act
-    CosmosConfig config = new CosmosConfig(props);
+    CosmosConfig config = new CosmosConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_ENDPOINT));
-    assertThat(config.getPassword().isPresent()).isTrue();
-    assertThat(config.getPassword().get()).isEqualTo(ANY_KEY);
-    assertThat(config.getStorageClass()).isEqualTo(Cosmos.class);
-    assertThat(config.getStorageAdminClass()).isEqualTo(CosmosAdmin.class);
+    assertThat(config.getEndpoint()).isEqualTo(ANY_ENDPOINT);
+    assertThat(config.getKey()).isEqualTo(ANY_KEY);
     assertThat(config.getTableMetadataDatabase()).isNotPresent();
   }
 }

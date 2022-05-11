@@ -4,6 +4,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.rpc.CoordinatorTablesExistRequest;
 import com.scalar.db.rpc.CoordinatorTablesExistResponse;
@@ -50,12 +51,10 @@ public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
   private final DistributedTransactionAdminGrpc.DistributedTransactionAdminBlockingStub stub;
 
   @Inject
-  public GrpcTransactionAdmin(GrpcConfig config) {
-    this.config = config;
+  public GrpcTransactionAdmin(DatabaseConfig databaseConfig) {
+    config = new GrpcConfig(databaseConfig);
     channel =
-        NettyChannelBuilder.forAddress(config.getContactPoints().get(0), config.getContactPort())
-            .usePlaintext()
-            .build();
+        NettyChannelBuilder.forAddress(config.getHost(), config.getPort()).usePlaintext().build();
     stub = DistributedTransactionAdminGrpc.newBlockingStub(channel);
   }
 

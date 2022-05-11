@@ -6,24 +6,25 @@ import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 
 public class JdbcSchemaLoaderWithStorageSpecificArgsIntegrationTest
     extends SchemaLoaderIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return JdbcEnv.getJdbcConfig();
+  protected Properties getProperties() {
+    return JdbcEnv.getProperties();
   }
 
   @Override
   protected List<String> getCommandArgsForCreationWithCoordinator(
       String configFile, String schemaFile) throws IOException {
-    DatabaseConfig config = new DatabaseConfig(new File(configFile));
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(new File(configFile)));
     return ImmutableList.of(
         "--jdbc",
         "-j",
-        config.getContactPoints().get(0),
+        config.getJdbcUrl(),
         "--schema-file",
         schemaFile,
         "-u",

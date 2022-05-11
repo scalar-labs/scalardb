@@ -1,16 +1,16 @@
 package com.scalar.db.storage.cosmos;
 
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitSpecificIntegrationTestBase;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 
 public class TwoPhaseConsensusCommitSpecificIntegrationTestWithCosmos
     extends TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return CosmosEnv.getCosmosConfig();
+  protected Properties getProperties() {
+    return CosmosEnv.getProperties();
   }
 
   @Override

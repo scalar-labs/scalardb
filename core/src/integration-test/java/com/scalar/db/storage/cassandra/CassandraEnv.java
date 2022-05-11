@@ -14,7 +14,7 @@ public final class CassandraEnv {
 
   private CassandraEnv() {}
 
-  public static DatabaseConfig getDatabaseConfig() {
+  public static Properties getProperties() {
     String contactPoints =
         System.getProperty(PROP_CASSANDRA_CONTACT_POINTS, DEFAULT_CASSANDRA_CONTACT_POINTS);
     String username = System.getProperty(PROP_CASSANDRA_USERNAME, DEFAULT_CASSANDRA_USERNAME);
@@ -24,6 +24,6 @@ public final class CassandraEnv {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, contactPoints);
     props.setProperty(DatabaseConfig.USERNAME, username);
     props.setProperty(DatabaseConfig.PASSWORD, password);
-    return new DatabaseConfig(props);
+    return props;
   }
 }

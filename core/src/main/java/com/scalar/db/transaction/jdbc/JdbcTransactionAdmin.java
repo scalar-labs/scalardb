@@ -4,9 +4,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
-import com.scalar.db.storage.jdbc.JdbcConfig;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
@@ -17,8 +17,8 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
   private final JdbcAdmin admin;
 
   @Inject
-  public JdbcTransactionAdmin(JdbcConfig config) {
-    admin = new JdbcAdmin(config);
+  public JdbcTransactionAdmin(DatabaseConfig databaseConfig) {
+    admin = new JdbcAdmin(databaseConfig);
   }
 
   @VisibleForTesting

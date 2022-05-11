@@ -68,14 +68,14 @@ public class MultiStorageIntegrationTest {
   }
 
   private void initStorage1AndAdmin1() throws ExecutionException {
-    StorageFactory factory = new StorageFactory(MultiStorageEnv.getDatabaseConfigForStorage1());
+    StorageFactory factory = StorageFactory.create(MultiStorageEnv.getPropertiesForStorage1());
     admin1 = factory.getAdmin();
     createTables(admin1);
     storage1 = factory.getStorage();
   }
 
   private void initStorage2AndAdmin2() throws ExecutionException {
-    StorageFactory factory = new StorageFactory(MultiStorageEnv.getDatabaseConfigForStorage2());
+    StorageFactory factory = StorageFactory.create(MultiStorageEnv.getPropertiesForStorage2());
     admin2 = factory.getAdmin();
     createTables(admin2);
     storage2 = factory.getStorage();
@@ -97,43 +97,43 @@ public class MultiStorageIntegrationTest {
     // Define storages, storage1 and storage2
     props.setProperty(MultiStorageConfig.STORAGES, "storage1,storage2");
 
-    DatabaseConfig configForStorage1 = MultiStorageEnv.getDatabaseConfigForStorage1();
+    Properties propertiesForStorage1 = MultiStorageEnv.getPropertiesForStorage1();
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage1.storage",
-        configForStorage1.getProperties().getProperty(DatabaseConfig.STORAGE));
+        propertiesForStorage1.getProperty(DatabaseConfig.STORAGE));
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage1.contact_points",
-        configForStorage1.getProperties().getProperty(DatabaseConfig.CONTACT_POINTS));
-    if (configForStorage1.getProperties().containsValue(DatabaseConfig.CONTACT_PORT)) {
+        propertiesForStorage1.getProperty(DatabaseConfig.CONTACT_POINTS));
+    if (propertiesForStorage1.containsValue(DatabaseConfig.CONTACT_PORT)) {
       props.setProperty(
           MultiStorageConfig.STORAGES + ".storage1.contact_port",
-          configForStorage1.getProperties().getProperty(DatabaseConfig.CONTACT_PORT));
+          propertiesForStorage1.getProperty(DatabaseConfig.CONTACT_PORT));
     }
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage1.username",
-        configForStorage1.getProperties().getProperty(DatabaseConfig.USERNAME));
+        propertiesForStorage1.getProperty(DatabaseConfig.USERNAME));
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage1.password",
-        configForStorage1.getProperties().getProperty(DatabaseConfig.PASSWORD));
+        propertiesForStorage1.getProperty(DatabaseConfig.PASSWORD));
 
-    DatabaseConfig configForStorage2 = MultiStorageEnv.getDatabaseConfigForStorage2();
+    Properties propertiesForStorage2 = MultiStorageEnv.getPropertiesForStorage2();
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage2.storage",
-        configForStorage2.getProperties().getProperty(DatabaseConfig.STORAGE));
+        propertiesForStorage2.getProperty(DatabaseConfig.STORAGE));
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage2.contact_points",
-        configForStorage2.getProperties().getProperty(DatabaseConfig.CONTACT_POINTS));
-    if (configForStorage2.getProperties().containsValue(DatabaseConfig.CONTACT_PORT)) {
+        propertiesForStorage2.getProperty(DatabaseConfig.CONTACT_POINTS));
+    if (propertiesForStorage2.containsValue(DatabaseConfig.CONTACT_PORT)) {
       props.setProperty(
           MultiStorageConfig.STORAGES + ".storage2.contact_port",
-          configForStorage2.getProperties().getProperty(DatabaseConfig.CONTACT_PORT));
+          propertiesForStorage2.getProperty(DatabaseConfig.CONTACT_PORT));
     }
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage2.username",
-        configForStorage2.getProperties().getProperty(DatabaseConfig.USERNAME));
+        propertiesForStorage2.getProperty(DatabaseConfig.USERNAME));
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage2.password",
-        configForStorage2.getProperties().getProperty(DatabaseConfig.PASSWORD));
+        propertiesForStorage2.getProperty(DatabaseConfig.PASSWORD));
 
     // Define table mapping from table1 to storage1, and from table2 to storage2
     props.setProperty(
@@ -146,7 +146,7 @@ public class MultiStorageIntegrationTest {
     // The default storage is storage1
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "storage1");
 
-    multiStorage = new MultiStorage(new MultiStorageConfig(props));
+    multiStorage = new MultiStorage(new DatabaseConfig(props));
   }
 
   @BeforeEach

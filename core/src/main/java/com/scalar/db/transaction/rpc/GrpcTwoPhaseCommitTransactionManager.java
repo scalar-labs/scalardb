@@ -1,6 +1,5 @@
 package com.scalar.db.transaction.rpc;
 
-import static com.scalar.db.transaction.rpc.GrpcTransactionManager.DEFAULT_SCALAR_DB_SERVER_PORT;
 import static com.scalar.db.transaction.rpc.GrpcTransactionManager.EXCEPTION_FACTORY;
 import static com.scalar.db.transaction.rpc.GrpcTransactionManager.execute;
 import static com.scalar.db.util.retry.Retry.executeWithRetries;
@@ -9,6 +8,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.rpc.AbortRequest;
@@ -47,21 +47,15 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
   private final ActiveExpiringMap<String, GrpcTwoPhaseCommitTransaction> activeTransactions;
 
   @Inject
-  public GrpcTwoPhaseCommitTransactionManager(GrpcConfig config) {
-    this.config = config;
+  public GrpcTwoPhaseCommitTransactionManager(DatabaseConfig databaseConfig) {
+    config = new GrpcConfig(databaseConfig);
     channel =
-        NettyChannelBuilder.forAddress(
-                config.getContactPoints().get(0),
-                config.getContactPort() == 0
-                    ? DEFAULT_SCALAR_DB_SERVER_PORT
-                    : config.getContactPort())
-            .usePlaintext()
-            .build();
+        NettyChannelBuilder.forAddress(config.getHost(), config.getPort()).usePlaintext().build();
     stub = TwoPhaseCommitTransactionGrpc.newStub(channel);
     blockingStub = TwoPhaseCommitTransactionGrpc.newBlockingStub(channel);
     metadataManager =
         new TableMetadataManager(
-            new GrpcAdmin(channel, config), config.getMetadataCacheExpirationTimeSecs());
+            new GrpcAdmin(channel, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
     if (config.isActiveTransactionsManagementEnabled()) {
       activeTransactions =
           new ActiveExpiringMap<>(

@@ -3,14 +3,14 @@ package com.scalar.db.storage.cassandra;
 import com.google.common.collect.Ordering;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.DistributedStorageConditionalMutationIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.Column;
+import java.util.Properties;
 
 public class CassandraConditionalMutationIntegrationTest
     extends DistributedStorageConditionalMutationIntegrationTestBase {
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return CassandraEnv.getDatabaseConfig();
+  protected Properties getProperties() {
+    return CassandraEnv.getProperties();
   }
 
   @Override

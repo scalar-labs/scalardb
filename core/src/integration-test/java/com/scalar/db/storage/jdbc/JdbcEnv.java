@@ -14,7 +14,7 @@ public final class JdbcEnv {
 
   private JdbcEnv() {}
 
-  public static JdbcConfig getJdbcConfig() {
+  public static Properties getProperties() {
     String jdbcUrl = System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL);
     String username = System.getProperty(PROP_JDBC_USERNAME, DEFAULT_JDBC_USERNAME);
     String password = System.getProperty(PROP_JDBC_PASSWORD, DEFAULT_JDBC_PASSWORD);
@@ -24,6 +24,6 @@ public final class JdbcEnv {
     props.setProperty(DatabaseConfig.USERNAME, username);
     props.setProperty(DatabaseConfig.PASSWORD, password);
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
-    return new JdbcConfig(props);
+    return props;
   }
 }

@@ -1,14 +1,14 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.DistributedStorageIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
+import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 
 public class JdbcDatabaseIntegrationTest extends DistributedStorageIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return JdbcEnv.getJdbcConfig();
+  protected Properties getProperties() {
+    return JdbcEnv.getProperties();
   }
 
   @Override

@@ -1,9 +1,9 @@
 package com.scalar.db.server;
 
 import com.scalar.db.api.DistributedStorageSecondaryIndexIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.io.IOException;
+import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 
 public class DistributedStorageServiceSecondaryIndexIntegrationTest
@@ -21,8 +21,8 @@ public class DistributedStorageServiceSecondaryIndexIntegrationTest
   }
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return ServerEnv.getGrpcConfig();
+  protected Properties getProperties() {
+    return ServerEnv.getProperties();
   }
 
   @AfterAll

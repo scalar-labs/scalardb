@@ -8,50 +8,50 @@ import java.util.Properties;
 public class MultiStorageSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
+  protected Properties getProperties() {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
 
     // Define storages, storage1 and storage2
     props.setProperty(MultiStorageConfig.STORAGES, "storage1,storage2");
 
-    DatabaseConfig configForStorage1 = MultiStorageEnv.getDatabaseConfigForStorage1();
+    Properties propertiesForStorage1 = MultiStorageEnv.getPropertiesForStorage1();
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage1.storage",
-        configForStorage1.getProperties().getProperty(DatabaseConfig.STORAGE));
+        propertiesForStorage1.getProperty(DatabaseConfig.STORAGE));
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage1.contact_points",
-        configForStorage1.getProperties().getProperty(DatabaseConfig.CONTACT_POINTS));
-    if (configForStorage1.getProperties().containsValue(DatabaseConfig.CONTACT_PORT)) {
+        propertiesForStorage1.getProperty(DatabaseConfig.CONTACT_POINTS));
+    if (propertiesForStorage1.containsValue(DatabaseConfig.CONTACT_PORT)) {
       props.setProperty(
           MultiStorageConfig.STORAGES + ".storage1.contact_port",
-          configForStorage1.getProperties().getProperty(DatabaseConfig.CONTACT_PORT));
+          propertiesForStorage1.getProperty(DatabaseConfig.CONTACT_PORT));
     }
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage1.username",
-        configForStorage1.getProperties().getProperty(DatabaseConfig.USERNAME));
+        propertiesForStorage1.getProperty(DatabaseConfig.USERNAME));
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage1.password",
-        configForStorage1.getProperties().getProperty(DatabaseConfig.PASSWORD));
+        propertiesForStorage1.getProperty(DatabaseConfig.PASSWORD));
 
-    DatabaseConfig configForStorage2 = MultiStorageEnv.getDatabaseConfigForStorage2();
+    Properties propertiesForStorage2 = MultiStorageEnv.getPropertiesForStorage2();
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage2.storage",
-        configForStorage2.getProperties().getProperty(DatabaseConfig.STORAGE));
+        propertiesForStorage2.getProperty(DatabaseConfig.STORAGE));
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage2.contact_points",
-        configForStorage2.getProperties().getProperty(DatabaseConfig.CONTACT_POINTS));
-    if (configForStorage2.getProperties().containsValue(DatabaseConfig.CONTACT_PORT)) {
+        propertiesForStorage2.getProperty(DatabaseConfig.CONTACT_POINTS));
+    if (propertiesForStorage2.containsValue(DatabaseConfig.CONTACT_PORT)) {
       props.setProperty(
           MultiStorageConfig.STORAGES + ".storage2.contact_port",
-          configForStorage2.getProperties().getProperty(DatabaseConfig.CONTACT_PORT));
+          propertiesForStorage2.getProperty(DatabaseConfig.CONTACT_PORT));
     }
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage2.username",
-        configForStorage2.getProperties().getProperty(DatabaseConfig.USERNAME));
+        propertiesForStorage2.getProperty(DatabaseConfig.USERNAME));
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage2.password",
-        configForStorage2.getProperties().getProperty(DatabaseConfig.PASSWORD));
+        propertiesForStorage2.getProperty(DatabaseConfig.PASSWORD));
 
     // Define namespace mapping from namespace1 to storage1, from namespace2 to storage2, and from
     // the coordinator namespace to storage1
@@ -67,6 +67,6 @@ public class MultiStorageSchemaLoaderIntegrationTest extends SchemaLoaderIntegra
     // The default storage is storage1
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "storage1");
 
-    return new DatabaseConfig(props);
+    return props;
   }
 }

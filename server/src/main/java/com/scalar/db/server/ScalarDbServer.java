@@ -9,6 +9,7 @@ import io.grpc.ServerBuilder;
 import io.grpc.protobuf.services.ProtoReflectionService;
 import java.io.File;
 import java.io.IOException;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
@@ -34,7 +35,7 @@ public class ScalarDbServer implements Callable<Integer> {
   public ScalarDbServer() {}
 
   public ScalarDbServer(ServerConfig config) {
-    this.config = config;
+    this.config = Objects.requireNonNull(config);
   }
 
   @Override
@@ -50,8 +51,7 @@ public class ScalarDbServer implements Callable<Integer> {
       config = new ServerConfig(new File(configFile));
     }
 
-    Injector injector =
-        Guice.createInjector(new ServerModule(config, new DatabaseConfig(config.getProperties())));
+    Injector injector = Guice.createInjector(new ServerModule(config));
 
     ServerBuilder<?> builder =
         ServerBuilder.forPort(config.getPort())

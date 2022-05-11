@@ -26,7 +26,7 @@ public class JdbcUtilsTest {
     properties.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_ENABLED, "true");
     properties.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "100");
 
-    JdbcConfig config = new JdbcConfig(properties);
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
 
     // Act
     BasicDataSource dataSource = JdbcUtils.initDataSource(config);
@@ -66,7 +66,7 @@ public class JdbcUtilsTest {
     properties.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_ENABLED, "true");
     properties.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "200");
 
-    JdbcConfig config = new JdbcConfig(properties);
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
 
     // Act
     BasicDataSource dataSource = JdbcUtils.initDataSource(config, true);
@@ -104,7 +104,7 @@ public class JdbcUtilsTest {
     properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_IDLE, "200");
     properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL, "300");
 
-    JdbcConfig config = new JdbcConfig(properties);
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
 
     // Act
     BasicDataSource tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config);
@@ -136,7 +136,7 @@ public class JdbcUtilsTest {
     properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_IDLE, "200");
     properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_TOTAL, "300");
 
-    JdbcConfig config = new JdbcConfig(properties);
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
 
     // Act
     BasicDataSource adminDataSource = JdbcUtils.initDataSourceForAdmin(config);
