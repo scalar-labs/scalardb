@@ -88,12 +88,12 @@ public class Cosmos extends AbstractDistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
-    if (scan instanceof ScanAll) {
-      throw new UnsupportedOperationException();
-    }
-
     scan = copyAndSetTargetToIfNot(scan);
-    operationChecker.check(scan);
+    if (scan instanceof ScanAll) {
+      operationChecker.check((ScanAll) scan);
+    } else {
+      operationChecker.check(scan);
+    }
 
     List<Record> records = selectStatementHandler.handle(scan);
 
