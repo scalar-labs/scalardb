@@ -92,6 +92,5 @@ Specifically, please follow the steps below.
 
 Note:
 
-* You can create a backup for the `scalardb.metadata` table without restoring the PITR because it contains metadata of the schemas (It will not change after the schema creation).
-* Tables can only be restored one by one so you need to do the above steps for each table.
-* Configurations such as PITR and auto scaling policies are reset to the default values for restored tables, so please manually configure the required settings. See [the doc](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/CreateBackup.html#CreateBackup_HowItWorks-restore) for more detail.
+* You need to do the above steps for each table because tables can only be restored one by one.
+* Configurations such as PITR and auto-scaling policies are reset to the default values for restored tables, so please manually configure required settings. See [the doc](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/CreateBackup.html#CreateBackup_HowItWorks-restore) for more detail.
