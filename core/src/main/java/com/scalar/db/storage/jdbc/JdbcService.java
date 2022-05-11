@@ -8,6 +8,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
@@ -84,11 +85,19 @@ public class JdbcService {
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE")
   public Scanner getScanner(Scan scan, Connection connection)
       throws SQLException, ExecutionException {
-    operationChecker.check(scan);
+    if (scan instanceof ScanAll) {
+      operationChecker.check((ScanAll) scan);
+    } else {
+      operationChecker.check(scan);
+    }
+
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
     ScalarDbUtils.addProjectionsForKeys(scan, tableMetadata);
 
-    SelectQuery selectQuery = buildSelectQueryForScan(scan, tableMetadata);
+    SelectQuery selectQuery =
+        scan instanceof ScanAll
+            ? buildSelectQueryForScanAll((ScanAll) scan, tableMetadata)
+            : buildSelectQueryForScan(scan, tableMetadata);
     PreparedStatement preparedStatement = connection.prepareStatement(selectQuery.sql());
     selectQuery.bind(preparedStatement);
     ResultSet resultSet = preparedStatement.executeQuery();
@@ -132,6 +141,14 @@ public class JdbcService {
             scan.getEndInclusive())
         .orderBy(scan.getOrderings())
         .limit(scan.getLimit())
+        .build();
+  }
+
+  private SelectQuery buildSelectQueryForScanAll(ScanAll scanAll, TableMetadata tableMetadata) {
+    return queryBuilder
+        .select(scanAll.getProjections())
+        .from(scanAll.forNamespace().get(), scanAll.forTable().get(), tableMetadata)
+        .limit(scanAll.getLimit())
         .build();
   }
 
