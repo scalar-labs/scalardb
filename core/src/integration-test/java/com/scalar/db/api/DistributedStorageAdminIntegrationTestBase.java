@@ -127,7 +127,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
         admin.dropTable(namespace, table);
       }
-      admin.dropNamespace(namespace, true);
+      admin.dropNamespace(namespace);
     }
   }
 

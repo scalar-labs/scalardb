@@ -18,6 +18,7 @@ import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -1494,6 +1495,58 @@ public class OperationCheckerTest {
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void whenCheckingScanAllOperationWithAllValidArguments_shouldNotThrowAnyException() {
+    // Arrange
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
+    int limit = 10;
+    ScanAll scanAll =
+        new ScanAll()
+            .withProjections(projections)
+            .withLimit(limit)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
+
+    // Act Assert
+    assertThatCode(() -> operationChecker.check(scanAll)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      whenCheckingScanAllOperationWithNegativeLimitNumber_shouldThrowIllegalArgumentException() {
+    // Arrange
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
+    int limit = -10;
+    ScanAll scanAll =
+        new ScanAll()
+            .withProjections(projections)
+            .withLimit(limit)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(scanAll))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingScanAllOperationWithInvalidProjections_shouldThrowIllegalArgumentException() {
+    // Arrange
+    List<String> projections = Arrays.asList(COL1, COL2, "v4");
+    int limit = 10;
+    ScanAll scanAll =
+        new ScanAll()
+            .withProjections(projections)
+            .withLimit(limit)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(scanAll))
         .isInstanceOf(IllegalArgumentException.class);
   }
 }

@@ -1,5 +1,8 @@
 package com.scalar.db.util;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.BigIntColumn;
@@ -16,6 +19,7 @@ import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
+import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
@@ -27,12 +31,18 @@ import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Set;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.junit.jupiter.api.Assertions;
 
 public final class TestUtils {
 
@@ -229,6 +239,165 @@ public final class TestUtils {
         return Order.ASC;
       default:
         throw new AssertionError();
+    }
+  }
+
+  /**
+   * Find and return an expected result that matches the result
+   *
+   * @param result a result
+   * @param expectedResults a list of expected results
+   * @return the first {@link ExpectedResult} that matches the {@link Result}, otherwise return null
+   */
+  private static ExpectedResult findFirstMatchingResult(
+      Result result, List<ExpectedResult> expectedResults) {
+    for (ExpectedResult er : expectedResults) {
+      if (er.equalsResult(result)) {
+        return er;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Asserts the actualResults and expectedResults lists elements are equals without taking the list
+   * order into consideration
+   *
+   * @param actualResults a list of results
+   * @param expectedResults a list of expected results
+   */
+  public static void assertResultsContainsExactlyInAnyOrder(
+      List<Result> actualResults, List<ExpectedResult> expectedResults) {
+    expectedResults = new ArrayList<>(expectedResults);
+    for (Result actualResult : actualResults) {
+      ExpectedResult matchedExpectedResult = findFirstMatchingResult(actualResult, expectedResults);
+      if (matchedExpectedResult == null) {
+        Assertions.fail("The actual result " + actualResult + " is not expected");
+      } else {
+        expectedResults.remove(matchedExpectedResult);
+      }
+    }
+    if (!expectedResults.isEmpty()) {
+      Assertions.fail(
+          "The given expected results are missing from the actual results" + expectedResults);
+    }
+  }
+
+  /**
+   * Asserts the actualResults are a subset of expectedResults. In other words, actualResults are
+   * contained into expectedResults
+   *
+   * @param actualResults of list of results
+   * @param expectedResults a list of expected results
+   */
+  public static void assertResultsAreASubsetOf(
+      List<Result> actualResults, List<ExpectedResult> expectedResults) {
+    expectedResults = new ArrayList<>(expectedResults);
+    for (Result actualResult : actualResults) {
+      ExpectedResult matchedExpectedResult = findFirstMatchingResult(actualResult, expectedResults);
+      if (matchedExpectedResult == null) {
+        Assertions.fail("The actual result " + actualResult + " is not expected");
+      } else {
+        expectedResults.remove(matchedExpectedResult);
+      }
+    }
+  }
+
+  /** Utility class used in testing to facilitate the comparison of {@link Result} */
+  public static class ExpectedResult {
+    private final Optional<Key> partitionKey;
+    private final Optional<Key> clusteringKey;
+    private final Set<Column<?>> columns;
+
+    private ExpectedResult(ExpectedResultBuilder builder) {
+      this.partitionKey = Optional.ofNullable(builder.partitionKey);
+      this.clusteringKey = Optional.ofNullable(builder.clusteringKey);
+      this.columns = new HashSet<>();
+      if (builder.nonKeyColumns != null) {
+        this.columns.addAll(builder.nonKeyColumns);
+      }
+      partitionKey.ifPresent(pk -> this.columns.addAll(pk.getColumns()));
+      clusteringKey.ifPresent(ck -> this.columns.addAll(ck.getColumns()));
+    }
+
+    public Optional<Key> getPartitionKey() {
+      return partitionKey;
+    }
+
+    public Optional<Key> getClusteringKey() {
+      return clusteringKey;
+    }
+
+    public Set<Column<?>> getColumns() {
+      return columns;
+    }
+
+    /**
+     * Verify the equality with a {@link Result} but ignores the columns ordering.
+     *
+     * @param other a Result
+     * @return true if this object is equal to the other
+     */
+    public boolean equalsResult(Result other) {
+      if (!this.getPartitionKey().equals(other.getPartitionKey())) {
+        return false;
+      }
+
+      if (!this.getClusteringKey().equals(other.getClusteringKey())) {
+        return false;
+      }
+
+      Set<Column<?>> otherComparableColumns = new HashSet<>(other.getColumns().values());
+      // ignore columns with null value
+      otherComparableColumns.removeIf(Column::hasNullValue);
+
+      if (this.columns.size() != otherComparableColumns.size()) {
+        return false;
+      }
+      // Columns ordering is not taken into account
+      for (Column<?> column : this.getColumns()) {
+        if (!Objects.equals(column.getValueAsObject(), other.getAsObject(column.getName()))) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    @Override
+    public String toString() {
+      ToStringHelper toStringHelper = MoreObjects.toStringHelper(this);
+      partitionKey.ifPresent((pk) -> toStringHelper.addValue(pk.toString()));
+      clusteringKey.ifPresent((ck) -> toStringHelper.addValue(ck.toString()));
+      getColumns().forEach(c -> toStringHelper.add(c.getName(), c.getValueAsObject()));
+      return toStringHelper.toString();
+    }
+
+    public static class ExpectedResultBuilder {
+      private Key partitionKey;
+      private Key clusteringKey;
+      private List<Column<?>> nonKeyColumns;
+
+      public ExpectedResultBuilder() {}
+
+      public ExpectedResultBuilder partitionKey(Key partitionKey) {
+        this.partitionKey = partitionKey;
+        return this;
+      }
+
+      public ExpectedResultBuilder clusteringKey(Key clusteringKey) {
+        this.clusteringKey = clusteringKey;
+        return this;
+      }
+
+      public ExpectedResultBuilder nonKeyColumns(List<Column<?>> nonKeyColumns) {
+        this.nonKeyColumns = nonKeyColumns;
+        return this;
+      }
+
+      public ExpectedResult build() {
+        return new ExpectedResult(this);
+      }
     }
   }
 }

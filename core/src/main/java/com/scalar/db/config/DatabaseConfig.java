@@ -28,6 +28,7 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
 import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager;
 import com.scalar.db.transaction.jdbc.JdbcTransactionAdmin;
 import com.scalar.db.transaction.jdbc.JdbcTransactionManager;
+import com.scalar.db.transaction.rpc.GrpcTransactionAdmin;
 import com.scalar.db.transaction.rpc.GrpcTransactionManager;
 import com.scalar.db.transaction.rpc.GrpcTwoPhaseCommitTransactionManager;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -163,7 +164,7 @@ public class DatabaseConfig {
                   + ")");
         }
         transactionManagerClass = GrpcTransactionManager.class;
-        transactionAdminClass = null;
+        transactionAdminClass = GrpcTransactionAdmin.class;
         twoPhaseCommitTransactionManagerClass = GrpcTwoPhaseCommitTransactionManager.class;
         break;
       default:

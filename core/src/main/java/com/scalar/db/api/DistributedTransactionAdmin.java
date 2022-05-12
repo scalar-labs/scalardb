@@ -11,90 +11,90 @@ import java.util.Map;
 public interface DistributedTransactionAdmin extends Admin {
 
   /**
-   * Creates a coordinator namespace and table if it does not exist.
+   * Creates coordinator namespace and tables.
    *
-   * @param options options to create namespace and table
+   * @param options options to create namespace and tables
    * @throws ExecutionException if the operation failed
    */
-  void createCoordinatorNamespaceAndTable(Map<String, String> options) throws ExecutionException;
+  void createCoordinatorTables(Map<String, String> options) throws ExecutionException;
 
   /**
-   * Creates a coordinator namespace and table if it does not exist.
+   * Creates coordinator namespace and tables.
    *
-   * @param ifNotExists if set to true, the coordinator table will be created only if it does not
-   *     exist already. If set to false, it will try to create the coordinator table but may throw
-   *     an exception if it already exists
-   * @param options options to create namespace and table
+   * @param ifNotExist if set to true, the coordinator namespace and tables will be created only if
+   *     they do not exist. If set to false, it will try to create the coordinator namespace and
+   *     tables but may throw an exception if they already exist
+   * @param options options to create namespace and tables
    * @throws ExecutionException if the operation failed
    */
-  default void createCoordinatorNamespaceAndTable(boolean ifNotExists, Map<String, String> options)
+  default void createCoordinatorTables(boolean ifNotExist, Map<String, String> options)
       throws ExecutionException {
-    if (ifNotExists && coordinatorTableExists()) {
+    if (ifNotExist && coordinatorTablesExist()) {
       return;
     }
-    createCoordinatorNamespaceAndTable(options);
+    createCoordinatorTables(options);
   }
 
   /**
-   * Creates a coordinator namespace and table if it does not exist.
+   * Creates coordinator namespace and tables.
    *
-   * @param ifNotExists if set to true, the coordinator table will be created only if it does not
-   *     exist already. If set to false, it will try to create the coordinator table but may throw
-   *     an exception if it already exists
+   * @param ifNotExist if set to true, the coordinator namespace and tables will be created only if
+   *     they do not exist. If set to false, it will try to create the coordinator namespace and
+   *     tables but may throw an exception if they already exist
    * @throws ExecutionException if the operation failed
    */
-  default void createCoordinatorNamespaceAndTable(boolean ifNotExists) throws ExecutionException {
-    if (ifNotExists && coordinatorTableExists()) {
+  default void createCoordinatorTables(boolean ifNotExist) throws ExecutionException {
+    if (ifNotExist && coordinatorTablesExist()) {
       return;
     }
-    createCoordinatorNamespaceAndTable(Collections.emptyMap());
+    createCoordinatorTables(Collections.emptyMap());
   }
 
   /**
-   * Creates a coordinator namespace and table if it does not exist.
+   * Creates coordinator namespace and tables.
    *
    * @throws ExecutionException if the operation failed
    */
-  default void createCoordinatorNamespaceAndTable() throws ExecutionException {
-    createCoordinatorNamespaceAndTable(Collections.emptyMap());
+  default void createCoordinatorTables() throws ExecutionException {
+    createCoordinatorTables(Collections.emptyMap());
   }
 
   /**
-   * Drops a coordinator namespace and table.
+   * Drops coordinator namespace and tables.
    *
    * @throws ExecutionException if the operation failed
    */
-  void dropCoordinatorNamespaceAndTable() throws ExecutionException;
+  void dropCoordinatorTables() throws ExecutionException;
 
   /**
-   * Drops a coordinator namespace and table.
+   * Drops coordinator namespace and tables.
    *
-   * @param ifExists if set to true, the coordinator table will be dropped only if it exists. If set
-   *     to false, it will try to drop the coordinator table but may throw an exception if it does
-   *     not exist
+   * @param ifExist if set to true, the coordinator namespace and tables will be dropped only if
+   *     they exist. If set to false, it will try to drop the coordinator namespace and tables but
+   *     may throw an exception if they do not exist
    * @throws ExecutionException if the operation failed
    */
-  default void dropCoordinatorNamespaceAndTable(boolean ifExists) throws ExecutionException {
-    if (ifExists && !coordinatorTableExists()) {
+  default void dropCoordinatorTables(boolean ifExist) throws ExecutionException {
+    if (ifExist && !coordinatorTablesExist()) {
       return;
     }
-    dropCoordinatorNamespaceAndTable();
+    dropCoordinatorTables();
   }
 
   /**
-   * Truncates a coordinator table.
+   * Truncates coordinator tables.
    *
    * @throws ExecutionException if the operation failed
    */
-  void truncateCoordinatorTable() throws ExecutionException;
+  void truncateCoordinatorTables() throws ExecutionException;
 
   /**
-   * Returns true if a coordinator table exists.
+   * Returns true if all the coordinator tables exist.
    *
-   * @return true if a coordinator table exists, false otherwise
+   * @return true if all the coordinator tables exist, false otherwise
    * @throws ExecutionException if the operation failed
    */
-  boolean coordinatorTableExists() throws ExecutionException;
+  boolean coordinatorTablesExist() throws ExecutionException;
 
   /** Closes connections to the storage. */
   void close();

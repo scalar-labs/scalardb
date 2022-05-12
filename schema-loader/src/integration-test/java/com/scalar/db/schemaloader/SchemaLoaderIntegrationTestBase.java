@@ -143,7 +143,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
     return ImmutableList.of("--config", configFile, "--schema-file", schemaFile);
   }
 
-  protected List<String> getCommandArgsForCreationWithCoordinatorTable(
+  protected List<String> getCommandArgsForCreationWithCoordinator(
       String configFile, String schemaFile) throws Exception {
     return ImmutableList.<String>builder()
         .addAll(getCommandArgsForCreation(configFile, schemaFile))
@@ -159,10 +159,10 @@ public abstract class SchemaLoaderIntegrationTestBase {
         .build();
   }
 
-  protected List<String> getCommandArgsForDeletionWithCoordinatorTable(
+  protected List<String> getCommandArgsForDeletionWithCoordinator(
       String configFile, String schemaFile) throws Exception {
     return ImmutableList.<String>builder()
-        .addAll(getCommandArgsForCreationWithCoordinatorTable(configFile, schemaFile))
+        .addAll(getCommandArgsForCreationWithCoordinator(configFile, schemaFile))
         .add("-D")
         .build();
   }
@@ -202,7 +202,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
     assertThat(exitCode).isEqualTo(0);
     assertThat(admin.tableExists(namespace1, TABLE_1)).isTrue();
     assertThat(admin.tableExists(namespace2, TABLE_2)).isTrue();
-    assertThat(consensusCommitAdmin.coordinatorTableExists()).isFalse();
+    assertThat(consensusCommitAdmin.coordinatorTablesExist()).isFalse();
   }
 
   private void deleteTables_ShouldDeleteTables() throws Exception {
@@ -213,40 +213,37 @@ public abstract class SchemaLoaderIntegrationTestBase {
     assertThat(exitCode).isEqualTo(0);
     assertThat(admin.tableExists(namespace1, TABLE_1)).isFalse();
     assertThat(admin.tableExists(namespace2, TABLE_2)).isFalse();
-    assertThat(consensusCommitAdmin.coordinatorTableExists()).isFalse();
+    assertThat(consensusCommitAdmin.coordinatorTablesExist()).isFalse();
   }
 
   @Test
-  public void createTablesThenDeleteTablesWithCoordinatorTable_ShouldExecuteProperly()
-      throws Exception {
-    createTables_ShouldCreateTablesWithCoordinatorTable();
-    deleteTables_ShouldDeleteTablesWithCoordinatorTable();
+  public void createTablesThenDeleteTablesWithCoordinator_ShouldExecuteProperly() throws Exception {
+    createTables_ShouldCreateTablesWithCoordinator();
+    deleteTables_ShouldDeleteTablesWithCoordinator();
   }
 
-  private void createTables_ShouldCreateTablesWithCoordinatorTable() throws Exception {
+  private void createTables_ShouldCreateTablesWithCoordinator() throws Exception {
     // Act
     int exitCode =
-        executeCommandWithArgs(
-            getCommandArgsForCreationWithCoordinatorTable(CONFIG_FILE, SCHEMA_FILE));
+        executeCommandWithArgs(getCommandArgsForCreationWithCoordinator(CONFIG_FILE, SCHEMA_FILE));
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
     assertThat(admin.tableExists(namespace1, TABLE_1)).isTrue();
     assertThat(admin.tableExists(namespace2, TABLE_2)).isTrue();
-    assertThat(consensusCommitAdmin.coordinatorTableExists()).isTrue();
+    assertThat(consensusCommitAdmin.coordinatorTablesExist()).isTrue();
   }
 
-  private void deleteTables_ShouldDeleteTablesWithCoordinatorTable() throws Exception {
+  private void deleteTables_ShouldDeleteTablesWithCoordinator() throws Exception {
     // Act
     int exitCode =
-        executeCommandWithArgs(
-            getCommandArgsForDeletionWithCoordinatorTable(CONFIG_FILE, SCHEMA_FILE));
+        executeCommandWithArgs(getCommandArgsForDeletionWithCoordinator(CONFIG_FILE, SCHEMA_FILE));
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
     assertThat(admin.tableExists(namespace1, TABLE_1)).isFalse();
     assertThat(admin.tableExists(namespace2, TABLE_2)).isFalse();
-    assertThat(consensusCommitAdmin.coordinatorTableExists()).isFalse();
+    assertThat(consensusCommitAdmin.coordinatorTablesExist()).isFalse();
   }
 
   private int executeCommandWithArgs(List<String> args) throws Exception {

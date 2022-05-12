@@ -56,7 +56,7 @@ public class SchemaLoaderTest {
 
   @Test
   public void
-      load_WithConfigFileAndSchemaFileWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      load_WithConfigFileAndSchemaFileWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -66,12 +66,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser).parse();
     verify(operator).createTables(anyList());
-    verify(operator).createCoordinatorTable(options);
+    verify(operator).createCoordinatorTables(options);
   }
 
   @Test
   public void
-      load_WithConfigFileAndSchemaFileWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      load_WithConfigFileAndSchemaFileWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -81,12 +81,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser).parse();
     verify(operator).createTables(anyList());
-    verify(operator, never()).createCoordinatorTable(options);
+    verify(operator, never()).createCoordinatorTables(options);
   }
 
   @Test
   public void
-      load_WithConfigFileAndNullSchemaFileWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      load_WithConfigFileAndNullSchemaFileWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -96,12 +96,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser, never()).parse();
     verify(operator).createTables(anyList());
-    verify(operator).createCoordinatorTable(options);
+    verify(operator).createCoordinatorTables(options);
   }
 
   @Test
   public void
-      load_WithConfigFileAndNullSchemaFileWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      load_WithConfigFileAndNullSchemaFileWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -111,12 +111,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser, never()).parse();
     verify(operator).createTables(anyList());
-    verify(operator, never()).createCoordinatorTable(options);
+    verify(operator, never()).createCoordinatorTables(options);
   }
 
   @Test
   public void
-      load_WithConfigFileAndSerializedSchemaJsonWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      load_WithConfigFileAndSerializedSchemaJsonWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -126,12 +126,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser).parse();
     verify(operator).createTables(anyList());
-    verify(operator).createCoordinatorTable(options);
+    verify(operator).createCoordinatorTables(options);
   }
 
   @Test
   public void
-      load_WithConfigFileAndSerializedSchemaJsonWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      load_WithConfigFileAndSerializedSchemaJsonWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -141,12 +141,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser).parse();
     verify(operator).createTables(anyList());
-    verify(operator, never()).createCoordinatorTable(options);
+    verify(operator, never()).createCoordinatorTables(options);
   }
 
   @Test
   public void
-      load_WithConfigFileAndNullSerializedSchemaJsonWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      load_WithConfigFileAndNullSerializedSchemaJsonWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -156,12 +156,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser, never()).parse();
     verify(operator).createTables(anyList());
-    verify(operator).createCoordinatorTable(options);
+    verify(operator).createCoordinatorTables(options);
   }
 
   @Test
   public void
-      load_WithConfigFileAndNullSerializedSchemaJsonWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      load_WithConfigFileAndNullSerializedSchemaJsonWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -171,12 +171,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser, never()).parse();
     verify(operator).createTables(anyList());
-    verify(operator, never()).createCoordinatorTable(options);
+    verify(operator, never()).createCoordinatorTables(options);
   }
 
   @Test
   public void
-      load_WithConfigPropertiesAndSchemaFileWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      load_WithConfigPropertiesAndSchemaFileWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -186,12 +186,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser).parse();
     verify(operator).createTables(anyList());
-    verify(operator).createCoordinatorTable(options);
+    verify(operator).createCoordinatorTables(options);
   }
 
   @Test
   public void
-      load_WithConfigPropertiesAndSchemaFileWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      load_WithConfigPropertiesAndSchemaFileWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -201,12 +201,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser).parse();
     verify(operator).createTables(anyList());
-    verify(operator, never()).createCoordinatorTable(options);
+    verify(operator, never()).createCoordinatorTables(options);
   }
 
   @Test
   public void
-      load_WithConfigPropertiesAndNullSchemaFileWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      load_WithConfigPropertiesAndNullSchemaFileWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -216,12 +216,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser, never()).parse();
     verify(operator).createTables(anyList());
-    verify(operator).createCoordinatorTable(options);
+    verify(operator).createCoordinatorTables(options);
   }
 
   @Test
   public void
-      load_WithConfigPropertiesAndNullSchemaFileWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      load_WithConfigPropertiesAndNullSchemaFileWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -231,12 +231,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser, never()).parse();
     verify(operator).createTables(anyList());
-    verify(operator, never()).createCoordinatorTable(options);
+    verify(operator, never()).createCoordinatorTables(options);
   }
 
   @Test
   public void
-      load_WithConfigPropertiesAndSerializedSchemaJsonWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      load_WithConfigPropertiesAndSerializedSchemaJsonWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -246,12 +246,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser).parse();
     verify(operator).createTables(anyList());
-    verify(operator).createCoordinatorTable(options);
+    verify(operator).createCoordinatorTables(options);
   }
 
   @Test
   public void
-      load_WithConfigPropertiesAndSerializedSchemaJsonWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      load_WithConfigPropertiesAndSerializedSchemaJsonWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -261,12 +261,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser).parse();
     verify(operator).createTables(anyList());
-    verify(operator, never()).createCoordinatorTable(options);
+    verify(operator, never()).createCoordinatorTables(options);
   }
 
   @Test
   public void
-      load_WithConfigPropertiesAndNullSerializedSchemaJsonWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      load_WithConfigPropertiesAndNullSerializedSchemaJsonWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -276,12 +276,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser, never()).parse();
     verify(operator).createTables(anyList());
-    verify(operator).createCoordinatorTable(options);
+    verify(operator).createCoordinatorTables(options);
   }
 
   @Test
   public void
-      load_WithConfigPropertiesAndNullSerializedSchemaJsonWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      load_WithConfigPropertiesAndNullSerializedSchemaJsonWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -291,12 +291,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser, never()).parse();
     verify(operator).createTables(anyList());
-    verify(operator, never()).createCoordinatorTable(options);
+    verify(operator, never()).createCoordinatorTables(options);
   }
 
   @Test
   public void
-      unload_WithConfigFileAndSchemaFileWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      unload_WithConfigFileAndSchemaFileWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -306,12 +306,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser).parse();
     verify(operator).deleteTables(anyList());
-    verify(operator).dropCoordinatorTable();
+    verify(operator).dropCoordinatorTables();
   }
 
   @Test
   public void
-      unload_WithConfigFileAndSchemaFileWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      unload_WithConfigFileAndSchemaFileWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -321,12 +321,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser).parse();
     verify(operator).deleteTables(anyList());
-    verify(operator, never()).dropCoordinatorTable();
+    verify(operator, never()).dropCoordinatorTables();
   }
 
   @Test
   public void
-      unload_WithConfigFileAndNullSchemaFileWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      unload_WithConfigFileAndNullSchemaFileWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -336,12 +336,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser, never()).parse();
     verify(operator).deleteTables(anyList());
-    verify(operator).dropCoordinatorTable();
+    verify(operator).dropCoordinatorTables();
   }
 
   @Test
   public void
-      unload_WithConfigFileAndNullSchemaFileWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      unload_WithConfigFileAndNullSchemaFileWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -351,12 +351,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser, never()).parse();
     verify(operator).deleteTables(anyList());
-    verify(operator, never()).dropCoordinatorTable();
+    verify(operator, never()).dropCoordinatorTables();
   }
 
   @Test
   public void
-      unload_WithConfigFileAndSerializedSchemaJsonWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      unload_WithConfigFileAndSerializedSchemaJsonWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -366,12 +366,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser).parse();
     verify(operator).deleteTables(anyList());
-    verify(operator).dropCoordinatorTable();
+    verify(operator).dropCoordinatorTables();
   }
 
   @Test
   public void
-      unload_WithConfigFileAndSerializedSchemaJsonWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      unload_WithConfigFileAndSerializedSchemaJsonWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -381,12 +381,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser).parse();
     verify(operator).deleteTables(anyList());
-    verify(operator, never()).dropCoordinatorTable();
+    verify(operator, never()).dropCoordinatorTables();
   }
 
   @Test
   public void
-      unload_WithConfigFileAndNullSerializedSchemaJsonWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      unload_WithConfigFileAndNullSerializedSchemaJsonWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -396,12 +396,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser, never()).parse();
     verify(operator).deleteTables(anyList());
-    verify(operator).dropCoordinatorTable();
+    verify(operator).dropCoordinatorTables();
   }
 
   @Test
   public void
-      unload_WithConfigFileAndNullSerializedSchemaJsonWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      unload_WithConfigFileAndNullSerializedSchemaJsonWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -411,12 +411,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser, never()).parse();
     verify(operator).deleteTables(anyList());
-    verify(operator, never()).dropCoordinatorTable();
+    verify(operator, never()).dropCoordinatorTables();
   }
 
   @Test
   public void
-      unload_WithConfigPropertiesAndSchemaFileWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      unload_WithConfigPropertiesAndSchemaFileWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -426,12 +426,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser).parse();
     verify(operator).deleteTables(anyList());
-    verify(operator).dropCoordinatorTable();
+    verify(operator).dropCoordinatorTables();
   }
 
   @Test
   public void
-      unload_WithConfigPropertiesAndSchemaFileWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      unload_WithConfigPropertiesAndSchemaFileWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -441,12 +441,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser).parse();
     verify(operator).deleteTables(anyList());
-    verify(operator, never()).dropCoordinatorTable();
+    verify(operator, never()).dropCoordinatorTables();
   }
 
   @Test
   public void
-      unload_WithConfigPropertiesAndNullSchemaFileWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      unload_WithConfigPropertiesAndNullSchemaFileWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -456,12 +456,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser, never()).parse();
     verify(operator).deleteTables(anyList());
-    verify(operator).dropCoordinatorTable();
+    verify(operator).dropCoordinatorTables();
   }
 
   @Test
   public void
-      unload_WithConfigPropertiesAndNullSchemaFileWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      unload_WithConfigPropertiesAndNullSchemaFileWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -471,12 +471,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser, never()).parse();
     verify(operator).deleteTables(anyList());
-    verify(operator, never()).dropCoordinatorTable();
+    verify(operator, never()).dropCoordinatorTables();
   }
 
   @Test
   public void
-      unload_WithConfigPropertiesAndSerializedSchemaJsonWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      unload_WithConfigPropertiesAndSerializedSchemaJsonWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -486,12 +486,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser).parse();
     verify(operator).deleteTables(anyList());
-    verify(operator).dropCoordinatorTable();
+    verify(operator).dropCoordinatorTables();
   }
 
   @Test
   public void
-      unload_WithConfigPropertiesAndSerializedSchemaJsonWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      unload_WithConfigPropertiesAndSerializedSchemaJsonWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -501,12 +501,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser).parse();
     verify(operator).deleteTables(anyList());
-    verify(operator, never()).dropCoordinatorTable();
+    verify(operator, never()).dropCoordinatorTables();
   }
 
   @Test
   public void
-      unload_WithConfigPropertiesAndNullSerializedSchemaJsonWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      unload_WithConfigPropertiesAndNullSerializedSchemaJsonWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -516,12 +516,12 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser, never()).parse();
     verify(operator).deleteTables(anyList());
-    verify(operator).dropCoordinatorTable();
+    verify(operator).dropCoordinatorTables();
   }
 
   @Test
   public void
-      unload_WithConfigPropertiesAndNullSerializedSchemaJsonWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+      unload_WithConfigPropertiesAndNullSerializedSchemaJsonWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
@@ -531,6 +531,6 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser, never()).parse();
     verify(operator).deleteTables(anyList());
-    verify(operator, never()).dropCoordinatorTable();
+    verify(operator, never()).dropCoordinatorTables();
   }
 }

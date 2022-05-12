@@ -99,12 +99,12 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
 
   @AfterAll
   public void afterAll() throws ExecutionException {
-    deleteTables();
+    dropTables();
     admin.close();
     storage.close();
   }
 
-  private void deleteTables() throws ExecutionException {
+  private void dropTables() throws ExecutionException {
     for (DataType secondaryIndexType : secondaryIndexTypes) {
       admin.dropTable(namespace, getTableName(secondaryIndexType));
     }

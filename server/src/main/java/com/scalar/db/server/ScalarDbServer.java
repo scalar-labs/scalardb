@@ -58,6 +58,7 @@ public class ScalarDbServer implements Callable<Integer> {
             .addService(injector.getInstance(DistributedStorageService.class))
             .addService(injector.getInstance(DistributedStorageAdminService.class))
             .addService(injector.getInstance(DistributedTransactionService.class))
+            .addService(injector.getInstance(DistributedTransactionAdminService.class))
             .addService(injector.getInstance(AdminService.class))
             .addService(new HealthService())
             .addService(ProtoReflectionService.newInstance());

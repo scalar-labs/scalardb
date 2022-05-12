@@ -10,7 +10,7 @@ This document sets out some guidelines for backing up and restoring the database
 #### JDBC databases
 
 You can take a backup with your favorite way for JDBC databases.
-One requirement for backup in Scalar DB on JDBC databases is that backups for all the Scalar DB managed tables (including the coordinator table) need to be transactionally-consistent or automatically recoverable to a transactionally-consistent state.
+One requirement for backup in Scalar DB on JDBC databases is that backups for all the Scalar DB managed tables (including the coordinator tables) need to be transactionally-consistent or automatically recoverable to a transactionally-consistent state.
 That means that you need to create a consistent snapshot by dumping all tables in a single transaction.
 For example, you can use the `mysqldump` command with `--single-transaction` option in MySQL and the `pg_dump` command in PostgreSQL to achieve that.
 Or when you use Amazon RDS (Relational Database Service) or Azure Database for MySQL/PostgreSQL, you can restore to any point within the backup retention period with the automated backup feature, which satisfies the requirement.
