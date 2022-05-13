@@ -1,14 +1,14 @@
 package com.scalar.db.storage.dynamo;
 
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestBase;
 import java.util.Map;
+import java.util.Properties;
 
 public class ConsensusCommitIntegrationTestWithDynamo extends ConsensusCommitIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDbConfig() {
-    return DynamoEnv.getDynamoConfig();
+  protected Properties getProps() {
+    return DynamoEnv.getProperties();
   }
 
   @Override

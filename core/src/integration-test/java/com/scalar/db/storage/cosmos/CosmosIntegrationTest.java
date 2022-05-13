@@ -1,16 +1,15 @@
 package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.api.DistributedStorageIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
 import java.util.Map;
 import java.util.Optional;
-import org.junit.jupiter.api.Disabled;
+import java.util.Properties;
 
 public class CosmosIntegrationTest extends DistributedStorageIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return CosmosEnv.getCosmosConfig();
+  protected Properties getProperties() {
+    return CosmosEnv.getProperties();
   }
 
   @Override
@@ -24,20 +23,4 @@ public class CosmosIntegrationTest extends DistributedStorageIntegrationTestBase
   protected Map<String, String> getCreateOptions() {
     return CosmosEnv.getCreateOptions();
   }
-
-  @Override
-  @Disabled("ScanAll is not yet implemented for Cosmos DB")
-  public void scan_ScanAllWithNoLimitGiven_ShouldRetrieveAllRecords() {}
-
-  @Override
-  @Disabled("ScanAll is not yet implemented for Cosmos DB")
-  public void scan_ScanAllWithLimitGiven_ShouldRetrieveExpectedRecords() {}
-
-  @Override
-  @Disabled("ScanAll is not yet implemented for Cosmos DB")
-  public void scan_ScanAllWithProjectionsGiven_ShouldRetrieveSpecifiedValues() {}
-
-  @Override
-  @Disabled("ScanAll is not yet implemented for Cosmos DB")
-  public void scan_ScanAllWithLargeData_ShouldRetrieveExpectedValues() {}
 }

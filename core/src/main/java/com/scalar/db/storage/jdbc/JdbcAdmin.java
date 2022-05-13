@@ -13,6 +13,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
@@ -126,15 +127,16 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private final String metadataSchema;
 
   @Inject
-  public JdbcAdmin(JdbcConfig config) {
+  public JdbcAdmin(DatabaseConfig databaseConfig) {
+    JdbcConfig config = new JdbcConfig(databaseConfig);
     dataSource = JdbcUtils.initDataSourceForAdmin(config);
-    rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
+    rdbEngine = JdbcUtils.getRdbEngine(config.getJdbcUrl());
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
 
   public JdbcAdmin(BasicDataSource dataSource, JdbcConfig config) {
     this.dataSource = dataSource;
-    rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
+    rdbEngine = JdbcUtils.getRdbEngine(config.getJdbcUrl());
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
 

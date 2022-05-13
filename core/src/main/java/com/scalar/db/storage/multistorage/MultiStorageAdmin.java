@@ -4,6 +4,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageFactory;
 import java.util.ArrayList;
@@ -32,14 +33,16 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
   private final List<DistributedStorageAdmin> admins;
 
   @Inject
-  public MultiStorageAdmin(MultiStorageConfig config) {
+  public MultiStorageAdmin(DatabaseConfig databaseConfig) {
+    MultiStorageConfig config = new MultiStorageConfig(databaseConfig);
+
     admins = new ArrayList<>();
     Map<String, DistributedStorageAdmin> nameAdminMap = new HashMap<>();
     config
-        .getDatabaseConfigMap()
+        .getDatabasePropertiesMap()
         .forEach(
-            (storageName, databaseConfig) -> {
-              StorageFactory factory = new StorageFactory(databaseConfig);
+            (storageName, properties) -> {
+              StorageFactory factory = StorageFactory.create(properties);
               DistributedStorageAdmin admin = factory.getAdmin();
               nameAdminMap.put(storageName, admin);
               admins.add(admin);

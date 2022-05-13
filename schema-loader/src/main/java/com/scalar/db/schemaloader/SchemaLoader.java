@@ -12,7 +12,6 @@ import com.scalar.db.schemaloader.command.SchemaLoaderCommand;
 import com.scalar.db.schemaloader.util.either.Either;
 import com.scalar.db.schemaloader.util.either.Left;
 import com.scalar.db.schemaloader.util.either.Right;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -283,7 +282,7 @@ public class SchemaLoader {
     if (config.isLeft()) {
       try {
         assert config.getLeft() != null;
-        databaseConfig = new DatabaseConfig(new FileInputStream(config.getLeft().toFile()));
+        databaseConfig = new DatabaseConfig(config.getLeft());
       } catch (IOException e) {
         throw new SchemaLoaderException("Initializing schema operator failed.", e);
       }

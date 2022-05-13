@@ -32,7 +32,6 @@ public class MultiStorageTest {
   protected static final String COL_NAME2 = "c2";
   protected static final String COL_NAME3 = "c3";
 
-  @Mock private MultiStorageConfig config;
   @Mock private DistributedStorage storage1;
   @Mock private DistributedStorage storage2;
   @Mock private DistributedStorage storage3;
@@ -50,7 +49,7 @@ public class MultiStorageTest {
     Map<String, DistributedStorage> namespaceStorageMap = new HashMap<>();
     namespaceStorageMap.put(NAMESPACE2, storage2);
     DistributedStorage defaultStorage = storage3;
-    multiStorage = new MultiStorage(config, tableStorageMap, namespaceStorageMap, defaultStorage);
+    multiStorage = new MultiStorage(tableStorageMap, namespaceStorageMap, defaultStorage);
   }
 
   @Test

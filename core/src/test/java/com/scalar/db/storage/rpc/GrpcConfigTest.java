@@ -4,13 +4,32 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.config.DatabaseConfig;
-import java.util.Collections;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
 public class GrpcConfigTest {
 
   private static final String ANY_HOST = "localhost";
+  private static final int ANY_PORT = 60000;
+
+  @Test
+  public void constructor_PropertiesWithPortGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.CONTACT_PORT, Integer.toString(ANY_PORT));
+    props.setProperty(DatabaseConfig.STORAGE, "grpc");
+
+    // Act
+    GrpcConfig config = new GrpcConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.getHost()).isEqualTo(ANY_HOST);
+    assertThat(config.getPort()).isEqualTo(ANY_PORT);
+    assertThat(config.getDeadlineDurationMillis())
+        .isEqualTo(GrpcConfig.DEFAULT_DEADLINE_DURATION_MILLIS);
+    assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(true);
+  }
 
   @Test
   public void constructor_PropertiesWithoutPortGiven_ShouldLoadProperly() {
@@ -20,10 +39,11 @@ public class GrpcConfigTest {
     props.setProperty(DatabaseConfig.STORAGE, "grpc");
 
     // Act
-    GrpcConfig config = new GrpcConfig(props);
+    GrpcConfig config = new GrpcConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
+    assertThat(config.getHost()).isEqualTo(ANY_HOST);
+    assertThat(config.getPort()).isEqualTo(GrpcConfig.DEFAULT_SCALAR_DB_SERVER_PORT);
     assertThat(config.getDeadlineDurationMillis())
         .isEqualTo(GrpcConfig.DEFAULT_DEADLINE_DURATION_MILLIS);
     assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(true);
@@ -38,10 +58,10 @@ public class GrpcConfigTest {
     props.setProperty(GrpcConfig.DEADLINE_DURATION_MILLIS, "5000");
 
     // Act
-    GrpcConfig config = new GrpcConfig(props);
+    GrpcConfig config = new GrpcConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
+    assertThat(config.getHost()).isEqualTo(ANY_HOST);
     assertThat(config.getDeadlineDurationMillis()).isEqualTo(5000);
   }
 
@@ -55,7 +75,8 @@ public class GrpcConfigTest {
     props.setProperty(GrpcConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "aaa");
 
     // Act
-    assertThatThrownBy(() -> new GrpcConfig(props)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new GrpcConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -68,10 +89,10 @@ public class GrpcConfigTest {
     props.setProperty(GrpcConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "false");
 
     // Act
-    GrpcConfig config = new GrpcConfig(props);
+    GrpcConfig config = new GrpcConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
+    assertThat(config.getHost()).isEqualTo(ANY_HOST);
     assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(false);
   }
 
@@ -85,6 +106,7 @@ public class GrpcConfigTest {
     props.setProperty(GrpcConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "aaa");
 
     // Act Assert
-    assertThatThrownBy(() -> new GrpcConfig(props)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new GrpcConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }

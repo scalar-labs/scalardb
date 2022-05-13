@@ -14,6 +14,7 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.AbstractDistributedStorage;
 import com.scalar.db.storage.common.checker.OperationChecker;
@@ -49,7 +50,9 @@ public class Dynamo extends AbstractDistributedStorage {
   private final OperationChecker operationChecker;
 
   @Inject
-  public Dynamo(DynamoConfig config) {
+  public Dynamo(DatabaseConfig databaseConfig) {
+    DynamoConfig config = new DynamoConfig(databaseConfig);
+
     DynamoDbClientBuilder builder = DynamoDbClient.builder();
     config.getEndpointOverride().ifPresent(e -> builder.endpointOverride(URI.create(e)));
     client =
@@ -57,13 +60,13 @@ public class Dynamo extends AbstractDistributedStorage {
             .credentialsProvider(
                 StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(
-                        config.getUsername().orElse(null), config.getPassword().orElse(null))))
-            .region(Region.of(config.getContactPoints().get(0)))
+                        config.getAccessKeyId(), config.getSecretAccessKey())))
+            .region(Region.of(config.getRegion()))
             .build();
 
     metadataManager =
         new TableMetadataManager(
-            new DynamoAdmin(client, config), config.getMetadataCacheExpirationTimeSecs());
+            new DynamoAdmin(client, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
     operationChecker = new OperationChecker(metadataManager);
 
     selectStatementHandler = new SelectStatementHandler(client, metadataManager);

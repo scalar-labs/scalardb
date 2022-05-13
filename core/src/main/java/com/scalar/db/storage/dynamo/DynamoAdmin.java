@@ -10,6 +10,7 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.net.URI;
@@ -154,7 +155,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private final String metadataNamespace;
 
   @Inject
-  public DynamoAdmin(DynamoConfig config) {
+  public DynamoAdmin(DatabaseConfig databaseConfig) {
+    DynamoConfig config = new DynamoConfig(databaseConfig);
     AwsCredentialsProvider credentialsProvider = createCredentialsProvider(config);
 
     DynamoDbClientBuilder builder = DynamoDbClient.builder();
@@ -162,7 +164,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     client =
         builder
             .credentialsProvider(credentialsProvider)
-            .region(Region.of(config.getContactPoints().get(0)))
+            .region(Region.of(config.getRegion()))
             .build();
 
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
@@ -177,8 +179,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   private AwsCredentialsProvider createCredentialsProvider(DynamoConfig config) {
     return StaticCredentialsProvider.create(
-        AwsBasicCredentials.create(
-            config.getUsername().orElse(null), config.getPassword().orElse(null)));
+        AwsBasicCredentials.create(config.getAccessKeyId(), config.getSecretAccessKey()));
   }
 
   private ApplicationAutoScalingClient createApplicationAutoScalingClient(DynamoConfig config) {
@@ -186,7 +187,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     config.getEndpointOverride().ifPresent(e -> builder.endpointOverride(URI.create(e)));
     return builder
         .credentialsProvider(createCredentialsProvider(config))
-        .region(Region.of(config.getContactPoints().get(0)))
+        .region(Region.of(config.getRegion()))
         .build();
   }
 

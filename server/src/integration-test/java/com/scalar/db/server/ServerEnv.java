@@ -1,7 +1,6 @@
 package com.scalar.db.server;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Isolation;
 import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
@@ -73,7 +72,7 @@ public final class ServerEnv {
     return new ServerConfig(properties);
   }
 
-  public static GrpcConfig getGrpcConfig() {
+  public static Properties getProperties() {
     String contactPoints =
         System.getProperty(PROP_GRPC_CONTACT_POINTS, DEFAULT_GRPC_CONTACT_POINTS);
     String contactPort = System.getProperty(PROP_GRPC_CONTACT_PORT, DEFAULT_GRPC_CONTACT_PORT);
@@ -83,6 +82,6 @@ public final class ServerEnv {
     properties.setProperty(DatabaseConfig.CONTACT_PORT, contactPort);
     properties.setProperty(DatabaseConfig.STORAGE, "grpc");
     properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "grpc");
-    return new GrpcConfig(properties);
+    return properties;
   }
 }

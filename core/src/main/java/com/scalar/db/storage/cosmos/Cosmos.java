@@ -17,6 +17,7 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.AbstractDistributedStorage;
 import com.scalar.db.storage.common.checker.OperationChecker;
@@ -45,18 +46,20 @@ public class Cosmos extends AbstractDistributedStorage {
   private final OperationChecker operationChecker;
 
   @Inject
-  public Cosmos(CosmosConfig config) {
+  public Cosmos(DatabaseConfig databaseConfig) {
+    CosmosConfig config = new CosmosConfig(databaseConfig);
+
     client =
         new CosmosClientBuilder()
-            .endpoint(config.getContactPoints().get(0))
-            .key(config.getPassword().orElse(null))
+            .endpoint(config.getEndpoint())
+            .key(config.getKey())
             .directMode()
             .consistencyLevel(ConsistencyLevel.STRONG)
             .buildClient();
 
     metadataManager =
         new TableMetadataManager(
-            new CosmosAdmin(client, config), config.getMetadataCacheExpirationTimeSecs());
+            new CosmosAdmin(client, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
     operationChecker = new OperationChecker(metadataManager);
 
     selectStatementHandler = new SelectStatementHandler(client, metadataManager);
@@ -88,12 +91,12 @@ public class Cosmos extends AbstractDistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
-    if (scan instanceof ScanAll) {
-      throw new UnsupportedOperationException();
-    }
-
     scan = copyAndSetTargetToIfNot(scan);
-    operationChecker.check(scan);
+    if (scan instanceof ScanAll) {
+      operationChecker.check((ScanAll) scan);
+    } else {
+      operationChecker.check(scan);
+    }
 
     List<Record> records = selectStatementHandler.handle(scan);
 

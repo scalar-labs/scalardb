@@ -25,9 +25,9 @@ public class ServerModule extends AbstractModule {
   private final StorageFactory storageFactory;
   private final TransactionFactory transactionFactory;
 
-  public ServerModule(ServerConfig config, DatabaseConfig databaseConfig) {
+  public ServerModule(ServerConfig config) {
     this.config = config;
-    this.databaseConfig = databaseConfig;
+    this.databaseConfig = new DatabaseConfig(config.getProperties());
     storageFactory = new StorageFactory(databaseConfig);
 
     Properties transactionProperties = new Properties();

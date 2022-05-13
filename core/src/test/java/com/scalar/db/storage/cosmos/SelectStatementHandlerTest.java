@@ -23,6 +23,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -90,6 +91,10 @@ public class SelectStatementHandlerTest {
   private Scan prepareScan() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     return new Scan(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+  }
+
+  private ScanAll prepareScanAll() {
+    return new ScanAll().forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
   @Test
@@ -486,5 +491,41 @@ public class SelectStatementHandlerTest {
 
     // Assert
     verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+  }
+
+  @Test
+  public void handle_ScanAllOperationWithLimit_ShouldCallQueryItemsWithProperQuery() {
+    // Arrange
+    when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
+        .thenReturn(responseIterable);
+    Record expected = new Record();
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    ScanAll scanAll = prepareScanAll().withLimit(ANY_LIMIT);
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(scanAll)).doesNotThrowAnyException();
+
+    // Assert
+    String expectedQuery = "select * from Record r offset 0 limit " + ANY_LIMIT;
+    verify(container)
+        .queryItems(eq(expectedQuery), any(CosmosQueryRequestOptions.class), eq(Record.class));
+  }
+
+  @Test
+  public void handle_ScanAllOperationWithoutLimit_ShouldCallQueryItemsWithProperQuery() {
+    // Arrange
+    when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
+        .thenReturn(responseIterable);
+    Record expected = new Record();
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    ScanAll scanAll = prepareScanAll();
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(scanAll)).doesNotThrowAnyException();
+
+    // Assert
+    String expectedQuery = "select * from Record r";
+    verify(container)
+        .queryItems(eq(expectedQuery), any(CosmosQueryRequestOptions.class), eq(Record.class));
   }
 }

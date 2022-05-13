@@ -4,6 +4,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.rpc.CreateIndexRequest;
 import com.scalar.db.rpc.CreateNamespaceRequest;
@@ -43,12 +44,10 @@ public class GrpcAdmin implements DistributedStorageAdmin {
   private final DistributedStorageAdminGrpc.DistributedStorageAdminBlockingStub stub;
 
   @Inject
-  public GrpcAdmin(GrpcConfig config) {
-    this.config = config;
+  public GrpcAdmin(DatabaseConfig databaseConfig) {
+    config = new GrpcConfig(databaseConfig);
     channel =
-        NettyChannelBuilder.forAddress(config.getContactPoints().get(0), config.getContactPort())
-            .usePlaintext()
-            .build();
+        NettyChannelBuilder.forAddress(config.getHost(), config.getPort()).usePlaintext().build();
     stub = DistributedStorageAdminGrpc.newBlockingStub(channel);
   }
 

@@ -1,9 +1,9 @@
 package com.scalar.db.server;
 
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitSpecificIntegrationTestBase;
 import java.io.IOException;
+import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 
 public class TwoPhaseConsensusCommitSpecificIntegrationTestWithDistributedStorageService
@@ -21,8 +21,8 @@ public class TwoPhaseConsensusCommitSpecificIntegrationTestWithDistributedStorag
   }
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return ServerEnv.getGrpcConfig();
+  protected Properties getProperties() {
+    return ServerEnv.getProperties();
   }
 
   @AfterAll

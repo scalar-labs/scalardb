@@ -7,14 +7,15 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 
 public class CosmosSchemaLoaderWithStorageSpecificArgsIntegrationTest
     extends SchemaLoaderIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return CosmosEnv.getCosmosConfig();
+  protected Properties getProperties() {
+    return CosmosEnv.getProperties();
   }
 
   @Override
@@ -35,16 +36,16 @@ public class CosmosSchemaLoaderWithStorageSpecificArgsIntegrationTest
   @Override
   protected List<String> getCommandArgsForCreationWithCoordinator(
       String configFile, String schemaFile) throws IOException {
-    DatabaseConfig config = new DatabaseConfig(new File(configFile));
+    CosmosConfig config = new CosmosConfig(new DatabaseConfig(new File(configFile)));
     ImmutableList.Builder<String> builder =
         ImmutableList.<String>builder()
             .add("--cosmos")
             .add("-h")
-            .add(config.getContactPoints().get(0))
+            .add(config.getEndpoint())
             .add("--schema-file")
             .add(schemaFile)
             .add("-p")
-            .add(config.getPassword().get());
+            .add(config.getKey());
     CosmosEnv.getDatabasePrefix()
         .ifPresent(
             (prefix) ->
