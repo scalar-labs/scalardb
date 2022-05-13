@@ -7,6 +7,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Result;
+import com.scalar.db.storage.dynamo.request.PaginatedRequest;
+import com.scalar.db.storage.dynamo.request.PaginatedRequestResponse;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -18,31 +20,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
-import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 
 public class QueryScannerTest {
 
-  @Mock private DynamoDbClient client;
-  @Mock private QueryRequest request;
+  @Mock PaginatedRequest request;
   @Mock private ResultInterpreter resultInterpreter;
-
-  @Mock private QueryRequest.Builder builder;
-  @Mock private QueryResponse response;
+  @Mock private PaginatedRequestResponse response;
   @Mock private Result result;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-
-    // Arrange
-    when(client.query(request)).thenReturn(response);
-
-    when(request.limit()).thenReturn(null);
-    when(request.toBuilder()).thenReturn(builder);
-    when(builder.build()).thenReturn(request);
   }
 
   @Test
@@ -50,10 +39,12 @@ public class QueryScannerTest {
     // Arrange
     Map<String, AttributeValue> item = Collections.emptyMap();
     List<Map<String, AttributeValue>> items = Arrays.asList(item, item, item);
+    when(request.execute()).thenReturn(response);
+    when(request.limit()).thenReturn(null);
     when(response.items()).thenReturn(items);
     when(resultInterpreter.interpret(item)).thenReturn(result);
 
-    QueryScanner queryScanner = new QueryScanner(client, request, resultInterpreter);
+    QueryScanner queryScanner = new QueryScanner(request, resultInterpreter);
 
     // Act
     Optional<Result> actual1 = queryScanner.one();
@@ -71,6 +62,7 @@ public class QueryScannerTest {
     assertThat(actual4).isNotPresent();
 
     verify(resultInterpreter, times(3)).interpret(item);
+    verify(request).execute();
   }
 
   @Test
@@ -78,10 +70,12 @@ public class QueryScannerTest {
     // Arrange
     Map<String, AttributeValue> item = Collections.emptyMap();
     List<Map<String, AttributeValue>> items = Arrays.asList(item, item, item);
+    when(request.execute()).thenReturn(response);
+    when(request.limit()).thenReturn(null);
     when(response.items()).thenReturn(items);
     when(resultInterpreter.interpret(item)).thenReturn(result);
 
-    QueryScanner queryScanner = new QueryScanner(client, request, resultInterpreter);
+    QueryScanner queryScanner = new QueryScanner(request, resultInterpreter);
 
     // Act
     List<Result> results1 = queryScanner.all();
@@ -95,6 +89,7 @@ public class QueryScannerTest {
     assertThat(results2).isEmpty();
 
     verify(resultInterpreter, times(3)).interpret(item);
+    verify(request).execute();
   }
 
   @Test
@@ -104,8 +99,10 @@ public class QueryScannerTest {
     List<Map<String, AttributeValue>> items = Arrays.asList(item, item, item);
     when(response.items()).thenReturn(items);
     when(resultInterpreter.interpret(item)).thenReturn(result);
+    when(request.execute()).thenReturn(response);
+    when(request.limit()).thenReturn(null);
 
-    QueryScanner queryScanner = new QueryScanner(client, request, resultInterpreter);
+    QueryScanner queryScanner = new QueryScanner(request, resultInterpreter);
 
     // Act
     Iterator<Result> iterator = queryScanner.iterator();
@@ -121,6 +118,7 @@ public class QueryScannerTest {
     assertThatThrownBy(iterator::next).isInstanceOf(NoSuchElementException.class);
 
     verify(resultInterpreter, times(3)).interpret(item);
+    verify(request).execute();
   }
 
   @Test
@@ -130,12 +128,15 @@ public class QueryScannerTest {
     List<Map<String, AttributeValue>> items = Arrays.asList(item, item);
     Map<String, AttributeValue> lastEvaluatedKey = Collections.emptyMap();
 
-    when(response.items()).thenReturn(items);
+    when(response.items()).thenReturn(items).thenReturn(items);
     when(response.hasLastEvaluatedKey()).thenReturn(true).thenReturn(false);
     when(response.lastEvaluatedKey()).thenReturn(lastEvaluatedKey);
     when(resultInterpreter.interpret(item)).thenReturn(result);
+    when(request.execute()).thenReturn(response);
+    when(request.execute(lastEvaluatedKey)).thenReturn(response);
+    when(request.limit()).thenReturn(null);
 
-    QueryScanner queryScanner = new QueryScanner(client, request, resultInterpreter);
+    QueryScanner queryScanner = new QueryScanner(request, resultInterpreter);
 
     // Act
     Optional<Result> actual1 = queryScanner.one();
@@ -156,7 +157,8 @@ public class QueryScannerTest {
     assertThat(actual5).isNotPresent();
 
     verify(resultInterpreter, times(4)).interpret(item);
-    verify(builder).exclusiveStartKey(lastEvaluatedKey);
+    verify(request).execute(lastEvaluatedKey);
+    verify(request).execute();
   }
 
   @Test
@@ -170,9 +172,11 @@ public class QueryScannerTest {
     when(response.items()).thenReturn(items);
     when(response.hasLastEvaluatedKey()).thenReturn(true);
     when(response.lastEvaluatedKey()).thenReturn(lastEvaluatedKey);
+    when(request.execute()).thenReturn(response);
+    when(request.execute(lastEvaluatedKey)).thenReturn(response);
     when(resultInterpreter.interpret(item)).thenReturn(result);
 
-    QueryScanner queryScanner = new QueryScanner(client, request, resultInterpreter);
+    QueryScanner queryScanner = new QueryScanner(request, resultInterpreter);
 
     // Act
     Optional<Result> actual1 = queryScanner.one();
@@ -193,6 +197,7 @@ public class QueryScannerTest {
     assertThat(actual5).isNotPresent();
 
     verify(resultInterpreter, times(4)).interpret(item);
-    verify(builder).exclusiveStartKey(lastEvaluatedKey);
+    verify(request).execute(lastEvaluatedKey);
+    verify(request).execute();
   }
 }
