@@ -1,15 +1,15 @@
 package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.api.DistributedStorageSinglePartitionKeyIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 
 public class CosmosSinglePartitionKeyIntegrationTest
     extends DistributedStorageSinglePartitionKeyIntegrationTestBase {
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return CosmosEnv.getCosmosConfig();
+  protected Properties getProperties() {
+    return CosmosEnv.getProperties();
   }
 
   @Override

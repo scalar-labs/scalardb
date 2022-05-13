@@ -4,7 +4,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan.Ordering.Order;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobColumn;
@@ -188,47 +187,45 @@ public final class TestUtils {
    * Add a suffix to the metadata database/namespace/schema name and the consensus-commit
    * coordinator table name.
    *
-   * @param config the original config
+   * @param properties properties of the original config
    * @param testName used for the suffix
-   * @return config added the suffix
+   * @return properties of the new config
    */
-  public static DatabaseConfig addSuffix(DatabaseConfig config, String testName) {
-    Properties properties = new Properties();
-    properties.putAll(config.getProperties());
+  public static Properties addSuffix(Properties properties, String testName) {
+    Properties props = new Properties();
+    props.putAll(properties);
 
     // for Cosmos
-    String tableMetadataDatabase = properties.getProperty(CosmosConfig.TABLE_METADATA_DATABASE);
+    String tableMetadataDatabase = props.getProperty(CosmosConfig.TABLE_METADATA_DATABASE);
     if (tableMetadataDatabase == null) {
       tableMetadataDatabase = CosmosAdmin.METADATA_DATABASE;
     }
-    properties.setProperty(
-        CosmosConfig.TABLE_METADATA_DATABASE, tableMetadataDatabase + "_" + testName);
+    props.setProperty(CosmosConfig.TABLE_METADATA_DATABASE, tableMetadataDatabase + "_" + testName);
 
     // for Dynamo
-    String tableMetadataNamespace = properties.getProperty(DynamoConfig.TABLE_METADATA_NAMESPACE);
+    String tableMetadataNamespace = props.getProperty(DynamoConfig.TABLE_METADATA_NAMESPACE);
     if (tableMetadataNamespace == null) {
       tableMetadataNamespace = DynamoAdmin.METADATA_NAMESPACE;
     }
-    properties.setProperty(
+    props.setProperty(
         DynamoConfig.TABLE_METADATA_NAMESPACE, tableMetadataNamespace + "_" + testName);
 
     // for JDBC
-    String tableMetadataSchema = properties.getProperty(JdbcConfig.TABLE_METADATA_SCHEMA);
+    String tableMetadataSchema = props.getProperty(JdbcConfig.TABLE_METADATA_SCHEMA);
     if (tableMetadataSchema == null) {
       tableMetadataSchema = JdbcAdmin.METADATA_SCHEMA;
     }
-    properties.setProperty(JdbcConfig.TABLE_METADATA_SCHEMA, tableMetadataSchema + "_" + testName);
+    props.setProperty(JdbcConfig.TABLE_METADATA_SCHEMA, tableMetadataSchema + "_" + testName);
 
     // for consensus-commit
-    String coordinatorNamespace =
-        properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE);
+    String coordinatorNamespace = props.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE);
     if (coordinatorNamespace == null) {
       coordinatorNamespace = Coordinator.NAMESPACE;
     }
-    properties.setProperty(
+    props.setProperty(
         ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
 
-    return new DatabaseConfig(properties);
+    return props;
   }
 
   public static Order reverseOrder(Order order) {

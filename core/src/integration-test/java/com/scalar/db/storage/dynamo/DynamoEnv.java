@@ -22,7 +22,7 @@ public final class DynamoEnv {
 
   private DynamoEnv() {}
 
-  public static DynamoConfig getDynamoConfig() {
+  public static Properties getProperties() {
     String endpointOverride =
         System.getProperty(PROP_DYNAMO_ENDPOINT_OVERRIDE, DEFAULT_DYNAMO_ENDPOINT_OVERRIDE);
     String region = System.getProperty(PROP_DYNAMO_REGION, DEFAULT_DYNAMO_REGION);
@@ -39,7 +39,7 @@ public final class DynamoEnv {
     props.setProperty(DatabaseConfig.USERNAME, accessKeyId);
     props.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
     props.setProperty(DatabaseConfig.STORAGE, "dynamo");
-    return new DynamoConfig(props);
+    return props;
   }
 
   public static Map<String, String> getCreateOptions() {

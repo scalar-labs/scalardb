@@ -2,18 +2,18 @@ package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.DistributedStorageConditionalMutationIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 
 public class CosmosConditionalMutationIntegrationTest
     extends DistributedStorageConditionalMutationIntegrationTestBase {
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return CosmosEnv.getCosmosConfig();
+  protected Properties getProperties() {
+    return CosmosEnv.getProperties();
   }
 
   @Override

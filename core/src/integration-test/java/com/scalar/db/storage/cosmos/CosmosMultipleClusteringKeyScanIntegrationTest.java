@@ -3,17 +3,17 @@ package com.scalar.db.storage.cosmos;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.scalar.db.api.DistributedStorageMultipleClusteringKeyScanIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 
 public class CosmosMultipleClusteringKeyScanIntegrationTest
     extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return CosmosEnv.getCosmosConfig();
+  protected Properties getProperties() {
+    return CosmosEnv.getProperties();
   }
 
   @Override

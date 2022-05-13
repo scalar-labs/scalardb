@@ -2,7 +2,6 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
@@ -22,6 +21,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Random;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -56,8 +56,7 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize();
-    StorageFactory factory =
-        new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+    StorageFactory factory = StorageFactory.create(TestUtils.addSuffix(getProperties(), TEST_NAME));
     admin = factory.getAdmin();
     namespace = getNamespace();
     createTable();
@@ -68,7 +67,7 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
 
   protected void initialize() throws Exception {}
 
-  protected abstract DatabaseConfig getDatabaseConfig();
+  protected abstract Properties getProperties();
 
   protected String getNamespace() {
     return NAMESPACE;

@@ -1,8 +1,8 @@
 package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.DistributedStorageWithReservedKeywordIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
 import java.util.Map;
+import java.util.Properties;
 
 public class DynamoWithReservedKeywordIntegrationTest
     extends DistributedStorageWithReservedKeywordIntegrationTestBase {
@@ -50,8 +50,8 @@ public class DynamoWithReservedKeywordIntegrationTest
   }
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return DynamoEnv.getDynamoConfig();
+  protected Properties getProperties() {
+    return DynamoEnv.getProperties();
   }
 
   @Override

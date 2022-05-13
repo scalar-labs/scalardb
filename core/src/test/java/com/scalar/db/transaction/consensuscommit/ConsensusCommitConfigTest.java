@@ -15,7 +15,7 @@ public class ConsensusCommitConfigTest {
     Properties props = new Properties();
 
     // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
 
     // Assert
     assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
@@ -30,7 +30,6 @@ public class ConsensusCommitConfigTest {
     assertThat(config.isParallelRollbackEnabled()).isEqualTo(false);
     assertThat(config.isAsyncCommitEnabled()).isEqualTo(false);
     assertThat(config.isAsyncRollbackEnabled()).isEqualTo(false);
-    assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
   @Test
@@ -40,7 +39,7 @@ public class ConsensusCommitConfigTest {
     props.setProperty(ConsensusCommitConfig.ISOLATION_LEVEL, Isolation.SERIALIZABLE.toString());
 
     // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
 
     // Assert
     assertThat(config.getIsolation()).isEqualTo(Isolation.SERIALIZABLE);
@@ -53,7 +52,7 @@ public class ConsensusCommitConfigTest {
     props.setProperty("scalar.db.isolation_level", Isolation.SERIALIZABLE.toString());
 
     // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
 
     // Assert
     assertThat(config.getIsolation()).isEqualTo(Isolation.SERIALIZABLE);
@@ -66,7 +65,7 @@ public class ConsensusCommitConfigTest {
     props.setProperty(ConsensusCommitConfig.ISOLATION_LEVEL, "READ_COMMITTED");
 
     // Act Assert
-    assertThatThrownBy(() -> new ConsensusCommitConfig(props))
+    assertThatThrownBy(() -> new ConsensusCommitConfig(new DatabaseConfig(props)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -78,7 +77,7 @@ public class ConsensusCommitConfigTest {
         ConsensusCommitConfig.SERIALIZABLE_STRATEGY, SerializableStrategy.EXTRA_WRITE.toString());
 
     // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
 
     // Assert
     assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_WRITE);
@@ -92,7 +91,7 @@ public class ConsensusCommitConfigTest {
     props.setProperty(ConsensusCommitConfig.SERIALIZABLE_STRATEGY, "NO_STRATEGY");
 
     // Act Assert
-    assertThatThrownBy(() -> new ConsensusCommitConfig(props))
+    assertThatThrownBy(() -> new ConsensusCommitConfig(new DatabaseConfig(props)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -104,7 +103,7 @@ public class ConsensusCommitConfigTest {
     props.setProperty(ConsensusCommitConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "false");
 
     // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
 
     // Assert
     assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(false);
@@ -118,7 +117,7 @@ public class ConsensusCommitConfigTest {
     props.setProperty(ConsensusCommitConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "aaa");
 
     // Act Assert
-    assertThatThrownBy(() -> new ConsensusCommitConfig(props))
+    assertThatThrownBy(() -> new ConsensusCommitConfig(new DatabaseConfig(props)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -129,7 +128,7 @@ public class ConsensusCommitConfigTest {
     props.setProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, "changed_coordinator");
 
     // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
 
     // Assert
     assertThat(config.getCoordinatorNamespace()).isPresent();
@@ -147,7 +146,7 @@ public class ConsensusCommitConfigTest {
     props.setProperty(ConsensusCommitConfig.PARALLEL_ROLLBACK_ENABLED, "true");
 
     // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
 
     // Assert
     assertThat(config.getParallelExecutorCount()).isEqualTo(100);
@@ -167,7 +166,7 @@ public class ConsensusCommitConfigTest {
     props.setProperty(ConsensusCommitConfig.PARALLEL_COMMIT_ENABLED, "true");
 
     // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
 
     // Assert
     assertThat(config.getParallelExecutorCount()).isEqualTo(100);
@@ -186,7 +185,7 @@ public class ConsensusCommitConfigTest {
     props.setProperty(ConsensusCommitConfig.ASYNC_ROLLBACK_ENABLED, "true");
 
     // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
 
     // Assert
     assertThat(config.isAsyncCommitEnabled()).isEqualTo(true);
@@ -201,35 +200,10 @@ public class ConsensusCommitConfigTest {
     props.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "true");
 
     // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
 
     // Assert
     assertThat(config.isAsyncCommitEnabled()).isEqualTo(true);
     assertThat(config.isAsyncRollbackEnabled()).isEqualTo(true); // use the async commit value
-  }
-
-  @Test
-  public void constructor_TableMetadataCacheExpirationTimeGiven_ShouldLoadProperly() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "3600");
-
-    // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
-
-    // Assert
-    assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(3600);
-  }
-
-  @Test
-  public void
-      constructor_InvalidTableMetadataCacheExpirationTimeGiven_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "aaa");
-
-    // Act Assert
-    assertThatThrownBy(() -> new ConsensusCommitConfig(props))
-        .isInstanceOf(IllegalArgumentException.class);
   }
 }

@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.Properties;
 import javax.annotation.concurrent.Immutable;
 
@@ -46,6 +47,10 @@ public class ServerConfig {
     props = new Properties();
     props.putAll(properties);
     load();
+  }
+
+  public ServerConfig(Path propertiesPath) throws IOException {
+    this(propertiesPath.toFile());
   }
 
   public Properties getProperties() {

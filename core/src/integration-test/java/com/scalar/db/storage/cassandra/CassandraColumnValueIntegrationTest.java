@@ -1,12 +1,12 @@
 package com.scalar.db.storage.cassandra;
 
 import com.scalar.db.api.DistributedStorageColumnValueIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
+import java.util.Properties;
 
 public class CassandraColumnValueIntegrationTest
     extends DistributedStorageColumnValueIntegrationTestBase {
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return CassandraEnv.getDatabaseConfig();
+  protected Properties getProperties() {
+    return CassandraEnv.getProperties();
   }
 }

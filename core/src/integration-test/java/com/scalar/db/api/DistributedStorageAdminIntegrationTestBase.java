@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
@@ -17,6 +16,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -76,8 +76,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize();
-    StorageFactory factory =
-        new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+    StorageFactory factory = StorageFactory.create(TestUtils.addSuffix(getProperties(), TEST_NAME));
     admin = factory.getAdmin();
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
@@ -88,7 +87,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
   protected void initialize() throws Exception {}
 
-  protected abstract DatabaseConfig getDatabaseConfig();
+  protected abstract Properties getProperties();
 
   protected String getNamespace1() {
     return NAMESPACE1;

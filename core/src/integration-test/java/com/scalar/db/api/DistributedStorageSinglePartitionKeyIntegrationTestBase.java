@@ -1,6 +1,5 @@
 package com.scalar.db.api;
 
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
@@ -14,6 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.IntStream;
@@ -45,8 +45,7 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize();
-    StorageFactory factory =
-        new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+    StorageFactory factory = StorageFactory.create(TestUtils.addSuffix(getProperties(), TEST_NAME));
     admin = factory.getAdmin();
     namespace = getNamespace();
     partitionKeyTypes = getPartitionKeyTypes();
@@ -58,7 +57,7 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
 
   protected void initialize() throws Exception {}
 
-  protected abstract DatabaseConfig getDatabaseConfig();
+  protected abstract Properties getProperties();
 
   protected String getNamespace() {
     return NAMESPACE;

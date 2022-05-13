@@ -3,49 +3,47 @@ package com.scalar.db.storage.dynamo;
 import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.scalar.db.config.DatabaseConfig;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Optional;
-import java.util.Properties;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
-@SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
 @Immutable
-public class DynamoConfig extends DatabaseConfig {
+public class DynamoConfig {
 
   public static final String PREFIX = DatabaseConfig.PREFIX + "dynamo.";
   public static final String ENDPOINT_OVERRIDE = PREFIX + "endpoint-override";
   public static final String TABLE_METADATA_NAMESPACE = PREFIX + "table_metadata.namespace";
 
-  @Nullable private String endpointOverride;
-  @Nullable private String tableMetadataNamespace;
+  private final String region;
+  private final String accessKeyId;
+  private final String secretAccessKey;
+  @Nullable private final String endpointOverride;
+  @Nullable private final String tableMetadataNamespace;
 
-  public DynamoConfig(File propertiesFile) throws IOException {
-    super(propertiesFile);
-  }
-
-  public DynamoConfig(InputStream stream) throws IOException {
-    super(stream);
-  }
-
-  public DynamoConfig(Properties properties) {
-    super(properties);
-  }
-
-  @Override
-  protected void load() {
-    String storage = getProperties().getProperty(DatabaseConfig.STORAGE);
+  public DynamoConfig(DatabaseConfig databaseConfig) {
+    String storage = databaseConfig.getProperties().getProperty(DatabaseConfig.STORAGE);
     if (storage == null || !storage.equals("dynamo")) {
       throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be 'dynamo'");
     }
 
-    super.load();
+    region = databaseConfig.getContactPoints().get(0);
+    accessKeyId = databaseConfig.getUsername().orElse(null);
+    secretAccessKey = databaseConfig.getPassword().orElse(null);
+    endpointOverride = getString(databaseConfig.getProperties(), ENDPOINT_OVERRIDE, null);
+    tableMetadataNamespace =
+        getString(databaseConfig.getProperties(), TABLE_METADATA_NAMESPACE, null);
+  }
 
-    endpointOverride = getString(getProperties(), ENDPOINT_OVERRIDE, null);
-    tableMetadataNamespace = getString(getProperties(), TABLE_METADATA_NAMESPACE, null);
+  public String getRegion() {
+    return region;
+  }
+
+  public String getAccessKeyId() {
+    return accessKeyId;
+  }
+
+  public String getSecretAccessKey() {
+    return secretAccessKey;
   }
 
   public Optional<String> getEndpointOverride() {

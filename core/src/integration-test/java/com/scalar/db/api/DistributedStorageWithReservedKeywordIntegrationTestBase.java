@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.DataType;
@@ -22,6 +21,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -47,8 +47,7 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
 
   @BeforeAll
   public void beforeAll() throws ExecutionException {
-    StorageFactory factory =
-        new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+    StorageFactory factory = StorageFactory.create(TestUtils.addSuffix(getProperties(), TEST_NAME));
     admin = factory.getAdmin();
     namespace = getNamespace();
     tableName = getTableName();
@@ -61,7 +60,7 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
     storage = factory.getStorage();
   }
 
-  protected abstract DatabaseConfig getDatabaseConfig();
+  protected abstract Properties getProperties();
 
   protected abstract String getNamespace();
 

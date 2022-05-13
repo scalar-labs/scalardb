@@ -1,9 +1,9 @@
 package com.scalar.db.server;
 
 import com.scalar.db.api.DistributedStorageColumnValueIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.io.IOException;
+import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 
 public class DistributedStorageServiceColumnValueIntegrationTest
@@ -21,8 +21,8 @@ public class DistributedStorageServiceColumnValueIntegrationTest
   }
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return ServerEnv.getGrpcConfig();
+  protected Properties getProperties() {
+    return ServerEnv.getProperties();
   }
 
   @AfterAll
