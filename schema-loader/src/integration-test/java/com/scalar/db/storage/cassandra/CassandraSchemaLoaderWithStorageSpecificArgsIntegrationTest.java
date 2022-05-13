@@ -6,14 +6,15 @@ import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 
 public class CassandraSchemaLoaderWithStorageSpecificArgsIntegrationTest
     extends SchemaLoaderIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return CassandraEnv.getDatabaseConfig();
+  protected Properties getProperties() {
+    return CassandraEnv.getProperties();
   }
 
   @Override

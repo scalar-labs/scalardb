@@ -8,6 +8,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.util.TestUtils;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.Random;
 
 public class JdbcDatabaseConditionalMutationIntegrationTest
@@ -16,10 +17,10 @@ public class JdbcDatabaseConditionalMutationIntegrationTest
   private RdbEngine rdbEngine;
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    JdbcConfig jdbcConfig = JdbcEnv.getJdbcConfig();
-    rdbEngine = JdbcUtils.getRdbEngine(jdbcConfig.getContactPoints().get(0));
-    return jdbcConfig;
+  protected Properties getProperties() {
+    Properties properties = JdbcEnv.getProperties();
+    rdbEngine = JdbcUtils.getRdbEngine(new JdbcConfig(new DatabaseConfig(properties)).getJdbcUrl());
+    return properties;
   }
 
   @Override

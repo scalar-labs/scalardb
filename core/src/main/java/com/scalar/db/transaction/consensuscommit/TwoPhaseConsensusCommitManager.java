@@ -7,6 +7,7 @@ import com.google.common.base.Strings;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -42,12 +43,13 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
 
   @Inject
   public TwoPhaseConsensusCommitManager(
-      DistributedStorage storage, DistributedStorageAdmin admin, ConsensusCommitConfig config) {
+      DistributedStorage storage, DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
     this.storage = storage;
     this.admin = admin;
-    this.config = config;
+    config = new ConsensusCommitConfig(databaseConfig);
     tableMetadataManager =
-        new TransactionalTableMetadataManager(admin, config.getMetadataCacheExpirationTimeSecs());
+        new TransactionalTableMetadataManager(
+            admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
@@ -76,6 +78,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
       DistributedStorage storage,
       DistributedStorageAdmin admin,
       ConsensusCommitConfig config,
+      DatabaseConfig databaseConfig,
       Coordinator coordinator,
       ParallelExecutor parallelExecutor,
       RecoveryHandler recovery,
@@ -84,7 +87,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     this.admin = admin;
     this.config = config;
     tableMetadataManager =
-        new TransactionalTableMetadataManager(admin, config.getMetadataCacheExpirationTimeSecs());
+        new TransactionalTableMetadataManager(
+            admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     this.coordinator = coordinator;
     this.parallelExecutor = parallelExecutor;
     this.recovery = recovery;

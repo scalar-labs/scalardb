@@ -1,8 +1,8 @@
 package com.scalar.db.server;
 
 import com.scalar.db.api.DistributedStorageMultipleClusteringKeyScanIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
 import java.io.IOException;
+import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 
 public class DistributedStorageServiceMultipleClusteringKeyScanIntegrationTest
@@ -20,8 +20,8 @@ public class DistributedStorageServiceMultipleClusteringKeyScanIntegrationTest
   }
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return ServerEnv.getGrpcConfig();
+  protected Properties getProperties() {
+    return ServerEnv.getProperties();
   }
 
   @AfterAll

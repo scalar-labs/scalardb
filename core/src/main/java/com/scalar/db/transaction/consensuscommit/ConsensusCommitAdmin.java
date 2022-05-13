@@ -3,10 +3,12 @@ package com.scalar.db.transaction.consensuscommit;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.buildTransactionalTableMetadata;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.removeTransactionalMetaColumns;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Map;
 import java.util.Set;
@@ -19,7 +21,14 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   private final String coordinatorNamespace;
 
   @Inject
-  public ConsensusCommitAdmin(DistributedStorageAdmin admin, ConsensusCommitConfig config) {
+  public ConsensusCommitAdmin(DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
+    this.admin = admin;
+    ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
+    coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
+  }
+
+  @VisibleForTesting
+  ConsensusCommitAdmin(DistributedStorageAdmin admin, ConsensusCommitConfig config) {
     this.admin = admin;
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
   }

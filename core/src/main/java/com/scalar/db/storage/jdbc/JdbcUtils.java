@@ -29,7 +29,6 @@ public final class JdbcUtils {
   }
 
   public static BasicDataSource initDataSource(JdbcConfig config, boolean transactional) {
-    String jdbcUrl = config.getContactPoints().get(0);
     BasicDataSource dataSource = new BasicDataSource();
 
     /*
@@ -37,9 +36,9 @@ public final class JdbcUtils {
      * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
      * work (e.g., when we dynamically load a driver class from a fatJar).
      */
-    dataSource.setDriver(getDriverClass(jdbcUrl));
+    dataSource.setDriver(getDriverClass(config.getJdbcUrl()));
 
-    dataSource.setUrl(jdbcUrl);
+    dataSource.setUrl(config.getJdbcUrl());
 
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
@@ -84,7 +83,6 @@ public final class JdbcUtils {
   }
 
   public static BasicDataSource initDataSourceForTableMetadata(JdbcConfig config) {
-    String jdbcUrl = config.getContactPoints().get(0);
     BasicDataSource dataSource = new BasicDataSource();
 
     /*
@@ -92,9 +90,9 @@ public final class JdbcUtils {
      * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
      * work (e.g., when we dynamically load a driver class from a fatJar).
      */
-    dataSource.setDriver(getDriverClass(jdbcUrl));
+    dataSource.setDriver(getDriverClass(config.getJdbcUrl()));
 
-    dataSource.setUrl(jdbcUrl);
+    dataSource.setUrl(config.getJdbcUrl());
 
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
@@ -107,7 +105,6 @@ public final class JdbcUtils {
   }
 
   public static BasicDataSource initDataSourceForAdmin(JdbcConfig config) {
-    String jdbcUrl = config.getContactPoints().get(0);
     BasicDataSource dataSource = new BasicDataSource();
 
     /*
@@ -115,9 +112,9 @@ public final class JdbcUtils {
      * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
      * work (e.g., when we dynamically load a driver class from a fatJar).
      */
-    dataSource.setDriver(getDriverClass(jdbcUrl));
+    dataSource.setDriver(getDriverClass(config.getJdbcUrl()));
 
-    dataSource.setUrl(jdbcUrl);
+    dataSource.setUrl(config.getJdbcUrl());
 
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);

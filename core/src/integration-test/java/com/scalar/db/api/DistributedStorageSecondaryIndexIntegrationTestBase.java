@@ -2,7 +2,6 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
@@ -15,6 +14,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
@@ -46,8 +46,7 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize();
-    StorageFactory factory =
-        new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+    StorageFactory factory = StorageFactory.create(TestUtils.addSuffix(getProperties(), TEST_NAME));
     admin = factory.getAdmin();
     namespace = getNamespace();
     secondaryIndexTypes = getSecondaryIndexTypes();
@@ -59,7 +58,7 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
 
   protected void initialize() throws Exception {}
 
-  protected abstract DatabaseConfig getDatabaseConfig();
+  protected abstract Properties getProperties();
 
   protected String getNamespace() {
     return NAMESPACE;

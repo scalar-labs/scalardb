@@ -10,7 +10,6 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.BufferedReader;
 import java.io.File;
@@ -53,16 +52,15 @@ public abstract class SchemaLoaderIntegrationTestBase {
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize();
-    DatabaseConfig config = getDatabaseConfig();
+    Properties properties = getProperties();
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
-    writeConfigFile(config.getProperties());
+    writeConfigFile(properties);
     Map<String, Object> schemaJsonMap = getSchemaJsonMap();
     writeSchemaFile(schemaJsonMap);
-    StorageFactory factory = new StorageFactory(config);
+    StorageFactory factory = StorageFactory.create(properties);
     admin = factory.getAdmin();
-    consensusCommitAdmin =
-        new ConsensusCommitAdmin(admin, new ConsensusCommitConfig(config.getProperties()));
+    consensusCommitAdmin = new ConsensusCommitAdmin(admin, new DatabaseConfig(properties));
   }
 
   @BeforeEach
@@ -72,7 +70,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
   protected void initialize() throws Exception {}
 
-  protected abstract DatabaseConfig getDatabaseConfig();
+  protected abstract Properties getProperties();
 
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   protected void writeConfigFile(Properties properties) throws IOException {

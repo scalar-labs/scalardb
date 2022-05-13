@@ -141,15 +141,6 @@ public class DatabaseConfigTest {
   }
 
   @Test
-  public void constructor_NonQualifiedPropertiesGiven_ShouldThrowNullPointerException() {
-    // Arrange
-    Properties props = new Properties();
-
-    // Act Assert
-    assertThatThrownBy(() -> new DatabaseConfig(props)).isInstanceOf(NullPointerException.class);
-  }
-
-  @Test
   public void constructor_PropertiesWithNegativePortGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Properties props = new Properties();
@@ -265,7 +256,7 @@ public class DatabaseConfigTest {
     DatabaseConfig config = new DatabaseConfig(props);
 
     // Assert
-    assertThat(config.getContactPoints()).isNull();
+    assertThat(config.getContactPoints()).isEmpty();
     assertThat(config.getContactPort()).isEqualTo(0);
     assertThat(config.getUsername().isPresent()).isFalse();
     assertThat(config.getPassword().isPresent()).isFalse();

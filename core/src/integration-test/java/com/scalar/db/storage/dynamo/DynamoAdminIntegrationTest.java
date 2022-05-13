@@ -1,16 +1,16 @@
 package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
 import java.util.Map;
+import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return DynamoEnv.getDynamoConfig();
+  protected Properties getProperties() {
+    return DynamoEnv.getProperties();
   }
 
   @Override

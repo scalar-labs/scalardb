@@ -1,8 +1,8 @@
 package com.scalar.db.storage.dynamo;
 
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
 import java.util.Map;
+import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -10,8 +10,8 @@ public class ConsensusCommitAdminIntegrationTestWithDynamo
     extends ConsensusCommitAdminIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDbConfig() {
-    return DynamoEnv.getDynamoConfig();
+  protected Properties getProps() {
+    return DynamoEnv.getProperties();
   }
 
   @Override

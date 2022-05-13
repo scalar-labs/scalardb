@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.io.BufferedReader;
@@ -67,11 +68,12 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   private final String metadataDatabase;
 
   @Inject
-  public CosmosAdmin(CosmosConfig config) {
+  public CosmosAdmin(DatabaseConfig databaseConfig) {
+    CosmosConfig config = new CosmosConfig(databaseConfig);
     client =
         new CosmosClientBuilder()
-            .endpoint(config.getContactPoints().get(0))
-            .key(config.getPassword().orElse(null))
+            .endpoint(config.getEndpoint())
+            .key(config.getKey())
             .directMode()
             .consistencyLevel(ConsistencyLevel.STRONG)
             .buildClient();

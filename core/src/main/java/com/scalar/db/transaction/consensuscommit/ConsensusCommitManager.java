@@ -9,6 +9,7 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.common.AbstractDistributedTransactionManager;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
@@ -32,14 +33,15 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
   @Inject
   public ConsensusCommitManager(
-      DistributedStorage storage, DistributedStorageAdmin admin, ConsensusCommitConfig config) {
+      DistributedStorage storage, DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
     this.storage = storage;
     this.admin = admin;
-    this.config = config;
+    config = new ConsensusCommitConfig(databaseConfig);
     this.coordinator = new Coordinator(storage, config);
     this.parallelExecutor = new ParallelExecutor(config);
     tableMetadataManager =
-        new TransactionalTableMetadataManager(admin, config.getMetadataCacheExpirationTimeSecs());
+        new TransactionalTableMetadataManager(
+            admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
   }
@@ -49,6 +51,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       DistributedStorage storage,
       DistributedStorageAdmin admin,
       ConsensusCommitConfig config,
+      DatabaseConfig databaseConfig,
       Coordinator coordinator,
       ParallelExecutor parallelExecutor,
       RecoveryHandler recovery,
@@ -57,7 +60,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     this.admin = admin;
     this.config = config;
     tableMetadataManager =
-        new TransactionalTableMetadataManager(admin, config.getMetadataCacheExpirationTimeSecs());
+        new TransactionalTableMetadataManager(
+            admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     this.coordinator = coordinator;
     this.parallelExecutor = parallelExecutor;
     this.recovery = recovery;

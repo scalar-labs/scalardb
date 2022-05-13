@@ -3,17 +3,17 @@ package com.scalar.db.storage.dynamo;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.scalar.db.api.DistributedStorageMultiplePartitionKeyIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Value;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Random;
 
 public class DynamoMultiplePartitionKeyIntegrationTest
     extends DistributedStorageMultiplePartitionKeyIntegrationTestBase {
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return DynamoEnv.getDynamoConfig();
+  protected Properties getProperties() {
+    return DynamoEnv.getProperties();
   }
 
   @Override

@@ -1,13 +1,13 @@
 package com.scalar.db.storage.jdbc;
 
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitIntegrationTestBase;
+import java.util.Properties;
 
 public class TwoPhaseConsensusCommitIntegrationTestWithJdbcDatabase
     extends TwoPhaseConsensusCommitIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDbConfig() {
-    return JdbcEnv.getJdbcConfig();
+  protected Properties getProps() {
+    return JdbcEnv.getProperties();
   }
 }

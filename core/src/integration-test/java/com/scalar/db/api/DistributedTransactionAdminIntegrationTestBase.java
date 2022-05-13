@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
@@ -18,6 +17,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -78,7 +78,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   public void beforeAll() throws Exception {
     initialize();
     TransactionFactory factory =
-        new TransactionFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+        TransactionFactory.create(TestUtils.addSuffix(gerProperties(), TEST_NAME));
     admin = factory.getTransactionAdmin();
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
@@ -89,7 +89,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
   protected void initialize() throws Exception {}
 
-  protected abstract DatabaseConfig getDatabaseConfig();
+  protected abstract Properties gerProperties();
 
   protected String getNamespace1() {
     return NAMESPACE1;

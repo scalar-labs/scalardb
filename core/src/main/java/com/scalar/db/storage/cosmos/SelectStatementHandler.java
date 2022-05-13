@@ -12,6 +12,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -93,22 +94,15 @@ public class SelectStatementHandler extends StatementHandler {
 
     String query;
     CosmosQueryRequestOptions options;
-    if (ScalarDbUtils.isSecondaryIndexSpecified(scan, tableMetadata)) {
+
+    if (scan instanceof ScanAll) {
+      query = "select * from Record r";
+      options = new CosmosQueryRequestOptions();
+    } else if (ScalarDbUtils.isSecondaryIndexSpecified(scan, tableMetadata)) {
       query = makeQueryWithIndex(scan, tableMetadata);
       options = new CosmosQueryRequestOptions();
     } else {
-      String concatenatedPartitionKey = cosmosOperation.getConcatenatedPartitionKey();
-      SelectConditionStep<org.jooq.Record> select =
-          DSL.using(SQLDialect.DEFAULT)
-              .selectFrom("Record r")
-              .where(DSL.field("r.concatenatedPartitionKey").eq(concatenatedPartitionKey));
-
-      setStart(select, scan);
-      setEnd(select, scan);
-
-      setOrderings(select, scan.getOrderings(), tableMetadata);
-
-      query = select.getSQL(ParamType.INLINED);
+      query = makeQueryWithCondition(tableMetadata, cosmosOperation, scan);
       options =
           new CosmosQueryRequestOptions().setPartitionKey(cosmosOperation.getCosmosPartitionKey());
     }
@@ -123,6 +117,22 @@ public class SelectStatementHandler extends StatementHandler {
         getContainer(scan).queryItems(query, options, Record.class);
 
     return Lists.newArrayList(iterable);
+  }
+
+  private String makeQueryWithCondition(
+      TableMetadata tableMetadata, CosmosOperation cosmosOperation, Scan scan) {
+    String concatenatedPartitionKey = cosmosOperation.getConcatenatedPartitionKey();
+    SelectConditionStep<org.jooq.Record> select =
+        DSL.using(SQLDialect.DEFAULT)
+            .selectFrom("Record r")
+            .where(DSL.field("r.concatenatedPartitionKey").eq(concatenatedPartitionKey));
+
+    setStart(select, scan);
+    setEnd(select, scan);
+
+    setOrderings(select, scan.getOrderings(), tableMetadata);
+
+    return select.getSQL(ParamType.INLINED);
   }
 
   private void setStart(SelectConditionStep<org.jooq.Record> select, Scan scan) {
