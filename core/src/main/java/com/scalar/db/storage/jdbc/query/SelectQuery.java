@@ -28,7 +28,6 @@ public interface SelectQuery extends Query {
     private int limit;
     boolean isRangeQuery;
     Optional<String> indexedColumn = Optional.empty();
-
     boolean isConditionalQuery;
 
     Builder(RdbEngine rdbEngine, List<String> projections) {
