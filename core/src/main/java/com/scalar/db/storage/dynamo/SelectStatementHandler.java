@@ -64,15 +64,15 @@ public class SelectStatementHandler {
     try {
       if (!(selection instanceof ScanAll)
           && ScalarDbUtils.isSecondaryIndexSpecified(selection, tableMetadata)) {
-        return executeQueryWithIndex(selection, tableMetadata);
+        return executeScanWithIndex(selection, tableMetadata);
       }
 
       if (selection instanceof Get) {
         return executeGet((Get) selection, tableMetadata);
       } else if (selection instanceof ScanAll) {
-        return executeScan((ScanAll) selection, tableMetadata);
+        return executeFullScan((ScanAll) selection, tableMetadata);
       } else {
-        return executeQuery((Scan) selection, tableMetadata);
+        return executeScan((Scan) selection, tableMetadata);
       }
 
     } catch (DynamoDbException e) {
@@ -102,7 +102,7 @@ public class SelectStatementHandler {
         client, builder.build(), new ResultInterpreter(get.getProjections(), tableMetadata));
   }
 
-  private Scanner executeQueryWithIndex(Selection selection, TableMetadata tableMetadata) {
+  private Scanner executeScanWithIndex(Selection selection, TableMetadata tableMetadata) {
     DynamoOperation dynamoOperation = new DynamoOperation(selection, tableMetadata);
     Column<?> keyColumn = selection.getPartitionKey().getColumns().get(0);
     String column = keyColumn.getName();
@@ -138,7 +138,7 @@ public class SelectStatementHandler {
         request, new ResultInterpreter(selection.getProjections(), tableMetadata));
   }
 
-  private Scanner executeQuery(Scan scan, TableMetadata tableMetadata) {
+  private Scanner executeScan(Scan scan, TableMetadata tableMetadata) {
     DynamoOperation dynamoOperation = new DynamoOperation(scan, tableMetadata);
     QueryRequest.Builder builder = QueryRequest.builder().tableName(dynamoOperation.getTableName());
 
@@ -174,7 +174,7 @@ public class SelectStatementHandler {
         queryRequest, new ResultInterpreter(scan.getProjections(), tableMetadata));
   }
 
-  private Scanner executeScan(ScanAll scan, TableMetadata tableMetadata) {
+  private Scanner executeFullScan(ScanAll scan, TableMetadata tableMetadata) {
     DynamoOperation dynamoOperation = new DynamoOperation(scan, tableMetadata);
     ScanRequest.Builder builder = ScanRequest.builder().tableName(dynamoOperation.getTableName());
 
