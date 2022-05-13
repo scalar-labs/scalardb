@@ -137,7 +137,7 @@ public interface SelectQuery extends Query {
           case ORACLE:
             return new SelectWithFetchFirstNRowsOnly(this, limit);
           case SQL_SERVER:
-            return new SelectWithOffsetFetchQuery(this, limit);
+            return new SelectWithTop(this, limit);
           default:
             throw new AssertionError("invalid rdb engine: " + rdbEngine);
         }
