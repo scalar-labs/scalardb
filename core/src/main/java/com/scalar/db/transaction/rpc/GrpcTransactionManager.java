@@ -8,6 +8,7 @@ import com.scalar.db.api.Isolation;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
@@ -35,7 +36,6 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class GrpcTransactionManager extends AbstractDistributedTransactionManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(GrpcTransactionManager.class);
-  static final int DEFAULT_SCALAR_DB_SERVER_PORT = 60051;
 
   static final Retry.ExceptionFactory<TransactionException> EXCEPTION_FACTORY =
       (message, cause) -> {
@@ -55,21 +55,15 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
   private final TableMetadataManager metadataManager;
 
   @Inject
-  public GrpcTransactionManager(GrpcConfig config) {
-    this.config = config;
+  public GrpcTransactionManager(DatabaseConfig databaseConfig) {
+    config = new GrpcConfig(databaseConfig);
     channel =
-        NettyChannelBuilder.forAddress(
-                config.getContactPoints().get(0),
-                config.getContactPort() == 0
-                    ? DEFAULT_SCALAR_DB_SERVER_PORT
-                    : config.getContactPort())
-            .usePlaintext()
-            .build();
+        NettyChannelBuilder.forAddress(config.getHost(), config.getPort()).usePlaintext().build();
     stub = DistributedTransactionGrpc.newStub(channel);
     blockingStub = DistributedTransactionGrpc.newBlockingStub(channel);
     metadataManager =
         new TableMetadataManager(
-            new GrpcAdmin(channel, config), config.getMetadataCacheExpirationTimeSecs());
+            new GrpcAdmin(channel, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
   }
 
   @VisibleForTesting

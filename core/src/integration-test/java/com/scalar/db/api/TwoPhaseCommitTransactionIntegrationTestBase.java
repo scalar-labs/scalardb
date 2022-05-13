@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.scalar.db.api.Scan.Ordering;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -22,6 +21,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -50,8 +50,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void beforeAll() throws Exception {
     initialize();
     String testName = getTestName();
-    DatabaseConfig config = TestUtils.addSuffix(getDatabaseConfig(), testName);
-    TransactionFactory factory = new TransactionFactory(config);
+    TransactionFactory factory =
+        TransactionFactory.create(TestUtils.addSuffix(gerProperties(), testName));
     admin = factory.getTransactionAdmin();
     namespace = getNamespaceBaseName() + testName;
     createTables();
@@ -62,7 +62,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
   protected abstract String getTestName();
 
-  protected abstract DatabaseConfig getDatabaseConfig();
+  protected abstract Properties gerProperties();
 
   protected String getNamespaceBaseName() {
     return NAMESPACE_BASE_NAME;

@@ -1,15 +1,15 @@
 package com.scalar.db.storage.dynamo;
 
 import com.google.common.collect.ImmutableList;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
 import java.util.List;
+import java.util.Properties;
 
 public class DynamoSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return DynamoEnv.getDynamoConfig();
+  protected Properties getProperties() {
+    return DynamoEnv.getProperties();
   }
 
   @Override

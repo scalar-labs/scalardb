@@ -1,14 +1,14 @@
 package com.scalar.db.storage.cosmos;
 
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
 import java.util.Optional;
+import java.util.Properties;
 
 public class CosmosSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTestBase {
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return CosmosEnv.getCosmosConfig();
+  protected Properties getProperties() {
+    return CosmosEnv.getProperties();
   }
 
   @Override

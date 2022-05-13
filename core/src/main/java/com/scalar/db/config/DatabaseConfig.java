@@ -36,9 +36,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import javax.annotation.Nullable;
@@ -89,6 +89,10 @@ public class DatabaseConfig {
     load();
   }
 
+  public DatabaseConfig(Path propertiesPath) throws IOException {
+    this(propertiesPath.toFile());
+  }
+
   public Properties getProperties() {
     return props;
   }
@@ -124,15 +128,11 @@ public class DatabaseConfig {
         throw new IllegalArgumentException("storage '" + storage + "' isn't supported");
     }
 
-    if (storageClass != MultiStorage.class) {
-      contactPoints =
-          Arrays.asList(
-              Objects.requireNonNull(getStringArray(getProperties(), CONTACT_POINTS, null)));
-      contactPort = getInt(getProperties(), CONTACT_PORT, 0);
-      checkArgument(contactPort >= 0);
-      username = getString(getProperties(), USERNAME, null);
-      password = getString(getProperties(), PASSWORD, null);
-    }
+    contactPoints = Arrays.asList(getStringArray(getProperties(), CONTACT_POINTS, new String[0]));
+    contactPort = getInt(getProperties(), CONTACT_PORT, 0);
+    checkArgument(contactPort >= 0);
+    username = getString(getProperties(), USERNAME, null);
+    password = getString(getProperties(), PASSWORD, null);
 
     String transactionManager = getString(getProperties(), TRANSACTION_MANAGER, "consensus-commit");
     switch (transactionManager.toLowerCase()) {

@@ -33,6 +33,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,20 +66,21 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize();
-    DatabaseConfig config = TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME);
+    Properties properties = TestUtils.addSuffix(getProperties(), TEST_NAME);
     namespace = getNamespace();
-    StorageFactory factory = new StorageFactory(config);
+    StorageFactory factory = StorageFactory.create(properties);
     admin = factory.getAdmin();
-    consensusCommitAdmin =
-        new ConsensusCommitAdmin(admin, new ConsensusCommitConfig(config.getProperties()));
+    DatabaseConfig databaseConfig = new DatabaseConfig(properties);
+    ConsensusCommitConfig consensusCommitConfig = new ConsensusCommitConfig(databaseConfig);
+    consensusCommitAdmin = new ConsensusCommitAdmin(admin, consensusCommitConfig);
     createTables();
     storage = factory.getStorage();
-    initManagerAndCoordinator(config);
+    initManagerAndCoordinator(databaseConfig, consensusCommitConfig);
   }
 
   protected void initialize() throws Exception {}
 
-  protected abstract DatabaseConfig getDatabaseConfig();
+  protected abstract Properties getProperties();
 
   protected String getNamespace() {
     return NAMESPACE;
@@ -104,9 +106,9 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     return Collections.emptyMap();
   }
 
-  private void initManagerAndCoordinator(DatabaseConfig config) {
-    ConsensusCommitConfig consensusCommitConfig = new ConsensusCommitConfig(config.getProperties());
-    manager = new TwoPhaseConsensusCommitManager(storage, admin, consensusCommitConfig);
+  private void initManagerAndCoordinator(
+      DatabaseConfig databaseConfig, ConsensusCommitConfig consensusCommitConfig) {
+    manager = new TwoPhaseConsensusCommitManager(storage, admin, databaseConfig);
     coordinator = new Coordinator(storage, consensusCommitConfig);
   }
 

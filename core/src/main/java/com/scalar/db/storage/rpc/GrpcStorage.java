@@ -14,6 +14,7 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.rpc.DistributedStorageGrpc;
@@ -39,7 +40,6 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class GrpcStorage extends AbstractDistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(GrpcStorage.class);
-  private static final int DEFAULT_SCALAR_DB_SERVER_PORT = 60051;
 
   private static final Retry.ExceptionFactory<ExecutionException> EXCEPTION_FACTORY =
       (message, cause) -> {
@@ -59,21 +59,15 @@ public class GrpcStorage extends AbstractDistributedStorage {
   private final TableMetadataManager metadataManager;
 
   @Inject
-  public GrpcStorage(GrpcConfig config) {
-    this.config = config;
+  public GrpcStorage(DatabaseConfig databaseConfig) {
+    config = new GrpcConfig(databaseConfig);
     channel =
-        NettyChannelBuilder.forAddress(
-                config.getContactPoints().get(0),
-                config.getContactPort() == 0
-                    ? DEFAULT_SCALAR_DB_SERVER_PORT
-                    : config.getContactPort())
-            .usePlaintext()
-            .build();
+        NettyChannelBuilder.forAddress(config.getHost(), config.getPort()).usePlaintext().build();
     stub = DistributedStorageGrpc.newStub(channel);
     blockingStub = DistributedStorageGrpc.newBlockingStub(channel);
     metadataManager =
         new TableMetadataManager(
-            new GrpcAdmin(channel, config), config.getMetadataCacheExpirationTimeSecs());
+            new GrpcAdmin(channel, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
   }
 
   @VisibleForTesting

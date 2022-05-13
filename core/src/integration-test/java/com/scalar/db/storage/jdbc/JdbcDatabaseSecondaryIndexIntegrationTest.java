@@ -5,6 +5,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Value;
 import com.scalar.db.util.TestUtils;
+import java.util.Properties;
 import java.util.Random;
 
 public class JdbcDatabaseSecondaryIndexIntegrationTest
@@ -13,10 +14,10 @@ public class JdbcDatabaseSecondaryIndexIntegrationTest
   private RdbEngine rdbEngine;
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    JdbcConfig jdbcConfig = JdbcEnv.getJdbcConfig();
-    rdbEngine = JdbcUtils.getRdbEngine(jdbcConfig.getContactPoints().get(0));
-    return jdbcConfig;
+  protected Properties getProperties() {
+    Properties properties = JdbcEnv.getProperties();
+    rdbEngine = JdbcUtils.getRdbEngine(new JdbcConfig(new DatabaseConfig(properties)).getJdbcUrl());
+    return properties;
   }
 
   @Override

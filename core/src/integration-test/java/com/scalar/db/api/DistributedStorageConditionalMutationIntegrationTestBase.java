@@ -8,7 +8,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Ordering;
 import com.scalar.db.api.ConditionalExpression.Operator;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.BigIntColumn;
@@ -30,6 +29,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -86,8 +86,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize();
-    StorageFactory factory =
-        new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+    StorageFactory factory = StorageFactory.create(TestUtils.addSuffix(getProperties(), TEST_NAME));
     admin = factory.getAdmin();
     namespace = getNamespace();
     createTable();
@@ -100,7 +99,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
   protected void initialize() throws Exception {}
 
-  protected abstract DatabaseConfig getDatabaseConfig();
+  protected abstract Properties getProperties();
 
   protected String getNamespace() {
     return NAMESPACE;

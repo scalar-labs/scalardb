@@ -40,12 +40,13 @@ public class MultiStorageConfigTest {
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
     // Act
-    MultiStorageConfig config = new MultiStorageConfig(props);
+    MultiStorageConfig config = new MultiStorageConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.getDatabaseConfigMap().size()).isEqualTo(2);
-    assertThat(config.getDatabaseConfigMap().containsKey("cassandra")).isTrue();
-    DatabaseConfig c = config.getDatabaseConfigMap().get("cassandra");
+    assertThat(config.getDatabasePropertiesMap().size()).isEqualTo(2);
+
+    assertThat(config.getDatabasePropertiesMap().containsKey("cassandra")).isTrue();
+    DatabaseConfig c = new DatabaseConfig(config.getDatabasePropertiesMap().get("cassandra"));
     assertThat(c.getStorageClass()).isEqualTo(Cassandra.class);
     assertThat(c.getContactPoints()).isEqualTo(Collections.singletonList("localhost"));
     assertThat(c.getContactPort()).isEqualTo(7000);
@@ -53,8 +54,9 @@ public class MultiStorageConfigTest {
     assertThat(c.getUsername().get()).isEqualTo("cassandra");
     assertThat(c.getPassword().isPresent()).isTrue();
     assertThat(c.getPassword().get()).isEqualTo("cassandra");
-    assertThat(config.getDatabaseConfigMap().containsKey("mysql")).isTrue();
-    c = config.getDatabaseConfigMap().get("mysql");
+
+    assertThat(config.getDatabasePropertiesMap().containsKey("mysql")).isTrue();
+    c = new DatabaseConfig(config.getDatabasePropertiesMap().get("mysql"));
     assertThat(c.getStorageClass()).isEqualTo(JdbcDatabase.class);
     assertThat(c.getContactPoints())
         .isEqualTo(Collections.singletonList("jdbc:mysql://localhost:3306/"));
@@ -102,7 +104,7 @@ public class MultiStorageConfigTest {
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
     // Act Assert
-    assertThatThrownBy(() -> new MultiStorageConfig(props))
+    assertThatThrownBy(() -> new MultiStorageConfig(new DatabaseConfig(props)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -136,7 +138,7 @@ public class MultiStorageConfigTest {
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
     // Act Assert
-    assertThatThrownBy(() -> new MultiStorageConfig(props))
+    assertThatThrownBy(() -> new MultiStorageConfig(new DatabaseConfig(props)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -170,7 +172,7 @@ public class MultiStorageConfigTest {
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
     // Act Assert
-    assertThatThrownBy(() -> new MultiStorageConfig(props))
+    assertThatThrownBy(() -> new MultiStorageConfig(new DatabaseConfig(props)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -202,7 +204,7 @@ public class MultiStorageConfigTest {
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "dynamo"); // non-existent storage
 
     // Act Assert
-    assertThatThrownBy(() -> new MultiStorageConfig(props))
+    assertThatThrownBy(() -> new MultiStorageConfig(new DatabaseConfig(props)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -233,7 +235,7 @@ public class MultiStorageConfigTest {
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
     // Act Assert
-    assertThatThrownBy(() -> new MultiStorageConfig(props))
+    assertThatThrownBy(() -> new MultiStorageConfig(new DatabaseConfig(props)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 }

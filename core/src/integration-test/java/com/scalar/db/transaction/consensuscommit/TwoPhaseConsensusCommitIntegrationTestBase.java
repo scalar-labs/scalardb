@@ -13,13 +13,12 @@ public abstract class TwoPhaseConsensusCommitIntegrationTestBase
   }
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    DatabaseConfig config = getDbConfig();
+  protected final Properties gerProperties() {
     Properties properties = new Properties();
-    properties.putAll(config.getProperties());
+    properties.putAll(getProps());
     properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "consensus-commit");
-    return new DatabaseConfig(properties);
+    return properties;
   }
 
-  protected abstract DatabaseConfig getDbConfig();
+  protected abstract Properties getProps();
 }

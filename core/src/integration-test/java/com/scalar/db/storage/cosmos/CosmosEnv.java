@@ -19,7 +19,7 @@ public final class CosmosEnv {
 
   private CosmosEnv() {}
 
-  public static CosmosConfig getCosmosConfig() {
+  public static Properties getProperties() {
     String contactPoint = System.getProperty(PROP_COSMOS_URI);
     String password = System.getProperty(PROP_COSMOS_PASSWORD);
     Optional<String> databasePrefix = getDatabasePrefix();
@@ -35,7 +35,7 @@ public final class CosmosEnv {
           props.setProperty(
               ConsensusCommitConfig.COORDINATOR_NAMESPACE, prefix + Coordinator.NAMESPACE);
         });
-    return new CosmosConfig(props);
+    return props;
   }
 
   public static Optional<String> getDatabasePrefix() {

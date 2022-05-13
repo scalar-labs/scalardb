@@ -13,6 +13,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.storage.common.AbstractDistributedStorage;
@@ -42,14 +43,16 @@ public class MultiStorage extends AbstractDistributedStorage {
   private final List<DistributedStorage> storages;
 
   @Inject
-  public MultiStorage(MultiStorageConfig config) {
+  public MultiStorage(DatabaseConfig databaseConfig) {
+    MultiStorageConfig config = new MultiStorageConfig(databaseConfig);
+
     storages = new ArrayList<>();
     Map<String, DistributedStorage> nameStorageMap = new HashMap<>();
     config
-        .getDatabaseConfigMap()
+        .getDatabasePropertiesMap()
         .forEach(
-            (storageName, databaseConfig) -> {
-              StorageFactory factory = new StorageFactory(databaseConfig);
+            (storageName, properties) -> {
+              StorageFactory factory = StorageFactory.create(properties);
               DistributedStorage storage = factory.getStorage();
               nameStorageMap.put(storageName, storage);
               storages.add(storage);
@@ -73,7 +76,6 @@ public class MultiStorage extends AbstractDistributedStorage {
 
   @VisibleForTesting
   MultiStorage(
-      MultiStorageConfig config,
       Map<String, DistributedStorage> tableStorageMap,
       Map<String, DistributedStorage> namespaceStorageMap,
       DistributedStorage defaultStorage) {

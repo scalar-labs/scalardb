@@ -41,6 +41,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.stream.IntStream;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
@@ -68,6 +69,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   private DistributedStorage originalStorage;
   private DistributedStorageAdmin admin;
+  private DatabaseConfig databaseConfig;
   private ConsensusCommitConfig consensusCommitConfig;
   private ConsensusCommitAdmin consensusCommitAdmin;
   private String namespace1;
@@ -83,10 +85,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize();
-    DatabaseConfig config = TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME);
-    StorageFactory factory = new StorageFactory(config);
+    Properties properties = TestUtils.addSuffix(getProperties(), TEST_NAME);
+    StorageFactory factory = StorageFactory.create(properties);
     admin = factory.getAdmin();
-    consensusCommitConfig = new ConsensusCommitConfig(config.getProperties());
+    databaseConfig = new DatabaseConfig(properties);
+    consensusCommitConfig = new ConsensusCommitConfig(databaseConfig);
     consensusCommitAdmin = new ConsensusCommitAdmin(admin, consensusCommitConfig);
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
@@ -97,7 +100,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   protected void initialize() throws Exception {}
 
-  protected abstract DatabaseConfig getDatabaseConfig();
+  protected abstract Properties getProperties();
 
   protected String getNamespace1() {
     return NAMESPACE_1;
@@ -139,7 +142,14 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     commit = spy(new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor));
     manager =
         new ConsensusCommitManager(
-            storage, admin, consensusCommitConfig, coordinator, parallelExecutor, recovery, commit);
+            storage,
+            admin,
+            consensusCommitConfig,
+            databaseConfig,
+            coordinator,
+            parallelExecutor,
+            recovery,
+            commit);
   }
 
   private void truncateTables() throws ExecutionException {

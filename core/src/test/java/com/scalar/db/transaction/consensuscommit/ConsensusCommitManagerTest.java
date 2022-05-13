@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Optional;
@@ -28,18 +29,24 @@ public class ConsensusCommitManagerTest {
   @SuppressWarnings("unused")
   private DistributedStorageAdmin admin;
 
-  @Mock private ConsensusCommitConfig config;
+  @Mock
+  @SuppressWarnings("unused")
+  private DatabaseConfig databaseConfig;
+
+  @Mock private ConsensusCommitConfig consensusCommitConfig;
   @Mock private Coordinator coordinator;
   @Mock private RecoveryHandler recovery;
   @Mock private CommitHandler commit;
+
   @InjectMocks private ConsensusCommitManager manager;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    when(config.getIsolation()).thenReturn(Isolation.SNAPSHOT);
-    when(config.getSerializableStrategy()).thenReturn(SerializableStrategy.EXTRA_READ);
+    when(consensusCommitConfig.getIsolation()).thenReturn(Isolation.SNAPSHOT);
+    when(consensusCommitConfig.getSerializableStrategy())
+        .thenReturn(SerializableStrategy.EXTRA_READ);
   }
 
   @Test

@@ -1,7 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.DistributedStorageWithReservedKeywordIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
+import java.util.Properties;
 
 public class JdbcDatabaseWithReservedKeywordIntegrationTest
     extends DistributedStorageWithReservedKeywordIntegrationTestBase {
@@ -49,7 +49,7 @@ public class JdbcDatabaseWithReservedKeywordIntegrationTest
   }
 
   @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return JdbcEnv.getJdbcConfig();
+  protected Properties getProperties() {
+    return JdbcEnv.getProperties();
   }
 }

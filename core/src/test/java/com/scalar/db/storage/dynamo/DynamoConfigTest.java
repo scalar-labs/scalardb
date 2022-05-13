@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.config.DatabaseConfig;
-import java.util.Collections;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
@@ -29,17 +28,12 @@ public class DynamoConfigTest {
     props.setProperty(DynamoConfig.TABLE_METADATA_NAMESPACE, ANY_TABLE_METADATA_NAMESPACE);
 
     // Act
-    DynamoConfig config = new DynamoConfig(props);
+    DynamoConfig config = new DynamoConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_REGION));
-    assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername().isPresent()).isTrue();
-    assertThat(config.getUsername().get()).isEqualTo(ANY_ACCESS_KEY_ID);
-    assertThat(config.getPassword().isPresent()).isTrue();
-    assertThat(config.getPassword().get()).isEqualTo(ANY_SECRET_ACCESS_ID);
-    assertThat(config.getStorageClass()).isEqualTo(Dynamo.class);
-    assertThat(config.getStorageAdminClass()).isEqualTo(DynamoAdmin.class);
+    assertThat(config.getRegion()).isEqualTo(ANY_REGION);
+    assertThat(config.getAccessKeyId()).isEqualTo(ANY_ACCESS_KEY_ID);
+    assertThat(config.getSecretAccessKey()).isEqualTo(ANY_SECRET_ACCESS_ID);
     assertThat(config.getEndpointOverride().isPresent()).isTrue();
     assertThat(config.getEndpointOverride().get()).isEqualTo(ANY_ENDPOINT_OVERRIDE);
     assertThat(config.getTableMetadataNamespace()).isPresent();
@@ -57,7 +51,8 @@ public class DynamoConfigTest {
     props.setProperty(DynamoConfig.TABLE_METADATA_NAMESPACE, ANY_TABLE_METADATA_NAMESPACE);
 
     // Act Assert
-    assertThatThrownBy(() -> new DynamoConfig(props)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new DynamoConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -71,17 +66,12 @@ public class DynamoConfigTest {
     props.setProperty(DynamoConfig.TABLE_METADATA_NAMESPACE, ANY_TABLE_METADATA_NAMESPACE);
 
     // Act
-    DynamoConfig config = new DynamoConfig(props);
+    DynamoConfig config = new DynamoConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_REGION));
-    assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername().isPresent()).isTrue();
-    assertThat(config.getUsername().get()).isEqualTo(ANY_ACCESS_KEY_ID);
-    assertThat(config.getPassword().isPresent()).isTrue();
-    assertThat(config.getPassword().get()).isEqualTo(ANY_SECRET_ACCESS_ID);
-    assertThat(config.getStorageClass()).isEqualTo(Dynamo.class);
-    assertThat(config.getStorageAdminClass()).isEqualTo(DynamoAdmin.class);
+    assertThat(config.getRegion()).isEqualTo(ANY_REGION);
+    assertThat(config.getAccessKeyId()).isEqualTo(ANY_ACCESS_KEY_ID);
+    assertThat(config.getSecretAccessKey()).isEqualTo(ANY_SECRET_ACCESS_ID);
     assertThat(config.getEndpointOverride().isPresent()).isFalse();
     assertThat(config.getTableMetadataNamespace()).isPresent();
     assertThat(config.getTableMetadataNamespace().get()).isEqualTo(ANY_TABLE_METADATA_NAMESPACE);
@@ -98,17 +88,12 @@ public class DynamoConfigTest {
     props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, ANY_ENDPOINT_OVERRIDE);
 
     // Act
-    DynamoConfig config = new DynamoConfig(props);
+    DynamoConfig config = new DynamoConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_REGION));
-    assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername().isPresent()).isTrue();
-    assertThat(config.getUsername().get()).isEqualTo(ANY_ACCESS_KEY_ID);
-    assertThat(config.getPassword().isPresent()).isTrue();
-    assertThat(config.getPassword().get()).isEqualTo(ANY_SECRET_ACCESS_ID);
-    assertThat(config.getStorageClass()).isEqualTo(Dynamo.class);
-    assertThat(config.getStorageAdminClass()).isEqualTo(DynamoAdmin.class);
+    assertThat(config.getRegion()).isEqualTo(ANY_REGION);
+    assertThat(config.getAccessKeyId()).isEqualTo(ANY_ACCESS_KEY_ID);
+    assertThat(config.getSecretAccessKey()).isEqualTo(ANY_SECRET_ACCESS_ID);
     assertThat(config.getEndpointOverride().isPresent()).isTrue();
     assertThat(config.getEndpointOverride().get()).isEqualTo(ANY_ENDPOINT_OVERRIDE);
     assertThat(config.getTableMetadataNamespace()).isNotPresent();

@@ -6,6 +6,7 @@ import com.scalar.db.api.Isolation;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
@@ -32,15 +33,17 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
   private final JdbcService jdbcService;
 
   @Inject
-  public JdbcTransactionManager(JdbcConfig config) {
+  public JdbcTransactionManager(DatabaseConfig databaseConfig) {
+    JdbcConfig config = new JdbcConfig(databaseConfig);
+
     dataSource = JdbcUtils.initDataSource(config, true);
-    rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
+    rdbEngine = JdbcUtils.getRdbEngine(config.getJdbcUrl());
 
     tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config);
     TableMetadataManager tableMetadataManager =
         new TableMetadataManager(
             new JdbcAdmin(tableMetadataDataSource, config),
-            config.getMetadataCacheExpirationTimeSecs());
+            databaseConfig.getMetadataCacheExpirationTimeSecs());
 
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
