@@ -15,6 +15,10 @@ jobs:
         run: |
           VERSION=$(echo ${{ github.ref }} | sed -e "s#refs/tags/v##g")
           echo ::set-output name=version::${VERSION}
+          MINOR_VERSION=$(echo ${{ github.ref }} | sed -e "s#refs/tags/v##g" | grep -o -E "^[0-9]+\.[0-9]+")
+          echo ::set-output name=minor_version::${MINOR_VERSION}
+          LATEST_VERSION=$(curl -s -u "${{ github.repository_owner }}:${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/scalar-labs/scalardb/tags | jq -r .[].name | sort --version-sort -r | head -n 1 | sed -e "s#v##g")
+          echo ::set-output name=latest_version::${LATEST_VERSION}
 
       - uses: actions/checkout@v2
 
@@ -40,6 +44,13 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
 
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USER }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
       - name: Create containers
         run: gradle docker
 
@@ -47,6 +58,19 @@ jobs:
         run: |
           docker push ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }}
           docker push ghcr.io/scalar-labs/scalardb-schema-loader:${{ steps.version.outputs.version }}
+
+      - name: Push containers to Azure Container Registry
+        run: |
+          docker tag ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }} ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:${{ steps.version.outputs.version }}
+          docker tag ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }} ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:${{ steps.version.outputs.minor_version }}
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:${{ steps.version.outputs.version }}
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:${{ steps.version.outputs.minor_version }}
+
+      - name: Push latest tag to Azure Container Registry
+        if: ${{ steps.version.outputs.version == steps.version.outputs.latest_version }}
+        run: |
+          docker tag ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }} ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:latest
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:latest
 
       - name: Upload scalardb, scalardb-server, scalardb-rpc, and scalardb-schema-loader to Maven Central Repository
         run: |
