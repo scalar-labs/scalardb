@@ -181,6 +181,7 @@ public class JdbcServiceTest {
     verify(operationChecker).check(any(Scan.class));
     verify(queryBuilder).select(any());
   }
+
   @Test
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public void whenScanExecuted_withScanAll_shouldCallQueryBuilder() throws Exception {
@@ -203,7 +204,6 @@ public class JdbcServiceTest {
     verify(operationChecker).check(any(ScanAll.class));
     verify(queryBuilder).select(any());
   }
-
 
   @Test
   public void whenPutOperationExecuted_shouldReturnTrueAndCallQueryBuilder() throws Exception {
