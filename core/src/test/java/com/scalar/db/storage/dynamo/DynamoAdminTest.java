@@ -433,7 +433,17 @@ public class DynamoAdminTest {
         .registerScalableTarget(any(RegisterScalableTargetRequest.class));
     verify(applicationAutoScalingClient, times(4))
         .putScalingPolicy(any(PutScalingPolicyRequest.class));
-    verify(client).updateContinuousBackups(any(UpdateContinuousBackupsRequest.class));
+
+    ArgumentCaptor<UpdateContinuousBackupsRequest> updateContinuousBackupsRequestCaptor =
+        ArgumentCaptor.forClass(UpdateContinuousBackupsRequest.class);
+    verify(client, times(2))
+        .updateContinuousBackups(updateContinuousBackupsRequestCaptor.capture());
+    List<UpdateContinuousBackupsRequest> updateContinuousBackupsRequests =
+        updateContinuousBackupsRequestCaptor.getAllValues();
+    assertThat(updateContinuousBackupsRequests.size()).isEqualTo(2);
+    assertThat(updateContinuousBackupsRequests.get(0).tableName()).isEqualTo(FULL_TABLE_NAME);
+    assertThat(updateContinuousBackupsRequests.get(1).tableName())
+        .isEqualTo(metadataNamespaceName + "." + DynamoAdmin.METADATA_TABLE);
   }
 
   @Test

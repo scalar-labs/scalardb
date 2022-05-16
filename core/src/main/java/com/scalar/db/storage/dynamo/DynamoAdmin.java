@@ -228,9 +228,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     } catch (Exception e) {
       throw new ExecutionException("creating the table failed", e);
     }
-    waitForTableCreation(getFullTableName(namespace, table));
-
-    putTableMetadata(namespace, table, metadata);
+    waitForTableCreation(namespace, table);
 
     boolean noScaling = Boolean.parseBoolean(options.getOrDefault(NO_SCALING, DEFAULT_NO_SCALING));
     if (!noScaling) {
@@ -241,6 +239,9 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     if (!noBackup) {
       enableContinuousBackup(namespace, table);
     }
+
+    createMetadataTableIfNotExists(noBackup);
+    putTableMetadata(namespace, table, metadata);
   }
 
   private void checkMetadata(TableMetadata metadata) {
@@ -351,8 +352,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   private void putTableMetadata(String namespace, String table, TableMetadata metadata)
       throws ExecutionException {
-    createMetadataTableIfNotExists();
-
     // Add metadata
     Map<String, AttributeValue> itemValues = new HashMap<>();
     itemValues.put(
@@ -403,14 +402,17 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
     try {
       client.putItem(
-          PutItemRequest.builder().tableName(getMetadataTable()).item(itemValues).build());
+          PutItemRequest.builder()
+              .tableName(getFullTableName(metadataNamespace, METADATA_TABLE))
+              .item(itemValues)
+              .build());
     } catch (Exception e) {
       throw new ExecutionException(
           "adding the meta data for table " + getFullTableName(namespace, table) + " failed", e);
     }
   }
 
-  private void createMetadataTableIfNotExists() throws ExecutionException {
+  private void createMetadataTableIfNotExists(boolean noBackup) throws ExecutionException {
     if (metadataTableExists()) {
       return;
     }
@@ -435,17 +437,24 @@ public class DynamoAdmin implements DistributedStorageAdmin {
                       .readCapacityUnits(METADATA_TABLE_REQUEST_UNIT)
                       .writeCapacityUnits(METADATA_TABLE_REQUEST_UNIT)
                       .build())
-              .tableName(getMetadataTable())
+              .tableName(getFullTableName(metadataNamespace, METADATA_TABLE))
               .build());
     } catch (Exception e) {
       throw new ExecutionException("creating the metadata table failed", e);
     }
-    waitForTableCreation(getMetadataTable());
+    waitForTableCreation(metadataNamespace, METADATA_TABLE);
+
+    if (!noBackup) {
+      enableContinuousBackup(metadataNamespace, METADATA_TABLE);
+    }
   }
 
   private boolean metadataTableExists() throws ExecutionException {
     try {
-      client.describeTable(DescribeTableRequest.builder().tableName(getMetadataTable()).build());
+      client.describeTable(
+          DescribeTableRequest.builder()
+              .tableName(getFullTableName(metadataNamespace, METADATA_TABLE))
+              .build());
       return true;
     } catch (Exception e) {
       if (e instanceof ResourceNotFoundException) {
@@ -456,12 +465,15 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void waitForTableCreation(String tableFullName) throws ExecutionException {
+  private void waitForTableCreation(String namespace, String table) throws ExecutionException {
     try {
       while (true) {
         Uninterruptibles.sleepUninterruptibly(WAITING_DURATION_SECS, TimeUnit.SECONDS);
         DescribeTableResponse describeTableResponse =
-            client.describeTable(DescribeTableRequest.builder().tableName(tableFullName).build());
+            client.describeTable(
+                DescribeTableRequest.builder()
+                    .tableName(getFullTableName(namespace, table))
+                    .build());
         if (describeTableResponse.table().tableStatus() == TableStatus.ACTIVE) {
           break;
         }
@@ -664,28 +676,29 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   private void deleteTableMetadata(String namespace, String table) throws ExecutionException {
+    String metadataTable = getFullTableName(metadataNamespace, METADATA_TABLE);
+
     Map<String, AttributeValue> keyToDelete = new HashMap<>();
     keyToDelete.put(
         METADATA_ATTR_TABLE,
         AttributeValue.builder().s(getFullTableName(namespace, table)).build());
     try {
       client.deleteItem(
-          DeleteItemRequest.builder().tableName(getMetadataTable()).key(keyToDelete).build());
+          DeleteItemRequest.builder().tableName(metadataTable).key(keyToDelete).build());
     } catch (Exception e) {
       throw new ExecutionException("deleting the metadata failed", e);
     }
 
     ScanResponse scanResponse;
     try {
-      scanResponse =
-          client.scan(ScanRequest.builder().tableName(getMetadataTable()).limit(1).build());
+      scanResponse = client.scan(ScanRequest.builder().tableName(metadataTable).limit(1).build());
     } catch (Exception e) {
       throw new ExecutionException("scanning the metadata table failed", e);
     }
 
     if (scanResponse.count() == 0) {
       try {
-        client.deleteTable(DeleteTableRequest.builder().tableName(getMetadataTable()).build());
+        client.deleteTable(DeleteTableRequest.builder().tableName(metadataTable).build());
       } catch (Exception e) {
         throw new ExecutionException("deleting the empty metadata table failed", e);
       }
@@ -996,7 +1009,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           client
               .getItem(
                   GetItemRequest.builder()
-                      .tableName(getMetadataTable())
+                      .tableName(getFullTableName(metadataNamespace, METADATA_TABLE))
                       .key(key)
                       .consistentRead(true)
                       .build())
@@ -1009,10 +1022,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     } catch (Exception e) {
       throw new ExecutionException("Failed to read the table metadata", e);
     }
-  }
-
-  private String getMetadataTable() {
-    return getFullTableName(metadataNamespace, METADATA_TABLE);
   }
 
   private TableMetadata createTableMetadata(Map<String, AttributeValue> metadata)
