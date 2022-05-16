@@ -158,7 +158,7 @@ public class JdbcServiceTest {
 
   @Test
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
-  public void whenScanExecuted_shouldCallQueryBuilder() throws Exception {
+  public void whenScanExecuted_withScan_shouldCallQueryBuilder() throws Exception {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
 
@@ -181,6 +181,29 @@ public class JdbcServiceTest {
     verify(operationChecker).check(any(Scan.class));
     verify(queryBuilder).select(any());
   }
+  @Test
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  public void whenScanExecuted_withScanAll_shouldCallQueryBuilder() throws Exception {
+    // Arrange
+    when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
+
+    when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.limit(anyInt())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.build()).thenReturn(selectQuery);
+
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
+    when(preparedStatement.executeQuery()).thenReturn(resultSet);
+    when(resultSet.next()).thenReturn(false);
+
+    // Act
+    ScanAll scanAll = new ScanAll().forNamespace(NAMESPACE).forTable(TABLE);
+    jdbcService.scan(scanAll, connection);
+
+    // Assert
+    verify(operationChecker).check(any(ScanAll.class));
+    verify(queryBuilder).select(any());
+  }
+
 
   @Test
   public void whenPutOperationExecuted_shouldReturnTrueAndCallQueryBuilder() throws Exception {

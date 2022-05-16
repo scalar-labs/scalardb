@@ -110,11 +110,18 @@ public class JdbcService {
 
   public List<Result> scan(Scan scan, Connection connection)
       throws SQLException, ExecutionException {
-    operationChecker.check(scan);
+    if (scan instanceof ScanAll) {
+      operationChecker.check((ScanAll) scan);
+    } else {
+      operationChecker.check(scan);
+    }
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
     ScalarDbUtils.addProjectionsForKeys(scan, tableMetadata);
 
-    SelectQuery selectQuery = buildSelectQueryForScan(scan, tableMetadata);
+    SelectQuery selectQuery =
+        scan instanceof ScanAll
+            ? buildSelectQueryForScanAll((ScanAll) scan, tableMetadata)
+            : buildSelectQueryForScan(scan, tableMetadata);
     try (PreparedStatement preparedStatement = connection.prepareStatement(selectQuery.sql())) {
       selectQuery.bind(preparedStatement);
       try (ResultSet resultSet = preparedStatement.executeQuery()) {
