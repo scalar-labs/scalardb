@@ -11,6 +11,7 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -187,6 +188,13 @@ public class Snapshot {
   private boolean isWriteSetOverlappedWith(Scan scan) {
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
       Put put = entry.getValue();
+
+      if (scan instanceof ScanAll
+          && put.forNamespace().equals(scan.forNamespace())
+          && put.forTable().equals(put.forTable())) {
+        return true;
+      }
+
       if (!put.forNamespace().equals(scan.forNamespace())
           || !put.forTable().equals(scan.forTable())
           || !put.getPartitionKey().equals(scan.getPartitionKey())) {
