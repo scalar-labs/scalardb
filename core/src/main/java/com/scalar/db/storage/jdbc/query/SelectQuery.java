@@ -17,7 +17,7 @@ public interface SelectQuery extends Query {
     String schema;
     String table;
     TableMetadata tableMetadata;
-    Key partitionKey;
+    Optional<Key> partitionKey = Optional.empty();
     Optional<Key> clusteringKey = Optional.empty();
     Optional<Key> commonClusteringKey = Optional.empty();
     Optional<Column<?>> startColumn = Optional.empty();
@@ -28,6 +28,7 @@ public interface SelectQuery extends Query {
     private int limit;
     boolean isRangeQuery;
     Optional<String> indexedColumn = Optional.empty();
+    boolean isConditionalQuery;
 
     Builder(RdbEngine rdbEngine, List<String> projections) {
       this.rdbEngine = rdbEngine;
@@ -45,7 +46,8 @@ public interface SelectQuery extends Query {
      * Assumes this is called by get operations
      */
     public Builder where(Key partitionKey, Optional<Key> clusteringKey) {
-      this.partitionKey = partitionKey;
+      isConditionalQuery = true;
+      this.partitionKey = Optional.of(partitionKey);
       this.clusteringKey = clusteringKey;
       setIndexInfoIfUsed(partitionKey);
       return this;
@@ -60,7 +62,9 @@ public interface SelectQuery extends Query {
         boolean startInclusive,
         Optional<Key> endClusteringKey,
         boolean endInclusive) {
-      this.partitionKey = partitionKey;
+      isConditionalQuery = true;
+
+      this.partitionKey = Optional.of(partitionKey);
 
       if (startClusteringKey.isPresent()) {
         commonClusteringKey =
@@ -132,7 +136,7 @@ public interface SelectQuery extends Query {
           case ORACLE:
             return new SelectWithFetchFirstNRowsOnly(this, limit);
           case SQL_SERVER:
-            return new SelectWithOffsetFetchQuery(this, limit);
+            return new SelectWithTop(this, limit);
           default:
             throw new AssertionError("invalid rdb engine: " + rdbEngine);
         }
