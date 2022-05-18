@@ -15,6 +15,8 @@ public class SelectWithTop extends SimpleSelectQuery {
 
   @Override
   public String sql() {
+    // This inserts "TOP ${limit}" clause, specific to SqlServer, right after the "SELECT" clause of the
+    // query returned by super.sql()
     return new StringBuilder(super.sql()).insert(7, "TOP " + limit + " ").toString();
   }
 }
