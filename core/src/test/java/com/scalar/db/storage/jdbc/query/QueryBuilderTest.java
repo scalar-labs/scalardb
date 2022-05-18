@@ -291,8 +291,8 @@ public class QueryBuilderTest {
       case SQL_SERVER:
       default:
         expectedQuery =
-            "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? "
-                + "ORDER BY c1 ASC,c2 DESC OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY";
+            "SELECT TOP 10 c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? "
+                + "ORDER BY c1 ASC,c2 DESC";
         break;
     }
     preparedStatement = mock(PreparedStatement.class);
