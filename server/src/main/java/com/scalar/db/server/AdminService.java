@@ -3,6 +3,7 @@ package com.scalar.db.server;
 import com.google.inject.Inject;
 import com.google.protobuf.Empty;
 import com.scalar.admin.rpc.AdminGrpc;
+import com.scalar.admin.rpc.CheckPausedResponse;
 import com.scalar.admin.rpc.PauseRequest;
 import com.scalar.admin.rpc.StatsResponse;
 import io.grpc.Status;
@@ -64,6 +65,13 @@ public class AdminService extends AdminGrpc.AdminImplBase {
   public void stats(Empty request, StreamObserver<StatsResponse> responseObserver) {
     // returns empty for now
     responseObserver.onNext(StatsResponse.newBuilder().setStats("{}").build());
+    responseObserver.onCompleted();
+  }
+
+  @Override
+  public void checkPaused(Empty request, StreamObserver<CheckPausedResponse> responseObserver) {
+    responseObserver.onNext(
+        CheckPausedResponse.newBuilder().setPaused(!gateKeeper.letIn()).build());
     responseObserver.onCompleted();
   }
 }
