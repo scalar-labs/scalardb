@@ -144,8 +144,8 @@ public abstract class DistributedTransactionIntegrationTestBase {
     DistributedTransaction transaction = manager.start();
     Get get =
         prepareGet(0, 0)
-//            .withProjection(ACCOUNT_ID)
-//            .withProjection(ACCOUNT_TYPE)
+            .withProjection(ACCOUNT_ID)
+            .withProjection(ACCOUNT_TYPE)
             .withProjection(BALANCE);
 
     // Act
@@ -153,12 +153,11 @@ public abstract class DistributedTransactionIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    System.out.println(result);
-//    assertThat(result.isPresent()).isTrue();
-//    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-//    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
-//    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
-//    assertThat(result.get().contains(SOME_COLUMN)).isFalse();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
+    assertThat(result.get().contains(SOME_COLUMN)).isFalse();
   }
 
   @Test
@@ -447,7 +446,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
                                       ImmutableList.of(IntColumn.of(BALANCE, INITIAL_BALANCE)));
                           expectedResults.add(erBuilder.build());
                         }));
-        assertResultsContainsExactlyInAnyOrder(results, expectedResults);
+    assertResultsContainsExactlyInAnyOrder(results, expectedResults);
     results.forEach(
         result -> {
           System.out.println(result);

@@ -191,7 +191,7 @@ public class Snapshot {
 
       if (scan instanceof ScanAll
           && put.forNamespace().equals(scan.forNamespace())
-          && put.forTable().equals(put.forTable())) {
+          && put.forTable().equals(scan.forTable())) {
         return true;
       }
 
