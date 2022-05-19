@@ -26,6 +26,11 @@ public class SynchronizedGateKeeper implements GateKeeper {
   }
 
   @Override
+  public synchronized boolean isOpen() {
+    return isOpen;
+  }
+
+  @Override
   public synchronized boolean awaitDrained(long timeout, TimeUnit unit)
       throws InterruptedException {
     long timeoutNanos = unit.toNanos(timeout);
