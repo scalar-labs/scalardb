@@ -24,7 +24,7 @@ public class SimpleSelectQuery implements SelectQuery {
   private final String schema;
   private final String table;
   private final TableMetadata tableMetadata;
-  private final Key partitionKey;
+  private final Optional<Key> partitionKey;
   private final Optional<Key> clusteringKey;
   private final Optional<Key> commonClusteringKey;
   private final Optional<Column<?>> startColumn;
@@ -34,6 +34,7 @@ public class SimpleSelectQuery implements SelectQuery {
   private final List<Scan.Ordering> orderings;
   private final boolean isRangeQuery;
   private final Optional<String> indexedColumn;
+  private final boolean isConditionalQuery;
 
   SimpleSelectQuery(Builder builder) {
     projections = builder.projections;
@@ -51,17 +52,22 @@ public class SimpleSelectQuery implements SelectQuery {
     orderings = builder.orderings;
     isRangeQuery = builder.isRangeQuery;
     indexedColumn = builder.indexedColumn;
+    isConditionalQuery = builder.isConditionalQuery;
   }
 
   @Override
   public String sql() {
-    return "SELECT "
-        + projectionSqlString()
-        + " FROM "
-        + enclosedFullTableName(schema, table, rdbEngine)
-        + " WHERE "
-        + conditionSqlString()
-        + orderBySqlString();
+    String sql =
+        "SELECT "
+            + projectionSqlString()
+            + " FROM "
+            + enclosedFullTableName(schema, table, rdbEngine);
+    if (isConditionalQuery) {
+      sql += " WHERE " + conditionSqlString();
+    }
+    sql += orderBySqlString();
+
+    return sql;
   }
 
   private String projectionSqlString() {
@@ -73,7 +79,8 @@ public class SimpleSelectQuery implements SelectQuery {
 
   private String conditionSqlString() {
     List<String> conditions = new ArrayList<>();
-    partitionKey.forEach(v -> conditions.add(enclose(v.getName(), rdbEngine) + "=?"));
+    partitionKey.ifPresent(
+        k -> k.forEach(v -> conditions.add(enclose(v.getName(), rdbEngine) + "=?")));
     clusteringKey.ifPresent(
         k -> k.forEach(v -> conditions.add(enclose(v.getName(), rdbEngine) + "=?")));
     commonClusteringKey.ifPresent(
@@ -127,10 +134,11 @@ public class SimpleSelectQuery implements SelectQuery {
   public void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder =
         new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine);
-
-    for (Column<?> column : partitionKey.getColumns()) {
-      column.accept(binder);
-      binder.throwSQLExceptionIfOccurred();
+    if (partitionKey.isPresent()) {
+      for (Column<?> column : partitionKey.get().getColumns()) {
+        column.accept(binder);
+        binder.throwSQLExceptionIfOccurred();
+      }
     }
 
     if (clusteringKey.isPresent()) {
