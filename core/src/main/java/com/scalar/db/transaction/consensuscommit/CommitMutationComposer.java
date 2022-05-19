@@ -75,7 +75,7 @@ public class CommitMutationComposer extends AbstractMutationComposer {
   }
 
   private Put composePut(Operation base, TransactionResult result) {
-    return new Put(base.getPartitionKey(), getClusteringKey(base, result).orElse(null))
+    return new Put(getPartitionKey(base, result), getClusteringKey(base, result).orElse(null))
         .forNamespace(base.forNamespace().get())
         .forTable(base.forTable().get())
         .withConsistency(Consistency.LINEARIZABLE)
@@ -89,7 +89,7 @@ public class CommitMutationComposer extends AbstractMutationComposer {
   }
 
   private Delete composeDelete(Operation base, TransactionResult result) {
-    return new Delete(base.getPartitionKey(), getClusteringKey(base, result).orElse(null))
+    return new Delete(getPartitionKey(base, result), getClusteringKey(base, result).orElse(null))
         .forNamespace(base.forNamespace().get())
         .forTable(base.forTable().get())
         .withConsistency(Consistency.LINEARIZABLE)
