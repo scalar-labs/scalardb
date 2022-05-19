@@ -454,6 +454,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
           assertThat(result.contains(SOME_COLUMN)).isFalse();
         });
   }
+
   @Test
   public void scanAll_ScanAllGivenForNonExisting_ShouldReturnEmpty() throws TransactionException {
     // Arrange
