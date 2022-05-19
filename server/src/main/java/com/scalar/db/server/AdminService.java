@@ -71,7 +71,7 @@ public class AdminService extends AdminGrpc.AdminImplBase {
   @Override
   public void checkPaused(Empty request, StreamObserver<CheckPausedResponse> responseObserver) {
     responseObserver.onNext(
-        CheckPausedResponse.newBuilder().setPaused(!gateKeeper.letIn()).build());
+        CheckPausedResponse.newBuilder().setPaused(!gateKeeper.isOpen()).build());
     responseObserver.onCompleted();
   }
 }
