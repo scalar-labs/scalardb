@@ -454,6 +454,19 @@ public abstract class DistributedTransactionIntegrationTestBase {
           assertThat(result.contains(SOME_COLUMN)).isFalse();
         });
   }
+  @Test
+  public void scanAll_ScanAllGivenForNonExisting_ShouldReturnEmpty() throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.start();
+    ScanAll scanAll = prepareScanAll();
+
+    // Act
+    List<Result> results = transaction.scan(scanAll);
+    transaction.commit();
+
+    // Assert
+    assertThat(results.size()).isEqualTo(0);
+  }
 
   @Test
   public void putAndCommit_PutGivenForNonExisting_ShouldCreateRecord() throws TransactionException {

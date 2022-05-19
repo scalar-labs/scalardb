@@ -1172,14 +1172,14 @@ public class SnapshotTest {
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.put(putKey, put);
-    Scan scan =
+    ScanAll scanAll =
         new ScanAll()
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
 
     // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.get(scan));
+    Throwable thrown = catchThrowable(() -> snapshot.get(scanAll));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1193,14 +1193,14 @@ public class SnapshotTest {
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.put(putKey, put);
-    Scan scan =
+    ScanAll scanAll =
         new ScanAll()
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME_2)
             .forTable(ANY_TABLE_NAME_2);
 
     // Act Assert
-    Optional<List<Snapshot.Key>> keys = snapshot.get(scan);
+    Optional<List<Snapshot.Key>> keys = snapshot.get(scanAll);
 
     // Assert
     assertThat(keys).isEmpty();
@@ -1215,16 +1215,16 @@ public class SnapshotTest {
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.put(putKey, put);
 
-    Scan scan =
+    ScanAll scanAll =
         new ScanAll()
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME_2)
             .forTable(ANY_TABLE_NAME_2);
     Snapshot.Key aKey = mock(Snapshot.Key.class);
-    snapshot.put(scan, Collections.singletonList(aKey));
+    snapshot.put(scanAll, Collections.singletonList(aKey));
 
     // Act Assert
-    Optional<List<Snapshot.Key>> keys = snapshot.get(scan);
+    Optional<List<Snapshot.Key>> keys = snapshot.get(scanAll);
 
     // Assert
     assertThat(keys).isNotEmpty();
