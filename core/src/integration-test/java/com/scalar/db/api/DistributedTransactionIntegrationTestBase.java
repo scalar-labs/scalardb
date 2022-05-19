@@ -395,6 +395,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
     // Act
     List<Result> results = scanAllTransaction.scan(scanAll);
+    scanAllTransaction.commit();
 
     // Assert
     assertResultsAreASubsetOf(
@@ -449,7 +450,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
     assertResultsContainsExactlyInAnyOrder(results, expectedResults);
     results.forEach(
         result -> {
-          System.out.println(result);
           assertThat(result.contains(ACCOUNT_ID)).isFalse();
           assertThat(result.contains(SOME_COLUMN)).isFalse();
         });
