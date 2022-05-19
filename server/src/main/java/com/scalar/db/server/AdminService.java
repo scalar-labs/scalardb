@@ -29,14 +29,14 @@ public class AdminService extends AdminGrpc.AdminImplBase {
   @Override
   public void pause(PauseRequest request, StreamObserver<Empty> responseObserver) {
     gateKeeper.close();
-    long maxPauseWaitTime =
-        request.getMaxPauseWaitTime() != 0
-            ? request.getMaxPauseWaitTime()
-            : DEFAULT_MAX_PAUSE_WAIT_TIME_MILLIS;
 
     if (request.getWaitOutstanding()) {
       LOGGER.warn("Pausing... waiting until outstanding requests are all finished");
       boolean drained = false;
+      long maxPauseWaitTime =
+          request.getMaxPauseWaitTime() != 0
+              ? request.getMaxPauseWaitTime()
+              : DEFAULT_MAX_PAUSE_WAIT_TIME_MILLIS;
 
       try {
         drained = gateKeeper.awaitDrained(maxPauseWaitTime, TimeUnit.MILLISECONDS);
