@@ -840,7 +840,6 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     assertResultsContainsExactlyInAnyOrder(results, expectedResults);
     results.forEach(
         result -> {
-          System.out.println(result);
           assertThat(result.contains(ACCOUNT_ID)).isFalse();
           assertThat(result.contains(SOME_COLUMN)).isFalse();
         });
