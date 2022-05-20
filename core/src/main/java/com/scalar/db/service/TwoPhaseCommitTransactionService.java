@@ -65,6 +65,11 @@ public class TwoPhaseCommitTransactionService implements TwoPhaseCommitTransacti
   }
 
   @Override
+  public void suspend(TwoPhaseCommitTransaction transaction) throws TransactionException {
+    manager.suspend(transaction);
+  }
+
+  @Override
   public TwoPhaseCommitTransaction resume(String txId) throws TransactionException {
     return manager.resume(txId);
   }

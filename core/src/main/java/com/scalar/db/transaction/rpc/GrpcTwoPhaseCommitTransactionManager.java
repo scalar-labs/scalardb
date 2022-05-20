@@ -7,6 +7,7 @@ import static com.scalar.db.util.retry.Retry.executeWithRetries;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.RollbackException;
@@ -43,7 +44,6 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
   private final TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionBlockingStub blockingStub;
   private final TableMetadataManager metadataManager;
 
-  @Nullable
   private final ActiveExpiringMap<String, GrpcTwoPhaseCommitTransaction> activeTransactions;
 
   @Inject
@@ -56,22 +56,19 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
     metadataManager =
         new TableMetadataManager(
             new GrpcAdmin(channel, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
-    if (config.isActiveTransactionsManagementEnabled()) {
-      activeTransactions =
-          new ActiveExpiringMap<>(
-              TRANSACTION_LIFETIME_MILLIS,
-              TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
-              t -> {
-                LOGGER.warn("the transaction is expired. transactionId: {}", t.getId());
-                try {
-                  t.rollback();
-                } catch (RollbackException e) {
-                  LOGGER.warn("rollback failed", e);
-                }
-              });
-    } else {
-      activeTransactions = null;
-    }
+
+    activeTransactions =
+        new ActiveExpiringMap<>(
+            TRANSACTION_LIFETIME_MILLIS,
+            TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
+            t -> {
+              LOGGER.warn("the transaction is expired. transactionId: {}", t.getId());
+              try {
+                t.rollback();
+              } catch (RollbackException e) {
+                LOGGER.warn("rollback failed", e);
+              }
+            });
   }
 
   @VisibleForTesting
@@ -85,11 +82,7 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
     this.stub = stub;
     this.blockingStub = blockingStub;
     this.metadataManager = metadataManager;
-    if (config.isActiveTransactionsManagementEnabled()) {
-      activeTransactions = new ActiveExpiringMap<>(Long.MAX_VALUE, Long.MAX_VALUE, t -> {});
-    } else {
-      activeTransactions = null;
-    }
+    activeTransactions = new ActiveExpiringMap<>(Long.MAX_VALUE, Long.MAX_VALUE, t -> {});
   }
 
   @Override
@@ -110,7 +103,7 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
               new GrpcTwoPhaseCommitTransactionOnBidirectionalStream(config, stub, metadataManager);
           String transactionId = stream.startTransaction(txId);
           GrpcTwoPhaseCommitTransaction transaction =
-              new GrpcTwoPhaseCommitTransaction(transactionId, stream, true, this);
+              new GrpcTwoPhaseCommitTransaction(transactionId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
           getTable().ifPresent(transaction::withTable);
           return transaction;
@@ -126,37 +119,33 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
               new GrpcTwoPhaseCommitTransactionOnBidirectionalStream(config, stub, metadataManager);
           stream.joinTransaction(txId);
           GrpcTwoPhaseCommitTransaction transaction =
-              new GrpcTwoPhaseCommitTransaction(txId, stream, false, this);
+              new GrpcTwoPhaseCommitTransaction(txId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
           getTable().ifPresent(transaction::withTable);
-          if (activeTransactions != null) {
-            if (activeTransactions.putIfAbsent(txId, transaction) != null) {
-              transaction.rollback();
-              throw new TransactionException(
-                  "The transaction associated with the specified transaction ID already exists");
-            }
-          }
           return transaction;
         },
         EXCEPTION_FACTORY);
   }
 
   @Override
-  public GrpcTwoPhaseCommitTransaction resume(String txId) throws TransactionException {
-    if (activeTransactions == null) {
-      throw new UnsupportedOperationException(
-          "unsupported when setting \""
-              + GrpcConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED
-              + "\" to false");
+  public void suspend(TwoPhaseCommitTransaction transaction) throws TransactionException {
+    if (activeTransactions.putIfAbsent(
+            transaction.getId(), (GrpcTwoPhaseCommitTransaction) transaction)
+        != null) {
+      transaction.rollback();
+      throw new TransactionException("The transaction already exists");
     }
+  }
 
-    return activeTransactions
-        .get(txId)
-        .orElseThrow(
-            () ->
-                new TransactionException(
-                    "A transaction associated with the specified transaction ID is not found. "
-                        + "It might have been expired"));
+  @Override
+  public GrpcTwoPhaseCommitTransaction resume(String txId) throws TransactionException {
+    GrpcTwoPhaseCommitTransaction transaction = activeTransactions.remove(txId);
+    if (transaction == null) {
+      throw new TransactionException(
+          "A transaction associated with the specified transaction ID is not found. "
+              + "It might have been expired");
+    }
+    return transaction;
   }
 
   @Override
@@ -190,19 +179,5 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
     } catch (InterruptedException e) {
       LOGGER.warn("failed to shutdown the channel", e);
     }
-  }
-
-  void removeTransaction(String txId) {
-    if (activeTransactions == null) {
-      return;
-    }
-    activeTransactions.remove(txId);
-  }
-
-  void updateTransactionExpirationTime(String txId) {
-    if (activeTransactions == null) {
-      return;
-    }
-    activeTransactions.updateExpirationTime(txId);
   }
 }
