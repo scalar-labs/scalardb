@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 public class AdminService extends AdminGrpc.AdminImplBase {
   private static final Logger LOGGER = LoggerFactory.getLogger(AdminService.class);
 
-  private static final long MAX_PAUSE_WAIT_TIME_MILLIS = 10000; // 10 seconds
+  private static final long DEFAULT_MAX_PAUSE_WAIT_TIME_MILLIS = 30000; // 30 seconds
 
   private final GateKeeper gateKeeper;
 
@@ -33,8 +33,13 @@ public class AdminService extends AdminGrpc.AdminImplBase {
     if (request.getWaitOutstanding()) {
       LOGGER.warn("Pausing... waiting until outstanding requests are all finished");
       boolean drained = false;
+      long maxPauseWaitTime =
+          request.getMaxPauseWaitTime() != 0
+              ? request.getMaxPauseWaitTime()
+              : DEFAULT_MAX_PAUSE_WAIT_TIME_MILLIS;
+
       try {
-        drained = gateKeeper.awaitDrained(MAX_PAUSE_WAIT_TIME_MILLIS, TimeUnit.MILLISECONDS);
+        drained = gateKeeper.awaitDrained(maxPauseWaitTime, TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
         // ignored
       }
