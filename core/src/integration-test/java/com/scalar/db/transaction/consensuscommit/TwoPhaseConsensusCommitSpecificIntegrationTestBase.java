@@ -2538,7 +2538,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     TwoPhaseConsensusCommit transaction = manager.start();
     ScanAll scanAll =
         new ScanAll()
-            .forNamespace(NAMESPACE)
+            .forNamespace(namespace)
             .forTable(TABLE_2)
             .withConsistency(Consistency.LINEARIZABLE);
 
