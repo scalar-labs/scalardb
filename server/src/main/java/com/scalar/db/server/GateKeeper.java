@@ -17,6 +17,13 @@ public interface GateKeeper {
   void close();
 
   /**
+   * Returns if the gate is open or not.
+   *
+   * @return true if the gate is open
+   */
+  boolean isOpen();
+
+  /**
    * Waits for the server to finish outstanding requests, giving up if the timeout is reached.
    *
    * @param timeout the maximum time to wait

@@ -36,7 +36,7 @@ subprojects {
         protocVersion = '3.17.2'
         protobufVersion = '3.17.2'
         picocliVersion = '4.1.4'
-        scalarAdminVersion = '1.0.0'
+        scalarAdminVersion = '1.2.0'
         dropwizardMetricsVersion = '4.2.2'
         prometheusVersion = '0.12.0'
         jettyVersion = '9.4.43.v20210629'
