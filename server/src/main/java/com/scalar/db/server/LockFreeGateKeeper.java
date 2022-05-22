@@ -27,6 +27,11 @@ public class LockFreeGateKeeper implements GateKeeper {
   }
 
   @Override
+  public boolean isOpen() {
+    return isOpen.get();
+  }
+
+  @Override
   public boolean awaitDrained(long timeout, TimeUnit unit) throws InterruptedException {
     long start = System.currentTimeMillis();
     while (outstandingRequestCount.longValue() > 0) {

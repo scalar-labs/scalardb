@@ -5,7 +5,6 @@ import com.scalar.db.exception.storage.ExecutionException;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Disabled;
 
 public class DistributedStorageServiceIntegrationTest
     extends DistributedStorageIntegrationTestBase {
@@ -35,20 +34,4 @@ public class DistributedStorageServiceIntegrationTest
       server.blockUntilShutdown();
     }
   }
-
-  @Override
-  @Disabled("ScanAll is not yet implemented for GRPC")
-  public void scan_ScanAllWithNoLimitGiven_ShouldRetrieveAllRecords() {}
-
-  @Override
-  @Disabled("ScanAll is not yet implemented for GRPC")
-  public void scan_ScanAllWithLimitGiven_ShouldRetrieveExpectedRecords() {}
-
-  @Override
-  @Disabled("ScanAll is not yet implemented for GRPC")
-  public void scan_ScanAllWithProjectionsGiven_ShouldRetrieveSpecifiedValues() {}
-
-  @Override
-  @Disabled("ScanAll is not yet implemented for GRPC")
-  public void scan_ScanAllWithLargeData_ShouldRetrieveExpectedValues() {}
 }

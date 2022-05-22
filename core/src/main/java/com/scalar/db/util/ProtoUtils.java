@@ -16,6 +16,7 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
@@ -198,14 +199,20 @@ public final class ProtoUtils {
   }
 
   public static Scan toScan(com.scalar.db.rpc.Scan scan, TableMetadata metadata) {
-    Scan ret = new Scan(toKey(scan.getPartitionKey(), metadata));
-    if (scan.hasStartClusteringKey()) {
-      ret.withStart(toKey(scan.getStartClusteringKey(), metadata), scan.getStartInclusive());
+    Scan ret;
+    if (scan.hasPartitionKey()) {
+      ret = new Scan(toKey(scan.getPartitionKey(), metadata));
+      if (scan.hasStartClusteringKey()) {
+        ret.withStart(toKey(scan.getStartClusteringKey(), metadata), scan.getStartInclusive());
+      }
+      if (scan.hasEndClusteringKey()) {
+        ret.withEnd(toKey(scan.getEndClusteringKey(), metadata), scan.getEndInclusive());
+      }
+      scan.getOrderingList().forEach(o -> ret.withOrdering(toOrdering(o)));
+    } else {
+      ret = new ScanAll();
     }
-    if (scan.hasEndClusteringKey()) {
-      ret.withEnd(toKey(scan.getEndClusteringKey(), metadata), scan.getEndInclusive());
-    }
-    scan.getOrderingList().forEach(o -> ret.withOrdering(toOrdering(o)));
+
     ret.withLimit(scan.getLimit());
     if (!scan.getNamespace().isEmpty()) {
       ret.forNamespace(scan.getNamespace());
@@ -220,17 +227,21 @@ public final class ProtoUtils {
 
   public static com.scalar.db.rpc.Scan toScan(Scan scan) {
     com.scalar.db.rpc.Scan.Builder builder = com.scalar.db.rpc.Scan.newBuilder();
-    builder.setPartitionKey(toKey(scan.getPartitionKey()));
-    scan.getStartClusteringKey()
-        .ifPresent(
-            k ->
-                builder
-                    .setStartClusteringKey(toKey(k))
-                    .setStartInclusive(scan.getStartInclusive()));
-    scan.getEndClusteringKey()
-        .ifPresent(
-            k -> builder.setEndClusteringKey(toKey(k)).setEndInclusive(scan.getEndInclusive()));
-    scan.getOrderings().forEach(o -> builder.addOrdering(toOrdering(o)));
+
+    if (!(scan instanceof ScanAll)) {
+      builder.setPartitionKey(toKey(scan.getPartitionKey()));
+      scan.getStartClusteringKey()
+          .ifPresent(
+              k ->
+                  builder
+                      .setStartClusteringKey(toKey(k))
+                      .setStartInclusive(scan.getStartInclusive()));
+      scan.getEndClusteringKey()
+          .ifPresent(
+              k -> builder.setEndClusteringKey(toKey(k)).setEndInclusive(scan.getEndInclusive()));
+      scan.getOrderings().forEach(o -> builder.addOrdering(toOrdering(o)));
+    }
+
     builder.setLimit(scan.getLimit());
     scan.forNamespace().ifPresent(builder::setNamespace);
     scan.forTable().ifPresent(builder::setTable);
