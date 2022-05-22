@@ -99,6 +99,8 @@ private static final long serialVersionUID = 0L;
       }
     } catch (com.google.protobuf.InvalidProtocolBufferException e) {
       throw e.setUnfinishedMessage(this);
+    } catch (com.google.protobuf.UninitializedMessageException e) {
+      throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
     } catch (java.io.IOException e) {
       throw new com.google.protobuf.InvalidProtocolBufferException(
           e).setUnfinishedMessage(this);
@@ -279,7 +281,7 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public boolean containsOptions(
       java.lang.String key) {
-    if (key == null) { throw new java.lang.NullPointerException(); }
+    if (key == null) { throw new NullPointerException("map key"); }
     return internalGetOptions().getMap().containsKey(key);
   }
   /**
@@ -306,7 +308,7 @@ private static final long serialVersionUID = 0L;
   public java.lang.String getOptionsOrDefault(
       java.lang.String key,
       java.lang.String defaultValue) {
-    if (key == null) { throw new java.lang.NullPointerException(); }
+    if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.String> map =
         internalGetOptions().getMap();
     return map.containsKey(key) ? map.get(key) : defaultValue;
@@ -318,7 +320,7 @@ private static final long serialVersionUID = 0L;
 
   public java.lang.String getOptionsOrThrow(
       java.lang.String key) {
-    if (key == null) { throw new java.lang.NullPointerException(); }
+    if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.String> map =
         internalGetOptions().getMap();
     if (!map.containsKey(key)) {
@@ -352,13 +354,13 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (!getNamespaceBytes().isEmpty()) {
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(namespace_)) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 1, namespace_);
     }
-    if (!getTableBytes().isEmpty()) {
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(table_)) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 2, table_);
     }
-    if (!getColumnNameBytes().isEmpty()) {
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(columnName_)) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 3, columnName_);
     }
     com.google.protobuf.GeneratedMessageV3
@@ -379,13 +381,13 @@ private static final long serialVersionUID = 0L;
     if (size != -1) return size;
 
     size = 0;
-    if (!getNamespaceBytes().isEmpty()) {
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(namespace_)) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, namespace_);
     }
-    if (!getTableBytes().isEmpty()) {
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(table_)) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, table_);
     }
-    if (!getColumnNameBytes().isEmpty()) {
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(columnName_)) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, columnName_);
     }
     for (java.util.Map.Entry<java.lang.String, java.lang.String> entry
@@ -1004,7 +1006,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean containsOptions(
         java.lang.String key) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
       return internalGetOptions().getMap().containsKey(key);
     }
     /**
@@ -1031,7 +1033,7 @@ private static final long serialVersionUID = 0L;
     public java.lang.String getOptionsOrDefault(
         java.lang.String key,
         java.lang.String defaultValue) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.String> map =
           internalGetOptions().getMap();
       return map.containsKey(key) ? map.get(key) : defaultValue;
@@ -1043,7 +1045,7 @@ private static final long serialVersionUID = 0L;
 
     public java.lang.String getOptionsOrThrow(
         java.lang.String key) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.String> map =
           internalGetOptions().getMap();
       if (!map.containsKey(key)) {
@@ -1063,7 +1065,7 @@ private static final long serialVersionUID = 0L;
 
     public Builder removeOptions(
         java.lang.String key) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
       internalGetMutableOptions().getMutableMap()
           .remove(key);
       return this;
@@ -1082,8 +1084,11 @@ private static final long serialVersionUID = 0L;
     public Builder putOptions(
         java.lang.String key,
         java.lang.String value) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
-      if (value == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
+      if (value == null) {
+  throw new NullPointerException("map value");
+}
+
       internalGetMutableOptions().getMutableMap()
           .put(key, value);
       return this;
