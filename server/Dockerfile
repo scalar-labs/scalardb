@@ -55,6 +55,7 @@ ENV SCALARDB_SERVER_OPTS -Dlog4j.configurationFile=file:log4j2.properties
 
 ENTRYPOINT ["./docker-entrypoint.sh"]
 
-CMD ["./bin/scalardb-server", "--config", "database.properties"]
+CMD ["dockerize", "-template", "database.properties.tmpl:database.properties", \
+    "./bin/scalardb-server", "--config", "database.properties"]
 
 EXPOSE 60051 8080
