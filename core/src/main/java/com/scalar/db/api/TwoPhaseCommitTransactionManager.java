@@ -80,7 +80,7 @@ public interface TwoPhaseCommitTransactionManager {
   TwoPhaseCommitTransaction start(String txId) throws TransactionException;
 
   /**
-   * Join a transaction associated with the specified transaction ID. The transaction should be
+   * Joins a transaction associated with the specified transaction ID. The transaction should be
    * started by a coordinator process. This method is assumed to be called by a participant process.
    *
    * @param txId the transaction ID
@@ -90,8 +90,15 @@ public interface TwoPhaseCommitTransactionManager {
   TwoPhaseCommitTransaction join(String txId) throws TransactionException;
 
   /**
-   * Resumes a transaction associated with the specified transaction ID that it has already joined.
-   * This method is assumed to be called by a participant process.
+   * Suspends a transaction. You can resume this transaction with {@link #resume(String)}.
+   *
+   * @param transaction a transaction to suspend
+   * @throws TransactionException if suspending the transaction failed
+   */
+  void suspend(TwoPhaseCommitTransaction transaction) throws TransactionException;
+
+  /**
+   * Resumes a suspended transaction associated with the specified transaction ID.
    *
    * @param txId the transaction ID
    * @return {@link TwoPhaseCommitTransaction}

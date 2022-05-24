@@ -39,7 +39,6 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Arrange
     when(config.getIsolation()).thenReturn(Isolation.SNAPSHOT);
     when(config.getSerializableStrategy()).thenReturn(SerializableStrategy.EXTRA_READ);
-    when(config.isActiveTransactionsManagementEnabled()).thenReturn(true);
 
     manager =
         new TwoPhaseConsensusCommitManager(
@@ -100,8 +99,7 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
-  public void join_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
-      throws TransactionException {
+  public void join_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation() {
     // Arrange
 
     // Act
@@ -114,20 +112,12 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
-  public void join_CalledTwiceWithSameTxId_ThrowTransactionException() throws TransactionException {
-    // Arrange
-
-    // Act Assert
-    manager.join(ANY_TX_ID);
-    assertThatThrownBy(() -> manager.join(ANY_TX_ID)).isInstanceOf(TransactionException.class);
-  }
-
-  @Test
-  public void resume_CalledAfterJoin_ReturnSameTransactionObjects() throws TransactionException {
+  public void resume_CalledAfterSuspend_ReturnSameTransactionObjects() throws TransactionException {
     // Arrange
 
     // Act
     TwoPhaseConsensusCommit transaction1 = manager.join(ANY_TX_ID);
+    manager.suspend(transaction1);
     TwoPhaseConsensusCommit transaction2 = manager.resume(ANY_TX_ID);
 
     // Assert
@@ -135,32 +125,11 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
-  public void resume_CalledWithoutJoin_ThrowTransactionException() {
+  public void resume_CalledWithoutSuspend_ThrowTransactionException() {
     // Arrange
 
     // Act Assert
     assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(TransactionException.class);
-  }
-
-  @Test
-  public void
-      resume_WhenActiveTransactionsManagementEnabledIsFalse_ShouldThrowUnsupportedOperationException() {
-    // Arrange
-    when(config.isActiveTransactionsManagementEnabled()).thenReturn(false);
-    manager =
-        new TwoPhaseConsensusCommitManager(
-            storage,
-            admin,
-            config,
-            databaseConfig,
-            coordinator,
-            parallelExecutor,
-            recovery,
-            commit);
-
-    // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_TX_ID))
-        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

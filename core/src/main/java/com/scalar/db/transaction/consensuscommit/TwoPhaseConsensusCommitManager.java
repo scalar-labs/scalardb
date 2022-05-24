@@ -7,6 +7,7 @@ import com.google.common.base.Strings;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -16,7 +17,6 @@ import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.util.ActiveExpiringMap;
 import java.util.Optional;
 import java.util.UUID;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
 import org.slf4j.Logger;
@@ -39,7 +39,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   private final RecoveryHandler recovery;
   private final CommitHandler commit;
 
-  @Nullable private final ActiveExpiringMap<String, TwoPhaseConsensusCommit> activeTransactions;
+  private final ActiveExpiringMap<String, TwoPhaseConsensusCommit> activeTransactions;
 
   @Inject
   public TwoPhaseConsensusCommitManager(
@@ -55,22 +55,18 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
 
-    if (config.isActiveTransactionsManagementEnabled()) {
-      activeTransactions =
-          new ActiveExpiringMap<>(
-              TRANSACTION_LIFETIME_MILLIS,
-              TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
-              t -> {
-                LOGGER.warn("the transaction is expired. transactionId: {}", t.getId());
-                try {
-                  t.rollback();
-                } catch (RollbackException e) {
-                  LOGGER.warn("rollback failed", e);
-                }
-              });
-    } else {
-      activeTransactions = null;
-    }
+    activeTransactions =
+        new ActiveExpiringMap<>(
+            TRANSACTION_LIFETIME_MILLIS,
+            TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
+            t -> {
+              LOGGER.warn("the transaction is expired. transactionId: {}", t.getId());
+              try {
+                t.rollback();
+              } catch (RollbackException e) {
+                LOGGER.warn("rollback failed", e);
+              }
+            });
   }
 
   @VisibleForTesting
@@ -93,11 +89,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     this.parallelExecutor = parallelExecutor;
     this.recovery = recovery;
     this.commit = commit;
-    if (config.isActiveTransactionsManagementEnabled()) {
-      activeTransactions = new ActiveExpiringMap<>(Long.MAX_VALUE, Long.MAX_VALUE, t -> {});
-    } else {
-      activeTransactions = null;
-    }
+    activeTransactions = new ActiveExpiringMap<>(Long.MAX_VALUE, Long.MAX_VALUE, t -> {});
   }
 
   @Override
@@ -124,23 +116,14 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   }
 
   @Override
-  public TwoPhaseConsensusCommit join(String txId) throws TransactionException {
+  public TwoPhaseConsensusCommit join(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     return join(txId, config.getIsolation(), config.getSerializableStrategy());
   }
 
   @VisibleForTesting
-  TwoPhaseConsensusCommit join(String txId, Isolation isolation, SerializableStrategy strategy)
-      throws TransactionException {
-    TwoPhaseConsensusCommit transaction = createNewTransaction(txId, false, isolation, strategy);
-    if (activeTransactions != null) {
-      if (activeTransactions.putIfAbsent(txId, transaction) != null) {
-        transaction.rollback();
-        throw new TransactionException(
-            "The transaction associated with the specified transaction ID already exists");
-      }
-    }
-    return transaction;
+  TwoPhaseConsensusCommit join(String txId, Isolation isolation, SerializableStrategy strategy) {
+    return createNewTransaction(txId, false, isolation, strategy);
   }
 
   private TwoPhaseConsensusCommit createNewTransaction(
@@ -150,7 +133,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     CrudHandler crud = new CrudHandler(storage, snapshot, tableMetadataManager);
 
     TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator, this);
+        new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator);
 
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
@@ -158,21 +141,23 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   }
 
   @Override
-  public TwoPhaseConsensusCommit resume(String txId) throws TransactionException {
-    if (activeTransactions == null) {
-      throw new UnsupportedOperationException(
-          "unsupported when setting \""
-              + ConsensusCommitConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED
-              + "\" to false");
+  public void suspend(TwoPhaseCommitTransaction transaction) throws TransactionException {
+    if (activeTransactions.putIfAbsent(transaction.getId(), (TwoPhaseConsensusCommit) transaction)
+        != null) {
+      transaction.rollback();
+      throw new TransactionException("The transaction already exists");
     }
+  }
 
-    return activeTransactions
-        .get(txId)
-        .orElseThrow(
-            () ->
-                new TransactionException(
-                    "A transaction associated with the specified transaction ID is not found. "
-                        + "It might have been expired"));
+  @Override
+  public TwoPhaseConsensusCommit resume(String txId) throws TransactionException {
+    TwoPhaseConsensusCommit transaction = activeTransactions.remove(txId);
+    if (transaction == null) {
+      throw new TransactionException(
+          "A transaction associated with the specified transaction ID is not found. "
+              + "It might have been expired");
+    }
+    return transaction;
   }
 
   @Override
@@ -205,19 +190,5 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     storage.close();
     admin.close();
     parallelExecutor.close();
-  }
-
-  void removeTransaction(String txId) {
-    if (activeTransactions == null) {
-      return;
-    }
-    activeTransactions.remove(txId);
-  }
-
-  void updateTransactionExpirationTime(String txId) {
-    if (activeTransactions == null) {
-      return;
-    }
-    activeTransactions.updateExpirationTime(txId);
   }
 }
