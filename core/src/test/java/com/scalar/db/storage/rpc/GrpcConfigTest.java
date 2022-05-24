@@ -28,7 +28,6 @@ public class GrpcConfigTest {
     assertThat(config.getPort()).isEqualTo(ANY_PORT);
     assertThat(config.getDeadlineDurationMillis())
         .isEqualTo(GrpcConfig.DEFAULT_DEADLINE_DURATION_MILLIS);
-    assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(true);
   }
 
   @Test
@@ -46,7 +45,6 @@ public class GrpcConfigTest {
     assertThat(config.getPort()).isEqualTo(GrpcConfig.DEFAULT_SCALAR_DB_SERVER_PORT);
     assertThat(config.getDeadlineDurationMillis())
         .isEqualTo(GrpcConfig.DEFAULT_DEADLINE_DURATION_MILLIS);
-    assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(true);
   }
 
   @Test
@@ -72,40 +70,9 @@ public class GrpcConfigTest {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
     props.setProperty(DatabaseConfig.STORAGE, "grpc");
-    props.setProperty(GrpcConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "aaa");
+    props.setProperty(GrpcConfig.DEADLINE_DURATION_MILLIS, "aaa");
 
     // Act
-    assertThatThrownBy(() -> new GrpcConfig(new DatabaseConfig(props)))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void
-      constructor_PropertiesWithValidActiveTransactionsManagementEnabledGiven_ShouldLoadProperly() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.STORAGE, "grpc");
-    props.setProperty(GrpcConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "false");
-
-    // Act
-    GrpcConfig config = new GrpcConfig(new DatabaseConfig(props));
-
-    // Assert
-    assertThat(config.getHost()).isEqualTo(ANY_HOST);
-    assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(false);
-  }
-
-  @Test
-  public void
-      constructor_PropertiesWithInvalidActiveTransactionsManagementEnabledGiven_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.STORAGE, "grpc");
-    props.setProperty(GrpcConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "aaa");
-
-    // Act Assert
     assertThatThrownBy(() -> new GrpcConfig(new DatabaseConfig(props)))
         .isInstanceOf(IllegalArgumentException.class);
   }

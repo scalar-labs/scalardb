@@ -81,8 +81,12 @@ public class ActiveExpiringMap<K, V> {
     return map.containsKey(key);
   }
 
-  public void remove(K key) {
-    map.remove(key);
+  public V remove(K key) {
+    ValueHolder<V> prev = map.remove(key);
+    if (prev == null) {
+      return null;
+    }
+    return prev.get();
   }
 
   public void updateExpirationTime(K key) {

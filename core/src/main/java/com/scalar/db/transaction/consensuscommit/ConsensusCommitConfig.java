@@ -43,13 +43,6 @@ public class ConsensusCommitConfig {
   private final boolean asyncCommitEnabled;
   private final boolean asyncRollbackEnabled;
 
-  // for two-phase consensus commit
-  public static final String TWO_PHASE_CONSENSUS_COMMIT_PREFIX = PREFIX + "2pcc.";
-  public static final String ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED =
-      TWO_PHASE_CONSENSUS_COMMIT_PREFIX + "active_transactions_management.enabled";
-
-  private final boolean activeTransactionsManagementEnabled;
-
   public ConsensusCommitConfig(DatabaseConfig databaseConfig) {
     if (databaseConfig.getProperties().containsValue("scalar.db.isolation_level")) {
       LOGGER.warn(
@@ -75,9 +68,6 @@ public class ConsensusCommitConfig {
                     SERIALIZABLE_STRATEGY,
                     SerializableStrategy.EXTRA_READ.toString())
                 .toUpperCase());
-
-    activeTransactionsManagementEnabled =
-        getBoolean(databaseConfig.getProperties(), ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, true);
 
     coordinatorNamespace = getString(databaseConfig.getProperties(), COORDINATOR_NAMESPACE, null);
 
@@ -111,10 +101,6 @@ public class ConsensusCommitConfig {
 
   public SerializableStrategy getSerializableStrategy() {
     return strategy;
-  }
-
-  public boolean isActiveTransactionsManagementEnabled() {
-    return activeTransactionsManagementEnabled;
   }
 
   public Optional<String> getCoordinatorNamespace() {

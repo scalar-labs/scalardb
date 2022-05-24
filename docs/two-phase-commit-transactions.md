@@ -43,7 +43,7 @@ The coordinator process first starts a transaction, and the participant processe
 
 First, you need to get a `TwoPhaseCommitTransactionManager` instance to execute Two-phase Commit Transactions.
 You can use `TransactionFactory` to get a `TwoPhaseCommitTransactionManager` instance as follows:
-```Java
+```java
 TransactionFactory factory = new TransactionFactory(new DatabaseConfig(new File("<configuration file path>")));
 TwoPhaseCommitTransactionManager manager = factory.getTwoPhaseCommitTransactionManager();
 ```
@@ -51,39 +51,30 @@ TwoPhaseCommitTransactionManager manager = factory.getTwoPhaseCommitTransactionM
 ### Start a transaction (coordinator only)
 
 You can start a transaction as follows:
-```Java
+```java
 TwoPhaseCommitTransaction tx = manager.start();
 ```
 
 The process/application that starts the transaction acts as a coordinator, as mentioned.
 
 You can also start a transaction by specifying a transaction ID as follows:
-```Java
+```java
 TwoPhaseCommitTransaction tx = manager.start("<transaction ID>");
 ```
 
 And, you can get the transaction ID with `getId()` as follows:
-```Java
+```java
 tx.getId();
 ```
 
 ### Join the transaction (participant only)
 
 If you are a participant, you can join the transaction that has been started by the coordinator as follows:
-```Java
+```java
 TwoPhaseCommitTransaction tx = manager.join("<transaction ID>")
 ```
 
 You need to specify the transaction ID associated with the transaction that the coordinator has started.
-
-#### Resume the transaction (participant only)
-
-You can get the transaction object (the `TwoPhaseCommitTransaction` instance) that you have already joined with `TwoPhaseCommitTransactionManager.resume()`:
-```Java
-TwoPhaseCommitTransaction tx = manager.resume("<transaction ID>")
-```
-
-`TwoPhaseCommitTransactionManager` manages the transaction objects that you have joined, and you can get it with the transaction ID.
 
 ### CRUD operations for the transaction
 
@@ -116,7 +107,7 @@ tx.put(toPut);
 After finishing CRUD operations, you need to commit the transaction.
 Like a well-known two-phase commit protocol, there are two phases: prepare and commit phases.
 You first need to prepare the transaction in all the coordinator/participant processes, then you need to call in the order of coordinator's `commit()` and the participants' `commit()` as follows:
-```Java
+```java
 TwoPhaseCommitTransaction tx = ...
 
 try {
@@ -164,6 +155,168 @@ Similar to `prepare()`, you can call `validate()` in the coordinator/participant
 
 Currently, you need to call `validate()` when you use the `Consensus Commit` transaction manager with `EXTRA_READ` serializable strategy in `SERIALIZABLE` isolation level.
 In other cases, `validate()` does nothing.
+
+### Suspend and resume the transaction
+
+You can suspend and resume the transaction object (the `TwoPhaseCommitTransaction` instance) as follows:
+```java
+// Join the transaction
+TwoPhaseCommitTransaction tx = manager.join("<transaction ID>");
+
+....
+
+// Suspend the transaction
+manager.suspend(tx);
+
+...
+
+// Resume the suspended transaction by the trnasaction ID
+TwoPhaseCommitTransaction tx1 = manager.resume("<transaction ID>")
+```
+
+It is useful when you execute a transaction across multiple endpoints.
+For example, let's see you have two services that have the following interfaces:
+
+```java
+interface ServiceA {
+  void facadeEndpoint() throws Exception;
+}
+
+interface ServiceB {
+  void endpoint1(String txId) throws Exception;
+
+  void endpoint2(String txId) throws Exception;
+
+  void prepare(String txId) throws Exception;
+
+  void commit(String txId) throws Exception;
+
+  void rollback(String txId) throws Exception;
+}
+```
+
+And, let's see `ServiceA.facadeEndpoint()` starts a transaction that span the two services as follows.
+
+```java
+public class ServiceAImpl implements ServiceA {
+
+  private TwoPhaseCommitTransactionManager manager = ...;
+  private ServiceB serviceB = ...;
+
+  ...
+
+  @Override
+  public void facadeEndpoint() throws Exception {
+    TwoPhaseCommitTransaction tx = manager.start();
+
+    try {
+      ...
+
+      // Call ServiceB endpoint1
+      serviceB.endpoint1(tx.getId());
+
+      ...
+
+      // Call ServiceB endpoint2
+      serviceB.endpoint2(tx.getId());
+
+      ...
+
+      // Prepare
+      tx.prepare();
+      serviceB.prepare(tx.getId());
+
+      // Commit
+      tx.commit();
+      serviceB.commit(tx.getId());
+    } catch (Exception e) {
+      // Rollback
+      tx.rollback();
+      serviceB.rollback(tx.getId());
+    }
+  }
+}
+```
+
+In this example, the transaction is executed across multiple endpoints (`endpoint1()`, `endpoint2()`, `prepare()`, `commit()`, and `rollback()`) in ServiceB, and in Two-phase Commit Transactions, you need to use the same transaction object in the same transaction across the endpoints.
+In this situation, you can suspend and resume the transaction.
+The implementation of ServiceB is as follows:
+
+```java
+public class ServiceBImpl implements ServiceB {
+
+  private TwoPhaseCommitTransactionManager manager = ...;
+
+  ...
+
+  @Override
+  public void endpoint1(String txId) throws Exception {
+    // First, you need to join the transaction
+    TwoPhaseCommitTransaction tx = manager.join(txId);
+
+    ...
+
+    // Suspend the transaction object
+    manager.suspend(tx);
+  }
+
+  @Override
+  public void endpoint2(String txId) throws Exception {
+    // You can resume the transaction suspended in endpoint1()
+    TwoPhaseCommitTransaction tx = manager.resume(txId);
+
+    ...
+
+    // Suspend the transaction object
+    manager.suspend(tx);
+  }
+
+  @Override
+  public void prepare(String txId) throws Exception {
+    // You can resume the suspended transaction
+    TwoPhaseCommitTransaction tx = manager.resume(txId);
+
+    ...
+
+    // Prepare
+    tx.prepare();
+
+    ...
+
+    // Suspend the transaction object
+    manager.suspend(tx);
+  }
+
+  @Override
+  public void commit(String txId) throws Exception {
+    // You can resume the suspended transaction
+    TwoPhaseCommitTransaction tx = manager.resume(txId);
+    try {
+      ...
+
+      // Commit
+      tx.commit();
+    } catch (Exception e) {
+      // Suspend the transaction object (you need to suspend the transaction when commit fails
+      // because you need to rollback the transaction after that)
+      manager.suspend(tx);
+    }
+  }
+
+  @Override
+  public void rollback(String txId) throws Exception {
+    // You can resume the suspended transaction
+    TwoPhaseCommitTransaction tx = manager.resume(txId);
+
+    ...
+
+    // Rollback
+    tx.rollback();
+  }
+}
+```
+
+As you can see, by resuming and suspending the transaction, you can execute a transaction across multiple endpoints.
 
 ## Further documentation
 
