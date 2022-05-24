@@ -30,9 +30,11 @@ public interface TableMetadataOrBuilder extends
   /**
    * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
    */
-  com.scalar.db.rpc.DataType getColumnOrDefault(
+  /* nullable */
+com.scalar.db.rpc.DataType getColumnOrDefault(
       java.lang.String key,
-      com.scalar.db.rpc.DataType defaultValue);
+      /* nullable */
+com.scalar.db.rpc.DataType         defaultValue);
   /**
    * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
    */
@@ -136,9 +138,11 @@ public interface TableMetadataOrBuilder extends
   /**
    * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
    */
-  com.scalar.db.rpc.Order getClusteringOrderOrDefault(
+  /* nullable */
+com.scalar.db.rpc.Order getClusteringOrderOrDefault(
       java.lang.String key,
-      com.scalar.db.rpc.Order defaultValue);
+      /* nullable */
+com.scalar.db.rpc.Order         defaultValue);
   /**
    * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
    */

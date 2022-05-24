@@ -2,7 +2,6 @@ package com.scalar.db.transaction.consensuscommit;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ComparisonChain;
-import com.google.common.collect.Ordering;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -17,6 +16,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudRuntimeException;
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -420,7 +420,7 @@ public class Snapshot {
           .compare(
               this.clusteringKey.orElse(null),
               o.clusteringKey.orElse(null),
-              Ordering.natural().nullsFirst())
+              Comparator.nullsFirst(Comparator.naturalOrder()))
           .result();
     }
   }

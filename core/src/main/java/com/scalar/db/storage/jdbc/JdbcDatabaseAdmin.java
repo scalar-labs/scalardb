@@ -699,6 +699,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
    * @param columnName a column name
    * @return a vendor DB data type
    */
+  @SuppressFBWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
   private String getVendorDbColumnType(TableMetadata metadata, String columnName) {
     HashSet<String> keysAndIndexes =
         Sets.newHashSet(
