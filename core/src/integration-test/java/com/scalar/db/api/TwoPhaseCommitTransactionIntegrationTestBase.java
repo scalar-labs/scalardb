@@ -580,20 +580,38 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     Delete delete = prepareDelete(1, 0);
 
     TwoPhaseCommitTransaction transaction1 = manager.start();
-    TwoPhaseCommitTransaction transaction2 = manager.join(transaction1.getId());
+    TwoPhaseCommitTransaction transaction2;
 
     // Act
     transaction1.get(get1);
     transaction1.put(put);
 
+    transaction2 = manager.join(transaction1.getId());
     transaction2.get(get2);
-    transaction2.delete(delete);
+    manager.suspend(transaction2);
 
+    transaction2 = manager.resume(transaction1.getId());
+    transaction2.delete(delete);
+    manager.suspend(transaction2);
+
+    // Prepare
     transaction1.prepare();
+
+    transaction2 = manager.resume(transaction1.getId());
     transaction2.prepare();
+    manager.suspend(transaction2);
+
+    // Validate
     transaction1.validate();
+
+    transaction2 = manager.resume(transaction1.getId());
     transaction2.validate();
+    manager.suspend(transaction2);
+
+    // Commit
     transaction1.commit();
+
+    transaction2 = manager.resume(transaction1.getId());
     transaction2.commit();
 
     // Assert
@@ -620,20 +638,38 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     Delete delete = prepareDelete(1, 0);
 
     TwoPhaseCommitTransaction transaction1 = manager.start();
-    TwoPhaseCommitTransaction transaction2 = manager.join(transaction1.getId());
+    TwoPhaseCommitTransaction transaction2;
 
     // Act
     transaction1.get(get1);
     transaction1.put(put);
 
+    transaction2 = manager.join(transaction1.getId());
     transaction2.get(get2);
-    transaction2.delete(delete);
+    manager.suspend(transaction2);
 
+    transaction2 = manager.resume(transaction1.getId());
+    transaction2.delete(delete);
+    manager.suspend(transaction2);
+
+    // Prepare
     transaction1.prepare();
+
+    transaction2 = manager.resume(transaction1.getId());
     transaction2.prepare();
+    manager.suspend(transaction2);
+
+    // Validate
     transaction1.validate();
+
+    transaction2 = manager.resume(transaction1.getId());
     transaction2.validate();
+    manager.suspend(transaction2);
+
+    // Rollback
     transaction1.rollback();
+
+    transaction2 = manager.resume(transaction1.getId());
     transaction2.rollback();
 
     // Assert

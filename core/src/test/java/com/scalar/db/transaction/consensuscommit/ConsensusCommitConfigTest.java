@@ -20,7 +20,6 @@ public class ConsensusCommitConfigTest {
     // Assert
     assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
     assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_READ);
-    assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(true);
     assertThat(config.getCoordinatorNamespace()).isNotPresent();
     assertThat(config.getParallelExecutorCount())
         .isEqualTo(ConsensusCommitConfig.DEFAULT_PARALLEL_EXECUTOR_COUNT);
@@ -89,32 +88,6 @@ public class ConsensusCommitConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(ConsensusCommitConfig.SERIALIZABLE_STRATEGY, "NO_STRATEGY");
-
-    // Act Assert
-    assertThatThrownBy(() -> new ConsensusCommitConfig(new DatabaseConfig(props)))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void
-      constructor_PropertiesWithValidActiveTransactionsManagementEnabledGiven_ShouldLoadProperly() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(ConsensusCommitConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "false");
-
-    // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
-
-    // Assert
-    assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(false);
-  }
-
-  @Test
-  public void
-      constructor_PropertiesWithInvalidActiveTransactionsManagementEnabledGiven_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(ConsensusCommitConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "aaa");
 
     // Act Assert
     assertThatThrownBy(() -> new ConsensusCommitConfig(new DatabaseConfig(props)))
