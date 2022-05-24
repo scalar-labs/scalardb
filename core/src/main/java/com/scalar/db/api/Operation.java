@@ -3,8 +3,8 @@ package com.scalar.db.api;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ComparisonChain;
-import com.google.common.collect.Ordering;
 import com.scalar.db.io.Key;
+import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -158,15 +158,15 @@ public abstract class Operation {
             .compare(
                 clusteringKey.orElse(null),
                 other.clusteringKey.orElse(null),
-                Ordering.natural().nullsFirst())
+                Comparator.nullsFirst(Comparator.naturalOrder()))
             .compare(
                 namespace.orElse(null),
                 other.namespace.orElse(null),
-                Ordering.natural().nullsFirst())
+                Comparator.nullsFirst(Comparator.naturalOrder()))
             .compare(
                 tableName.orElse(null),
                 other.tableName.orElse(null),
-                Ordering.natural().nullsFirst())
+                Comparator.nullsFirst(Comparator.naturalOrder()))
             .compare(consistency, other.consistency)
             .result()
         == 0;
