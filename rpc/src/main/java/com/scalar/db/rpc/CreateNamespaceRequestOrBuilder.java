@@ -43,9 +43,11 @@ public interface CreateNamespaceRequestOrBuilder extends
    * <code>map&lt;string, string&gt; options = 2;</code>
    */
 
-  java.lang.String getOptionsOrDefault(
+  /* nullable */
+java.lang.String getOptionsOrDefault(
       java.lang.String key,
-      java.lang.String defaultValue);
+      /* nullable */
+java.lang.String defaultValue);
   /**
    * <code>map&lt;string, string&gt; options = 2;</code>
    */
