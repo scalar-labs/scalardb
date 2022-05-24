@@ -48,7 +48,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private final CommitHandler commit;
   private final RecoveryHandler recovery;
   private final boolean isCoordinator;
-  private final TwoPhaseConsensusCommitManager manager;
 
   @VisibleForTesting Status status;
 
@@ -57,16 +56,11 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private Runnable beforePrepareHook = () -> {};
 
   public TwoPhaseConsensusCommit(
-      CrudHandler crud,
-      CommitHandler commit,
-      RecoveryHandler recovery,
-      boolean isCoordinator,
-      TwoPhaseConsensusCommitManager manager) {
+      CrudHandler crud, CommitHandler commit, RecoveryHandler recovery, boolean isCoordinator) {
     this.crud = crud;
     this.commit = commit;
     this.recovery = recovery;
     this.isCoordinator = isCoordinator;
-    this.manager = manager;
 
     status = Status.ACTIVE;
   }
@@ -79,7 +73,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   @Override
   public Optional<Result> get(Get get) throws CrudException {
     checkStatus("The transaction is not active", Status.ACTIVE);
-    updateTransactionExpirationTime();
     get = copyAndSetTargetToIfNot(get);
     try {
       return crud.get(get);
@@ -92,7 +85,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
     checkStatus("The transaction is not active", Status.ACTIVE);
-    updateTransactionExpirationTime();
     scan = copyAndSetTargetToIfNot(scan);
     try {
       return crud.scan(scan);
@@ -105,14 +97,12 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   @Override
   public void put(Put put) {
     checkStatus("The transaction is not active", Status.ACTIVE);
-    updateTransactionExpirationTime();
     putInternal(put);
   }
 
   @Override
   public void put(List<Put> puts) {
     checkStatus("The transaction is not active", Status.ACTIVE);
-    updateTransactionExpirationTime();
     checkArgument(puts.size() != 0);
     puts.forEach(this::putInternal);
   }
@@ -125,14 +115,12 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   @Override
   public void delete(Delete delete) {
     checkStatus("The transaction is not active", Status.ACTIVE);
-    updateTransactionExpirationTime();
     deleteInternal(delete);
   }
 
   @Override
   public void delete(List<Delete> deletes) {
     checkStatus("The transaction is not active", Status.ACTIVE);
-    updateTransactionExpirationTime();
     checkArgument(deletes.size() != 0);
     deletes.forEach(this::deleteInternal);
   }
@@ -145,7 +133,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   @Override
   public void mutate(List<? extends Mutation> mutations) {
     checkStatus("The transaction is not active", Status.ACTIVE);
-    updateTransactionExpirationTime();
     checkArgument(mutations.size() != 0);
     mutations.forEach(
         m -> {
@@ -161,7 +148,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   public void prepare() throws PreparationException {
     checkStatus("The transaction is not active", Status.ACTIVE);
     beforePrepareHook.run();
-    updateTransactionExpirationTime();
 
     try {
       commit.prepare(crud.getSnapshot(), false);
@@ -181,7 +167,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   @Override
   public void validate() throws ValidationException {
     checkStatus("The transaction is not prepared", Status.PREPARED);
-    updateTransactionExpirationTime();
 
     try {
       commit.preCommitValidation(crud.getSnapshot(), false);
@@ -221,10 +206,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     } catch (CommitException e) {
       status = Status.COMMIT_FAILED;
       throw e;
-    } finally {
-      if (!isCoordinator) {
-        manager.removeTransaction(getId());
-      }
     }
   }
 
@@ -252,9 +233,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
       commit.rollbackRecords(crud.getSnapshot());
     } finally {
-      if (!isCoordinator) {
-        manager.removeTransaction(getId());
-      }
       status = Status.ROLLED_BACK;
     }
   }
@@ -288,12 +266,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     boolean expected = Arrays.stream(expectedStatus).anyMatch(s -> status == s);
     if (!expected) {
       throw new IllegalStateException(message);
-    }
-  }
-
-  private void updateTransactionExpirationTime() {
-    if (!isCoordinator) {
-      manager.updateTransactionExpirationTime(crud.getSnapshot().getId());
     }
   }
 

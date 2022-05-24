@@ -22,18 +22,11 @@ public class GrpcTwoPhaseCommitTransaction extends AbstractTwoPhaseCommitTransac
 
   private final String txId;
   private final GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream;
-  private final boolean isCoordinator;
-  private final GrpcTwoPhaseCommitTransactionManager manager;
 
   public GrpcTwoPhaseCommitTransaction(
-      String txId,
-      GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream,
-      boolean isCoordinator,
-      GrpcTwoPhaseCommitTransactionManager manager) {
+      String txId, GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream) {
     this.txId = txId;
     this.stream = stream;
-    this.isCoordinator = isCoordinator;
-    this.manager = manager;
   }
 
   @Override
@@ -43,21 +36,18 @@ public class GrpcTwoPhaseCommitTransaction extends AbstractTwoPhaseCommitTransac
 
   @Override
   public Optional<Result> get(Get get) throws CrudException {
-    updateTransactionExpirationTime();
     get = copyAndSetTargetToIfNot(get);
     return stream.get(get);
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
-    updateTransactionExpirationTime();
     scan = copyAndSetTargetToIfNot(scan);
     return stream.scan(scan);
   }
 
   @Override
   public void put(Put put) throws CrudException {
-    updateTransactionExpirationTime();
     put = copyAndSetTargetToIfNot(put);
     stream.mutate(put);
   }
@@ -69,7 +59,6 @@ public class GrpcTwoPhaseCommitTransaction extends AbstractTwoPhaseCommitTransac
 
   @Override
   public void delete(Delete delete) throws CrudException {
-    updateTransactionExpirationTime();
     delete = copyAndSetTargetToIfNot(delete);
     stream.mutate(delete);
   }
@@ -81,48 +70,27 @@ public class GrpcTwoPhaseCommitTransaction extends AbstractTwoPhaseCommitTransac
 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws CrudException {
-    updateTransactionExpirationTime();
     mutations = copyAndSetTargetToIfNot(mutations);
     stream.mutate(mutations);
   }
 
   @Override
   public void prepare() throws PreparationException {
-    updateTransactionExpirationTime();
     stream.prepare();
   }
 
   @Override
   public void validate() throws ValidationException {
-    updateTransactionExpirationTime();
     stream.validate();
   }
 
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
-    try {
-      stream.commit();
-    } finally {
-      if (!isCoordinator) {
-        manager.removeTransaction(getId());
-      }
-    }
+    stream.commit();
   }
 
   @Override
   public void rollback() throws RollbackException {
-    try {
-      stream.rollback();
-    } finally {
-      if (!isCoordinator) {
-        manager.removeTransaction(getId());
-      }
-    }
-  }
-
-  private void updateTransactionExpirationTime() {
-    if (!isCoordinator) {
-      manager.updateTransactionExpirationTime(txId);
-    }
+    stream.rollback();
   }
 }
