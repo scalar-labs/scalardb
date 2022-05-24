@@ -21,7 +21,7 @@ subprojects {
 
     ext {
         guiceVersion = '5.0.1'
-        guavaVersion = '30.1-jre'
+        guavaVersion = '31.1-jre'
         slf4jVersion = '1.7.30'
         cassandraDriverVersion = '3.6.0'
         azureCosmosVersion = '4.28.1'
@@ -32,9 +32,9 @@ subprojects {
         postgresqlDriverVersion = '42.3.3'
         oracleDriverVersion = '19.8.0.0'
         sqlserverDriverVersion = '8.4.1.jre8'
-        grpcVersion = '1.38.0'
-        protocVersion = '3.17.2'
-        protobufVersion = '3.17.2'
+        grpcVersion = '1.46.0'
+        protocVersion = '3.20.1'
+        protobufVersion = '3.20.1'
         picocliVersion = '4.1.4'
         scalarAdminVersion = '1.0.0'
         dropwizardMetricsVersion = '4.2.2'
@@ -47,7 +47,7 @@ subprojects {
         spotbugsVersion = '4.3.0'
         errorproneVersion = '2.10.0'
         errorproneJavacVersion = '9+181-r4173-1'
-        gsonVersion = '2.8.7'
+        gsonVersion = '2.9.0'
         log4jVersion = '2.17.1'
     }
 

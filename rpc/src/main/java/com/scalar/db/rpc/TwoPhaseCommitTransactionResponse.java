@@ -115,6 +115,8 @@ private static final long serialVersionUID = 0L;
       }
     } catch (com.google.protobuf.InvalidProtocolBufferException e) {
       throw e.setUnfinishedMessage(this);
+    } catch (com.google.protobuf.UninitializedMessageException e) {
+      throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
     } catch (java.io.IOException e) {
       throw new com.google.protobuf.InvalidProtocolBufferException(
           e).setUnfinishedMessage(this);
@@ -215,6 +217,8 @@ private static final long serialVersionUID = 0L;
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
         throw e.setUnfinishedMessage(this);
+      } catch (com.google.protobuf.UninitializedMessageException e) {
+        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
       } catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
@@ -288,7 +292,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!getTransactionIdBytes().isEmpty()) {
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(transactionId_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 1, transactionId_);
       }
       unknownFields.writeTo(output);
@@ -300,7 +304,7 @@ private static final long serialVersionUID = 0L;
       if (size != -1) return size;
 
       size = 0;
-      if (!getTransactionIdBytes().isEmpty()) {
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(transactionId_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, transactionId_);
       }
       size += unknownFields.getSerializedSize();
@@ -792,6 +796,8 @@ private static final long serialVersionUID = 0L;
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
         throw e.setUnfinishedMessage(this);
+      } catch (com.google.protobuf.UninitializedMessageException e) {
+        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
       } catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
@@ -1420,6 +1426,8 @@ private static final long serialVersionUID = 0L;
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
         throw e.setUnfinishedMessage(this);
+      } catch (com.google.protobuf.UninitializedMessageException e) {
+        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
       } catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
@@ -2215,6 +2223,8 @@ private static final long serialVersionUID = 0L;
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
         throw e.setUnfinishedMessage(this);
+      } catch (com.google.protobuf.UninitializedMessageException e) {
+        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
       } catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
@@ -2436,7 +2446,7 @@ private static final long serialVersionUID = 0L;
       if (errorCode_ != com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode.INVALID_ARGUMENT.getNumber()) {
         output.writeEnum(1, errorCode_);
       }
-      if (!getMessageBytes().isEmpty()) {
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(message_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, message_);
       }
       unknownFields.writeTo(output);
@@ -2452,7 +2462,7 @@ private static final long serialVersionUID = 0L;
         size += com.google.protobuf.CodedOutputStream
           .computeEnumSize(1, errorCode_);
       }
-      if (!getMessageBytes().isEmpty()) {
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(message_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, message_);
       }
       size += unknownFields.getSerializedSize();
@@ -3583,8 +3593,9 @@ private static final long serialVersionUID = 0L;
       } else {
         if (responseCase_ == 1) {
           startResponseBuilder_.mergeFrom(value);
+        } else {
+          startResponseBuilder_.setMessage(value);
         }
-        startResponseBuilder_.setMessage(value);
       }
       responseCase_ = 1;
       return this;
@@ -3724,8 +3735,9 @@ private static final long serialVersionUID = 0L;
       } else {
         if (responseCase_ == 2) {
           getResponseBuilder_.mergeFrom(value);
+        } else {
+          getResponseBuilder_.setMessage(value);
         }
-        getResponseBuilder_.setMessage(value);
       }
       responseCase_ = 2;
       return this;
@@ -3865,8 +3877,9 @@ private static final long serialVersionUID = 0L;
       } else {
         if (responseCase_ == 3) {
           scanResponseBuilder_.mergeFrom(value);
+        } else {
+          scanResponseBuilder_.setMessage(value);
         }
-        scanResponseBuilder_.setMessage(value);
       }
       responseCase_ = 3;
       return this;
@@ -4006,8 +4019,9 @@ private static final long serialVersionUID = 0L;
       } else {
         if (responseCase_ == 4) {
           errorBuilder_.mergeFrom(value);
+        } else {
+          errorBuilder_.setMessage(value);
         }
-        errorBuilder_.setMessage(value);
       }
       responseCase_ = 4;
       return this;
