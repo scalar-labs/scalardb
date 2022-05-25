@@ -39,7 +39,7 @@ $ docker run -v <your local configuration file path>:/scalardb/server/database.p
 $ docker run -v <your local configuration file path>:/scalardb/server/database.properties.tmpl -e JAVA_OPTS=-Dlog4j.logLevel=DEBUG -d -p 60051:60051 -p 8080:8080 ghcr.io/scalar-labs/scalardb-server:<version>
 
 # For custom log configuration
-$ docker run -v <your local configuration file path>:/scalardb/server/database.properties.tmpl -v <your custom log4j2 configuration file path>:/scalardb/server/log4j2.properties -d -p 60051:60051 -p 8080:8080 ghcr.io/scalar-labs/scalardb-server:<version>
+$ docker run -v <your local configuration file path>:/scalardb/server/database.properties.tmpl -v <your custom log4j2 configuration file path>:/scalardb/server/log4j2.properties.tmpl -d -p 60051:60051 -p 8080:8080 ghcr.io/scalar-labs/scalardb-server:<version>
 
 # Use environment variables
 docker run --env SCALAR_DB_CONTACT_POINTS=cassandra --env SCALAR_DB_CONTACT_PORT=9042 --env SCALAR_DB_USERNAME=cassandra --env SCALAR_DB_PASSWORD=cassandra --env SCALAR_DB_STORAGE=cassandra -d -p 60051:60051 -p 8080:8080 ghcr.io/scalar-labs/scalardb-server:<version>
