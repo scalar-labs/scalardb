@@ -548,7 +548,7 @@ public class SelectStatementHandlerTest {
             + "r.concatenatedPartitionKey, "
             + "r.partitionKey, "
             + "r.clusteringKey, "
-            + "{\"name3\":r.values.name3,\"name4\":r.values.name4} as values "
+            + "{\"name3\":r.values[\"name3\"],\"name4\":r.values[\"name4\"]} as values "
             + "from Record r "
             + "where (r.concatenatedPartitionKey = '"
             + ANY_TEXT_1
@@ -610,7 +610,7 @@ public class SelectStatementHandlerTest {
             + "r.concatenatedPartitionKey, "
             + "r.partitionKey, "
             + "r.clusteringKey, "
-            + "{\"name3\":r.values.name3,\"name4\":r.values.name4} as values "
+            + "{\"name3\":r.values[\"name3\"],\"name4\":r.values[\"name4\"]} as values "
             + "from Record r where r.values[\""
             + ANY_NAME_3
             + "\"]"
@@ -644,7 +644,7 @@ public class SelectStatementHandlerTest {
             + "r.concatenatedPartitionKey, "
             + "r.partitionKey, "
             + "r.clusteringKey, "
-            + "{\"name3\":r.values.name3,\"name4\":r.values.name4} as values "
+            + "{\"name3\":r.values[\"name3\"],\"name4\":r.values[\"name4\"]} as values "
             + "from Record r";
     verify(container)
         .queryItems(eq(expectedQuery), any(CosmosQueryRequestOptions.class), eq(Record.class));
@@ -693,7 +693,7 @@ public class SelectStatementHandlerTest {
             + "r.concatenatedPartitionKey, "
             + "r.partitionKey, "
             + "r.clusteringKey, "
-            + "{\"name3\":r.values.name3,\"name4\":r.values.name4} as values "
+            + "{\"name3\":r.values[\"name3\"],\"name4\":r.values[\"name4\"]} as values "
             + "from Record r where r.values[\""
             + ANY_NAME_3
             + "\"]"
@@ -729,7 +729,7 @@ public class SelectStatementHandlerTest {
             + "r.concatenatedPartitionKey, "
             + "r.partitionKey, "
             + "r.clusteringKey, "
-            + "{\"name3\":r.values.name3,\"name4\":r.values.name4} as values "
+            + "{\"name3\":r.values[\"name3\"],\"name4\":r.values[\"name4\"]} as values "
             + "from Record r where (r.concatenatedPartitionKey = '"
             + ANY_TEXT_1
             + "' and r.clusteringKey[\""

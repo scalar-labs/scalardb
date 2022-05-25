@@ -165,7 +165,7 @@ public class SelectStatementHandler extends StatementHandler {
                 c ->
                     !tableMetadata.getPartitionKeyNames().contains(c)
                         && !tableMetadata.getClusteringKeyNames().contains(c))
-            .map(c -> "\"" + c + "\":r.values." + c)
+            .map(c -> "\"" + c + "\":r.values" + CosmosUtils.quoteKeyword(c))
             .collect(Collectors.toList());
     // Since Jooq parser consumes curly brace character as there are placeholder, each curly brace
     // need to be doubled "{{" to have a
