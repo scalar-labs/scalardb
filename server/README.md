@@ -36,7 +36,7 @@ This runs the Scalar DB Server (you need to specify your local configuration fil
 $ docker run -v <your local configuration file path>:/scalardb/server/database.properties.tmpl -d -p 60051:60051 -p 8080:8080 ghcr.io/scalar-labs/scalardb-server:<version>
 
 # For DEBUG logging
-$ docker run -v <your local configuration file path>:/scalardb/server/database.properties.tmpl -e JAVA_OPTS=-Dlog4j.logLevel=DEBUG -d -p 60051:60051 -p 8080:8080 ghcr.io/scalar-labs/scalardb-server:<version>
+$ docker run -v <your local configuration file path>:/scalardb/server/database.properties.tmpl -e SCALAR_DB_LOG_LEVEL=DEBUG -d -p 60051:60051 -p 8080:8080 ghcr.io/scalar-labs/scalardb-server:<version>
 
 # For custom log configuration
 $ docker run -v <your local configuration file path>:/scalardb/server/database.properties.tmpl -v <your custom log4j2 configuration file path>:/scalardb/server/log4j2.properties.tmpl -d -p 60051:60051 -p 8080:8080 ghcr.io/scalar-labs/scalardb-server:<version>
