@@ -154,6 +154,10 @@ public class SelectStatementHandler extends StatementHandler {
     }
 
     List<String> projectedFields = new ArrayList<>();
+
+    // To project the required columns, we build a JSON object with the same structure as the
+    // `Record.class`so that each field can be deserialized properly into a `Record.class` object.
+    // For example, the projected field "r.id" will be mapped to the `Record.id` attribute
     projectedFields.add("r.id");
     projectedFields.add("r.concatenatedPartitionKey");
     projectedFields.add("r.partitionKey");
@@ -167,10 +171,14 @@ public class SelectStatementHandler extends StatementHandler {
                         && !tableMetadata.getClusteringKeyNames().contains(c))
             .map(c -> "\"" + c + "\":r.values" + CosmosUtils.quoteKeyword(c))
             .collect(Collectors.toList());
-    // Since Jooq parser consumes curly brace character as there are placeholder, each curly brace
-    // need to be doubled "{{" to have a
-    // single curly brace "{" present in the generated sql query
+
     if (!projectedValues.isEmpty()) {
+      // The following will be mapped to the "Record.values" map attribute
+      // For example, to project the columns c1 and c2, the values field will be
+      // `{"c1": r["c1"], "c2":r["c2"]} as values`
+      // Besides, since the Jooq parser consumes curly brace character as they are treated as
+      // placeholder, each curly brace need to be doubled "{{" to have a single curly brace "{"
+      // present in the generated sql query
       projectedFields.add("{{" + String.join(",", projectedValues) + "}} as values");
     }
 
