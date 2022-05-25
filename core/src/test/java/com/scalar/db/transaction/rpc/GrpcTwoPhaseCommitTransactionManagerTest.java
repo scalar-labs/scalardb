@@ -15,7 +15,6 @@ import com.scalar.db.rpc.TransactionState;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionGrpc;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import io.grpc.Status;
-import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -40,18 +39,6 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     manager.with("namespace", "table");
     when(config.getDeadlineDurationMillis()).thenReturn(60000L);
     when(blockingStub.withDeadlineAfter(anyLong(), any())).thenReturn(blockingStub);
-  }
-
-  @Test
-  public void
-      resume_WhenActiveTransactionsManagementEnabledIsFalse_ShouldThrowUnsupportedOperationException() {
-    // Arrange
-    when(config.isActiveTransactionsManagementEnabled()).thenReturn(false);
-    manager = new GrpcTwoPhaseCommitTransactionManager(config, stub, blockingStub, metadataManager);
-
-    // Act Assert
-    AssertionsForClassTypes.assertThatThrownBy(() -> manager.resume(ANY_ID))
-        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

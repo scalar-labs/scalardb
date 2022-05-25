@@ -116,6 +116,8 @@ private static final long serialVersionUID = 0L;
       }
     } catch (com.google.protobuf.InvalidProtocolBufferException e) {
       throw e.setUnfinishedMessage(this);
+    } catch (com.google.protobuf.UninitializedMessageException e) {
+      throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
     } catch (java.io.IOException e) {
       throw new com.google.protobuf.InvalidProtocolBufferException(
           e).setUnfinishedMessage(this);
@@ -206,7 +208,7 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public boolean containsColumn(
       java.lang.String key) {
-    if (key == null) { throw new java.lang.NullPointerException(); }
+    if (key == null) { throw new NullPointerException("map key"); }
     return internalGetColumn().getMap().containsKey(key);
   }
   /**
@@ -232,10 +234,12 @@ private static final long serialVersionUID = 0L;
    */
   @java.lang.Override
 
-  public com.scalar.db.rpc.DataType getColumnOrDefault(
+  public /* nullable */
+com.scalar.db.rpc.DataType getColumnOrDefault(
       java.lang.String key,
-      com.scalar.db.rpc.DataType defaultValue) {
-    if (key == null) { throw new java.lang.NullPointerException(); }
+      /* nullable */
+com.scalar.db.rpc.DataType defaultValue) {
+    if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.Integer> map =
         internalGetColumn().getMap();
     return map.containsKey(key)
@@ -249,7 +253,7 @@ private static final long serialVersionUID = 0L;
 
   public com.scalar.db.rpc.DataType getColumnOrThrow(
       java.lang.String key) {
-    if (key == null) { throw new java.lang.NullPointerException(); }
+    if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.Integer> map =
         internalGetColumn().getMap();
     if (!map.containsKey(key)) {
@@ -283,7 +287,7 @@ private static final long serialVersionUID = 0L;
   public int getColumnValueOrDefault(
       java.lang.String key,
       int defaultValue) {
-    if (key == null) { throw new java.lang.NullPointerException(); }
+    if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.Integer> map =
         internalGetColumn().getMap();
     return map.containsKey(key) ? map.get(key) : defaultValue;
@@ -295,7 +299,7 @@ private static final long serialVersionUID = 0L;
 
   public int getColumnValueOrThrow(
       java.lang.String key) {
-    if (key == null) { throw new java.lang.NullPointerException(); }
+    if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.Integer> map =
         internalGetColumn().getMap();
     if (!map.containsKey(key)) {
@@ -420,7 +424,7 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public boolean containsClusteringOrder(
       java.lang.String key) {
-    if (key == null) { throw new java.lang.NullPointerException(); }
+    if (key == null) { throw new NullPointerException("map key"); }
     return internalGetClusteringOrder().getMap().containsKey(key);
   }
   /**
@@ -446,10 +450,12 @@ private static final long serialVersionUID = 0L;
    */
   @java.lang.Override
 
-  public com.scalar.db.rpc.Order getClusteringOrderOrDefault(
+  public /* nullable */
+com.scalar.db.rpc.Order getClusteringOrderOrDefault(
       java.lang.String key,
-      com.scalar.db.rpc.Order defaultValue) {
-    if (key == null) { throw new java.lang.NullPointerException(); }
+      /* nullable */
+com.scalar.db.rpc.Order defaultValue) {
+    if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.Integer> map =
         internalGetClusteringOrder().getMap();
     return map.containsKey(key)
@@ -463,7 +469,7 @@ private static final long serialVersionUID = 0L;
 
   public com.scalar.db.rpc.Order getClusteringOrderOrThrow(
       java.lang.String key) {
-    if (key == null) { throw new java.lang.NullPointerException(); }
+    if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.Integer> map =
         internalGetClusteringOrder().getMap();
     if (!map.containsKey(key)) {
@@ -497,7 +503,7 @@ private static final long serialVersionUID = 0L;
   public int getClusteringOrderValueOrDefault(
       java.lang.String key,
       int defaultValue) {
-    if (key == null) { throw new java.lang.NullPointerException(); }
+    if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.Integer> map =
         internalGetClusteringOrder().getMap();
     return map.containsKey(key) ? map.get(key) : defaultValue;
@@ -509,7 +515,7 @@ private static final long serialVersionUID = 0L;
 
   public int getClusteringOrderValueOrThrow(
       java.lang.String key) {
-    if (key == null) { throw new java.lang.NullPointerException(); }
+    if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.Integer> map =
         internalGetClusteringOrder().getMap();
     if (!map.containsKey(key)) {
@@ -1055,7 +1061,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean containsColumn(
         java.lang.String key) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
       return internalGetColumn().getMap().containsKey(key);
     }
     /**
@@ -1081,10 +1087,12 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Override
 
-    public com.scalar.db.rpc.DataType getColumnOrDefault(
+    public /* nullable */
+com.scalar.db.rpc.DataType getColumnOrDefault(
         java.lang.String key,
-        com.scalar.db.rpc.DataType defaultValue) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+        /* nullable */
+com.scalar.db.rpc.DataType defaultValue) {
+      if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.Integer> map =
           internalGetColumn().getMap();
       return map.containsKey(key)
@@ -1098,7 +1106,7 @@ private static final long serialVersionUID = 0L;
 
     public com.scalar.db.rpc.DataType getColumnOrThrow(
         java.lang.String key) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.Integer> map =
           internalGetColumn().getMap();
       if (!map.containsKey(key)) {
@@ -1132,7 +1140,7 @@ private static final long serialVersionUID = 0L;
     public int getColumnValueOrDefault(
         java.lang.String key,
         int defaultValue) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.Integer> map =
           internalGetColumn().getMap();
       return map.containsKey(key) ? map.get(key) : defaultValue;
@@ -1144,7 +1152,7 @@ private static final long serialVersionUID = 0L;
 
     public int getColumnValueOrThrow(
         java.lang.String key) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.Integer> map =
           internalGetColumn().getMap();
       if (!map.containsKey(key)) {
@@ -1164,7 +1172,7 @@ private static final long serialVersionUID = 0L;
 
     public Builder removeColumn(
         java.lang.String key) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
       internalGetMutableColumn().getMutableMap()
           .remove(key);
       return this;
@@ -1184,8 +1192,8 @@ private static final long serialVersionUID = 0L;
     public Builder putColumn(
         java.lang.String key,
         com.scalar.db.rpc.DataType value) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
-      if (value == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
+      
       internalGetMutableColumn().getMutableMap()
           .put(key, columnValueConverter.doBackward(value));
       return this;
@@ -1214,7 +1222,8 @@ private static final long serialVersionUID = 0L;
     public Builder putColumnValue(
         java.lang.String key,
         int value) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
+      
       internalGetMutableColumn().getMutableMap()
           .put(key, value);
       return this;
@@ -1482,7 +1491,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean containsClusteringOrder(
         java.lang.String key) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
       return internalGetClusteringOrder().getMap().containsKey(key);
     }
     /**
@@ -1508,10 +1517,12 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Override
 
-    public com.scalar.db.rpc.Order getClusteringOrderOrDefault(
+    public /* nullable */
+com.scalar.db.rpc.Order getClusteringOrderOrDefault(
         java.lang.String key,
-        com.scalar.db.rpc.Order defaultValue) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+        /* nullable */
+com.scalar.db.rpc.Order defaultValue) {
+      if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.Integer> map =
           internalGetClusteringOrder().getMap();
       return map.containsKey(key)
@@ -1525,7 +1536,7 @@ private static final long serialVersionUID = 0L;
 
     public com.scalar.db.rpc.Order getClusteringOrderOrThrow(
         java.lang.String key) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.Integer> map =
           internalGetClusteringOrder().getMap();
       if (!map.containsKey(key)) {
@@ -1559,7 +1570,7 @@ private static final long serialVersionUID = 0L;
     public int getClusteringOrderValueOrDefault(
         java.lang.String key,
         int defaultValue) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.Integer> map =
           internalGetClusteringOrder().getMap();
       return map.containsKey(key) ? map.get(key) : defaultValue;
@@ -1571,7 +1582,7 @@ private static final long serialVersionUID = 0L;
 
     public int getClusteringOrderValueOrThrow(
         java.lang.String key) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.Integer> map =
           internalGetClusteringOrder().getMap();
       if (!map.containsKey(key)) {
@@ -1591,7 +1602,7 @@ private static final long serialVersionUID = 0L;
 
     public Builder removeClusteringOrder(
         java.lang.String key) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
       internalGetMutableClusteringOrder().getMutableMap()
           .remove(key);
       return this;
@@ -1611,8 +1622,8 @@ private static final long serialVersionUID = 0L;
     public Builder putClusteringOrder(
         java.lang.String key,
         com.scalar.db.rpc.Order value) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
-      if (value == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
+      
       internalGetMutableClusteringOrder().getMutableMap()
           .put(key, clusteringOrderValueConverter.doBackward(value));
       return this;
@@ -1641,7 +1652,8 @@ private static final long serialVersionUID = 0L;
     public Builder putClusteringOrderValue(
         java.lang.String key,
         int value) {
-      if (key == null) { throw new java.lang.NullPointerException(); }
+      if (key == null) { throw new NullPointerException("map key"); }
+      
       internalGetMutableClusteringOrder().getMutableMap()
           .put(key, value);
       return this;

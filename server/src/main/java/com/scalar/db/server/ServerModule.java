@@ -12,11 +12,6 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
-import com.scalar.db.storage.rpc.GrpcConfig;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
-import com.scalar.db.transaction.rpc.GrpcTransactionManager;
-import java.util.Properties;
 
 public class ServerModule extends AbstractModule {
 
@@ -29,19 +24,7 @@ public class ServerModule extends AbstractModule {
     this.config = config;
     this.databaseConfig = new DatabaseConfig(config.getProperties());
     storageFactory = new StorageFactory(databaseConfig);
-
-    Properties transactionProperties = new Properties();
-    transactionProperties.putAll(databaseConfig.getProperties());
-
-    // For two-phase consensus commit transactions in Scalar DB server, disable the active
-    // transactions management because Scalar DB server takes care of active transactions management
-    if (databaseConfig.getTransactionManagerClass() == ConsensusCommitManager.class) {
-      transactionProperties.put(
-          ConsensusCommitConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "false");
-    } else if (databaseConfig.getTransactionManagerClass() == GrpcTransactionManager.class) {
-      transactionProperties.put(GrpcConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "false");
-    }
-    transactionFactory = new TransactionFactory(new DatabaseConfig(transactionProperties));
+    transactionFactory = new TransactionFactory(databaseConfig);
   }
 
   @Override

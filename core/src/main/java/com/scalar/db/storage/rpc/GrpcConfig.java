@@ -1,6 +1,5 @@
 package com.scalar.db.storage.rpc;
 
-import static com.scalar.db.config.ConfigUtils.getBoolean;
 import static com.scalar.db.config.ConfigUtils.getLong;
 
 import com.scalar.db.config.DatabaseConfig;
@@ -20,13 +19,6 @@ public class GrpcConfig {
 
   private final long deadlineDurationMillis;
 
-  // for two-phase commit transactions
-  public static final String TWO_PHASE_COMMIT_TRANSACTION_PREFIX = PREFIX + "2pc.";
-  public static final String ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED =
-      TWO_PHASE_COMMIT_TRANSACTION_PREFIX + "active_transactions_management.enabled";
-
-  private final boolean activeTransactionsManagementEnabled;
-
   public GrpcConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getProperties().getProperty(DatabaseConfig.STORAGE);
     if (storage == null || !storage.equals("grpc")) {
@@ -43,8 +35,6 @@ public class GrpcConfig {
             databaseConfig.getProperties(),
             DEADLINE_DURATION_MILLIS,
             DEFAULT_DEADLINE_DURATION_MILLIS);
-    activeTransactionsManagementEnabled =
-        getBoolean(databaseConfig.getProperties(), ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, true);
   }
 
   public String getHost() {
@@ -57,9 +47,5 @@ public class GrpcConfig {
 
   public long getDeadlineDurationMillis() {
     return deadlineDurationMillis;
-  }
-
-  public boolean isActiveTransactionsManagementEnabled() {
-    return activeTransactionsManagementEnabled;
   }
 }

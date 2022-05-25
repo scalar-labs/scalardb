@@ -1513,7 +1513,11 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act
     ScanAll scanAll =
-        new ScanAll().withProjection(COL_NAME1).withProjection(COL_NAME2).withProjection(COL_NAME3).withProjection(COL_NAME6);
+        new ScanAll()
+            .withProjection(COL_NAME1)
+            .withProjection(COL_NAME2)
+            .withProjection(COL_NAME3)
+            .withProjection(COL_NAME6);
     List<Result> actualResults = scanAll(scanAll);
 
     // Assert
@@ -1531,7 +1535,7 @@ public abstract class DistributedStorageIntegrationTestBase {
                               ImmutableList.of(
                                   TextColumn.of(COL_NAME2, Integer.toString(i + j)),
                                   IntColumn.of(COL_NAME3, i + j)));
-                                  BlobColumn.ofNull(COL_NAME6);
+                          BlobColumn.ofNull(COL_NAME6);
                           expectedResults.add(erBuilder.build());
                         }));
     assertResultsContainsExactlyInAnyOrder(actualResults, expectedResults);
