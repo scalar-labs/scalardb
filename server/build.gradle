@@ -72,7 +72,7 @@ application {
 
 docker {
     name "ghcr.io/scalar-labs/scalardb-server:${project.version}"
-    files tasks.distTar.outputs, 'conf/log4j2.properties', 'conf/database.properties.tmpl', 'docker-entrypoint.sh'
+    files tasks.distTar.outputs, 'conf/log4j2.properties.tmpl', 'conf/database.properties.tmpl', 'docker-entrypoint.sh'
 }
 
 task dockerfileLint(type: Exec) {

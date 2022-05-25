@@ -14,7 +14,7 @@ This runs Scalar DB Server:
 
 ```
 $ cd server/build/install/server
-$ export SCALARDB_SERVER_OPTS="<your JVM options>"
+$ export JAVA_OPTS="<your JVM options>"
 $ bin/scalardb-server --config <your configuration file path>
 ```
 
