@@ -19,6 +19,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
@@ -2390,6 +2391,214 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
+  @Test
+  public void scanAll_DeleteCalledBefore_ShouldReturnEmpty()
+      throws CommitException, UnknownTransactionStatusException, CrudException {
+    // Arrange
+    ConsensusCommit transaction = manager.start();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, 1));
+    transaction.commit();
+
+    // Act
+    ConsensusCommit transaction1 = manager.start();
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    List<Result> resultBefore = transaction1.scan(scanAll);
+    transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
+    List<Result> resultAfter = transaction1.scan(scanAll);
+    assertThatCode(transaction1::commit).doesNotThrowAnyException();
+
+    // Assert
+    assertThat(resultBefore.size()).isEqualTo(1);
+    assertThat(resultAfter.size()).isEqualTo(0);
+  }
+
+  @Test
+  public void scanAll_DeleteGivenBefore_ShouldScanAll()
+      throws CommitException, UnknownTransactionStatusException, CrudException {
+    // Arrange
+    ConsensusCommit transaction = manager.start();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, 1));
+    transaction.put(preparePut(0, 1, namespace1, TABLE_1).withIntValue(BALANCE, 1));
+    transaction.commit();
+
+    // Act
+    ConsensusCommit transaction1 = manager.start();
+    transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    List<Result> results = transaction1.scan(scanAll);
+    assertThatCode(transaction1::commit).doesNotThrowAnyException();
+
+    // Assert
+    assertThat(results.size()).isEqualTo(1);
+  }
+
+  @Test
+  public void scanAll_NonOverlappingPutGivenBefore_ShouldScanAll()
+      throws CommitException, UnknownTransactionStatusException {
+    // Arrange
+    ConsensusCommit transaction = manager.start();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, 1));
+
+    // Act
+    ScanAll scanAll = prepareScanAll(namespace2, TABLE_2);
+    Throwable thrown = catchThrowable(() -> transaction.scan(scanAll));
+    transaction.commit();
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void scanAll_OverlappingPutGivenBefore_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    ConsensusCommit transaction = manager.start();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, 1));
+
+    // Act
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    Throwable thrown = catchThrowable(() -> transaction.scan(scanAll));
+    transaction.abort();
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void scanAll_ScanAllGivenForCommittedRecord_ShouldReturnRecord()
+      throws CrudException, CommitException, UnknownTransactionStatusException {
+    // Arrange
+    populateRecords(namespace1, TABLE_1);
+    ConsensusCommit transaction = manager.start();
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1).withLimit(1);
+
+    // Act
+    List<Result> results = transaction.scan(scanAll);
+
+    // Assert
+    assertThat(results.size()).isEqualTo(1);
+    Assertions.assertThat(
+            ((TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+  }
+
+  @Test
+  public void scanAll_ScanAllGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback()
+      throws ExecutionException, CoordinatorException, CrudException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(scanAll);
+  }
+
+  @Test
+  public void
+      scanAll_ScanAllGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
+          throws ExecutionException, CoordinatorException, CrudException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
+        scanAll);
+  }
+
+  @Test
+  public void scanAll_ScanAllGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward()
+      throws ExecutionException, CoordinatorException, CrudException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(scanAll);
+  }
+
+  @Test
+  public void
+      scanAll_ScanAllGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
+          throws ExecutionException, CoordinatorException, CrudException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
+        scanAll);
+  }
+
+  @Test
+  public void
+      scanAll_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
+          throws ExecutionException, CoordinatorException, CrudException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
+        scanAll);
+  }
+
+  @Test
+  public void
+      scanAll_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
+          throws ExecutionException, CoordinatorException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
+        scanAll);
+  }
+
+  @Test
+  public void scanAll_ScanAllGivenForNonExisting_ShouldReturnEmpty()
+      throws CrudException, CommitException, UnknownTransactionStatusException {
+    // Arrange
+    ConsensusCommit putTransaction = manager.start();
+    putTransaction.put(preparePut(0, 0, namespace1, TABLE_1));
+    putTransaction.commit();
+
+    ConsensusCommit transaction = manager.start();
+    ScanAll scanAll = prepareScanAll(namespace2, TABLE_2);
+
+    // Act
+    List<Result> results = transaction.scan(scanAll);
+
+    // Assert
+    assertThat(results.size()).isEqualTo(0);
+  }
+
+  @Test
+  public void scanAll_ScanAllGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback()
+      throws CrudException, ExecutionException, CoordinatorException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(scanAll);
+  }
+
+  @Test
+  public void
+      scanAll_ScanAllGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
+          throws ExecutionException, CoordinatorException, CrudException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
+        scanAll);
+  }
+
+  @Test
+  public void scanAll_ScanAllGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward()
+      throws ExecutionException, CoordinatorException, CrudException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(scanAll);
+  }
+
+  @Test
+  public void
+      scanAll_ScanAllGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
+          throws ExecutionException, CoordinatorException, CrudException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
+        scanAll);
+  }
+
+  @Test
+  public void
+      scanAll_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
+          throws ExecutionException, CoordinatorException, CrudException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
+        scanAll);
+  }
+
+  @Test
+  public void
+      scanAll_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
+          throws ExecutionException, CoordinatorException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
+        scanAll);
+  }
+
   private ConsensusCommit prepareTransfer(
       int fromId,
       String fromNamespace,
@@ -2534,6 +2743,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private Scan prepareScan(int id, String namespace, String table) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     return new Scan(partitionKey)
+        .forNamespace(namespace)
+        .forTable(table)
+        .withConsistency(Consistency.LINEARIZABLE);
+  }
+
+  private ScanAll prepareScanAll(String namespace, String table) {
+    return new ScanAll()
         .forNamespace(namespace)
         .forTable(table)
         .withConsistency(Consistency.LINEARIZABLE);

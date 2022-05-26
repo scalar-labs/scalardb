@@ -21,6 +21,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.ResultImpl;
@@ -48,7 +49,9 @@ import org.mockito.MockitoAnnotations;
 
 public class SnapshotTest {
   private static final String ANY_NAMESPACE_NAME = "namespace";
+  private static final String ANY_NAMESPACE_NAME_2 = "namespace2";
   private static final String ANY_TABLE_NAME = "table";
+  private static final String ANY_TABLE_NAME_2 = "table2";
   private static final String ANY_ID = "id";
   private static final int ANY_VERSION = 1;
   private static final String ANY_NAME_1 = "name1";
@@ -1159,5 +1162,72 @@ public class SnapshotTest {
     assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
     assertThat(thrown2).isInstanceOf(IllegalArgumentException.class);
     assertThat(thrown3).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void get_ScanAllGivenAndPutInWriteSetInSameTable_ShouldThrowException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    // "text2"
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    ScanAll scanAll =
+        new ScanAll()
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_NAMESPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+
+    // Act Assert
+    Throwable thrown = catchThrowable(() -> snapshot.get(scanAll));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void get_ScanAllGivenAndPutInWriteSetNotOverlappingWithScanAll_ShouldReturnEmptyList() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    // "text2"
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    ScanAll scanAll =
+        new ScanAll()
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_NAMESPACE_NAME_2)
+            .forTable(ANY_TABLE_NAME_2);
+
+    // Act Assert
+    Optional<List<Snapshot.Key>> keys = snapshot.get(scanAll);
+
+    // Assert
+    assertThat(keys).isEmpty();
+  }
+
+  @Test
+  public void get_ScanAllGivenAndAlreadyPresentInScanSet_ShouldReturnKeys() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    // "text2"
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+
+    ScanAll scanAll =
+        new ScanAll()
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_NAMESPACE_NAME_2)
+            .forTable(ANY_TABLE_NAME_2);
+    Snapshot.Key aKey = mock(Snapshot.Key.class);
+    snapshot.put(scanAll, Collections.singletonList(aKey));
+
+    // Act Assert
+    Optional<List<Snapshot.Key>> keys = snapshot.get(scanAll);
+
+    // Assert
+    assertThat(keys).isNotEmpty();
+    assertThat(keys.get()).containsExactly(aKey);
   }
 }

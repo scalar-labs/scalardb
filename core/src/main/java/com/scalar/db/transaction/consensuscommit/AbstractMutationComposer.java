@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +41,14 @@ public abstract class AbstractMutationComposer implements MutationComposer {
       return result.getClusteringKey();
     } else {
       return base.getClusteringKey();
+    }
+  }
+
+  protected Key getPartitionKey(Operation base, TransactionResult result) {
+    if (base instanceof ScanAll) {
+      return result.getPartitionKey().get();
+    } else {
+      return base.getPartitionKey();
     }
   }
 }
