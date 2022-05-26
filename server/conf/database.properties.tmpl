@@ -9,10 +9,10 @@ scalar.db.username={{ default .Env.SCALAR_DB_USERNAME "" }}
 scalar.db.password={{ default .Env.SCALAR_DB_PASSWORD "" }}
 
 # Storage implementation. "cassandra" or "cosmos" or "dynamo" or "jdbc" or "grpc" can be set. Default storage is "cassandra".
-scalar.db.storage={{ default .Env.SCALAR_DB_STORAGE "cassandra" }}
+scalar.db.storage={{ default .Env.SCALAR_DB_STORAGE "" }}
 
 # The type of the transaction manager. "consensus-commit" or "jdbc" or "grpc" can be set. The default is "consensus-commit"
-scalar.db.transaction_manager={{ default .Env.SCALAR_DB_TRANSACTION_MANAGER "consensus-commit" }}
+scalar.db.transaction_manager={{ default .Env.SCALAR_DB_TRANSACTION_MANAGER "" }}
 
 # Default isolation level for ConsensusCommit. Either SNAPSHOT or SERIALIZABLE can be specified. SNAPSHOT is used by default.
 scalar.db.consensus_commit.isolation_level={{ default .Env.SCALAR_DB_CONSENSUSCOMMIT_ISOLATION_LEVEL "" }}
