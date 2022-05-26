@@ -39,9 +39,8 @@ ENV SCALAR_DB_CONSENSUSCOMMIT_SERIALIZABLE_STRATEGY ''
 
 WORKDIR /scalardb/server
 
-COPY log4j2.properties .
-# Support use cases where environment variables are used to configure the database
 COPY database.properties.tmpl .
+COPY log4j2.properties.tmpl .
 COPY docker-entrypoint.sh .
 
 RUN groupadd -r --gid 201 scalardb && \
@@ -51,10 +50,12 @@ RUN chown -R scalardb:scalardb /scalardb/server
 USER 201
 
 ENV JAVA_OPT_MAX_RAM_PERCENTAGE '70.0'
-ENV SCALARDB_SERVER_OPTS -Dlog4j.configurationFile=file:log4j2.properties
+ENV JAVA_OPTS '-Dlog4j.configurationFile=file:log4j2.properties'
 
 ENTRYPOINT ["./docker-entrypoint.sh"]
 
-CMD ["./bin/scalardb-server", "--config", "database.properties"]
+CMD ["dockerize", "-template", "database.properties.tmpl:database.properties", \
+    "-template", "log4j2.properties.tmpl:log4j2.properties", \
+    "./bin/scalardb-server", "--config=database.properties"]
 
 EXPOSE 60051 8080
