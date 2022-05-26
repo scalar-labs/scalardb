@@ -103,7 +103,7 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
               }
             });
 
-    return new Put(base.getPartitionKey(), getClusteringKey(base, result).orElse(null))
+    return new Put(getPartitionKey(base, result), getClusteringKey(base, result).orElse(null))
         .forNamespace(base.forNamespace().get())
         .forTable(base.forTable().get())
         .withCondition(
@@ -118,7 +118,7 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
     assert result.getState().equals(TransactionState.PREPARED)
         || result.getState().equals(TransactionState.DELETED);
 
-    return new Delete(base.getPartitionKey(), getClusteringKey(base, result).orElse(null))
+    return new Delete(getPartitionKey(base, result), getClusteringKey(base, result).orElse(null))
         .forNamespace(base.forNamespace().get())
         .forTable(base.forTable().get())
         .withCondition(
@@ -131,7 +131,9 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
   private Optional<TransactionResult> getLatestResult(Operation operation, TransactionResult result)
       throws ExecutionException {
     Get get =
-        new Get(operation.getPartitionKey(), getClusteringKey(operation, result).orElse(null))
+        new Get(
+                getPartitionKey(operation, result),
+                getClusteringKey(operation, result).orElse(null))
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(operation.forNamespace().get())
             .forTable(operation.forTable().get());
