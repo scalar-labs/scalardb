@@ -8,6 +8,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -81,7 +82,9 @@ public class RecoveryHandler {
   Optional<TransactionResult> getLatestResult(Selection selection, TransactionResult result)
       throws ExecutionException {
     Get get =
-        new Get(selection.getPartitionKey(), getClusteringKey(selection, result).orElse(null))
+        new Get(
+                getPartitionKey(selection, result),
+                getClusteringKey(selection, result).orElse(null))
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(selection.forNamespace().get())
             .forTable(selection.forTable().get());
@@ -93,6 +96,14 @@ public class RecoveryHandler {
       return result.getClusteringKey();
     } else {
       return selection.getClusteringKey();
+    }
+  }
+
+  private Key getPartitionKey(Selection selection, TransactionResult result) {
+    if (selection instanceof ScanAll) {
+      return result.getPartitionKey().get();
+    } else {
+      return selection.getPartitionKey();
     }
   }
 

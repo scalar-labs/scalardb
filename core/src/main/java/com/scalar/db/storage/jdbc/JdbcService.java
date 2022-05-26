@@ -116,7 +116,6 @@ public class JdbcService {
       operationChecker.check(scan);
     }
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
-    ScalarDbUtils.addProjectionsForKeys(scan, tableMetadata);
 
     SelectQuery selectQuery =
         scan instanceof ScanAll
