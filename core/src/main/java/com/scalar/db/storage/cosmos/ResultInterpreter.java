@@ -38,7 +38,6 @@ public class ResultInterpreter {
     if (projections.isEmpty()) {
       metadata.getColumnNames().forEach(name -> add(ret, name, recordValues.get(name), metadata));
     } else {
-      // This isn't actual projection...
       projections.forEach(name -> add(ret, name, recordValues.get(name), metadata));
     }
 
