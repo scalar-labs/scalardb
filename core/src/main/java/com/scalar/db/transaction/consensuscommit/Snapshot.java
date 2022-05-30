@@ -160,6 +160,22 @@ public class Snapshot {
     }
   }
 
+  private TableMetadata getTableMetadata(Scan scan) throws ExecutionException {
+    try {
+      TransactionalTableMetadata metadata =
+          tableMetadataManager.getTransactionalTableMetadata(
+              scan.forNamespace().get(), scan.forTable().get());
+      if (metadata == null) {
+        throw new IllegalArgumentException(
+            "The specified table is not found: "
+                + ScalarDbUtils.getFullTableName(scan.forNamespace().get(), scan.forTable().get()));
+      }
+      return metadata.getTableMetadata();
+    } catch (ExecutionException e) {
+      throw new ExecutionException("getting a table metadata failed", e);
+    }
+  }
+
   public Optional<List<Key>> get(Scan scan) {
     if (isWriteSetOverlappedWith(scan)) {
       throw new IllegalArgumentException("reading already written data is not allowed");
@@ -311,6 +327,7 @@ public class Snapshot {
               // only get tx_id and tx_version columns because we use only them to compare
               scan.clearProjections();
               scan.withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+              ScalarDbUtils.addProjectionsForKeys(scan, getTableMetadata(scan));
               scanner = storage.scan(scan);
               for (Result result : scanner) {
                 TransactionResult transactionResult = new TransactionResult(result);
