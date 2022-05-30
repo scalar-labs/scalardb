@@ -197,7 +197,10 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act
     Get get = prepareGet(pKey, cKey);
-    get.withProjection(COL_NAME1).withProjection(COL_NAME2).withProjection(COL_NAME3);
+    get.withProjection(COL_NAME1)
+        .withProjection(COL_NAME2)
+        .withProjection(COL_NAME3)
+        .withProjection(COL_NAME6);
     Optional<Result> actual = storage.get(get);
 
     // Assert
@@ -210,6 +213,8 @@ public abstract class DistributedStorageIntegrationTestBase {
         .isEqualTo(Optional.of(new IntValue(COL_NAME3, pKey + cKey)));
     assertThat(actual.get().getValue(COL_NAME4).isPresent()).isTrue(); // since it's clustering key
     assertThat(actual.get().getValue(COL_NAME5).isPresent()).isFalse();
+    assertThat(actual.get().contains(COL_NAME6)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME6)).isTrue();
   }
 
   @Test
@@ -224,7 +229,8 @@ public abstract class DistributedStorageIntegrationTestBase {
         new Scan(new Key(COL_NAME1, pKey))
             .withProjection(COL_NAME1)
             .withProjection(COL_NAME2)
-            .withProjection(COL_NAME3);
+            .withProjection(COL_NAME3)
+            .withProjection(COL_NAME6);
     List<Result> actual = scanAll(scan);
 
     // Assert
@@ -249,6 +255,8 @@ public abstract class DistributedStorageIntegrationTestBase {
           assertThat(a.getValue(COL_NAME3).isPresent()).isTrue();
           assertThat(a.getValue(COL_NAME4).isPresent()).isTrue(); // since it's clustering key
           assertThat(a.getValue(COL_NAME5).isPresent()).isFalse();
+          assertThat(a.contains(COL_NAME6)).isTrue();
+          assertThat(a.isNull(COL_NAME6)).isTrue();
         });
   }
 
@@ -1505,7 +1513,11 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act
     ScanAll scanAll =
-        new ScanAll().withProjection(COL_NAME1).withProjection(COL_NAME2).withProjection(COL_NAME3);
+        new ScanAll()
+            .withProjection(COL_NAME1)
+            .withProjection(COL_NAME2)
+            .withProjection(COL_NAME3)
+            .withProjection(COL_NAME6);
     List<Result> actualResults = scanAll(scanAll);
 
     // Assert
@@ -1523,13 +1535,13 @@ public abstract class DistributedStorageIntegrationTestBase {
                               ImmutableList.of(
                                   TextColumn.of(COL_NAME2, Integer.toString(i + j)),
                                   IntColumn.of(COL_NAME3, i + j)));
+                          BlobColumn.ofNull(COL_NAME6);
                           expectedResults.add(erBuilder.build());
                         }));
     assertResultsContainsExactlyInAnyOrder(actualResults, expectedResults);
     actualResults.forEach(
         actualResult -> {
           assertThat(actualResult.contains(COL_NAME5)).isFalse();
-          assertThat(actualResult.contains(COL_NAME6)).isFalse();
         });
   }
 
