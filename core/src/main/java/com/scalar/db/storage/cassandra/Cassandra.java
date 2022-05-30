@@ -15,7 +15,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -80,7 +79,9 @@ public class Cassandra extends AbstractDistributedStorage {
     if (next != null) {
       throw new IllegalArgumentException("please use scan() for non-exact match selection");
     }
-    return Optional.of(new ResultInterpreter(get.getProjections(), metadataManager.getTableMetadata(get)).interpret(row));
+    return Optional.of(
+        new ResultInterpreter(get.getProjections(), metadataManager.getTableMetadata(get))
+            .interpret(row));
   }
 
   @Override
@@ -95,7 +96,9 @@ public class Cassandra extends AbstractDistributedStorage {
 
     ResultSet results = handlers.select().handle(scan);
 
-    return new ScannerImpl(results, new ResultInterpreter(scan.getProjections(), metadataManager.getTableMetadata(scan)));
+    return new ScannerImpl(
+        results,
+        new ResultInterpreter(scan.getProjections(), metadataManager.getTableMetadata(scan)));
   }
 
   @Override
