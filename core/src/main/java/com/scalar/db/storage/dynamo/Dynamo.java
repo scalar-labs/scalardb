@@ -17,6 +17,7 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.AbstractDistributedStorage;
+import com.scalar.db.storage.common.checker.DynamoOperationChecker;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
@@ -67,7 +68,7 @@ public class Dynamo extends AbstractDistributedStorage {
     metadataManager =
         new TableMetadataManager(
             new DynamoAdmin(client, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
-    operationChecker = new OperationChecker(metadataManager);
+    operationChecker = new DynamoOperationChecker(metadataManager);
 
     selectStatementHandler = new SelectStatementHandler(client, metadataManager);
     putStatementHandler = new PutStatementHandler(client, metadataManager);
