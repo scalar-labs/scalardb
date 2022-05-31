@@ -815,8 +815,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
         new Put(Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0))
             .forNamespace(namespace)
             .forTable(TABLE)
-            .withIntValue(BALANCE, INITIAL_BALANCE)
-            .withIntValue(SOME_COLUMN, null);
+            .withIntValue(BALANCE, INITIAL_BALANCE);
     DistributedTransaction transaction = manager.start();
     transaction.put(put);
     transaction.commit();
