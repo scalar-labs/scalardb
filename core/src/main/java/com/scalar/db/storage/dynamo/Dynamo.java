@@ -17,7 +17,6 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.AbstractDistributedStorage;
-import com.scalar.db.storage.common.checker.DynamoOperationChecker;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;

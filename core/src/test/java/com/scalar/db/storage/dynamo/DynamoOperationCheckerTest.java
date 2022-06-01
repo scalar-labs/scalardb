@@ -1,8 +1,10 @@
-package com.scalar.db.storage.common.checker;
+package com.scalar.db.storage.dynamo;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.mockito.MockitoAnnotations.openMocks;
 
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
@@ -13,19 +15,17 @@ import com.scalar.db.io.Key;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
 
 public class DynamoOperationCheckerTest {
   private static final String PKEY1 = "p1";
   private static final String COL1 = "v1";
   private static final String COL2 = "v2";
-  @Mock TableMetadataManager metadataManager;
-  private OperationChecker operationChecker;
+  @Mock private TableMetadataManager metadataManager;
+  private DynamoOperationChecker operationChecker;
 
   @BeforeEach
   public void setUp() throws Exception {
-    MockitoAnnotations.openMocks(this).close();
+    openMocks(this).close();
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(PKEY1, DataType.INT)
@@ -34,7 +34,7 @@ public class DynamoOperationCheckerTest {
             .addPartitionKey(PKEY1)
             .addSecondaryIndex(COL1)
             .build();
-    Mockito.when(metadataManager.getTableMetadata(any())).thenReturn(tableMetadata);
+    when(metadataManager.getTableMetadata(any())).thenReturn(tableMetadata);
     operationChecker = new DynamoOperationChecker(metadataManager);
   }
 

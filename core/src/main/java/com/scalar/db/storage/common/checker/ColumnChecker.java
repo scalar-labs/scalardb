@@ -14,7 +14,7 @@ import com.scalar.db.io.TextColumn;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-class ColumnChecker implements ColumnVisitor {
+public class ColumnChecker implements ColumnVisitor {
   private final TableMetadata tableMetadata;
   private final boolean requireNotNull;
   private final boolean requireNull;
