@@ -34,25 +34,26 @@ public class ResultInterpreter {
   public Result interpret(Record record) {
     Map<String, Column<?>> ret = new HashMap<>();
 
-    Map<String, Object> recordValues = record.getValues();
     if (projections.isEmpty()) {
-      metadata.getColumnNames().forEach(name -> add(ret, name, recordValues.get(name), metadata));
+      metadata.getColumnNames().forEach(name -> add(ret, name, record, metadata));
     } else {
-      projections.forEach(name -> add(ret, name, recordValues.get(name), metadata));
+      projections.forEach(name -> add(ret, name, record, metadata));
     }
-
-    metadata
-        .getPartitionKeyNames()
-        .forEach(name -> add(ret, name, record.getPartitionKey().get(name), metadata));
-    metadata
-        .getClusteringKeyNames()
-        .forEach(name -> add(ret, name, record.getClusteringKey().get(name), metadata));
 
     return new ResultImpl(ret, metadata);
   }
 
   private void add(
-      Map<String, Column<?>> columns, String name, Object value, TableMetadata metadata) {
+      Map<String, Column<?>> columns, String name, Record record, TableMetadata metadata) {
+    Object value;
+    if (record.getPartitionKey().containsKey(name)) {
+      value = record.getPartitionKey().get(name);
+    } else if (record.getClusteringKey().containsKey(name)) {
+      value = record.getClusteringKey().get(name);
+    } else {
+      value = record.getValues().get(name);
+    }
+
     columns.put(name, convert(value, name, metadata.getColumnDataType(name)));
   }
 

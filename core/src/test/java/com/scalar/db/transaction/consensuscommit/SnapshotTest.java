@@ -779,7 +779,9 @@ public class SnapshotTest {
     Scanner scanner = mock(Scanner.class);
     when(scanner.iterator()).thenReturn(Collections.singletonList((Result) txResult).iterator());
     Scan scanWithProjections =
-        prepareScan().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+        prepareScan()
+            .withProjections(
+                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
     when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
@@ -807,7 +809,9 @@ public class SnapshotTest {
     when(scanner.iterator())
         .thenReturn(Collections.singletonList((Result) changedTxResult).iterator());
     Scan scanWithProjections =
-        prepareScan().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+        prepareScan()
+            .withProjections(
+                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
     when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
@@ -819,7 +823,7 @@ public class SnapshotTest {
   }
 
   @Test
-  public void toSerializableWithExtraRead_ScanSetExtended_ShouldProcessWithoutExceptions()
+  public void toSerializableWithExtraRead_ScanSetExtended_ShouldThrowCommitConflictException()
       throws ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
@@ -833,7 +837,9 @@ public class SnapshotTest {
     Scanner scanner = mock(Scanner.class);
     when(scanner.iterator()).thenReturn(Collections.singletonList((Result) txResult).iterator());
     Scan scanWithProjections =
-        prepareScan().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+        prepareScan()
+            .withProjections(
+                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
     when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
@@ -846,7 +852,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      toSerializableWithExtraRead_MultipleScansInScanSetExist_ShouldThrowCommitConflictException()
+      toSerializableWithExtraRead_MultipleScansInScanSetExist_ShouldProcessWithoutExceptions()
           throws ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
@@ -910,8 +916,8 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME)
-            .withProjection(Attribute.ID)
-            .withProjection(Attribute.VERSION);
+            .withProjections(
+                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
     when(storage.scan(scan1WithProjections)).thenReturn(scanner1);
 
     Scanner scanner2 = mock(Scanner.class);
@@ -922,8 +928,8 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME)
-            .withProjection(Attribute.ID)
-            .withProjection(Attribute.VERSION);
+            .withProjections(
+                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
     when(storage.scan(scan2WithProjections)).thenReturn(scanner2);
 
     // Act Assert
