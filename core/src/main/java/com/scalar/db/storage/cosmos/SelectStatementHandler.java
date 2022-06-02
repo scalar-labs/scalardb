@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import org.jooq.Field;
@@ -161,38 +162,59 @@ public class SelectStatementHandler extends StatementHandler {
     projectedFields.add("r.id");
     projectedFields.add("r.concatenatedPartitionKey");
 
-    if (selection.getProjections().stream()
-        .anyMatch(tableMetadata.getPartitionKeyNames()::contains)) {
-      projectedFields.add("r.partitionKey");
-    }
+    // Project partition key columns
+    addJsonFormattedProjectionsFieldForAttribute(
+        projectedFields,
+        "partitionKey",
+        selection.getProjections().stream().filter(tableMetadata.getPartitionKeyNames()::contains));
 
-    if (selection.getProjections().stream()
-        .anyMatch(tableMetadata.getClusteringKeyNames()::contains)) {
-      projectedFields.add("r.clusteringKey");
-    }
+    // Project clustering key columns
+    addJsonFormattedProjectionsFieldForAttribute(
+        projectedFields,
+        "clusteringKey",
+        selection.getProjections().stream()
+            .filter(tableMetadata.getClusteringKeyNames()::contains));
 
-    List<String> projectedValues =
+    // Project non-primary key columns
+    addJsonFormattedProjectionsFieldForAttribute(
+        projectedFields,
+        "values",
         selection.getProjections().stream()
             .filter(
                 c ->
                     !tableMetadata.getPartitionKeyNames().contains(c)
-                        && !tableMetadata.getClusteringKeyNames().contains(c))
-            .map(c -> "\"" + c + "\":r.values" + CosmosUtils.quoteKeyword(c))
-            .collect(Collectors.toList());
-
-    if (!projectedValues.isEmpty()) {
-      // The following will be mapped to the "Record.values" map attribute
-      // For example, to project the columns c1 and c2, the values field will be
-      // `{"c1": r["c1"], "c2":r["c2"]} as values`
-      // Besides, since the Jooq parser consumes curly brace character as they are treated as
-      // placeholder, each curly brace need to be doubled "{{" to have a single curly brace "{"
-      // present in the generated sql query
-      projectedFields.add("{{" + String.join(",", projectedValues) + "}} as values");
-    }
+                        && !tableMetadata.getClusteringKeyNames().contains(c)));
 
     return DSL.using(SQLDialect.DEFAULT)
         .select(projectedFields.stream().map(DSL::field).collect(Collectors.toList()))
         .from("Record r");
+  }
+
+  private void addJsonFormattedProjectionsFieldForAttribute(
+      List<String> projectedFields, String rootAttributeName, Stream<String> projectedColumnNames) {
+    // If rootAttributeName="partitionKey", the following will be mapped to the
+    // "Record.partitionKey"  map upon the query result deserialization.
+    // For example, to project the partition keys c1 and c2, the partitionKey field will be
+    // `{"c1": r.partitionKey["c1"], "c2":r.partitionKey["c2"]} as partitionKey`
+
+    // Besides, since the Jooq parser consumes curly brace character as they are treated as
+    // placeholder, each curly brace need to be doubled "{{" to have a single curly brace "{"
+    // present in the generated sql query
+    List<String> projectedColumnsToJson =
+        projectedColumnNames
+            .map(
+                columnName ->
+                    "\""
+                        + columnName
+                        + "\":r."
+                        + rootAttributeName
+                        + CosmosUtils.quoteKeyword(columnName))
+            .collect(Collectors.toList());
+
+    if (!projectedColumnsToJson.isEmpty()) {
+      projectedFields.add(
+          "{{" + String.join(",", projectedColumnsToJson) + "}} as " + rootAttributeName);
+    }
   }
 
   private void setStart(SelectConditionStep<org.jooq.Record> select, Scan scan) {

@@ -576,8 +576,8 @@ public class SelectStatementHandlerTest {
     String expectedQuery =
         "select r.id, "
             + "r.concatenatedPartitionKey, "
-            + "r.partitionKey, "
-            + "r.clusteringKey "
+            + "{\"name1\":r.partitionKey[\"name1\"]} as partitionKey, "
+            + "{\"name2\":r.clusteringKey[\"name2\"]} as clusteringKey "
             + "from Record r "
             + "where (r.concatenatedPartitionKey = '"
             + ANY_TEXT_1
@@ -661,8 +661,8 @@ public class SelectStatementHandlerTest {
     String expectedQuery =
         "select r.id, "
             + "r.concatenatedPartitionKey, "
-            + "r.partitionKey, "
-            + "r.clusteringKey "
+            + "{\"name1\":r.partitionKey[\"name1\"]} as partitionKey, "
+            + "{\"name2\":r.clusteringKey[\"name2\"]} as clusteringKey "
             + "from Record r";
     verify(container)
         .queryItems(eq(expectedQuery), any(CosmosQueryRequestOptions.class), eq(Record.class));
@@ -685,7 +685,7 @@ public class SelectStatementHandlerTest {
     String expectedQuery =
         "select r.id, "
             + "r.concatenatedPartitionKey, "
-            + "r.partitionKey, "
+            + "{\"name1\":r.partitionKey[\"name1\"]} as partitionKey, "
             + "{\"name4\":r.values[\"name4\"]} as values "
             + "from Record r";
     verify(container)
@@ -709,7 +709,7 @@ public class SelectStatementHandlerTest {
     String expectedQuery =
         "select r.id, "
             + "r.concatenatedPartitionKey, "
-            + "r.clusteringKey, "
+            + "{\"name2\":r.clusteringKey[\"name2\"]} as clusteringKey, "
             + "{\"name4\":r.values[\"name4\"]} as values "
             + "from Record r";
     verify(container)
@@ -781,6 +781,117 @@ public class SelectStatementHandlerTest {
 
     // Act Assert
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
+
+    // Assert
+    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+  }
+
+  @Test
+  public void
+      handle_ScanOperationWithProjectionsOnMultiplePartitionAndClusteringKeys_ShouldCallQueryItemsWithProperQuery() {
+    // Arrange
+    when(metadata.getPartitionKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2)));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_3, ANY_NAME_4)));
+    when(metadata.getClusteringOrder(ANY_NAME_3)).thenReturn(Order.ASC);
+    when(metadata.getClusteringOrder(ANY_NAME_4)).thenReturn(Order.DESC);
+
+    when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
+        .thenReturn(responseIterable);
+    Record expected = new Record();
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    Key partitionKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2);
+    Scan scan =
+        new Scan(partitionKey)
+            .withProjections(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3, ANY_NAME_4))
+            .forNamespace(ANY_NAMESPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+
+    String query =
+        "select r.id, "
+            + "r.concatenatedPartitionKey, "
+            + "{\"name1\":r.partitionKey[\"name1\"],\"name2\":r.partitionKey[\"name2\"]} as partitionKey, "
+            + "{\"name3\":r.clusteringKey[\"name3\"],\"name4\":r.clusteringKey[\"name4\"]} as clusteringKey "
+            + "from Record r "
+            + "where r.concatenatedPartitionKey = 'text1:text2' "
+            + "order by r.concatenatedPartitionKey asc, r.clusteringKey[\"name3\"] asc, r.clusteringKey[\"name4\"] desc";
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
+
+    // Assert
+    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+  }
+
+  @Test
+  public void
+      handle_ScanAllOperationWithProjectionsOnMultiplePartitionAndClusteringKeys_ShouldCallQueryItemsWithProperQuery() {
+    // Arrange
+    when(metadata.getPartitionKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2)));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_3, ANY_NAME_4)));
+    when(metadata.getClusteringOrder(ANY_NAME_3)).thenReturn(Order.ASC);
+    when(metadata.getClusteringOrder(ANY_NAME_4)).thenReturn(Order.DESC);
+
+    when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
+        .thenReturn(responseIterable);
+    Record expected = new Record();
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    ScanAll scanAll =
+        new ScanAll()
+            .withProjections(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3, ANY_NAME_4))
+            .forNamespace(ANY_NAMESPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+
+    String query =
+        "select r.id, "
+            + "r.concatenatedPartitionKey, "
+            + "{\"name1\":r.partitionKey[\"name1\"],\"name2\":r.partitionKey[\"name2\"]} as partitionKey, "
+            + "{\"name3\":r.clusteringKey[\"name3\"],\"name4\":r.clusteringKey[\"name4\"]} as clusteringKey "
+            + "from Record r";
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(scanAll)).doesNotThrowAnyException();
+
+    // Assert
+    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+  }
+
+  @Test
+  public void
+      handle_GetOperationWithProjectionsOnMultiplePartitionAndClusteringKeys_ShouldCallQueryItemsWithProperQuery() {
+    // Arrange
+    when(metadata.getPartitionKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2)));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_3, ANY_NAME_4)));
+    when(metadata.getClusteringOrder(ANY_NAME_3)).thenReturn(Order.ASC);
+    when(metadata.getClusteringOrder(ANY_NAME_4)).thenReturn(Order.DESC);
+
+    when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
+        .thenReturn(responseIterable);
+    Record expected = new Record();
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    Key partitionKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2);
+    Key clusteringKey = Key.of(ANY_NAME_3, ANY_TEXT_3, ANY_NAME_4, ANY_TEXT_4);
+    Get get =
+        new Get(partitionKey, clusteringKey)
+            .withProjections(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3, ANY_NAME_4))
+            .forNamespace(ANY_NAMESPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+
+    String query =
+        "select r.id, "
+            + "r.concatenatedPartitionKey, "
+            + "{\"name1\":r.partitionKey[\"name1\"],\"name2\":r.partitionKey[\"name2\"]} as partitionKey, "
+            + "{\"name3\":r.clusteringKey[\"name3\"],\"name4\":r.clusteringKey[\"name4\"]} as clusteringKey "
+            + "from Record r "
+            + "where (r.concatenatedPartitionKey = 'text1:text2' and r.id = 'text1:text2:text3:text4')";
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(get)).doesNotThrowAnyException();
 
     // Assert
     verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
