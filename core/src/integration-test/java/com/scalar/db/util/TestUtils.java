@@ -34,7 +34,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
@@ -344,16 +343,13 @@ public final class TestUtils {
         return false;
       }
 
-      Set<Column<?>> otherComparableColumns = new HashSet<>(other.getColumns().values());
-      // ignore columns with null value
-      otherComparableColumns.removeIf(Column::hasNullValue);
-
-      if (this.columns.size() != otherComparableColumns.size()) {
+      if (this.columns.size() != other.getColumns().keySet().size()) {
         return false;
       }
+
       // Columns ordering is not taken into account
       for (Column<?> column : this.getColumns()) {
-        if (!Objects.equals(column.getValueAsObject(), other.getAsObject(column.getName()))) {
+        if (!column.equals(other.getColumns().get(column.getName()))) {
           return false;
         }
       }

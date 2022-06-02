@@ -15,13 +15,11 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.AbstractDistributedStorage;
 import com.scalar.db.storage.common.checker.OperationChecker;
-import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -71,8 +69,6 @@ public class Cassandra extends AbstractDistributedStorage {
   public Optional<Result> get(Get get) throws ExecutionException {
     get = copyAndSetTargetToIfNot(get);
     operationChecker.check(get);
-    TableMetadata metadata = metadataManager.getTableMetadata(get);
-    ScalarDbUtils.addProjectionsForKeys(get, metadata);
 
     ResultSet resultSet = handlers.select().handle(get);
     Row row = resultSet.one();
@@ -83,7 +79,9 @@ public class Cassandra extends AbstractDistributedStorage {
     if (next != null) {
       throw new IllegalArgumentException("please use scan() for non-exact match selection");
     }
-    return Optional.of(new ResultInterpreter(get.getProjections(), metadata).interpret(row));
+    return Optional.of(
+        new ResultInterpreter(get.getProjections(), metadataManager.getTableMetadata(get))
+            .interpret(row));
   }
 
   @Override
@@ -96,12 +94,11 @@ public class Cassandra extends AbstractDistributedStorage {
       operationChecker.check(scan);
     }
 
-    TableMetadata metadata = metadataManager.getTableMetadata(scan);
-    ScalarDbUtils.addProjectionsForKeys(scan, metadata);
-
     ResultSet results = handlers.select().handle(scan);
 
-    return new ScannerImpl(results, new ResultInterpreter(scan.getProjections(), metadata));
+    return new ScannerImpl(
+        results,
+        new ResultInterpreter(scan.getProjections(), metadataManager.getTableMetadata(scan)));
   }
 
   @Override

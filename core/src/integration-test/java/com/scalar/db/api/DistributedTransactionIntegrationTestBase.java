@@ -157,7 +157,8 @@ public abstract class DistributedTransactionIntegrationTestBase {
     assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
     assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
     assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
-    assertThat(result.get().contains(SOME_COLUMN)).isFalse();
+    assertThat(result.get().getContainedColumnNames())
+        .containsOnly(ACCOUNT_ID, ACCOUNT_TYPE, BALANCE);
   }
 
   @Test
@@ -207,20 +208,20 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
     // Assert
     assertThat(results.size()).isEqualTo(3);
+    results.forEach(
+        result -> {
+          assertThat(result.getContainedColumnNames())
+              .containsOnly(ACCOUNT_ID, ACCOUNT_TYPE, BALANCE);
+          assertThat(getBalance(result)).isEqualTo(INITIAL_BALANCE);
+        });
     assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(1);
     assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(getBalance(results.get(0))).isEqualTo(INITIAL_BALANCE);
-    assertThat(results.get(0).contains(SOME_COLUMN)).isFalse();
 
     assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(1);
     assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(getBalance(results.get(1))).isEqualTo(INITIAL_BALANCE);
-    assertThat(results.get(1).contains(SOME_COLUMN)).isFalse();
 
     assertThat(results.get(2).getInt(ACCOUNT_ID)).isEqualTo(1);
     assertThat(results.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
-    assertThat(getBalance(results.get(2))).isEqualTo(INITIAL_BALANCE);
-    assertThat(results.get(2).contains(SOME_COLUMN)).isFalse();
   }
 
   @Test
@@ -404,18 +405,26 @@ public abstract class DistributedTransactionIntegrationTestBase {
             new ExpectedResultBuilder()
                 .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
                 .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+                .nonKeyColumns(
+                    Arrays.asList(IntColumn.ofNull(BALANCE), IntColumn.ofNull(SOME_COLUMN)))
                 .build(),
             new ExpectedResultBuilder()
                 .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
                 .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
+                .nonKeyColumns(
+                    Arrays.asList(IntColumn.ofNull(BALANCE), IntColumn.ofNull(SOME_COLUMN)))
                 .build(),
             new ExpectedResultBuilder()
                 .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
                 .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+                .nonKeyColumns(
+                    Arrays.asList(IntColumn.ofNull(BALANCE), IntColumn.ofNull(SOME_COLUMN)))
                 .build(),
             new ExpectedResultBuilder()
                 .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
                 .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .nonKeyColumns(
+                    Arrays.asList(IntColumn.ofNull(BALANCE), IntColumn.ofNull(SOME_COLUMN)))
                 .build()));
     assertThat(results).hasSize(2);
   }
@@ -448,11 +457,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
                           expectedResults.add(erBuilder.build());
                         }));
     assertResultsContainsExactlyInAnyOrder(results, expectedResults);
-    results.forEach(
-        result -> {
-          assertThat(result.contains(ACCOUNT_ID)).isFalse();
-          assertThat(result.contains(SOME_COLUMN)).isFalse();
-        });
   }
 
   @Test
@@ -716,6 +720,71 @@ public abstract class DistributedTransactionIntegrationTestBase {
     assertThat(state).isEqualTo(TransactionState.ABORTED);
   }
 
+  @Test
+  public void
+      get_GetWithProjectionOnNonPrimaryKeyColumnsForGivenForCommittedRecord_ShouldReturnOnlyProjectedColumns()
+          throws TransactionException {
+    // Arrange
+    populateSingleRecord();
+    DistributedTransaction transaction = manager.start();
+    Get get = prepareGet(0, 0).withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
+
+    // Act
+    Optional<Result> result = transaction.get(get);
+    transaction.commit();
+
+    // Assert
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getContainedColumnNames()).containsOnly(BALANCE, SOME_COLUMN);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(result.get().isNull(SOME_COLUMN)).isTrue();
+  }
+
+  @Test
+  public void
+      scan_ScanWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns()
+          throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.start();
+    populateSingleRecord();
+    Scan scan = prepareScan(0, 0, 0).withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
+
+    // Act
+    List<Result> results = transaction.scan(scan);
+    transaction.commit();
+
+    // Assert
+    results.forEach(
+        result -> {
+          assertThat(result.getContainedColumnNames()).containsOnly(BALANCE, SOME_COLUMN);
+          assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+          assertThat(result.isNull(SOME_COLUMN)).isTrue();
+        });
+  }
+
+  @Test
+  public void
+      scan_ScanAllWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns()
+          throws TransactionException {
+    // Arrange
+    populateSingleRecord();
+    DistributedTransaction transaction = manager.start();
+    ScanAll scanAll = prepareScanAll().withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
+
+    // Act
+    List<Result> results = transaction.scan(scanAll);
+    transaction.commit();
+
+    // Assert
+    ExpectedResult expectedResult =
+        new ExpectedResultBuilder()
+            .nonKeyColumns(
+                ImmutableList.of(
+                    IntColumn.of(BALANCE, INITIAL_BALANCE), IntColumn.ofNull(SOME_COLUMN)))
+            .build();
+    assertResultsContainsExactlyInAnyOrder(results, Collections.singletonList(expectedResult));
+  }
+
   private void populateRecords() throws TransactionException {
     DistributedTransaction transaction = manager.start();
     IntStream.range(0, NUM_ACCOUNTS)
@@ -738,6 +807,17 @@ public abstract class DistributedTransactionIntegrationTestBase {
                             throw new RuntimeException(e);
                           }
                         }));
+    transaction.commit();
+  }
+
+  private void populateSingleRecord() throws TransactionException {
+    Put put =
+        new Put(Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0))
+            .forNamespace(namespace)
+            .forTable(TABLE)
+            .withIntValue(BALANCE, INITIAL_BALANCE);
+    DistributedTransaction transaction = manager.start();
+    transaction.put(put);
     transaction.commit();
   }
 

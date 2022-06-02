@@ -163,8 +163,7 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
         .isEqualTo(Optional.of(new TextValue(columnName2, Integer.toString(pKey + cKey))));
     assertThat(actual.get().getValue(columnName3))
         .isEqualTo(Optional.of(new IntValue(columnName3, pKey + cKey)));
-    assertThat(actual.get().getValue(columnName4).isPresent())
-        .isTrue(); // since it's clustering key
+    assertThat(actual.get().getValue(columnName4).isPresent()).isFalse();
     assertThat(actual.get().getValue(columnName5).isPresent()).isFalse();
   }
 
@@ -184,28 +183,18 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
     List<Result> actual = scanAll(scan);
 
     // Assert
-    assertThat(actual.size()).isEqualTo(3);
-    assertThat(actual.get(0).getValue(columnName1).isPresent()).isTrue();
-    assertThat(actual.get(0).getValue(columnName1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(0).getValue(columnName4).isPresent()).isTrue();
-    assertThat(actual.get(0).getValue(columnName4).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(1).getValue(columnName1).isPresent()).isTrue();
-    assertThat(actual.get(1).getValue(columnName1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(1).getValue(columnName4).isPresent()).isTrue();
-    assertThat(actual.get(1).getValue(columnName4).get().getAsInt()).isEqualTo(1);
-    assertThat(actual.get(2).getValue(columnName1).isPresent()).isTrue();
-    assertThat(actual.get(2).getValue(columnName1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(2).getValue(columnName4).isPresent()).isTrue();
-    assertThat(actual.get(2).getValue(columnName4).get().getAsInt()).isEqualTo(2);
-
     actual.forEach(
         a -> {
-          assertThat(a.getValue(columnName1).isPresent()).isTrue();
-          assertThat(a.getValue(columnName2).isPresent()).isTrue();
-          assertThat(a.getValue(columnName3).isPresent()).isTrue();
-          assertThat(a.getValue(columnName4).isPresent()).isTrue(); // since it's clustering key
-          assertThat(a.getValue(columnName5).isPresent()).isFalse();
+          assertThat(a.getContainedColumnNames())
+              .containsOnly(columnName1, columnName2, columnName3);
         });
+    assertThat(actual.size()).isEqualTo(3);
+    assertThat(actual.get(0).getInt(columnName1)).isEqualTo(0);
+    assertThat(actual.get(0).getInt(columnName3)).isEqualTo(0);
+    assertThat(actual.get(1).getInt(columnName1)).isEqualTo(0);
+    assertThat(actual.get(1).getInt(columnName3)).isEqualTo(1);
+    assertThat(actual.get(2).getInt(columnName1)).isEqualTo(0);
+    assertThat(actual.get(2).getInt(columnName3)).isEqualTo(2);
   }
 
   @Test

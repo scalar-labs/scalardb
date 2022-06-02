@@ -197,23 +197,16 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act
     Get get = prepareGet(pKey, cKey);
-    get.withProjection(COL_NAME1)
-        .withProjection(COL_NAME2)
-        .withProjection(COL_NAME3)
-        .withProjection(COL_NAME6);
+    get.withProjections(Arrays.asList(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME6));
     Optional<Result> actual = storage.get(get);
 
     // Assert
-    assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get().getValue(COL_NAME2))
-        .isEqualTo(Optional.of(new TextValue(COL_NAME2, Integer.toString(pKey + cKey))));
-    assertThat(actual.get().getValue(COL_NAME3))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME3, pKey + cKey)));
-    assertThat(actual.get().getValue(COL_NAME4).isPresent()).isTrue(); // since it's clustering key
-    assertThat(actual.get().getValue(COL_NAME5).isPresent()).isFalse();
-    assertThat(actual.get().contains(COL_NAME6)).isTrue();
+    assertThat(actual).isNotEmpty();
+    assertThat(actual.get().getContainedColumnNames())
+        .containsOnly(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME6);
+    assertThat(actual.get().getInt(COL_NAME1)).isEqualTo(0);
+    assertThat(actual.get().getText(COL_NAME2)).isEqualTo("0");
+    assertThat(actual.get().getInt(COL_NAME3)).isEqualTo(0);
     assertThat(actual.get().isNull(COL_NAME6)).isTrue();
   }
 
@@ -226,7 +219,7 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act
     Scan scan =
-        new Scan(new Key(COL_NAME1, pKey))
+        new Scan(Key.ofInt(COL_NAME1, pKey))
             .withProjection(COL_NAME1)
             .withProjection(COL_NAME2)
             .withProjection(COL_NAME3)
@@ -234,30 +227,20 @@ public abstract class DistributedStorageIntegrationTestBase {
     List<Result> actual = scanAll(scan);
 
     // Assert
-    assertThat(actual.size()).isEqualTo(3);
-    assertThat(actual.get(0).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(actual.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(0).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(actual.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(1).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(actual.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(1).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(actual.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
-    assertThat(actual.get(2).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(actual.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(2).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(actual.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
-
     actual.forEach(
         a -> {
-          assertThat(a.getValue(COL_NAME1).isPresent()).isTrue();
-          assertThat(a.getValue(COL_NAME2).isPresent()).isTrue();
-          assertThat(a.getValue(COL_NAME3).isPresent()).isTrue();
-          assertThat(a.getValue(COL_NAME4).isPresent()).isTrue(); // since it's clustering key
-          assertThat(a.getValue(COL_NAME5).isPresent()).isFalse();
-          assertThat(a.contains(COL_NAME6)).isTrue();
+          assertThat(a.getContainedColumnNames())
+              .containsOnly(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME6);
+          assertThat(a.getInt(COL_NAME1)).isEqualTo(0);
           assertThat(a.isNull(COL_NAME6)).isTrue();
         });
+    assertThat(actual.size()).isEqualTo(3);
+    assertThat(actual.get(0).getText(COL_NAME2)).isEqualTo("0");
+    assertThat(actual.get(1).getText(COL_NAME2)).isEqualTo("1");
+    assertThat(actual.get(2).getText(COL_NAME2)).isEqualTo("2");
+    assertThat(actual.get(0).getInt(COL_NAME3)).isEqualTo(0);
+    assertThat(actual.get(1).getInt(COL_NAME3)).isEqualTo(1);
+    assertThat(actual.get(2).getInt(COL_NAME3)).isEqualTo(2);
   }
 
   @Test
@@ -1460,7 +1443,8 @@ public abstract class DistributedStorageIntegrationTestBase {
                                       ImmutableList.of(
                                           TextColumn.of(COL_NAME2, Integer.toString(i + j)),
                                           IntColumn.of(COL_NAME3, i + j),
-                                          BooleanColumn.of(COL_NAME5, j % 2 == 0)));
+                                          BooleanColumn.of(COL_NAME5, j % 2 == 0),
+                                          BlobColumn.ofNull(COL_NAME6)));
                           expectedResults.add(erBuilder.build());
                         }));
     assertResultsContainsExactlyInAnyOrder(results, expectedResults);
@@ -1489,18 +1473,42 @@ public abstract class DistributedStorageIntegrationTestBase {
             new ExpectedResultBuilder()
                 .partitionKey(Key.ofInt(COL_NAME1, 1))
                 .clusteringKey(Key.ofInt(COL_NAME4, 1))
+                .nonKeyColumns(
+                    Arrays.asList(
+                        TextColumn.ofNull(COL_NAME2),
+                        IntColumn.ofNull(COL_NAME3),
+                        BooleanColumn.ofNull(COL_NAME5),
+                        BlobColumn.ofNull(COL_NAME6)))
                 .build(),
             new ExpectedResultBuilder()
                 .partitionKey(Key.ofInt(COL_NAME1, 1))
                 .clusteringKey(Key.ofInt(COL_NAME4, 2))
+                .nonKeyColumns(
+                    Arrays.asList(
+                        TextColumn.ofNull(COL_NAME2),
+                        IntColumn.ofNull(COL_NAME3),
+                        BooleanColumn.ofNull(COL_NAME5),
+                        BlobColumn.ofNull(COL_NAME6)))
                 .build(),
             new ExpectedResultBuilder()
                 .partitionKey(Key.ofInt(COL_NAME1, 2))
                 .clusteringKey(Key.ofInt(COL_NAME4, 1))
+                .nonKeyColumns(
+                    Arrays.asList(
+                        TextColumn.ofNull(COL_NAME2),
+                        IntColumn.ofNull(COL_NAME3),
+                        BooleanColumn.ofNull(COL_NAME5),
+                        BlobColumn.ofNull(COL_NAME6)))
                 .build(),
             new ExpectedResultBuilder()
                 .partitionKey(Key.ofInt(COL_NAME1, 3))
                 .clusteringKey(Key.ofInt(COL_NAME4, 0))
+                .nonKeyColumns(
+                    Arrays.asList(
+                        TextColumn.ofNull(COL_NAME2),
+                        IntColumn.ofNull(COL_NAME3),
+                        BooleanColumn.ofNull(COL_NAME5),
+                        BlobColumn.ofNull(COL_NAME6)))
                 .build()));
     assertThat(results).hasSize(2);
   }
@@ -1513,11 +1521,7 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act
     ScanAll scanAll =
-        new ScanAll()
-            .withProjection(COL_NAME1)
-            .withProjection(COL_NAME2)
-            .withProjection(COL_NAME3)
-            .withProjection(COL_NAME6);
+        new ScanAll().withProjections(Arrays.asList(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME6));
     List<Result> actualResults = scanAll(scanAll);
 
     // Assert
@@ -1530,18 +1534,18 @@ public abstract class DistributedStorageIntegrationTestBase {
                         j -> {
                           ExpectedResultBuilder erBuilder =
                               new ExpectedResultBuilder().partitionKey(Key.ofInt(COL_NAME1, i));
-                          erBuilder.clusteringKey(Key.ofInt(COL_NAME4, j));
                           erBuilder.nonKeyColumns(
                               ImmutableList.of(
                                   TextColumn.of(COL_NAME2, Integer.toString(i + j)),
-                                  IntColumn.of(COL_NAME3, i + j)));
-                          BlobColumn.ofNull(COL_NAME6);
+                                  IntColumn.of(COL_NAME3, i + j),
+                                  BlobColumn.ofNull(COL_NAME6)));
                           expectedResults.add(erBuilder.build());
                         }));
     assertResultsContainsExactlyInAnyOrder(actualResults, expectedResults);
     actualResults.forEach(
         actualResult -> {
-          assertThat(actualResult.contains(COL_NAME5)).isFalse();
+          assertThat(actualResult.getContainedColumnNames())
+              .containsOnly(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME6);
         });
   }
 
@@ -1568,10 +1572,89 @@ public abstract class DistributedStorageIntegrationTestBase {
           new ExpectedResultBuilder()
               .partitionKey(partitionKey)
               .clusteringKey(clusteringKey)
-              .nonKeyColumns(Collections.singletonList(BlobColumn.of(COL_NAME6, new byte[5000])))
+              .nonKeyColumns(
+                  Arrays.asList(
+                      TextColumn.ofNull(COL_NAME2),
+                      IntColumn.ofNull(COL_NAME3),
+                      BooleanColumn.ofNull(COL_NAME5),
+                      BlobColumn.of(COL_NAME6, new byte[5000])))
               .build());
     }
     assertResultsContainsExactlyInAnyOrder(results, expectedResults);
+  }
+
+  @Test
+  public void get_GetWithProjectionsGivenOnNonPrimaryKey_ShouldRetrieveOnlyProjectedColumns()
+      throws ExecutionException {
+    // Arrange
+    Put put =
+        new Put(Key.ofInt(COL_NAME1, 0), Key.ofInt(COL_NAME4, 0))
+            .withTextValue(COL_NAME2, "foo")
+            .withIntValue(COL_NAME3, 0)
+            .withBooleanValue(COL_NAME5, true)
+            .forNamespace(namespace)
+            .forTable(TABLE);
+    storage.put(put);
+
+    // Act
+    Get get = prepareGet(0, 0).withProjection(COL_NAME3).withProjection(COL_NAME5);
+    Optional<Result> actual = storage.get(get);
+
+    // Assert
+    assertThat(actual.isPresent()).isTrue();
+    Result result = actual.get();
+    assertThat(result.getContainedColumnNames()).containsOnly(COL_NAME3, COL_NAME5);
+    assertThat(result.getInt(COL_NAME3)).isEqualTo(0);
+    assertThat(result.getBoolean(COL_NAME5)).isTrue();
+  }
+
+  @Test
+  public void scan_ScanWithProjectionsGivenOnNonPrimaryKey_ShouldRetrieveOnlyProjectedColumns()
+      throws ExecutionException, IOException {
+    // Arrange
+    Put put =
+        new Put(Key.ofInt(COL_NAME1, 0), Key.ofInt(COL_NAME4, 0))
+            .withTextValue(COL_NAME2, "foo")
+            .withIntValue(COL_NAME3, 0)
+            .withBooleanValue(COL_NAME5, true)
+            .forNamespace(namespace)
+            .forTable(TABLE);
+    storage.put(put);
+
+    // Act
+    Scan scan =
+        new Scan(Key.ofInt(COL_NAME1, 0)).withProjection(COL_NAME3).withProjection(COL_NAME5);
+    List<Result> results = scanAll(scan);
+
+    // Assert
+    assertThat(results.size()).isEqualTo(1);
+    assertThat(results.get(0).getContainedColumnNames()).containsOnly(COL_NAME3, COL_NAME5);
+    assertThat(results.get(0).getInt(COL_NAME3)).isEqualTo(0);
+    assertThat(results.get(0).getBoolean(COL_NAME5)).isTrue();
+  }
+
+  @Test
+  public void scan_ScanAllWithProjectionsGivenOnNonPrimaryKey_ShouldRetrieveOnlyProjectedColumns()
+      throws ExecutionException, IOException {
+    // Arrange
+    Put put =
+        new Put(Key.ofInt(COL_NAME1, 0), Key.ofInt(COL_NAME4, 0))
+            .withTextValue(COL_NAME2, "foo")
+            .withIntValue(COL_NAME3, 0)
+            .withBooleanValue(COL_NAME5, true)
+            .forNamespace(namespace)
+            .forTable(TABLE);
+    storage.put(put);
+
+    // Act
+    ScanAll scanAll = new ScanAll().withProjection(COL_NAME3).withProjection(COL_NAME5);
+    List<Result> results = scanAll(scanAll);
+
+    // Assert
+    assertThat(results.size()).isEqualTo(1);
+    assertThat(results.get(0).getContainedColumnNames()).containsOnly(COL_NAME3, COL_NAME5);
+    assertThat(results.get(0).getInt(COL_NAME3)).isEqualTo(0);
+    assertThat(results.get(0).getBoolean(COL_NAME5)).isTrue();
   }
 
   private void populateRecords() {
