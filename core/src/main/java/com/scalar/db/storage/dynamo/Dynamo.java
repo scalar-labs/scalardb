@@ -65,7 +65,7 @@ public class Dynamo extends AbstractDistributedStorage {
     metadataManager =
         new TableMetadataManager(
             new DynamoAdmin(client, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
-    operationChecker = new OperationChecker(metadataManager);
+    operationChecker = new DynamoOperationChecker(metadataManager);
 
     selectStatementHandler = new SelectStatementHandler(client, metadataManager);
     putStatementHandler = new PutStatementHandler(client, metadataManager);
