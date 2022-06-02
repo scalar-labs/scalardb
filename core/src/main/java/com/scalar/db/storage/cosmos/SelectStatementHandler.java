@@ -193,7 +193,7 @@ public class SelectStatementHandler extends StatementHandler {
   private void addJsonFormattedProjectionsFieldForAttribute(
       List<String> projectedFields, String rootAttributeName, Stream<String> projectedColumnNames) {
     // If rootAttributeName="partitionKey", the following will be mapped to the
-    // "Record.partitionKey"  map upon the query result deserialization.
+    // "Record.partitionKey" map upon the query result deserialization.
     // For example, to project the partition keys c1 and c2, the partitionKey field will be
     // `{"c1": r.partitionKey["c1"], "c2":r.partitionKey["c2"]} as partitionKey`
 
