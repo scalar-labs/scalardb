@@ -215,7 +215,7 @@ public class OperationChecker {
     return metadata;
   }
 
-  private void checkColumnsInPut(Put put, TableMetadata metadata) {
+  protected void checkColumnsInPut(Put put, TableMetadata metadata) {
     for (Column<?> column : put.getColumns().values()) {
       if (!new ColumnChecker(metadata, false, false, false, true).check(column)) {
         throw new IllegalArgumentException(
