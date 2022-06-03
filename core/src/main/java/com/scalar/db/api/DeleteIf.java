@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -91,5 +92,10 @@ public class DeleteIf implements MutationCondition {
     }
     DeleteIf other = (DeleteIf) o;
     return expressions.equals(other.expressions);
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this).add("expressions", expressions).toString();
   }
 }
