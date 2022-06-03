@@ -1,6 +1,10 @@
 package com.scalar.db.api;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.base.MoreObjects;
+import com.scalar.db.api.builder.GetBuilder.BuildableFromExisting;
+import com.scalar.db.api.builder.GetBuilder.Namespace;
 import com.scalar.db.io.Key;
 import java.util.Collection;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -35,6 +39,27 @@ public class Get extends Selection {
 
   public Get(Get get) {
     super(get);
+  }
+
+  /**
+   * Build a {@code Get} operation using a builder
+   *
+   * @return a {@code Get} operation builder
+   */
+  public static Namespace newBuilder() {
+    return new Namespace();
+  }
+
+  /**
+   * Build a {@code Get} operation from an existing {@code Get} object using a builder. The builder
+   * will be parametrized by default with all the existing {@code Get} attributes
+   *
+   * @param get an existing {@code Get} operation
+   * @return a {@code Get} operation builder
+   */
+  public static BuildableFromExisting newBuilder(Get get) {
+    checkNotNull(get);
+    return new BuildableFromExisting(get);
   }
 
   @Override

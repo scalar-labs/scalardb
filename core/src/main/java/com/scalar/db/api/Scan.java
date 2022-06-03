@@ -1,6 +1,10 @@
 package com.scalar.db.api;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.base.MoreObjects;
+import com.scalar.db.api.builder.ScanBuilder.BuildableScanOrScanAllFromExisting;
+import com.scalar.db.api.builder.ScanBuilder.Namespace;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -22,6 +26,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public class Scan extends Selection {
+
   private Optional<Key> startClusteringKey;
   private boolean startInclusive;
   private Optional<Key> endClusteringKey;
@@ -50,6 +55,27 @@ public class Scan extends Selection {
     endInclusive = scan.endInclusive;
     orderings = new ArrayList<>(scan.orderings);
     limit = scan.limit;
+  }
+
+  /**
+   * Build a {@code Scan} or {@code ScanAll} operation using a builder
+   *
+   * @return a {@code Scan} operation builder
+   */
+  public static Namespace newBuilder() {
+    return new Namespace();
+  }
+
+  /**
+   * Build a {@code Scan} operation from an existing {@code Scan} object using a builder. The
+   * builder will be parametrized by default with all the existing {@code Scan} attributes
+   *
+   * @param scan an existing {@code Scan} operation
+   * @return a {@code Scan} operation builder
+   */
+  public static BuildableScanOrScanAllFromExisting newBuilder(Scan scan) {
+    checkNotNull(scan);
+    return new BuildableScanOrScanAllFromExisting(scan);
   }
 
   /**

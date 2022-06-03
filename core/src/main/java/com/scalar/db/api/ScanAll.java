@@ -24,26 +24,61 @@ public class ScanAll extends Scan {
     super(scanAll);
   }
 
+  /**
+   * Guaranteed to throw an exception
+   *
+   * @throws UnsupportedOperationException always
+   * @deprecated Unsupported operation.
+   */
+  @Deprecated
   @Override
   public ScanAll withStart(Key clusteringKey) {
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * Guaranteed to throw an exception
+   *
+   * @throws UnsupportedOperationException always
+   * @deprecated Unsupported operation.
+   */
+  @Deprecated
   @Override
   public ScanAll withStart(Key clusteringKey, boolean inclusive) {
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * Guaranteed to throw an exception
+   *
+   * @throws UnsupportedOperationException always
+   * @deprecated Unsupported operation.
+   */
+  @Deprecated
   @Override
   public Scan withEnd(Key clusteringKey) {
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * Guaranteed to throw an exception
+   *
+   * @throws UnsupportedOperationException always
+   * @deprecated Unsupported operation.
+   */
+  @Deprecated
   @Override
   public Scan withEnd(Key clusteringKey, boolean inclusive) {
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * Guaranteed to throw an exception
+   *
+   * @throws UnsupportedOperationException always
+   * @deprecated Unsupported operation.
+   */
+  @Deprecated
   @Override
   public ScanAll withOrdering(Ordering ordering) {
     throw new UnsupportedOperationException();

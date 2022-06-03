@@ -1,8 +1,12 @@
 package com.scalar.db.api;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.scalar.db.api.builder.PutBuilder.BuildableFromExisting;
+import com.scalar.db.api.builder.PutBuilder.Namespace;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
@@ -31,8 +35,8 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public class Put extends Mutation {
-  private final Map<String, Column<?>> columns;
 
+  private final Map<String, Column<?>> columns;
   /**
    * Constructs a {@code Put} with the specified partition {@link Key}.
    *
@@ -57,6 +61,27 @@ public class Put extends Mutation {
   public Put(Put put) {
     super(put);
     columns = new LinkedHashMap<>(put.columns);
+  }
+
+  /**
+   * Build a {@code Put} operation using a builder
+   *
+   * @return a {@code Put} operation builder
+   */
+  public static Namespace newBuilder() {
+    return new Namespace();
+  }
+
+  /**
+   * Build a {@code Put} operation from an existing {@code Put} object using a builder. The builder
+   * will be parametrized by default with all the existing {@code Put} object attributes
+   *
+   * @param put an existing {@code Put} operation
+   * @return a {@code Put} operation builder
+   */
+  public static BuildableFromExisting newBuilder(Put put) {
+    checkNotNull(put);
+    return new BuildableFromExisting(put);
   }
 
   /**
@@ -216,7 +241,7 @@ public class Put extends Mutation {
    * Adds the specified FLOAT value to the list of put values.
    *
    * @param columnName a column name of the value
-   * @param value a value to put
+   * @param value a FLOAT value to put
    * @return this object
    */
   public Put withFloatValue(String columnName, float value) {
@@ -228,7 +253,7 @@ public class Put extends Mutation {
    * Adds the specified FLOAT value to the list of put values.
    *
    * @param columnName a column name of the value
-   * @param value a value to put
+   * @param value a FLOAT value to put
    * @return this object
    */
   public Put withFloatValue(String columnName, @Nullable Float value) {

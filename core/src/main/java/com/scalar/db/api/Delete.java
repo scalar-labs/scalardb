@@ -1,6 +1,10 @@
 package com.scalar.db.api;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.base.MoreObjects;
+import com.scalar.db.api.builder.DeleteBuilder.BuildableFromExisting;
+import com.scalar.db.api.builder.DeleteBuilder.Namespace;
 import com.scalar.db.io.Key;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -11,6 +15,26 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public class Delete extends Mutation {
+  /**
+   * Build a {@code Delete} operation using a builder
+   *
+   * @return a {@code Delete} operation builder
+   */
+  public static Namespace newBuilder() {
+    return new Namespace();
+  }
+
+  /**
+   * Build a {@code Delete} operation from an existing {@code Delete} object using a builder. The
+   * builder will be parametrized by default with all the existing {@code Delete} attributes
+   *
+   * @param delete an existing {@code Delete} operation
+   * @return a {@code Delete} operation builder
+   */
+  public static BuildableFromExisting newBuilder(Delete delete) {
+    checkNotNull(delete);
+    return new BuildableFromExisting(delete);
+  }
 
   /**
    * Constructs a {@code Delete} with the specified partition {@code Key}.
