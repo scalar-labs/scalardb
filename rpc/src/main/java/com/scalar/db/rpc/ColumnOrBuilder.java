@@ -3,8 +3,8 @@
 
 package com.scalar.db.rpc;
 
-@java.lang.Deprecated public interface ValueOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.Value)
+public interface ColumnOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:rpc.Column)
     com.google.protobuf.MessageOrBuilder {
 
   /**
@@ -75,34 +75,32 @@ package com.scalar.db.rpc;
   double getDoubleValue();
 
   /**
-   * <code>.rpc.Value.TextValue text_value = 7;</code>
+   * <code>string text_value = 7;</code>
    * @return Whether the textValue field is set.
    */
   boolean hasTextValue();
   /**
-   * <code>.rpc.Value.TextValue text_value = 7;</code>
+   * <code>string text_value = 7;</code>
    * @return The textValue.
    */
-  com.scalar.db.rpc.Value.TextValue getTextValue();
+  java.lang.String getTextValue();
   /**
-   * <code>.rpc.Value.TextValue text_value = 7;</code>
+   * <code>string text_value = 7;</code>
+   * @return The bytes for textValue.
    */
-  com.scalar.db.rpc.Value.TextValueOrBuilder getTextValueOrBuilder();
+  com.google.protobuf.ByteString
+      getTextValueBytes();
 
   /**
-   * <code>.rpc.Value.BlobValue blob_value = 8;</code>
+   * <code>bytes blob_value = 8;</code>
    * @return Whether the blobValue field is set.
    */
   boolean hasBlobValue();
   /**
-   * <code>.rpc.Value.BlobValue blob_value = 8;</code>
+   * <code>bytes blob_value = 8;</code>
    * @return The blobValue.
    */
-  com.scalar.db.rpc.Value.BlobValue getBlobValue();
-  /**
-   * <code>.rpc.Value.BlobValue blob_value = 8;</code>
-   */
-  com.scalar.db.rpc.Value.BlobValueOrBuilder getBlobValueOrBuilder();
+  com.google.protobuf.ByteString getBlobValue();
 
-  public com.scalar.db.rpc.Value.ValueCase getValueCase();
+  public com.scalar.db.rpc.Column.ValueCase getValueCase();
 }

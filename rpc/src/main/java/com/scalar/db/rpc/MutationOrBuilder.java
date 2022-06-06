@@ -103,42 +103,86 @@ public interface MutationOrBuilder extends
    * only for Put operations
    * </pre>
    *
-   * <code>repeated .rpc.Value value = 8;</code>
+   * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
    */
-  java.util.List<com.scalar.db.rpc.Value> 
+  @java.lang.Deprecated java.util.List<com.scalar.db.rpc.Value> 
       getValueList();
   /**
    * <pre>
    * only for Put operations
    * </pre>
    *
-   * <code>repeated .rpc.Value value = 8;</code>
+   * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
    */
-  com.scalar.db.rpc.Value getValue(int index);
+  @java.lang.Deprecated com.scalar.db.rpc.Value getValue(int index);
   /**
    * <pre>
    * only for Put operations
    * </pre>
    *
-   * <code>repeated .rpc.Value value = 8;</code>
+   * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
    */
-  int getValueCount();
+  @java.lang.Deprecated int getValueCount();
   /**
    * <pre>
    * only for Put operations
    * </pre>
    *
-   * <code>repeated .rpc.Value value = 8;</code>
+   * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
    */
-  java.util.List<? extends com.scalar.db.rpc.ValueOrBuilder> 
+  @java.lang.Deprecated java.util.List<? extends com.scalar.db.rpc.ValueOrBuilder> 
       getValueOrBuilderList();
   /**
    * <pre>
    * only for Put operations
    * </pre>
    *
-   * <code>repeated .rpc.Value value = 8;</code>
+   * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
    */
-  com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder(
+  @java.lang.Deprecated com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder(
+      int index);
+
+  /**
+   * <pre>
+   * only for Put operations
+   * </pre>
+   *
+   * <code>repeated .rpc.Column column = 9;</code>
+   */
+  java.util.List<com.scalar.db.rpc.Column> 
+      getColumnList();
+  /**
+   * <pre>
+   * only for Put operations
+   * </pre>
+   *
+   * <code>repeated .rpc.Column column = 9;</code>
+   */
+  com.scalar.db.rpc.Column getColumn(int index);
+  /**
+   * <pre>
+   * only for Put operations
+   * </pre>
+   *
+   * <code>repeated .rpc.Column column = 9;</code>
+   */
+  int getColumnCount();
+  /**
+   * <pre>
+   * only for Put operations
+   * </pre>
+   *
+   * <code>repeated .rpc.Column column = 9;</code>
+   */
+  java.util.List<? extends com.scalar.db.rpc.ColumnOrBuilder> 
+      getColumnOrBuilderList();
+  /**
+   * <pre>
+   * only for Put operations
+   * </pre>
+   *
+   * <code>repeated .rpc.Column column = 9;</code>
+   */
+  com.scalar.db.rpc.ColumnOrBuilder getColumnOrBuilder(
       int index);
 }
