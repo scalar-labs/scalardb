@@ -482,6 +482,31 @@ public class OperationCheckerTest {
 
   @Test
   public void
+      whenCheckingScanOperationWithEmptyClusteringKey_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
+    Key startClusteringKey = Key.of();
+    Key endClusteringKey = Key.of();
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
+    int limit = 10;
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withEnd(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit)
+            .withOrdering(Scan.Ordering.asc(CKEY1))
+            .withOrdering(Scan.Ordering.desc(CKEY2))
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(scan))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
       whenCheckingScanOperationWithNegativeLimitNumber_shouldThrowIllegalArgumentException() {
     // Arrange
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
