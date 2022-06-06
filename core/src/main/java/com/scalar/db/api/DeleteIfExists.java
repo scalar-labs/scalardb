@@ -1,5 +1,6 @@
 package com.scalar.db.api;
 
+import com.google.common.base.MoreObjects;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -60,5 +61,10 @@ public class DeleteIfExists implements MutationCondition {
   @Override
   public int hashCode() {
     return DeleteIfExists.class.hashCode();
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this).toString();
   }
 }
