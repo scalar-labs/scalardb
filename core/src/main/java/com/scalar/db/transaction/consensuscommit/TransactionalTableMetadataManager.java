@@ -22,7 +22,7 @@ public class TransactionalTableMetadataManager {
       DistributedStorageAdmin admin, long cacheExpirationTimeSecs) {
 
     CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
-    if (cacheExpirationTimeSecs > 0) {
+    if (cacheExpirationTimeSecs >= 0) {
       builder.expireAfterWrite(cacheExpirationTimeSecs, TimeUnit.SECONDS);
     }
     tableMetadataCache =
