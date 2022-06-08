@@ -1,5 +1,6 @@
 package com.scalar.db.api;
 
+import com.google.common.base.MoreObjects;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
@@ -331,6 +332,14 @@ public class ConditionalExpression {
   @Override
   public int hashCode() {
     return Objects.hash(column, operator);
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("column", column)
+        .add("operator", operator)
+        .toString();
   }
 
   public enum Operator {
