@@ -158,21 +158,8 @@ public final class ConsensusCommitUtils {
    * @return whether the specified column is a transactional meta column or not
    */
   public static boolean isTransactionalMetaColumn(String columnName, TableMetadata tableMetadata) {
-    return isTransactionalMetaColumn(columnName, tableMetadata.getColumnNames());
-  }
-
-  /**
-   * Returns whether the specified column is a transactional meta column or not.
-   *
-   * @param columnName a column name
-   * @param allColumnNames a set of all the column names
-   * @return whether the specified column is a transactional meta column or not
-   */
-  public static boolean isTransactionalMetaColumn(String columnName, Set<String> allColumnNames) {
-    if (AFTER_IMAGE_META_COLUMNS.containsKey(columnName)) {
-      return true;
-    }
-    return isBeforeImageColumn(columnName, allColumnNames);
+    return AFTER_IMAGE_META_COLUMNS.containsKey(columnName)
+        || isBeforeImageColumn(columnName, tableMetadata);
   }
 
   /**
@@ -183,26 +170,20 @@ public final class ConsensusCommitUtils {
    * @return whether the specified column is transactional or not
    */
   public static boolean isBeforeImageColumn(String columnName, TableMetadata tableMetadata) {
-    return isBeforeImageColumn(columnName, tableMetadata.getColumnNames());
-  }
-
-  /**
-   * Returns whether the specified column is a before image column or not.
-   *
-   * @param columnName a column name
-   * @param allColumnNames a set of all the column names
-   * @return whether the specified column is transactional or not
-   */
-  public static boolean isBeforeImageColumn(String columnName, Set<String> allColumnNames) {
-    if (!allColumnNames.contains(columnName)) {
+    if (!tableMetadata.getColumnNames().contains(columnName)
+        || tableMetadata.getPartitionKeyNames().contains(columnName)
+        || tableMetadata.getClusteringKeyNames().contains(columnName)) {
       return false;
     }
+
     if (BEFORE_IMAGE_META_COLUMNS.containsKey(columnName)) {
       return true;
     }
     if (columnName.startsWith(Attribute.BEFORE_PREFIX)) {
       // if the column name without the "before_" prefix exists, it's a transactional meta column
-      return allColumnNames.contains(columnName.substring(Attribute.BEFORE_PREFIX.length()));
+      return tableMetadata
+          .getColumnNames()
+          .contains(columnName.substring(Attribute.BEFORE_PREFIX.length()));
     }
     return false;
   }
@@ -215,23 +196,9 @@ public final class ConsensusCommitUtils {
    * @return whether the specified column is transactional or not
    */
   public static boolean isAfterImageColumn(String columnName, TableMetadata tableMetadata) {
-    return isAfterImageColumn(columnName, tableMetadata.getColumnNames());
-  }
-
-  /**
-   * Returns whether the specified column is an after image column or not.
-   *
-   * @param columnName a column name
-   * @param allColumnNames a set of all the column names
-   * @return whether the specified column is transactional or not
-   */
-  public static boolean isAfterImageColumn(String columnName, Set<String> allColumnNames) {
-    if (!allColumnNames.contains(columnName)) {
+    if (!tableMetadata.getColumnNames().contains(columnName)) {
       return false;
     }
-    if (AFTER_IMAGE_META_COLUMNS.containsKey(columnName)) {
-      return true;
-    }
-    return !isBeforeImageColumn(columnName, allColumnNames);
+    return !isBeforeImageColumn(columnName, tableMetadata);
   }
 }
