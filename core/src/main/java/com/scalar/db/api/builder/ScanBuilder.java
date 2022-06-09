@@ -18,7 +18,6 @@ import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import javax.annotation.Nullable;
 
 public class ScanBuilder {
@@ -155,19 +154,20 @@ public class ScanBuilder {
     }
   }
 
-  public static class BuildableScanFromExisting
-      implements OperationBuilder.Namespace<BuildableScanFromExisting>,
-          OperationBuilder.Table<BuildableScanFromExisting>,
-          OperationBuilder.PartitionKey<BuildableScanFromExisting>,
-          ClusteringKeyFiltering<BuildableScanFromExisting>,
-          Ordering<BuildableScanFromExisting>,
-          ClearOrderings<BuildableScanFromExisting>,
-          Limit<BuildableScanFromExisting>,
-          Projection<BuildableScanFromExisting>,
-          ClearProjections<BuildableScanFromExisting>,
-          Consistency<BuildableScanFromExisting> {
+  public static class BuildableScanOrScanAllFromExisting
+      implements OperationBuilder.Namespace<BuildableScanOrScanAllFromExisting>,
+          OperationBuilder.Table<BuildableScanOrScanAllFromExisting>,
+          OperationBuilder.PartitionKey<BuildableScanOrScanAllFromExisting>,
+          ClusteringKeyFiltering<BuildableScanOrScanAllFromExisting>,
+          Ordering<BuildableScanOrScanAllFromExisting>,
+          ClearOrderings<BuildableScanOrScanAllFromExisting>,
+          Limit<BuildableScanOrScanAllFromExisting>,
+          Projection<BuildableScanOrScanAllFromExisting>,
+          ClearProjections<BuildableScanOrScanAllFromExisting>,
+          Consistency<BuildableScanOrScanAllFromExisting> {
     private final List<String> projections = new ArrayList<>();
     private final List<Scan.Ordering> orderings = new ArrayList<>();
+    private final boolean isScanAll;
     @Nullable private String namespaceName;
     @Nullable private String tableName;
     private Key partitionKey;
@@ -178,7 +178,8 @@ public class ScanBuilder {
     private boolean endInclusive;
     private int limit;
 
-    public BuildableScanFromExisting(Scan scan) {
+    public BuildableScanOrScanAllFromExisting(Scan scan) {
+      isScanAll = scan instanceof ScanAll;
       this.namespaceName = scan.forNamespace().orElse(null);
       this.tableName = scan.forTable().orElse(null);
       this.partitionKey = scan.getPartitionKey();
@@ -201,61 +202,64 @@ public class ScanBuilder {
     }
 
     @Override
-    public BuildableScanFromExisting namespace(String namespaceName) {
+    public BuildableScanOrScanAllFromExisting namespace(String namespaceName) {
       checkNotNull(namespaceName);
       this.namespaceName = namespaceName;
       return this;
     }
 
     @Override
-    public BuildableScanFromExisting table(String tableName) {
+    public BuildableScanOrScanAllFromExisting table(String tableName) {
       checkNotNull(tableName);
       this.tableName = tableName;
       return this;
     }
 
     @Override
-    public BuildableScanFromExisting partitionKey(Key partitionKey) {
+    public BuildableScanOrScanAllFromExisting partitionKey(Key partitionKey) {
+      checkNotScanAll();
       checkNotNull(partitionKey);
       this.partitionKey = partitionKey;
       return this;
     }
 
     @Override
-    public BuildableScanFromExisting consistency(com.scalar.db.api.Consistency consistency) {
+    public BuildableScanOrScanAllFromExisting consistency(
+        com.scalar.db.api.Consistency consistency) {
       checkNotNull(consistency);
       this.consistency = consistency;
       return this;
     }
 
     @Override
-    public BuildableScanFromExisting projection(String projection) {
+    public BuildableScanOrScanAllFromExisting projection(String projection) {
       checkNotNull(projection);
       this.projections.add(projection);
       return this;
     }
 
     @Override
-    public BuildableScanFromExisting projections(Collection<String> projections) {
+    public BuildableScanOrScanAllFromExisting projections(Collection<String> projections) {
       checkNotNull(projections);
       this.projections.addAll(projections);
       return this;
     }
 
     @Override
-    public BuildableScanFromExisting clearProjections() {
+    public BuildableScanOrScanAllFromExisting clearProjections() {
       this.projections.clear();
       return this;
     }
 
     @Override
-    public BuildableScanFromExisting limit(int limit) {
+    public BuildableScanOrScanAllFromExisting limit(int limit) {
       this.limit = limit;
       return this;
     }
 
     @Override
-    public BuildableScanFromExisting ordering(Scan.Ordering ordering) {
+    public BuildableScanOrScanAllFromExisting ordering(Scan.Ordering ordering) {
+      checkNotScanAll();
       checkNotNull(ordering);
       orderings.add(ordering);
       return this;
@@ -269,7 +273,9 @@ public class ScanBuilder {
      * @return the scan operation builder
      */
     @Override
-    public BuildableScanFromExisting start(@Nullable Key clusteringKey, boolean inclusive) {
+    public BuildableScanOrScanAllFromExisting start(
+        @Nullable Key clusteringKey, boolean inclusive) {
+      checkNotScanAll();
       startClusteringKey = clusteringKey;
       startInclusive = inclusive;
       return this;
@@ -283,7 +289,8 @@ public class ScanBuilder {
      * @return the scan operation builder
      */
     @Override
-    public BuildableScanFromExisting end(@Nullable Key clusteringKey, boolean inclusive) {
+    public BuildableScanOrScanAllFromExisting end(@Nullable Key clusteringKey, boolean inclusive) {
+      checkNotScanAll();
       endClusteringKey = clusteringKey;
       endInclusive = inclusive;
       return this;
@@ -297,7 +304,8 @@ public class ScanBuilder {
      * @return the scan operation builder
      */
     @Override
-    public BuildableScanFromExisting start(@Nullable Key clusteringKey) {
+    public BuildableScanOrScanAllFromExisting start(@Nullable Key clusteringKey) {
+      checkNotScanAll();
       return ClusteringKeyFiltering.super.start(clusteringKey);
     }
 
@@ -310,32 +318,48 @@ public class ScanBuilder {
      * @return the scan operation builder
      */
     @Override
-    public BuildableScanFromExisting end(@Nullable Key clusteringKey) {
+    public BuildableScanOrScanAllFromExisting end(@Nullable Key clusteringKey) {
+      checkNotScanAll();
       return ClusteringKeyFiltering.super.end(clusteringKey);
     }
 
     @Override
-    public BuildableScanFromExisting clearOrderings() {
+    public BuildableScanOrScanAllFromExisting clearOrderings() {
+      checkNotScanAll();
       this.orderings.clear();
       return this;
     }
 
-    public Scan build() {
-      Scan scan = new Scan(partitionKey);
-      scan.forNamespace(namespaceName).forTable(tableName).withLimit(limit);
-      orderings.forEach(scan::withOrdering);
-      if (startClusteringKey != null) {
-        scan.withStart(startClusteringKey, startInclusive);
+    private void checkNotScanAll() {
+      if (isScanAll) {
+        throw new UnsupportedOperationException(
+            "This operation is not supported when scanning all the records of a database.");
       }
-      if (endClusteringKey != null) {
-        scan.withEnd(endClusteringKey, endInclusive);
+    }
+
+    public Scan build() {
+      Scan scan;
+
+      if (isScanAll) {
+        scan = new ScanAll();
+      } else {
+        scan = new Scan(partitionKey);
+        orderings.forEach(scan::withOrdering);
+        if (startClusteringKey != null) {
+          scan.withStart(startClusteringKey, startInclusive);
+        }
+        if (endClusteringKey != null) {
+          scan.withEnd(endClusteringKey, endInclusive);
+        }
       }
 
+      scan.forNamespace(namespaceName)
+          .forTable(tableName)
+          .withLimit(limit)
+          .withConsistency(consistency);
       if (!projections.isEmpty()) {
         scan.withProjections(projections);
       }
-
-      scan.withConsistency(consistency);
 
       return scan;
     }
@@ -394,207 +418,6 @@ public class ScanBuilder {
       if (consistency != null) {
         scan.withConsistency(consistency);
       }
-
-      return scan;
-    }
-  }
-
-  public static class BuildableScanOrScanAllFromExisting extends BuildableScanFromExisting
-      implements All<BuildableScanAllFromExisting> {
-    private final Scan existingScan;
-
-    public BuildableScanOrScanAllFromExisting(Scan scan) {
-      super(scan);
-      this.existingScan = scan;
-    }
-
-    @Override
-    public BuildableScanAllFromExisting all() {
-      if (!(existingScan instanceof ScanAll)) {
-        throw new IllegalStateException(
-            "This method is to be called only when rebuilding a Scan object used to "
-                + "retrieve all the database entries. Rebuilding a Scan object targeting a database"
-                + " partition is not possible here.");
-      }
-      return new BuildableScanAllFromExisting((ScanAll) existingScan);
-    }
-
-    private void checkIsNotScanAll() {
-      if (existingScan instanceof ScanAll) {
-        throw new IllegalStateException(
-            "This method is to be called only when rebuilding a Scan object targeting a database partition."
-                + ". Rebuilding a Scan object used to retrieve all the database entries is not possible here");
-      }
-    }
-
-    @Override
-    public BuildableScanFromExisting namespace(String namespaceName) {
-      checkIsNotScanAll();
-      return super.namespace(namespaceName);
-    }
-
-    @Override
-    public BuildableScanFromExisting table(String tableName) {
-      checkIsNotScanAll();
-      return super.table(tableName);
-    }
-
-    @Override
-    public BuildableScanFromExisting partitionKey(Key partitionKey) {
-      checkIsNotScanAll();
-      return super.partitionKey(partitionKey);
-    }
-
-    @Override
-    public BuildableScanFromExisting consistency(com.scalar.db.api.Consistency consistency) {
-      checkIsNotScanAll();
-      return super.consistency(consistency);
-    }
-
-    @Override
-    public BuildableScanFromExisting projection(String projection) {
-      checkIsNotScanAll();
-      return super.projection(projection);
-    }
-
-    @Override
-    public BuildableScanFromExisting projections(Collection<String> projections) {
-      checkIsNotScanAll();
-      return super.projections(projections);
-    }
-
-    @Override
-    public BuildableScanFromExisting clearProjections() {
-      checkIsNotScanAll();
-      return super.clearProjections();
-    }
-
-    @Override
-    public BuildableScanFromExisting limit(int limit) {
-      checkIsNotScanAll();
-      return super.limit(limit);
-    }
-
-    @Override
-    public BuildableScanFromExisting ordering(Scan.Ordering ordering) {
-      checkIsNotScanAll();
-      return super.ordering(ordering);
-    }
-
-    @Override
-    public BuildableScanFromExisting start(@Nullable Key clusteringKey, boolean inclusive) {
-      checkIsNotScanAll();
-      return super.start(clusteringKey, inclusive);
-    }
-
-    @Override
-    public BuildableScanFromExisting end(@Nullable Key clusteringKey, boolean inclusive) {
-      checkIsNotScanAll();
-      return super.end(clusteringKey, inclusive);
-    }
-
-    @Override
-    public BuildableScanFromExisting start(@Nullable Key clusteringKey) {
-      checkIsNotScanAll();
-      return super.start(clusteringKey);
-    }
-
-    @Override
-    public BuildableScanFromExisting end(@Nullable Key clusteringKey) {
-      checkIsNotScanAll();
-      return super.end(clusteringKey);
-    }
-
-    @Override
-    public BuildableScanFromExisting clearOrderings() {
-      checkIsNotScanAll();
-      return super.clearOrderings();
-    }
-
-    @Override
-    public Scan build() {
-      checkIsNotScanAll();
-      return super.build();
-    }
-  }
-
-  public static class BuildableScanAllFromExisting
-      implements OperationBuilder.Namespace<BuildableScanAllFromExisting>,
-          OperationBuilder.Table<BuildableScanAllFromExisting>,
-          Limit<BuildableScanAllFromExisting>,
-          Projection<BuildableScanAllFromExisting>,
-          ClearProjections<BuildableScanAllFromExisting>,
-          Consistency<BuildableScanAllFromExisting> {
-    private final List<String> projections = new ArrayList<>();
-    @Nullable private String namespaceName;
-    @Nullable private String tableName;
-    private com.scalar.db.api.Consistency consistency;
-    private int limit;
-
-    public BuildableScanAllFromExisting(ScanAll scanAll) {
-      this.namespaceName = scanAll.forNamespace().orElse(null);
-      this.tableName = scanAll.forTable().orElse(null);
-      this.limit = scanAll.getLimit();
-      this.projections.addAll(scanAll.getProjections());
-      this.consistency = scanAll.getConsistency();
-    }
-
-    @Override
-    public BuildableScanAllFromExisting namespace(String namespaceName) {
-      checkNotNull(namespaceName);
-      this.namespaceName = namespaceName;
-      return this;
-    }
-
-    @Override
-    public BuildableScanAllFromExisting table(String tableName) {
-      checkNotNull(tableName);
-      this.tableName = tableName;
-      return this;
-    }
-
-    @Override
-    public BuildableScanAllFromExisting consistency(com.scalar.db.api.Consistency consistency) {
-      checkNotNull(consistency);
-      this.consistency = consistency;
-      return this;
-    }
-
-    @Override
-    public BuildableScanAllFromExisting projection(String projection) {
-      Objects.requireNonNull(projection);
-      this.projections.add(projection);
-      return this;
-    }
-
-    @Override
-    public BuildableScanAllFromExisting projections(Collection<String> projections) {
-      checkNotNull(projections);
-      this.projections.addAll(projections);
-      return this;
-    }
-
-    @Override
-    public BuildableScanAllFromExisting clearProjections() {
-      this.projections.clear();
-      return this;
-    }
-
-    @Override
-    public BuildableScanAllFromExisting limit(int limit) {
-      this.limit = limit;
-      return this;
-    }
-
-    public Scan build() {
-      Scan scan = new ScanAll();
-      scan.forNamespace(namespaceName).forTable(tableName).withLimit(limit);
-
-      if (!projections.isEmpty()) {
-        scan.withProjections(projections);
-      }
-
-      scan.withConsistency(consistency);
 
       return scan;
     }

@@ -83,12 +83,7 @@ public class GetBuilder {
 
     @Override
     public Get build() {
-      Get get;
-      if (clusteringKey == null) {
-        get = new Get(partitionKey);
-      } else {
-        get = new Get(partitionKey, clusteringKey);
-      }
+      Get get = new Get(partitionKey, clusteringKey);
       get.forNamespace(namespaceName).forTable(tableName);
       if (!projections.isEmpty()) {
         get.withProjections(projections);
@@ -193,12 +188,7 @@ public class GetBuilder {
     }
 
     public Get build() {
-      Get get;
-      if (clusteringKey == null) {
-        get = new Get(partitionKey);
-      } else {
-        get = new Get(partitionKey, clusteringKey);
-      }
+      Get get = new Get(partitionKey, clusteringKey);
       get.forNamespace(namespaceName);
       get.forTable(tableName);
       get.withConsistency(consistency);

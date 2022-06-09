@@ -80,12 +80,7 @@ public class DeleteBuilder {
 
     @Override
     public Delete build() {
-      Delete delete;
-      if (clusteringKey == null) {
-        delete = new Delete(partitionKey);
-      } else {
-        delete = new Delete(partitionKey, clusteringKey);
-      }
+      Delete delete = new Delete(partitionKey, clusteringKey);
       delete.forNamespace(namespaceName).forTable(tableName);
       if (condition != null) {
         delete.withCondition(condition);
@@ -174,19 +169,14 @@ public class DeleteBuilder {
     }
 
     public Delete build() {
-      Delete put;
-      if (clusteringKey == null) {
-        put = new Delete(partitionKey);
-      } else {
-        put = new Delete(partitionKey, clusteringKey);
-      }
-      put.forNamespace(namespaceName);
-      put.forTable(tableName);
-      put.withConsistency(consistency);
+      Delete delete = new Delete(partitionKey, clusteringKey);
+      delete.forNamespace(namespaceName);
+      delete.forTable(tableName);
+      delete.withConsistency(consistency);
       if (condition != null) {
-        put.withCondition(condition);
+        delete.withCondition(condition);
       }
-      return put;
+      return delete;
     }
   }
 }

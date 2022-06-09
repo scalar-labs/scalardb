@@ -8,7 +8,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
-import java.util.Collections;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -254,7 +253,7 @@ public class ScanBuilderTest {
             .withConsistency(Consistency.EVENTUAL);
 
     // Act
-    Scan newScan = Scan.newBuilder(existingScan).all().build();
+    Scan newScan = Scan.newBuilder(existingScan).build();
 
     // Assert
     assertThat(newScan).isEqualTo(existingScan);
@@ -276,7 +275,6 @@ public class ScanBuilderTest {
     // Act
     Scan newScan =
         Scan.newBuilder(existingScan)
-            .all()
             .namespace(NAMESPACE_2)
             .table(TABLE_2)
             .limit(5)
@@ -298,49 +296,25 @@ public class ScanBuilderTest {
   }
 
   @Test
-  public void buildScanAll_FromExistingScan_ShouldThrowIllegalArgumentException() {
-    Scan existingScan = new Scan(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
-
-    // Act Assert
-    assertThatThrownBy(() -> Scan.newBuilder(existingScan).all())
-        .isInstanceOf(IllegalStateException.class);
-  }
-
-  @Test
-  public void buildScan_FromExistingScanAll_ShouldThrowIllegalArgumentException() {
+  public void
+      buildScanAll_FromExistingScanAllWithUnsupportedOperation_ShouldThrowUnsupportedOperationException() {
     // Arrange
     Scan existingScanAll = new ScanAll().forNamespace(NAMESPACE_1).forTable(TABLE_1);
 
     // Act Assert
     assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).partitionKey(partitionKey1))
-        .isInstanceOf(IllegalStateException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).namespace(NAMESPACE_1))
-        .isInstanceOf(IllegalStateException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).table(TABLE_1))
-        .isInstanceOf(IllegalStateException.class);
+        .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).clearOrderings())
-        .isInstanceOf(IllegalStateException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).clearProjections())
-        .isInstanceOf(IllegalStateException.class);
+        .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).start(startClusteringKey1))
-        .isInstanceOf(IllegalStateException.class);
+        .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).start(startClusteringKey1, false))
-        .isInstanceOf(IllegalStateException.class);
+        .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).end(endClusteringKey1, false))
-        .isInstanceOf(IllegalStateException.class);
+        .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).end(endClusteringKey1))
-        .isInstanceOf(IllegalStateException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).consistency(Consistency.EVENTUAL))
-        .isInstanceOf(IllegalStateException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).limit(10))
-        .isInstanceOf(IllegalStateException.class);
+        .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).ordering(ordering1))
-        .isInstanceOf(IllegalStateException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).projection(""))
-        .isInstanceOf(IllegalStateException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).projections(Collections.emptyList()))
-        .isInstanceOf(IllegalStateException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).build())
-        .isInstanceOf(IllegalStateException.class);
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 }

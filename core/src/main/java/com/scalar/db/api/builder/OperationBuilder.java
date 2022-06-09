@@ -240,6 +240,13 @@ class OperationBuilder {
      * @return the operation builder
      */
     T clearValues();
+    /**
+     * Clear the value for the given column
+     *
+     * @param columnName a column name
+     * @return the operation builder
+     */
+    T clearValue(String columnName);
   }
 
   interface Limit<T> {

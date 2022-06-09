@@ -189,12 +189,7 @@ public class PutBuilder {
 
     @Override
     public Put build() {
-      Put put;
-      if (clusteringKey == null) {
-        put = new Put(partitionKey);
-      } else {
-        put = new Put(partitionKey, clusteringKey);
-      }
+      Put put = new Put(partitionKey, clusteringKey);
       put.forNamespace(namespaceName).forTable(tableName);
       columns.values().forEach(put::withValue);
       if (consistency != null) {
@@ -400,13 +395,14 @@ public class PutBuilder {
       return this;
     }
 
+    @Override
+    public BuildableFromExisting clearValue(String columnName) {
+      columns.remove(columnName);
+      return this;
+    }
+
     public Put build() {
-      Put put;
-      if (clusteringKey == null) {
-        put = new Put(partitionKey);
-      } else {
-        put = new Put(partitionKey, clusteringKey);
-      }
+      Put put = new Put(partitionKey, clusteringKey);
       put.forNamespace(this.namespaceName).forTable(tableName);
       columns.values().forEach(put::withValue);
       put.withConsistency(consistency);

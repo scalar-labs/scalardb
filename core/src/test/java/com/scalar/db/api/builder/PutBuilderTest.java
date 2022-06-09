@@ -197,7 +197,7 @@ public class PutBuilderTest {
   }
 
   @Test
-  public void build_FromExistingAndUpdateAllParameters_ShouldBuildGetWithUpdatedParameters() {
+  public void build_FromExistingAndUpdateAllParameters_ShouldBuildPutWithUpdatedParameters() {
     // Arrange
     Put existingPut =
         new Put(partitionKey1, clusteringKey1)
@@ -268,5 +268,28 @@ public class PutBuilderTest {
                 .withTextValue("text", "another_value")
                 .withTextValue("text2", "foo")
                 .withCondition(condition2));
+  }
+
+  @Test
+  public void build_FromExistingAndClearValue_ShouldBuildPutWithoutClearedValues() {
+    // Arrange
+    Put existingPut =
+        new Put(partitionKey1)
+            .forNamespace(NAMESPACE_1)
+            .forTable(TABLE_1)
+            .withBooleanValue("bool", Boolean.TRUE)
+            .withDoubleValue("double", Double.MIN_VALUE);
+
+    // Act
+    Put newPut =
+        Put.newBuilder(existingPut).clearValue("double").clearValue("unknown_column").build();
+
+    // Assert
+    assertThat(newPut)
+        .isEqualTo(
+            new Put(partitionKey1)
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withBooleanValue("bool", Boolean.TRUE));
   }
 }
