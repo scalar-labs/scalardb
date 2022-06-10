@@ -51,6 +51,7 @@ public abstract class Selection extends Operation {
     return this;
   }
 
+  @Deprecated
   public void clearProjections() {
     projections.clear();
   }

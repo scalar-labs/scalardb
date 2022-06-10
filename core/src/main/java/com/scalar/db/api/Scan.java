@@ -27,18 +27,21 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public class Scan extends Selection {
 
+  private final List<Ordering> orderings;
   private Optional<Key> startClusteringKey;
   private boolean startInclusive;
   private Optional<Key> endClusteringKey;
   private boolean endInclusive;
-  private final List<Ordering> orderings;
   private int limit;
 
   /**
    * Constructs a {@code Scan} with the specified partition {@link Key}.
    *
    * @param partitionKey a partition key (it might be composed of multiple values)
+   * @deprecated Use {@link Scan#newBuilder()} instead
    */
+  @Deprecated
+  @SuppressWarnings("InlineMeSuggester")
   public Scan(Key partitionKey) {
     super(partitionKey, null);
     startClusteringKey = Optional.empty();
@@ -47,6 +50,14 @@ public class Scan extends Selection {
     limit = 0;
   }
 
+  /**
+   * Copy a Scan
+   *
+   * @param scan a Scan
+   * @deprecated Use {@link Scan#newBuilder(Scan)} ()} instead
+   */
+  @Deprecated
+  @SuppressWarnings("InlineMeSuggester")
   public Scan(Scan scan) {
     super(scan);
     startClusteringKey = scan.startClusteringKey;
@@ -84,6 +95,7 @@ public class Scan extends Selection {
    * @param clusteringKey a starting clustering key
    * @return this object
    */
+  @Deprecated
   public Scan withStart(Key clusteringKey) {
     return withStart(clusteringKey, true);
   }
@@ -95,6 +107,7 @@ public class Scan extends Selection {
    * @param inclusive indicates whether the boundary is inclusive or not
    * @return this object
    */
+  @Deprecated
   public Scan withStart(Key clusteringKey, boolean inclusive) {
     startClusteringKey = Optional.ofNullable(clusteringKey);
     startInclusive = inclusive;
@@ -126,6 +139,7 @@ public class Scan extends Selection {
    * @param clusteringKey an ending clustering key
    * @return this object
    */
+  @Deprecated
   public Scan withEnd(Key clusteringKey) {
     return withEnd(clusteringKey, true);
   }
@@ -137,6 +151,7 @@ public class Scan extends Selection {
    * @param inclusive indicates whether the boundary is inclusive or not
    * @return this object
    */
+  @Deprecated
   public Scan withEnd(Key clusteringKey, boolean inclusive) {
     endClusteringKey = Optional.ofNullable(clusteringKey);
     endInclusive = inclusive;
@@ -179,6 +194,7 @@ public class Scan extends Selection {
    * @param ordering a scan ordering
    * @return this object
    */
+  @Deprecated
   public Scan withOrdering(Ordering ordering) {
     orderings.add(ordering);
     return this;
@@ -199,22 +215,26 @@ public class Scan extends Selection {
    * @param limit the number of results to be returned
    * @return this object
    */
+  @Deprecated
   public Scan withLimit(int limit) {
     this.limit = limit;
     return this;
   }
 
   @Override
+  @Deprecated
   public Scan forNamespace(String namespace) {
     return (Scan) super.forNamespace(namespace);
   }
 
   @Override
+  @Deprecated
   public Scan forTable(String tableName) {
     return (Scan) super.forTable(tableName);
   }
 
   @Override
+  @Deprecated
   public Scan withConsistency(Consistency consistency) {
     return (Scan) super.withConsistency(consistency);
   }
@@ -225,11 +245,13 @@ public class Scan extends Selection {
   }
 
   @Override
+  @Deprecated
   public Scan withProjection(String projection) {
     return (Scan) super.withProjection(projection);
   }
 
   @Override
+  @Deprecated
   public Scan withProjections(Collection<String> projections) {
     return (Scan) super.withProjections(projections);
   }
@@ -313,6 +335,26 @@ public class Scan extends Selection {
     }
 
     /**
+     * Creates an Ordering object for ASC order with the specified column.
+     *
+     * @param columnName a name of a target column
+     * @return an Ordering object
+     */
+    public static Ordering asc(String columnName) {
+      return new Ordering(columnName, Order.ASC);
+    }
+
+    /**
+     * Creates an Ordering object for DESC order with the specified column.
+     *
+     * @param columnName a name of a target column
+     * @return an Ordering object
+     */
+    public static Ordering desc(String columnName) {
+      return new Ordering(columnName, Order.DESC);
+    }
+
+    /**
      * Returns the column name of the ordering clustering key
      *
      * @return the column name of the ordering clustering key
@@ -378,26 +420,6 @@ public class Scan extends Selection {
     public enum Order {
       ASC,
       DESC,
-    }
-
-    /**
-     * Creates an Ordering object for ASC order with the specified column.
-     *
-     * @param columnName a name of a target column
-     * @return an Ordering object
-     */
-    public static Ordering asc(String columnName) {
-      return new Ordering(columnName, Order.ASC);
-    }
-
-    /**
-     * Creates an Ordering object for DESC order with the specified column.
-     *
-     * @param columnName a name of a target column
-     * @return an Ordering object
-     */
-    public static Ordering desc(String columnName) {
-      return new Ordering(columnName, Order.DESC);
     }
   }
 }

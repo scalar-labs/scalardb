@@ -16,10 +16,21 @@ public class ScanAll extends Scan {
 
   private static final Key DUMMY_PARTITION_KEY = Key.of();
 
+  /** @deprecated Use {@link Scan#newBuilder()} instead */
+  @Deprecated
+  @SuppressWarnings("InlineMeSuggester")
   public ScanAll() {
     super(DUMMY_PARTITION_KEY);
   }
 
+  /**
+   * Copy a ScanAll
+   *
+   * @param scanAll a ScanAll
+   * @deprecated Use {@link Scan#newBuilder(Scan)} instead
+   */
+  @Deprecated
+  @SuppressWarnings("InlineMeSuggester")
   public ScanAll(ScanAll scanAll) {
     super(scanAll);
   }
@@ -85,31 +96,37 @@ public class ScanAll extends Scan {
   }
 
   @Override
+  @Deprecated
   public ScanAll withLimit(int limit) {
     return (ScanAll) super.withLimit(limit);
   }
 
   @Override
+  @Deprecated
   public ScanAll forNamespace(String namespace) {
     return (ScanAll) super.forNamespace(namespace);
   }
 
   @Override
+  @Deprecated
   public ScanAll forTable(String tableName) {
     return (ScanAll) super.forTable(tableName);
   }
 
   @Override
+  @Deprecated
   public ScanAll withConsistency(Consistency consistency) {
     return (ScanAll) super.withConsistency(consistency);
   }
 
   @Override
+  @Deprecated
   public ScanAll withProjection(String projection) {
     return (ScanAll) super.withProjection(projection);
   }
 
   @Override
+  @Deprecated
   public ScanAll withProjections(Collection<String> projections) {
     return (ScanAll) super.withProjections(projections);
   }

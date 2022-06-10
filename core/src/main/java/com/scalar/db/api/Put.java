@@ -41,7 +41,10 @@ public class Put extends Mutation {
    * Constructs a {@code Put} with the specified partition {@link Key}.
    *
    * @param partitionKey a partition {@code Key} (it might be composed of multiple values)
+   * @deprecated Use {@link Put#newBuilder()} instead
    */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   public Put(Key partitionKey) {
     this(partitionKey, null);
   }
@@ -52,12 +55,23 @@ public class Put extends Mutation {
    *
    * @param partitionKey a partition {@code Key} (it might be composed of multiple values)
    * @param clusteringKey a clustering {@code Key} (it might be composed of multiple values)
+   * @deprecated Use {@link Put#newBuilder()} instead
    */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   public Put(Key partitionKey, Key clusteringKey) {
     super(partitionKey, clusteringKey);
     columns = new LinkedHashMap<>();
   }
 
+  /**
+   * Copy a Put
+   *
+   * @param put a Put
+   * @deprecated Use {@link Put#newBuilder(Put)} instead
+   */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   public Put(Put put) {
     super(put);
     columns = new LinkedHashMap<>(put.columns);
@@ -118,6 +132,7 @@ public class Put extends Mutation {
    * @param value a BOOLEAN value to put
    * @return this object
    */
+  @Deprecated
   public Put withBooleanValue(String columnName, boolean value) {
     columns.put(columnName, BooleanColumn.of(columnName, value));
     return this;
@@ -130,6 +145,7 @@ public class Put extends Mutation {
    * @param value a BOOLEAN value to put
    * @return this object
    */
+  @Deprecated
   public Put withBooleanValue(String columnName, @Nullable Boolean value) {
     if (value != null) {
       return withBooleanValue(columnName, value.booleanValue());
@@ -160,6 +176,7 @@ public class Put extends Mutation {
    * @param value a INT value to put
    * @return this object
    */
+  @Deprecated
   public Put withIntValue(String columnName, int value) {
     columns.put(columnName, IntColumn.of(columnName, value));
     return this;
@@ -172,6 +189,7 @@ public class Put extends Mutation {
    * @param value a INT value to put
    * @return this object
    */
+  @Deprecated
   public Put withIntValue(String columnName, @Nullable Integer value) {
     if (value != null) {
       return withIntValue(columnName, value.intValue());
@@ -202,6 +220,7 @@ public class Put extends Mutation {
    * @param value a BIGINT value to put
    * @return this object
    */
+  @Deprecated
   public Put withBigIntValue(String columnName, long value) {
     columns.put(columnName, BigIntColumn.of(columnName, value));
     return this;
@@ -214,6 +233,7 @@ public class Put extends Mutation {
    * @param value a BIGINT value to put
    * @return this object
    */
+  @Deprecated
   public Put withBigIntValue(String columnName, @Nullable Long value) {
     if (value != null) {
       return withBigIntValue(columnName, value.longValue());
@@ -244,6 +264,7 @@ public class Put extends Mutation {
    * @param value a FLOAT value to put
    * @return this object
    */
+  @Deprecated
   public Put withFloatValue(String columnName, float value) {
     columns.put(columnName, FloatColumn.of(columnName, value));
     return this;
@@ -256,6 +277,7 @@ public class Put extends Mutation {
    * @param value a FLOAT value to put
    * @return this object
    */
+  @Deprecated
   public Put withFloatValue(String columnName, @Nullable Float value) {
     if (value != null) {
       return withFloatValue(columnName, value.floatValue());
@@ -286,6 +308,7 @@ public class Put extends Mutation {
    * @param value a DOUBLE value to put
    * @return this object
    */
+  @Deprecated
   public Put withDoubleValue(String columnName, double value) {
     columns.put(columnName, DoubleColumn.of(columnName, value));
     return this;
@@ -298,6 +321,7 @@ public class Put extends Mutation {
    * @param value a DOUBLE value to put
    * @return this object
    */
+  @Deprecated
   public Put withDoubleValue(String columnName, @Nullable Double value) {
     if (value != null) {
       return withDoubleValue(columnName, value.doubleValue());
@@ -328,6 +352,7 @@ public class Put extends Mutation {
    * @param value a TEXT value to put
    * @return this object
    */
+  @Deprecated
   public Put withTextValue(String columnName, @Nullable String value) {
     columns.put(columnName, TextColumn.of(columnName, value));
     return this;
@@ -355,6 +380,7 @@ public class Put extends Mutation {
    * @param value a BLOB value to put
    * @return this object
    */
+  @Deprecated
   public Put withBlobValue(String columnName, @Nullable byte[] value) {
     columns.put(columnName, BlobColumn.of(columnName, value));
     return this;
@@ -382,6 +408,7 @@ public class Put extends Mutation {
    * @param value a BLOB value to put
    * @return this object
    */
+  @Deprecated
   public Put withBlobValue(String columnName, @Nullable ByteBuffer value) {
     columns.put(columnName, BlobColumn.of(columnName, value));
     return this;
@@ -409,6 +436,7 @@ public class Put extends Mutation {
    * @param column a column to put
    * @return this object
    */
+  @Deprecated
   public Put withValue(Column<?> column) {
     columns.put(column.getName(), column);
     return this;
@@ -420,7 +448,6 @@ public class Put extends Mutation {
    * @return a map of {@code Value}s
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
    */
-  @Deprecated
   public Map<String, Value<?>> getValues() {
     Map<String, Value<?>> ret = new HashMap<>();
     columns.forEach((k, v) -> ret.put(k, v.hasNullValue() ? null : ScalarDbUtils.toValue(v)));
@@ -620,16 +647,19 @@ public class Put extends Mutation {
   }
 
   @Override
+  @Deprecated
   public Put forNamespace(String namespace) {
     return (Put) super.forNamespace(namespace);
   }
 
   @Override
+  @Deprecated
   public Put forTable(String tableName) {
     return (Put) super.forTable(tableName);
   }
 
   @Override
+  @Deprecated
   public Put withConsistency(Consistency consistency) {
     return (Put) super.withConsistency(consistency);
   }
@@ -640,6 +670,7 @@ public class Put extends Mutation {
   }
 
   @Override
+  @Deprecated
   public Put withCondition(MutationCondition condition) {
     return (Put) super.withCondition(condition);
   }

@@ -21,7 +21,10 @@ public class Get extends Selection {
    * Constructs a {@code Get} with the specified partition {@code Key}.
    *
    * @param partitionKey a partition key (it might be composed of multiple values)
+   * @deprecated Use {@link Get#newBuilder()} instead
    */
+  @Deprecated
+  @SuppressWarnings("InlineMeSuggester")
   public Get(Key partitionKey) {
     this(partitionKey, null);
   }
@@ -32,11 +35,22 @@ public class Get extends Selection {
    *
    * @param partitionKey a partition {@code Key} (it might be composed of multiple values)
    * @param clusteringKey a clustering {@code Key} (it might be composed of multiple values)
+   * @deprecated Use {@link Get#newBuilder()} instead
    */
+  @Deprecated
+  @SuppressWarnings("InlineMeSuggester")
   public Get(Key partitionKey, Key clusteringKey) {
     super(partitionKey, clusteringKey);
   }
 
+  /**
+   * Copy a Get
+   *
+   * @param get a Get
+   * @deprecated Use {@link Get#newBuilder(Get)} instead
+   */
+  @Deprecated
+  @SuppressWarnings("InlineMeSuggester")
   public Get(Get get) {
     super(get);
   }
@@ -62,16 +76,19 @@ public class Get extends Selection {
     return new BuildableFromExisting(get);
   }
 
+  @Deprecated
   @Override
   public Get forNamespace(String namespace) {
     return (Get) super.forNamespace(namespace);
   }
 
+  @Deprecated
   @Override
   public Get forTable(String tableName) {
     return (Get) super.forTable(tableName);
   }
 
+  @Deprecated
   @Override
   public Get withConsistency(Consistency consistency) {
     return (Get) super.withConsistency(consistency);
@@ -82,11 +99,13 @@ public class Get extends Selection {
     v.visit(this);
   }
 
+  @Deprecated
   @Override
   public Get withProjection(String projection) {
     return (Get) super.withProjection(projection);
   }
 
+  @Deprecated
   @Override
   public Get withProjections(Collection<String> projections) {
     return (Get) super.withProjections(projections);

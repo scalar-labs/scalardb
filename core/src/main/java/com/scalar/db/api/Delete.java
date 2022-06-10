@@ -15,6 +15,43 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public class Delete extends Mutation {
+
+  /**
+   * Constructs a {@code Delete} with the specified partition {@code Key}.
+   *
+   * @param partitionKey a partition key (it might be composed of multiple values)
+   * @deprecated Use {@link Delete#newBuilder()} instead
+   */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
+  public Delete(Key partitionKey) {
+    this(partitionKey, null);
+  }
+
+  /**
+   * Constructs a {@code Delete} with the specified partition {@link Key} and the clustering {@link
+   * Key}.
+   *
+   * @param partitionKey a partition {@code Key} (it might be composed of multiple values)
+   * @param clusteringKey a clustering {@code Key} (it might be composed of multiple values)
+   * @deprecated Use {@link Delete#newBuilder()} instead
+   */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
+  public Delete(Key partitionKey, Key clusteringKey) {
+    super(partitionKey, clusteringKey);
+  }
+  /**
+   * Copy a Delete
+   *
+   * @param delete a Delete
+   * @deprecated Use {@link Delete#newBuilder(Delete)} instead
+   */
+  @Deprecated
+  public Delete(Delete delete) {
+    super(delete);
+  }
+
   /**
    * Build a {@code Delete} operation using a builder
    *
@@ -36,41 +73,20 @@ public class Delete extends Mutation {
     return new BuildableFromExisting(delete);
   }
 
-  /**
-   * Constructs a {@code Delete} with the specified partition {@code Key}.
-   *
-   * @param partitionKey a partition key (it might be composed of multiple values)
-   */
-  public Delete(Key partitionKey) {
-    this(partitionKey, null);
-  }
-
-  /**
-   * Constructs a {@code Delete} with the specified partition {@link Key} and the clustering {@link
-   * Key}.
-   *
-   * @param partitionKey a partition {@code Key} (it might be composed of multiple values)
-   * @param clusteringKey a clustering {@code Key} (it might be composed of multiple values)
-   */
-  public Delete(Key partitionKey, Key clusteringKey) {
-    super(partitionKey, clusteringKey);
-  }
-
-  public Delete(Delete delete) {
-    super(delete);
-  }
-
   @Override
+  @Deprecated
   public Delete forNamespace(String namespace) {
     return (Delete) super.forNamespace(namespace);
   }
 
   @Override
+  @Deprecated
   public Delete forTable(String tableName) {
     return (Delete) super.forTable(tableName);
   }
 
   @Override
+  @Deprecated
   public Delete withConsistency(Consistency consistency) {
     return (Delete) super.withConsistency(consistency);
   }
@@ -81,6 +97,7 @@ public class Delete extends Mutation {
   }
 
   @Override
+  @Deprecated
   public Delete withCondition(MutationCondition condition) {
     return (Delete) super.withCondition(condition);
   }
