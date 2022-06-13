@@ -53,6 +53,15 @@ class OperationBuilder {
     T clusteringKey(Key clusteringKey);
   }
 
+  interface ClearClusteringKey<T> {
+    /**
+     * Remove the clustering key
+     *
+     * @return the operation builder
+     */
+    T clearClusteringKey();
+  }
+
   interface Consistency<E> {
     /**
      * Sets the specified consistency level for this operation
@@ -99,6 +108,16 @@ class OperationBuilder {
      * @return the operation builder
      */
     T condition(MutationCondition condition);
+  }
+
+  interface ClearCondition<T> {
+
+    /**
+     * Remove the condition
+     *
+     * @return the operation builder
+     */
+    T clearCondition();
   }
 
   interface Values<T> {
@@ -320,6 +339,22 @@ class OperationBuilder {
     T end(Key clusteringKey, boolean inclusive);
   }
 
+  interface ClearBoundaries<T> {
+
+    /**
+     * Remove the scan starting boundary
+     *
+     * @return the scan operation builder
+     */
+    T clearStart();
+    /**
+     * Remove the scan ending boundary
+     *
+     * @return the scan operation builder
+     */
+    T clearEnd();
+  }
+
   interface All<T> {
 
     /**
@@ -349,9 +384,9 @@ class OperationBuilder {
   }
 
   abstract static class Buildable<T> {
-    final String namespaceName;
-    final String tableName;
-    final Key partitionKey;
+    String namespaceName;
+    String tableName;
+    Key partitionKey;
 
     public Buildable(String namespaceName, String tableName, Key partitionKey) {
       this.namespaceName = namespaceName;

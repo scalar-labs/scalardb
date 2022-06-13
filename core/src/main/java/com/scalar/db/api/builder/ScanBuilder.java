@@ -5,8 +5,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.builder.OperationBuilder.All;
-import com.scalar.db.api.builder.OperationBuilder.ClearOrderings;
-import com.scalar.db.api.builder.OperationBuilder.ClearProjections;
 import com.scalar.db.api.builder.OperationBuilder.ClusteringKeyFiltering;
 import com.scalar.db.api.builder.OperationBuilder.Consistency;
 import com.scalar.db.api.builder.OperationBuilder.Limit;
@@ -67,14 +65,14 @@ public class ScanBuilder {
           Consistency<BuildableScan>,
           Projection<BuildableScan>,
           Limit<BuildableScan> {
-    private final List<Scan.Ordering> orderings = new ArrayList<>();
-    private final List<String> projections = new ArrayList<>();
-    @Nullable private Key startClusteringKey;
-    private boolean startInclusive;
-    @Nullable private Key endClusteringKey;
-    private boolean endInclusive;
-    private int limit = 0;
-    @Nullable private com.scalar.db.api.Consistency consistency;
+    final List<Scan.Ordering> orderings = new ArrayList<>();
+    final List<String> projections = new ArrayList<>();
+    @Nullable Key startClusteringKey;
+    boolean startInclusive;
+    @Nullable Key endClusteringKey;
+    boolean endInclusive;
+    int limit = 0;
+    @Nullable com.scalar.db.api.Consistency consistency;
 
     public BuildableScan(String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
@@ -154,35 +152,18 @@ public class ScanBuilder {
     }
   }
 
-  public static class BuildableScanOrScanAllFromExisting
+  public static class BuildableScanOrScanAllFromExisting extends BuildableScan
       implements OperationBuilder.Namespace<BuildableScanOrScanAllFromExisting>,
           OperationBuilder.Table<BuildableScanOrScanAllFromExisting>,
           OperationBuilder.PartitionKey<BuildableScanOrScanAllFromExisting>,
-          ClusteringKeyFiltering<BuildableScanOrScanAllFromExisting>,
-          Ordering<BuildableScanOrScanAllFromExisting>,
-          ClearOrderings<BuildableScanOrScanAllFromExisting>,
-          Limit<BuildableScanOrScanAllFromExisting>,
-          Projection<BuildableScanOrScanAllFromExisting>,
-          ClearProjections<BuildableScanOrScanAllFromExisting>,
-          Consistency<BuildableScanOrScanAllFromExisting> {
-    private final List<String> projections = new ArrayList<>();
-    private final List<Scan.Ordering> orderings = new ArrayList<>();
+          OperationBuilder.ClearProjections<BuildableScanOrScanAllFromExisting>,
+          OperationBuilder.ClearOrderings<BuildableScanOrScanAllFromExisting>,
+          OperationBuilder.ClearBoundaries<BuildableScanOrScanAllFromExisting> {
     private final boolean isScanAll;
-    @Nullable private String namespaceName;
-    @Nullable private String tableName;
-    private Key partitionKey;
-    private com.scalar.db.api.Consistency consistency;
-    @Nullable private Key startClusteringKey;
-    private boolean startInclusive;
-    @Nullable private Key endClusteringKey;
-    private boolean endInclusive;
-    private int limit;
 
     public BuildableScanOrScanAllFromExisting(Scan scan) {
+      super(scan.forNamespace().orElse(null), scan.forTable().orElse(null), scan.getPartitionKey());
       isScanAll = scan instanceof ScanAll;
-      this.namespaceName = scan.forNamespace().orElse(null);
-      this.tableName = scan.forTable().orElse(null);
-      this.partitionKey = scan.getPartitionKey();
       scan.getStartClusteringKey()
           .ifPresent(
               key -> {
@@ -226,22 +207,19 @@ public class ScanBuilder {
     @Override
     public BuildableScanOrScanAllFromExisting consistency(
         com.scalar.db.api.Consistency consistency) {
-      checkNotNull(consistency);
-      this.consistency = consistency;
+      super.consistency(consistency);
       return this;
     }
 
     @Override
     public BuildableScanOrScanAllFromExisting projection(String projection) {
-      checkNotNull(projection);
-      this.projections.add(projection);
+      super.projection(projection);
       return this;
     }
 
     @Override
     public BuildableScanOrScanAllFromExisting projections(Collection<String> projections) {
-      checkNotNull(projections);
-      this.projections.addAll(projections);
+      super.projections(projections);
       return this;
     }
 
@@ -253,74 +231,57 @@ public class ScanBuilder {
 
     @Override
     public BuildableScanOrScanAllFromExisting limit(int limit) {
-      this.limit = limit;
+      super.limit(limit);
       return this;
     }
 
     @Override
     public BuildableScanOrScanAllFromExisting ordering(Scan.Ordering ordering) {
       checkNotScanAll();
-      checkNotNull(ordering);
-      orderings.add(ordering);
-      return this;
-    }
-    /**
-     * Sets the specified clustering key with the specified boundary as a starting point for scan.
-     *
-     * @param clusteringKey a starting clustering key. This can be set to {@code null} to clear the
-     *     existing starting clustering key.
-     * @param inclusive indicates whether the boundary is inclusive or not
-     * @return the scan operation builder
-     */
-    @Override
-    public BuildableScanOrScanAllFromExisting start(
-        @Nullable Key clusteringKey, boolean inclusive) {
-      checkNotScanAll();
-      startClusteringKey = clusteringKey;
-      startInclusive = inclusive;
-      return this;
-    }
-    /**
-     * Sets the specified clustering key with the specified boundary as an ending point for scan.
-     *
-     * @param clusteringKey an ending clustering key. This can be set to {@code null} to clear the
-     *     existing ending clustering key.
-     * @param inclusive indicates whether the boundary is inclusive or not
-     * @return the scan operation builder
-     */
-    @Override
-    public BuildableScanOrScanAllFromExisting end(@Nullable Key clusteringKey, boolean inclusive) {
-      checkNotScanAll();
-      endClusteringKey = clusteringKey;
-      endInclusive = inclusive;
+      super.ordering(ordering);
       return this;
     }
 
-    /**
-     * Sets the specified clustering key with the specified boundary as a starting point for scan.
-     *
-     * @param clusteringKey a starting clustering key. This can be set to {@code null} to clear the
-     *     existing starting clustering key.
-     * @return the scan operation builder
-     */
     @Override
-    public BuildableScanOrScanAllFromExisting start(@Nullable Key clusteringKey) {
+    public BuildableScanOrScanAllFromExisting start(Key clusteringKey, boolean inclusive) {
       checkNotScanAll();
-      return ClusteringKeyFiltering.super.start(clusteringKey);
+      super.start(clusteringKey, inclusive);
+      return this;
     }
 
-    /**
-     * Sets the specified clustering key with the specified boundary as an ending point for scan.
-     * The boundary is inclusive.
-     *
-     * @param clusteringKey an ending clustering key. This can be set to {@code null} to clear the
-     *     existing ending clustering key.
-     * @return the scan operation builder
-     */
     @Override
-    public BuildableScanOrScanAllFromExisting end(@Nullable Key clusteringKey) {
+    public BuildableScanOrScanAllFromExisting end(Key clusteringKey, boolean inclusive) {
       checkNotScanAll();
-      return ClusteringKeyFiltering.super.end(clusteringKey);
+      super.end(clusteringKey, inclusive);
+      return this;
+    }
+
+    @Override
+    public BuildableScanOrScanAllFromExisting start(Key clusteringKey) {
+      checkNotScanAll();
+      super.start(clusteringKey);
+      return this;
+    }
+
+    @Override
+    public BuildableScanOrScanAllFromExisting end(Key clusteringKey) {
+      checkNotScanAll();
+      super.end(clusteringKey);
+      return this;
+    }
+
+    @Override
+    public BuildableScanOrScanAllFromExisting clearStart() {
+      checkNotScanAll();
+      this.startClusteringKey = null;
+      return this;
+    }
+
+    @Override
+    public BuildableScanOrScanAllFromExisting clearEnd() {
+      checkNotScanAll();
+      this.endClusteringKey = null;
+      return this;
     }
 
     @Override
@@ -337,6 +298,7 @@ public class ScanBuilder {
       }
     }
 
+    @Override
     public Scan build() {
       Scan scan;
 

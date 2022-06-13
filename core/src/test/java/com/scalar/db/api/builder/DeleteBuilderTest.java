@@ -131,4 +131,35 @@ public class DeleteBuilderTest {
                 .withConsistency(Consistency.EVENTUAL)
                 .withCondition(condition2));
   }
+
+  @Test
+  public void build_FromExistingAndClearCondition_ShouldBuildDeleteWithoutCondition() {
+    // Arrange
+    Delete existingDelete =
+        new Delete(partitionKey1)
+            .forNamespace(NAMESPACE_1)
+            .forTable(TABLE_1)
+            .withCondition(condition1);
+
+    // Act
+    Delete newDelete = Delete.newBuilder(existingDelete).clearCondition().build();
+
+    // Assert
+    assertThat(newDelete)
+        .isEqualTo(new Delete(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+  }
+
+  @Test
+  public void build_FromExistingAndClearClusteringKey_ShouldBuildDeleteWithoutClusteringKey() {
+    // Arrange
+    Delete existingDelete =
+        new Delete(partitionKey1, clusteringKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+
+    // Act
+    Delete newDelete = Delete.newBuilder(existingDelete).clearClusteringKey().build();
+
+    // Assert
+    assertThat(newDelete)
+        .isEqualTo(new Delete(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+  }
 }

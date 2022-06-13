@@ -292,4 +292,35 @@ public class PutBuilderTest {
                 .forTable(TABLE_1)
                 .withBooleanValue("bool", Boolean.TRUE));
   }
+
+  @Test
+  public void build_FromExistingAndClearCondition_ShouldBuildPutWithoutCondition() {
+    // Arrange
+    Put existingPut =
+        new Put(partitionKey1)
+            .forNamespace(NAMESPACE_1)
+            .forTable(TABLE_1)
+            .withCondition(condition1);
+
+    // Act
+    Put newPut = Put.newBuilder(existingPut).clearCondition().build();
+
+    // Assert
+    assertThat(newPut)
+        .isEqualTo(new Put(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+  }
+
+  @Test
+  public void build_FromExistingAndClearClusteringKey_ShouldBuildPutWithoutClusteringKey() {
+    // Arrange
+    Put existingPut =
+        new Put(partitionKey1, clusteringKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+
+    // Act
+    Put newPut = Put.newBuilder(existingPut).clearClusteringKey().build();
+
+    // Assert
+    assertThat(newPut)
+        .isEqualTo(new Put(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+  }
 }

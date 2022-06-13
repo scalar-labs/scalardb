@@ -3,7 +3,6 @@ package com.scalar.db.api.builder;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.scalar.db.api.Get;
-import com.scalar.db.api.builder.OperationBuilder.ClearProjections;
 import com.scalar.db.api.builder.OperationBuilder.ClusteringKey;
 import com.scalar.db.api.builder.OperationBuilder.Consistency;
 import com.scalar.db.api.builder.OperationBuilder.PartitionKeyBuilder;
@@ -52,9 +51,9 @@ public class GetBuilder {
 
   public static class Buildable extends OperationBuilder.Buildable<Get>
       implements ClusteringKey<Buildable>, Consistency<Buildable>, Projection<Buildable> {
-    private final List<String> projections = new ArrayList<>();
-    @Nullable private Key clusteringKey;
-    @Nullable private com.scalar.db.api.Consistency consistency;
+    final List<String> projections = new ArrayList<>();
+    @Nullable Key clusteringKey;
+    @Nullable com.scalar.db.api.Consistency consistency;
 
     public Buildable(String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
@@ -103,25 +102,15 @@ public class GetBuilder {
     }
   }
 
-  public static class BuildableFromExisting
+  public static class BuildableFromExisting extends Buildable
       implements OperationBuilder.Namespace<BuildableFromExisting>,
           OperationBuilder.Table<BuildableFromExisting>,
           OperationBuilder.PartitionKey<BuildableFromExisting>,
-          ClusteringKey<BuildableFromExisting>,
-          Projection<BuildableFromExisting>,
-          ClearProjections<BuildableFromExisting>,
-          Consistency<BuildableFromExisting> {
-    private final List<String> projections = new ArrayList<>();
-    @Nullable private String namespaceName;
-    @Nullable private String tableName;
-    private Key partitionKey;
-    @Nullable private Key clusteringKey;
-    private com.scalar.db.api.Consistency consistency;
+          OperationBuilder.ClearProjections<BuildableFromExisting>,
+          OperationBuilder.ClearClusteringKey<BuildableFromExisting> {
 
     public BuildableFromExisting(Get get) {
-      this.namespaceName = get.forNamespace().orElse(null);
-      this.tableName = get.forTable().orElse(null);
-      this.partitionKey = get.getPartitionKey();
+      super(get.forNamespace().orElse(null), get.forTable().orElse(null), get.getPartitionKey());
       this.clusteringKey = get.getClusteringKey().orElse(null);
       this.projections.addAll(get.getProjections());
       this.consistency = get.getConsistency();
@@ -147,37 +136,28 @@ public class GetBuilder {
       this.partitionKey = partitionKey;
       return this;
     }
-    /**
-     * Constructs the operation with the specified clustering {@link Key}.
-     *
-     * @param clusteringKey a clustering {@code Key} (it might be composed of multiple values). This
-     *     can be set to {@code null} to clear the existing clustering key.
-     * @return the operation builder
-     */
+
     @Override
-    public BuildableFromExisting clusteringKey(@Nullable Key clusteringKey) {
-      this.clusteringKey = clusteringKey;
+    public BuildableFromExisting clusteringKey(Key clusteringKey) {
+      super.clusteringKey(clusteringKey);
       return this;
     }
 
     @Override
     public BuildableFromExisting consistency(com.scalar.db.api.Consistency consistency) {
-      checkNotNull(consistency);
-      this.consistency = consistency;
+      super.consistency(consistency);
       return this;
     }
 
     @Override
     public BuildableFromExisting projection(String projection) {
-      checkNotNull(projection);
-      this.projections.add(projection);
+      super.projection(projection);
       return this;
     }
 
     @Override
     public BuildableFromExisting projections(Collection<String> projections) {
-      checkNotNull(projections);
-      this.projections.addAll(projections);
+      super.projections(projections);
       return this;
     }
 
@@ -187,14 +167,10 @@ public class GetBuilder {
       return this;
     }
 
-    public Get build() {
-      Get get = new Get(partitionKey, clusteringKey);
-      get.forNamespace(namespaceName);
-      get.forTable(tableName);
-      get.withConsistency(consistency);
-      get.withProjections(projections);
-
-      return get;
+    @Override
+    public BuildableFromExisting clearClusteringKey() {
+      this.clusteringKey = null;
+      return this;
     }
   }
 }

@@ -129,4 +129,18 @@ public class GetBuilderTest {
                 .withConsistency(Consistency.EVENTUAL)
                 .withProjections(Arrays.asList("c3", "c4", "c5")));
   }
+
+  @Test
+  public void build_FromExistingAndClearClusteringKey_ShouldBuildGetWithoutClusteringKey() {
+    // Arrange
+    Get existingGet =
+        new Get(partitionKey1, clusteringKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+
+    // Act
+    Get newGet = Get.newBuilder(existingGet).clearClusteringKey().build();
+
+    // Assert
+    assertThat(newGet)
+        .isEqualTo(new Get(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+  }
 }

@@ -49,9 +49,9 @@ public class DeleteBuilder {
 
   public static class Buildable extends OperationBuilder.Buildable<Delete>
       implements ClusteringKey<Buildable>, Consistency<Buildable>, Condition<Buildable> {
-    @Nullable private Key clusteringKey;
-    @Nullable private com.scalar.db.api.Consistency consistency;
-    @Nullable private MutationCondition condition;
+    @Nullable Key clusteringKey;
+    @Nullable com.scalar.db.api.Consistency consistency;
+    @Nullable MutationCondition condition;
 
     public Buildable(String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
@@ -93,24 +93,19 @@ public class DeleteBuilder {
     }
   }
 
-  public static class BuildableFromExisting
+  public static class BuildableFromExisting extends Buildable
       implements OperationBuilder.Namespace<BuildableFromExisting>,
           OperationBuilder.Table<BuildableFromExisting>,
           OperationBuilder.PartitionKey<BuildableFromExisting>,
-          ClusteringKey<BuildableFromExisting>,
-          Condition<BuildableFromExisting>,
-          Consistency<BuildableFromExisting> {
-    @Nullable private String namespaceName;
-    @Nullable private String tableName;
-    private Key partitionKey;
-    @Nullable private Key clusteringKey;
-    @Nullable private MutationCondition condition;
-    private com.scalar.db.api.Consistency consistency;
+          OperationBuilder.ClearCondition<BuildableFromExisting>,
+          OperationBuilder.ClearClusteringKey<BuildableFromExisting> {
 
     public BuildableFromExisting(Delete delete) {
-      this.namespaceName = delete.forNamespace().orElse(null);
-      this.tableName = delete.forTable().orElse(null);
-      this.partitionKey = delete.getPartitionKey();
+      super(
+          delete.forNamespace().orElse(null),
+          delete.forTable().orElse(null),
+          delete.getPartitionKey());
+
       this.clusteringKey = delete.getClusteringKey().orElse(null);
       this.consistency = delete.getConsistency();
       this.condition = delete.getCondition().orElse(null);
@@ -136,47 +131,35 @@ public class DeleteBuilder {
       this.partitionKey = partitionKey;
       return this;
     }
-    /**
-     * Constructs the operation with the specified clustering {@link Key}.
-     *
-     * @param clusteringKey a clustering {@code Key} (it might be composed of multiple values). This
-     *     can be set to {@code null} to clear the existing clustering key.
-     * @return the operation builder
-     */
+
     @Override
-    public BuildableFromExisting clusteringKey(@Nullable Key clusteringKey) {
-      this.clusteringKey = clusteringKey;
+    public BuildableFromExisting clusteringKey(Key clusteringKey) {
+      super.clusteringKey(clusteringKey);
       return this;
     }
 
     @Override
     public BuildableFromExisting consistency(com.scalar.db.api.Consistency consistency) {
-      checkNotNull(consistency);
-      this.consistency = consistency;
-      return this;
-    }
-    /**
-     * Sets the specified {@link MutationCondition}
-     *
-     * @param condition a {@code MutationCondition}. This can be set to {@code null} to clear the
-     *     existing condition.
-     * @return the operation builder
-     */
-    @Override
-    public BuildableFromExisting condition(@Nullable MutationCondition condition) {
-      this.condition = condition;
+      super.consistency(consistency);
       return this;
     }
 
-    public Delete build() {
-      Delete delete = new Delete(partitionKey, clusteringKey);
-      delete.forNamespace(namespaceName);
-      delete.forTable(tableName);
-      delete.withConsistency(consistency);
-      if (condition != null) {
-        delete.withCondition(condition);
-      }
-      return delete;
+    @Override
+    public BuildableFromExisting condition(MutationCondition condition) {
+      super.condition(condition);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearCondition() {
+      this.condition = null;
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearClusteringKey() {
+      this.clusteringKey = null;
+      return this;
     }
   }
 }

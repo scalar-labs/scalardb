@@ -4,6 +4,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.builder.OperationBuilder.ClearClusteringKey;
+import com.scalar.db.api.builder.OperationBuilder.ClearCondition;
 import com.scalar.db.api.builder.OperationBuilder.ClearValues;
 import com.scalar.db.api.builder.OperationBuilder.ClusteringKey;
 import com.scalar.db.api.builder.OperationBuilder.Condition;
@@ -65,10 +67,10 @@ public class PutBuilder {
           Consistency<Buildable>,
           Condition<Buildable>,
           Values<Buildable> {
-    private final Map<String, Column<?>> columns = new LinkedHashMap<>();
-    @Nullable private Key clusteringKey;
-    @Nullable private com.scalar.db.api.Consistency consistency;
-    @Nullable private MutationCondition condition;
+    final Map<String, Column<?>> columns = new LinkedHashMap<>();
+    @Nullable Key clusteringKey;
+    @Nullable com.scalar.db.api.Consistency consistency;
+    @Nullable MutationCondition condition;
 
     public Buildable(String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
@@ -210,27 +212,16 @@ public class PutBuilder {
     }
   }
 
-  public static class BuildableFromExisting
+  public static class BuildableFromExisting extends Buildable
       implements OperationBuilder.Namespace<BuildableFromExisting>,
           OperationBuilder.Table<BuildableFromExisting>,
           OperationBuilder.PartitionKey<BuildableFromExisting>,
-          ClusteringKey<BuildableFromExisting>,
-          Condition<BuildableFromExisting>,
-          Consistency<BuildableFromExisting>,
-          Values<BuildableFromExisting>,
-          ClearValues<BuildableFromExisting> {
-    private final Map<String, Column<?>> columns = new LinkedHashMap<>();
-    @Nullable private String namespaceName;
-    @Nullable private String tableName;
-    private Key partitionKey;
-    @Nullable private Key clusteringKey;
-    private com.scalar.db.api.Consistency consistency;
-    @Nullable private MutationCondition condition;
+          ClearClusteringKey<BuildableFromExisting>,
+          ClearValues<BuildableFromExisting>,
+          ClearCondition<BuildableFromExisting> {
 
     public BuildableFromExisting(Put put) {
-      this.namespaceName = put.forNamespace().orElse(null);
-      this.tableName = put.forTable().orElse(null);
-      this.partitionKey = put.getPartitionKey();
+      super(put.forNamespace().orElse(null), put.forTable().orElse(null), put.getPartitionKey());
       this.clusteringKey = put.getClusteringKey().orElse(null);
       this.columns.putAll(put.getColumns());
       this.consistency = put.getConsistency();
@@ -258,134 +249,105 @@ public class PutBuilder {
       return this;
     }
 
-    /**
-     * Constructs the operation with the specified clustering {@link Key}.
-     *
-     * @param clusteringKey a clustering {@code Key} (it might be composed of multiple values). This
-     *     can be set to {@code null} to clear the existing clustering key.
-     * @return the operation builder
-     */
     @Override
-    public BuildableFromExisting clusteringKey(@Nullable Key clusteringKey) {
-      this.clusteringKey = clusteringKey;
+    public BuildableFromExisting clusteringKey(Key clusteringKey) {
+      super.clusteringKey(clusteringKey);
       return this;
     }
 
     @Override
     public BuildableFromExisting consistency(com.scalar.db.api.Consistency consistency) {
-      checkNotNull(consistency);
-      this.consistency = consistency;
+      super.consistency(consistency);
       return this;
     }
-    /**
-     * Sets the specified {@link MutationCondition}
-     *
-     * @param condition a {@code MutationCondition}. This can be set to {@code null} to clear the
-     *     existing condition.
-     * @return the operation builder
-     */
+
     @Override
-    public BuildableFromExisting condition(@Nullable MutationCondition condition) {
-      this.condition = condition;
+    public BuildableFromExisting condition(MutationCondition condition) {
+      super.condition(condition);
       return this;
     }
 
     @Override
     public BuildableFromExisting booleanValue(String columnName, boolean value) {
-      columns.put(columnName, BooleanColumn.of(columnName, value));
+      super.booleanValue(columnName, value);
       return this;
     }
 
     @Override
     public BuildableFromExisting booleanValue(String columnName, @Nullable Boolean value) {
-      if (value != null) {
-        return booleanValue(columnName, value.booleanValue());
-      }
-      columns.put(columnName, BooleanColumn.ofNull(columnName));
+      super.booleanValue(columnName, value);
       return this;
     }
 
     @Override
     public BuildableFromExisting intValue(String columnName, int value) {
-      columns.put(columnName, IntColumn.of(columnName, value));
+      super.intValue(columnName, value);
       return this;
     }
 
     @Override
     public BuildableFromExisting intValue(String columnName, @Nullable Integer value) {
-      if (value != null) {
-        return intValue(columnName, value.intValue());
-      }
-      columns.put(columnName, IntColumn.ofNull(columnName));
+      super.intValue(columnName, value);
       return this;
     }
 
     @Override
     public BuildableFromExisting bigIntValue(String columnName, long value) {
-      columns.put(columnName, BigIntColumn.of(columnName, value));
+      super.bigIntValue(columnName, value);
       return this;
     }
 
     @Override
     public BuildableFromExisting bigIntValue(String columnName, @Nullable Long value) {
-      if (value != null) {
-        return bigIntValue(columnName, value.longValue());
-      }
-      columns.put(columnName, BigIntColumn.ofNull(columnName));
+      super.bigIntValue(columnName, value);
       return this;
     }
 
     @Override
     public BuildableFromExisting floatValue(String columnName, float value) {
-      columns.put(columnName, FloatColumn.of(columnName, value));
+      super.floatValue(columnName, value);
       return this;
     }
 
     @Override
     public BuildableFromExisting floatValue(String columnName, @Nullable Float value) {
-      if (value != null) {
-        return floatValue(columnName, value.floatValue());
-      }
-      columns.put(columnName, FloatColumn.ofNull(columnName));
+      super.floatValue(columnName, value);
       return this;
     }
 
     @Override
     public BuildableFromExisting doubleValue(String columnName, double value) {
-      columns.put(columnName, DoubleColumn.of(columnName, value));
+      super.doubleValue(columnName, value);
       return this;
     }
 
     @Override
     public BuildableFromExisting doubleValue(String columnName, @Nullable Double value) {
-      if (value != null) {
-        return doubleValue(columnName, value.doubleValue());
-      }
-      columns.put(columnName, DoubleColumn.ofNull(columnName));
+      super.doubleValue(columnName, value);
       return this;
     }
 
     @Override
     public BuildableFromExisting textValue(String columnName, @Nullable String value) {
-      columns.put(columnName, TextColumn.of(columnName, value));
+      super.textValue(columnName, value);
       return this;
     }
 
     @Override
     public BuildableFromExisting blobValue(String columnName, @Nullable byte[] value) {
-      columns.put(columnName, BlobColumn.of(columnName, value));
+      super.blobValue(columnName, value);
       return this;
     }
 
     @Override
     public BuildableFromExisting blobValue(String columnName, @Nullable ByteBuffer value) {
-      columns.put(columnName, BlobColumn.of(columnName, value));
+      super.blobValue(columnName, value);
       return this;
     }
 
     @Override
     public BuildableFromExisting value(Column<?> column) {
-      columns.put(column.getName(), column);
+      super.value(column);
       return this;
     }
 
@@ -401,16 +363,16 @@ public class PutBuilder {
       return this;
     }
 
-    public Put build() {
-      Put put = new Put(partitionKey, clusteringKey);
-      put.forNamespace(this.namespaceName).forTable(tableName);
-      columns.values().forEach(put::withValue);
-      put.withConsistency(consistency);
-      if (condition != null) {
-        put.withCondition(condition);
-      }
+    @Override
+    public BuildableFromExisting clearClusteringKey() {
+      this.clusteringKey = null;
+      return this;
+    }
 
-      return put;
+    @Override
+    public BuildableFromExisting clearCondition() {
+      this.condition = null;
+      return this;
     }
   }
 }

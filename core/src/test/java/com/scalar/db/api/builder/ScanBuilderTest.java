@@ -206,6 +206,24 @@ public class ScanBuilderTest {
   }
 
   @Test
+  public void buildScan_FromExistingAndClearBoundaries_ShouldBuildScanWithoutBoundaries() {
+    // Arrange
+    Scan existingScan =
+        new Scan(partitionKey1)
+            .forNamespace(NAMESPACE_1)
+            .forTable(TABLE_1)
+            .withStart(startClusteringKey1)
+            .withEnd(endClusteringKey1);
+
+    // Act
+    Scan newScan = Scan.newBuilder(existingScan).clearStart().clearEnd().build();
+
+    // Assert
+    assertThat(newScan)
+        .isEqualTo(new Scan(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+  }
+
+  @Test
   public void buildScanAll_WithMandatoryParameters_ShouldBuildScanWithMandatoryParameters() {
     // Arrange Act
     Scan actual = Scan.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).all().build();
@@ -315,6 +333,10 @@ public class ScanBuilderTest {
     assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).end(endClusteringKey1))
         .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).ordering(ordering1))
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).clearStart())
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).clearEnd())
         .isInstanceOf(UnsupportedOperationException.class);
   }
 }
