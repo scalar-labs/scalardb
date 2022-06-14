@@ -18,7 +18,6 @@ import com.scalar.db.storage.jdbc.query.DeleteQuery;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
-import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -56,7 +55,6 @@ public class JdbcService {
       throws SQLException, ExecutionException {
     operationChecker.check(get);
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(get);
-    ScalarDbUtils.addProjectionsForKeys(get, tableMetadata);
 
     SelectQuery selectQuery =
         queryBuilder
@@ -92,7 +90,6 @@ public class JdbcService {
     }
 
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
-    ScalarDbUtils.addProjectionsForKeys(scan, tableMetadata);
 
     SelectQuery selectQuery =
         scan instanceof ScanAll

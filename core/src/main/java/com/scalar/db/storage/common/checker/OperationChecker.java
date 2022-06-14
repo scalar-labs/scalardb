@@ -215,7 +215,7 @@ public class OperationChecker {
     return metadata;
   }
 
-  private void checkColumnsInPut(Put put, TableMetadata metadata) {
+  protected void checkColumnsInPut(Put put, TableMetadata metadata) {
     for (Column<?> column : put.getColumns().values()) {
       if (!new ColumnChecker(metadata, false, false, false, true).check(column)) {
         throw new IllegalArgumentException(
@@ -285,13 +285,17 @@ public class OperationChecker {
   private boolean checkKey(
       Key key, LinkedHashSet<String> keyNames, boolean allowPartial, TableMetadata metadata) {
     if (!allowPartial) {
-      if (key.getColumns().size() != keyNames.size()) {
+      if (key.size() != keyNames.size()) {
         return false;
       }
     } else {
-      if (key.getColumns().size() > keyNames.size()) {
+      if (key.size() > keyNames.size()) {
         return false;
       }
+    }
+
+    if (key.size() == 0) {
+      return false;
     }
 
     Iterator<String> iterator = keyNames.iterator();

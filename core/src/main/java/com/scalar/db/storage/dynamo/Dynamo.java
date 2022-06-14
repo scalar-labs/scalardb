@@ -12,13 +12,11 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.AbstractDistributedStorage;
 import com.scalar.db.storage.common.checker.OperationChecker;
-import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
@@ -67,7 +65,7 @@ public class Dynamo extends AbstractDistributedStorage {
     metadataManager =
         new TableMetadataManager(
             new DynamoAdmin(client, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
-    operationChecker = new OperationChecker(metadataManager);
+    operationChecker = new DynamoOperationChecker(metadataManager);
 
     selectStatementHandler = new SelectStatementHandler(client, metadataManager);
     putStatementHandler = new PutStatementHandler(client, metadataManager);
@@ -82,8 +80,6 @@ public class Dynamo extends AbstractDistributedStorage {
   public Optional<Result> get(Get get) throws ExecutionException {
     get = copyAndSetTargetToIfNot(get);
     operationChecker.check(get);
-    TableMetadata metadata = metadataManager.getTableMetadata(get);
-    ScalarDbUtils.addProjectionsForKeys(get, metadata);
 
     Scanner scanner = null;
     try {
@@ -112,9 +108,6 @@ public class Dynamo extends AbstractDistributedStorage {
     } else {
       operationChecker.check(scan);
     }
-
-    TableMetadata metadata = metadataManager.getTableMetadata(scan);
-    ScalarDbUtils.addProjectionsForKeys(scan, metadata);
 
     return selectStatementHandler.handle(scan);
   }

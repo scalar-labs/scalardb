@@ -192,14 +192,6 @@ task integrationTestMultiStorage(type: Test) {
     }
 }
 
-task copyDependencies(type: Copy) {
-    configurations.api.canBeResolved true
-    configurations.implementation.canBeResolved true
-    from(configurations.api + configurations.implementation)
-    into file("$buildDir/libs")
-    duplicatesStrategy DuplicatesStrategy.EXCLUDE
-}
-
 spotless {
     java {
         target 'src/*/java/**/*.java'

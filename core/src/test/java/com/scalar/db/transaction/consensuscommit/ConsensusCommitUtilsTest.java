@@ -3,10 +3,8 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
-import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 public class ConsensusCommitUtilsTest {
@@ -304,64 +302,55 @@ public class ConsensusCommitUtilsTest {
     final String ACCOUNT_TYPE = "account_type";
     final String BALANCE = "balance";
 
-    Set<String> allColumnNames =
-        ImmutableSet.<String>builder()
-            .add(ACCOUNT_ID)
-            .add(ACCOUNT_TYPE)
-            .add(BALANCE)
-            .add(Attribute.ID)
-            .add(Attribute.STATE)
-            .add(Attribute.VERSION)
-            .add(Attribute.PREPARED_AT)
-            .add(Attribute.COMMITTED_AT)
-            .add(Attribute.BEFORE_PREFIX + BALANCE)
-            .add(Attribute.BEFORE_ID)
-            .add(Attribute.BEFORE_STATE)
-            .add(Attribute.BEFORE_VERSION)
-            .add(Attribute.BEFORE_PREPARED_AT)
-            .add(Attribute.BEFORE_COMMITTED_AT)
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
             .build();
 
     // Act Assert
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(ACCOUNT_ID, allColumnNames))
-        .isFalse();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(ACCOUNT_TYPE, allColumnNames))
-        .isFalse();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(BALANCE, allColumnNames)).isFalse();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.ID, allColumnNames))
+    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(ACCOUNT_ID, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(ACCOUNT_TYPE, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(BALANCE, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.ID, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.STATE, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.VERSION, metadata))
         .isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.STATE, allColumnNames))
+    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.PREPARED_AT, metadata))
         .isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.VERSION, allColumnNames))
-        .isTrue();
-    assertThat(
-            ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.PREPARED_AT, allColumnNames))
-        .isTrue();
-    assertThat(
-            ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.COMMITTED_AT, allColumnNames))
+    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.COMMITTED_AT, metadata))
         .isTrue();
     assertThat(
             ConsensusCommitUtils.isTransactionalMetaColumn(
-                Attribute.BEFORE_PREFIX + BALANCE, allColumnNames))
+                Attribute.BEFORE_PREFIX + BALANCE, metadata))
         .isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.BEFORE_ID, allColumnNames))
+    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.BEFORE_ID, metadata))
         .isTrue();
-    assertThat(
-            ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.BEFORE_STATE, allColumnNames))
+    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.BEFORE_STATE, metadata))
         .isTrue();
-    assertThat(
-            ConsensusCommitUtils.isTransactionalMetaColumn(
-                Attribute.BEFORE_VERSION, allColumnNames))
+    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.BEFORE_VERSION, metadata))
         .isTrue();
     assertThat(
-            ConsensusCommitUtils.isTransactionalMetaColumn(
-                Attribute.BEFORE_PREPARED_AT, allColumnNames))
+            ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.BEFORE_PREPARED_AT, metadata))
         .isTrue();
     assertThat(
-            ConsensusCommitUtils.isTransactionalMetaColumn(
-                Attribute.BEFORE_COMMITTED_AT, allColumnNames))
+            ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.BEFORE_COMMITTED_AT, metadata))
         .isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn("aaa", allColumnNames)).isFalse();
+    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn("aaa", metadata)).isFalse();
   }
 
   @Test
@@ -371,53 +360,101 @@ public class ConsensusCommitUtilsTest {
     final String ACCOUNT_TYPE = "account_type";
     final String BALANCE = "balance";
 
-    Set<String> allColumnNames =
-        ImmutableSet.<String>builder()
-            .add(ACCOUNT_ID)
-            .add(ACCOUNT_TYPE)
-            .add(BALANCE)
-            .add(Attribute.ID)
-            .add(Attribute.STATE)
-            .add(Attribute.VERSION)
-            .add(Attribute.PREPARED_AT)
-            .add(Attribute.COMMITTED_AT)
-            .add(Attribute.BEFORE_PREFIX + BALANCE)
-            .add(Attribute.BEFORE_ID)
-            .add(Attribute.BEFORE_STATE)
-            .add(Attribute.BEFORE_VERSION)
-            .add(Attribute.BEFORE_PREPARED_AT)
-            .add(Attribute.BEFORE_COMMITTED_AT)
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
             .build();
 
     // Act Assert
-    assertThat(ConsensusCommitUtils.isBeforeImageColumn(ACCOUNT_ID, allColumnNames)).isFalse();
-    assertThat(ConsensusCommitUtils.isBeforeImageColumn(ACCOUNT_TYPE, allColumnNames)).isFalse();
-    assertThat(ConsensusCommitUtils.isBeforeImageColumn(BALANCE, allColumnNames)).isFalse();
-    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.ID, allColumnNames)).isFalse();
-    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.STATE, allColumnNames)).isFalse();
-    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.VERSION, allColumnNames))
-        .isFalse();
-    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.PREPARED_AT, allColumnNames))
-        .isFalse();
-    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.COMMITTED_AT, allColumnNames))
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(ACCOUNT_ID, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(ACCOUNT_TYPE, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(BALANCE, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.ID, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.STATE, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.VERSION, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.PREPARED_AT, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.COMMITTED_AT, metadata))
         .isFalse();
     assertThat(
-            ConsensusCommitUtils.isBeforeImageColumn(
-                Attribute.BEFORE_PREFIX + BALANCE, allColumnNames))
+            ConsensusCommitUtils.isBeforeImageColumn(Attribute.BEFORE_PREFIX + BALANCE, metadata))
         .isTrue();
-    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.BEFORE_ID, allColumnNames))
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.BEFORE_ID, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.BEFORE_STATE, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.BEFORE_VERSION, metadata))
         .isTrue();
-    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.BEFORE_STATE, allColumnNames))
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.BEFORE_PREPARED_AT, metadata))
         .isTrue();
-    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.BEFORE_VERSION, allColumnNames))
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.BEFORE_COMMITTED_AT, metadata))
         .isTrue();
-    assertThat(
-            ConsensusCommitUtils.isBeforeImageColumn(Attribute.BEFORE_PREPARED_AT, allColumnNames))
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn("aaa", metadata)).isFalse();
+  }
+
+  @Test
+  public void
+      isBeforeImageColumn_PartitionKeyAndClusteringKeyWithBeforePrefixGiven_shouldReturnProperResult() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn("partitionKey", DataType.INT)
+            .addColumn("before_partitionKey", DataType.INT)
+            .addColumn("clusteringKey", DataType.INT)
+            .addColumn("before_clusteringKey", DataType.INT)
+            .addColumn("col", DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + "col", DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey("partitionKey")
+            .addPartitionKey("before_partitionKey")
+            .addClusteringKey("clusteringKey")
+            .addClusteringKey("before_clusteringKey")
+            .build();
+
+    // Act Assert
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn("partitionKey", metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn("before_partitionKey", metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn("clusteringKey", metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn("before_clusteringKey", metadata))
+        .isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn("col", metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.ID, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.STATE, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.VERSION, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.PREPARED_AT, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.COMMITTED_AT, metadata))
+        .isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.BEFORE_PREFIX + "col", metadata))
         .isTrue();
-    assertThat(
-            ConsensusCommitUtils.isBeforeImageColumn(Attribute.BEFORE_COMMITTED_AT, allColumnNames))
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.BEFORE_ID, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.BEFORE_STATE, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.BEFORE_VERSION, metadata))
         .isTrue();
-    assertThat(ConsensusCommitUtils.isBeforeImageColumn("aaa", allColumnNames)).isFalse();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.BEFORE_PREPARED_AT, metadata))
+        .isTrue();
+    assertThat(ConsensusCommitUtils.isBeforeImageColumn(Attribute.BEFORE_COMMITTED_AT, metadata))
+        .isTrue();
   }
 
   @Test
@@ -427,51 +464,45 @@ public class ConsensusCommitUtilsTest {
     final String ACCOUNT_TYPE = "account_type";
     final String BALANCE = "balance";
 
-    Set<String> allColumnNames =
-        ImmutableSet.<String>builder()
-            .add(ACCOUNT_ID)
-            .add(ACCOUNT_TYPE)
-            .add(BALANCE)
-            .add(Attribute.ID)
-            .add(Attribute.STATE)
-            .add(Attribute.VERSION)
-            .add(Attribute.PREPARED_AT)
-            .add(Attribute.COMMITTED_AT)
-            .add(Attribute.BEFORE_PREFIX + BALANCE)
-            .add(Attribute.BEFORE_ID)
-            .add(Attribute.BEFORE_STATE)
-            .add(Attribute.BEFORE_VERSION)
-            .add(Attribute.BEFORE_PREPARED_AT)
-            .add(Attribute.BEFORE_COMMITTED_AT)
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
             .build();
 
     // Act Assert
-    assertThat(ConsensusCommitUtils.isAfterImageColumn(ACCOUNT_ID, allColumnNames)).isTrue();
-    assertThat(ConsensusCommitUtils.isAfterImageColumn(ACCOUNT_TYPE, allColumnNames)).isTrue();
-    assertThat(ConsensusCommitUtils.isAfterImageColumn(BALANCE, allColumnNames)).isTrue();
-    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.ID, allColumnNames)).isTrue();
-    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.STATE, allColumnNames)).isTrue();
-    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.VERSION, allColumnNames)).isTrue();
-    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.PREPARED_AT, allColumnNames))
-        .isTrue();
-    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.COMMITTED_AT, allColumnNames))
-        .isTrue();
-    assertThat(
-            ConsensusCommitUtils.isAfterImageColumn(
-                Attribute.BEFORE_PREFIX + BALANCE, allColumnNames))
+    assertThat(ConsensusCommitUtils.isAfterImageColumn(ACCOUNT_ID, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isAfterImageColumn(ACCOUNT_TYPE, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isAfterImageColumn(BALANCE, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.ID, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.STATE, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.VERSION, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.PREPARED_AT, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.COMMITTED_AT, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.BEFORE_PREFIX + BALANCE, metadata))
         .isFalse();
-    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.BEFORE_ID, allColumnNames))
+    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.BEFORE_ID, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.BEFORE_STATE, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.BEFORE_VERSION, metadata))
         .isFalse();
-    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.BEFORE_STATE, allColumnNames))
+    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.BEFORE_PREPARED_AT, metadata))
         .isFalse();
-    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.BEFORE_VERSION, allColumnNames))
+    assertThat(ConsensusCommitUtils.isAfterImageColumn(Attribute.BEFORE_COMMITTED_AT, metadata))
         .isFalse();
-    assertThat(
-            ConsensusCommitUtils.isAfterImageColumn(Attribute.BEFORE_PREPARED_AT, allColumnNames))
-        .isFalse();
-    assertThat(
-            ConsensusCommitUtils.isAfterImageColumn(Attribute.BEFORE_COMMITTED_AT, allColumnNames))
-        .isFalse();
-    assertThat(ConsensusCommitUtils.isAfterImageColumn("aaa", allColumnNames)).isFalse();
+    assertThat(ConsensusCommitUtils.isAfterImageColumn("aaa", metadata)).isFalse();
   }
 }
