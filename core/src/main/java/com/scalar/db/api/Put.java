@@ -41,7 +41,8 @@ public class Put extends Mutation {
    * Constructs a {@code Put} with the specified partition {@link Key}.
    *
    * @param partitionKey a partition {@code Key} (it might be composed of multiple values)
-   * @deprecated Use {@link Put#newBuilder()} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link Put#newBuilder()}
+   *     instead
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
@@ -55,7 +56,8 @@ public class Put extends Mutation {
    *
    * @param partitionKey a partition {@code Key} (it might be composed of multiple values)
    * @param clusteringKey a clustering {@code Key} (it might be composed of multiple values)
-   * @deprecated Use {@link Put#newBuilder()} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link Put#newBuilder()}
+   *     instead
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
@@ -68,7 +70,8 @@ public class Put extends Mutation {
    * Copy a Put
    *
    * @param put a Put
-   * @deprecated Use {@link Put#newBuilder(Put)} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   *     Put#newBuilder(Put)} instead
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
@@ -103,8 +106,10 @@ public class Put extends Mutation {
    *
    * @param value a {@code Value} to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public Put withValue(Value<?> value) {
     return withValue(ScalarDbUtils.toColumn(value));
@@ -116,8 +121,8 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param booleanValue a BOOLEAN value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
-   *     #withBooleanValue(String, boolean)} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
@@ -131,7 +136,10 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a BOOLEAN value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public Put withBooleanValue(String columnName, boolean value) {
     columns.put(columnName, BooleanColumn.of(columnName, value));
@@ -144,7 +152,10 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a BOOLEAN value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public Put withBooleanValue(String columnName, @Nullable Boolean value) {
     if (value != null) {
@@ -160,8 +171,8 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param intValue a INT value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
-   *     #withIntValue(String, int)} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
@@ -175,7 +186,10 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a INT value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public Put withIntValue(String columnName, int value) {
     columns.put(columnName, IntColumn.of(columnName, value));
@@ -188,7 +202,10 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a INT value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public Put withIntValue(String columnName, @Nullable Integer value) {
     if (value != null) {
@@ -204,8 +221,8 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param bigIntValue a BIGINT value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
-   *     #withBigIntValue(String, long)} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
@@ -219,7 +236,10 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a BIGINT value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public Put withBigIntValue(String columnName, long value) {
     columns.put(columnName, BigIntColumn.of(columnName, value));
@@ -232,7 +252,10 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a BIGINT value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public Put withBigIntValue(String columnName, @Nullable Long value) {
     if (value != null) {
@@ -248,8 +271,8 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param floatValue a value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
-   *     #withFloatValue(String, float)} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
@@ -263,7 +286,10 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a FLOAT value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public Put withFloatValue(String columnName, float value) {
     columns.put(columnName, FloatColumn.of(columnName, value));
@@ -276,7 +302,10 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a FLOAT value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public Put withFloatValue(String columnName, @Nullable Float value) {
     if (value != null) {
@@ -292,8 +321,8 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param doubleValue a DOUBLE value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
-   *     #withDoubleValue(String, double)} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
@@ -307,7 +336,10 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a DOUBLE value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public Put withDoubleValue(String columnName, double value) {
     columns.put(columnName, DoubleColumn.of(columnName, value));
@@ -320,7 +352,10 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a DOUBLE value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public Put withDoubleValue(String columnName, @Nullable Double value) {
     if (value != null) {
@@ -336,8 +371,8 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param textValue a TEXT value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
-   *     #withTextValue(String, String)} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
@@ -351,7 +386,10 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a TEXT value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public Put withTextValue(String columnName, @Nullable String value) {
     columns.put(columnName, TextColumn.of(columnName, value));
@@ -364,8 +402,8 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param blobValue a BLOB value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
-   *     #withBlobValue(String, byte[])} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
@@ -379,7 +417,10 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a BLOB value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public Put withBlobValue(String columnName, @Nullable byte[] value) {
     columns.put(columnName, BlobColumn.of(columnName, value));
@@ -392,8 +433,8 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param blobValue a BLOB value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
-   *     #withBlobValue(String, ByteBuffer)} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
@@ -407,7 +448,10 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a BLOB value to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public Put withBlobValue(String columnName, @Nullable ByteBuffer value) {
     columns.put(columnName, BlobColumn.of(columnName, value));
@@ -435,6 +479,8 @@ public class Put extends Mutation {
    *
    * @param column a column to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @Deprecated
   public Put withValue(Column<?> column) {
@@ -448,6 +494,7 @@ public class Put extends Mutation {
    * @return a map of {@code Value}s
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
    */
+  @Deprecated
   public Map<String, Value<?>> getValues() {
     Map<String, Value<?>> ret = new HashMap<>();
     columns.forEach((k, v) -> ret.put(k, v.hasNullValue() ? null : ScalarDbUtils.toValue(v)));
@@ -645,21 +692,31 @@ public class Put extends Mutation {
       throw new IllegalArgumentException(name + " doesn't exist");
     }
   }
-
-  @Override
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
+   */
   @Deprecated
+  @Override
   public Put forNamespace(String namespace) {
     return (Put) super.forNamespace(namespace);
   }
 
-  @Override
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
+   */
   @Deprecated
+  @Override
   public Put forTable(String tableName) {
     return (Put) super.forTable(tableName);
   }
-
-  @Override
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
+   */
   @Deprecated
+  @Override
   public Put withConsistency(Consistency consistency) {
     return (Put) super.withConsistency(consistency);
   }
@@ -668,7 +725,10 @@ public class Put extends Mutation {
   public void accept(OperationVisitor v) {
     v.visit(this);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
+   */
   @Override
   @Deprecated
   public Put withCondition(MutationCondition condition) {

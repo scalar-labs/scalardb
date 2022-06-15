@@ -21,7 +21,8 @@ public class Get extends Selection {
    * Constructs a {@code Get} with the specified partition {@code Key}.
    *
    * @param partitionKey a partition key (it might be composed of multiple values)
-   * @deprecated Use {@link Get#newBuilder()} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link Get#newBuilder()}
+   *     instead
    */
   @Deprecated
   @SuppressWarnings("InlineMeSuggester")
@@ -35,7 +36,8 @@ public class Get extends Selection {
    *
    * @param partitionKey a partition {@code Key} (it might be composed of multiple values)
    * @param clusteringKey a clustering {@code Key} (it might be composed of multiple values)
-   * @deprecated Use {@link Get#newBuilder()} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link Get#newBuilder()}
+   *     instead
    */
   @Deprecated
   @SuppressWarnings("InlineMeSuggester")
@@ -76,18 +78,28 @@ public class Get extends Selection {
     return new BuildableFromExisting(get);
   }
 
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
+   */
   @Deprecated
   @Override
   public Get forNamespace(String namespace) {
     return (Get) super.forNamespace(namespace);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
+   */
   @Deprecated
   @Override
   public Get forTable(String tableName) {
     return (Get) super.forTable(tableName);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
+   */
   @Deprecated
   @Override
   public Get withConsistency(Consistency consistency) {
@@ -98,13 +110,19 @@ public class Get extends Selection {
   public void accept(OperationVisitor v) {
     v.visit(this);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
+   */
   @Deprecated
   @Override
   public Get withProjection(String projection) {
     return (Get) super.withProjection(projection);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
+   */
   @Deprecated
   @Override
   public Get withProjections(Collection<String> projections) {

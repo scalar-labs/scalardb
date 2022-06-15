@@ -20,7 +20,8 @@ public class Delete extends Mutation {
    * Constructs a {@code Delete} with the specified partition {@code Key}.
    *
    * @param partitionKey a partition key (it might be composed of multiple values)
-   * @deprecated Use {@link Delete#newBuilder()} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   *     Delete#newBuilder()} instead
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
@@ -34,7 +35,8 @@ public class Delete extends Mutation {
    *
    * @param partitionKey a partition {@code Key} (it might be composed of multiple values)
    * @param clusteringKey a clustering {@code Key} (it might be composed of multiple values)
-   * @deprecated Use {@link Delete#newBuilder()} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   *     Delete#newBuilder()} instead
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
@@ -45,7 +47,8 @@ public class Delete extends Mutation {
    * Copy a Delete
    *
    * @param delete a Delete
-   * @deprecated Use {@link Delete#newBuilder(Delete)} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   *     Delete#newBuilder(Delete)} instead.
    */
   @Deprecated
   public Delete(Delete delete) {
@@ -72,19 +75,28 @@ public class Delete extends Mutation {
     checkNotNull(delete);
     return new BuildableFromExisting(delete);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Delete builder instead; to create a Delete builder, use {@link Delete#newBuilder()}
+   */
   @Override
   @Deprecated
   public Delete forNamespace(String namespace) {
     return (Delete) super.forNamespace(namespace);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Delete builder instead; to create a Delete builder, use {@link Delete#newBuilder()}
+   */
   @Override
   @Deprecated
   public Delete forTable(String tableName) {
     return (Delete) super.forTable(tableName);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Delete builder instead; to create a Delete builder, use {@link Delete#newBuilder()}
+   */
   @Override
   @Deprecated
   public Delete withConsistency(Consistency consistency) {
@@ -95,7 +107,10 @@ public class Delete extends Mutation {
   public void accept(OperationVisitor v) {
     v.visit(this);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Delete builder instead; to create a Delete builder, use {@link Delete#newBuilder()}
+   */
   @Override
   @Deprecated
   public Delete withCondition(MutationCondition condition) {

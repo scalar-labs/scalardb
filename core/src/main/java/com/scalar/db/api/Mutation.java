@@ -16,12 +16,20 @@ import javax.annotation.concurrent.NotThreadSafe;
 public abstract class Mutation extends Operation {
   private Optional<MutationCondition> condition;
 
+  /**
+   * @param partitionKey a partition key
+   * @param clusteringKey a clustering key
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0.
+   */
   @Deprecated
   public Mutation(Key partitionKey, Key clusteringKey) {
     super(partitionKey, clusteringKey);
     condition = Optional.empty();
   }
-
+  /**
+   * @param mutation a mutation
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0.
+   */
   @Deprecated
   public Mutation(Mutation mutation) {
     super(mutation);
@@ -43,6 +51,7 @@ public abstract class Mutation extends Operation {
    *
    * @param condition a {@code MutationCondition}
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0.
    */
   @Deprecated
   public Mutation withCondition(MutationCondition condition) {

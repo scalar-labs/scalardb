@@ -82,6 +82,7 @@ public abstract class Operation {
    *
    * @param namespace target namespace for this operation
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
    */
   @Deprecated
   public Operation forNamespace(String namespace) {
@@ -94,6 +95,7 @@ public abstract class Operation {
    *
    * @param tableName target table name for this operation
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
    */
   @Deprecated
   public Operation forTable(String tableName) {
@@ -135,6 +137,7 @@ public abstract class Operation {
    *
    * @param consistency consistency level to set
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
    */
   @Deprecated
   public Operation withConsistency(Consistency consistency) {

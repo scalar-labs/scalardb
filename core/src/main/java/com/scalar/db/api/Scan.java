@@ -38,7 +38,8 @@ public class Scan extends Selection {
    * Constructs a {@code Scan} with the specified partition {@link Key}.
    *
    * @param partitionKey a partition key (it might be composed of multiple values)
-   * @deprecated Use {@link Scan#newBuilder()} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   *     Scan#newBuilder()} instead
    */
   @Deprecated
   @SuppressWarnings("InlineMeSuggester")
@@ -54,7 +55,8 @@ public class Scan extends Selection {
    * Copy a Scan
    *
    * @param scan a Scan
-   * @deprecated Use {@link Scan#newBuilder(Scan)} ()} instead
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   *     Scan#newBuilder(Scan)} ()} instead
    */
   @Deprecated
   @SuppressWarnings("InlineMeSuggester")
@@ -94,6 +96,8 @@ public class Scan extends Selection {
    *
    * @param clusteringKey a starting clustering key
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Deprecated
   public Scan withStart(Key clusteringKey) {
@@ -106,6 +110,8 @@ public class Scan extends Selection {
    * @param clusteringKey a starting clustering key
    * @param inclusive indicates whether the boundary is inclusive or not
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Deprecated
   public Scan withStart(Key clusteringKey, boolean inclusive) {
@@ -138,6 +144,8 @@ public class Scan extends Selection {
    *
    * @param clusteringKey an ending clustering key
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Deprecated
   public Scan withEnd(Key clusteringKey) {
@@ -150,6 +158,8 @@ public class Scan extends Selection {
    * @param clusteringKey an ending clustering key
    * @param inclusive indicates whether the boundary is inclusive or not
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Deprecated
   public Scan withEnd(Key clusteringKey, boolean inclusive) {
@@ -193,6 +203,8 @@ public class Scan extends Selection {
    *
    * @param ordering a scan ordering
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Deprecated
   public Scan withOrdering(Ordering ordering) {
@@ -214,6 +226,8 @@ public class Scan extends Selection {
    *
    * @param limit the number of results to be returned
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Deprecated
   public Scan withLimit(int limit) {
@@ -221,18 +235,28 @@ public class Scan extends Selection {
     return this;
   }
 
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
+   */
   @Override
   @Deprecated
   public Scan forNamespace(String namespace) {
     return (Scan) super.forNamespace(namespace);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
+   */
   @Override
   @Deprecated
   public Scan forTable(String tableName) {
     return (Scan) super.forTable(tableName);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
+   */
   @Override
   @Deprecated
   public Scan withConsistency(Consistency consistency) {
@@ -243,13 +267,19 @@ public class Scan extends Selection {
   public void accept(OperationVisitor v) {
     v.visit(this);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
+   */
   @Override
   @Deprecated
   public Scan withProjection(String projection) {
     return (Scan) super.withProjection(projection);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
+   */
   @Override
   @Deprecated
   public Scan withProjections(Collection<String> projections) {

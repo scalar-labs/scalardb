@@ -18,12 +18,21 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public abstract class Selection extends Operation {
   private final List<String> projections;
-
+  /**
+   * @param partitionKey a partition key
+   * @param clusteringKey a clustering key
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0.
+   */
+  @Deprecated
   public Selection(Key partitionKey, Key clusteringKey) {
     super(partitionKey, clusteringKey);
     projections = new ArrayList<>();
   }
-
+  /**
+   * @param selection a selection
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0.
+   */
+  @Deprecated
   public Selection(Selection selection) {
     super(selection);
     projections = new ArrayList<>(selection.projections);
@@ -34,7 +43,9 @@ public abstract class Selection extends Operation {
    *
    * @param projection a column name to project
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0.
    */
+  @Deprecated
   public Selection withProjection(String projection) {
     projections.add(projection);
     return this;
@@ -45,12 +56,15 @@ public abstract class Selection extends Operation {
    *
    * @param projections a collection of the column names to project
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0.
    */
+  @Deprecated
   public Selection withProjections(Collection<String> projections) {
     this.projections.addAll(projections);
     return this;
   }
 
+  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0. */
   @Deprecated
   public void clearProjections() {
     projections.clear();
