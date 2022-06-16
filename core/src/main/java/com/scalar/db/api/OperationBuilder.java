@@ -1,7 +1,5 @@
-package com.scalar.db.api.builder;
+package com.scalar.db.api;
 
-import com.scalar.db.api.MutationCondition;
-import com.scalar.db.api.Scan;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import java.nio.ByteBuffer;

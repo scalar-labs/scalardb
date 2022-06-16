@@ -1,20 +1,16 @@
-package com.scalar.db.api.builder;
+package com.scalar.db.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.scalar.db.api.Get;
-import com.scalar.db.api.builder.OperationBuilder.ClusteringKey;
-import com.scalar.db.api.builder.OperationBuilder.Consistency;
-import com.scalar.db.api.builder.OperationBuilder.PartitionKeyBuilder;
-import com.scalar.db.api.builder.OperationBuilder.Projection;
-import com.scalar.db.api.builder.OperationBuilder.TableBuilder;
+import com.scalar.db.api.OperationBuilder.ClusteringKey;
+import com.scalar.db.api.OperationBuilder.Condition;
+import com.scalar.db.api.OperationBuilder.Consistency;
+import com.scalar.db.api.OperationBuilder.PartitionKeyBuilder;
+import com.scalar.db.api.OperationBuilder.TableBuilder;
 import com.scalar.db.io.Key;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import javax.annotation.Nullable;
 
-public class GetBuilder {
+public class DeleteBuilder {
 
   public static class Namespace implements OperationBuilder.Namespace<Table> {
     @Override
@@ -49,21 +45,14 @@ public class GetBuilder {
     }
   }
 
-  public static class Buildable extends OperationBuilder.Buildable<Get>
-      implements ClusteringKey<Buildable>, Consistency<Buildable>, Projection<Buildable> {
-    final List<String> projections = new ArrayList<>();
+  public static class Buildable extends OperationBuilder.Buildable<Delete>
+      implements ClusteringKey<Buildable>, Consistency<Buildable>, Condition<Buildable> {
     @Nullable Key clusteringKey;
     @Nullable com.scalar.db.api.Consistency consistency;
+    @Nullable MutationCondition condition;
 
     public Buildable(String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
-    }
-
-    @Override
-    public Buildable projection(String projection) {
-      checkNotNull(projection);
-      projections.add(projection);
-      return this;
     }
 
     @Override
@@ -74,24 +63,10 @@ public class GetBuilder {
     }
 
     @Override
-    public Buildable projections(Collection<String> projections) {
-      checkNotNull(projections);
-      this.projections.addAll(projections);
+    public Buildable condition(MutationCondition condition) {
+      checkNotNull(condition);
+      this.condition = condition;
       return this;
-    }
-
-    @Override
-    public Get build() {
-      Get get = new Get(partitionKey, clusteringKey);
-      get.forNamespace(namespaceName).forTable(tableName);
-      if (!projections.isEmpty()) {
-        get.withProjections(projections);
-      }
-      if (consistency != null) {
-        get.withConsistency(consistency);
-      }
-
-      return get;
     }
 
     @Override
@@ -100,20 +75,38 @@ public class GetBuilder {
       this.consistency = consistency;
       return this;
     }
+
+    @Override
+    public Delete build() {
+      Delete delete = new Delete(partitionKey, clusteringKey);
+      delete.forNamespace(namespaceName).forTable(tableName);
+      if (condition != null) {
+        delete.withCondition(condition);
+      }
+      if (consistency != null) {
+        delete.withConsistency(consistency);
+      }
+
+      return delete;
+    }
   }
 
   public static class BuildableFromExisting extends Buildable
       implements OperationBuilder.Namespace<BuildableFromExisting>,
           OperationBuilder.Table<BuildableFromExisting>,
           OperationBuilder.PartitionKey<BuildableFromExisting>,
-          OperationBuilder.ClearProjections<BuildableFromExisting>,
+          OperationBuilder.ClearCondition<BuildableFromExisting>,
           OperationBuilder.ClearClusteringKey<BuildableFromExisting> {
 
-    public BuildableFromExisting(Get get) {
-      super(get.forNamespace().orElse(null), get.forTable().orElse(null), get.getPartitionKey());
-      this.clusteringKey = get.getClusteringKey().orElse(null);
-      this.projections.addAll(get.getProjections());
-      this.consistency = get.getConsistency();
+    public BuildableFromExisting(Delete delete) {
+      super(
+          delete.forNamespace().orElse(null),
+          delete.forTable().orElse(null),
+          delete.getPartitionKey());
+
+      this.clusteringKey = delete.getClusteringKey().orElse(null);
+      this.consistency = delete.getConsistency();
+      this.condition = delete.getCondition().orElse(null);
     }
 
     @Override
@@ -150,20 +143,14 @@ public class GetBuilder {
     }
 
     @Override
-    public BuildableFromExisting projection(String projection) {
-      super.projection(projection);
+    public BuildableFromExisting condition(MutationCondition condition) {
+      super.condition(condition);
       return this;
     }
 
     @Override
-    public BuildableFromExisting projections(Collection<String> projections) {
-      super.projections(projections);
-      return this;
-    }
-
-    @Override
-    public BuildableFromExisting clearProjections() {
-      this.projections.clear();
+    public BuildableFromExisting clearCondition() {
+      this.condition = null;
       return this;
     }
 

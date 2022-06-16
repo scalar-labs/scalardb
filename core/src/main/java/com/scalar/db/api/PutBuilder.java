@@ -1,18 +1,16 @@
-package com.scalar.db.api.builder;
+package com.scalar.db.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.scalar.db.api.MutationCondition;
-import com.scalar.db.api.Put;
-import com.scalar.db.api.builder.OperationBuilder.ClearClusteringKey;
-import com.scalar.db.api.builder.OperationBuilder.ClearCondition;
-import com.scalar.db.api.builder.OperationBuilder.ClearValues;
-import com.scalar.db.api.builder.OperationBuilder.ClusteringKey;
-import com.scalar.db.api.builder.OperationBuilder.Condition;
-import com.scalar.db.api.builder.OperationBuilder.Consistency;
-import com.scalar.db.api.builder.OperationBuilder.PartitionKeyBuilder;
-import com.scalar.db.api.builder.OperationBuilder.TableBuilder;
-import com.scalar.db.api.builder.OperationBuilder.Values;
+import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
+import com.scalar.db.api.OperationBuilder.ClearCondition;
+import com.scalar.db.api.OperationBuilder.ClearValues;
+import com.scalar.db.api.OperationBuilder.ClusteringKey;
+import com.scalar.db.api.OperationBuilder.Condition;
+import com.scalar.db.api.OperationBuilder.Consistency;
+import com.scalar.db.api.OperationBuilder.PartitionKeyBuilder;
+import com.scalar.db.api.OperationBuilder.TableBuilder;
+import com.scalar.db.api.OperationBuilder.Values;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;

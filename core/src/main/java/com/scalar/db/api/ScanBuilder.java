@@ -1,17 +1,15 @@
-package com.scalar.db.api.builder;
+package com.scalar.db.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.scalar.db.api.Scan;
-import com.scalar.db.api.ScanAll;
-import com.scalar.db.api.builder.OperationBuilder.All;
-import com.scalar.db.api.builder.OperationBuilder.ClusteringKeyFiltering;
-import com.scalar.db.api.builder.OperationBuilder.Consistency;
-import com.scalar.db.api.builder.OperationBuilder.Limit;
-import com.scalar.db.api.builder.OperationBuilder.Ordering;
-import com.scalar.db.api.builder.OperationBuilder.PartitionKeyBuilder;
-import com.scalar.db.api.builder.OperationBuilder.Projection;
-import com.scalar.db.api.builder.OperationBuilder.TableBuilder;
+import com.scalar.db.api.OperationBuilder.All;
+import com.scalar.db.api.OperationBuilder.ClusteringKeyFiltering;
+import com.scalar.db.api.OperationBuilder.Consistency;
+import com.scalar.db.api.OperationBuilder.Limit;
+import com.scalar.db.api.OperationBuilder.Ordering;
+import com.scalar.db.api.OperationBuilder.PartitionKeyBuilder;
+import com.scalar.db.api.OperationBuilder.Projection;
+import com.scalar.db.api.OperationBuilder.TableBuilder;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Collection;

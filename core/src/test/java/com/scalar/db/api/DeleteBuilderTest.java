@@ -1,10 +1,7 @@
-package com.scalar.db.api.builder;
+package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.scalar.db.api.Consistency;
-import com.scalar.db.api.Delete;
-import com.scalar.db.api.MutationCondition;
 import com.scalar.db.io.Key;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

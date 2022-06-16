@@ -3,8 +3,8 @@ package com.scalar.db.api;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
-import com.scalar.db.api.builder.GetBuilder.BuildableFromExisting;
-import com.scalar.db.api.builder.GetBuilder.Namespace;
+import com.scalar.db.api.GetBuilder.BuildableFromExisting;
+import com.scalar.db.api.GetBuilder.Namespace;
 import com.scalar.db.io.Key;
 import java.util.Collection;
 import javax.annotation.concurrent.NotThreadSafe;

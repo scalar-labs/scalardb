@@ -1,9 +1,7 @@
-package com.scalar.db.api.builder;
+package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.scalar.db.api.Consistency;
-import com.scalar.db.api.Get;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;

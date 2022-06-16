@@ -3,8 +3,8 @@ package com.scalar.db.api;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
-import com.scalar.db.api.builder.ScanBuilder.BuildableScanOrScanAllFromExisting;
-import com.scalar.db.api.builder.ScanBuilder.Namespace;
+import com.scalar.db.api.ScanBuilder.BuildableScanOrScanAllFromExisting;
+import com.scalar.db.api.ScanBuilder.Namespace;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Collection;

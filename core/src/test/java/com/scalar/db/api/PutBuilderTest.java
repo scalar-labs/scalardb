@@ -1,10 +1,7 @@
-package com.scalar.db.api.builder;
+package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.scalar.db.api.Consistency;
-import com.scalar.db.api.MutationCondition;
-import com.scalar.db.api.Put;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
