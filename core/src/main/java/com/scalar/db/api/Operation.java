@@ -82,7 +82,9 @@ public abstract class Operation {
    *
    * @param namespace target namespace for this operation
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
    */
+  @Deprecated
   public Operation forNamespace(String namespace) {
     this.namespace = Optional.ofNullable(namespace);
     return this;
@@ -93,7 +95,9 @@ public abstract class Operation {
    *
    * @param tableName target table name for this operation
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
    */
+  @Deprecated
   public Operation forTable(String tableName) {
     this.tableName = Optional.ofNullable(tableName);
     return this;
@@ -133,7 +137,9 @@ public abstract class Operation {
    *
    * @param consistency consistency level to set
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
    */
+  @Deprecated
   public Operation withConsistency(Consistency consistency) {
     this.consistency = consistency;
     return this;
