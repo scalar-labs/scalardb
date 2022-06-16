@@ -1,6 +1,10 @@
 package com.scalar.db.api;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.base.MoreObjects;
+import com.scalar.db.api.ScanBuilder.BuildableScanOrScanAllFromExisting;
+import com.scalar.db.api.ScanBuilder.Namespace;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -22,18 +26,23 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public class Scan extends Selection {
+
+  private final List<Ordering> orderings;
   private Optional<Key> startClusteringKey;
   private boolean startInclusive;
   private Optional<Key> endClusteringKey;
   private boolean endInclusive;
-  private final List<Ordering> orderings;
   private int limit;
 
   /**
    * Constructs a {@code Scan} with the specified partition {@link Key}.
    *
    * @param partitionKey a partition key (it might be composed of multiple values)
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   *     Scan#newBuilder()} instead
    */
+  @Deprecated
+  @SuppressWarnings("InlineMeSuggester")
   public Scan(Key partitionKey) {
     super(partitionKey, null);
     startClusteringKey = Optional.empty();
@@ -42,6 +51,15 @@ public class Scan extends Selection {
     limit = 0;
   }
 
+  /**
+   * Copy a Scan
+   *
+   * @param scan a Scan
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   *     Scan#newBuilder(Scan)} ()} instead
+   */
+  @Deprecated
+  @SuppressWarnings("InlineMeSuggester")
   public Scan(Scan scan) {
     super(scan);
     startClusteringKey = scan.startClusteringKey;
@@ -53,11 +71,35 @@ public class Scan extends Selection {
   }
 
   /**
+   * Build a {@code Scan} or {@code ScanAll} operation using a builder
+   *
+   * @return a {@code Scan} operation builder
+   */
+  public static Namespace newBuilder() {
+    return new Namespace();
+  }
+
+  /**
+   * Build a {@code Scan} operation from an existing {@code Scan} object using a builder. The
+   * builder will be parametrized by default with all the existing {@code Scan} attributes
+   *
+   * @param scan an existing {@code Scan} operation
+   * @return a {@code Scan} operation builder
+   */
+  public static BuildableScanOrScanAllFromExisting newBuilder(Scan scan) {
+    checkNotNull(scan);
+    return new BuildableScanOrScanAllFromExisting(scan);
+  }
+
+  /**
    * Sets the specified clustering key as a starting point for scan. The boundary is inclusive.
    *
    * @param clusteringKey a starting clustering key
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
+  @Deprecated
   public Scan withStart(Key clusteringKey) {
     return withStart(clusteringKey, true);
   }
@@ -68,7 +110,10 @@ public class Scan extends Selection {
    * @param clusteringKey a starting clustering key
    * @param inclusive indicates whether the boundary is inclusive or not
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
+  @Deprecated
   public Scan withStart(Key clusteringKey, boolean inclusive) {
     startClusteringKey = Optional.ofNullable(clusteringKey);
     startInclusive = inclusive;
@@ -99,7 +144,10 @@ public class Scan extends Selection {
    *
    * @param clusteringKey an ending clustering key
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
+  @Deprecated
   public Scan withEnd(Key clusteringKey) {
     return withEnd(clusteringKey, true);
   }
@@ -110,7 +158,10 @@ public class Scan extends Selection {
    * @param clusteringKey an ending clustering key
    * @param inclusive indicates whether the boundary is inclusive or not
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
+  @Deprecated
   public Scan withEnd(Key clusteringKey, boolean inclusive) {
     endClusteringKey = Optional.ofNullable(clusteringKey);
     endInclusive = inclusive;
@@ -152,7 +203,10 @@ public class Scan extends Selection {
    *
    * @param ordering a scan ordering
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
+  @Deprecated
   public Scan withOrdering(Ordering ordering) {
     orderings.add(ordering);
     return this;
@@ -172,23 +226,39 @@ public class Scan extends Selection {
    *
    * @param limit the number of results to be returned
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
+  @Deprecated
   public Scan withLimit(int limit) {
     this.limit = limit;
     return this;
   }
 
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
+   */
   @Override
+  @Deprecated
   public Scan forNamespace(String namespace) {
     return (Scan) super.forNamespace(namespace);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
+   */
   @Override
+  @Deprecated
   public Scan forTable(String tableName) {
     return (Scan) super.forTable(tableName);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
+   */
   @Override
+  @Deprecated
   public Scan withConsistency(Consistency consistency) {
     return (Scan) super.withConsistency(consistency);
   }
@@ -197,13 +267,21 @@ public class Scan extends Selection {
   public void accept(OperationVisitor v) {
     v.visit(this);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
+   */
   @Override
+  @Deprecated
   public Scan withProjection(String projection) {
     return (Scan) super.withProjection(projection);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
+   */
   @Override
+  @Deprecated
   public Scan withProjections(Collection<String> projections) {
     return (Scan) super.withProjections(projections);
   }
@@ -287,6 +365,26 @@ public class Scan extends Selection {
     }
 
     /**
+     * Creates an Ordering object for ASC order with the specified column.
+     *
+     * @param columnName a name of a target column
+     * @return an Ordering object
+     */
+    public static Ordering asc(String columnName) {
+      return new Ordering(columnName, Order.ASC);
+    }
+
+    /**
+     * Creates an Ordering object for DESC order with the specified column.
+     *
+     * @param columnName a name of a target column
+     * @return an Ordering object
+     */
+    public static Ordering desc(String columnName) {
+      return new Ordering(columnName, Order.DESC);
+    }
+
+    /**
      * Returns the column name of the ordering clustering key
      *
      * @return the column name of the ordering clustering key
@@ -352,26 +450,6 @@ public class Scan extends Selection {
     public enum Order {
       ASC,
       DESC,
-    }
-
-    /**
-     * Creates an Ordering object for ASC order with the specified column.
-     *
-     * @param columnName a name of a target column
-     * @return an Ordering object
-     */
-    public static Ordering asc(String columnName) {
-      return new Ordering(columnName, Order.ASC);
-    }
-
-    /**
-     * Creates an Ordering object for DESC order with the specified column.
-     *
-     * @param columnName a name of a target column
-     * @return an Ordering object
-     */
-    public static Ordering desc(String columnName) {
-      return new Ordering(columnName, Order.DESC);
     }
   }
 }
