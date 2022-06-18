@@ -11,6 +11,7 @@ import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
@@ -497,7 +498,18 @@ public class Put extends Mutation {
   @Deprecated
   public Map<String, Value<?>> getValues() {
     Map<String, Value<?>> ret = new HashMap<>();
-    columns.forEach((k, v) -> ret.put(k, v.hasNullValue() ? null : ScalarDbUtils.toValue(v)));
+    columns.forEach(
+        (k, c) -> {
+          Value<?> value;
+          if (c.hasNullValue()
+              && c.getDataType() != DataType.TEXT
+              && c.getDataType() != DataType.BLOB) {
+            value = null;
+          } else {
+            value = ScalarDbUtils.toValue(c);
+          }
+          ret.put(k, value);
+        });
     return ret;
   }
 
