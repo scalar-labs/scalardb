@@ -1,6 +1,10 @@
 package com.scalar.db.api;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.base.MoreObjects;
+import com.scalar.db.api.GetBuilder.BuildableFromExisting;
+import com.scalar.db.api.GetBuilder.Namespace;
 import com.scalar.db.io.Key;
 import java.util.Collection;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -17,7 +21,11 @@ public class Get extends Selection {
    * Constructs a {@code Get} with the specified partition {@code Key}.
    *
    * @param partitionKey a partition key (it might be composed of multiple values)
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link Get#newBuilder()}
+   *     instead
    */
+  @Deprecated
+  @SuppressWarnings("InlineMeSuggester")
   public Get(Key partitionKey) {
     this(partitionKey, null);
   }
@@ -28,25 +36,71 @@ public class Get extends Selection {
    *
    * @param partitionKey a partition {@code Key} (it might be composed of multiple values)
    * @param clusteringKey a clustering {@code Key} (it might be composed of multiple values)
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link Get#newBuilder()}
+   *     instead
    */
+  @Deprecated
+  @SuppressWarnings("InlineMeSuggester")
   public Get(Key partitionKey, Key clusteringKey) {
     super(partitionKey, clusteringKey);
   }
 
+  /**
+   * Copy a Get
+   *
+   * @param get a Get
+   * @deprecated Use {@link Get#newBuilder(Get)} instead
+   */
+  @Deprecated
+  @SuppressWarnings("InlineMeSuggester")
   public Get(Get get) {
     super(get);
   }
 
+  /**
+   * Build a {@code Get} operation using a builder
+   *
+   * @return a {@code Get} operation builder
+   */
+  public static Namespace newBuilder() {
+    return new Namespace();
+  }
+
+  /**
+   * Build a {@code Get} operation from an existing {@code Get} object using a builder. The builder
+   * will be parametrized by default with all the existing {@code Get} attributes
+   *
+   * @param get an existing {@code Get} operation
+   * @return a {@code Get} operation builder
+   */
+  public static BuildableFromExisting newBuilder(Get get) {
+    checkNotNull(get);
+    return new BuildableFromExisting(get);
+  }
+
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
+   */
+  @Deprecated
   @Override
   public Get forNamespace(String namespace) {
     return (Get) super.forNamespace(namespace);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
+   */
+  @Deprecated
   @Override
   public Get forTable(String tableName) {
     return (Get) super.forTable(tableName);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
+   */
+  @Deprecated
   @Override
   public Get withConsistency(Consistency consistency) {
     return (Get) super.withConsistency(consistency);
@@ -56,12 +110,20 @@ public class Get extends Selection {
   public void accept(OperationVisitor v) {
     v.visit(this);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
+   */
+  @Deprecated
   @Override
   public Get withProjection(String projection) {
     return (Get) super.withProjection(projection);
   }
-
+  /**
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
+   */
+  @Deprecated
   @Override
   public Get withProjections(Collection<String> projections) {
     return (Get) super.withProjections(projections);

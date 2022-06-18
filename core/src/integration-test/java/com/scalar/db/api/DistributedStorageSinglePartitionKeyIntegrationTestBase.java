@@ -1,11 +1,14 @@
 package com.scalar.db.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.TestUtils;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -17,7 +20,6 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.IntStream;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -117,7 +119,7 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
   }
 
   @Test
-  public void getAndDelete_ShouldBehaveCorrectly() throws ExecutionException {
+  public void getAndScanAndDelete_ShouldBehaveCorrectly() throws ExecutionException, IOException {
     for (DataType partitionKeyType : partitionKeyTypes) {
       truncateTable(partitionKeyType);
       List<Value<?>> partitionKeyValues = prepareRecords(partitionKeyType);
@@ -133,19 +135,42 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
         Optional<Result> result = storage.get(get);
 
         // Assert
-        Assertions.assertThat(result).describedAs(description).isPresent();
-        Assertions.assertThat(result.get().getValue(PARTITION_KEY).isPresent())
+        assertThat(result).describedAs(description).isPresent();
+        assertThat(result.get().getValue(PARTITION_KEY).isPresent())
             .describedAs(description)
             .isTrue();
-        Assertions.assertThat(result.get().getValue(PARTITION_KEY).get())
+        assertThat(result.get().getValue(PARTITION_KEY).get())
             .describedAs(description)
             .isEqualTo(partitionKeyValue);
-        Assertions.assertThat(result.get().getValue(COL_NAME).isPresent())
-            .describedAs(description)
-            .isTrue();
-        Assertions.assertThat(result.get().getValue(COL_NAME).get().getAsInt())
+        assertThat(result.get().getValue(COL_NAME).isPresent()).describedAs(description).isTrue();
+        assertThat(result.get().getValue(COL_NAME).get().getAsInt())
             .describedAs(description)
             .isEqualTo(1);
+      }
+
+      // for scan
+      for (Value<?> partitionKeyValue : partitionKeyValues) {
+        // Arrange
+        Scan scan = prepareScan(partitionKeyType, partitionKeyValue);
+
+        // Act Assert
+        try (Scanner scanner = storage.scan(scan)) {
+          Optional<Result> result = scanner.one();
+
+          assertThat(result).describedAs(description).isPresent();
+          assertThat(result.get().getValue(PARTITION_KEY).isPresent())
+              .describedAs(description)
+              .isTrue();
+          assertThat(result.get().getValue(PARTITION_KEY).get())
+              .describedAs(description)
+              .isEqualTo(partitionKeyValue);
+          assertThat(result.get().getValue(COL_NAME).isPresent()).describedAs(description).isTrue();
+          assertThat(result.get().getValue(COL_NAME).get().getAsInt())
+              .describedAs(description)
+              .isEqualTo(1);
+
+          assertThat(scanner.one()).isNotPresent();
+        }
       }
 
       // for delete
@@ -158,7 +183,7 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
 
         // Assert
         Optional<Result> result = storage.get(prepareGet(partitionKeyType, partitionKeyValue));
-        Assertions.assertThat(result).describedAs(description).isNotPresent();
+        assertThat(result).describedAs(description).isNotPresent();
       }
     }
   }
@@ -226,6 +251,12 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
 
   private Get prepareGet(DataType partitionKeyType, Value<?> partitionKeyValue) {
     return new Get(new Key(partitionKeyValue))
+        .forNamespace(namespace)
+        .forTable(getTableName(partitionKeyType));
+  }
+
+  private Scan prepareScan(DataType partitionKeyType, Value<?> partitionKeyValue) {
+    return new Scan(new Key(partitionKeyValue))
         .forNamespace(namespace)
         .forTable(getTableName(partitionKeyType));
   }

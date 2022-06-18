@@ -33,7 +33,6 @@ subprojects {
         oracleDriverVersion = '19.8.0.0'
         sqlserverDriverVersion = '8.4.1.jre8'
         grpcVersion = '1.46.0'
-        protocVersion = '3.20.1'
         protobufVersion = '3.20.1'
         picocliVersion = '4.1.4'
         scalarAdminVersion = '1.2.0'
