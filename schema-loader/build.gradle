@@ -1,8 +1,8 @@
 plugins {
-    id 'com.palantir.docker' version '0.25.0'
-    id 'net.ltgt.errorprone' version '2.0.2'
-    id 'com.github.johnrengelman.shadow' version '7.1.0'
-    id 'com.github.spotbugs-base' version '4.7.1'
+    id 'com.palantir.docker' version "${dockerPluginVersion}"
+    id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
+    id 'com.github.johnrengelman.shadow' version "${shadowPluginVersion}"
+    id 'com.github.spotbugs-base' version "${spotbugsPluginVersion}"
 }
 
 archivesBaseName = "scalardb-schema-loader"
@@ -141,7 +141,7 @@ docker {
 
 task dockerfileLint(type: Exec) {
     description 'Lint the Dockerfile'
-    commandLine "${project.rootDir}/ci/scripts/dockerfile_lint.sh"
+    commandLine "${project.rootDir}/ci/dockerfile_lint.sh"
 }
 
 // Build a fat jar
