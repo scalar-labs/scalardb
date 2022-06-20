@@ -32,7 +32,6 @@ import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpdateQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -43,7 +42,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-@SuppressFBWarnings({"RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT", "OBL_UNSATISFIED_OBLIGATION"})
 public class JdbcServiceTest {
 
   private static final String NAMESPACE = "ns";
@@ -87,7 +85,6 @@ public class JdbcServiceTest {
   }
 
   @Test
-  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public void whenGetOperationExecuted_shouldCallQueryBuilder() throws Exception {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
@@ -108,7 +105,6 @@ public class JdbcServiceTest {
   }
 
   @Test
-  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public void whenGetScannerExecuted_withScan_shouldCallQueryBuilder() throws Exception {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
@@ -134,7 +130,6 @@ public class JdbcServiceTest {
   }
 
   @Test
-  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public void whenGetScannerExecuted_withScanAll_shouldCallQueryBuilder() throws Exception {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
@@ -157,7 +152,6 @@ public class JdbcServiceTest {
   }
 
   @Test
-  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public void whenScanExecuted_withScan_shouldCallQueryBuilder() throws Exception {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
@@ -183,7 +177,6 @@ public class JdbcServiceTest {
   }
 
   @Test
-  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public void whenScanExecuted_withScanAll_shouldCallQueryBuilder() throws Exception {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);

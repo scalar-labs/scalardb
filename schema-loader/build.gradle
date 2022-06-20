@@ -257,6 +257,7 @@ task spotbugsMain(type: SpotBugsTask) {
     sourceDirs = sourceSets.main.allSource.sourceDirectories
     auxClassPaths = sourceSets.main.compileClasspath
     reports { html.enabled = true }
+    excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
 }
 
 task spotbugsTest(type: SpotBugsTask) {
@@ -265,6 +266,7 @@ task spotbugsTest(type: SpotBugsTask) {
     sourceDirs = sourceSets.test.allSource.sourceDirectories
     auxClassPaths = sourceSets.test.compileClasspath
     reports { html.enabled = true }
+    excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
 }
 
 task spotbugsIntegrationTest(type: SpotBugsTask) {
@@ -273,6 +275,7 @@ task spotbugsIntegrationTest(type: SpotBugsTask) {
     sourceDirs = sourceSets.integrationTestAll.allSource.sourceDirectories
     auxClassPaths = sourceSets.integrationTestAll.compileClasspath
     reports { html.enabled = true }
+    excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
 }
 
 check.dependsOn += spotbugsMain

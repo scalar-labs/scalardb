@@ -15,9 +15,9 @@ import javax.annotation.concurrent.Immutable;
 public class TransactionalTableMetadata {
 
   private final TableMetadata tableMetadata;
-  private final LinkedHashSet<String> transactionalMetaColumnNames;
-  private final LinkedHashSet<String> beforeImageColumnNames;
-  private final LinkedHashSet<String> afterImageColumnNames;
+  private final ImmutableLinkedHashSet<String> transactionalMetaColumnNames;
+  private final ImmutableLinkedHashSet<String> beforeImageColumnNames;
+  private final ImmutableLinkedHashSet<String> afterImageColumnNames;
 
   public TransactionalTableMetadata(TableMetadata tableMetadata) {
     this.tableMetadata = tableMetadata;

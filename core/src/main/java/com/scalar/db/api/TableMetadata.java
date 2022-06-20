@@ -18,12 +18,12 @@ import javax.annotation.concurrent.Immutable;
 @Immutable
 public class TableMetadata {
 
-  private final LinkedHashSet<String> columnNames;
-  private final Map<String, DataType> columnDataTypes;
-  private final LinkedHashSet<String> partitionKeyNames;
-  private final LinkedHashSet<String> clusteringKeyNames;
-  private final Map<String, Order> clusteringOrders;
-  private final Set<String> secondaryIndexNames;
+  private final ImmutableLinkedHashSet<String> columnNames;
+  private final ImmutableMap<String, DataType> columnDataTypes;
+  private final ImmutableLinkedHashSet<String> partitionKeyNames;
+  private final ImmutableLinkedHashSet<String> clusteringKeyNames;
+  private final ImmutableMap<String, Order> clusteringOrders;
+  private final ImmutableSet<String> secondaryIndexNames;
 
   private TableMetadata(
       LinkedHashMap<String, DataType> columns,
@@ -77,6 +77,15 @@ public class TableMetadata {
    */
   public DataType getColumnDataType(String columnName) {
     return columnDataTypes.get(columnName);
+  }
+
+  /**
+   * Returns the map of the columns names and the data types
+   *
+   * @return the map of the columns names and the data types
+   */
+  public Map<String, DataType> getColumnDataTypes() {
+    return columnDataTypes;
   }
 
   /**
