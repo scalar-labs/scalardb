@@ -75,6 +75,19 @@ private static final long serialVersionUID = 0L;
             operator_ = rawValue;
             break;
           }
+          case 34: {
+            com.scalar.db.rpc.Column.Builder subBuilder = null;
+            if (column_ != null) {
+              subBuilder = column_.toBuilder();
+            }
+            column_ = input.readMessage(com.scalar.db.rpc.Column.parser(), extensionRegistry);
+            if (subBuilder != null) {
+              subBuilder.mergeFrom(column_);
+              column_ = subBuilder.buildPartial();
+            }
+
+            break;
+          }
           default: {
             if (!parseUnknownField(
                 input, unknownFields, extensionRegistry, tag)) {
@@ -274,11 +287,13 @@ private static final long serialVersionUID = 0L;
   public static final int NAME_FIELD_NUMBER = 1;
   private volatile java.lang.Object name_;
   /**
-   * <code>string name = 1;</code>
+   * <code>string name = 1 [deprecated = true];</code>
+   * @deprecated rpc.ConditionalExpression.name is deprecated.
+   *     See scalardb.proto;l=91
    * @return The name.
    */
   @java.lang.Override
-  public java.lang.String getName() {
+  @java.lang.Deprecated public java.lang.String getName() {
     java.lang.Object ref = name_;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
@@ -291,11 +306,13 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <code>string name = 1;</code>
+   * <code>string name = 1 [deprecated = true];</code>
+   * @deprecated rpc.ConditionalExpression.name is deprecated.
+   *     See scalardb.proto;l=91
    * @return The bytes for name.
    */
   @java.lang.Override
-  public com.google.protobuf.ByteString
+  @java.lang.Deprecated public com.google.protobuf.ByteString
       getNameBytes() {
     java.lang.Object ref = name_;
     if (ref instanceof java.lang.String) {
@@ -312,26 +329,30 @@ private static final long serialVersionUID = 0L;
   public static final int VALUE_FIELD_NUMBER = 2;
   private com.scalar.db.rpc.Value value_;
   /**
-   * <code>.rpc.Value value = 2;</code>
+   * <code>.rpc.Value value = 2 [deprecated = true];</code>
+   * @deprecated rpc.ConditionalExpression.value is deprecated.
+   *     See scalardb.proto;l=92
    * @return Whether the value field is set.
    */
   @java.lang.Override
-  public boolean hasValue() {
+  @java.lang.Deprecated public boolean hasValue() {
     return value_ != null;
   }
   /**
-   * <code>.rpc.Value value = 2;</code>
+   * <code>.rpc.Value value = 2 [deprecated = true];</code>
+   * @deprecated rpc.ConditionalExpression.value is deprecated.
+   *     See scalardb.proto;l=92
    * @return The value.
    */
   @java.lang.Override
-  public com.scalar.db.rpc.Value getValue() {
+  @java.lang.Deprecated public com.scalar.db.rpc.Value getValue() {
     return value_ == null ? com.scalar.db.rpc.Value.getDefaultInstance() : value_;
   }
   /**
-   * <code>.rpc.Value value = 2;</code>
+   * <code>.rpc.Value value = 2 [deprecated = true];</code>
    */
   @java.lang.Override
-  public com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder() {
+  @java.lang.Deprecated public com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder() {
     return getValue();
   }
 
@@ -352,6 +373,32 @@ private static final long serialVersionUID = 0L;
     @SuppressWarnings("deprecation")
     com.scalar.db.rpc.ConditionalExpression.Operator result = com.scalar.db.rpc.ConditionalExpression.Operator.valueOf(operator_);
     return result == null ? com.scalar.db.rpc.ConditionalExpression.Operator.UNRECOGNIZED : result;
+  }
+
+  public static final int COLUMN_FIELD_NUMBER = 4;
+  private com.scalar.db.rpc.Column column_;
+  /**
+   * <code>.rpc.Column column = 4;</code>
+   * @return Whether the column field is set.
+   */
+  @java.lang.Override
+  public boolean hasColumn() {
+    return column_ != null;
+  }
+  /**
+   * <code>.rpc.Column column = 4;</code>
+   * @return The column.
+   */
+  @java.lang.Override
+  public com.scalar.db.rpc.Column getColumn() {
+    return column_ == null ? com.scalar.db.rpc.Column.getDefaultInstance() : column_;
+  }
+  /**
+   * <code>.rpc.Column column = 4;</code>
+   */
+  @java.lang.Override
+  public com.scalar.db.rpc.ColumnOrBuilder getColumnOrBuilder() {
+    return getColumn();
   }
 
   private byte memoizedIsInitialized = -1;
@@ -377,6 +424,9 @@ private static final long serialVersionUID = 0L;
     if (operator_ != com.scalar.db.rpc.ConditionalExpression.Operator.EQ.getNumber()) {
       output.writeEnum(3, operator_);
     }
+    if (column_ != null) {
+      output.writeMessage(4, getColumn());
+    }
     unknownFields.writeTo(output);
   }
 
@@ -396,6 +446,10 @@ private static final long serialVersionUID = 0L;
     if (operator_ != com.scalar.db.rpc.ConditionalExpression.Operator.EQ.getNumber()) {
       size += com.google.protobuf.CodedOutputStream
         .computeEnumSize(3, operator_);
+    }
+    if (column_ != null) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(4, getColumn());
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -420,6 +474,11 @@ private static final long serialVersionUID = 0L;
           .equals(other.getValue())) return false;
     }
     if (operator_ != other.operator_) return false;
+    if (hasColumn() != other.hasColumn()) return false;
+    if (hasColumn()) {
+      if (!getColumn()
+          .equals(other.getColumn())) return false;
+    }
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -439,6 +498,10 @@ private static final long serialVersionUID = 0L;
     }
     hash = (37 * hash) + OPERATOR_FIELD_NUMBER;
     hash = (53 * hash) + operator_;
+    if (hasColumn()) {
+      hash = (37 * hash) + COLUMN_FIELD_NUMBER;
+      hash = (53 * hash) + getColumn().hashCode();
+    }
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -582,6 +645,12 @@ private static final long serialVersionUID = 0L;
       }
       operator_ = 0;
 
+      if (columnBuilder_ == null) {
+        column_ = null;
+      } else {
+        column_ = null;
+        columnBuilder_ = null;
+      }
       return this;
     }
 
@@ -615,6 +684,11 @@ private static final long serialVersionUID = 0L;
         result.value_ = valueBuilder_.build();
       }
       result.operator_ = operator_;
+      if (columnBuilder_ == null) {
+        result.column_ = column_;
+      } else {
+        result.column_ = columnBuilder_.build();
+      }
       onBuilt();
       return result;
     }
@@ -673,6 +747,9 @@ private static final long serialVersionUID = 0L;
       if (other.operator_ != 0) {
         setOperatorValue(other.getOperatorValue());
       }
+      if (other.hasColumn()) {
+        mergeColumn(other.getColumn());
+      }
       this.mergeUnknownFields(other.unknownFields);
       onChanged();
       return this;
@@ -704,10 +781,12 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object name_ = "";
     /**
-     * <code>string name = 1;</code>
+     * <code>string name = 1 [deprecated = true];</code>
+     * @deprecated rpc.ConditionalExpression.name is deprecated.
+     *     See scalardb.proto;l=91
      * @return The name.
      */
-    public java.lang.String getName() {
+    @java.lang.Deprecated public java.lang.String getName() {
       java.lang.Object ref = name_;
       if (!(ref instanceof java.lang.String)) {
         com.google.protobuf.ByteString bs =
@@ -720,10 +799,12 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string name = 1;</code>
+     * <code>string name = 1 [deprecated = true];</code>
+     * @deprecated rpc.ConditionalExpression.name is deprecated.
+     *     See scalardb.proto;l=91
      * @return The bytes for name.
      */
-    public com.google.protobuf.ByteString
+    @java.lang.Deprecated public com.google.protobuf.ByteString
         getNameBytes() {
       java.lang.Object ref = name_;
       if (ref instanceof String) {
@@ -737,11 +818,13 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string name = 1;</code>
+     * <code>string name = 1 [deprecated = true];</code>
+     * @deprecated rpc.ConditionalExpression.name is deprecated.
+     *     See scalardb.proto;l=91
      * @param value The name to set.
      * @return This builder for chaining.
      */
-    public Builder setName(
+    @java.lang.Deprecated public Builder setName(
         java.lang.String value) {
       if (value == null) {
     throw new NullPointerException();
@@ -752,21 +835,25 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>string name = 1;</code>
+     * <code>string name = 1 [deprecated = true];</code>
+     * @deprecated rpc.ConditionalExpression.name is deprecated.
+     *     See scalardb.proto;l=91
      * @return This builder for chaining.
      */
-    public Builder clearName() {
+    @java.lang.Deprecated public Builder clearName() {
       
       name_ = getDefaultInstance().getName();
       onChanged();
       return this;
     }
     /**
-     * <code>string name = 1;</code>
+     * <code>string name = 1 [deprecated = true];</code>
+     * @deprecated rpc.ConditionalExpression.name is deprecated.
+     *     See scalardb.proto;l=91
      * @param value The bytes for name to set.
      * @return This builder for chaining.
      */
-    public Builder setNameBytes(
+    @java.lang.Deprecated public Builder setNameBytes(
         com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
@@ -782,17 +869,21 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Value, com.scalar.db.rpc.Value.Builder, com.scalar.db.rpc.ValueOrBuilder> valueBuilder_;
     /**
-     * <code>.rpc.Value value = 2;</code>
+     * <code>.rpc.Value value = 2 [deprecated = true];</code>
+     * @deprecated rpc.ConditionalExpression.value is deprecated.
+     *     See scalardb.proto;l=92
      * @return Whether the value field is set.
      */
-    public boolean hasValue() {
+    @java.lang.Deprecated public boolean hasValue() {
       return valueBuilder_ != null || value_ != null;
     }
     /**
-     * <code>.rpc.Value value = 2;</code>
+     * <code>.rpc.Value value = 2 [deprecated = true];</code>
+     * @deprecated rpc.ConditionalExpression.value is deprecated.
+     *     See scalardb.proto;l=92
      * @return The value.
      */
-    public com.scalar.db.rpc.Value getValue() {
+    @java.lang.Deprecated public com.scalar.db.rpc.Value getValue() {
       if (valueBuilder_ == null) {
         return value_ == null ? com.scalar.db.rpc.Value.getDefaultInstance() : value_;
       } else {
@@ -800,9 +891,9 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.rpc.Value value = 2;</code>
+     * <code>.rpc.Value value = 2 [deprecated = true];</code>
      */
-    public Builder setValue(com.scalar.db.rpc.Value value) {
+    @java.lang.Deprecated public Builder setValue(com.scalar.db.rpc.Value value) {
       if (valueBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -816,9 +907,9 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Value value = 2;</code>
+     * <code>.rpc.Value value = 2 [deprecated = true];</code>
      */
-    public Builder setValue(
+    @java.lang.Deprecated public Builder setValue(
         com.scalar.db.rpc.Value.Builder builderForValue) {
       if (valueBuilder_ == null) {
         value_ = builderForValue.build();
@@ -830,9 +921,9 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Value value = 2;</code>
+     * <code>.rpc.Value value = 2 [deprecated = true];</code>
      */
-    public Builder mergeValue(com.scalar.db.rpc.Value value) {
+    @java.lang.Deprecated public Builder mergeValue(com.scalar.db.rpc.Value value) {
       if (valueBuilder_ == null) {
         if (value_ != null) {
           value_ =
@@ -848,9 +939,9 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Value value = 2;</code>
+     * <code>.rpc.Value value = 2 [deprecated = true];</code>
      */
-    public Builder clearValue() {
+    @java.lang.Deprecated public Builder clearValue() {
       if (valueBuilder_ == null) {
         value_ = null;
         onChanged();
@@ -862,17 +953,17 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Value value = 2;</code>
+     * <code>.rpc.Value value = 2 [deprecated = true];</code>
      */
-    public com.scalar.db.rpc.Value.Builder getValueBuilder() {
+    @java.lang.Deprecated public com.scalar.db.rpc.Value.Builder getValueBuilder() {
       
       onChanged();
       return getValueFieldBuilder().getBuilder();
     }
     /**
-     * <code>.rpc.Value value = 2;</code>
+     * <code>.rpc.Value value = 2 [deprecated = true];</code>
      */
-    public com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder() {
+    @java.lang.Deprecated public com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder() {
       if (valueBuilder_ != null) {
         return valueBuilder_.getMessageOrBuilder();
       } else {
@@ -881,7 +972,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.rpc.Value value = 2;</code>
+     * <code>.rpc.Value value = 2 [deprecated = true];</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Value, com.scalar.db.rpc.Value.Builder, com.scalar.db.rpc.ValueOrBuilder> 
@@ -949,6 +1040,125 @@ private static final long serialVersionUID = 0L;
       operator_ = 0;
       onChanged();
       return this;
+    }
+
+    private com.scalar.db.rpc.Column column_;
+    private com.google.protobuf.SingleFieldBuilderV3<
+        com.scalar.db.rpc.Column, com.scalar.db.rpc.Column.Builder, com.scalar.db.rpc.ColumnOrBuilder> columnBuilder_;
+    /**
+     * <code>.rpc.Column column = 4;</code>
+     * @return Whether the column field is set.
+     */
+    public boolean hasColumn() {
+      return columnBuilder_ != null || column_ != null;
+    }
+    /**
+     * <code>.rpc.Column column = 4;</code>
+     * @return The column.
+     */
+    public com.scalar.db.rpc.Column getColumn() {
+      if (columnBuilder_ == null) {
+        return column_ == null ? com.scalar.db.rpc.Column.getDefaultInstance() : column_;
+      } else {
+        return columnBuilder_.getMessage();
+      }
+    }
+    /**
+     * <code>.rpc.Column column = 4;</code>
+     */
+    public Builder setColumn(com.scalar.db.rpc.Column value) {
+      if (columnBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        column_ = value;
+        onChanged();
+      } else {
+        columnBuilder_.setMessage(value);
+      }
+
+      return this;
+    }
+    /**
+     * <code>.rpc.Column column = 4;</code>
+     */
+    public Builder setColumn(
+        com.scalar.db.rpc.Column.Builder builderForValue) {
+      if (columnBuilder_ == null) {
+        column_ = builderForValue.build();
+        onChanged();
+      } else {
+        columnBuilder_.setMessage(builderForValue.build());
+      }
+
+      return this;
+    }
+    /**
+     * <code>.rpc.Column column = 4;</code>
+     */
+    public Builder mergeColumn(com.scalar.db.rpc.Column value) {
+      if (columnBuilder_ == null) {
+        if (column_ != null) {
+          column_ =
+            com.scalar.db.rpc.Column.newBuilder(column_).mergeFrom(value).buildPartial();
+        } else {
+          column_ = value;
+        }
+        onChanged();
+      } else {
+        columnBuilder_.mergeFrom(value);
+      }
+
+      return this;
+    }
+    /**
+     * <code>.rpc.Column column = 4;</code>
+     */
+    public Builder clearColumn() {
+      if (columnBuilder_ == null) {
+        column_ = null;
+        onChanged();
+      } else {
+        column_ = null;
+        columnBuilder_ = null;
+      }
+
+      return this;
+    }
+    /**
+     * <code>.rpc.Column column = 4;</code>
+     */
+    public com.scalar.db.rpc.Column.Builder getColumnBuilder() {
+      
+      onChanged();
+      return getColumnFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.rpc.Column column = 4;</code>
+     */
+    public com.scalar.db.rpc.ColumnOrBuilder getColumnOrBuilder() {
+      if (columnBuilder_ != null) {
+        return columnBuilder_.getMessageOrBuilder();
+      } else {
+        return column_ == null ?
+            com.scalar.db.rpc.Column.getDefaultInstance() : column_;
+      }
+    }
+    /**
+     * <code>.rpc.Column column = 4;</code>
+     */
+    private com.google.protobuf.SingleFieldBuilderV3<
+        com.scalar.db.rpc.Column, com.scalar.db.rpc.Column.Builder, com.scalar.db.rpc.ColumnOrBuilder> 
+        getColumnFieldBuilder() {
+      if (columnBuilder_ == null) {
+        columnBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+            com.scalar.db.rpc.Column, com.scalar.db.rpc.Column.Builder, com.scalar.db.rpc.ColumnOrBuilder>(
+                getColumn(),
+                getParentForChildren(),
+                isClean());
+        column_ = null;
+      }
+      return columnBuilder_;
     }
     @java.lang.Override
     public final Builder setUnknownFields(

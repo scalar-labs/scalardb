@@ -1,5 +1,6 @@
 package com.scalar.db.server;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.google.protobuf.Empty;
 import com.scalar.db.api.DistributedStorage;
@@ -69,8 +70,16 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
 
           Get get = ProtoUtils.toGet(request.getGet(), metadata);
           Optional<Result> result = storage.get(get);
+
           GetResponse.Builder builder = GetResponse.newBuilder();
-          result.ifPresent(r -> builder.setResult(ProtoUtils.toResult(r)));
+
+          // For backward compatibility
+          if (ProtoUtils.isRequestFromOldClient(request.getGet())) {
+            result.ifPresent(r -> builder.setResult(ProtoUtils.toResultWithValue(r)));
+          } else {
+            result.ifPresent(r -> builder.setResult(ProtoUtils.toResult(r)));
+          }
+
           responseObserver.onNext(builder.build());
           responseObserver.onCompleted();
         },
@@ -162,7 +171,8 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
     gateKeeper.letOut();
   }
 
-  private static class ScanStreamObserver implements StreamObserver<ScanRequest> {
+  @VisibleForTesting
+  static class ScanStreamObserver implements StreamObserver<ScanRequest> {
 
     private final DistributedStorage storage;
     private final TableMetadataManager tableMetadataManager;
@@ -174,6 +184,9 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
     private final AtomicBoolean cleanedUp = new AtomicBoolean();
 
     private Scanner scanner;
+
+    // For backward compatibility
+    private boolean requestFromOldClient;
 
     public ScanStreamObserver(
         DistributedStorage storage,
@@ -242,6 +255,10 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
                 throw new IllegalArgumentException("the specified table is not found");
               }
               Scan scan = ProtoUtils.toScan(request.getScan(), metadata);
+
+              // For backward compatibility
+              requestFromOldClient = ProtoUtils.isRequestFromOldClient(request.getScan());
+
               scanner = storage.scan(scan);
             });
         return true;
@@ -268,8 +285,16 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
                   fetch(
                       resultIterator,
                       request.hasFetchCount() ? request.getFetchCount() : DEFAULT_SCAN_FETCH_COUNT);
+
               ScanResponse.Builder builder = ScanResponse.newBuilder();
-              results.forEach(r -> builder.addResult(ProtoUtils.toResult(r)));
+
+              // For backward compatibility
+              if (requestFromOldClient) {
+                results.forEach(r -> builder.addResult(ProtoUtils.toResultWithValue(r)));
+              } else {
+                results.forEach(r -> builder.addResult(ProtoUtils.toResult(r)));
+              }
+
               return builder.setHasMoreResults(resultIterator.hasNext()).build();
             });
       } catch (Throwable t) {
