@@ -48,6 +48,11 @@ subprojects {
         errorproneJavacVersion = '9+181-r4173-1'
         gsonVersion = '2.9.0'
         log4jVersion = '2.17.1'
+        spotbugsPluginVersion  = '4.7.1'
+        errorpronePluginVersion  = '2.0.2'
+        protobufPluginVersion = '0.8.17'
+        shadowPluginVersion = '7.1.2'
+        dockerPluginVersion = '0.25.0'
     }
 
     repositories {

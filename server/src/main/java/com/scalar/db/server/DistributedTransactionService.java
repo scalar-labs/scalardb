@@ -1,5 +1,6 @@
 package com.scalar.db.server;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
@@ -152,7 +153,8 @@ public class DistributedTransactionService
     gateKeeper.letOut();
   }
 
-  private static class TransactionStreamObserver implements StreamObserver<TransactionRequest> {
+  @VisibleForTesting
+  static class TransactionStreamObserver implements StreamObserver<TransactionRequest> {
 
     private final DistributedTransactionManager manager;
     private final TableMetadataManager tableMetadataManager;
@@ -292,8 +294,16 @@ public class DistributedTransactionService
 
             Get get = ProtoUtils.toGet(request.getGet(), metadata);
             Optional<Result> result = transaction.get(get);
+
             GetResponse.Builder builder = GetResponse.newBuilder();
-            result.ifPresent(r -> builder.setResult(ProtoUtils.toResult(r)));
+
+            // For backward compatibility
+            if (ProtoUtils.isRequestFromOldClient(request.getGet())) {
+              result.ifPresent(r -> builder.setResult(ProtoUtils.toResultWithValue(r)));
+            } else {
+              result.ifPresent(r -> builder.setResult(ProtoUtils.toResult(r)));
+            }
+
             responseBuilder.setGetResponse(builder);
           },
           responseBuilder,
@@ -313,7 +323,14 @@ public class DistributedTransactionService
             Scan scan = ProtoUtils.toScan(request.getScan(), metadata);
             List<Result> results = transaction.scan(scan);
             ScanResponse.Builder builder = ScanResponse.newBuilder();
-            results.forEach(r -> builder.addResult(ProtoUtils.toResult(r)));
+
+            // For backward compatibility
+            if (ProtoUtils.isRequestFromOldClient(request.getScan())) {
+              results.forEach(r -> builder.addResult(ProtoUtils.toResultWithValue(r)));
+            } else {
+              results.forEach(r -> builder.addResult(ProtoUtils.toResult(r)));
+            }
+
             responseBuilder.setScanResponse(builder);
           },
           responseBuilder,

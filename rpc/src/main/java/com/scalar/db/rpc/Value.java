@@ -4,9 +4,13 @@
 package com.scalar.db.rpc;
 
 /**
+ * <pre>
+ * Value is deprecated as of release 3.6.0. Will be removed in release 5.0.0
+ * </pre>
+ *
  * Protobuf type {@code rpc.Value}
  */
-public final class Value extends
+@java.lang.Deprecated public final class Value extends
     com.google.protobuf.GeneratedMessageV3 implements
     // @@protoc_insertion_point(message_implements:rpc.Value)
     ValueOrBuilder {
@@ -1817,6 +1821,10 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
+   * <pre>
+   * Value is deprecated as of release 3.6.0. Will be removed in release 5.0.0
+   * </pre>
+   *
    * Protobuf type {@code rpc.Value}
    */
   public static final class Builder extends

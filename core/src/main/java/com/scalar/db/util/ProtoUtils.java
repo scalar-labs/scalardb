@@ -32,7 +32,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.rpc.MutateCondition;
 import com.scalar.db.rpc.Order;
-import com.scalar.db.rpc.Value;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -74,18 +73,95 @@ public final class ProtoUtils {
 
   private static Key toKey(com.scalar.db.rpc.Key key, TableMetadata metadata) {
     Key.Builder builder = Key.newBuilder();
-    key.getValueList().forEach(v -> builder.add(toColumn(v.getName(), v, metadata)));
+
+    // For backward compatibility
+    if (!key.getValueList().isEmpty()) {
+      key.getValueList().forEach(v -> builder.add(toColumn(v.getName(), v)));
+    } else {
+      key.getColumnList().forEach(c -> builder.add(toColumn(c, metadata)));
+    }
+
     return builder.build();
   }
 
   private static com.scalar.db.rpc.Key toKey(Key key) {
     com.scalar.db.rpc.Key.Builder builder = com.scalar.db.rpc.Key.newBuilder();
-    key.getColumns().forEach(v -> builder.addValue(toValue(v)));
+    key.getColumns().forEach(c -> builder.addColumn(toColumn(c)));
     return builder.build();
   }
 
-  private static Column<?> toColumn(
-      String columnName, com.scalar.db.rpc.Value value, TableMetadata metadata) {
+  private static Column<?> toColumn(com.scalar.db.rpc.Column column, TableMetadata metadata) {
+    switch (column.getValueCase()) {
+      case BOOLEAN_VALUE:
+        return BooleanColumn.of(column.getName(), column.getBooleanValue());
+      case INT_VALUE:
+        return IntColumn.of(column.getName(), column.getIntValue());
+      case BIGINT_VALUE:
+        return BigIntColumn.of(column.getName(), column.getBigintValue());
+      case FLOAT_VALUE:
+        return FloatColumn.of(column.getName(), column.getFloatValue());
+      case DOUBLE_VALUE:
+        return DoubleColumn.of(column.getName(), column.getDoubleValue());
+      case TEXT_VALUE:
+        return TextColumn.of(column.getName(), column.getTextValue());
+      case BLOB_VALUE:
+        return BlobColumn.of(column.getName(), column.getBlobValue().toByteArray());
+      case VALUE_NOT_SET:
+        switch (metadata.getColumnDataType(column.getName())) {
+          case BOOLEAN:
+            return BooleanColumn.ofNull(column.getName());
+          case INT:
+            return IntColumn.ofNull(column.getName());
+          case BIGINT:
+            return BigIntColumn.ofNull(column.getName());
+          case FLOAT:
+            return FloatColumn.ofNull(column.getName());
+          case DOUBLE:
+            return DoubleColumn.ofNull(column.getName());
+          case TEXT:
+            return TextColumn.ofNull(column.getName());
+          case BLOB:
+            return BlobColumn.ofNull(column.getName());
+          default:
+            throw new AssertionError();
+        }
+      default:
+        throw new AssertionError();
+    }
+  }
+
+  private static com.scalar.db.rpc.Column toColumn(Column<?> column) {
+    com.scalar.db.rpc.Column.Builder builder =
+        com.scalar.db.rpc.Column.newBuilder().setName(column.getName());
+
+    if (column.hasNullValue()) {
+      return builder.build();
+    }
+
+    if (column instanceof BooleanColumn) {
+      return builder.setBooleanValue(column.getBooleanValue()).build();
+    } else if (column instanceof IntColumn) {
+      return builder.setIntValue(column.getIntValue()).build();
+    } else if (column instanceof BigIntColumn) {
+      return builder.setBigintValue(column.getBigIntValue()).build();
+    } else if (column instanceof FloatColumn) {
+      return builder.setFloatValue(column.getFloatValue()).build();
+    } else if (column instanceof DoubleColumn) {
+      return builder.setDoubleValue(column.getDoubleValue()).build();
+    } else if (column instanceof TextColumn) {
+      assert column.getTextValue() != null;
+      return builder.setTextValue(column.getTextValue()).build();
+    } else if (column instanceof BlobColumn) {
+      assert column.getBlobValueAsBytes() != null;
+      return builder.setBlobValue(ByteString.copyFrom(column.getBlobValueAsBytes())).build();
+    } else {
+      throw new AssertionError();
+    }
+  }
+
+  // For backward compatibility
+  @Deprecated
+  private static Column<?> toColumn(String columnName, com.scalar.db.rpc.Value value) {
     switch (value.getValueCase()) {
       case BOOLEAN_VALUE:
         return BooleanColumn.of(columnName, value.getBooleanValue());
@@ -109,37 +185,16 @@ public final class ProtoUtils {
         } else {
           return BlobColumn.ofNull(columnName);
         }
-      case VALUE_NOT_SET:
-        switch (metadata.getColumnDataType(columnName)) {
-          case BOOLEAN:
-            return BooleanColumn.ofNull(columnName);
-          case INT:
-            return IntColumn.ofNull(columnName);
-          case BIGINT:
-            return BigIntColumn.ofNull(columnName);
-          case FLOAT:
-            return FloatColumn.ofNull(columnName);
-          case DOUBLE:
-            return DoubleColumn.ofNull(columnName);
-          case TEXT:
-            return TextColumn.ofNull(columnName);
-          case BLOB:
-            return BlobColumn.ofNull(columnName);
-          default:
-            throw new AssertionError();
-        }
       default:
         throw new AssertionError();
     }
   }
 
+  // For backward compatibility
+  @Deprecated
   private static com.scalar.db.rpc.Value toValue(Column<?> column) {
     com.scalar.db.rpc.Value.Builder builder =
         com.scalar.db.rpc.Value.newBuilder().setName(column.getName());
-
-    if (column.hasNullValue()) {
-      return builder.build();
-    }
 
     if (column instanceof BooleanColumn) {
       return builder.setBooleanValue(column.getBooleanValue()).build();
@@ -152,21 +207,21 @@ public final class ProtoUtils {
     } else if (column instanceof DoubleColumn) {
       return builder.setDoubleValue(column.getDoubleValue()).build();
     } else if (column instanceof TextColumn) {
-      assert column.getTextValue() != null;
-      return builder
-          .setTextValue(
-              com.scalar.db.rpc.Value.TextValue.newBuilder()
-                  .setValue(column.getTextValue())
-                  .build())
-          .build();
+      com.scalar.db.rpc.Value.TextValue.Builder textValueBuilder =
+          com.scalar.db.rpc.Value.TextValue.newBuilder();
+      if (!column.hasNullValue()) {
+        assert column.getTextValue() != null;
+        textValueBuilder.setValue(column.getTextValue());
+      }
+      return builder.setTextValue(textValueBuilder.build()).build();
     } else if (column instanceof BlobColumn) {
-      assert column.getBlobValueAsBytes() != null;
-      return builder
-          .setBlobValue(
-              com.scalar.db.rpc.Value.BlobValue.newBuilder()
-                  .setValue(ByteString.copyFrom(column.getBlobValueAsBytes()))
-                  .build())
-          .build();
+      com.scalar.db.rpc.Value.BlobValue.Builder blobValueBuilder =
+          com.scalar.db.rpc.Value.BlobValue.newBuilder();
+      if (!column.hasNullValue()) {
+        assert column.getBlobValueAsBytes() != null;
+        blobValueBuilder.setValue(ByteString.copyFrom(column.getBlobValueAsBytes()));
+      }
+      return builder.setBlobValue(blobValueBuilder).build();
     } else {
       throw new AssertionError();
     }
@@ -252,7 +307,14 @@ public final class ProtoUtils {
   }
 
   private static Scan.Ordering toOrdering(com.scalar.db.rpc.Ordering ordering) {
-    return new Scan.Ordering(ordering.getName(), toOrder(ordering.getOrder()));
+    switch (ordering.getOrder()) {
+      case ORDER_ASC:
+        return Scan.Ordering.asc(ordering.getName());
+      case ORDER_DESC:
+        return Scan.Ordering.desc(ordering.getName());
+      default:
+        throw new AssertionError();
+    }
   }
 
   private static com.scalar.db.rpc.Ordering toOrdering(Scan.Ordering ordering) {
@@ -296,7 +358,14 @@ public final class ProtoUtils {
     Mutation ret;
     if (mutation.getType() == com.scalar.db.rpc.Mutation.Type.PUT) {
       Put put = new Put(partitionKey, clusteringKey);
-      mutation.getValueList().forEach(v -> put.withValue(toColumn(v.getName(), v, metadata)));
+
+      // For backward compatibility
+      if (!mutation.getValueList().isEmpty()) {
+        mutation.getValueList().forEach(v -> put.withValue(toColumn(v.getName(), v)));
+      } else {
+        mutation.getColumnList().forEach(c -> put.withValue(toColumn(c, metadata)));
+      }
+
       ret = put;
     } else {
       ret = new Delete(partitionKey, clusteringKey);
@@ -320,7 +389,7 @@ public final class ProtoUtils {
     mutation.getClusteringKey().ifPresent(k -> builder.setClusteringKey(toKey(k)));
     if (mutation instanceof Put) {
       builder.setType(com.scalar.db.rpc.Mutation.Type.PUT);
-      ((Put) mutation).getColumns().values().forEach(c -> builder.addValue(toValue(c)));
+      ((Put) mutation).getColumns().values().forEach(c -> builder.addColumn(toColumn(c)));
     } else {
       builder.setType(com.scalar.db.rpc.Mutation.Type.DELETE);
     }
@@ -385,16 +454,21 @@ public final class ProtoUtils {
 
   private static ConditionalExpression toExpression(
       com.scalar.db.rpc.ConditionalExpression expression, TableMetadata metadata) {
-    return ConditionBuilder.buildConditionalExpression(
-        toColumn(expression.getName(), expression.getValue(), metadata),
-        toOperator(expression.getOperator()));
+    // For backward compatibility
+    if (expression.hasValue()) {
+      return ConditionBuilder.buildConditionalExpression(
+          toColumn(expression.getName(), expression.getValue()),
+          toOperator(expression.getOperator()));
+    } else {
+      return ConditionBuilder.buildConditionalExpression(
+          toColumn(expression.getColumn(), metadata), toOperator(expression.getOperator()));
+    }
   }
 
   private static com.scalar.db.rpc.ConditionalExpression toExpression(
       ConditionalExpression expression) {
     return com.scalar.db.rpc.ConditionalExpression.newBuilder()
-        .setName(expression.getColumn().getName())
-        .setValue(toValue(expression.getColumn()))
+        .setColumn(toColumn(expression.getColumn()))
         .setOperator(toOperator(expression.getOperator()))
         .build();
   }
@@ -449,12 +523,41 @@ public final class ProtoUtils {
 
   public static Result toResult(com.scalar.db.rpc.Result result, TableMetadata metadata) {
     Map<String, Column<?>> columns =
-        result.getValueList().stream()
-            .collect(Collectors.toMap(Value::getName, v -> toColumn(v.getName(), v, metadata)));
+        result.getColumnList().stream()
+            .collect(
+                Collectors.toMap(com.scalar.db.rpc.Column::getName, c -> toColumn(c, metadata)));
     return new ResultImpl(columns, metadata);
   }
 
   public static com.scalar.db.rpc.Result toResult(Result result) {
+    com.scalar.db.rpc.Result.Builder builder = com.scalar.db.rpc.Result.newBuilder();
+    result.getColumns().values().forEach(c -> builder.addColumn(toColumn(c)));
+    return builder.build();
+  }
+
+  // For backward compatibility
+  @Deprecated
+  public static boolean isRequestFromOldClient(com.scalar.db.rpc.Get get) {
+    // If the partition key of the get has "Value", then it's from an old client
+    return !get.getPartitionKey().getValueList().isEmpty();
+  }
+
+  // For backward compatibility
+  @Deprecated
+  public static boolean isRequestFromOldClient(com.scalar.db.rpc.Scan scan) {
+    if (!scan.hasPartitionKey()) {
+      // If the scan doesn't have partition key, it indicates ScanAll operation, then it's from a
+      // new client
+      return false;
+    }
+
+    // If the partition key of the scan has "Value", then it's from an old client
+    return !scan.getPartitionKey().getValueList().isEmpty();
+  }
+
+  // For backward compatibility
+  @Deprecated
+  public static com.scalar.db.rpc.Result toResultWithValue(Result result) {
     com.scalar.db.rpc.Result.Builder builder = com.scalar.db.rpc.Result.newBuilder();
     result.getColumns().values().forEach(c -> builder.addValue(toValue(c)));
     return builder.build();
@@ -538,8 +641,9 @@ public final class ProtoUtils {
       case ABORTED:
         return com.scalar.db.rpc.TransactionState.TRANSACTION_STATE_ABORTED;
       case UNKNOWN:
-      default:
         return com.scalar.db.rpc.TransactionState.TRANSACTION_STATE_UNKNOWN;
+      default:
+        throw new AssertionError();
     }
   }
 

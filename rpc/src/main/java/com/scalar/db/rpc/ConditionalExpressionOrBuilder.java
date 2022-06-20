@@ -8,31 +8,39 @@ public interface ConditionalExpressionOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>string name = 1;</code>
+   * <code>string name = 1 [deprecated = true];</code>
+   * @deprecated rpc.ConditionalExpression.name is deprecated.
+   *     See scalardb.proto;l=91
    * @return The name.
    */
-  java.lang.String getName();
+  @java.lang.Deprecated java.lang.String getName();
   /**
-   * <code>string name = 1;</code>
+   * <code>string name = 1 [deprecated = true];</code>
+   * @deprecated rpc.ConditionalExpression.name is deprecated.
+   *     See scalardb.proto;l=91
    * @return The bytes for name.
    */
-  com.google.protobuf.ByteString
+  @java.lang.Deprecated com.google.protobuf.ByteString
       getNameBytes();
 
   /**
-   * <code>.rpc.Value value = 2;</code>
+   * <code>.rpc.Value value = 2 [deprecated = true];</code>
+   * @deprecated rpc.ConditionalExpression.value is deprecated.
+   *     See scalardb.proto;l=92
    * @return Whether the value field is set.
    */
-  boolean hasValue();
+  @java.lang.Deprecated boolean hasValue();
   /**
-   * <code>.rpc.Value value = 2;</code>
+   * <code>.rpc.Value value = 2 [deprecated = true];</code>
+   * @deprecated rpc.ConditionalExpression.value is deprecated.
+   *     See scalardb.proto;l=92
    * @return The value.
    */
-  com.scalar.db.rpc.Value getValue();
+  @java.lang.Deprecated com.scalar.db.rpc.Value getValue();
   /**
-   * <code>.rpc.Value value = 2;</code>
+   * <code>.rpc.Value value = 2 [deprecated = true];</code>
    */
-  com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder();
+  @java.lang.Deprecated com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder();
 
   /**
    * <code>.rpc.ConditionalExpression.Operator operator = 3;</code>
@@ -44,4 +52,19 @@ public interface ConditionalExpressionOrBuilder extends
    * @return The operator.
    */
   com.scalar.db.rpc.ConditionalExpression.Operator getOperator();
+
+  /**
+   * <code>.rpc.Column column = 4;</code>
+   * @return Whether the column field is set.
+   */
+  boolean hasColumn();
+  /**
+   * <code>.rpc.Column column = 4;</code>
+   * @return The column.
+   */
+  com.scalar.db.rpc.Column getColumn();
+  /**
+   * <code>.rpc.Column column = 4;</code>
+   */
+  com.scalar.db.rpc.ColumnOrBuilder getColumnOrBuilder();
 }
