@@ -266,11 +266,11 @@ public class PutTest {
     assertThat(values).containsKey("val13");
     assertThat(values.get("val13")).isNull();
     assertThat(values).containsKey("val14");
-    assertThat(values.get("val14")).isNull();
+    assertThat(values.get("val14")).isEqualTo(new TextValue("val14", (String) null));
     assertThat(values).containsKey("val15");
-    assertThat(values.get("val15")).isNull();
+    assertThat(values.get("val15")).isEqualTo(new BlobValue("val15", (ByteBuffer) null));
     assertThat(values).containsKey("val16");
-    assertThat(values.get("val16")).isNull();
+    assertThat(values.get("val16")).isEqualTo(new BlobValue("val16", (byte[]) null));
 
     Map<String, Column<?>> columns = put.getColumns();
     assertThat(columns.size()).isEqualTo(16);
