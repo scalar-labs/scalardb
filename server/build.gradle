@@ -1,8 +1,8 @@
 plugins {
     id 'application'
-    id 'com.palantir.docker' version '0.25.0'
-    id 'com.github.spotbugs' version '4.7.1'
-    id 'net.ltgt.errorprone' version '2.0.2'
+    id 'com.palantir.docker' version "${dockerPluginVersion}"
+    id 'com.github.spotbugs' version "${spotbugsPluginVersion}"
+    id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
 }
 
 sourceSets {
@@ -77,7 +77,7 @@ docker {
 
 task dockerfileLint(type: Exec) {
     description 'Lint the Dockerfile'
-    commandLine "${project.rootDir}/ci/scripts/dockerfile_lint.sh"
+    commandLine "${project.rootDir}/ci/dockerfile_lint.sh"
 }
 
 task integrationTestScalarDbServer(type: Test) {
