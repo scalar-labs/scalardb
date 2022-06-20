@@ -8,26 +8,50 @@ public interface KeyOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>repeated .rpc.Value value = 1;</code>
+   * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
    */
-  java.util.List<com.scalar.db.rpc.Value> 
+  @java.lang.Deprecated java.util.List<com.scalar.db.rpc.Value> 
       getValueList();
   /**
-   * <code>repeated .rpc.Value value = 1;</code>
+   * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
    */
-  com.scalar.db.rpc.Value getValue(int index);
+  @java.lang.Deprecated com.scalar.db.rpc.Value getValue(int index);
   /**
-   * <code>repeated .rpc.Value value = 1;</code>
+   * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
    */
-  int getValueCount();
+  @java.lang.Deprecated int getValueCount();
   /**
-   * <code>repeated .rpc.Value value = 1;</code>
+   * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
    */
-  java.util.List<? extends com.scalar.db.rpc.ValueOrBuilder> 
+  @java.lang.Deprecated java.util.List<? extends com.scalar.db.rpc.ValueOrBuilder> 
       getValueOrBuilderList();
   /**
-   * <code>repeated .rpc.Value value = 1;</code>
+   * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
    */
-  com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder(
+  @java.lang.Deprecated com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder(
+      int index);
+
+  /**
+   * <code>repeated .rpc.Column column = 2;</code>
+   */
+  java.util.List<com.scalar.db.rpc.Column> 
+      getColumnList();
+  /**
+   * <code>repeated .rpc.Column column = 2;</code>
+   */
+  com.scalar.db.rpc.Column getColumn(int index);
+  /**
+   * <code>repeated .rpc.Column column = 2;</code>
+   */
+  int getColumnCount();
+  /**
+   * <code>repeated .rpc.Column column = 2;</code>
+   */
+  java.util.List<? extends com.scalar.db.rpc.ColumnOrBuilder> 
+      getColumnOrBuilderList();
+  /**
+   * <code>repeated .rpc.Column column = 2;</code>
+   */
+  com.scalar.db.rpc.ColumnOrBuilder getColumnOrBuilder(
       int index);
 }

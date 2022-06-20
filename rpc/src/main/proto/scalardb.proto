@@ -10,7 +10,9 @@ import "google/protobuf/empty.proto";
 
 // Common
 
+// Value is deprecated as of release 3.6.0. Will be removed in release 5.0.0
 message Value {
+  option deprecated = true;
   string name = 1;
   message TextValue {
     optional string value = 1;
@@ -29,8 +31,22 @@ message Value {
   }
 }
 
+message Column {
+  string name = 1;
+  oneof value {
+    bool boolean_value = 2;
+    int32 int_value = 3;
+    int64 bigint_value = 4;
+    float float_value = 5;
+    double double_value = 6;
+    string text_value = 7;
+    bytes blob_value = 8;
+  }
+}
+
 message Key {
-  repeated Value value = 1;
+  repeated Value value = 1 [deprecated = true];
+  repeated Column column = 2;
 }
 
 enum Consistency {
@@ -73,8 +89,8 @@ message Scan {
 }
 
 message ConditionalExpression {
-  string name = 1;
-  Value value = 2;
+  string name = 1 [deprecated = true];
+  Value value = 2 [deprecated = true];
   enum Operator {
     EQ = 0;
     NE = 1;
@@ -86,6 +102,7 @@ message ConditionalExpression {
     IS_NOT_NULL = 7;
   }
   Operator operator = 3;
+  Column column = 4;
 }
 
 message MutateCondition {
@@ -112,11 +129,13 @@ message Mutation {
     DELETE = 1;
   }
   Type type = 7;
-  repeated Value value = 8; // only for Put operations
+  repeated Value value = 8 [deprecated = true]; // only for Put operations
+  repeated Column column = 9; // only for Put operations
 }
 
 message Result {
-  repeated Value value = 1;
+  repeated Value value = 1 [deprecated = true];
+  repeated Column column = 2;
 }
 
 // DistributedStorage

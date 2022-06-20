@@ -1,5 +1,6 @@
 package com.scalar.db.server;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
@@ -158,7 +159,8 @@ public class TwoPhaseCommitTransactionService
     gateKeeper.letOut();
   }
 
-  private static class TwoPhaseCommitTransactionStreamObserver
+  @VisibleForTesting
+  static class TwoPhaseCommitTransactionStreamObserver
       implements StreamObserver<TwoPhaseCommitTransactionRequest> {
 
     private final TwoPhaseCommitTransactionManager manager;
@@ -336,7 +338,14 @@ public class TwoPhaseCommitTransactionService
             Get get = ProtoUtils.toGet(request.getGet(), metadata);
             Optional<Result> result = transaction.get(get);
             GetResponse.Builder builder = GetResponse.newBuilder();
-            result.ifPresent(r -> builder.setResult(ProtoUtils.toResult(r)));
+
+            // For backward compatibility
+            if (ProtoUtils.isRequestFromOldClient(request.getGet())) {
+              result.ifPresent(r -> builder.setResult(ProtoUtils.toResultWithValue(r)));
+            } else {
+              result.ifPresent(r -> builder.setResult(ProtoUtils.toResult(r)));
+            }
+
             responseBuilder.setGetResponse(builder);
           },
           responseBuilder,
@@ -357,7 +366,14 @@ public class TwoPhaseCommitTransactionService
             Scan scan = ProtoUtils.toScan(request.getScan(), metadata);
             List<Result> results = transaction.scan(scan);
             ScanResponse.Builder builder = ScanResponse.newBuilder();
-            results.forEach(r -> builder.addResult(ProtoUtils.toResult(r)));
+
+            // For backward compatibility
+            if (ProtoUtils.isRequestFromOldClient(request.getScan())) {
+              results.forEach(r -> builder.addResult(ProtoUtils.toResultWithValue(r)));
+            } else {
+              results.forEach(r -> builder.addResult(ProtoUtils.toResult(r)));
+            }
+
             responseBuilder.setScanResponse(builder);
           },
           responseBuilder,
