@@ -1,6 +1,5 @@
 package com.scalar.db.server;
 
-import com.google.inject.Inject;
 import com.google.protobuf.Empty;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
@@ -37,7 +36,6 @@ public class DistributedStorageAdminService
   private final DistributedStorageAdmin admin;
   private final Metrics metrics;
 
-  @Inject
   public DistributedStorageAdminService(DistributedStorageAdmin admin, Metrics metrics) {
     this.admin = admin;
     this.metrics = metrics;
