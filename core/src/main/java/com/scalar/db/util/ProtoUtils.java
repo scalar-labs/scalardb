@@ -159,7 +159,14 @@ public final class ProtoUtils {
     }
   }
 
-  // For backward compatibility
+  /**
+   * This method is for backward compatibility.
+   *
+   * @param columnName a column name
+   * @param value a value
+   * @return a converted column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   */
   @Deprecated
   private static Column<?> toColumn(String columnName, com.scalar.db.rpc.Value value) {
     switch (value.getValueCase()) {
@@ -190,7 +197,13 @@ public final class ProtoUtils {
     }
   }
 
-  // For backward compatibility
+  /**
+   * This method is for backward compatibility.
+   *
+   * @param column a column
+   * @return a converted value
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   */
   @Deprecated
   private static com.scalar.db.rpc.Value toValue(Column<?> column) {
     com.scalar.db.rpc.Value.Builder builder =
@@ -535,14 +548,26 @@ public final class ProtoUtils {
     return builder.build();
   }
 
-  // For backward compatibility
+  /**
+   * This method is for backward compatibility.
+   *
+   * @param get a get
+   * @return whether the request is from client or not
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   */
   @Deprecated
   public static boolean isRequestFromOldClient(com.scalar.db.rpc.Get get) {
     // If the partition key of the get has "Value", then it's from an old client
     return !get.getPartitionKey().getValueList().isEmpty();
   }
 
-  // For backward compatibility
+  /**
+   * This method is for backward compatibility.
+   *
+   * @param scan a scan
+   * @return whether the request is from client or not
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   */
   @Deprecated
   public static boolean isRequestFromOldClient(com.scalar.db.rpc.Scan scan) {
     if (!scan.hasPartitionKey()) {
@@ -555,7 +580,13 @@ public final class ProtoUtils {
     return !scan.getPartitionKey().getValueList().isEmpty();
   }
 
-  // For backward compatibility
+  /**
+   * This method is for backward compatibility.
+   *
+   * @param result a result
+   * @return a converted result
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   */
   @Deprecated
   public static com.scalar.db.rpc.Result toResultWithValue(Result result) {
     com.scalar.db.rpc.Result.Builder builder = com.scalar.db.rpc.Result.newBuilder();
