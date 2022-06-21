@@ -21,30 +21,35 @@ public class TransactionService implements DistributedTransactionManager {
     this.manager = manager;
   }
 
+  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void with(String namespace, String tableName) {
     manager.with(namespace, tableName);
   }
 
+  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void withNamespace(String namespace) {
     manager.withNamespace(namespace);
   }
 
+  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public Optional<String> getNamespace() {
     return manager.getNamespace();
   }
 
+  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void withTable(String tableName) {
     manager.withTable(tableName);
   }
 
+  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public Optional<String> getTable() {
@@ -61,12 +66,14 @@ public class TransactionService implements DistributedTransactionManager {
     return manager.start(txId);
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public DistributedTransaction start(Isolation isolation) throws TransactionException {
     return manager.start(isolation);
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public DistributedTransaction start(String txId, Isolation isolation)
@@ -74,6 +81,7 @@ public class TransactionService implements DistributedTransactionManager {
     return manager.start(txId, isolation);
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public DistributedTransaction start(Isolation isolation, SerializableStrategy strategy)
@@ -81,12 +89,14 @@ public class TransactionService implements DistributedTransactionManager {
     return manager.start(isolation, strategy);
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public DistributedTransaction start(SerializableStrategy strategy) throws TransactionException {
     return manager.start(strategy);
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public DistributedTransaction start(String txId, SerializableStrategy strategy)
@@ -94,6 +104,7 @@ public class TransactionService implements DistributedTransactionManager {
     return manager.start(txId, strategy);
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public DistributedTransaction start(
