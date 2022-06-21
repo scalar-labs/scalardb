@@ -30,7 +30,6 @@ public class SchemaLoaderWithScalarDbServer extends SchemaLoaderIntegrationTestB
     super.afterAll();
     if (server != null) {
       server.shutdown();
-      server.blockUntilShutdown();
     }
   }
 }

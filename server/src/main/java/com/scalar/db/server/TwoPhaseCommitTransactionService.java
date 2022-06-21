@@ -1,7 +1,6 @@
 package com.scalar.db.server;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.inject.Inject;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Result;
@@ -64,7 +63,6 @@ public class TwoPhaseCommitTransactionService
   private final GateKeeper gateKeeper;
   private final Metrics metrics;
 
-  @Inject
   public TwoPhaseCommitTransactionService(
       TwoPhaseCommitTransactionManager manager,
       TableMetadataManager tableMetadataManager,

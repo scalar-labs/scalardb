@@ -22,7 +22,6 @@ public class ServerConfigTest {
     assertThat(config.getPort()).isEqualTo(ServerConfig.DEFAULT_PORT);
     assertThat(config.getPrometheusExporterPort())
         .isEqualTo(ServerConfig.DEFAULT_PROMETHEUS_EXPORTER_PORT);
-    assertThat(config.getGateKeeperClass()).isEqualTo(LockFreeGateKeeper.class);
   }
 
   @Test
@@ -66,29 +65,6 @@ public class ServerConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "abc");
-
-    // Act Assert
-    assertThatThrownBy(() -> new ServerConfig(props)).isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void constructor_ValidGateKeeperTypeGiven_ShouldLoadProperly() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(ServerConfig.GATE_KEEPER_TYPE, "synchronized");
-
-    // Act
-    ServerConfig config = new ServerConfig(props);
-
-    // Assert
-    assertThat(config.getGateKeeperClass()).isEqualTo(SynchronizedGateKeeper.class);
-  }
-
-  @Test
-  public void constructor_InvalidGateKeeperTypeGiven_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(ServerConfig.GATE_KEEPER_TYPE, "aaa");
 
     // Act Assert
     assertThatThrownBy(() -> new ServerConfig(props)).isInstanceOf(IllegalArgumentException.class);

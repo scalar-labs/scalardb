@@ -2260,9 +2260,9 @@ private static final long serialVersionUID = 0L;
        */
       CONFLICT(1),
       /**
-       * <code>UNKNOWN_TRANSACTION = 2;</code>
+       * <code>UNKNOWN_TRANSACTION_STATUS = 2;</code>
        */
-      UNKNOWN_TRANSACTION(2),
+      UNKNOWN_TRANSACTION_STATUS(2),
       /**
        * <code>OTHER = 3;</code>
        */
@@ -2279,9 +2279,9 @@ private static final long serialVersionUID = 0L;
        */
       public static final int CONFLICT_VALUE = 1;
       /**
-       * <code>UNKNOWN_TRANSACTION = 2;</code>
+       * <code>UNKNOWN_TRANSACTION_STATUS = 2;</code>
        */
-      public static final int UNKNOWN_TRANSACTION_VALUE = 2;
+      public static final int UNKNOWN_TRANSACTION_STATUS_VALUE = 2;
       /**
        * <code>OTHER = 3;</code>
        */
@@ -2314,7 +2314,7 @@ private static final long serialVersionUID = 0L;
         switch (value) {
           case 0: return INVALID_ARGUMENT;
           case 1: return CONFLICT;
-          case 2: return UNKNOWN_TRANSACTION;
+          case 2: return UNKNOWN_TRANSACTION_STATUS;
           case 3: return OTHER;
           default: return null;
         }

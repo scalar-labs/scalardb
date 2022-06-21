@@ -1,9 +1,15 @@
 package com.scalar.db.server;
 
 import com.google.common.base.Strings;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
+import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransactionAdmin;
+import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.api.TwoPhaseCommitTransactionManager;
+import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.service.StorageFactory;
+import com.scalar.db.service.TransactionFactory;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.protobuf.services.ProtoReflectionService;
@@ -32,6 +38,12 @@ public class ScalarDbServer implements Callable<Integer> {
   private ServerConfig config;
   private Server server;
 
+  private DistributedStorage storage;
+  private DistributedStorageAdmin storageAdmin;
+  private DistributedTransactionManager transactionManager;
+  private DistributedTransactionAdmin transactionAdmin;
+  private TwoPhaseCommitTransactionManager twoPhaseCommitTransactionManager;
+
   public ScalarDbServer() {}
 
   public ScalarDbServer(ServerConfig config) {
@@ -51,23 +63,42 @@ public class ScalarDbServer implements Callable<Integer> {
       config = new ServerConfig(new File(configFile));
     }
 
-    Injector injector = Guice.createInjector(new ServerModule(config));
+    StorageFactory storageFactory = StorageFactory.create(config.getProperties());
+    storage = storageFactory.getStorage();
+    storageAdmin = storageFactory.getStorageAdmin();
+
+    TransactionFactory transactionFactory = TransactionFactory.create(config.getProperties());
+    transactionManager = transactionFactory.getTransactionManager();
+    transactionAdmin = transactionFactory.getTransactionAdmin();
+
+    DatabaseConfig databaseConfig = new DatabaseConfig(config.getProperties());
+    TableMetadataManager tableMetadataManager =
+        new TableMetadataManager(storageAdmin, databaseConfig.getMetadataCacheExpirationTimeSecs());
+
+    GateKeeper gateKeeper = new SynchronizedGateKeeper();
+    Metrics metrics = new Metrics(config);
 
     ServerBuilder<?> builder =
         ServerBuilder.forPort(config.getPort())
-            .addService(injector.getInstance(DistributedStorageService.class))
-            .addService(injector.getInstance(DistributedStorageAdminService.class))
-            .addService(injector.getInstance(DistributedTransactionService.class))
-            .addService(injector.getInstance(DistributedTransactionAdminService.class))
-            .addService(injector.getInstance(AdminService.class))
+            .addService(
+                new DistributedStorageService(storage, tableMetadataManager, gateKeeper, metrics))
+            .addService(new DistributedStorageAdminService(storageAdmin, metrics))
+            .addService(
+                new DistributedTransactionService(
+                    transactionManager, tableMetadataManager, gateKeeper, metrics))
+            .addService(new DistributedTransactionAdminService(transactionAdmin, metrics))
+            .addService(new AdminService(gateKeeper))
             .addService(new HealthService())
             .addService(ProtoReflectionService.newInstance());
 
     // Two-phase commit for JDBC is not supported for now
-    String transactionManager =
+    String transactionManagerType =
         config.getProperties().getProperty(DatabaseConfig.TRANSACTION_MANAGER);
-    if (Strings.isNullOrEmpty(transactionManager) || !transactionManager.equals("jdbc")) {
-      builder.addService(injector.getInstance(TwoPhaseCommitTransactionService.class));
+    if (Strings.isNullOrEmpty(transactionManagerType) || !transactionManagerType.equals("jdbc")) {
+      twoPhaseCommitTransactionManager = transactionFactory.getTwoPhaseCommitTransactionManager();
+      builder.addService(
+          new TwoPhaseCommitTransactionService(
+              twoPhaseCommitTransactionManager, tableMetadataManager, gateKeeper, metrics));
     } else {
       LOGGER.warn(
           "TwoPhaseCommitTransactionService doesn't start when setting \""
@@ -86,35 +117,58 @@ public class ScalarDbServer implements Callable<Integer> {
             new Thread(
                 () -> {
                   LOGGER.info("Signal received. Shutting down the server ...");
-                  shutdown();
-                  blockUntilShutdown(MAX_WAIT_TIME_MILLIS, TimeUnit.MILLISECONDS);
+                  shutdown(MAX_WAIT_TIME_MILLIS, TimeUnit.MILLISECONDS);
                   LOGGER.info("The server shut down.");
                 }));
-  }
-
-  public void blockUntilShutdown() {
-    if (server != null) {
-      try {
-        server.awaitTermination();
-      } catch (InterruptedException ignored) {
-        // don't need to handle InterruptedException
-      }
-    }
-  }
-
-  public void blockUntilShutdown(long timeout, TimeUnit unit) {
-    if (server != null) {
-      try {
-        server.awaitTermination(timeout, unit);
-      } catch (InterruptedException ignored) {
-        // don't need to handle InterruptedException
-      }
-    }
   }
 
   public void shutdown() {
     if (server != null) {
       server.shutdown();
+      blockUntilShutdown();
+    }
+    close();
+  }
+
+  private void blockUntilShutdown() {
+    try {
+      server.awaitTermination();
+    } catch (InterruptedException ignored) {
+      // don't need to handle InterruptedException
+    }
+  }
+
+  public void shutdown(long timeout, TimeUnit unit) {
+    if (server != null) {
+      server.shutdown();
+      blockUntilShutdown(timeout, unit);
+    }
+    close();
+  }
+
+  private void blockUntilShutdown(long timeout, TimeUnit unit) {
+    try {
+      server.awaitTermination(timeout, unit);
+    } catch (InterruptedException ignored) {
+      // don't need to handle InterruptedException
+    }
+  }
+
+  private void close() {
+    if (storage != null) {
+      storage.close();
+    }
+    if (storageAdmin != null) {
+      storageAdmin.close();
+    }
+    if (transactionManager != null) {
+      transactionManager.close();
+    }
+    if (transactionAdmin != null) {
+      transactionAdmin.close();
+    }
+    if (twoPhaseCommitTransactionManager != null) {
+      twoPhaseCommitTransactionManager.close();
     }
   }
 

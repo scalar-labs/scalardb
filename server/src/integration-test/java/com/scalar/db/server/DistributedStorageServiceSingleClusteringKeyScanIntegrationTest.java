@@ -31,7 +31,6 @@ public class DistributedStorageServiceSingleClusteringKeyScanIntegrationTest
     super.afterAll();
     if (server != null) {
       server.shutdown();
-      server.blockUntilShutdown();
     }
   }
 }
