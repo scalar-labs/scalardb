@@ -10,7 +10,6 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -72,7 +71,6 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
   protected abstract Properties getProperties();
 
-  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   protected void writeConfigFile(Properties properties) throws IOException {
     try (FileOutputStream fileOutputStream = new FileOutputStream(CONFIG_FILE)) {
       properties.store(fileOutputStream, null);

@@ -1,6 +1,5 @@
 package com.scalar.db.server;
 
-import com.google.inject.Inject;
 import com.google.protobuf.Empty;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
@@ -42,7 +41,6 @@ public class DistributedTransactionAdminService
   private final DistributedTransactionAdmin admin;
   private final Metrics metrics;
 
-  @Inject
   public DistributedTransactionAdminService(DistributedTransactionAdmin admin, Metrics metrics) {
     this.admin = admin;
     this.metrics = metrics;

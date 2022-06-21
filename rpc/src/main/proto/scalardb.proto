@@ -345,7 +345,7 @@ message TransactionResponse {
     enum ErrorCode {
       INVALID_ARGUMENT = 0;
       CONFLICT = 1;
-      UNKNOWN_TRANSACTION = 2;
+      UNKNOWN_TRANSACTION_STATUS = 2;
       OTHER = 3;
     }
     ErrorCode error_code = 1;

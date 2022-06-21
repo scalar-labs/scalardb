@@ -28,7 +28,6 @@ dependencies {
     implementation project(':core')
     implementation project(':rpc')
     implementation "com.google.guava:guava:${guavaVersion}"
-    implementation "com.google.inject:guice:${guiceVersion}"
     implementation "org.slf4j:slf4j-api:${slf4jVersion}"
     implementation "org.apache.logging.log4j:log4j-core:${log4jVersion}"
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:${log4jVersion}"
@@ -104,14 +103,17 @@ spotless {
 spotbugsMain.reports {
     html.enabled = true
 }
+spotbugsMain.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
 
 spotbugsTest.reports {
     html.enabled = true
 }
+spotbugsTest.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
 
 spotbugsIntegrationTestScalarDbServer.reports {
     html.enabled = true
 }
+spotbugsIntegrationTestScalarDbServer.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
 
 archivesBaseName = "scalardb-server"
 

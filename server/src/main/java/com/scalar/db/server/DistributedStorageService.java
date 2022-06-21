@@ -1,7 +1,6 @@
 package com.scalar.db.server;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.inject.Inject;
 import com.google.protobuf.Empty;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
@@ -45,7 +44,6 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
   private final GateKeeper gateKeeper;
   private final Metrics metrics;
 
-  @Inject
   public DistributedStorageService(
       DistributedStorage storage,
       TableMetadataManager tableMetadataManager,

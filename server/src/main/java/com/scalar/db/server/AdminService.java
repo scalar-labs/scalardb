@@ -1,6 +1,5 @@
 package com.scalar.db.server;
 
-import com.google.inject.Inject;
 import com.google.protobuf.Empty;
 import com.scalar.admin.rpc.AdminGrpc;
 import com.scalar.admin.rpc.CheckPausedResponse;
@@ -21,7 +20,6 @@ public class AdminService extends AdminGrpc.AdminImplBase {
 
   private final GateKeeper gateKeeper;
 
-  @Inject
   public AdminService(GateKeeper gateKeeper) {
     this.gateKeeper = gateKeeper;
   }

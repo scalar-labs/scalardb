@@ -103,6 +103,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
         EXCEPTION_FACTORY);
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
@@ -110,6 +111,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
     return start();
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
@@ -117,6 +119,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
     return start(txId);
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
@@ -125,6 +128,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
     return start();
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
@@ -132,6 +136,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
     return start();
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
@@ -140,6 +145,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
     return start(txId);
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override

@@ -5,7 +5,6 @@ import static com.scalar.db.config.ConfigUtils.getStringArray;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.config.DatabaseConfig;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import javax.annotation.concurrent.Immutable;
@@ -21,9 +20,9 @@ public class MultiStorageConfig {
 
   private static final String MULTI_STORAGE = "multi-storage";
 
-  private final Map<String, Properties> databasePropertiesMap;
-  private final Map<String, String> tableStorageMap;
-  private final Map<String, String> namespaceStorageMap;
+  private final ImmutableMap<String, Properties> databasePropertiesMap;
+  private final ImmutableMap<String, String> tableStorageMap;
+  private final ImmutableMap<String, String> namespaceStorageMap;
   private final String defaultStorage;
 
   public MultiStorageConfig(DatabaseConfig databaseConfig) {
@@ -41,10 +40,10 @@ public class MultiStorageConfig {
     checkIfStorageExists(defaultStorage);
   }
 
-  private Map<String, Properties> loadDatabasePropertiesMapping(Properties properties) {
+  private ImmutableMap<String, Properties> loadDatabasePropertiesMapping(Properties properties) {
     String[] storages = getStringArray(properties, STORAGES, null);
     if (storages == null) {
-      return Collections.emptyMap();
+      return ImmutableMap.of();
     }
 
     ImmutableMap.Builder<String, Properties> builder = ImmutableMap.builder();
@@ -67,10 +66,10 @@ public class MultiStorageConfig {
     return builder.build();
   }
 
-  private Map<String, String> loadTableStorageMapping(Properties properties) {
+  private ImmutableMap<String, String> loadTableStorageMapping(Properties properties) {
     String[] tableMapping = getStringArray(properties, TABLE_MAPPING, null);
     if (tableMapping == null) {
-      return Collections.emptyMap();
+      return ImmutableMap.of();
     }
 
     ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
@@ -84,10 +83,10 @@ public class MultiStorageConfig {
     return builder.build();
   }
 
-  private Map<String, String> loadNamespaceStorageMapping(Properties properties) {
+  private ImmutableMap<String, String> loadNamespaceStorageMapping(Properties properties) {
     String[] namespaceMapping = getStringArray(properties, NAMESPACE_MAPPING, null);
     if (namespaceMapping == null) {
-      return Collections.emptyMap();
+      return ImmutableMap.of();
     }
 
     ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();

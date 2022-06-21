@@ -1,7 +1,6 @@
 package com.scalar.db.server;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.inject.Inject;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
@@ -57,7 +56,6 @@ public class DistributedTransactionService
   private final GateKeeper gateKeeper;
   private final Metrics metrics;
 
-  @Inject
   public DistributedTransactionService(
       DistributedTransactionManager manager,
       TableMetadataManager tableMetadataManager,
@@ -415,7 +413,7 @@ public class DistributedTransactionService
       } catch (UnknownTransactionStatusException e) {
         responseBuilder.setError(
             TransactionResponse.Error.newBuilder()
-                .setErrorCode(ErrorCode.UNKNOWN_TRANSACTION)
+                .setErrorCode(ErrorCode.UNKNOWN_TRANSACTION_STATUS)
                 .setMessage(e.getMessage())
                 .build());
       } catch (Throwable t) {

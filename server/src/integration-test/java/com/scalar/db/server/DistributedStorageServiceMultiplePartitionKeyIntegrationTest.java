@@ -30,7 +30,6 @@ public class DistributedStorageServiceMultiplePartitionKeyIntegrationTest
     super.afterAll();
     if (server != null) {
       server.shutdown();
-      server.blockUntilShutdown();
     }
   }
 }
