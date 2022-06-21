@@ -255,7 +255,7 @@ public class GrpcTransactionOnBidirectionalStream
       switch (error.getErrorCode()) {
         case CONFLICT:
           throw new CommitConflictException(error.getMessage());
-        case UNKNOWN_TRANSACTION:
+        case UNKNOWN_TRANSACTION_STATUS:
           throw new UnknownTransactionStatusException(error.getMessage());
         default:
           throw new CommitException(error.getMessage());
