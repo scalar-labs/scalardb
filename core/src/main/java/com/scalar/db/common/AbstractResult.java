@@ -51,12 +51,14 @@ public abstract class AbstractResult implements Result {
     }
   }
 
+  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public Optional<Value<?>> getValue(String columnName) {
     return Optional.ofNullable(valuesWithDefaultValues.get().get(columnName));
   }
 
+  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public Map<String, Value<?>> getValues() {

@@ -78,18 +78,21 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     return start(txId, config.getIsolation(), config.getSerializableStrategy());
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public ConsensusCommit start(com.scalar.db.api.Isolation isolation) {
     return start(Isolation.valueOf(isolation.name()), config.getSerializableStrategy());
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public ConsensusCommit start(String txId, com.scalar.db.api.Isolation isolation) {
     return start(txId, Isolation.valueOf(isolation.name()), config.getSerializableStrategy());
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public ConsensusCommit start(
@@ -97,18 +100,21 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     return start(Isolation.valueOf(isolation.name()), (SerializableStrategy) strategy);
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public ConsensusCommit start(com.scalar.db.api.SerializableStrategy strategy) {
     return start(Isolation.SERIALIZABLE, (SerializableStrategy) strategy);
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public ConsensusCommit start(String txId, com.scalar.db.api.SerializableStrategy strategy) {
     return start(txId, Isolation.SERIALIZABLE, (SerializableStrategy) strategy);
   }
 
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public ConsensusCommit start(

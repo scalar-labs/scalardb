@@ -19,30 +19,35 @@ public class TwoPhaseCommitTransactionService implements TwoPhaseCommitTransacti
     this.manager = manager;
   }
 
+  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void with(String namespace, String tableName) {
     manager.with(namespace, tableName);
   }
 
+  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void withNamespace(String namespace) {
     manager.withNamespace(namespace);
   }
 
+  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public Optional<String> getNamespace() {
     return manager.getNamespace();
   }
 
+  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void withTable(String tableName) {
     manager.withTable(tableName);
   }
 
+  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public Optional<String> getTable() {
