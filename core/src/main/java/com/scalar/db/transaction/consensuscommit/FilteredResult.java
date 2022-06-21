@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
  */
 @Immutable
 public class FilteredResult extends AbstractResult {
-  private static final Logger LOGGER = LoggerFactory.getLogger(FilteredResult.class);
+  private static final Logger logger = LoggerFactory.getLogger(FilteredResult.class);
 
   private final Result original;
   private final ImmutableSet<String> containedColumnNames;
@@ -58,7 +58,7 @@ public class FilteredResult extends AbstractResult {
     }
     for (Value<?> value : key.get()) {
       if (!containedColumnNames.contains(value.getName())) {
-        LOGGER.warn("full key doesn't seem to be projected into the result");
+        logger.warn("full key doesn't seem to be projected into the result");
         return Optional.empty();
       }
     }

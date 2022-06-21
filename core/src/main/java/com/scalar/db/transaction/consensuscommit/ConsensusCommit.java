@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
  */
 @NotThreadSafe
 public class ConsensusCommit extends AbstractDistributedTransaction {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ConsensusCommit.class);
+  private static final Logger logger = LoggerFactory.getLogger(ConsensusCommit.class);
   private final CrudHandler crud;
   private final CommitHandler commit;
   private final RecoveryHandler recovery;
@@ -152,7 +152,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   }
 
   private void lazyRecovery(Selection selection, List<TransactionResult> results) {
-    LOGGER.debug("recover uncommitted records: {}", results);
+    logger.debug("recover uncommitted records: {}", results);
     beforeRecoveryHook.run();
     results.forEach(r -> recovery.recover(selection, r));
   }

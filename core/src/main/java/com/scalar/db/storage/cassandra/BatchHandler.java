@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
  */
 @ThreadSafe
 public class BatchHandler {
-  static final Logger LOGGER = LoggerFactory.getLogger(BatchHandler.class);
+  static final Logger logger = LoggerFactory.getLogger(BatchHandler.class);
   private final Session session;
   private final StatementHandlerManager handlers;
 
@@ -58,18 +58,18 @@ public class BatchHandler {
         throw new NoMutationException("no mutation was applied.");
       }
     } catch (WriteTimeoutException e) {
-      LOGGER.warn("write timeout happened during batch mutate operation.", e);
+      logger.warn("write timeout happened during batch mutate operation.", e);
       WriteType writeType = e.getWriteType();
       if (writeType == WriteType.BATCH_LOG) {
         throw new RetriableExecutionException("logging failed in the batch.", e);
       } else if (writeType == WriteType.BATCH) {
-        LOGGER.warn("logging was succeeded, but mutations in the batch partially failed.", e);
+        logger.warn("logging was succeeded, but mutations in the batch partially failed.", e);
       } else {
         throw new RetriableExecutionException(
             "operation failed in the batch with type " + writeType, e);
       }
     } catch (RuntimeException e) {
-      LOGGER.warn(e.getMessage(), e);
+      logger.warn(e.getMessage(), e);
       throw new RetriableExecutionException(e.getMessage(), e);
     }
   }

@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class CrudHandler {
-  private static final Logger LOGGER = LoggerFactory.getLogger(CrudHandler.class);
+  private static final Logger logger = LoggerFactory.getLogger(CrudHandler.class);
   private final DistributedStorage storage;
   private final Snapshot snapshot;
   private final TransactionalTableMetadataManager tableMetadataManager;
@@ -101,7 +101,7 @@ public class CrudHandler {
         try {
           scanner.close();
         } catch (IOException e) {
-          LOGGER.warn("failed to close the scanner", e);
+          logger.warn("failed to close the scanner", e);
         }
       }
     }

@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommitTransactionManager {
-  private static final Logger LOGGER =
+  private static final Logger logger =
       LoggerFactory.getLogger(GrpcTwoPhaseCommitTransactionManager.class);
 
   private static final long TRANSACTION_LIFETIME_MILLIS = 60000;
@@ -62,11 +62,11 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
             TRANSACTION_LIFETIME_MILLIS,
             TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
             t -> {
-              LOGGER.warn("the transaction is expired. transactionId: {}", t.getId());
+              logger.warn("the transaction is expired. transactionId: {}", t.getId());
               try {
                 t.rollback();
               } catch (RollbackException e) {
-                LOGGER.warn("rollback failed", e);
+                logger.warn("rollback failed", e);
               }
             });
   }
@@ -177,7 +177,7 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
     try {
       channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     } catch (InterruptedException e) {
-      LOGGER.warn("failed to shutdown the channel", e);
+      logger.warn("failed to shutdown the channel", e);
     }
   }
 }

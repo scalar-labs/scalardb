@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class DistributedStorageService extends DistributedStorageGrpc.DistributedStorageImplBase {
-  private static final Logger LOGGER = LoggerFactory.getLogger(DistributedStorageService.class);
+  private static final Logger logger = LoggerFactory.getLogger(DistributedStorageService.class);
   private static final String SERVICE_NAME = "distributed_storage";
   private static final int DEFAULT_SCAN_FETCH_COUNT = 100;
 
@@ -141,7 +141,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
       responseObserver.onError(
           Status.FAILED_PRECONDITION.withDescription(e.getMessage()).asRuntimeException());
     } catch (Throwable t) {
-      LOGGER.error("an internal error happened during the execution", t);
+      logger.error("an internal error happened during the execution", t);
       responseObserver.onError(
           Status.INTERNAL.withDescription(t.getMessage()).asRuntimeException());
       if (t instanceof Error) {
@@ -263,7 +263,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
       } catch (IllegalArgumentException e) {
         respondInvalidArgumentError(e.getMessage());
       } catch (Throwable t) {
-        LOGGER.error("an internal error happened when opening a scanner", t);
+        logger.error("an internal error happened when opening a scanner", t);
         respondInternalError(t.getMessage());
         if (t instanceof Error) {
           throw (Error) t;
@@ -296,7 +296,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
               return builder.setHasMoreResults(resultIterator.hasNext()).build();
             });
       } catch (Throwable t) {
-        LOGGER.error("an internal error happened during the execution", t);
+        logger.error("an internal error happened during the execution", t);
         respondInternalError(t.getMessage());
         if (t instanceof Error) {
           throw (Error) t;
@@ -318,7 +318,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
 
     @Override
     public void onError(Throwable t) {
-      LOGGER.error("an error received", t);
+      logger.error("an error received", t);
       cleanUp();
     }
 
@@ -336,7 +336,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
           scanner.close();
         }
       } catch (IOException e) {
-        LOGGER.warn("failed to close the scanner");
+        logger.warn("failed to close the scanner");
       }
 
       postProcessor.run();

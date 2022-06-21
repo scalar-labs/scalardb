@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
  */
 @ThreadSafe
 public class SelectStatementHandler extends StatementHandler {
-  private static final Logger LOGGER = LoggerFactory.getLogger(SelectStatementHandler.class);
+  private static final Logger logger = LoggerFactory.getLogger(SelectStatementHandler.class);
 
   /**
    * Constructs {@code SelectStatementHandler} with the specified {@code Session}
@@ -281,7 +281,7 @@ public class SelectStatementHandler extends StatementHandler {
       case DESC:
         return QueryBuilder.desc(quoteIfNecessary(ordering.getColumnName()));
       default:
-        LOGGER.warn("Unsupported ordering specified. Using Order.ASC.");
+        logger.warn("Unsupported ordering specified. Using Order.ASC.");
         return QueryBuilder.asc(quoteIfNecessary(ordering.getColumnName()));
     }
   }

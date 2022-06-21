@@ -46,7 +46,7 @@ public class KeyBytesEncoderTest {
 
   private static final int ATTEMPT_COUNT = 50;
   private static final int KEY_ELEMENT_COUNT = 30;
-  private static final Random RANDOM = new Random();
+  private static final Random random = new Random();
   private static final ImmutableList<Order> ORDERS = ImmutableList.of(Order.ASC, Order.DESC);
   private static final ImmutableList<DataType> KEY_TYPES =
       ImmutableList.of(
@@ -67,7 +67,7 @@ public class KeyBytesEncoderTest {
 
   @Test
   public void encode_SingleKeysGiven_ShouldEncodeProperlyWithPreservingSortOrder() {
-    RANDOM.setSeed(seed);
+    random.setSeed(seed);
     runTest(
         () -> {
           for (DataType col1Type : KEY_TYPES) {
@@ -105,7 +105,7 @@ public class KeyBytesEncoderTest {
 
   @Test
   public void encode_DoubleKeysGiven_ShouldEncodeProperlyWithPreservingSortOrder() {
-    RANDOM.setSeed(seed);
+    random.setSeed(seed);
     runTest(
         () -> {
           for (DataType col1Type : KEY_TYPES) {
@@ -155,7 +155,7 @@ public class KeyBytesEncoderTest {
 
   @Test
   public void encode_TripleKeysGiven_ShouldEncodeProperlyWithPreservingSortOrder() {
-    RANDOM.setSeed(seed);
+    random.setSeed(seed);
     runTest(
         () -> {
           for (DataType col1Type : KEY_TYPES) {
@@ -277,15 +277,15 @@ public class KeyBytesEncoderTest {
       case BIGINT:
         return new BigIntValue(columnName, nextBigInt());
       case INT:
-        return new IntValue(columnName, RANDOM.nextInt());
+        return new IntValue(columnName, random.nextInt());
       case FLOAT:
         return new FloatValue(columnName, nextFloat());
       case DOUBLE:
         return new DoubleValue(columnName, nextDouble());
       case BLOB:
-        int length = RANDOM.nextInt(BLOB_MAX_LENGTH);
+        int length = random.nextInt(BLOB_MAX_LENGTH);
         byte[] bytes = new byte[length];
-        RANDOM.nextBytes(bytes);
+        random.nextBytes(bytes);
 
         // 0x00 bytes not accepted in blob values in DESC order
         if (order == Order.DESC) {
@@ -298,11 +298,11 @@ public class KeyBytesEncoderTest {
 
         return new BlobValue(columnName, bytes);
       case TEXT:
-        int count = RANDOM.nextInt(TEXT_MAX_COUNT);
+        int count = random.nextInt(TEXT_MAX_COUNT);
         return new TextValue(
-            columnName, RandomStringUtils.random(count, 0, 0, true, true, null, RANDOM));
+            columnName, RandomStringUtils.random(count, 0, 0, true, true, null, random));
       case BOOLEAN:
-        return new BooleanValue(columnName, RANDOM.nextBoolean());
+        return new BooleanValue(columnName, random.nextBoolean());
       default:
         throw new AssertionError();
     }
@@ -310,19 +310,19 @@ public class KeyBytesEncoderTest {
 
   private static long nextBigInt() {
     OptionalLong randomLong =
-        RANDOM.longs(BigIntValue.MIN_VALUE, (BigIntValue.MAX_VALUE + 1)).limit(1).findFirst();
+        random.longs(BigIntValue.MIN_VALUE, (BigIntValue.MAX_VALUE + 1)).limit(1).findFirst();
     return randomLong.orElse(0);
   }
 
   private static float nextFloat() {
     OptionalDouble randomDouble =
-        RANDOM.doubles(Float.MIN_VALUE, Float.MAX_VALUE).limit(1).findFirst();
+        random.doubles(Float.MIN_VALUE, Float.MAX_VALUE).limit(1).findFirst();
     return (float) randomDouble.orElse(0.0d);
   }
 
   private static double nextDouble() {
     OptionalDouble randomDouble =
-        RANDOM.doubles(Double.MIN_VALUE, Double.MAX_VALUE).limit(1).findFirst();
+        random.doubles(Double.MIN_VALUE, Double.MAX_VALUE).limit(1).findFirst();
     return randomDouble.orElse(0.0d);
   }
 

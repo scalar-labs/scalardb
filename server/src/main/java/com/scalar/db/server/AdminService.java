@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class AdminService extends AdminGrpc.AdminImplBase {
-  private static final Logger LOGGER = LoggerFactory.getLogger(AdminService.class);
+  private static final Logger logger = LoggerFactory.getLogger(AdminService.class);
 
   private static final long DEFAULT_MAX_PAUSE_WAIT_TIME_MILLIS = 30000; // 30 seconds
 
@@ -29,7 +29,7 @@ public class AdminService extends AdminGrpc.AdminImplBase {
     gateKeeper.close();
 
     if (request.getWaitOutstanding()) {
-      LOGGER.warn("Pausing... waiting until outstanding requests are all finished");
+      logger.warn("Pausing... waiting until outstanding requests are all finished");
       boolean drained = false;
       long maxPauseWaitTime =
           request.getMaxPauseWaitTime() != 0
@@ -44,13 +44,13 @@ public class AdminService extends AdminGrpc.AdminImplBase {
       if (!drained) {
         gateKeeper.open();
         String message = "failed to finish processing outstanding requests within the time limit.";
-        LOGGER.warn(message);
+        logger.warn(message);
         responseObserver.onError(
             Status.FAILED_PRECONDITION.withDescription(message).asRuntimeException());
         return;
       }
     }
-    LOGGER.warn("Paused");
+    logger.warn("Paused");
 
     responseObserver.onNext(Empty.getDefaultInstance());
     responseObserver.onCompleted();
@@ -59,7 +59,7 @@ public class AdminService extends AdminGrpc.AdminImplBase {
   @Override
   public void unpause(Empty request, StreamObserver<Empty> responseObserver) {
     gateKeeper.open();
-    LOGGER.warn("Unpaused");
+    logger.warn("Unpaused");
     responseObserver.onNext(Empty.getDefaultInstance());
     responseObserver.onCompleted();
   }

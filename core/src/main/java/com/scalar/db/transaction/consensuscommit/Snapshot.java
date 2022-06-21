@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 
 @NotThreadSafe
 public class Snapshot {
-  private static final Logger LOGGER = LoggerFactory.getLogger(Snapshot.class);
+  private static final Logger logger = LoggerFactory.getLogger(Snapshot.class);
   private final String id;
   private final Isolation isolation;
   private final SerializableStrategy strategy;
@@ -342,7 +342,7 @@ public class Snapshot {
                 try {
                   scanner.close();
                 } catch (IOException e) {
-                  LOGGER.warn("failed to close the scanner", e);
+                  logger.warn("failed to close the scanner", e);
                 }
               }
             }

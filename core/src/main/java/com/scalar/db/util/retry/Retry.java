@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public final class Retry {
-  private static final Logger LOGGER = LoggerFactory.getLogger(Retry.class);
+  private static final Logger logger = LoggerFactory.getLogger(Retry.class);
 
   private static final int RETRY_INITIAL_INTERVAL_MILLIS = 100;
   private static final int RETRY_MAX_INTERVAL_MILLIS = 60000;
@@ -29,7 +29,7 @@ public final class Retry {
       try {
         return supplier.get();
       } catch (ServiceTemporaryUnavailableException e) {
-        LOGGER.warn(
+        logger.warn(
             "received UNAVAILABLE state (the message: \"{}\"). retrying after {} milliseconds..."
                 + " the current attempt count: {}",
             e.getMessage(),

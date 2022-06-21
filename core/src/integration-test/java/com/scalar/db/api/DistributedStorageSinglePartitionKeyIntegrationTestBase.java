@@ -35,7 +35,7 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
 
   private static final int PARTITION_KEY_NUM = 5;
 
-  private static final Random RANDOM = new Random();
+  private static final Random random = new Random();
 
   private DistributedStorageAdmin admin;
   private DistributedStorage storage;
@@ -189,7 +189,7 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
   }
 
   private List<Value<?>> prepareRecords(DataType partitionKeyType) throws ExecutionException {
-    RANDOM.setSeed(seed);
+    random.setSeed(seed);
 
     List<Value<?>> ret = new ArrayList<>();
     List<Put> puts = new ArrayList<>();
@@ -220,7 +220,7 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
               i -> {
                 Value<?> partitionKeyValue;
                 while (true) {
-                  partitionKeyValue = getRandomValue(RANDOM, PARTITION_KEY, partitionKeyType);
+                  partitionKeyValue = getRandomValue(random, PARTITION_KEY, partitionKeyType);
                   // reject duplication
                   if (!valueSet.contains(partitionKeyValue)) {
                     valueSet.add(partitionKeyValue);

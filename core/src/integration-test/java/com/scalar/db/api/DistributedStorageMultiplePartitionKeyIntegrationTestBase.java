@@ -41,7 +41,7 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
   private static final int FIRST_PARTITION_KEY_NUM = 5;
   private static final int SECOND_PARTITION_KEY_NUM = 5;
 
-  private static final Random RANDOM = new Random();
+  private static final Random random = new Random();
 
   private static final int THREAD_NUM = 10;
 
@@ -263,7 +263,7 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
 
   private List<PartitionKey> prepareRecords(
       DataType firstPartitionKeyType, DataType secondPartitionKeyType) throws ExecutionException {
-    RANDOM.setSeed(seed);
+    random.setSeed(seed);
 
     List<Put> puts = new ArrayList<>();
     List<PartitionKey> ret = new ArrayList<>();
@@ -302,7 +302,7 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
                 Value<?> firstPartitionKeyValue;
                 while (true) {
                   firstPartitionKeyValue =
-                      getRandomValue(RANDOM, FIRST_PARTITION_KEY, firstPartitionKeyType);
+                      getRandomValue(random, FIRST_PARTITION_KEY, firstPartitionKeyType);
                   // reject duplication
                   if (!valueSet.contains(firstPartitionKeyValue)) {
                     valueSet.add(firstPartitionKeyValue);
@@ -367,7 +367,7 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
       for (int i = 0; i < SECOND_PARTITION_KEY_NUM - 2; i++) {
         while (true) {
           Value<?> secondPartitionKeyValue =
-              getRandomValue(RANDOM, SECOND_PARTITION_KEY, secondPartitionKeyType);
+              getRandomValue(random, SECOND_PARTITION_KEY, secondPartitionKeyType);
           // reject duplication
           if (!valueSet.contains(secondPartitionKeyValue)) {
             ret.add(new PartitionKey(firstPartitionKeyValue, secondPartitionKeyValue));

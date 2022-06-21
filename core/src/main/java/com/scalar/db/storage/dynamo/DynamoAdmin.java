@@ -88,7 +88,7 @@ import software.amazon.awssdk.services.dynamodb.model.UpdateTableRequest;
  */
 @ThreadSafe
 public class DynamoAdmin implements DistributedStorageAdmin {
-  private static final Logger LOGGER = LoggerFactory.getLogger(DynamoAdmin.class);
+  private static final Logger logger = LoggerFactory.getLogger(DynamoAdmin.class);
 
   public static final String NO_SCALING = "no-scaling";
   public static final String NO_BACKUP = "no-backup";
@@ -966,7 +966,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         applicationAutoScalingClient.deleteScalingPolicy(deleteScalingPolicyRequest);
       } catch (Exception e) {
         if (!(e instanceof ObjectNotFoundException)) {
-          LOGGER.warn(
+          logger.warn(
               "The scaling policy " + deleteScalingPolicyRequest.policyName() + " is not found.");
         }
       }
@@ -981,7 +981,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         applicationAutoScalingClient.deregisterScalableTarget(deregisterScalableTargetRequest);
       } catch (Exception e) {
         if (!(e instanceof ObjectNotFoundException)) {
-          LOGGER.warn(
+          logger.warn(
               "The scalable target "
                   + deregisterScalableTargetRequest.resourceId()
                   + " is not found");

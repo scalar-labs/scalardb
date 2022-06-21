@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
 
 @NotThreadSafe
 public class ScannerImpl implements Scanner {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ScannerImpl.class);
+  private static final Logger logger = LoggerFactory.getLogger(ScannerImpl.class);
 
   private final ResultInterpreter resultInterpreter;
   private final Connection connection;
@@ -79,17 +79,17 @@ public class ScannerImpl implements Scanner {
     try {
       resultSet.close();
     } catch (SQLException e) {
-      LOGGER.warn("failed to close the resultSet", e);
+      logger.warn("failed to close the resultSet", e);
     }
     try {
       preparedStatement.close();
     } catch (SQLException e) {
-      LOGGER.warn("failed to close the preparedStatement", e);
+      logger.warn("failed to close the preparedStatement", e);
     }
     try {
       connection.close();
     } catch (SQLException e) {
-      LOGGER.warn("failed to close the connection", e);
+      logger.warn("failed to close the connection", e);
     }
   }
 }

@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class JdbcAdmin implements DistributedStorageAdmin {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(JdbcAdmin.class);
+  private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
   private static final ImmutableMap<RdbEngine, ImmutableMap<DataType, String>> DATA_TYPE_MAPPING =
       ImmutableMap.<RdbEngine, ImmutableMap<DataType, String>>builder()
           .put(
@@ -729,7 +729,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try {
       dataSource.close();
     } catch (SQLException e) {
-      LOGGER.error("failed to close the dataSource", e);
+      logger.error("failed to close the dataSource", e);
     }
   }
 

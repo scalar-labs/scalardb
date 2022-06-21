@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class JdbcTransactionManager extends AbstractDistributedTransactionManager {
-  private static final Logger LOGGER = LoggerFactory.getLogger(JdbcTransactionManager.class);
+  private static final Logger logger = LoggerFactory.getLogger(JdbcTransactionManager.class);
 
   private final BasicDataSource dataSource;
   private final BasicDataSource tableMetadataDataSource;
@@ -147,12 +147,12 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
     try {
       dataSource.close();
     } catch (SQLException e) {
-      LOGGER.warn("failed to close the dataSource", e);
+      logger.warn("failed to close the dataSource", e);
     }
     try {
       tableMetadataDataSource.close();
     } catch (SQLException e) {
-      LOGGER.warn("failed to close the table metadata dataSource", e);
+      logger.warn("failed to close the table metadata dataSource", e);
     }
   }
 }
