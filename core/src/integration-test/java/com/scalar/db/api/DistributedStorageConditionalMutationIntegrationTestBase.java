@@ -70,8 +70,6 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
           .build();
 
   private static final int ATTEMPT_COUNT = 5;
-  private static final Random random = new Random();
-
   private static final int THREAD_NUM = 10;
 
   private DistributedStorageAdmin admin;
@@ -79,6 +77,8 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   private String namespace;
 
   private long seed;
+  private ThreadLocal<Random> random;
+
   private List<OperatorAndDataType> operatorAndDataTypeList;
 
   private ExecutorService executorService;
@@ -93,6 +93,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     storage = factory.getStorage();
     seed = System.currentTimeMillis();
     System.out.println("The seed used in the conditional mutation integration test is " + seed);
+    random = ThreadLocal.withInitial(Random::new);
     operatorAndDataTypeList = getOperatorAndDataTypeListForTest();
     executorService = Executors.newFixedThreadPool(getThreadNum());
   }
@@ -149,8 +150,6 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   @Test
   public void put_withPutIfWithSingleCondition_shouldPutProperly()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    random.setSeed(seed);
-
     executeInParallel(
         (operator, dataType) -> {
           put_withPutIfWithSingleConditionWithSameValue_shouldPutProperly(operator, dataType);
@@ -192,7 +191,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
       Map<String, Column<?>> initialData = putInitialDataWithRandomValues(operator, dataType);
 
       String columnName = getColumnName(dataType);
-      Column<?> columnToCompare = getColumnWithRandomValue(random, columnName, dataType);
+      Column<?> columnToCompare = getColumnWithRandomValue(random.get(), columnName, dataType);
 
       MutationCondition condition =
           ConditionBuilder.putIf(buildConditionalExpression(columnToCompare, operator)).build();
@@ -216,7 +215,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     Map<String, Column<?>> initialData = putInitialDataWithNullValues(operator, dataType);
 
     String columnName = getColumnName(dataType);
-    Column<?> columnToCompare = getColumnWithRandomValue(random, columnName, dataType);
+    Column<?> columnToCompare = getColumnWithRandomValue(random.get(), columnName, dataType);
 
     MutationCondition condition =
         ConditionBuilder.putIf(buildConditionalExpression(columnToCompare, operator)).build();
@@ -239,7 +238,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     Map<String, Column<?>> initialData = putInitialDataWithoutValues(operator, dataType);
 
     String columnName = getColumnName(dataType);
-    Column<?> columnToCompare = getColumnWithRandomValue(random, columnName, dataType);
+    Column<?> columnToCompare = getColumnWithRandomValue(random.get(), columnName, dataType);
 
     MutationCondition condition =
         ConditionBuilder.putIf(buildConditionalExpression(columnToCompare, operator)).build();
@@ -259,8 +258,6 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   @Test
   public void put_withPutIfWithMultipleConditions_shouldPutProperly()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    random.setSeed(seed);
-
     executeInParallel(
         (firstOperator, firstDataType, secondOperator, secondDataType) -> {
           put_withPutIfWithMultipleConditionsWithSameValue_shouldPutProperly(
@@ -333,11 +330,11 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
       String firstColumnName = getColumnName(firstDataType);
       Column<?> firstColumnToCompare =
-          getColumnWithRandomValue(random, firstColumnName, firstDataType);
+          getColumnWithRandomValue(random.get(), firstColumnName, firstDataType);
 
       String secondColumnName = getColumnName(secondDataType);
       Column<?> secondColumnToCompare =
-          getColumnWithRandomValue(random, secondColumnName, secondDataType);
+          getColumnWithRandomValue(random.get(), secondColumnName, secondDataType);
 
       MutationCondition condition =
           ConditionBuilder.putIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
@@ -380,11 +377,11 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
     String firstColumnName = getColumnName(firstDataType);
     Column<?> firstColumnToCompare =
-        getColumnWithRandomValue(random, firstColumnName, firstDataType);
+        getColumnWithRandomValue(random.get(), firstColumnName, firstDataType);
 
     String secondColumnName = getColumnName(secondDataType);
     Column<?> secondColumnToCompare =
-        getColumnWithRandomValue(random, secondColumnName, secondDataType);
+        getColumnWithRandomValue(random.get(), secondColumnName, secondDataType);
 
     MutationCondition condition =
         ConditionBuilder.putIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
@@ -426,11 +423,11 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
     String firstColumnName = getColumnName(firstDataType);
     Column<?> firstColumnToCompare =
-        getColumnWithRandomValue(random, firstColumnName, firstDataType);
+        getColumnWithRandomValue(random.get(), firstColumnName, firstDataType);
 
     String secondColumnName = getColumnName(secondDataType);
     Column<?> secondColumnToCompare =
-        getColumnWithRandomValue(random, secondColumnName, secondDataType);
+        getColumnWithRandomValue(random.get(), secondColumnName, secondDataType);
 
     MutationCondition condition =
         ConditionBuilder.putIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
@@ -530,7 +527,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
   @Test
   public void put_withPutIfExistsWhenRecordExists_shouldPutProperly() throws ExecutionException {
-    random.setSeed(seed);
+    random.get().setSeed(seed);
 
     // Arrange
     putInitialDataWithRandomValues();
@@ -566,7 +563,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   @Test
   public void put_withPutIfExistsWhenRecordDoesNotExist_shouldThrowNoMutationException()
       throws ExecutionException {
-    random.setSeed(seed);
+    random.get().setSeed(seed);
 
     // Arrange
     Put put = preparePutWithRandomValues().withCondition(ConditionBuilder.putIfExists());
@@ -581,7 +578,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   @Test
   public void put_withPutIfNotExistsWhenRecordDoesNotExist_shouldPutProperly()
       throws ExecutionException {
-    random.setSeed(seed);
+    random.get().setSeed(seed);
 
     // Arrange
     Put put = preparePutWithRandomValues().withCondition(ConditionBuilder.putIfNotExists());
@@ -615,7 +612,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   @Test
   public void put_withPutIfNotExistsWhenRecordExists_shouldThrowNoMutationException()
       throws ExecutionException {
-    random.setSeed(seed);
+    random.get().setSeed(seed);
 
     // Arrange
     Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
@@ -656,8 +653,6 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   @Test
   public void delete_withDeleteIfWithSingleCondition_shouldPutProperly()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    random.setSeed(seed);
-
     executeInParallel(
         (operator, dataType) -> {
           delete_withDeleteIfWithSingleConditionWithSameValue_shouldPutProperly(operator, dataType);
@@ -699,7 +694,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
       Map<String, Column<?>> initialData = putInitialDataWithRandomValues(operator, dataType);
 
       String columnName = getColumnName(dataType);
-      Column<?> columnToCompare = getColumnWithRandomValue(random, columnName, dataType);
+      Column<?> columnToCompare = getColumnWithRandomValue(random.get(), columnName, dataType);
 
       MutationCondition condition =
           ConditionBuilder.deleteIf(buildConditionalExpression(columnToCompare, operator)).build();
@@ -724,7 +719,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     Map<String, Column<?>> initialData = putInitialDataWithNullValues(operator, dataType);
 
     String columnName = getColumnName(dataType);
-    Column<?> columnToCompare = getColumnWithRandomValue(random, columnName, dataType);
+    Column<?> columnToCompare = getColumnWithRandomValue(random.get(), columnName, dataType);
 
     MutationCondition condition =
         ConditionBuilder.deleteIf(buildConditionalExpression(columnToCompare, operator)).build();
@@ -747,7 +742,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     Map<String, Column<?>> initialData = putInitialDataWithoutValues(operator, dataType);
 
     String columnName = getColumnName(dataType);
-    Column<?> columnToCompare = getColumnWithRandomValue(random, columnName, dataType);
+    Column<?> columnToCompare = getColumnWithRandomValue(random.get(), columnName, dataType);
 
     MutationCondition condition =
         ConditionBuilder.deleteIf(buildConditionalExpression(columnToCompare, operator)).build();
@@ -767,8 +762,6 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   @Test
   public void delete_withDeleteIfWithMultipleConditions_shouldPutProperly()
       throws java.util.concurrent.ExecutionException, InterruptedException {
-    random.setSeed(seed);
-
     executeInParallel(
         (firstOperator, firstDataType, secondOperator, secondDataType) -> {
           delete_withDeleteIfWithMultipleConditionsWithSameValue_shouldPutProperly(
@@ -842,11 +835,11 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
       String firstColumnName = getColumnName(firstDataType);
       Column<?> firstColumnToCompare =
-          getColumnWithRandomValue(random, firstColumnName, firstDataType);
+          getColumnWithRandomValue(random.get(), firstColumnName, firstDataType);
 
       String secondColumnName = getColumnName(secondDataType);
       Column<?> secondColumnToCompare =
-          getColumnWithRandomValue(random, secondColumnName, secondDataType);
+          getColumnWithRandomValue(random.get(), secondColumnName, secondDataType);
 
       MutationCondition condition =
           ConditionBuilder.deleteIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
@@ -891,11 +884,11 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
     String firstColumnName = getColumnName(firstDataType);
     Column<?> firstColumnToCompare =
-        getColumnWithRandomValue(random, firstColumnName, firstDataType);
+        getColumnWithRandomValue(random.get(), firstColumnName, firstDataType);
 
     String secondColumnName = getColumnName(secondDataType);
     Column<?> secondColumnToCompare =
-        getColumnWithRandomValue(random, secondColumnName, secondDataType);
+        getColumnWithRandomValue(random.get(), secondColumnName, secondDataType);
 
     MutationCondition condition =
         ConditionBuilder.deleteIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
@@ -939,11 +932,11 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
     String firstColumnName = getColumnName(firstDataType);
     Column<?> firstColumnToCompare =
-        getColumnWithRandomValue(random, firstColumnName, firstDataType);
+        getColumnWithRandomValue(random.get(), firstColumnName, firstDataType);
 
     String secondColumnName = getColumnName(secondDataType);
     Column<?> secondColumnToCompare =
-        getColumnWithRandomValue(random, secondColumnName, secondDataType);
+        getColumnWithRandomValue(random.get(), secondColumnName, secondDataType);
 
     MutationCondition condition =
         ConditionBuilder.deleteIf(buildConditionalExpression(firstColumnToCompare, firstOperator))
@@ -1047,7 +1040,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   @Test
   public void delete_withDeleteIfExistsWhenRecordExists_shouldPutProperly()
       throws ExecutionException {
-    random.setSeed(seed);
+    random.get().setSeed(seed);
 
     // Arrange
     putInitialDataWithRandomValues();
@@ -1065,7 +1058,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   @Test
   public void delete_withDeleteIfExistsWhenRecordDoesNotExist_shouldThrowNoMutationException()
       throws ExecutionException {
-    random.setSeed(seed);
+    random.get().setSeed(seed);
 
     // Arrange
     Delete delete = prepareDelete().withCondition(ConditionBuilder.deleteIfExists());
@@ -1116,13 +1109,13 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
             Key.ofText(
                 PARTITION_KEY,
                 getPartitionKeyValue(firstOperator, firstDataType, secondOperator, secondDataType)))
-        .withValue(getColumnWithRandomValue(random, COL_NAME1, DataType.BOOLEAN))
-        .withValue(getColumnWithRandomValue(random, COL_NAME2, DataType.INT))
-        .withValue(getColumnWithRandomValue(random, COL_NAME3, DataType.BIGINT))
-        .withValue(getColumnWithRandomValue(random, COL_NAME4, DataType.FLOAT))
-        .withValue(getColumnWithRandomValue(random, COL_NAME5, DataType.DOUBLE))
-        .withValue(getColumnWithRandomValue(random, COL_NAME6, DataType.TEXT))
-        .withValue(getColumnWithRandomValue(random, COL_NAME7, DataType.BLOB))
+        .withValue(getColumnWithRandomValue(random.get(), COL_NAME1, DataType.BOOLEAN))
+        .withValue(getColumnWithRandomValue(random.get(), COL_NAME2, DataType.INT))
+        .withValue(getColumnWithRandomValue(random.get(), COL_NAME3, DataType.BIGINT))
+        .withValue(getColumnWithRandomValue(random.get(), COL_NAME4, DataType.FLOAT))
+        .withValue(getColumnWithRandomValue(random.get(), COL_NAME5, DataType.DOUBLE))
+        .withValue(getColumnWithRandomValue(random.get(), COL_NAME6, DataType.TEXT))
+        .withValue(getColumnWithRandomValue(random.get(), COL_NAME7, DataType.BLOB))
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(namespace)
         .forTable(TABLE);
@@ -1414,6 +1407,8 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     for (OperatorAndDataType operatorAndDataType : operatorAndDataTypeList) {
       testCallables.add(
           () -> {
+            random.get().setSeed(seed);
+
             test.execute(operatorAndDataType.getOperator(), operatorAndDataType.getDataType());
             return null;
           });
@@ -1428,6 +1423,8 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
       for (OperatorAndDataType secondOperatorAndDataType : operatorAndDataTypeList) {
         testCallables.add(
             () -> {
+              random.get().setSeed(seed);
+
               test.execute(
                   firstOperatorAndDataType.getOperator(),
                   firstOperatorAndDataType.getDataType(),

@@ -193,6 +193,8 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
   public void getAndDelete_ShouldBehaveCorrectly() throws ExecutionException {
     for (DataType firstPartitionKeyType : partitionKeyTypes.keySet()) {
       for (DataType secondPartitionKeyType : partitionKeyTypes.get(firstPartitionKeyType)) {
+        random.setSeed(seed);
+
         truncateTable(firstPartitionKeyType, secondPartitionKeyType);
         List<PartitionKey> partitionKeys =
             prepareRecords(firstPartitionKeyType, secondPartitionKeyType);
@@ -263,8 +265,6 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
 
   private List<PartitionKey> prepareRecords(
       DataType firstPartitionKeyType, DataType secondPartitionKeyType) throws ExecutionException {
-    random.setSeed(seed);
-
     List<Put> puts = new ArrayList<>();
     List<PartitionKey> ret = new ArrayList<>();
 
