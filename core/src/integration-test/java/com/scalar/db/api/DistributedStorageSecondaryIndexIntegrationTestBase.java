@@ -34,7 +34,7 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
   private static final int ATTEMPT_COUNT = 50;
   private static final int DATA_NUM = 10;
 
-  private static final Random RANDOM = new Random();
+  private static final Random random = new Random();
 
   private DistributedStorageAdmin admin;
   private DistributedStorage storage;
@@ -121,14 +121,14 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
   @Test
   public void scan_WithRandomSecondaryIndexValue_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-    RANDOM.setSeed(seed);
+    random.setSeed(seed);
 
     for (DataType secondaryIndexType : secondaryIndexTypes) {
       truncateTable(secondaryIndexType);
 
       for (int i = 0; i < ATTEMPT_COUNT; i++) {
         // Arrange
-        Value<?> secondaryIndexValue = getRandomValue(RANDOM, INDEX_COL_NAME, secondaryIndexType);
+        Value<?> secondaryIndexValue = getRandomValue(random, INDEX_COL_NAME, secondaryIndexType);
         prepareRecords(secondaryIndexType, secondaryIndexValue);
         Scan scan =
             new Scan(new Key(secondaryIndexValue))

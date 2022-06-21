@@ -45,7 +45,7 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
   private static final String COL_NAME7 = "c7";
 
   private static final int ATTEMPT_COUNT = 50;
-  private static final Random RANDOM = new Random();
+  private static final Random random = new Random();
 
   private DistributedStorageAdmin admin;
   private DistributedStorage storage;
@@ -117,18 +117,18 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
 
   @Test
   public void put_WithRandomValues_ShouldPutCorrectly() throws ExecutionException {
-    RANDOM.setSeed(seed);
+    random.setSeed(seed);
 
     for (int i = 0; i < ATTEMPT_COUNT; i++) {
       // Arrange
-      IntValue partitionKeyValue = (IntValue) getRandomValue(RANDOM, PARTITION_KEY, DataType.INT);
-      BooleanValue col1Value = (BooleanValue) getRandomValue(RANDOM, COL_NAME1, DataType.BOOLEAN);
-      IntValue col2Value = (IntValue) getRandomValue(RANDOM, COL_NAME2, DataType.INT);
-      BigIntValue col3Value = (BigIntValue) getRandomValue(RANDOM, COL_NAME3, DataType.BIGINT);
-      FloatValue col4Value = (FloatValue) getRandomValue(RANDOM, COL_NAME4, DataType.FLOAT);
-      DoubleValue col5Value = (DoubleValue) getRandomValue(RANDOM, COL_NAME5, DataType.DOUBLE);
-      TextValue col6Value = (TextValue) getRandomValue(RANDOM, COL_NAME6, DataType.TEXT);
-      BlobValue col7Value = (BlobValue) getRandomValue(RANDOM, COL_NAME7, DataType.BLOB);
+      IntValue partitionKeyValue = (IntValue) getRandomValue(random, PARTITION_KEY, DataType.INT);
+      BooleanValue col1Value = (BooleanValue) getRandomValue(random, COL_NAME1, DataType.BOOLEAN);
+      IntValue col2Value = (IntValue) getRandomValue(random, COL_NAME2, DataType.INT);
+      BigIntValue col3Value = (BigIntValue) getRandomValue(random, COL_NAME3, DataType.BIGINT);
+      FloatValue col4Value = (FloatValue) getRandomValue(random, COL_NAME4, DataType.FLOAT);
+      DoubleValue col5Value = (DoubleValue) getRandomValue(random, COL_NAME5, DataType.DOUBLE);
+      TextValue col6Value = (TextValue) getRandomValue(random, COL_NAME6, DataType.TEXT);
+      BlobValue col7Value = (BlobValue) getRandomValue(random, COL_NAME7, DataType.BLOB);
 
       Put put =
           new Put(new Key(partitionKeyValue))
@@ -556,13 +556,13 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
 
     Put putForRandomValues =
         new Put(new Key(partitionKeyValue))
-            .withValue(getRandomValue(RANDOM, COL_NAME1, DataType.BOOLEAN))
-            .withValue(getRandomValue(RANDOM, COL_NAME2, DataType.INT))
-            .withValue(getRandomValue(RANDOM, COL_NAME3, DataType.BIGINT))
-            .withValue(getRandomValue(RANDOM, COL_NAME4, DataType.FLOAT))
-            .withValue(getRandomValue(RANDOM, COL_NAME5, DataType.DOUBLE))
-            .withValue(getRandomValue(RANDOM, COL_NAME6, DataType.TEXT))
-            .withValue(getRandomValue(RANDOM, COL_NAME7, DataType.BLOB))
+            .withValue(getRandomValue(random, COL_NAME1, DataType.BOOLEAN))
+            .withValue(getRandomValue(random, COL_NAME2, DataType.INT))
+            .withValue(getRandomValue(random, COL_NAME3, DataType.BIGINT))
+            .withValue(getRandomValue(random, COL_NAME4, DataType.FLOAT))
+            .withValue(getRandomValue(random, COL_NAME5, DataType.DOUBLE))
+            .withValue(getRandomValue(random, COL_NAME6, DataType.TEXT))
+            .withValue(getRandomValue(random, COL_NAME7, DataType.BLOB))
             .forNamespace(namespace)
             .forTable(TABLE);
 

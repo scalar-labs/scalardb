@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 /** A handler class for statements */
 @ThreadSafe
 public abstract class StatementHandler {
-  private static final Logger LOGGER = LoggerFactory.getLogger(StatementHandler.class);
+  private static final Logger logger = LoggerFactory.getLogger(StatementHandler.class);
   protected final CosmosClient client;
   protected final TableMetadataManager metadataManager;
 
@@ -44,7 +44,7 @@ public abstract class StatementHandler {
     try {
       return execute(operation);
     } catch (RuntimeException e) {
-      LOGGER.error(e.getMessage(), e);
+      logger.error(e.getMessage(), e);
       throw new ExecutionException(e.getMessage(), e);
     }
   }

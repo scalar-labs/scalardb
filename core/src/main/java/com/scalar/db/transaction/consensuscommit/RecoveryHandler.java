@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class RecoveryHandler {
   static final long TRANSACTION_LIFETIME_MILLIS = 15000;
-  private static final Logger LOGGER = LoggerFactory.getLogger(RecoveryHandler.class);
+  private static final Logger logger = LoggerFactory.getLogger(RecoveryHandler.class);
   private final DistributedStorage storage;
   private final Coordinator coordinator;
   private final TransactionalTableMetadataManager tableMetadataManager;
@@ -38,14 +38,14 @@ public class RecoveryHandler {
 
   // lazy recovery in read phase
   public void recover(Selection selection, TransactionResult result) {
-    LOGGER.debug("recovering for {}", result.getId());
+    logger.debug("recovering for {}", result.getId());
 
     // as the result doesn't have before image columns, need to get the latest result
     Optional<TransactionResult> latestResult;
     try {
       latestResult = getLatestResult(selection, result);
     } catch (ExecutionException e) {
-      LOGGER.warn("can't get the latest result", e);
+      logger.warn("can't get the latest result", e);
       return;
     }
 
@@ -63,7 +63,7 @@ public class RecoveryHandler {
     try {
       state = coordinator.getState(latestResult.get().getId());
     } catch (CoordinatorException e) {
-      LOGGER.warn("can't get coordinator state", e);
+      logger.warn("can't get coordinator state", e);
       return;
     }
 
@@ -109,7 +109,7 @@ public class RecoveryHandler {
 
   @VisibleForTesting
   void rollbackRecord(Selection selection, TransactionResult result) {
-    LOGGER.debug(
+    logger.debug(
         "rollback for {}, {} mutated by {}",
         selection.getPartitionKey(),
         selection.getClusteringKey(),
@@ -120,14 +120,14 @@ public class RecoveryHandler {
       composer.add(selection, result);
       mutate(composer.get());
     } catch (Exception e) {
-      LOGGER.warn("rolling back a record failed", e);
+      logger.warn("rolling back a record failed", e);
       // ignore since the record is recovered lazily
     }
   }
 
   @VisibleForTesting
   void rollforwardRecord(Selection selection, TransactionResult result) {
-    LOGGER.debug(
+    logger.debug(
         "rollforward for {}, {} mutated by {}",
         selection.getPartitionKey(),
         selection.getClusteringKey(),
@@ -147,7 +147,7 @@ public class RecoveryHandler {
       coordinator.putState(new Coordinator.State(result.getId(), TransactionState.ABORTED));
       rollbackRecord(selection, result);
     } catch (CoordinatorException e) {
-      LOGGER.warn("coordinator tries to abort {}, but failed", result.getId(), e);
+      logger.warn("coordinator tries to abort {}, but failed", result.getId(), e);
     }
   }
 
@@ -155,7 +155,7 @@ public class RecoveryHandler {
     try {
       storage.mutate(mutations);
     } catch (ExecutionException e) {
-      LOGGER.warn("mutation in recovery failed. the record will be eventually recovered", e);
+      logger.warn("mutation in recovery failed. the record will be eventually recovered", e);
     }
   }
 }

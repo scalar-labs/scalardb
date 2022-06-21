@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 
 @Immutable
 public class ResultImpl extends AbstractResult {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ResultImpl.class);
+  private static final Logger logger = LoggerFactory.getLogger(ResultImpl.class);
 
   private final Map<String, Column<?>> columns;
   private final TableMetadata metadata;
@@ -45,7 +45,7 @@ public class ResultImpl extends AbstractResult {
     for (String name : names) {
       Column<?> column = columns.get(name);
       if (column == null) {
-        LOGGER.warn("full key doesn't seem to be projected into the result");
+        logger.warn("full key doesn't seem to be projected into the result");
         return Optional.empty();
       }
       builder.add(column);

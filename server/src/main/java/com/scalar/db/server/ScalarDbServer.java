@@ -19,7 +19,7 @@ import picocli.CommandLine.Command;
 
 @Command(name = "scalardb-server", description = "Starts Scalar DB server.")
 public class ScalarDbServer implements Callable<Integer> {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ScalarDbServer.class);
+  private static final Logger logger = LoggerFactory.getLogger(ScalarDbServer.class);
   private static final long MAX_WAIT_TIME_MILLIS = 60000; // 60 seconds
 
   @CommandLine.Option(
@@ -69,7 +69,7 @@ public class ScalarDbServer implements Callable<Integer> {
     if (Strings.isNullOrEmpty(transactionManager) || !transactionManager.equals("jdbc")) {
       builder.addService(injector.getInstance(TwoPhaseCommitTransactionService.class));
     } else {
-      LOGGER.warn(
+      logger.warn(
           "TwoPhaseCommitTransactionService doesn't start when setting \""
               + DatabaseConfig.TRANSACTION_MANAGER
               + "\" to 'jdbc'");
@@ -77,7 +77,7 @@ public class ScalarDbServer implements Callable<Integer> {
 
     server = builder.build().start();
 
-    LOGGER.info("Scalar DB server started, listening on {}", config.getPort());
+    logger.info("Scalar DB server started, listening on {}", config.getPort());
   }
 
   public void addShutdownHook() {
@@ -85,10 +85,10 @@ public class ScalarDbServer implements Callable<Integer> {
         .addShutdownHook(
             new Thread(
                 () -> {
-                  LOGGER.info("Signal received. Shutting down the server ...");
+                  logger.info("Signal received. Shutting down the server ...");
                   shutdown();
                   blockUntilShutdown(MAX_WAIT_TIME_MILLIS, TimeUnit.MILLISECONDS);
-                  LOGGER.info("The server shut down.");
+                  logger.info("The server shut down.");
                 }));
   }
 

@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class CommitHandler {
-  private static final Logger LOGGER = LoggerFactory.getLogger(CommitHandler.class);
+  private static final Logger logger = LoggerFactory.getLogger(CommitHandler.class);
   private final DistributedStorage storage;
   private final Coordinator coordinator;
   private final TransactionalTableMetadataManager tableMetadataManager;
@@ -51,7 +51,7 @@ public class CommitHandler {
     try {
       prepareRecords(snapshot);
     } catch (Exception e) {
-      LOGGER.warn("preparing records failed", e);
+      logger.warn("preparing records failed", e);
       if (abortIfError) {
         abort(id);
         rollbackRecords(snapshot);
@@ -89,7 +89,7 @@ public class CommitHandler {
     try {
       snapshot.toSerializableWithExtraRead(storage);
     } catch (Exception e) {
-      LOGGER.warn("pre-commit validation failed", e);
+      logger.warn("pre-commit validation failed", e);
       if (abortIfError) {
         abort(snapshot.getId());
         rollbackRecords(snapshot);
@@ -114,7 +114,7 @@ public class CommitHandler {
             "committing state in coordinator failed. the transaction is aborted", e);
       }
     }
-    LOGGER.debug("transaction {} is committed successfully at {}", id, System.currentTimeMillis());
+    logger.debug("transaction {} is committed successfully at {}", id, System.currentTimeMillis());
   }
 
   private void commitState(String id) throws CoordinatorException {
@@ -135,7 +135,7 @@ public class CommitHandler {
       }
       parallelExecutor.commit(tasks);
     } catch (Exception e) {
-      LOGGER.warn("committing records failed", e);
+      logger.warn("committing records failed", e);
       // ignore since records are recovered lazily
     }
   }
@@ -151,9 +151,9 @@ public class CommitHandler {
           // successfully COMMITTED or ABORTED
           return state.get().getState();
         }
-        LOGGER.warn("coordinator status for {} doesn't exist", id);
+        logger.warn("coordinator status for {} doesn't exist", id);
       } catch (CoordinatorException e1) {
-        LOGGER.warn("can't get the state", e1);
+        logger.warn("can't get the state", e1);
       }
       throw new UnknownTransactionStatusException("coordinator status is unknown", e, id);
     }
@@ -165,7 +165,7 @@ public class CommitHandler {
   }
 
   public void rollbackRecords(Snapshot snapshot) {
-    LOGGER.debug("rollback from snapshot for {}", snapshot.getId());
+    logger.debug("rollback from snapshot for {}", snapshot.getId());
     try {
       RollbackMutationComposer composer =
           new RollbackMutationComposer(snapshot.getId(), storage, tableMetadataManager);
@@ -179,7 +179,7 @@ public class CommitHandler {
       }
       parallelExecutor.rollback(tasks);
     } catch (Exception e) {
-      LOGGER.warn("rolling back records failed", e);
+      logger.warn("rolling back records failed", e);
       // ignore since records are recovered lazily
     }
   }

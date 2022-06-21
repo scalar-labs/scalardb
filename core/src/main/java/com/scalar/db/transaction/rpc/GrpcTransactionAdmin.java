@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
-  private static final Logger LOGGER = LoggerFactory.getLogger(GrpcAdmin.class);
+  private static final Logger logger = LoggerFactory.getLogger(GrpcAdmin.class);
 
   private final GrpcConfig config;
   private final ManagedChannel channel;
@@ -367,7 +367,7 @@ public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
     try {
       channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     } catch (InterruptedException e) {
-      LOGGER.warn("failed to shutdown the channel", e);
+      logger.warn("failed to shutdown the channel", e);
     }
   }
 }

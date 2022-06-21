@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
  */
 @ThreadSafe
 public class Cassandra extends AbstractDistributedStorage {
-  private static final Logger LOGGER = LoggerFactory.getLogger(Cassandra.class);
+  private static final Logger logger = LoggerFactory.getLogger(Cassandra.class);
   private final StatementHandlerManager handlers;
   private final BatchHandler batch;
   private final ClusterManager clusterManager;
@@ -55,7 +55,7 @@ public class Cassandra extends AbstractDistributedStorage {
             .build();
 
     batch = new BatchHandler(session, handlers);
-    LOGGER.info("Cassandra object is created properly.");
+    logger.info("Cassandra object is created properly.");
 
     metadataManager =
         new TableMetadataManager(

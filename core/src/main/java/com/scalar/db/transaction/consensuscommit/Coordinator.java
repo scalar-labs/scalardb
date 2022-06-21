@@ -38,7 +38,7 @@ public class Coordinator {
 
   private static final int MAX_RETRY_COUNT = 5;
   private static final long SLEEP_BASE_MILLIS = 50;
-  private static final Logger LOGGER = LoggerFactory.getLogger(Coordinator.class);
+  private static final Logger logger = LoggerFactory.getLogger(Coordinator.class);
   private final DistributedStorage storage;
   private final String coordinatorNamespace;
 
@@ -88,7 +88,7 @@ public class Coordinator {
           return Optional.empty();
         }
       } catch (ExecutionException e) {
-        LOGGER.warn("can't get coordinator state.", e);
+        logger.warn("can't get coordinator state.", e);
       }
       exponentialBackoff(counter++);
     }
@@ -115,10 +115,10 @@ public class Coordinator {
         storage.put(put);
         break;
       } catch (NoMutationException e) {
-        LOGGER.warn("mutation seems applied already", e);
+        logger.warn("mutation seems applied already", e);
         throw new CoordinatorException("mutation seems applied already.", e);
       } catch (ExecutionException e) {
-        LOGGER.warn("putting state in coordinator failed.", e);
+        logger.warn("putting state in coordinator failed.", e);
       }
       exponentialBackoff(counter++);
     }

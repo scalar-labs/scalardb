@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
  */
 @ThreadSafe
 public class JdbcDatabase extends AbstractDistributedStorage {
-  private static final Logger LOGGER = LoggerFactory.getLogger(JdbcDatabase.class);
+  private static final Logger logger = LoggerFactory.getLogger(JdbcDatabase.class);
 
   private final BasicDataSource dataSource;
   private final BasicDataSource tableMetadataDataSource;
@@ -199,7 +199,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
         connection.close();
       }
     } catch (SQLException e) {
-      LOGGER.warn("failed to close the connection", e);
+      logger.warn("failed to close the connection", e);
     }
   }
 
@@ -208,12 +208,12 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     try {
       dataSource.close();
     } catch (SQLException e) {
-      LOGGER.error("failed to close the dataSource", e);
+      logger.error("failed to close the dataSource", e);
     }
     try {
       tableMetadataDataSource.close();
     } catch (SQLException e) {
-      LOGGER.warn("failed to close the table metadata dataSource", e);
+      logger.warn("failed to close the table metadata dataSource", e);
     }
   }
 }

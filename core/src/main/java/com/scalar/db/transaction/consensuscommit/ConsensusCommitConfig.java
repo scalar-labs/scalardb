@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 
 @Immutable
 public class ConsensusCommitConfig {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ConsensusCommitConfig.class);
+  private static final Logger logger = LoggerFactory.getLogger(ConsensusCommitConfig.class);
 
   public static final String PREFIX = DatabaseConfig.PREFIX + "consensus_commit.";
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
@@ -45,7 +45,7 @@ public class ConsensusCommitConfig {
 
   public ConsensusCommitConfig(DatabaseConfig databaseConfig) {
     if (databaseConfig.getProperties().containsValue("scalar.db.isolation_level")) {
-      LOGGER.warn(
+      logger.warn(
           "The property \"scalar.db.isolation_level\" is deprecated and will be removed. "
               + "Please use \""
               + ISOLATION_LEVEL
