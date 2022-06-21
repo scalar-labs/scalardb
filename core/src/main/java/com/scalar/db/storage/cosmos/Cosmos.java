@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
  */
 @ThreadSafe
 public class Cosmos extends AbstractDistributedStorage {
-  private static final Logger LOGGER = LoggerFactory.getLogger(Cosmos.class);
+  private static final Logger logger = LoggerFactory.getLogger(Cosmos.class);
 
   private final CosmosClient client;
   private final TableMetadataManager metadataManager;
@@ -67,7 +67,7 @@ public class Cosmos extends AbstractDistributedStorage {
     deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
     batchHandler = new BatchHandler(client, metadataManager);
 
-    LOGGER.info("Cosmos DB object is created properly.");
+    logger.info("Cosmos DB object is created properly.");
   }
 
   @Override

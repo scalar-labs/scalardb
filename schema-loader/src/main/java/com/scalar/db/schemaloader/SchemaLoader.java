@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 
 public class SchemaLoader {
-  private static final Logger LOGGER = LoggerFactory.getLogger(SchemaLoader.class);
+  private static final Logger logger = LoggerFactory.getLogger(SchemaLoader.class);
   private static final Object SCHEMA_LOADER_COMMAND = new SchemaLoaderCommand();
   private static final ImmutableMap<String, Object> COMMAND_MAP =
       ImmutableMap.<String, Object>builder()
@@ -51,7 +51,7 @@ public class SchemaLoader {
       if (COMMAND_MAP.containsKey(arg)) {
         command = COMMAND_MAP.get(arg);
         if (STORAGE_SPECIFIC_OPTION_LIST.contains(arg)) {
-          LOGGER.warn(
+          logger.warn(
               "Storage-specific options (--cassandra, --cosmos, --dynamo, --jdbc) "
                   + "are deprecated and will be removed in the future. Please use "
                   + "the --config option along with your config file instead.");
@@ -66,7 +66,7 @@ public class SchemaLoader {
     if (command != null) {
       status = new CommandLine(command).execute(commandArgs);
     } else {
-      LOGGER.error(
+      logger.error(
           "Need to specify either --config <configPath> or --cassandra or --cosmos or --dynamo or --jdbc");
       status = 1;
     }

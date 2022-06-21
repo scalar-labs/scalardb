@@ -54,7 +54,7 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class TwoPhaseCommitTransactionService
     extends TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionImplBase {
-  private static final Logger LOGGER =
+  private static final Logger logger =
       LoggerFactory.getLogger(TwoPhaseCommitTransactionService.class);
   private static final String SERVICE_NAME = "two_phase_commit_transaction";
 
@@ -129,7 +129,7 @@ public class TwoPhaseCommitTransactionService
       responseObserver.onError(
           Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
     } catch (Throwable t) {
-      LOGGER.error("an internal error happened during the execution", t);
+      logger.error("an internal error happened during the execution", t);
       responseObserver.onError(
           Status.INTERNAL.withDescription(t.getMessage()).asRuntimeException());
       if (t instanceof Error) {
@@ -229,7 +229,7 @@ public class TwoPhaseCommitTransactionService
       } catch (IllegalArgumentException e) {
         respondInvalidArgumentError(e.getMessage());
       } catch (Throwable t) {
-        LOGGER.error("an internal error happened when starting a transaction", t);
+        logger.error("an internal error happened when starting a transaction", t);
         respondInternalError(t.getMessage());
         if (t instanceof Error) {
           throw (Error) t;
@@ -255,7 +255,7 @@ public class TwoPhaseCommitTransactionService
       } catch (IllegalArgumentException e) {
         respondInvalidArgumentError(e.getMessage());
       } catch (Throwable t) {
-        LOGGER.error("an internal error happened when joining a transaction", t);
+        logger.error("an internal error happened when joining a transaction", t);
         respondInternalError(t.getMessage());
         if (t instanceof Error) {
           throw (Error) t;
@@ -315,7 +315,7 @@ public class TwoPhaseCommitTransactionService
 
     @Override
     public void onError(Throwable t) {
-      LOGGER.error("an error received", t);
+      logger.error("an error received", t);
       cleanUp();
     }
 
@@ -430,7 +430,7 @@ public class TwoPhaseCommitTransactionService
         try {
           transaction.rollback();
         } catch (RollbackException e) {
-          LOGGER.warn("rollback failed", e);
+          logger.warn("rollback failed", e);
         }
       }
 
@@ -476,7 +476,7 @@ public class TwoPhaseCommitTransactionService
                 .setMessage(e.getMessage())
                 .build());
       } catch (Throwable t) {
-        LOGGER.error("an internal error happened during the execution", t);
+        logger.error("an internal error happened during the execution", t);
         if (t instanceof Error) {
           throw (Error) t;
         }

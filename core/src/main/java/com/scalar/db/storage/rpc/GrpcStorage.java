@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class GrpcStorage extends AbstractDistributedStorage {
-  private static final Logger LOGGER = LoggerFactory.getLogger(GrpcStorage.class);
+  private static final Logger logger = LoggerFactory.getLogger(GrpcStorage.class);
 
   private static final Retry.ExceptionFactory<ExecutionException> EXCEPTION_FACTORY =
       (message, cause) -> {
@@ -184,7 +184,7 @@ public class GrpcStorage extends AbstractDistributedStorage {
     try {
       channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     } catch (InterruptedException e) {
-      LOGGER.warn("failed to shutdown the channel", e);
+      logger.warn("failed to shutdown the channel", e);
     }
   }
 }

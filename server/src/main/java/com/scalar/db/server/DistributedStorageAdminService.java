@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class DistributedStorageAdminService
     extends DistributedStorageAdminGrpc.DistributedStorageAdminImplBase {
-  private static final Logger LOGGER =
+  private static final Logger logger =
       LoggerFactory.getLogger(DistributedStorageAdminService.class);
   private static final String SERVICE_NAME = "distributed_storage_admin";
 
@@ -197,7 +197,7 @@ public class DistributedStorageAdminService
       responseObserver.onError(
           Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
     } catch (Throwable t) {
-      LOGGER.error("an internal error happened during the execution", t);
+      logger.error("an internal error happened during the execution", t);
       responseObserver.onError(
           Status.INTERNAL.withDescription(t.getMessage()).asRuntimeException());
       if (t instanceof Error) {

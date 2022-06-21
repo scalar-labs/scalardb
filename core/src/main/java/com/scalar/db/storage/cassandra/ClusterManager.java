@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
  */
 @ThreadSafe
 public class ClusterManager {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ClusterManager.class);
+  private static final Logger logger = LoggerFactory.getLogger(ClusterManager.class);
   private static final int DEFAULT_CASSANDRA_PORT = 9042;
   private Cluster cluster;
   private Session session;
@@ -75,7 +75,7 @@ public class ClusterManager {
   private void initialize(DatabaseConfig config) {
     cluster = getCluster(config);
     session = cluster.connect();
-    LOGGER.info("session to the cluster is created.");
+    logger.info("session to the cluster is created.");
   }
 
   private Cluster getCluster(DatabaseConfig config) {

@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class Metrics {
-  private static final Logger LOGGER = LoggerFactory.getLogger(Metrics.class);
+  private static final Logger logger = LoggerFactory.getLogger(Metrics.class);
   private static final String PRODUCT_NAME = "scalardb";
   private static final String STATS_PREFIX = "stats";
   private static final String SUCCESS_SUFFIX = "success";
@@ -78,9 +78,9 @@ public class Metrics {
     server.setStopAtShutdown(true);
     try {
       server.start();
-      LOGGER.info("Prometheus exporter started, listening on {}", prometheusExporterPort);
+      logger.info("Prometheus exporter started, listening on {}", prometheusExporterPort);
     } catch (Exception e) {
-      LOGGER.error("failed to start Jetty server", e);
+      logger.error("failed to start Jetty server", e);
     }
   }
 

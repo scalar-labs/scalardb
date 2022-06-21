@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
  */
 @NotThreadSafe
 public class JdbcTransaction extends AbstractDistributedTransaction {
-  private static final Logger LOGGER = LoggerFactory.getLogger(JdbcTransaction.class);
+  private static final Logger logger = LoggerFactory.getLogger(JdbcTransaction.class);
 
   private final String txId;
   private final JdbcService jdbcService;
@@ -84,7 +84,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
     // Ignore the condition in the put
     if (put.getCondition().isPresent()) {
-      LOGGER.warn("ignoring the condition of the mutation: {}", put);
+      logger.warn("ignoring the condition of the mutation: {}", put);
       put.withCondition(null);
     }
 
@@ -111,7 +111,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
     // Ignore the condition in the delete
     if (delete.getCondition().isPresent()) {
-      LOGGER.warn("ignoring the condition of the mutation: {}", delete);
+      logger.warn("ignoring the condition of the mutation: {}", delete);
       delete.withCondition(null);
     }
 
@@ -159,7 +159,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
       try {
         connection.close();
       } catch (SQLException e) {
-        LOGGER.warn("failed to close the connection", e);
+        logger.warn("failed to close the connection", e);
       }
     }
   }
@@ -179,7 +179,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
       try {
         connection.close();
       } catch (SQLException e) {
-        LOGGER.warn("failed to close the connection", e);
+        logger.warn("failed to close the connection", e);
       }
     }
   }

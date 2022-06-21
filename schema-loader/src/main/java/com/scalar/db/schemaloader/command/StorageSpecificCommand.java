@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Option;
 
 public abstract class StorageSpecificCommand {
-  private static final Logger LOGGER = LoggerFactory.getLogger(StorageSpecificCommand.class);
+  private static final Logger logger = LoggerFactory.getLogger(StorageSpecificCommand.class);
 
   @Option(
       names = {"-f", "--schema-file"},
@@ -31,7 +31,7 @@ public abstract class StorageSpecificCommand {
 
   protected void execute(Properties props, Map<String, String> options)
       throws SchemaLoaderException {
-    LOGGER.info("Schema path: {}", schemaFile);
+    logger.info("Schema path: {}", schemaFile);
 
     // Parse the schema file
     SchemaParser parser = getSchemaParser(options);

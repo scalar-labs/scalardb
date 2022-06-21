@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
  */
 @NotThreadSafe
 public abstract class Operation {
-  private static final Logger LOGGER = LoggerFactory.getLogger(Operation.class);
+  private static final Logger logger = LoggerFactory.getLogger(Operation.class);
 
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
@@ -71,7 +71,7 @@ public abstract class Operation {
   @Nonnull
   public Optional<String> forFullTableName() {
     if (!namespace.isPresent() || !tableName.isPresent()) {
-      LOGGER.warn("namespace or table name isn't specified");
+      logger.warn("namespace or table name isn't specified");
       return Optional.empty();
     }
     return Optional.of(namespace.get() + "." + tableName.get());

@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 
 @NotThreadSafe
 public class CommitMutationComposer extends AbstractMutationComposer {
-  private static final Logger LOGGER = LoggerFactory.getLogger(CommitMutationComposer.class);
+  private static final Logger logger = LoggerFactory.getLogger(CommitMutationComposer.class);
 
   public CommitMutationComposer(String id) {
     super(id);
@@ -67,7 +67,7 @@ public class CommitMutationComposer extends AbstractMutationComposer {
     } else if (result.getState().equals(TransactionState.DELETED)) {
       mutations.add(composeDelete(base, result));
     } else {
-      LOGGER.debug(
+      logger.debug(
           "the record was committed by the originated one "
               + "or rolled forward by another transaction: {}",
           result);

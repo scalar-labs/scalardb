@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class ConsensusCommitManager extends AbstractDistributedTransactionManager {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ConsensusCommitManager.class);
+  private static final Logger logger = LoggerFactory.getLogger(ConsensusCommitManager.class);
   private final DistributedStorage storage;
   private final DistributedStorageAdmin admin;
   private final ConsensusCommitConfig config;
@@ -136,7 +136,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     checkNotNull(isolation);
     if (!config.getIsolation().equals(isolation)
         || !config.getSerializableStrategy().equals(strategy)) {
-      LOGGER.warn(
+      logger.warn(
           "Setting different isolation level or serializable strategy from the ones"
               + "in DatabaseConfig might cause unexpected anomalies.");
     }

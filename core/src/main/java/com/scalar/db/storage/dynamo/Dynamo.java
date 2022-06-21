@@ -38,7 +38,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
  */
 @ThreadSafe
 public class Dynamo extends AbstractDistributedStorage {
-  private static final Logger LOGGER = LoggerFactory.getLogger(Dynamo.class);
+  private static final Logger logger = LoggerFactory.getLogger(Dynamo.class);
   private final DynamoDbClient client;
   private final TableMetadataManager metadataManager;
   private final SelectStatementHandler selectStatementHandler;
@@ -72,7 +72,7 @@ public class Dynamo extends AbstractDistributedStorage {
     deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
     batchHandler = new BatchHandler(client, metadataManager);
 
-    LOGGER.info("DynamoDB object is created properly.");
+    logger.info("DynamoDB object is created properly.");
   }
 
   @Override
@@ -94,7 +94,7 @@ public class Dynamo extends AbstractDistributedStorage {
         try {
           scanner.close();
         } catch (IOException e) {
-          LOGGER.warn("failed to close the scanner", e);
+          logger.warn("failed to close the scanner", e);
         }
       }
     }

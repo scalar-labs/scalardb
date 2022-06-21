@@ -45,7 +45,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
 
   private static final int CLUSTERING_KEY_NUM = 20;
 
-  private static final Random RANDOM = new Random();
+  private static final Random random = new Random();
 
   private DistributedStorageAdmin admin;
   private DistributedStorage storage;
@@ -708,7 +708,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
 
   private List<Value<?>> prepareRecords(DataType clusteringKeyType, Order clusteringOrder)
       throws ExecutionException {
-    RANDOM.setSeed(seed);
+    random.setSeed(seed);
 
     List<Value<?>> ret = new ArrayList<>();
     List<Put> puts = new ArrayList<>();
@@ -739,7 +739,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
               i -> {
                 Value<?> clusteringKeyValue;
                 while (true) {
-                  clusteringKeyValue = getRandomValue(RANDOM, CLUSTERING_KEY, clusteringKeyType);
+                  clusteringKeyValue = getRandomValue(random, CLUSTERING_KEY, clusteringKeyType);
                   // reject duplication
                   if (!valueSet.contains(clusteringKeyValue)) {
                     valueSet.add(clusteringKeyValue);
@@ -869,7 +869,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       if (expected.size() == 1) {
         limit = 1;
       } else {
-        limit = RANDOM.nextInt(expected.size() - 1) + 1;
+        limit = random.nextInt(expected.size() - 1) + 1;
       }
     }
     return limit;

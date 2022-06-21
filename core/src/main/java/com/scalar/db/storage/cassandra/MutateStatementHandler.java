@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
 /** An abstraction for handler classes for mutate statements */
 @ThreadSafe
 public abstract class MutateStatementHandler extends StatementHandler {
-  private static final Logger LOGGER = LoggerFactory.getLogger(MutateStatementHandler.class);
+  private static final Logger logger = LoggerFactory.getLogger(MutateStatementHandler.class);
 
   public MutateStatementHandler(Session session) {
     super(session);
@@ -48,7 +48,7 @@ public abstract class MutateStatementHandler extends StatementHandler {
       return results;
 
     } catch (WriteTimeoutException e) {
-      LOGGER.warn("write timeout happened during mutate operation.", e);
+      logger.warn("write timeout happened during mutate operation.", e);
       if (e.getWriteType() == WriteType.CAS) {
         // retry needs to be done if applications need to do the operation exactly
         throw new RetriableExecutionException("paxos phase in CAS operation failed.", e);
@@ -65,7 +65,7 @@ public abstract class MutateStatementHandler extends StatementHandler {
         throw new ExecutionException("something wrong because it is neither CAS nor SIMPLE", e);
       }
     } catch (RuntimeException e) {
-      LOGGER.warn(e.getMessage(), e);
+      logger.warn(e.getMessage(), e);
       throw new RetriableExecutionException(e.getMessage(), e);
     }
   }

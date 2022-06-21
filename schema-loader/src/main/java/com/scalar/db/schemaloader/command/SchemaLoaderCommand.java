@@ -18,7 +18,7 @@ import picocli.CommandLine.Option;
     name = "java -jar scalardb-schema-loader-<version>.jar",
     description = "Create/Delete schemas in the storage defined in the config file")
 public class SchemaLoaderCommand implements Callable<Integer> {
-  private static final Logger LOGGER = LoggerFactory.getLogger(SchemaLoaderCommand.class);
+  private static final Logger logger = LoggerFactory.getLogger(SchemaLoaderCommand.class);
 
   @Option(
       names = "--replication-strategy",
@@ -72,8 +72,8 @@ public class SchemaLoaderCommand implements Callable<Integer> {
 
   @Override
   public Integer call() throws Exception {
-    LOGGER.info("Config path: {}", configPath);
-    LOGGER.info("Schema path: {}", schemaFile);
+    logger.info("Config path: {}", configPath);
+    logger.info("Schema path: {}", schemaFile);
 
     if (!deleteTables) {
       Map<String, String> options = new HashMap<>();

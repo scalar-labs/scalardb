@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 
 @NotThreadSafe
 public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
-  private static final Logger LOGGER = LoggerFactory.getLogger(TwoPhaseConsensusCommit.class);
+  private static final Logger logger = LoggerFactory.getLogger(TwoPhaseConsensusCommit.class);
 
   @VisibleForTesting
   enum Status {
@@ -270,7 +270,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   }
 
   private void lazyRecovery(Selection selection, List<TransactionResult> results) {
-    LOGGER.debug("recover uncommitted records: " + results);
+    logger.debug("recover uncommitted records: " + results);
     beforeRecoveryHook.run();
     results.forEach(r -> recovery.recover(selection, r));
   }

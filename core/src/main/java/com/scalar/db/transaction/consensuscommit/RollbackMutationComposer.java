@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 
 @NotThreadSafe
 public class RollbackMutationComposer extends AbstractMutationComposer {
-  private static final Logger LOGGER = LoggerFactory.getLogger(RollbackMutationComposer.class);
+  private static final Logger logger = LoggerFactory.getLogger(RollbackMutationComposer.class);
   private final DistributedStorage storage;
   private final TransactionalTableMetadataManager tableMetadataManager;
 
@@ -64,11 +64,11 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
       // rollback from snapshot
       latest = getLatestResult(base, result).orElse(null);
       if (latest == null) {
-        LOGGER.debug("the record was not prepared or has already rollback deleted");
+        logger.debug("the record was not prepared or has already rollback deleted");
         return;
       }
       if (!latest.getId().equals(id)) {
-        LOGGER.debug(
+        logger.debug(
             "the record is not prepared (yet) by this transaction or has already rolled back");
         return;
       }

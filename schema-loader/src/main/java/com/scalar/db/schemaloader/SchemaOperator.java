@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class SchemaOperator {
-  private static final Logger LOGGER = LoggerFactory.getLogger(SchemaOperator.class);
+  private static final Logger logger = LoggerFactory.getLogger(SchemaOperator.class);
 
   private final DistributedStorageAdmin storageAdmin;
   private final DistributedTransactionAdmin transactionAdmin;
@@ -43,7 +43,7 @@ public class SchemaOperator {
 
       createNamespace(namespace, tableSchema.getOptions());
       if (tableExists(namespace, tableName)) {
-        LOGGER.warn("Table {} in the namespace {} already exists.", tableName, namespace);
+        logger.warn("Table {} in the namespace {} already exists.", tableName, namespace);
       } else {
         createTable(tableSchema);
       }
@@ -70,7 +70,7 @@ public class SchemaOperator {
         storageAdmin.createTable(
             namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
       }
-      LOGGER.info("Creating the table {} in the namespace {} succeeded.", tableName, namespace);
+      logger.info("Creating the table {} in the namespace {} succeeded.", tableName, namespace);
     } catch (ExecutionException e) {
       throw new SchemaLoaderException(
           "Creating the table " + tableName + " in the namespace " + namespace + " failed.", e);
@@ -84,7 +84,7 @@ public class SchemaOperator {
       String tableName = tableSchema.getTable();
 
       if (!tableExists(namespace, tableName)) {
-        LOGGER.warn("Table {} in the namespace {} doesn't exist.", tableName, namespace);
+        logger.warn("Table {} in the namespace {} doesn't exist.", tableName, namespace);
       } else {
         dropTable(namespace, tableName);
         namespaces.add(namespace);
@@ -96,7 +96,7 @@ public class SchemaOperator {
   private void dropTable(String namespace, String tableName) throws SchemaLoaderException {
     try {
       storageAdmin.dropTable(namespace, tableName);
-      LOGGER.info("Deleting the table {} in the namespace {} succeeded.", tableName, namespace);
+      logger.info("Deleting the table {} in the namespace {} succeeded.", tableName, namespace);
     } catch (ExecutionException e) {
       throw new SchemaLoaderException(
           "Deleting the table " + tableName + " in the namespace " + namespace + " failed.", e);
@@ -129,12 +129,12 @@ public class SchemaOperator {
 
   public void createCoordinatorTables(Map<String, String> options) throws SchemaLoaderException {
     if (coordinatorTablesExist()) {
-      LOGGER.warn("The coordinator tables already exist.");
+      logger.warn("The coordinator tables already exist.");
       return;
     }
     try {
       transactionAdmin.createCoordinatorTables(options);
-      LOGGER.info("Creating the coordinator tables succeeded.");
+      logger.info("Creating the coordinator tables succeeded.");
     } catch (ExecutionException e) {
       throw new SchemaLoaderException("Creating the coordinator tables failed.", e);
     }
@@ -142,12 +142,12 @@ public class SchemaOperator {
 
   public void dropCoordinatorTables() throws SchemaLoaderException {
     if (!coordinatorTablesExist()) {
-      LOGGER.warn("The coordinator tables don't exist.");
+      logger.warn("The coordinator tables don't exist.");
       return;
     }
     try {
       transactionAdmin.dropCoordinatorTables();
-      LOGGER.info("Deleting the coordinator tables succeeded.");
+      logger.info("Deleting the coordinator tables succeeded.");
     } catch (ExecutionException e) {
       throw new SchemaLoaderException("Deleting the coordinator tables failed.", e);
     }
