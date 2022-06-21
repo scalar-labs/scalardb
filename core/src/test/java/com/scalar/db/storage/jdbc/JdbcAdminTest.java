@@ -12,7 +12,6 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -33,7 +32,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 
-@SuppressFBWarnings({"OBL_UNSATISFIED_OBLIGATION", "ODR_OPEN_DATABASE_RESOURCE"})
 public class JdbcAdminTest {
 
   @Mock private BasicDataSource dataSource;
@@ -808,7 +806,6 @@ public class JdbcAdminTest {
         "DROP USER \"changed\"");
   }
 
-  @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED")
   private void dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
       RdbEngine rdbEngine, Optional<String> tableMetadataSchema, String... expectedSqlStatements)
       throws Exception {
@@ -948,7 +945,6 @@ public class JdbcAdminTest {
         "SELECT DISTINCT \"full_table_name\" FROM \"changed\".\"metadata\"");
   }
 
-  @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED")
   private void
       dropTable_forXWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable(
           RdbEngine rdbEngine,
@@ -1167,7 +1163,6 @@ public class JdbcAdminTest {
         RdbEngine.ORACLE, "SELECT 1 FROM \"ALL_USERS\" WHERE \"USERNAME\" = ?");
   }
 
-  @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED")
   private void namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
       RdbEngine rdbEngine, String expectedSelectStatement) throws SQLException, ExecutionException {
     // Arrange

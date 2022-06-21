@@ -1,5 +1,6 @@
 package com.scalar.db.schemaloader;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
@@ -25,7 +26,7 @@ public class SchemaParser {
     } catch (IOException | JsonParseException e) {
       throw new SchemaLoaderException("Parsing the schema JSON failed", e);
     }
-    this.options = options;
+    this.options = ImmutableMap.copyOf(options);
   }
 
   public SchemaParser(String serializedSchemaJson, Map<String, String> options)
@@ -35,7 +36,7 @@ public class SchemaParser {
     } catch (JsonParseException e) {
       throw new SchemaLoaderException("Parsing the schema JSON failed", e);
     }
-    this.options = options;
+    this.options = ImmutableMap.copyOf(options);
   }
 
   public List<TableSchema> parse() throws SchemaLoaderException {

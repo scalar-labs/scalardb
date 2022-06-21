@@ -19,11 +19,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public class MapVisitor implements ColumnVisitor {
-  private final Map<String, Object> values;
-
-  public MapVisitor() {
-    values = new HashMap<>();
-  }
+  private final Map<String, Object> values = new HashMap<>();
 
   public Map<String, Object> get() {
     return values;

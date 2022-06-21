@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -257,7 +256,6 @@ public class GetTest {
   }
 
   @Test
-  @SuppressFBWarnings("EC_UNRELATED_TYPES")
   public void equals_AnotherOperationGiven_ShouldReturnFalse() {
     // Arrange
     Get get = prepareGet();

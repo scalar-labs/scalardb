@@ -54,7 +54,9 @@ public class ServerConfig {
   }
 
   public Properties getProperties() {
-    return props;
+    Properties ret = new Properties();
+    ret.putAll(props);
+    return ret;
   }
 
   private void load() {

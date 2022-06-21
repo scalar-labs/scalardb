@@ -3,7 +3,6 @@ package com.scalar.db.io;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -218,7 +217,6 @@ public class BlobValueTest {
   }
 
   @Test
-  @SuppressFBWarnings("EC_UNRELATED_TYPES")
   public void equals_DifferentTypesSameValuesGiven_ShouldReturnFalse() {
     // Arrange
     BlobValue oneValue = new BlobValue(ANY_NAME, SOME_TEXT_BYTES);

@@ -13,7 +13,6 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -42,7 +41,6 @@ public class BatchComposerTest {
   }
 
   @Test
-  @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT")
   public void visit_GetGiven_ShouldComposeWithSelectHandler() {
     // Arrange
     when(handlers.select()).thenReturn(select);
@@ -56,7 +54,6 @@ public class BatchComposerTest {
   }
 
   @Test
-  @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT")
   public void visit_ScanGiven_ShouldComposeWithSelectHandler() {
     // Arrange
     when(handlers.select()).thenReturn(select);

@@ -40,7 +40,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
@@ -128,16 +127,19 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     String storedProcedure;
     try (InputStream storedProcedureInputStream =
-            Objects.requireNonNull(
-                getClass().getClassLoader().getResourceAsStream(STORED_PROCEDURE_PATH));
-        InputStreamReader inputStreamReader =
-            new InputStreamReader(storedProcedureInputStream, StandardCharsets.UTF_8);
-        BufferedReader bufferedReader = new BufferedReader(inputStreamReader)) {
-      storedProcedure =
-          bufferedReader.lines().reduce("", (prev, cur) -> prev + cur + System.lineSeparator());
-    } catch (IOException | NullPointerException e) {
+        getClass().getClassLoader().getResourceAsStream(STORED_PROCEDURE_PATH)) {
+      assert storedProcedureInputStream != null;
+
+      try (InputStreamReader inputStreamReader =
+              new InputStreamReader(storedProcedureInputStream, StandardCharsets.UTF_8);
+          BufferedReader bufferedReader = new BufferedReader(inputStreamReader)) {
+        storedProcedure =
+            bufferedReader.lines().reduce("", (prev, cur) -> prev + cur + System.lineSeparator());
+      }
+    } catch (IOException e) {
       throw new ExecutionException("reading the stored procedure failed", e);
     }
+
     return new CosmosStoredProcedureProperties(STORED_PROCEDURE_FILE_NAME, storedProcedure);
   }
 

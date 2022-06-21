@@ -6,6 +6,7 @@ import static com.scalar.db.config.ConfigUtils.getLong;
 import static com.scalar.db.config.ConfigUtils.getString;
 import static com.scalar.db.config.ConfigUtils.getStringArray;
 
+import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
@@ -37,7 +38,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
@@ -48,7 +48,7 @@ import javax.annotation.concurrent.Immutable;
 @Immutable
 public class DatabaseConfig {
   private final Properties props;
-  private List<String> contactPoints;
+  private ImmutableList<String> contactPoints;
   private int contactPort;
   @Nullable private String username;
   @Nullable private String password;
@@ -94,7 +94,9 @@ public class DatabaseConfig {
   }
 
   public Properties getProperties() {
-    return props;
+    Properties ret = new Properties();
+    ret.putAll(props);
+    return ret;
   }
 
   protected void load() {
@@ -128,7 +130,8 @@ public class DatabaseConfig {
         throw new IllegalArgumentException("storage '" + storage + "' isn't supported");
     }
 
-    contactPoints = Arrays.asList(getStringArray(getProperties(), CONTACT_POINTS, new String[0]));
+    contactPoints =
+        ImmutableList.copyOf(getStringArray(getProperties(), CONTACT_POINTS, new String[0]));
     contactPort = getInt(getProperties(), CONTACT_PORT, 0);
     checkArgument(contactPort >= 0);
     username = getString(getProperties(), USERNAME, null);
