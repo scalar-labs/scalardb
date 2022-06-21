@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
 public class ResultImpl extends AbstractResult {
   private static final Logger LOGGER = LoggerFactory.getLogger(ResultImpl.class);
 
-  private final Map<String, Column<?>> columns;
+  private final ImmutableMap<String, Column<?>> columns;
   private final TableMetadata metadata;
 
   public ResultImpl(Map<String, Column<?>> columns, TableMetadata metadata) {
@@ -56,65 +56,85 @@ public class ResultImpl extends AbstractResult {
   @Override
   public boolean isNull(String columnName) {
     checkIfExists(columnName);
-    return columns.get(columnName).hasNullValue();
+    Column<?> column = columns.get(columnName);
+    assert column != null;
+    return column.hasNullValue();
   }
 
   @Override
   public boolean getBoolean(String columnName) {
     checkIfExists(columnName);
-    return columns.get(columnName).getBooleanValue();
+    Column<?> column = columns.get(columnName);
+    assert column != null;
+    return column.getBooleanValue();
   }
 
   @Override
   public int getInt(String columnName) {
     checkIfExists(columnName);
-    return columns.get(columnName).getIntValue();
+    Column<?> column = columns.get(columnName);
+    assert column != null;
+    return column.getIntValue();
   }
 
   @Override
   public long getBigInt(String columnName) {
     checkIfExists(columnName);
-    return columns.get(columnName).getBigIntValue();
+    Column<?> column = columns.get(columnName);
+    assert column != null;
+    return column.getBigIntValue();
   }
 
   @Override
   public float getFloat(String columnName) {
     checkIfExists(columnName);
-    return columns.get(columnName).getFloatValue();
+    Column<?> column = columns.get(columnName);
+    assert column != null;
+    return column.getFloatValue();
   }
 
   @Override
   public double getDouble(String columnName) {
     checkIfExists(columnName);
-    return columns.get(columnName).getDoubleValue();
+    Column<?> column = columns.get(columnName);
+    assert column != null;
+    return column.getDoubleValue();
   }
 
   @Nullable
   @Override
   public String getText(String columnName) {
     checkIfExists(columnName);
-    return columns.get(columnName).getTextValue();
+    Column<?> column = columns.get(columnName);
+    assert column != null;
+    return column.getTextValue();
   }
 
   @Nullable
   @Override
   public ByteBuffer getBlobAsByteBuffer(String columnName) {
     checkIfExists(columnName);
-    return columns.get(columnName).getBlobValueAsByteBuffer();
+    Column<?> column = columns.get(columnName);
+    assert column != null;
+    return column.getBlobValueAsByteBuffer();
   }
 
   @Nullable
   @Override
   public byte[] getBlobAsBytes(String columnName) {
     checkIfExists(columnName);
-    return columns.get(columnName).getBlobValueAsBytes();
+    Column<?> column = columns.get(columnName);
+    assert column != null;
+    return column.getBlobValueAsBytes();
   }
 
   @Nullable
   @Override
   public Object getAsObject(String columnName) {
     checkIfExists(columnName);
-    return columns.get(columnName).getValueAsObject();
+    Column<?> column = columns.get(columnName);
+    assert column != null;
+    return column.getValueAsObject();
   }
 
   @Override

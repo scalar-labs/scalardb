@@ -29,7 +29,7 @@ public class FilteredResult extends AbstractResult {
   private static final Logger LOGGER = LoggerFactory.getLogger(FilteredResult.class);
 
   private final Result original;
-  private final Set<String> containedColumnNames;
+  private final ImmutableSet<String> containedColumnNames;
 
   public FilteredResult(Result original, List<String> projections, TableMetadata metadata) {
     this.original = Objects.requireNonNull(original);

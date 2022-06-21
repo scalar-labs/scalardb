@@ -10,7 +10,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -42,7 +41,7 @@ public class TableSchema {
   private String namespace;
   private String tableName;
   private TableMetadata tableMetadata;
-  private Map<String, String> options;
+  private ImmutableMap<String, String> options;
   private boolean isTransactionalTable = false;
   private Set<String> traveledKeys;
 
@@ -147,20 +146,22 @@ public class TableSchema {
     return tableBuilder.build();
   }
 
-  protected Map<String, String> buildOptions(
+  protected ImmutableMap<String, String> buildOptions(
       JsonObject tableDefinition, Map<String, String> options) {
-    Map<String, String> ret = new HashMap<>(options);
+    ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
+    builder.putAll(options);
+
     for (Map.Entry<String, JsonElement> option : tableDefinition.entrySet()) {
       if (!traveledKeys.contains(option.getKey())) {
         // For backward compatibility
         if (option.getKey().equals("network-strategy")) {
-          ret.put(CassandraAdmin.REPLICATION_STRATEGY, option.getValue().getAsString());
+          builder.put(CassandraAdmin.REPLICATION_STRATEGY, option.getValue().getAsString());
         } else {
-          ret.put(option.getKey(), option.getValue().getAsString());
+          builder.put(option.getKey(), option.getValue().getAsString());
         }
       }
     }
-    return ret;
+    return builder.build();
   }
 
   public String getNamespace() {

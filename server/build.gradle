@@ -104,14 +104,17 @@ spotless {
 spotbugsMain.reports {
     html.enabled = true
 }
+spotbugsMain.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
 
 spotbugsTest.reports {
     html.enabled = true
 }
+spotbugsTest.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
 
 spotbugsIntegrationTestScalarDbServer.reports {
     html.enabled = true
 }
+spotbugsIntegrationTestScalarDbServer.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
 
 archivesBaseName = "scalardb-server"
 
