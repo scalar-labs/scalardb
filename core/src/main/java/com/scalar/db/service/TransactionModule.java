@@ -10,6 +10,8 @@ import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 
+/** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+@Deprecated
 public class TransactionModule extends AbstractModule {
 
   private final DatabaseConfig config;
@@ -20,19 +22,14 @@ public class TransactionModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    bind(DistributedStorage.class).to(config.getStorageClass()).in(Singleton.class);
-    bind(DistributedStorageAdmin.class).to(config.getStorageAdminClass()).in(Singleton.class);
+    bind(DistributedStorage.class).to(config.getStorageClass());
+    bind(DistributedStorageAdmin.class).to(config.getStorageAdminClass());
 
-    bind(DistributedTransactionManager.class)
-        .to(config.getTransactionManagerClass())
-        .in(Singleton.class);
-    bind(DistributedTransactionAdmin.class)
-        .to(config.getTransactionAdminClass())
-        .in(Singleton.class);
+    bind(DistributedTransactionManager.class).to(config.getTransactionManagerClass());
+    bind(DistributedTransactionAdmin.class).to(config.getTransactionAdminClass());
     if (config.getTwoPhaseCommitTransactionManagerClass() != null) {
       bind(TwoPhaseCommitTransactionManager.class)
-          .to(config.getTwoPhaseCommitTransactionManagerClass())
-          .in(Singleton.class);
+          .to(config.getTwoPhaseCommitTransactionManagerClass());
     }
   }
 
