@@ -23,6 +23,8 @@ import com.scalar.db.rpc.GetTableMetadataRequest;
 import com.scalar.db.rpc.GetTableMetadataResponse;
 import com.scalar.db.rpc.NamespaceExistsRequest;
 import com.scalar.db.rpc.NamespaceExistsResponse;
+import com.scalar.db.rpc.RepairCoordinatorTablesRequest;
+import com.scalar.db.rpc.RepairTableRequest;
 import com.scalar.db.rpc.TruncateCoordinatorTablesRequest;
 import com.scalar.db.rpc.TruncateTableRequest;
 import com.scalar.db.storage.rpc.GrpcAdmin;
@@ -348,6 +350,31 @@ public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
                   .coordinatorTablesExist(CoordinatorTablesExistRequest.getDefaultInstance());
           return response.getExist();
         });
+  }
+
+  @Override
+  public void repairTable(
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      throws ExecutionException {
+    execute(
+        () ->
+            stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                .repairTable(
+                    RepairTableRequest.newBuilder()
+                        .setNamespace(namespace)
+                        .setTable(table)
+                        .setTableMetadata(ProtoUtils.toTableMetadata(metadata))
+                        .putAllOptions(options)
+                        .build()));
+  }
+
+  @Override
+  public void repairCoordinatorTables(Map<String, String> options) throws ExecutionException {
+    execute(
+        () ->
+            stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                .repairCoordinatorTables(
+                    RepairCoordinatorTablesRequest.newBuilder().putAllOptions(options).build()));
   }
 
   private static <T> T execute(ThrowableSupplier<T, ExecutionException> supplier)

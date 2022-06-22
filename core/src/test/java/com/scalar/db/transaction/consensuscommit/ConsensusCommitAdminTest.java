@@ -421,4 +421,80 @@ public class ConsensusCommitAdminTest {
     verify(distributedStorageAdmin).namespaceExists("ns");
     assertThat(actual).isTrue();
   }
+
+  @Test
+  public void repairTable_withMetadataGiven_shouldRepairWithTransactionColumnsAdded()
+      throws ExecutionException {
+    // Arrange
+    final String ACCOUNT_ID = "account_id";
+    final String ACCOUNT_TYPE = "account_type";
+    final String BALANCE = "balance";
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build();
+
+    TableMetadata expected =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build();
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, tableMetadata, options);
+
+    // Assert
+    verify(distributedStorageAdmin).repairTable(NAMESPACE, TABLE, expected, options);
+  }
+
+  @Test
+  public void repairCoordinatorTables_WithDefaultCoordinatorNamespace_ShouldCallJdbcAdminProperly()
+      throws ExecutionException {
+    // Arrange
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    admin.repairCoordinatorTables(options);
+
+    // Assert
+    verify(distributedStorageAdmin)
+        .repairTable(Coordinator.NAMESPACE, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
+  }
+
+  @Test
+  public void repairCoordinatorTables_WithCustomCoordinatorNamespace_ShouldCallJdbcAdminProperly()
+      throws ExecutionException {
+    // Arrange
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+    String customNamespace = "custom";
+    when(config.getCoordinatorNamespace()).thenReturn(Optional.of(customNamespace));
+    admin = new ConsensusCommitAdmin(distributedStorageAdmin, config);
+
+    // Act
+    admin.repairCoordinatorTables(options);
+
+    // Assert
+    verify(distributedStorageAdmin)
+        .repairTable(customNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
+  }
 }

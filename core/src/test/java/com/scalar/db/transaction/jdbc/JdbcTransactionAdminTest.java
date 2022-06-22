@@ -6,12 +6,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -184,5 +186,30 @@ public class JdbcTransactionAdminTest {
 
     // Assert
     assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void repairTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addColumn("c1", DataType.INT).addPartitionKey("c1").build();
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    admin.repairTable(namespace, table, metadata, options);
+
+    // Assert
+    verify(jdbcAdmin).repairTable(namespace, table, metadata, options);
+  }
+
+  @Test
+  public void repairCoordinatorTables_ShouldDoNothing() throws ExecutionException {
+    // Arrange
+
+    // Act
+    assertThatCode(() -> admin.repairCoordinatorTables(Collections.emptyMap()))
+        .doesNotThrowAnyException();
   }
 }

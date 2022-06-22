@@ -96,6 +96,14 @@ public interface DistributedTransactionAdmin extends Admin {
    */
   boolean coordinatorTablesExist() throws ExecutionException;
 
+  /**
+   * Repair coordinator tables which may be in an unknown state
+   *
+   * @param options options to repair
+   * @throws ExecutionException if the operation failed
+   */
+  void repairCoordinatorTables(Map<String, String> options) throws ExecutionException;
+
   /** Closes connections to the storage. */
   void close();
 }

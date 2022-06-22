@@ -19,6 +19,7 @@ import com.scalar.db.rpc.GetTableMetadataRequest;
 import com.scalar.db.rpc.GetTableMetadataResponse;
 import com.scalar.db.rpc.NamespaceExistsRequest;
 import com.scalar.db.rpc.NamespaceExistsResponse;
+import com.scalar.db.rpc.RepairTableRequest;
 import com.scalar.db.rpc.TruncateTableRequest;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableSupplier;
@@ -285,6 +286,25 @@ public class GrpcAdmin implements DistributedStorageAdmin {
                       NamespaceExistsRequest.newBuilder().setNamespace(namespace).build());
           return response.getExists();
         });
+  }
+
+  @Override
+  public void repairTable(
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      throws ExecutionException {
+    execute(
+        () ->
+            execute(
+                () ->
+                    stub.withDeadlineAfter(
+                            config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                        .repairTable(
+                            RepairTableRequest.newBuilder()
+                                .setNamespace(namespace)
+                                .setTable(table)
+                                .setTableMetadata(ProtoUtils.toTableMetadata(metadata))
+                                .putAllOptions(options)
+                                .build())));
   }
 
   private static <T> T execute(ThrowableSupplier<T, ExecutionException> supplier)

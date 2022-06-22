@@ -232,6 +232,19 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     }
   }
 
+  @Override
+  public void repairTable(
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      throws ExecutionException {
+    // We have this check to stay consistent with the behavior of the other admins classes
+    if (!tableExists(namespace, table)) {
+      throw new IllegalArgumentException(
+          "The table " + getFullTableName(namespace, table) + "  does not exist");
+    }
+    // The table metadata are not managed by Scalar DB, so we don't need to do anything
+    // here
+  }
+
   @VisibleForTesting
   void createTableInternal(
       String keyspace, String table, TableMetadata metadata, Map<String, String> options)

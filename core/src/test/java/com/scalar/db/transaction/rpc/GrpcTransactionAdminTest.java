@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.LazyStringArrayList;
 import com.scalar.db.api.Scan;
@@ -30,6 +31,8 @@ import com.scalar.db.rpc.GetTableMetadataRequest;
 import com.scalar.db.rpc.GetTableMetadataResponse;
 import com.scalar.db.rpc.NamespaceExistsRequest;
 import com.scalar.db.rpc.NamespaceExistsResponse;
+import com.scalar.db.rpc.RepairCoordinatorTablesRequest;
+import com.scalar.db.rpc.RepairTableRequest;
 import com.scalar.db.rpc.TruncateCoordinatorTablesRequest;
 import com.scalar.db.rpc.TruncateTableRequest;
 import com.scalar.db.storage.rpc.GrpcConfig;
@@ -341,5 +344,48 @@ public class GrpcTransactionAdminTest {
     // Assert
     verify(stub).coordinatorTablesExist(CoordinatorTablesExistRequest.getDefaultInstance());
     assertThat(exist).isTrue();
+  }
+
+  @Test
+  public void repairTable_CalledWithProperArguments_StubShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "namespace";
+    String table = "table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn("col2", DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    admin.repairTable(namespace, table, metadata, options);
+
+    // Assert
+    verify(stub)
+        .repairTable(
+            RepairTableRequest.newBuilder()
+                .setNamespace(namespace)
+                .setTable(table)
+                .setTableMetadata(ProtoUtils.toTableMetadata(metadata))
+                .putAllOptions(options)
+                .build());
+  }
+
+  @Test
+  public void repairCoordinatorTables_CalledWithProperArguments_StubShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    admin.repairCoordinatorTables(options);
+
+    // Assert
+    verify(stub)
+        .repairCoordinatorTables(
+            RepairCoordinatorTablesRequest.newBuilder().putAllOptions(options).build());
   }
 }
