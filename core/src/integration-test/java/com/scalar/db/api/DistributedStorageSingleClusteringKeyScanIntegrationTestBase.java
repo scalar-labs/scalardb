@@ -141,6 +141,8 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       throws ExecutionException, IOException {
     for (DataType clusteringKeyType : clusteringKeyTypes) {
       for (Order clusteringOrder : Order.values()) {
+        random.setSeed(seed);
+
         truncateTable(clusteringKeyType, clusteringOrder);
         List<Value<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
         for (OrderingType orderingType : OrderingType.values()) {
@@ -187,6 +189,8 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       throws ExecutionException, IOException {
     for (DataType clusteringKeyType : clusteringKeyTypes) {
       for (Order clusteringOrder : Order.values()) {
+        random.setSeed(seed);
+
         truncateTable(clusteringKeyType, clusteringOrder);
         List<Value<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
         for (boolean startInclusive : Arrays.asList(true, false)) {
@@ -275,6 +279,8 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       throws ExecutionException, IOException {
     for (DataType clusteringKeyType : clusteringKeyTypes) {
       for (Order clusteringOrder : Order.values()) {
+        random.setSeed(seed);
+
         truncateTable(clusteringKeyType, clusteringOrder);
         List<Value<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
         for (boolean startInclusive : Arrays.asList(true, false)) {
@@ -360,6 +366,8 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       throws ExecutionException, IOException {
     for (DataType clusteringKeyType : clusteringKeyTypes) {
       for (Order clusteringOrder : Order.values()) {
+        random.setSeed(seed);
+
         truncateTable(clusteringKeyType, clusteringOrder);
         List<Value<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
         for (boolean startInclusive : Arrays.asList(true, false)) {
@@ -440,6 +448,8 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       throws ExecutionException, IOException {
     for (DataType clusteringKeyType : clusteringKeyTypes) {
       for (Order clusteringOrder : Order.values()) {
+        random.setSeed(seed);
+
         truncateTable(clusteringKeyType, clusteringOrder);
         List<Value<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
         for (boolean startInclusive : Arrays.asList(true, false)) {
@@ -511,6 +521,8 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       throws ExecutionException, IOException {
     for (DataType clusteringKeyType : clusteringKeyTypes) {
       for (Order clusteringOrder : Order.values()) {
+        random.setSeed(seed);
+
         truncateTable(clusteringKeyType, clusteringOrder);
         List<Value<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
         for (boolean startInclusive : Arrays.asList(true, false)) {
@@ -576,6 +588,8 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       throws ExecutionException, IOException {
     for (DataType clusteringKeyType : clusteringKeyTypes) {
       for (Order clusteringOrder : Order.values()) {
+        random.setSeed(seed);
+
         truncateTable(clusteringKeyType, clusteringOrder);
         List<Value<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
         for (boolean endInclusive : Arrays.asList(true, false)) {
@@ -647,6 +661,8 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       throws ExecutionException, IOException {
     for (DataType clusteringKeyType : clusteringKeyTypes) {
       for (Order clusteringOrder : Order.values()) {
+        random.setSeed(seed);
+
         truncateTable(clusteringKeyType, clusteringOrder);
         List<Value<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
         for (boolean endInclusive : Arrays.asList(true, false)) {
@@ -708,8 +724,6 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
 
   private List<Value<?>> prepareRecords(DataType clusteringKeyType, Order clusteringOrder)
       throws ExecutionException {
-    random.setSeed(seed);
-
     List<Value<?>> ret = new ArrayList<>();
     List<Put> puts = new ArrayList<>();
 
