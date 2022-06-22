@@ -121,9 +121,9 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
   @Test
   public void scan_WithRandomSecondaryIndexValue_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-    random.setSeed(seed);
-
     for (DataType secondaryIndexType : secondaryIndexTypes) {
+      random.setSeed(seed);
+
       truncateTable(secondaryIndexType);
 
       for (int i = 0; i < ATTEMPT_COUNT; i++) {

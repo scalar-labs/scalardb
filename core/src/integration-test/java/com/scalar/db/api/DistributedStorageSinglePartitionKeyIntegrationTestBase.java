@@ -121,6 +121,8 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
   @Test
   public void getAndScanAndDelete_ShouldBehaveCorrectly() throws ExecutionException, IOException {
     for (DataType partitionKeyType : partitionKeyTypes) {
+      random.setSeed(seed);
+
       truncateTable(partitionKeyType);
       List<Value<?>> partitionKeyValues = prepareRecords(partitionKeyType);
 
@@ -189,8 +191,6 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
   }
 
   private List<Value<?>> prepareRecords(DataType partitionKeyType) throws ExecutionException {
-    random.setSeed(seed);
-
     List<Value<?>> ret = new ArrayList<>();
     List<Put> puts = new ArrayList<>();
 

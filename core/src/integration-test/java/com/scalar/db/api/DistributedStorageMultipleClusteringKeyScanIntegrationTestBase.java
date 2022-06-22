@@ -58,8 +58,6 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
   private static final int FIRST_CLUSTERING_KEY_NUM = 5;
   private static final int SECOND_CLUSTERING_KEY_NUM = 20;
 
-  private static final Random random = new Random();
-
   private static final int THREAD_NUM = 10;
 
   private DistributedStorageAdmin admin;
@@ -70,6 +68,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
   private ListMultimap<DataType, DataType> clusteringKeyTypes;
 
   private long seed;
+  private ThreadLocal<Random> random;
 
   private ExecutorService executorService;
 
@@ -86,6 +85,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     seed = System.currentTimeMillis();
     System.out.println(
         "The seed used in the multiple clustering key scan integration test is " + seed);
+    random = ThreadLocal.withInitial(Random::new);
   }
 
   protected void initialize() throws Exception {}
@@ -1592,8 +1592,6 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       DataType secondClusteringKeyType,
       Order secondClusteringOrder)
       throws ExecutionException {
-    random.setSeed(seed);
-
     List<ClusteringKey> ret = new ArrayList<>();
     List<Put> puts = new ArrayList<>();
 
@@ -1718,7 +1716,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
         Value<?> secondClusteringKeyValue;
         while (true) {
           secondClusteringKeyValue =
-              getRandomValue(random, SECOND_CLUSTERING_KEY, secondClusteringKeyType);
+              getRandomValue(random.get(), SECOND_CLUSTERING_KEY, secondClusteringKeyType);
           // reject duplication
           if (!valueSet.contains(secondClusteringKeyValue)) {
             valueSet.add(secondClusteringKeyValue);
@@ -1796,7 +1794,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
   }
 
   private Value<?> getFirstClusteringKeyValue(DataType dataType) {
-    return getRandomValue(random, FIRST_CLUSTERING_KEY, dataType);
+    return getRandomValue(random.get(), FIRST_CLUSTERING_KEY, dataType);
   }
 
   protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
@@ -1853,7 +1851,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       if (expected.size() == 1) {
         limit = 1;
       } else {
-        limit = random.nextInt(expected.size() - 1) + 1;
+        limit = random.get().nextInt(expected.size() - 1) + 1;
       }
     }
     return limit;
@@ -1971,6 +1969,8 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       for (Order firstClusteringOrder : Order.values()) {
         testCallables.add(
             () -> {
+              random.get().setSeed(seed);
+
               truncateTable(firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC);
 
               List<ClusteringKey> clusteringKeys =
@@ -1995,6 +1995,8 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
           for (Order secondClusteringOrder : Order.values()) {
             testCallables.add(
                 () -> {
+                  random.get().setSeed(seed);
+
                   truncateTable(
                       firstClusteringKeyType,
                       firstClusteringOrder,
