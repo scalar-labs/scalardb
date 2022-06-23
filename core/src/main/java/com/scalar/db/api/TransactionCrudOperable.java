@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * An interface for transaction CRUD operations. Note that LINEARIZABLE consistency is always used
- * in transactional CRUD operations, so {@link Consistency} specified for CRUD operations is
- * ignored.
+ * An interface for transaction CRUD operations. Note that the LINEARIZABLE consistency level is
+ * always used in transactional CRUD operations, so {@link Consistency} specified for CRUD
+ * operations is ignored.
  */
 public interface TransactionCrudOperable {
 
