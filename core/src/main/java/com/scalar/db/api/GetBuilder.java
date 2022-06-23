@@ -9,6 +9,7 @@ import com.scalar.db.api.OperationBuilder.Projection;
 import com.scalar.db.api.OperationBuilder.TableBuilder;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import javax.annotation.Nullable;
@@ -77,6 +78,11 @@ public class GetBuilder {
       checkNotNull(projections);
       this.projections.addAll(projections);
       return this;
+    }
+
+    @Override
+    public Buildable projections(String... projections) {
+      return projections(Arrays.asList(projections));
     }
 
     @Override

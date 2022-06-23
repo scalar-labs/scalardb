@@ -86,6 +86,14 @@ class OperationBuilder {
      * @return the operation builder
      */
     T projections(Collection<String> projections);
+
+    /**
+     * Appends the specified collection of the specified column names to the list of projections.
+     *
+     * @param projections the column names to project
+     * @return the operation builder
+     */
+    T projections(String... projections);
   }
 
   interface ClearProjections<T> {
@@ -280,12 +288,28 @@ class OperationBuilder {
     /**
      * Sets the specified scan ordering. Ordering can only be specified with clustering keys. To
      * sort results by multiple clustering keys, call this method multiple times in the order of
-     * sorting.
+     * sorting or call {@link #orderings(Collection)} or {@link #orderings(Scan.Ordering...)}.
      *
      * @param ordering a scan ordering
      * @return the scan operation builder
      */
     T ordering(Scan.Ordering ordering);
+
+    /**
+     * Sets the specified scan orderings. Ordering can only be specified with clustering keys.
+     *
+     * @param orderings scan orderings
+     * @return the scan operation builder
+     */
+    T orderings(Collection<Scan.Ordering> orderings);
+
+    /**
+     * Sets the specified scan orderings. Ordering can only be specified with clustering keys.
+     *
+     * @param orderings scan orderings
+     * @return the scan operation builder
+     */
+    T orderings(Scan.Ordering... orderings);
   }
 
   interface ClearOrderings<T> {
