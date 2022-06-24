@@ -26,6 +26,7 @@ public class ScanBuilderTest {
   @Mock private Scan.Ordering ordering2;
   @Mock private Scan.Ordering ordering3;
   @Mock private Scan.Ordering ordering4;
+  @Mock private Scan.Ordering ordering5;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -54,10 +55,12 @@ public class ScanBuilderTest {
             .start(startClusteringKey1)
             .end(endClusteringKey1, true)
             .ordering(ordering1)
-            .ordering(ordering2)
+            .orderings(Arrays.asList(ordering2, ordering3))
+            .orderings(ordering4, ordering5)
             .limit(10)
             .projections(Arrays.asList("pk1", "ck1"))
             .projection("ck2")
+            .projections("ck3", "ck4")
             .consistency(Consistency.EVENTUAL)
             .build();
 
@@ -72,8 +75,11 @@ public class ScanBuilderTest {
                 .withEnd(endClusteringKey1)
                 .withOrdering(ordering1)
                 .withOrdering(ordering2)
+                .withOrdering(ordering3)
+                .withOrdering(ordering4)
+                .withOrdering(ordering5)
                 .withLimit(10)
-                .withProjections(Arrays.asList("pk1", "ck1", "ck2"))
+                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
                 .withConsistency(Consistency.EVENTUAL));
   }
 
@@ -179,11 +185,13 @@ public class ScanBuilderTest {
             .end(endClusteringKey2, false)
             .clearOrderings()
             .ordering(ordering3)
-            .ordering(ordering4)
+            .orderings(Arrays.asList(ordering4, ordering5))
+            .orderings(ordering1, ordering2)
             .limit(5)
             .clearProjections()
             .projections(Arrays.asList("pk2", "ck2"))
             .projection("ck3")
+            .projections("ck4", "ck5")
             .consistency(Consistency.LINEARIZABLE)
             .build();
 
@@ -197,8 +205,11 @@ public class ScanBuilderTest {
                 .withEnd(endClusteringKey2, false)
                 .withOrdering(ordering3)
                 .withOrdering(ordering4)
+                .withOrdering(ordering5)
+                .withOrdering(ordering1)
+                .withOrdering(ordering2)
                 .withLimit(5)
-                .withProjections(Arrays.asList("pk2", "ck2", "ck3"))
+                .withProjections(Arrays.asList("pk2", "ck2", "ck3", "ck4", "ck5"))
                 .withConsistency(Consistency.LINEARIZABLE));
   }
 
@@ -240,6 +251,7 @@ public class ScanBuilderTest {
             .limit(10)
             .projections(Arrays.asList("pk1", "ck1"))
             .projection("ck2")
+            .projections("ck3", "ck4")
             .consistency(Consistency.EVENTUAL)
             .build();
 
@@ -251,7 +263,7 @@ public class ScanBuilderTest {
                 .forTable(TABLE_1)
                 .withConsistency(Consistency.EVENTUAL)
                 .withLimit(10)
-                .withProjections(Arrays.asList("pk1", "ck1", "ck2"))
+                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
                 .withConsistency(Consistency.EVENTUAL));
   }
 
@@ -296,6 +308,7 @@ public class ScanBuilderTest {
             .clearProjections()
             .projections(Arrays.asList("pk2", "ck2"))
             .projection("ck3")
+            .projections("ck4", "ck5")
             .consistency(Consistency.LINEARIZABLE)
             .build();
 
@@ -306,7 +319,7 @@ public class ScanBuilderTest {
                 .forNamespace(NAMESPACE_2)
                 .forTable(TABLE_2)
                 .withLimit(5)
-                .withProjections(Arrays.asList("pk2", "ck2", "ck3"))
+                .withProjections(Arrays.asList("pk2", "ck2", "ck3", "ck4", "ck5"))
                 .withConsistency(Consistency.LINEARIZABLE));
   }
 

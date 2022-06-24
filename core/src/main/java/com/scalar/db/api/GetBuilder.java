@@ -60,16 +60,16 @@ public class GetBuilder {
     }
 
     @Override
-    public Buildable projection(String projection) {
-      checkNotNull(projection);
-      projections.add(projection);
+    public Buildable clusteringKey(Key clusteringKey) {
+      checkNotNull(clusteringKey);
+      this.clusteringKey = clusteringKey;
       return this;
     }
 
     @Override
-    public Buildable clusteringKey(Key clusteringKey) {
-      checkNotNull(clusteringKey);
-      this.clusteringKey = clusteringKey;
+    public Buildable projection(String projection) {
+      checkNotNull(projection);
+      projections.add(projection);
       return this;
     }
 
@@ -162,6 +162,12 @@ public class GetBuilder {
 
     @Override
     public BuildableFromExisting projections(Collection<String> projections) {
+      super.projections(projections);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting projections(String... projections) {
       super.projections(projections);
       return this;
     }

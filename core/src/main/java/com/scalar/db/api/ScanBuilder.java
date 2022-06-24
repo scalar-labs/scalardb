@@ -240,6 +240,12 @@ public class ScanBuilder {
     }
 
     @Override
+    public BuildableScanOrScanAllFromExisting projections(String... projections) {
+      super.projections(projections);
+      return this;
+    }
+
+    @Override
     public BuildableScanOrScanAllFromExisting clearProjections() {
       this.projections.clear();
       return this;
@@ -255,6 +261,20 @@ public class ScanBuilder {
     public BuildableScanOrScanAllFromExisting ordering(Scan.Ordering ordering) {
       checkNotScanAll();
       super.ordering(ordering);
+      return this;
+    }
+
+    @Override
+    public BuildableScanOrScanAllFromExisting orderings(Collection<Scan.Ordering> orderings) {
+      checkNotScanAll();
+      super.orderings(orderings);
+      return this;
+    }
+
+    @Override
+    public BuildableScanOrScanAllFromExisting orderings(Scan.Ordering... orderings) {
+      checkNotScanAll();
+      super.orderings(orderings);
       return this;
     }
 
