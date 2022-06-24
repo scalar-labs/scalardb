@@ -113,10 +113,23 @@ public class BooleanColumn implements Column<Boolean> {
         .toString();
   }
 
+  /**
+   * Returns a Boolean column instance with the specified column name and value.
+   *
+   * @param columnName a column name
+   * @param value a column value
+   * @return a Boolean column instance with the specified column name and value
+   */
   public static BooleanColumn of(String columnName, boolean value) {
     return new BooleanColumn(columnName, value);
   }
 
+  /**
+   * Returns a Boolean column instance with the specified column name and a null value.
+   *
+   * @param columnName a column name
+   * @return a Boolean column instance with the specified column name and a null value
+   */
   public static BooleanColumn ofNull(String columnName) {
     return new BooleanColumn(columnName);
   }

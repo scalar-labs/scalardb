@@ -18,6 +18,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public abstract class Selection extends Operation {
   private final List<String> projections;
+
   /**
    * @param partitionKey a partition key
    * @param clusteringKey a clustering key
@@ -28,6 +29,7 @@ public abstract class Selection extends Operation {
     super(partitionKey, clusteringKey);
     projections = new ArrayList<>();
   }
+
   /**
    * @param selection a selection
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0.

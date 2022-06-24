@@ -54,14 +54,34 @@ public class StorageFactory {
     return injector.getInstance(DistributedStorageAdmin.class);
   }
 
+  /**
+   * Returns a StorageFactory instance.
+   *
+   * @param properties properties to use for configuration
+   * @return a StorageFactory instance
+   */
   public static StorageFactory create(Properties properties) {
     return new StorageFactory(new DatabaseConfig(properties));
   }
 
+  /**
+   * Returns a StorageFactory instance.
+   *
+   * @param propertiesPath a properties path
+   * @return a StorageFactory instance
+   * @throws IOException if IO error occurs
+   */
   public static StorageFactory create(Path propertiesPath) throws IOException {
     return new StorageFactory(new DatabaseConfig(propertiesPath));
   }
 
+  /**
+   * Returns a StorageFactory instance.
+   *
+   * @param propertiesFile a properties file
+   * @return a StorageFactory instance
+   * @throws IOException if IO error occurs
+   */
   public static StorageFactory create(File propertiesFile) throws IOException {
     return new StorageFactory(new DatabaseConfig(propertiesFile));
   }

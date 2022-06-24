@@ -43,8 +43,9 @@ public class Delete extends Mutation {
   public Delete(Key partitionKey, Key clusteringKey) {
     super(partitionKey, clusteringKey);
   }
+
   /**
-   * Copy a Delete
+   * Copy a Delete.
    *
    * @param delete a Delete
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
@@ -56,7 +57,7 @@ public class Delete extends Mutation {
   }
 
   /**
-   * Build a {@code Delete} operation using a builder
+   * Build a {@code Delete} operation using a builder.
    *
    * @return a {@code Delete} operation builder
    */
@@ -75,6 +76,7 @@ public class Delete extends Mutation {
     checkNotNull(delete);
     return new BuildableFromExisting(delete);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Delete builder instead; to create a Delete builder, use {@link Delete#newBuilder()}
@@ -84,6 +86,7 @@ public class Delete extends Mutation {
   public Delete forNamespace(String namespace) {
     return (Delete) super.forNamespace(namespace);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Delete builder instead; to create a Delete builder, use {@link Delete#newBuilder()}
@@ -93,6 +96,7 @@ public class Delete extends Mutation {
   public Delete forTable(String tableName) {
     return (Delete) super.forTable(tableName);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Delete builder instead; to create a Delete builder, use {@link Delete#newBuilder()}
@@ -107,6 +111,7 @@ public class Delete extends Mutation {
   public void accept(OperationVisitor v) {
     v.visit(this);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Delete builder instead; to create a Delete builder, use {@link Delete#newBuilder()}

@@ -93,10 +93,23 @@ public class TextColumn implements Column<String> {
     return MoreObjects.toStringHelper(this).add("name", name).add("value", value).toString();
   }
 
+  /**
+   * Returns a Text column instance with the specified column name and value.
+   *
+   * @param columnName a column name
+   * @param value a column value
+   * @return a Text column instance with the specified column name and value
+   */
   public static TextColumn of(String columnName, @Nullable String value) {
     return new TextColumn(columnName, value);
   }
 
+  /**
+   * Returns a Text column instance with the specified column name and a null value.
+   *
+   * @param columnName a column name
+   * @return a Text column instance with the specified column name and a null value
+   */
   public static TextColumn ofNull(String columnName) {
     return of(columnName, null);
   }

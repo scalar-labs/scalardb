@@ -52,7 +52,7 @@ public class Scan extends Selection {
   }
 
   /**
-   * Copy a Scan
+   * Copy a Scan.
    *
    * @param scan a Scan
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
@@ -71,7 +71,7 @@ public class Scan extends Selection {
   }
 
   /**
-   * Build a {@code Scan} or {@code ScanAll} operation using a builder
+   * Build a {@code Scan} or {@code ScanAll} operation using a builder.
    *
    * @return a {@code Scan} operation builder
    */
@@ -244,6 +244,7 @@ public class Scan extends Selection {
   public Scan forNamespace(String namespace) {
     return (Scan) super.forNamespace(namespace);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
@@ -253,6 +254,7 @@ public class Scan extends Selection {
   public Scan forTable(String tableName) {
     return (Scan) super.forTable(tableName);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
@@ -267,6 +269,7 @@ public class Scan extends Selection {
   public void accept(OperationVisitor v) {
     v.visit(this);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
@@ -276,6 +279,7 @@ public class Scan extends Selection {
   public Scan withProjection(String projection) {
     return (Scan) super.withProjection(projection);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}

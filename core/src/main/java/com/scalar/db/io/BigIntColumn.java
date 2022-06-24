@@ -119,10 +119,23 @@ public class BigIntColumn implements Column<Long> {
         .toString();
   }
 
+  /**
+   * Returns a BigInt column instance with the specified column name and value.
+   *
+   * @param columnName a column name
+   * @param value a column value
+   * @return a BigInt column instance with the specified column name and value
+   */
   public static BigIntColumn of(String columnName, long value) {
     return new BigIntColumn(columnName, value);
   }
 
+  /**
+   * Returns a BigInt column instance with the specified column name and a null value.
+   *
+   * @param columnName a column name
+   * @return a BigInt column instance with the specified column name and a null value
+   */
   public static BigIntColumn ofNull(String columnName) {
     return new BigIntColumn(columnName);
   }
