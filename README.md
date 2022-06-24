@@ -43,8 +43,6 @@ To add a dependency using Maven:
     * [scalardb-schema-loader](https://javadoc.io/doc/com.scalar-labs/scalardb-schema-loader/latest/index.html) - Scalar DB Schema Loader that creates and deletes Scalar DB schemas
 * [Jepsen tests](https://github.com/scalar-labs/scalar-jepsen)
 * [TLA+](tla+/consensus-commit/README.md)
-* Sample applications by contributors/collaborators
-  * [Q&A application (From Indetail Engineering team)](https://github.com/indetail-blockchain/getting-started-with-scalardb)
 
 ## Contributing
 This library is mainly maintained by the Scalar Engineering Team, but of course we appreciate any help.
