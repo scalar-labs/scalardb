@@ -270,6 +270,7 @@ So you can use the same schema file as **emoney-storage.json**.
 These are just simple examples of how Scalar DB is used. For more information, please take a look at the following documents.
 
 * [Design Document](design.md)
+* [Scalar DB Sample](https://github.com/scalar-labs/scalardb-samples/tree/main/scalardb-sample)
 * Javadoc
     * [scalardb](https://javadoc.io/doc/com.scalar-labs/scalardb/latest/index.html) - A library that makes non-ACID distributed databases/storages ACID-compliant
     * [scalardb-rpc](https://javadoc.io/doc/com.scalar-labs/scalardb-rpc/latest/index.html) - Scalar DB RPC libraries
