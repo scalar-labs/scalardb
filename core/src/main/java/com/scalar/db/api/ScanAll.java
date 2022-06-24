@@ -108,6 +108,7 @@ public class ScanAll extends Scan {
   public ScanAll withLimit(int limit) {
     return (ScanAll) super.withLimit(limit);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
@@ -117,6 +118,7 @@ public class ScanAll extends Scan {
   public ScanAll forNamespace(String namespace) {
     return (ScanAll) super.forNamespace(namespace);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
@@ -126,6 +128,7 @@ public class ScanAll extends Scan {
   public ScanAll forTable(String tableName) {
     return (ScanAll) super.forTable(tableName);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
@@ -135,6 +138,7 @@ public class ScanAll extends Scan {
   public ScanAll withConsistency(Consistency consistency) {
     return (ScanAll) super.withConsistency(consistency);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
@@ -144,6 +148,7 @@ public class ScanAll extends Scan {
   public ScanAll withProjection(String projection) {
     return (ScanAll) super.withProjection(projection);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}

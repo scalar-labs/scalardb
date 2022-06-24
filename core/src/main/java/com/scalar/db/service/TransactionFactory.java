@@ -55,14 +55,34 @@ public class TransactionFactory {
     return injector.getInstance(TwoPhaseCommitTransactionManager.class);
   }
 
+  /**
+   * Returns a TransactionFactory instance.
+   *
+   * @param properties properties to use for configuration
+   * @return a TransactionFactory instance
+   */
   public static TransactionFactory create(Properties properties) {
     return new TransactionFactory(new DatabaseConfig(properties));
   }
 
+  /**
+   * Returns a TransactionFactory instance.
+   *
+   * @param propertiesPath a properties path
+   * @return a TransactionFactory instance
+   * @throws IOException if IO error occurs
+   */
   public static TransactionFactory create(Path propertiesPath) throws IOException {
     return new TransactionFactory(new DatabaseConfig(propertiesPath));
   }
 
+  /**
+   * Returns a TransactionFactory instance.
+   *
+   * @param propertiesFile a properties file
+   * @return a TransactionFactory instance
+   * @throws IOException if IO error occurs
+   */
   public static TransactionFactory create(File propertiesFile) throws IOException {
     return new TransactionFactory(new DatabaseConfig(propertiesFile));
   }

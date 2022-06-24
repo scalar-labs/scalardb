@@ -130,14 +130,34 @@ public class BlobColumn implements Column<ByteBuffer> {
     return MoreObjects.toStringHelper(this).add("name", name).add("value", value).toString();
   }
 
+  /**
+   * Returns a Blob column instance with the specified column name and value.
+   *
+   * @param columnName a column name
+   * @param value a column value
+   * @return a Blob column instance with the specified column name and value
+   */
   public static BlobColumn of(String columnName, @Nullable ByteBuffer value) {
     return new BlobColumn(columnName, value);
   }
 
+  /**
+   * Returns a Blob column instance with the specified column name and value.
+   *
+   * @param columnName a column name
+   * @param value a column value
+   * @return a Blob column instance with the specified column name and value
+   */
   public static BlobColumn of(String columnName, @Nullable byte[] value) {
     return new BlobColumn(columnName, value);
   }
 
+  /**
+   * Returns a Blob column instance with the specified column name and a null value.
+   *
+   * @param columnName a column name
+   * @return a Blob column instance with the specified column name and a null value
+   */
   public static BlobColumn ofNull(String columnName) {
     return new BlobColumn(columnName, (ByteBuffer) null);
   }

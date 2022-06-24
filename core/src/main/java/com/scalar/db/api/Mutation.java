@@ -26,6 +26,7 @@ public abstract class Mutation extends Operation {
     super(partitionKey, clusteringKey);
     condition = Optional.empty();
   }
+
   /**
    * @param mutation a mutation
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0.

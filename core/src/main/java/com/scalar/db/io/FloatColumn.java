@@ -113,10 +113,23 @@ public class FloatColumn implements Column<Float> {
         .toString();
   }
 
+  /**
+   * Returns a Float column instance with the specified column name and value.
+   *
+   * @param columnName a column name
+   * @param value a column value
+   * @return a Float column instance with the specified column name and value
+   */
   public static FloatColumn of(String columnName, float value) {
     return new FloatColumn(columnName, value);
   }
 
+  /**
+   * Returns a Float column instance with the specified column name and a null value.
+   *
+   * @param columnName a column name
+   * @return a Float column instance with the specified column name and a null value
+   */
   public static FloatColumn ofNull(String columnName) {
     return new FloatColumn(columnName);
   }
