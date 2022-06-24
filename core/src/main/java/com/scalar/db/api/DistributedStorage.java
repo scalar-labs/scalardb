@@ -31,23 +31,37 @@ import java.util.Optional;
  * readability.)
  *
  * <pre>{@code
- * StorageFactory factory = new StorageFactory(databaseConfig);
+ * StorageFactory factory = StorageFactory.create(configFilePath);
  * DistributedStorage storage = factory.getStorage();
  *
- * // Uses NAMESPACE and TABLE by default in this storage instance.
- * storage.with(NAMESPACE, TABLE);
- *
  * // Inserts a new entry which has the primary key value 0 to the storage.
- * // Assumes that the primary key is composed of a integer column named COL_NAME.
- * Put put = new Put(new Key(COL_NAME, 0);
+ * // Assumes that the namespace name and the table name are NAMESPACE and TABLE respectively, and
+ * // the primary key is composed of a integer column named COL_NAME.
+ * Put put =
+ *     Put.newBuilder()
+ *         .namespace(NAMESPACE)
+ *         .table(TABLE)
+ *         .partitionKey(Key.ofInt(COL_NAME, 0))
+ *         ...
+ *         .build();
  * storage.put(put);
  *
  * // Retrieves the entry from the storage.
- * Get get = new Get(new Key(COL_NAME, 0);
+ * Get get =
+ *     Get.newBuilder()
+ *         .namespace(NAMESPACE)
+ *         .table(TABLE)
+ *         .partitionKey(Key.ofInt(COL_NAME, 0))
+ *         .build();
  * Optional<Result> result = storage.get(get);
  *
  * // Deletes an entry which has the primary key value 1.
- * Delete delete = new Delete(new Key(COL_NAME, 1);
+ * Delete delete =
+ *     Delete.newBuilder()
+ *         .namespace(NAMESPACE)
+ *         .table(TABLE)
+ *         .partitionKey(Key.ofInt(COL_NAME, 0))
+ *         .build();
  * storage.delete(delete);
  * }</pre>
  *
@@ -55,7 +69,7 @@ import java.util.Optional;
  */
 public interface DistributedStorage {
   /**
-   * Sets the specified namespace and the table name as default values in the instance
+   * Sets the specified namespace and the table name as default values in the instance.
    *
    * @param namespace default namespace to operate for
    * @param tableName default table name to operate for
@@ -65,7 +79,7 @@ public interface DistributedStorage {
   void with(String namespace, String tableName);
 
   /**
-   * Sets the specified namespace as a default value in the instance
+   * Sets the specified namespace as a default value in the instance.
    *
    * @param namespace default namespace to operate for
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
@@ -74,7 +88,7 @@ public interface DistributedStorage {
   void withNamespace(String namespace);
 
   /**
-   * Returns the namespace
+   * Returns the namespace.
    *
    * @return an {@code Optional} with the namespace
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
@@ -83,7 +97,7 @@ public interface DistributedStorage {
   Optional<String> getNamespace();
 
   /**
-   * Sets the specified table name as a default value in the instance
+   * Sets the specified table name as a default value in the instance.
    *
    * @param tableName default table name to operate for
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
@@ -92,7 +106,7 @@ public interface DistributedStorage {
   void withTable(String tableName);
 
   /**
-   * Returns the table name
+   * Returns the table name.
    *
    * @return an {@code Optional} with the table name
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
