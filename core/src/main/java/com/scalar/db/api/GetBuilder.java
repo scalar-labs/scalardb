@@ -9,6 +9,7 @@ import com.scalar.db.api.OperationBuilder.Projection;
 import com.scalar.db.api.OperationBuilder.TableBuilder;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import javax.annotation.Nullable;
@@ -59,16 +60,16 @@ public class GetBuilder {
     }
 
     @Override
-    public Buildable projection(String projection) {
-      checkNotNull(projection);
-      projections.add(projection);
+    public Buildable clusteringKey(Key clusteringKey) {
+      checkNotNull(clusteringKey);
+      this.clusteringKey = clusteringKey;
       return this;
     }
 
     @Override
-    public Buildable clusteringKey(Key clusteringKey) {
-      checkNotNull(clusteringKey);
-      this.clusteringKey = clusteringKey;
+    public Buildable projection(String projection) {
+      checkNotNull(projection);
+      projections.add(projection);
       return this;
     }
 
@@ -77,6 +78,11 @@ public class GetBuilder {
       checkNotNull(projections);
       this.projections.addAll(projections);
       return this;
+    }
+
+    @Override
+    public Buildable projections(String... projections) {
+      return projections(Arrays.asList(projections));
     }
 
     @Override
@@ -156,6 +162,12 @@ public class GetBuilder {
 
     @Override
     public BuildableFromExisting projections(Collection<String> projections) {
+      super.projections(projections);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting projections(String... projections) {
       super.projections(projections);
       return this;
     }

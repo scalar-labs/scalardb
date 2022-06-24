@@ -12,6 +12,7 @@ import com.scalar.db.api.OperationBuilder.Projection;
 import com.scalar.db.api.OperationBuilder.TableBuilder;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import javax.annotation.Nullable;
@@ -91,6 +92,11 @@ public class ScanBuilder {
     }
 
     @Override
+    public BuildableScan projections(String... projections) {
+      return projections(Arrays.asList(projections));
+    }
+
+    @Override
     public BuildableScan limit(int limit) {
       this.limit = limit;
       return this;
@@ -101,6 +107,18 @@ public class ScanBuilder {
       checkNotNull(ordering);
       orderings.add(ordering);
       return this;
+    }
+
+    @Override
+    public BuildableScan orderings(Collection<Scan.Ordering> orderings) {
+      checkNotNull(orderings);
+      this.orderings.addAll(orderings);
+      return this;
+    }
+
+    @Override
+    public BuildableScan orderings(Scan.Ordering... orderings) {
+      return orderings(Arrays.asList(orderings));
     }
 
     @Override
@@ -222,6 +240,12 @@ public class ScanBuilder {
     }
 
     @Override
+    public BuildableScanOrScanAllFromExisting projections(String... projections) {
+      super.projections(projections);
+      return this;
+    }
+
+    @Override
     public BuildableScanOrScanAllFromExisting clearProjections() {
       this.projections.clear();
       return this;
@@ -237,6 +261,20 @@ public class ScanBuilder {
     public BuildableScanOrScanAllFromExisting ordering(Scan.Ordering ordering) {
       checkNotScanAll();
       super.ordering(ordering);
+      return this;
+    }
+
+    @Override
+    public BuildableScanOrScanAllFromExisting orderings(Collection<Scan.Ordering> orderings) {
+      checkNotScanAll();
+      super.orderings(orderings);
+      return this;
+    }
+
+    @Override
+    public BuildableScanOrScanAllFromExisting orderings(Scan.Ordering... orderings) {
+      checkNotScanAll();
+      super.orderings(orderings);
       return this;
     }
 
@@ -352,6 +390,11 @@ public class ScanBuilder {
       checkNotNull(projections);
       this.projections.addAll(projections);
       return this;
+    }
+
+    @Override
+    public BuildableScanAll projections(String... projections) {
+      return projections(Arrays.asList(projections));
     }
 
     @Override

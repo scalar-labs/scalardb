@@ -66,6 +66,7 @@ public class GetBuilderTest {
             .projection("c1")
             .projection("c2")
             .projections(Arrays.asList("c3", "c4"))
+            .projections("c5", "c6")
             .build();
 
     // Assert
@@ -74,7 +75,7 @@ public class GetBuilderTest {
             new Get(partitionKey1, clusteringKey1)
                 .forNamespace(NAMESPACE_1)
                 .forTable(TABLE_1)
-                .withProjections(Arrays.asList("c1", "c2", "c3", "c4"))
+                .withProjections(Arrays.asList("c1", "c2", "c3", "c4", "c5", "c6"))
                 .withConsistency(Consistency.EVENTUAL));
   }
 
@@ -116,6 +117,7 @@ public class GetBuilderTest {
             .clearProjections()
             .projections(Arrays.asList("c3", "c4"))
             .projection("c5")
+            .projections("c6", "c7")
             .build();
 
     // Assert
@@ -125,7 +127,7 @@ public class GetBuilderTest {
                 .forNamespace(NAMESPACE_2)
                 .forTable(TABLE_2)
                 .withConsistency(Consistency.EVENTUAL)
-                .withProjections(Arrays.asList("c3", "c4", "c5")));
+                .withProjections(Arrays.asList("c3", "c4", "c5", "c6", "c7")));
   }
 
   @Test
