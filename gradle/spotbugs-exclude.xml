@@ -20,6 +20,7 @@
       <Class name="~.*\.*TestBase\$.*"/>
       <Class name="~.*\.*TestBase\..*"/>
       <Class name="~.*\.*TestUtils\$.*"/>
+      <Class name="~.*\.*IntegrationTest.*"/>
     </Or>
     <Or>
       <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
