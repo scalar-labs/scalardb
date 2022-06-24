@@ -86,18 +86,44 @@ This is an example code for CRUD operations in Two-phase Commit Transactions:
 TwoPhaseCommitTransaction tx = ...
 
 // Retrieve the current balances for ids
-Get fromGet = new Get(new Key(ID, fromId));
-Get toGet = new Get(new Key(ID, toId));
+Get fromGet =
+    Get.newBuilder()
+        .namespace(NAMESPACE)
+        .table(TABLE)
+        .partitionKey(new Key(ID, fromId))
+        .build();
+
+Get toGet =
+    Get.newBuilder()
+        .namespace(NAMESPACE)
+        .table(TABLE)
+        .partitionKey(new Key(ID, toId))
+        .build();
+
 Optional<Result> fromResult = tx.get(fromGet);
 Optional<Result> toResult = tx.get(toGet);
 
 // Calculate the balances (it assumes that both accounts exist)
-int newFromBalance = fromResult.get().getValue(BALANCE).get().getAsInt() - amount;
-int newToBalance = toResult.get().getValue(BALANCE).get().getAsInt() + amount;
+int newFromBalance = fromResult.get().getInt(BALANCE) - amount;
+int newToBalance = toResult.get().getInt(BALANCE) + amount;
 
 // Update the balances
-Put fromPut = new Put(new Key(ID, fromId)).withValue(BALANCE, newFromBalance);
-Put toPut = new Put(new Key(ID, toId)).withValue(BALANCE, newToBalance);
+Put fromPut =
+    Put.newBuilder()
+        .namespace(NAMESPACE)
+        .table(TABLE)
+        .partitionKey(new Key(ID, fromId))
+        .intValue(BALANCE, newFromBalance)
+        .build();
+
+Put toPut =
+    Put.newBuilder()
+        .namespace(NAMESPACE)
+        .table(TABLE)
+        .partitionKey(new Key(ID, toId))
+        .intValue(BALANCE, newToBalance)
+        .build();
+
 tx.put(fromPut);
 tx.put(toPut);
 ```
@@ -322,4 +348,5 @@ As you can see, by resuming and suspending the transaction, you can execute a tr
 
 One of the use cases for Two-phase Commit Transactions is Microservice Transaction.
 Please see the following sample to learn Two-phase Commit Transactions further:
+
 - [Microservice Transaction Sample](https://github.com/scalar-labs/scalardb-samples/tree/main/microservice-transaction-sample)

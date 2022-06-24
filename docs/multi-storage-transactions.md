@@ -48,3 +48,9 @@ scalar.db.multi_storage.namespace_mapping=user:cassandra,coordinator:mysql
 # Define the default storage that’s used if a specified table doesn’t have any table mapping
 scalar.db.multi_storage.default_storage=cassandra
 ```
+
+## References
+
+Please see the following sample to learn Multi-storage Transactions further:
+
+- [Multi-storage Transaction Sample](https://github.com/scalar-labs/scalardb-samples/tree/main/multi-storage-transaction-sample)
