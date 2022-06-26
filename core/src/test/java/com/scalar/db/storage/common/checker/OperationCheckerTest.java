@@ -1409,6 +1409,72 @@ public class OperationCheckerTest {
   }
 
   @Test
+  public void whenCheckingIndexGetOperationWithProperArguments_shouldNotThrowAnyException() {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .indexKey(Key.ofInt(COL1, 1))
+            .projections(COL1, COL2, COL3)
+            .build();
+
+    // Act Assert
+    assertThatCode(() -> operationChecker.check(get)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      whenCheckingIndexGetOperationWithMultipleIndexedColumns_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .indexKey(Key.of(COL1, 1, COL2, 1.23))
+            .projections(COL1, COL2, COL3)
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(get))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingIndexGetOperationWithNonIndexedColumn_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .indexKey(Key.ofDouble(COL2, 1.23))
+            .projections(COL1, COL2, COL3)
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(get))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingIndexGetOperationWithIndexedColumnButWrongType_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .indexKey(Key.ofDouble(COL1, 1.0))
+            .projections(COL1, COL2, COL3)
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(get))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void
       whenCheckingScanOperationWithIndexedColumnAsPartitionKey_shouldNotThrowAnyException() {
     // Arrange
@@ -1517,6 +1583,76 @@ public class OperationCheckerTest {
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(scan))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void whenCheckingIndexScanOperationWithProperArguments_shouldNotThrowAnyException() {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .indexKey(Key.ofInt(COL1, 1))
+            .projections(COL1, COL2, COL3)
+            .limit(10)
+            .build();
+
+    // Act Assert
+    assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      whenCheckingIndexScanOperationWithMultipleIndexedColumns_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .indexKey(Key.of(COL1, 1, COL2, 1.23))
+            .projections(COL1, COL2, COL3)
+            .limit(10)
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(scan))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingIndexScanOperationWithNonIndexedColumn_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .indexKey(Key.ofDouble(COL2, 1.23))
+            .projections(COL1, COL2, COL3)
+            .limit(10)
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(scan))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingIndexScanOperationWithIndexedColumnButWrongType_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .indexKey(Key.ofDouble(COL1, 1.0))
+            .projections(COL1, COL2, COL3)
+            .limit(10)
+            .build();
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))

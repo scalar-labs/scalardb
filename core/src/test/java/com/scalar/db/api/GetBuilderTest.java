@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.io.Key;
 import java.util.Arrays;
@@ -19,6 +20,8 @@ public class GetBuilderTest {
   @Mock private Key partitionKey2;
   @Mock private Key clusteringKey1;
   @Mock private Key clusteringKey2;
+  @Mock private Key indexKey1;
+  @Mock private Key indexKey2;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -26,7 +29,7 @@ public class GetBuilderTest {
   }
 
   @Test
-  public void build_WithMandatoryParameters_ShouldBuildGetWithMandatoryParameters() {
+  public void buildGet_WithMandatoryParameters_ShouldBuildGetWithMandatoryParameters() {
     // Arrange Act
     Get actual =
         Get.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).partitionKey(partitionKey1).build();
@@ -37,7 +40,7 @@ public class GetBuilderTest {
   }
 
   @Test
-  public void build_WithClusteringKey_ShouldBuildGetWithClusteringKey() {
+  public void buildGet_WithClusteringKey_ShouldBuildGetWithClusteringKey() {
     // Arrange Act
     Get get =
         Get.newBuilder()
@@ -54,7 +57,7 @@ public class GetBuilderTest {
   }
 
   @Test
-  public void build_WithAllParameters_ShouldBuildGetWithAllParameters() {
+  public void buildGet_WithAllParameters_ShouldBuildGetWithAllParameters() {
     // Arrange Act
     Get get =
         Get.newBuilder()
@@ -80,7 +83,7 @@ public class GetBuilderTest {
   }
 
   @Test
-  public void build_FromExistingWithoutChange_ShouldCopy() {
+  public void buildGet_FromExistingWithoutChange_ShouldCopy() {
     // Arrange
     Get existingGet =
         new Get(partitionKey1, clusteringKey1)
@@ -97,7 +100,7 @@ public class GetBuilderTest {
   }
 
   @Test
-  public void build_FromExistingAndUpdateAllParameters_ShouldBuildGetWithUpdatedParameters() {
+  public void buildGet_FromExistingAndUpdateAllParameters_ShouldBuildGetWithUpdatedParameters() {
     // Arrange
     Get existingGet =
         new Get(partitionKey1, clusteringKey1)
@@ -131,7 +134,7 @@ public class GetBuilderTest {
   }
 
   @Test
-  public void build_FromExistingAndClearClusteringKey_ShouldBuildGetWithoutClusteringKey() {
+  public void buildGet_FromExistingAndClearClusteringKey_ShouldBuildGetWithoutClusteringKey() {
     // Arrange
     Get existingGet =
         new Get(partitionKey1, clusteringKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
@@ -142,5 +145,118 @@ public class GetBuilderTest {
     // Assert
     assertThat(newGet)
         .isEqualTo(new Get(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+  }
+
+  @Test
+  public void
+      buildGet_FromExistingWithUnsupportedOperation_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    Get existingGet =
+        new Get(partitionKey1, clusteringKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+
+    // Act Assert
+    assertThatThrownBy(() -> Get.newBuilder(existingGet).indexKey(indexKey1))
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void buildIndexGet_WithMandatoryParameters_ShouldBuildGetWithMandatoryParameters() {
+    // Arrange Act
+    Get actual = Get.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).indexKey(indexKey1).build();
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(new IndexGet(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+  }
+
+  @Test
+  public void buildIndexGet_WithAllParameters_ShouldBuildGetWithAllParameters() {
+    // Arrange Act
+    Get get =
+        Get.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .indexKey(indexKey1)
+            .consistency(Consistency.EVENTUAL)
+            .projection("c1")
+            .projection("c2")
+            .projections(Arrays.asList("c3", "c4"))
+            .projections("c5", "c6")
+            .build();
+
+    // Assert
+    assertThat(get)
+        .isEqualTo(
+            new IndexGet(indexKey1)
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withProjections(Arrays.asList("c1", "c2", "c3", "c4", "c5", "c6"))
+                .withConsistency(Consistency.EVENTUAL));
+  }
+
+  @Test
+  public void buildIndexGet_FromExistingWithoutChange_ShouldCopy() {
+    // Arrange
+    IndexGet existingGet =
+        new IndexGet(indexKey1)
+            .forNamespace(NAMESPACE_1)
+            .forTable(TABLE_1)
+            .withProjections(Arrays.asList("c1", "c2"))
+            .withConsistency(Consistency.LINEARIZABLE);
+
+    // Act
+    Get newGet = Get.newBuilder(existingGet).build();
+
+    // Assert
+    assertThat(newGet).isEqualTo(existingGet);
+  }
+
+  @Test
+  public void
+      buildIndexGet_FromExistingAndUpdateAllParameters_ShouldBuildGetWithUpdatedParameters() {
+    // Arrange
+    IndexGet existingGet =
+        new IndexGet(indexKey1)
+            .forNamespace(NAMESPACE_1)
+            .forTable(TABLE_1)
+            .withProjections(Arrays.asList("c1", "c2"))
+            .withConsistency(Consistency.LINEARIZABLE);
+
+    // Act
+    Get newGet =
+        Get.newBuilder(existingGet)
+            .indexKey(indexKey2)
+            .namespace(NAMESPACE_2)
+            .table(TABLE_2)
+            .consistency(Consistency.EVENTUAL)
+            .clearProjections()
+            .projections(Arrays.asList("c3", "c4"))
+            .projection("c5")
+            .projections("c6", "c7")
+            .build();
+
+    // Assert
+    assertThat(newGet)
+        .isEqualTo(
+            new IndexGet(indexKey2)
+                .forNamespace(NAMESPACE_2)
+                .forTable(TABLE_2)
+                .withConsistency(Consistency.EVENTUAL)
+                .withProjections(Arrays.asList("c3", "c4", "c5", "c6", "c7")));
+  }
+
+  @Test
+  public void
+      buildIndexGet_FromExistingWithUnsupportedOperation_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    IndexGet existingGet = new IndexGet(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+
+    // Act Assert
+    assertThatThrownBy(() -> Get.newBuilder(existingGet).partitionKey(partitionKey1))
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> Get.newBuilder(existingGet).clusteringKey(clusteringKey1))
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> Get.newBuilder(existingGet).clearClusteringKey())
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 }

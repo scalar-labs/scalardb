@@ -36,12 +36,25 @@ public class OperationChecker {
     checkProjections(get, metadata);
 
     if (ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
+      if (get.getPartitionKey().size() != 1) {
+        throw new IllegalArgumentException(
+            "Only a single column index is supported. Operation: " + get);
+      }
+
+      String name = get.getPartitionKey().getColumns().get(0).getName();
+      if (!metadata.getSecondaryIndexNames().contains(name)) {
+        throw new IllegalArgumentException(
+            "The column of the specified index key is not indexed. Operation: " + get);
+      }
+
       if (!new ColumnChecker(metadata, true, false, false, false)
           .check(get.getPartitionKey().getColumns().get(0))) {
         throw new IllegalArgumentException(
             "The partition key is not properly specified. Operation: " + get);
       }
 
+      // The following check is not needed when we use IndexGet. But we need to keep it for
+      // backward compatibility. We will remove it in release 5.0.0.
       if (get.getClusteringKey().isPresent()) {
         throw new IllegalArgumentException(
             "Clustering keys cannot be specified when using an index. Operation: " + get);
@@ -53,21 +66,40 @@ public class OperationChecker {
   }
 
   public void check(Scan scan) throws ExecutionException {
+    if (scan instanceof ScanAll) {
+      check((ScanAll) scan);
+      return;
+    }
+
     TableMetadata metadata = getMetadata(scan);
 
     checkProjections(scan, metadata);
 
     if (ScalarDbUtils.isSecondaryIndexSpecified(scan, metadata)) {
+      if (scan.getPartitionKey().size() != 1) {
+        throw new IllegalArgumentException(
+            "Only a single column index is supported. Operation: " + scan);
+      }
+
+      String name = scan.getPartitionKey().getColumns().get(0).getName();
+      if (!metadata.getSecondaryIndexNames().contains(name)) {
+        throw new IllegalArgumentException(
+            "The column of the specified index key is not indexed. Operation: " + scan);
+      }
+
       if (!new ColumnChecker(metadata, true, false, false, false)
           .check(scan.getPartitionKey().getColumns().get(0))) {
         throw new IllegalArgumentException(
             "The partition key is not properly specified. Operation: " + scan);
       }
 
+      // The following checks are not needed when we use IndexScan. But we need to keep them for
+      // backward compatibility. We will remove them in release 5.0.0.
       if (scan.getStartClusteringKey().isPresent() || scan.getEndClusteringKey().isPresent()) {
         throw new IllegalArgumentException(
             "Clustering keys cannot be specified when using an index. Operation: " + scan);
       }
+
       if (!scan.getOrderings().isEmpty()) {
         throw new IllegalArgumentException(
             "Orderings cannot be specified when using an index. Operation: " + scan);
@@ -86,7 +118,7 @@ public class OperationChecker {
     checkOrderings(scan, metadata);
   }
 
-  public void check(ScanAll scanAll) throws ExecutionException {
+  private void check(ScanAll scanAll) throws ExecutionException {
     TableMetadata metadata = getMetadata(scanAll);
 
     checkProjections(scanAll, metadata);

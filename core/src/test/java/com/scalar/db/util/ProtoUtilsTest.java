@@ -8,6 +8,8 @@ import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.IndexGet;
+import com.scalar.db.api.IndexScan;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
@@ -150,6 +152,68 @@ public class ProtoUtilsTest {
             new Get(Key.of("p1", 10, "p2", "text1"), Key.of("c1", "text2", "c2", 20))
                 .withProjections(Arrays.asList("col1", "col2", "col3"))
                 .withConsistency(Consistency.LINEARIZABLE)
+                .forNamespace("ns")
+                .forTable("tbl"));
+  }
+
+  @Test
+  public void toGet_IndexGetGiven_ShouldConvertProperly() {
+    // Arrange
+    IndexGet indexGet =
+        new IndexGet(Key.ofInt("col2", 1))
+            .withProjections(Arrays.asList("col1", "col2", "col3"))
+            .withConsistency(Consistency.SEQUENTIAL)
+            .forNamespace("ns")
+            .forTable("tbl");
+
+    // Act
+    com.scalar.db.rpc.Get actual = ProtoUtils.toGet(indexGet);
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            com.scalar.db.rpc.Get.newBuilder()
+                .setPartitionKey(
+                    com.scalar.db.rpc.Key.newBuilder()
+                        .addColumn(
+                            com.scalar.db.rpc.Column.newBuilder()
+                                .setName("col2")
+                                .setIntValue(1)
+                                .build()))
+                .addAllProjection(Arrays.asList("col1", "col2", "col3"))
+                .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_SEQUENTIAL)
+                .setNamespace("ns")
+                .setTable("tbl")
+                .build());
+  }
+
+  @Test
+  public void tGet_ProtoScanForIndexGetGiven_ShouldConvertProperly() {
+    // Arrange
+    com.scalar.db.rpc.Get get =
+        com.scalar.db.rpc.Get.newBuilder()
+            .setPartitionKey(
+                com.scalar.db.rpc.Key.newBuilder()
+                    .addColumn(
+                        com.scalar.db.rpc.Column.newBuilder()
+                            .setName("col2")
+                            .setIntValue(1)
+                            .build()))
+            .addAllProjection(Arrays.asList("col1", "col2", "col3"))
+            .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_SEQUENTIAL)
+            .setNamespace("ns")
+            .setTable("tbl")
+            .build();
+
+    // Act
+    Get actual = ProtoUtils.toGet(get, TABLE_METADATA);
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            new IndexGet(Key.ofInt("col2", 1))
+                .withProjections(Arrays.asList("col1", "col2", "col3"))
+                .withConsistency(Consistency.SEQUENTIAL)
                 .forNamespace("ns")
                 .forTable("tbl"));
   }
@@ -414,6 +478,72 @@ public class ProtoUtilsTest {
                 .withEnd(Key.of("c1", "text2", "c2", 100), false)
                 .withOrdering(Ordering.desc("c1"))
                 .withOrdering(Ordering.asc("c2"))
+                .withLimit(10)
+                .withProjections(Arrays.asList("col1", "col2", "col3"))
+                .withConsistency(Consistency.SEQUENTIAL)
+                .forNamespace("ns")
+                .forTable("tbl"));
+  }
+
+  @Test
+  public void toScan_IndexScanGiven_ShouldConvertProperly() {
+    // Arrange
+    IndexScan indexScan =
+        new IndexScan(Key.ofInt("col2", 1))
+            .withLimit(10)
+            .withProjections(Arrays.asList("col1", "col2", "col3"))
+            .withConsistency(Consistency.SEQUENTIAL)
+            .forNamespace("ns")
+            .forTable("tbl");
+
+    // Act
+    com.scalar.db.rpc.Scan actual = ProtoUtils.toScan(indexScan);
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            com.scalar.db.rpc.Scan.newBuilder()
+                .setPartitionKey(
+                    com.scalar.db.rpc.Key.newBuilder()
+                        .addColumn(
+                            com.scalar.db.rpc.Column.newBuilder()
+                                .setName("col2")
+                                .setIntValue(1)
+                                .build()))
+                .setLimit(10)
+                .addAllProjection(Arrays.asList("col1", "col2", "col3"))
+                .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_SEQUENTIAL)
+                .setNamespace("ns")
+                .setTable("tbl")
+                .build());
+  }
+
+  @Test
+  public void toScan_ProtoScanForIndexScanGiven_ShouldConvertProperly() {
+    // Arrange
+    com.scalar.db.rpc.Scan scan =
+        com.scalar.db.rpc.Scan.newBuilder()
+            .setPartitionKey(
+                com.scalar.db.rpc.Key.newBuilder()
+                    .addColumn(
+                        com.scalar.db.rpc.Column.newBuilder()
+                            .setName("col2")
+                            .setIntValue(1)
+                            .build()))
+            .setLimit(10)
+            .addAllProjection(Arrays.asList("col1", "col2", "col3"))
+            .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_SEQUENTIAL)
+            .setNamespace("ns")
+            .setTable("tbl")
+            .build();
+
+    // Act
+    Scan actual = ProtoUtils.toScan(scan, TABLE_METADATA);
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            new IndexScan(Key.ofInt("col2", 1))
                 .withLimit(10)
                 .withProjections(Arrays.asList("col1", "col2", "col3"))
                 .withConsistency(Consistency.SEQUENTIAL)

@@ -10,7 +10,6 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
@@ -103,11 +102,7 @@ public class Dynamo extends AbstractDistributedStorage {
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
     scan = copyAndSetTargetToIfNot(scan);
-    if (scan instanceof ScanAll) {
-      operationChecker.check((ScanAll) scan);
-    } else {
-      operationChecker.check(scan);
-    }
+    operationChecker.check(scan);
 
     return selectStatementHandler.handle(scan);
   }

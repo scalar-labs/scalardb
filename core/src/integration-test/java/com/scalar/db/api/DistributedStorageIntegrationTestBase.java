@@ -1299,15 +1299,26 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Arrange
     storage.put(preparePuts().get(0)); // (0,0)
     int c3 = 0;
-    Get get = new Get(new Key(COL_NAME3, c3));
+    Get getBuiltByConstructor = new Get(new Key(COL_NAME3, c3));
+    Get getBuiltByBuilder =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .indexKey(Key.ofInt(COL_NAME3, c3))
+            .build();
 
     // Act
-    Optional<Result> actual = storage.get(get);
+    Optional<Result> actual1 = storage.get(getBuiltByConstructor);
+    Optional<Result> actual2 = storage.get(getBuiltByBuilder);
 
     // Assert
-    assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getValue(COL_NAME1)).isEqualTo(Optional.of(new IntValue(COL_NAME1, 0)));
-    assertThat(actual.get().getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    assertThat(actual1.isPresent()).isTrue();
+    assertThat(actual1.get().getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, 0)));
+    assertThat(actual1.get().getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+
+    assertThat(actual2).isEqualTo(actual1);
   }
 
   @Test
@@ -1327,17 +1338,24 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Arrange
     populateRecords();
     int c3 = 3;
-    Scan scan = new Scan(new Key(COL_NAME3, c3));
+    Scan scanBuiltByConstructor = new Scan(new Key(COL_NAME3, c3));
+    Scan scanBuiltByBuilder =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .indexKey(Key.ofInt(COL_NAME3, c3))
+            .build();
 
     // Act
-    List<Result> actual = scanAll(scan);
+    List<Result> actual1 = scanAll(scanBuiltByConstructor);
+    List<Result> actual2 = scanAll(scanBuiltByBuilder);
 
     // Assert
-    assertThat(actual.size()).isEqualTo(3); // (1,2), (2,1), (3,0)
+    assertThat(actual1.size()).isEqualTo(3); // (1,2), (2,1), (3,0)
     List<List<Integer>> expectedValues =
         new ArrayList<>(
             Arrays.asList(Arrays.asList(1, 2), Arrays.asList(2, 1), Arrays.asList(3, 0)));
-    for (Result result : actual) {
+    for (Result result : actual1) {
       assertThat(result.getValue(COL_NAME1).isPresent()).isTrue();
       assertThat(result.getValue(COL_NAME4).isPresent()).isTrue();
 
@@ -1347,8 +1365,9 @@ public abstract class DistributedStorageIntegrationTestBase {
       assertThat(expectedValues).contains(col1AndCol4);
       expectedValues.remove(col1AndCol4);
     }
-
     assertThat(expectedValues).isEmpty();
+
+    assertThat(actual2).isEqualTo(actual1);
   }
 
   @Test
