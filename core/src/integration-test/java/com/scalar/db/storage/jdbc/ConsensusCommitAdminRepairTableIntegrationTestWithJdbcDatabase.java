@@ -3,7 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminRepairTableIntegrationTestBase;
 import java.util.Properties;
 
-public class ConsensusCommitAdminRepairTableIntegrationTestIntegrationTestWithJdbcDatabase
+public class ConsensusCommitAdminRepairTableIntegrationTestWithJdbcDatabase
     extends ConsensusCommitAdminRepairTableIntegrationTestBase {
 
   @Override

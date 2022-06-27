@@ -131,7 +131,7 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     assertThat(admin.tableExists(getNamespace(), TABLE)).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), TABLE)).isEqualTo(TABLE_METADATA);
     assertThat(admin.coordinatorTablesExist()).isTrue();
-    assertThat(getActualTableMetadataForCoordinatorTable()).isEqualTo(Coordinator.TABLE_METADATA);
+    assertTableMetadataForCoordinatorTableArePresent();
   }
 
   @Test
@@ -147,10 +147,14 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     // Assert
     assertThat(admin.tableExists(getNamespace(), TABLE)).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), TABLE)).isEqualTo(TABLE_METADATA);
-    assertThat(getActualTableMetadataForCoordinatorTable()).isEqualTo(Coordinator.TABLE_METADATA);
+    assertTableMetadataForCoordinatorTableArePresent();
   }
 
-  private TableMetadata getActualTableMetadataForCoordinatorTable() throws Exception {
+  private void assertTableMetadataForCoordinatorTableArePresent() throws Exception {
+    // There is no coordinator table when using JdbcTransaction
+    if (getStorageProperties().getProperty(DatabaseConfig.TRANSACTION_MANAGER, "").equals("jdbc")) {
+      return;
+    }
     Properties properties = TestUtils.addSuffix(getStorageProperties(), TEST_NAME);
     String coordinatorNamespace =
         new ConsensusCommitConfig(new DatabaseConfig(properties))
@@ -165,6 +169,7 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
         StorageFactory.create(TestUtils.addSuffix(getStorageProperties(), TEST_NAME))
             .getStorageAdmin();
 
-    return storageAdmin.getTableMetadata(coordinatorNamespace, coordinatorTable);
+    assertThat(storageAdmin.getTableMetadata(coordinatorNamespace, coordinatorTable))
+        .isEqualTo(Coordinator.TABLE_METADATA);
   }
 }
