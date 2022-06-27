@@ -15,7 +15,8 @@ From here, we assume Oracle JDK 8 is properly installed in your local environmen
 ## Configure Scalar DB
     
 The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for Scalar DB. You need to update `contact_points` with AWS region, `username` with your AWS access key ID, `password` with your AWS secret access key, and `storage` with `dynamo`.
-```
+
+```properties
 # The AWS region
 scalar.db.contact_points=<REGION>
 

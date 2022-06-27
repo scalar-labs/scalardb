@@ -6,23 +6,21 @@ If you haven't done it, please configure them first by following [this](getting-
 ## Build
 
 For building Scalar DB, what you will need to do is as follows.
-```
+```shell
 $ SCALARDB_HOME=/path/to/scalardb
 $ cd $SCALARDB_HOME
 $ ./gradlew installDist
-$ sudo mkdir /var/log/scalar
-$ sudo chmod 777 /var/log/scalar
 ```
 Or you can download from [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb).
 For example in Gradle, you can add the following dependency to your build.gradle. Please replace the `<version>` with the version you want to use.
-```
+```gradle
 dependencies {
     implementation 'com.scalar-labs:scalardb:<version>'
 }
 ```
 
 Let's move to the `getting-started` directory so that we can avoid too much copy-and-paste.
-```
+```shell
 $ cd docs/getting-started
 ```
 
@@ -30,105 +28,7 @@ $ cd docs/getting-started
 
 First of all, you need to define how the data will be organized (a.k.a database schema) in the application with Scalar DB database schema.
 Here is a database schema for the sample application. For the supported data types, please see [this doc](schema.md) for more details.
-You can create a JSON file `emoney-storage.json` with the JSON below.
-
-```json
-{
-  "emoney.account": {
-    "transaction": false,
-    "partition-key": [
-      "id"
-    ],
-    "clustering-key": [],
-    "columns": {
-      "id": "TEXT",
-      "balance": "INT"
-    }
-  }
-}
-```
-
-To apply the schema, download the Schema Loader that matches with the version you use from [scalardb releases](https://github.com/scalar-labs/scalardb/releases), and run the following command to load the schema.
-
-```
-$ java -jar scalardb-schema-loader-<version>.jar --config /path/to/database.properties -f emoney-storage.json
-```
-
-## Store & retrieve data with storage API
-
-[`ElectronicMoneyWithStorage.java`](./getting-started/src/main/java/sample/ElectronicMoneyWithStorage.java)
-is a simple electronic money application with storage API.
-(Be careful: it is simplified for ease of reading and far from practical and is certainly not production-ready.)
-
-```java
-public class ElectronicMoneyWithStorage extends ElectronicMoney {
-
-  private final DistributedStorage storage;
-
-  public ElectronicMoneyWithStorage() throws IOException {
-    StorageFactory factory = new StorageFactory(dbConfig);
-    storage = factory.getStorage();
-    storage.with(NAMESPACE, TABLENAME);
-  }
-
-  @Override
-  public void charge(String id, int amount) throws ExecutionException {
-    // Retrieve the current balance for id
-    Get get = new Get(new Key(ID, id));
-    Optional<Result> result = storage.get(get);
-
-    // Calculate the balance
-    int balance = amount;
-    if (result.isPresent()) {
-      int current = result.get().getValue(BALANCE).get().getAsInt();
-      balance += current;
-    }
-
-    // Update the balance
-    Put put = new Put(new Key(ID, id)).withValue(BALANCE, balance);
-    storage.put(put);
-  }
-
-  @Override
-  public void pay(String fromId, String toId, int amount) throws ExecutionException {
-    // Retrieve the current balances for ids
-    Get fromGet = new Get(new Key(ID, fromId));
-    Get toGet = new Get(new Key(ID, toId));
-    Optional<Result> fromResult = storage.get(fromGet);
-    Optional<Result> toResult = storage.get(toGet);
-
-    // Calculate the balances (it assumes that both accounts exist)
-    int newFromBalance = fromResult.get().getValue(BALANCE).get().getAsInt() - amount;
-    int newToBalance = toResult.get().getValue(BALANCE).get().getAsInt() + amount;
-    if (newFromBalance < 0) {
-      throw new RuntimeException(fromId + " doesn't have enough balance.");
-    }
-
-    // Update the balances
-    Put fromPut = new Put(new Key(ID, fromId)).withValue(BALANCE, newFromBalance);
-    Put toPut = new Put(new Key(ID, toId)).withValue(BALANCE, newToBalance);
-    storage.put(fromPut);
-    storage.put(toPut);
-  }
-
-  @Override
-  public void close() {
-    storage.close();
-  }
-}
-```
-
-Now we can run the application.
-```
-$ ../../gradlew run --args="-mode storage -action charge -amount 1000 -to user1"
-$ ../../gradlew run --args="-mode storage -action charge -amount 0 -to merchant1"
-$ ../../gradlew run --args="-mode storage -action pay -amount 100 -to merchant1 -from user1"
-```
-
-## Set up database schema for transaction
-
-To use transaction, we can just add a key `transaction` and value as `true` in the Scalar DB schema we used.
-You can create a JSON file `emoney-transaction.json` with the JSON bellow.
+You can create a JSON file `emoney.json` with the JSON below.
 
 ```json
 {
@@ -146,52 +46,66 @@ You can create a JSON file `emoney-transaction.json` with the JSON bellow.
 }
 ```
 
-Before reapplying the schema, please drop the existing namespace first by issuing the following. 
+To apply the schema, download the Schema Loader that matches with the version you use from [scalardb releases](https://github.com/scalar-labs/scalardb/releases), and run the following command to load the schema.
 
+```shell
+$ java -jar scalardb-schema-loader-<version>.jar --config scalardb.properties --schema-file emoney.json --coordinator
 ```
-$ java -jar scalardb-schema-loader-<version>.jar --config /path/to/database.properties -f emoney-storage.json -D
-$ java -jar scalardb-schema-loader-<version>.jar --config /path/to/database.properties --coordinator -f emoney-transaction.json
-```
-- The `--coordinator` is specified because we have a table with transaction enabled in the schema.
 
-## Store & retrieve data with transaction API
+The `--coordinator` option is specified because we have a table with transaction enabled in the schema.
+Please see [here](https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md) for more details of the Schema Loader
 
-The previous application seems fine under ideal conditions, but it is problematic when some failure happens during its operation or when multiple operations occur at the same time because it is not transactional.
-For example, money transfer (pay) from `A's balance` to `B's balance` is not done atomically in the application, and there might be a case where only `A's balance` is decreased (and `B's balance` is not increased) if a failure happens right after the first `put` and some money will be lost.
+## Store & retrieve data
 
-With the transaction capability of Scalar DB, we can make such operations to be executed with ACID properties.
+[`ElectronicMoney.java`](./getting-started/src/main/java/sample/ElectronicMoney.java) is a simple electronic money application.
+(Be careful: it is simplified for ease of reading and far from practical and is certainly not production-ready.)
 
-Now we can update the code as follows to make it transactional.
 ```java
-public class ElectronicMoneyWithTransaction extends ElectronicMoney {
+public class ElectronicMoney {
+
+  private static final String SCALARDB_PROPERTIES =
+          System.getProperty("user.dir") + File.separator + "scalardb.properties";
+  private static final String NAMESPACE = "emoney";
+  private static final String TABLENAME = "account";
+  private static final String ID = "id";
+  private static final String BALANCE = "balance";
 
   private final DistributedTransactionManager manager;
 
-  public ElectronicMoneyWithTransaction() throws IOException {
-    TransactionFactory factory = new TransactionFactory(dbConfig);
+  public ElectronicMoney() throws IOException {
+    TransactionFactory factory = TransactionFactory.create(SCALARDB_PROPERTIES);
     manager = factory.getTransactionManager();
-    manager.with(NAMESPACE, TABLENAME);
   }
 
-  @Override
   public void charge(String id, int amount) throws TransactionException {
     // Start a transaction
     DistributedTransaction tx = manager.start();
 
     try {
       // Retrieve the current balance for id
-      Get get = new Get(new Key(ID, id));
+      Get get =
+              Get.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLENAME)
+                      .partitionKey(Key.ofText(ID, id))
+                      .build();
       Optional<Result> result = tx.get(get);
 
       // Calculate the balance
       int balance = amount;
       if (result.isPresent()) {
-        int current = result.get().getValue(BALANCE).get().getAsInt();
+        int current = result.get().getInt(BALANCE);
         balance += current;
       }
 
       // Update the balance
-      Put put = new Put(new Key(ID, id)).withValue(BALANCE, balance);
+      Put put =
+              Put.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLENAME)
+                      .partitionKey(Key.ofText(ID, id))
+                      .intValue(BALANCE, balance)
+                      .build();
       tx.put(put);
 
       // Commit the transaction (records are automatically recovered in case of failure)
@@ -202,28 +116,49 @@ public class ElectronicMoneyWithTransaction extends ElectronicMoney {
     }
   }
 
-  @Override
   public void pay(String fromId, String toId, int amount) throws TransactionException {
     // Start a transaction
     DistributedTransaction tx = manager.start();
 
     try {
       // Retrieve the current balances for ids
-      Get fromGet = new Get(new Key(ID, fromId));
-      Get toGet = new Get(new Key(ID, toId));
+      Get fromGet =
+              Get.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLENAME)
+                      .partitionKey(Key.ofText(ID, fromId))
+                      .build();
+      Get toGet =
+              Get.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLENAME)
+                      .partitionKey(Key.ofText(ID, toId))
+                      .build();
       Optional<Result> fromResult = tx.get(fromGet);
       Optional<Result> toResult = tx.get(toGet);
 
       // Calculate the balances (it assumes that both accounts exist)
-      int newFromBalance = fromResult.get().getValue(BALANCE).get().getAsInt() - amount;
-      int newToBalance = toResult.get().getValue(BALANCE).get().getAsInt() + amount;
+      int newFromBalance = fromResult.get().getInt(BALANCE) - amount;
+      int newToBalance = toResult.get().getInt(BALANCE) + amount;
       if (newFromBalance < 0) {
         throw new RuntimeException(fromId + " doesn't have enough balance.");
       }
 
       // Update the balances
-      Put fromPut = new Put(new Key(ID, fromId)).withValue(BALANCE, newFromBalance);
-      Put toPut = new Put(new Key(ID, toId)).withValue(BALANCE, newToBalance);
+      Put fromPut =
+              Put.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLENAME)
+                      .partitionKey(Key.ofText(ID, fromId))
+                      .intValue(BALANCE, newFromBalance)
+                      .build();
+      Put toPut =
+              Put.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLENAME)
+                      .partitionKey(Key.ofText(ID, toId))
+                      .intValue(BALANCE, newToBalance)
+                      .build();
       tx.put(fromPut);
       tx.put(toPut);
 
@@ -235,35 +170,67 @@ public class ElectronicMoneyWithTransaction extends ElectronicMoney {
     }
   }
 
-  @Override
+  public int getBalance(String id) throws TransactionException {
+    // Start a transaction
+    DistributedTransaction tx = manager.start();
+
+    try {
+      // Retrieve the current balances for id
+      Get get =
+              Get.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLENAME)
+                      .partitionKey(Key.ofText(ID, id))
+                      .build();
+      Optional<Result> result = tx.get(get);
+
+      int balance = -1;
+      if (result.isPresent()) {
+        balance = result.get().getInt(BALANCE);
+      }
+
+      // Commit the transaction
+      tx.commit();
+
+      return balance;
+    } catch (Exception e) {
+      tx.abort();
+      throw e;
+    }
+  }
+
   public void close() {
     manager.close();
   }
 }
 ```
 
-As you can see, it's not very different from the code with `DistributedStorage`.
-This code instead uses `DistributedTransactionManager` and all the CRUD operations are done through the `DistributedTransaction` object returned from `DistributedTransactionManager.start()`.
+Now we can run the application.
 
-Now let's run the application with transaction mode.
-```
-$ ../../gradlew run --args="-mode transaction -action charge -amount 1000 -to user1"
-$ ../../gradlew run --args="-mode transaction -action charge -amount 0 -to merchant1"
-$ ../../gradlew run --args="-mode transaction -action pay -amount 100 -to merchant1 -from user1"
+- Charge `1000` to `user1`:
+```shell
+$ ./gradlew run --args="-action charge -amount 1000 -to user1"
 ```
 
-## Use JDBC transaction
-
-When you use a JDBC database as a backend database, you can optionally use the native transaction manager of a JDBC database instead of the default `ConsensusCommit` transaction manager.
-
-To use the native transaction manager, you need to set `jdbc` to a transaction manager type in **scalardb.properties** as follows.
-
-```
-scalar.db.transaction_manager=jdbc
+- Charge `0` to `merchant1` (Just create an account for `merchant1`):
+```shell
+$ ./gradlew run --args="-action charge -amount 0 -to merchant1"
 ```
 
-You don't need to set a key `transaction` to `true` in Scalar DB schema for the native transaction manager.
-So you can use the same schema file as **emoney-storage.json**.
+- Pay `100` from `user1` to `merchant1`:
+```shell
+$ ./gradlew run --args="-action pay -amount 100 -from user1 -to merchant1"
+```
+
+- Get the balance of `user1`:
+```shell
+$ ./gradlew run --args="-action getBalance -id user1"
+```
+
+- Get the balance of `merchant1`:
+```shell
+$ ./gradlew run --args="-action getBalance -id merchant1"
+```
 
 ## Further documentation
 

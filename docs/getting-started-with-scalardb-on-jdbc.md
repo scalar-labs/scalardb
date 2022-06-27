@@ -17,7 +17,7 @@ From here, we assume Oracle JDK 8 and a JDBC database is properly installed in y
 
 The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for Scalar DB. Basically, it describes the JDBC database installation that will be used.
 
-```
+```properties
 # The JDBC URL
 scalar.db.contact_points=jdbc:mysql://localhost:3306/
 
@@ -69,3 +69,13 @@ scalar.db.storage=jdbc
 ```
 
 Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md) to run the application.
+
+## Use JDBC transaction
+
+When you use a JDBC database as a backend database, you can optionally use the native transaction manager of a JDBC database instead of the default `ConsensusCommit` transaction manager.
+
+To use the native transaction manager, you need to set `jdbc` to a transaction manager type in **scalardb.properties** as follows.
+
+```properties
+scalar.db.transaction_manager=jdbc
+```

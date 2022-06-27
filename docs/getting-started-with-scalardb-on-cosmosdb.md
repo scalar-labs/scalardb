@@ -35,7 +35,7 @@ From here, we assume Oracle JDK 8 is properly installed in your local environmen
     
 The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for Scalar DB. You need to update `contact_points` and `password` with your Cosmos DB URI and Cosmos DB key respectively, and `storage` with `cosmos`.
     
-```
+```properties
 # The Cosmos DB URI
 scalar.db.contact_points=<COSMOS_DB_URI>
 
