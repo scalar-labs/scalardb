@@ -27,6 +27,8 @@ public class ScanBuilderTest {
   @Mock private Scan.Ordering ordering3;
   @Mock private Scan.Ordering ordering4;
   @Mock private Scan.Ordering ordering5;
+  @Mock private Key indexKey1;
+  @Mock private Key indexKey2;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -232,6 +234,17 @@ public class ScanBuilderTest {
   }
 
   @Test
+  public void
+      buildScan_FromExistingWithUnsupportedOperation_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    Scan existingScan = new Scan(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+
+    // Act Assert
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).indexKey(indexKey1))
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
   public void buildScanAll_WithMandatoryParameters_ShouldBuildScanWithMandatoryParameters() {
     // Arrange Act
     Scan actual = Scan.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).all().build();
@@ -325,28 +338,152 @@ public class ScanBuilderTest {
 
   @Test
   public void
-      buildScanAll_FromExistingScanAllWithUnsupportedOperation_ShouldThrowUnsupportedOperationException() {
+      buildScanAll_FromExistingWithUnsupportedOperation_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    Scan existingScanAll = new ScanAll().forNamespace(NAMESPACE_1).forTable(TABLE_1);
+    Scan existingScan = new ScanAll().forNamespace(NAMESPACE_1).forTable(TABLE_1);
 
     // Act Assert
-    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).partitionKey(partitionKey1))
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).partitionKey(partitionKey1))
         .isInstanceOf(UnsupportedOperationException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).clearOrderings())
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).indexKey(indexKey1))
         .isInstanceOf(UnsupportedOperationException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).start(startClusteringKey1))
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).clearOrderings())
         .isInstanceOf(UnsupportedOperationException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).start(startClusteringKey1, false))
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).start(startClusteringKey1))
         .isInstanceOf(UnsupportedOperationException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).end(endClusteringKey1, false))
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).start(startClusteringKey1, false))
         .isInstanceOf(UnsupportedOperationException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).end(endClusteringKey1))
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).end(endClusteringKey1, false))
         .isInstanceOf(UnsupportedOperationException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).ordering(ordering1))
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).end(endClusteringKey1))
         .isInstanceOf(UnsupportedOperationException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).clearStart())
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).ordering(ordering1))
         .isInstanceOf(UnsupportedOperationException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScanAll).clearEnd())
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).clearStart())
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).clearEnd())
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void buildScanWithIndex_WithMandatoryParameters_ShouldBuildScanWithMandatoryParameters() {
+    // Arrange Act
+    Scan actual =
+        Scan.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).indexKey(indexKey1).build();
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(new ScanWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+  }
+
+  @Test
+  public void buildScanWithIndex_ScanWithAllParameters_ShouldBuildScanCorrectly() {
+    // Arrange Act
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .indexKey(indexKey1)
+            .limit(10)
+            .projections(Arrays.asList("pk1", "ck1"))
+            .projection("ck2")
+            .projections("ck3", "ck4")
+            .consistency(Consistency.EVENTUAL)
+            .build();
+
+    // Assert
+    assertThat(scan)
+        .isEqualTo(
+            new ScanWithIndex(indexKey1)
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withConsistency(Consistency.EVENTUAL)
+                .withLimit(10)
+                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
+                .withConsistency(Consistency.EVENTUAL));
+  }
+
+  @Test
+  public void buildScanWithIndex_FromExistingWithoutChange_ShouldCopy() {
+    // Arrange
+    Scan existingScan =
+        new ScanWithIndex(indexKey1)
+            .forNamespace(NAMESPACE_1)
+            .forTable(TABLE_1)
+            .withConsistency(Consistency.EVENTUAL)
+            .withLimit(10)
+            .withProjections(Arrays.asList("pk1", "ck1"))
+            .withConsistency(Consistency.EVENTUAL);
+
+    // Act
+    Scan newScan = Scan.newBuilder(existingScan).build();
+
+    // Assert
+    assertThat(newScan).isEqualTo(existingScan);
+  }
+
+  @Test
+  public void
+      buildScanWithIndex_FromExistingAndUpdateAllParameters_ShouldBuildScanWithUpdatedParameters() {
+    // Arrange
+    Scan existingScan =
+        new ScanWithIndex(indexKey1)
+            .forNamespace(NAMESPACE_1)
+            .forTable(TABLE_1)
+            .withConsistency(Consistency.EVENTUAL)
+            .withLimit(10)
+            .withProjections(Arrays.asList("pk1", "ck1"))
+            .withConsistency(Consistency.EVENTUAL);
+
+    // Act
+    Scan newScan =
+        Scan.newBuilder(existingScan)
+            .namespace(NAMESPACE_2)
+            .table(TABLE_2)
+            .indexKey(indexKey2)
+            .limit(5)
+            .clearProjections()
+            .projections(Arrays.asList("pk2", "ck2"))
+            .projection("ck3")
+            .projections("ck4", "ck5")
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    // Assert
+    assertThat(newScan)
+        .isEqualTo(
+            new ScanWithIndex(indexKey2)
+                .forNamespace(NAMESPACE_2)
+                .forTable(TABLE_2)
+                .withLimit(5)
+                .withProjections(Arrays.asList("pk2", "ck2", "ck3", "ck4", "ck5"))
+                .withConsistency(Consistency.LINEARIZABLE));
+  }
+
+  @Test
+  public void
+      buildScanWithIndex_FromExistingWithUnsupportedOperation_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    Scan existingScan = new ScanWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+
+    // Act Assert
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).partitionKey(partitionKey1))
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).clearOrderings())
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).start(startClusteringKey1))
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).start(startClusteringKey1, false))
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).end(endClusteringKey1, false))
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).end(endClusteringKey1))
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).ordering(ordering1))
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).clearStart())
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).clearEnd())
         .isInstanceOf(UnsupportedOperationException.class);
   }
 }

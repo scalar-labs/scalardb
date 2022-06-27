@@ -383,6 +383,16 @@ class OperationBuilder {
     T all();
   }
 
+  interface IndexKey<T> {
+    /**
+     * Constructs the operation with the specified index {@link Key}.
+     *
+     * @param indexKey an index {@code Key}
+     * @return the operation builder
+     */
+    T indexKey(Key indexKey);
+  }
+
   abstract static class TableBuilder<T> implements Table<T> {
     final String namespace;
 

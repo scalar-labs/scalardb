@@ -13,7 +13,6 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
@@ -92,11 +91,7 @@ public class Cosmos extends AbstractDistributedStorage {
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
     scan = copyAndSetTargetToIfNot(scan);
-    if (scan instanceof ScanAll) {
-      operationChecker.check((ScanAll) scan);
-    } else {
-      operationChecker.check(scan);
-    }
+    operationChecker.check(scan);
 
     List<Record> records = selectStatementHandler.handle(scan);
 

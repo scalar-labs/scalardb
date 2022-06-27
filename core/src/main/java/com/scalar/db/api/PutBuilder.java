@@ -28,6 +28,9 @@ import javax.annotation.Nullable;
 public class PutBuilder {
 
   public static class Namespace implements OperationBuilder.Namespace<Table> {
+
+    Namespace() {}
+
     @Override
     public Table namespace(String namespaceName) {
       checkNotNull(namespaceName);
@@ -37,7 +40,7 @@ public class PutBuilder {
 
   public static class Table extends TableBuilder<PartitionKey> {
 
-    public Table(String namespaceName) {
+    private Table(String namespaceName) {
       super(namespaceName);
     }
 
@@ -49,7 +52,8 @@ public class PutBuilder {
   }
 
   public static class PartitionKey extends PartitionKeyBuilder<Buildable> {
-    public PartitionKey(String namespaceName, String tableName) {
+
+    private PartitionKey(String namespaceName, String tableName) {
       super(namespaceName, tableName);
     }
 
@@ -70,7 +74,7 @@ public class PutBuilder {
     @Nullable com.scalar.db.api.Consistency consistency;
     @Nullable MutationCondition condition;
 
-    public Buildable(String namespace, String table, Key partitionKey) {
+    private Buildable(String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
     }
 
@@ -218,7 +222,7 @@ public class PutBuilder {
           ClearValues<BuildableFromExisting>,
           ClearCondition<BuildableFromExisting> {
 
-    public BuildableFromExisting(Put put) {
+    BuildableFromExisting(Put put) {
       super(put.forNamespace().orElse(null), put.forTable().orElse(null), put.getPartitionKey());
       this.clusteringKey = put.getClusteringKey().orElse(null);
       this.columns.putAll(put.getColumns());

@@ -310,31 +310,86 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
+  public void get_GetGivenForIndexColumn_ShouldReturnRecords() throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.start();
+    transaction.put(
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .intValue(SOME_COLUMN, 2)
+            .build());
+    transaction.commit();
+
+    transaction = manager.start();
+    Get getBuiltByConstructor =
+        new Get(Key.ofInt(SOME_COLUMN, 2))
+            .forNamespace(namespace)
+            .forTable(TABLE)
+            .withConsistency(Consistency.LINEARIZABLE);
+
+    Get getBuiltByBuilder =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .indexKey(Key.ofInt(SOME_COLUMN, 2))
+            .build();
+
+    // Act
+    Optional<Result> result1 = transaction.get(getBuiltByConstructor);
+    Optional<Result> result2 = transaction.get(getBuiltByBuilder);
+    transaction.get(getBuiltByBuilder);
+    transaction.commit();
+
+    // Assert
+    assertThat(result1).isPresent();
+    assertThat(result1.get().getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(result1.get().getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(getBalance(result1.get())).isEqualTo(INITIAL_BALANCE);
+    assertThat(result1.get().getInt(SOME_COLUMN)).isEqualTo(2);
+
+    assertThat(result2).isEqualTo(result1);
+  }
+
+  @Test
   public void scan_ScanGivenForIndexColumn_ShouldReturnRecords() throws TransactionException {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
-    Scan scan =
+    Scan scanBuiltByConstructor =
         new Scan(Key.ofInt(SOME_COLUMN, 2))
             .forNamespace(namespace)
             .forTable(TABLE)
             .withConsistency(Consistency.LINEARIZABLE);
 
+    Scan scanBuiltByBuilder =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .indexKey(Key.ofInt(SOME_COLUMN, 2))
+            .build();
+
     // Act
-    List<Result> results = transaction.scan(scan);
+    List<Result> results1 = transaction.scan(scanBuiltByConstructor);
+    List<Result> results2 = transaction.scan(scanBuiltByBuilder);
     transaction.commit();
 
     // Assert
-    assertThat(results.size()).isEqualTo(2);
-    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(1);
-    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(2);
-    assertThat(getBalance(results.get(0))).isEqualTo(INITIAL_BALANCE);
-    assertThat(results.get(0).getInt(SOME_COLUMN)).isEqualTo(2);
+    assertThat(results1.size()).isEqualTo(2);
+    assertThat(results1.get(0).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(results1.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(getBalance(results1.get(0))).isEqualTo(INITIAL_BALANCE);
+    assertThat(results1.get(0).getInt(SOME_COLUMN)).isEqualTo(2);
 
-    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(2);
-    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(getBalance(results.get(1))).isEqualTo(INITIAL_BALANCE);
-    assertThat(results.get(1).getInt(SOME_COLUMN)).isEqualTo(2);
+    assertThat(results1.get(1).getInt(ACCOUNT_ID)).isEqualTo(2);
+    assertThat(results1.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(getBalance(results1.get(1))).isEqualTo(INITIAL_BALANCE);
+    assertThat(results1.get(1).getInt(SOME_COLUMN)).isEqualTo(2);
+
+    assertThat(results2).isEqualTo(results1);
   }
 
   @Test

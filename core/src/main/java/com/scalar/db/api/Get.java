@@ -3,7 +3,7 @@ package com.scalar.db.api;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
-import com.scalar.db.api.GetBuilder.BuildableFromExisting;
+import com.scalar.db.api.GetBuilder.BuildableGetOrGetWithIndexFromExisting;
 import com.scalar.db.api.GetBuilder.Namespace;
 import com.scalar.db.io.Key;
 import java.util.Collection;
@@ -73,9 +73,9 @@ public class Get extends Selection {
    * @param get an existing {@code Get} operation
    * @return a {@code Get} operation builder
    */
-  public static BuildableFromExisting newBuilder(Get get) {
+  public static BuildableGetOrGetWithIndexFromExisting newBuilder(Get get) {
     checkNotNull(get);
-    return new BuildableFromExisting(get);
+    return new BuildableGetOrGetWithIndexFromExisting(get);
   }
 
   /**

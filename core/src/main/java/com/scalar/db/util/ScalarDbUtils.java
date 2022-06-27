@@ -3,11 +3,13 @@ package com.scalar.db.util;
 import com.google.common.collect.Streams;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.GetWithIndex;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.BigIntColumn;
@@ -106,8 +108,13 @@ public final class ScalarDbUtils {
     }
   }
 
-  public static boolean isSecondaryIndexSpecified(Operation operation, TableMetadata metadata) {
-    List<Value<?>> keyValues = operation.getPartitionKey().get();
+  public static boolean isSecondaryIndexSpecified(Selection selection, TableMetadata metadata) {
+    if (selection instanceof GetWithIndex || selection instanceof ScanWithIndex) {
+      return true;
+    }
+
+    // We need to keep this for backward compatibility. We will remove it in release 5.0.0.
+    List<Value<?>> keyValues = selection.getPartitionKey().get();
     if (keyValues.size() == 1) {
       String name = keyValues.get(0).getName();
       return metadata.getSecondaryIndexNames().contains(name);

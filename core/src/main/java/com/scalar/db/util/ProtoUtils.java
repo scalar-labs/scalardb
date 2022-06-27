@@ -8,6 +8,7 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.GetWithIndex;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
@@ -17,6 +18,7 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
@@ -32,6 +34,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.rpc.MutateCondition;
 import com.scalar.db.rpc.Order;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -39,15 +42,19 @@ public final class ProtoUtils {
   private ProtoUtils() {}
 
   public static Get toGet(com.scalar.db.rpc.Get get, TableMetadata metadata) {
+    Get ret;
+
     Key partitionKey = toKey(get.getPartitionKey(), metadata);
-    Key clusteringKey;
-    if (get.hasClusteringKey()) {
-      clusteringKey = toKey(get.getClusteringKey(), metadata);
+    if (isIndexKey(partitionKey, metadata)) {
+      ret = new GetWithIndex(partitionKey);
     } else {
-      clusteringKey = null;
+      Key clusteringKey = null;
+      if (get.hasClusteringKey()) {
+        clusteringKey = toKey(get.getClusteringKey(), metadata);
+      }
+      ret = new Get(partitionKey, clusteringKey);
     }
 
-    Get ret = new Get(partitionKey, clusteringKey);
     if (!get.getNamespace().isEmpty()) {
       ret.forNamespace(get.getNamespace());
     }
@@ -269,14 +276,19 @@ public final class ProtoUtils {
   public static Scan toScan(com.scalar.db.rpc.Scan scan, TableMetadata metadata) {
     Scan ret;
     if (scan.hasPartitionKey()) {
-      ret = new Scan(toKey(scan.getPartitionKey(), metadata));
-      if (scan.hasStartClusteringKey()) {
-        ret.withStart(toKey(scan.getStartClusteringKey(), metadata), scan.getStartInclusive());
+      Key partitionKey = toKey(scan.getPartitionKey(), metadata);
+      if (isIndexKey(partitionKey, metadata)) {
+        ret = new ScanWithIndex(partitionKey);
+      } else {
+        ret = new Scan(partitionKey);
+        if (scan.hasStartClusteringKey()) {
+          ret.withStart(toKey(scan.getStartClusteringKey(), metadata), scan.getStartInclusive());
+        }
+        if (scan.hasEndClusteringKey()) {
+          ret.withEnd(toKey(scan.getEndClusteringKey(), metadata), scan.getEndInclusive());
+        }
+        scan.getOrderingList().forEach(o -> ret.withOrdering(toOrdering(o)));
       }
-      if (scan.hasEndClusteringKey()) {
-        ret.withEnd(toKey(scan.getEndClusteringKey(), metadata), scan.getEndInclusive());
-      }
-      scan.getOrderingList().forEach(o -> ret.withOrdering(toOrdering(o)));
     } else {
       ret = new ScanAll();
     }
@@ -291,6 +303,15 @@ public final class ProtoUtils {
     ret.withConsistency(toConsistency(scan.getConsistency()));
     ret.withProjections(scan.getProjectionList());
     return ret;
+  }
+
+  private static boolean isIndexKey(Key key, TableMetadata metadata) {
+    List<Column<?>> columns = key.getColumns();
+    if (columns.size() == 1) {
+      String name = columns.get(0).getName();
+      return metadata.getSecondaryIndexNames().contains(name);
+    }
+    return false;
   }
 
   public static com.scalar.db.rpc.Scan toScan(Scan scan) {
