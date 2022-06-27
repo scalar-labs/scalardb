@@ -1,12 +1,14 @@
 package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.Key;
+import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.util.AdminTestUtils;
 import com.scalar.db.util.TestUtils;
 import java.util.Collections;
@@ -61,7 +63,6 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
 
   protected DistributedTransactionAdmin admin;
   protected AdminTestUtils adminTestUtils;
-  private DistributedTransactionManager transactionManager;
 
   protected void initialize() throws Exception {}
 
@@ -104,7 +105,6 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     TransactionFactory factory =
         TransactionFactory.create(TestUtils.addSuffix(getProperties(), TEST_NAME));
     admin = factory.getTransactionAdmin();
-    transactionManager = factory.getTransactionManager();
     createTable();
     adminTestUtils = AdminTestUtils.create(TestUtils.addSuffix(getStorageProperties(), TEST_NAME));
   }
@@ -131,7 +131,7 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     assertThat(admin.tableExists(getNamespace(), TABLE)).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), TABLE)).isEqualTo(TABLE_METADATA);
     assertThat(admin.coordinatorTablesExist()).isTrue();
-    assertThatCode(this::putData).doesNotThrowAnyException();
+    assertThat(getActualTableMetadataForCoordinatorTable()).isEqualTo(Coordinator.TABLE_METADATA);
   }
 
   @Test
@@ -147,20 +147,24 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     // Assert
     assertThat(admin.tableExists(getNamespace(), TABLE)).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), TABLE)).isEqualTo(TABLE_METADATA);
-    assertThatCode(this::putData).doesNotThrowAnyException();
+    assertThat(getActualTableMetadataForCoordinatorTable()).isEqualTo(Coordinator.TABLE_METADATA);
   }
 
-  protected void putData() throws Exception {
-    Put put =
-        Put.newBuilder()
-            .namespace(getNamespace())
-            .table(getTable())
-            .partitionKey(Key.newBuilder().addText(COL_NAME2, "foo").addInt(COL_NAME1, 1).build())
-            .clusteringKey(Key.newBuilder().addInt(COL_NAME4, 2).addText(COL_NAME3, "bar").build())
-            .build();
+  private TableMetadata getActualTableMetadataForCoordinatorTable() throws Exception {
+    Properties properties = TestUtils.addSuffix(getStorageProperties(), TEST_NAME);
+    String coordinatorNamespace =
+        new ConsensusCommitConfig(new DatabaseConfig(properties))
+            .getCoordinatorNamespace()
+            .orElse(Coordinator.NAMESPACE);
+    String coordinatorTable = Coordinator.TABLE;
+    // Use the DistributedStorageAdmin instead of the DistributedTransactionAdmin because the latter
+    // expects the
+    // table to hold transactional table metadata columns which is not the case for the coordinator
+    // table
+    DistributedStorageAdmin storageAdmin =
+        StorageFactory.create(TestUtils.addSuffix(getStorageProperties(), TEST_NAME))
+            .getStorageAdmin();
 
-    DistributedTransaction tx = transactionManager.start();
-    tx.put(put);
-    tx.commit();
+    return storageAdmin.getTableMetadata(coordinatorNamespace, coordinatorTable);
   }
 }

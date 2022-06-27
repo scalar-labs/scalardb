@@ -1,6 +1,6 @@
 package com.scalar.db.server;
 
-import com.scalar.db.api.DistributedTransactionAdminRepairTableIntegrationTestBase;
+import com.scalar.db.api.DistributedStorageAdminRepairTableIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import java.io.IOException;
 import java.util.Properties;
@@ -8,8 +8,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 
-public class DistributedTransactionRepairTableAdminServiceIntegrationTest
-    extends DistributedTransactionAdminRepairTableIntegrationTestBase {
+public class DistributedStorageAdminServiceRepairTableIntegrationTest
+    extends DistributedStorageAdminRepairTableIntegrationTestBase {
 
   private ScalarDbServer server;
 
@@ -22,36 +22,32 @@ public class DistributedTransactionRepairTableAdminServiceIntegrationTest
     }
   }
 
-  @AfterAll
   @Override
+  protected Properties getProperties() {
+    return ServerEnv.getServerConfig().getProperties();
+  }
+
+  @Override
+  @AfterAll
   public void afterAll() throws Exception {
     super.afterAll();
     if (server != null) {
       server.shutdown();
     }
   }
-
-  @Override
-  protected Properties getProperties() {
-    return ServerEnv.getServerConfig().getProperties();
-  }
-
   /** This test is disabled if {@link #isExternalServerOrCassandraUsed()} return true */
   @Override
   @Test
   @DisabledIf("isExternalServerOrCassandraUsed")
-  public void repairTableAndCoordinatorTable_ForDeletedMetadataTable_ShouldRepairProperly()
-      throws Exception {
-    super.repairTableAndCoordinatorTable_ForDeletedMetadataTable_ShouldRepairProperly();
+  public void repairTable_ForDeletedMetadataTable_ShouldRepairProperly() throws Exception {
+    super.repairTable_ForDeletedMetadataTable_ShouldRepairProperly();
   }
-
   /** This test is disabled if {@link #isExternalServerOrCassandraUsed()} return true */
   @Override
   @Test
   @DisabledIf("isExternalServerOrCassandraUsed")
-  public void repairTableAndCoordinatorTable_ForTruncatedMetadataTable_ShouldRepairProperly()
-      throws Exception {
-    super.repairTableAndCoordinatorTable_ForTruncatedMetadataTable_ShouldRepairProperly();
+  public void repairTable_ForTruncatedMetadataTable_ShouldRepairProperly() throws Exception {
+    super.repairTable_ForTruncatedMetadataTable_ShouldRepairProperly();
   }
 
   @Override

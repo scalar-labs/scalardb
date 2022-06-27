@@ -9,7 +9,8 @@ import javax.annotation.Nullable;
 
 public final class ServerEnv {
 
-  static final String PROP_SERVER_EXTERNAL_SERVER_USED = "scalardb.server.external_server_used";
+  private static final String PROP_SERVER_EXTERNAL_SERVER_USED =
+      "scalardb.server.external_server_used";
   private static final String DEFAULT_SERVER_EXTERNAL_SERVER_USED = "false";
 
   private static final String PROP_SERVER_CONTACT_POINTS = "scalardb.server.contact_points";
