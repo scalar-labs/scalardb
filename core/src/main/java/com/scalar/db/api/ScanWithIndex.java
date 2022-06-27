@@ -4,39 +4,31 @@ import com.google.common.base.MoreObjects;
 import com.scalar.db.io.Key;
 import java.util.Collection;
 import java.util.Objects;
-import javax.annotation.concurrent.NotThreadSafe;
 
-/**
- * A command to retrieve all the entries of the database. The scan range of clustering key and
- * {@link Ordering} cannot be specified for this command. The number of {@link Result} can be
- * limited.
- */
-@NotThreadSafe
-public class ScanAll extends Scan {
-
-  private static final Key DUMMY_PARTITION_KEY = Key.of();
+public class ScanWithIndex extends Scan {
 
   /**
+   * @param indexKey an index key
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
    *     Scan#newBuilder()} instead
    */
   @Deprecated
   @SuppressWarnings("InlineMeSuggester")
-  public ScanAll() {
-    super(DUMMY_PARTITION_KEY);
+  public ScanWithIndex(Key indexKey) {
+    super(indexKey);
   }
 
   /**
-   * Copy a ScanAll.
+   * Copy a ScanWithIndex.
    *
-   * @param scanAll a ScanAll
+   * @param scanWithIndex a ScanWithIndex
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
    *     Scan#newBuilder(Scan)} instead
    */
   @Deprecated
   @SuppressWarnings("InlineMeSuggester")
-  public ScanAll(ScanAll scanAll) {
-    super(scanAll);
+  public ScanWithIndex(ScanWithIndex scanWithIndex) {
+    super(scanWithIndex);
   }
 
   /**
@@ -47,7 +39,7 @@ public class ScanAll extends Scan {
    */
   @Deprecated
   @Override
-  public ScanAll withStart(Key clusteringKey) {
+  public ScanWithIndex withStart(Key clusteringKey) {
     throw new UnsupportedOperationException();
   }
 
@@ -59,7 +51,7 @@ public class ScanAll extends Scan {
    */
   @Deprecated
   @Override
-  public ScanAll withStart(Key clusteringKey, boolean inclusive) {
+  public ScanWithIndex withStart(Key clusteringKey, boolean inclusive) {
     throw new UnsupportedOperationException();
   }
 
@@ -71,7 +63,7 @@ public class ScanAll extends Scan {
    */
   @Deprecated
   @Override
-  public ScanAll withEnd(Key clusteringKey) {
+  public ScanWithIndex withEnd(Key clusteringKey) {
     throw new UnsupportedOperationException();
   }
 
@@ -83,7 +75,7 @@ public class ScanAll extends Scan {
    */
   @Deprecated
   @Override
-  public ScanAll withEnd(Key clusteringKey, boolean inclusive) {
+  public ScanWithIndex withEnd(Key clusteringKey, boolean inclusive) {
     throw new UnsupportedOperationException();
   }
 
@@ -95,7 +87,7 @@ public class ScanAll extends Scan {
    */
   @Deprecated
   @Override
-  public ScanAll withOrdering(Ordering ordering) {
+  public ScanWithIndex withOrdering(Ordering ordering) {
     throw new UnsupportedOperationException();
   }
 
@@ -105,8 +97,8 @@ public class ScanAll extends Scan {
    */
   @Override
   @Deprecated
-  public ScanAll withLimit(int limit) {
-    return (ScanAll) super.withLimit(limit);
+  public ScanWithIndex withLimit(int limit) {
+    return (ScanWithIndex) super.withLimit(limit);
   }
 
   /**
@@ -115,8 +107,8 @@ public class ScanAll extends Scan {
    */
   @Override
   @Deprecated
-  public ScanAll forNamespace(String namespace) {
-    return (ScanAll) super.forNamespace(namespace);
+  public ScanWithIndex forNamespace(String namespace) {
+    return (ScanWithIndex) super.forNamespace(namespace);
   }
 
   /**
@@ -125,8 +117,8 @@ public class ScanAll extends Scan {
    */
   @Override
   @Deprecated
-  public ScanAll forTable(String tableName) {
-    return (ScanAll) super.forTable(tableName);
+  public ScanWithIndex forTable(String tableName) {
+    return (ScanWithIndex) super.forTable(tableName);
   }
 
   /**
@@ -135,8 +127,8 @@ public class ScanAll extends Scan {
    */
   @Override
   @Deprecated
-  public ScanAll withConsistency(Consistency consistency) {
-    return (ScanAll) super.withConsistency(consistency);
+  public ScanWithIndex withConsistency(Consistency consistency) {
+    return (ScanWithIndex) super.withConsistency(consistency);
   }
 
   /**
@@ -145,8 +137,8 @@ public class ScanAll extends Scan {
    */
   @Override
   @Deprecated
-  public ScanAll withProjection(String projection) {
-    return (ScanAll) super.withProjection(projection);
+  public ScanWithIndex withProjection(String projection) {
+    return (ScanWithIndex) super.withProjection(projection);
   }
 
   /**
@@ -155,8 +147,8 @@ public class ScanAll extends Scan {
    */
   @Override
   @Deprecated
-  public ScanAll withProjections(Collection<String> projections) {
-    return (ScanAll) super.withProjections(projections);
+  public ScanWithIndex withProjections(Collection<String> projections) {
+    return (ScanWithIndex) super.withProjections(projections);
   }
 
   @Override
@@ -167,7 +159,7 @@ public class ScanAll extends Scan {
     if (o == this) {
       return true;
     }
-    return o instanceof ScanAll;
+    return o instanceof ScanWithIndex;
   }
 
   @Override

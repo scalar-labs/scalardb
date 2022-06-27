@@ -13,7 +13,6 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
@@ -88,11 +87,7 @@ public class Cassandra extends AbstractDistributedStorage {
   @Nonnull
   public Scanner scan(Scan scan) throws ExecutionException {
     scan = copyAndSetTargetToIfNot(scan);
-    if (scan instanceof ScanAll) {
-      operationChecker.check((ScanAll) scan);
-    } else {
-      operationChecker.check(scan);
-    }
+    operationChecker.check(scan);
 
     ResultSet results = handlers.select().handle(scan);
 

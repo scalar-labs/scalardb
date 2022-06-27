@@ -83,11 +83,7 @@ public class JdbcService {
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE")
   public Scanner getScanner(Scan scan, Connection connection)
       throws SQLException, ExecutionException {
-    if (scan instanceof ScanAll) {
-      operationChecker.check((ScanAll) scan);
-    } else {
-      operationChecker.check(scan);
-    }
+    operationChecker.check(scan);
 
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
 
@@ -107,11 +103,8 @@ public class JdbcService {
 
   public List<Result> scan(Scan scan, Connection connection)
       throws SQLException, ExecutionException {
-    if (scan instanceof ScanAll) {
-      operationChecker.check((ScanAll) scan);
-    } else {
-      operationChecker.check(scan);
-    }
+    operationChecker.check(scan);
+
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
 
     SelectQuery selectQuery =
