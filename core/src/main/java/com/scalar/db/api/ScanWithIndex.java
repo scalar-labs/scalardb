@@ -5,7 +5,7 @@ import com.scalar.db.io.Key;
 import java.util.Collection;
 import java.util.Objects;
 
-public class IndexScan extends Scan {
+public class ScanWithIndex extends Scan {
 
   /**
    * @param indexKey an index key
@@ -14,21 +14,21 @@ public class IndexScan extends Scan {
    */
   @Deprecated
   @SuppressWarnings("InlineMeSuggester")
-  public IndexScan(Key indexKey) {
+  public ScanWithIndex(Key indexKey) {
     super(indexKey);
   }
 
   /**
-   * Copy a IndexScan.
+   * Copy a ScanWithIndex.
    *
-   * @param indexScan a IndexScan
+   * @param scanWithIndex a ScanWithIndex
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
    *     Scan#newBuilder(Scan)} instead
    */
   @Deprecated
   @SuppressWarnings("InlineMeSuggester")
-  public IndexScan(IndexScan indexScan) {
-    super(indexScan);
+  public ScanWithIndex(ScanWithIndex scanWithIndex) {
+    super(scanWithIndex);
   }
 
   /**
@@ -39,7 +39,7 @@ public class IndexScan extends Scan {
    */
   @Deprecated
   @Override
-  public IndexScan withStart(Key clusteringKey) {
+  public ScanWithIndex withStart(Key clusteringKey) {
     throw new UnsupportedOperationException();
   }
 
@@ -51,7 +51,7 @@ public class IndexScan extends Scan {
    */
   @Deprecated
   @Override
-  public IndexScan withStart(Key clusteringKey, boolean inclusive) {
+  public ScanWithIndex withStart(Key clusteringKey, boolean inclusive) {
     throw new UnsupportedOperationException();
   }
 
@@ -63,7 +63,7 @@ public class IndexScan extends Scan {
    */
   @Deprecated
   @Override
-  public IndexScan withEnd(Key clusteringKey) {
+  public ScanWithIndex withEnd(Key clusteringKey) {
     throw new UnsupportedOperationException();
   }
 
@@ -75,7 +75,7 @@ public class IndexScan extends Scan {
    */
   @Deprecated
   @Override
-  public IndexScan withEnd(Key clusteringKey, boolean inclusive) {
+  public ScanWithIndex withEnd(Key clusteringKey, boolean inclusive) {
     throw new UnsupportedOperationException();
   }
 
@@ -87,7 +87,7 @@ public class IndexScan extends Scan {
    */
   @Deprecated
   @Override
-  public IndexScan withOrdering(Ordering ordering) {
+  public ScanWithIndex withOrdering(Ordering ordering) {
     throw new UnsupportedOperationException();
   }
 
@@ -97,8 +97,8 @@ public class IndexScan extends Scan {
    */
   @Override
   @Deprecated
-  public IndexScan withLimit(int limit) {
-    return (IndexScan) super.withLimit(limit);
+  public ScanWithIndex withLimit(int limit) {
+    return (ScanWithIndex) super.withLimit(limit);
   }
 
   /**
@@ -107,8 +107,8 @@ public class IndexScan extends Scan {
    */
   @Override
   @Deprecated
-  public IndexScan forNamespace(String namespace) {
-    return (IndexScan) super.forNamespace(namespace);
+  public ScanWithIndex forNamespace(String namespace) {
+    return (ScanWithIndex) super.forNamespace(namespace);
   }
 
   /**
@@ -117,8 +117,8 @@ public class IndexScan extends Scan {
    */
   @Override
   @Deprecated
-  public IndexScan forTable(String tableName) {
-    return (IndexScan) super.forTable(tableName);
+  public ScanWithIndex forTable(String tableName) {
+    return (ScanWithIndex) super.forTable(tableName);
   }
 
   /**
@@ -127,8 +127,8 @@ public class IndexScan extends Scan {
    */
   @Override
   @Deprecated
-  public IndexScan withConsistency(Consistency consistency) {
-    return (IndexScan) super.withConsistency(consistency);
+  public ScanWithIndex withConsistency(Consistency consistency) {
+    return (ScanWithIndex) super.withConsistency(consistency);
   }
 
   /**
@@ -137,8 +137,8 @@ public class IndexScan extends Scan {
    */
   @Override
   @Deprecated
-  public IndexScan withProjection(String projection) {
-    return (IndexScan) super.withProjection(projection);
+  public ScanWithIndex withProjection(String projection) {
+    return (ScanWithIndex) super.withProjection(projection);
   }
 
   /**
@@ -147,8 +147,8 @@ public class IndexScan extends Scan {
    */
   @Override
   @Deprecated
-  public IndexScan withProjections(Collection<String> projections) {
-    return (IndexScan) super.withProjections(projections);
+  public ScanWithIndex withProjections(Collection<String> projections) {
+    return (ScanWithIndex) super.withProjections(projections);
   }
 
   @Override
@@ -159,7 +159,7 @@ public class IndexScan extends Scan {
     if (o == this) {
       return true;
     }
-    return o instanceof IndexScan;
+    return o instanceof ScanWithIndex;
   }
 
   @Override

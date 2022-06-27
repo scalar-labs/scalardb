@@ -8,8 +8,7 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.IndexGet;
-import com.scalar.db.api.IndexScan;
+import com.scalar.db.api.GetWithIndex;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
@@ -19,6 +18,7 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
@@ -46,7 +46,7 @@ public final class ProtoUtils {
 
     Key partitionKey = toKey(get.getPartitionKey(), metadata);
     if (isIndexKey(partitionKey, metadata)) {
-      ret = new IndexGet(partitionKey);
+      ret = new GetWithIndex(partitionKey);
     } else {
       Key clusteringKey = null;
       if (get.hasClusteringKey()) {
@@ -278,7 +278,7 @@ public final class ProtoUtils {
     if (scan.hasPartitionKey()) {
       Key partitionKey = toKey(scan.getPartitionKey(), metadata);
       if (isIndexKey(partitionKey, metadata)) {
-        ret = new IndexScan(partitionKey);
+        ret = new ScanWithIndex(partitionKey);
       } else {
         ret = new Scan(partitionKey);
         if (scan.hasStartClusteringKey()) {

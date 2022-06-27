@@ -8,14 +8,14 @@ import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.IndexGet;
-import com.scalar.db.api.IndexScan;
+import com.scalar.db.api.GetWithIndex;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.io.BigIntColumn;
@@ -157,17 +157,17 @@ public class ProtoUtilsTest {
   }
 
   @Test
-  public void toGet_IndexGetGiven_ShouldConvertProperly() {
+  public void toGet_GetWithIndexGiven_ShouldConvertProperly() {
     // Arrange
-    IndexGet indexGet =
-        new IndexGet(Key.ofInt("col2", 1))
+    GetWithIndex getWithIndex =
+        new GetWithIndex(Key.ofInt("col2", 1))
             .withProjections(Arrays.asList("col1", "col2", "col3"))
             .withConsistency(Consistency.SEQUENTIAL)
             .forNamespace("ns")
             .forTable("tbl");
 
     // Act
-    com.scalar.db.rpc.Get actual = ProtoUtils.toGet(indexGet);
+    com.scalar.db.rpc.Get actual = ProtoUtils.toGet(getWithIndex);
 
     // Assert
     assertThat(actual)
@@ -188,7 +188,7 @@ public class ProtoUtilsTest {
   }
 
   @Test
-  public void tGet_ProtoScanForIndexGetGiven_ShouldConvertProperly() {
+  public void tGet_ProtoScanForGetWithIndexGiven_ShouldConvertProperly() {
     // Arrange
     com.scalar.db.rpc.Get get =
         com.scalar.db.rpc.Get.newBuilder()
@@ -211,7 +211,7 @@ public class ProtoUtilsTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            new IndexGet(Key.ofInt("col2", 1))
+            new GetWithIndex(Key.ofInt("col2", 1))
                 .withProjections(Arrays.asList("col1", "col2", "col3"))
                 .withConsistency(Consistency.SEQUENTIAL)
                 .forNamespace("ns")
@@ -486,10 +486,10 @@ public class ProtoUtilsTest {
   }
 
   @Test
-  public void toScan_IndexScanGiven_ShouldConvertProperly() {
+  public void toScan_ScanWithIndexGiven_ShouldConvertProperly() {
     // Arrange
-    IndexScan indexScan =
-        new IndexScan(Key.ofInt("col2", 1))
+    ScanWithIndex scanWithIndex =
+        new ScanWithIndex(Key.ofInt("col2", 1))
             .withLimit(10)
             .withProjections(Arrays.asList("col1", "col2", "col3"))
             .withConsistency(Consistency.SEQUENTIAL)
@@ -497,7 +497,7 @@ public class ProtoUtilsTest {
             .forTable("tbl");
 
     // Act
-    com.scalar.db.rpc.Scan actual = ProtoUtils.toScan(indexScan);
+    com.scalar.db.rpc.Scan actual = ProtoUtils.toScan(scanWithIndex);
 
     // Assert
     assertThat(actual)
@@ -519,7 +519,7 @@ public class ProtoUtilsTest {
   }
 
   @Test
-  public void toScan_ProtoScanForIndexScanGiven_ShouldConvertProperly() {
+  public void toScan_ProtoScanForScanWithIndexGiven_ShouldConvertProperly() {
     // Arrange
     com.scalar.db.rpc.Scan scan =
         com.scalar.db.rpc.Scan.newBuilder()
@@ -543,7 +543,7 @@ public class ProtoUtilsTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            new IndexScan(Key.ofInt("col2", 1))
+            new ScanWithIndex(Key.ofInt("col2", 1))
                 .withLimit(10)
                 .withProjections(Arrays.asList("col1", "col2", "col3"))
                 .withConsistency(Consistency.SEQUENTIAL)

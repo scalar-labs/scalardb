@@ -366,18 +366,18 @@ public class ScanBuilderTest {
   }
 
   @Test
-  public void buildIndexScan_WithMandatoryParameters_ShouldBuildScanWithMandatoryParameters() {
+  public void buildScanWithIndex_WithMandatoryParameters_ShouldBuildScanWithMandatoryParameters() {
     // Arrange Act
     Scan actual =
         Scan.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).indexKey(indexKey1).build();
 
     // Assert
     assertThat(actual)
-        .isEqualTo(new IndexScan(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+        .isEqualTo(new ScanWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
   }
 
   @Test
-  public void buildIndexScan_ScanWithAllParameters_ShouldBuildScanCorrectly() {
+  public void buildScanWithIndex_ScanWithAllParameters_ShouldBuildScanCorrectly() {
     // Arrange Act
     Scan scan =
         Scan.newBuilder()
@@ -394,7 +394,7 @@ public class ScanBuilderTest {
     // Assert
     assertThat(scan)
         .isEqualTo(
-            new IndexScan(indexKey1)
+            new ScanWithIndex(indexKey1)
                 .forNamespace(NAMESPACE_1)
                 .forTable(TABLE_1)
                 .withConsistency(Consistency.EVENTUAL)
@@ -404,10 +404,10 @@ public class ScanBuilderTest {
   }
 
   @Test
-  public void buildIndexScan_FromExistingWithoutChange_ShouldCopy() {
+  public void buildScanWithIndex_FromExistingWithoutChange_ShouldCopy() {
     // Arrange
     Scan existingScan =
-        new IndexScan(indexKey1)
+        new ScanWithIndex(indexKey1)
             .forNamespace(NAMESPACE_1)
             .forTable(TABLE_1)
             .withConsistency(Consistency.EVENTUAL)
@@ -424,10 +424,10 @@ public class ScanBuilderTest {
 
   @Test
   public void
-      buildIndexScan_FromExistingAndUpdateAllParameters_ShouldBuildScanWithUpdatedParameters() {
+      buildScanWithIndex_FromExistingAndUpdateAllParameters_ShouldBuildScanWithUpdatedParameters() {
     // Arrange
     Scan existingScan =
-        new IndexScan(indexKey1)
+        new ScanWithIndex(indexKey1)
             .forNamespace(NAMESPACE_1)
             .forTable(TABLE_1)
             .withConsistency(Consistency.EVENTUAL)
@@ -452,7 +452,7 @@ public class ScanBuilderTest {
     // Assert
     assertThat(newScan)
         .isEqualTo(
-            new IndexScan(indexKey2)
+            new ScanWithIndex(indexKey2)
                 .forNamespace(NAMESPACE_2)
                 .forTable(TABLE_2)
                 .withLimit(5)
@@ -462,9 +462,9 @@ public class ScanBuilderTest {
 
   @Test
   public void
-      buildIndexScan_FromExistingWithUnsupportedOperation_ShouldThrowUnsupportedOperationException() {
+      buildScanWithIndex_FromExistingWithUnsupportedOperation_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    Scan existingScan = new IndexScan(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+    Scan existingScan = new ScanWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
 
     // Act Assert
     assertThatThrownBy(() -> Scan.newBuilder(existingScan).partitionKey(partitionKey1))

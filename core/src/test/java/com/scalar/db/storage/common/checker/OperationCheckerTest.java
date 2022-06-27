@@ -1409,7 +1409,7 @@ public class OperationCheckerTest {
   }
 
   @Test
-  public void whenCheckingIndexGetOperationWithProperArguments_shouldNotThrowAnyException() {
+  public void whenCheckingGetWithIndexOperationWithProperArguments_shouldNotThrowAnyException() {
     // Arrange
     Get get =
         Get.newBuilder()
@@ -1425,7 +1425,7 @@ public class OperationCheckerTest {
 
   @Test
   public void
-      whenCheckingIndexGetOperationWithMultipleIndexedColumns_shouldThrowIllegalArgumentException() {
+      whenCheckingGetWithIndexOperationWithMultipleIndexedColumns_shouldThrowIllegalArgumentException() {
     // Arrange
     Get get =
         Get.newBuilder()
@@ -1442,7 +1442,7 @@ public class OperationCheckerTest {
 
   @Test
   public void
-      whenCheckingIndexGetOperationWithNonIndexedColumn_shouldThrowIllegalArgumentException() {
+      whenCheckingGetWithIndexOperationWithNonIndexedColumn_shouldThrowIllegalArgumentException() {
     // Arrange
     Get get =
         Get.newBuilder()
@@ -1459,7 +1459,7 @@ public class OperationCheckerTest {
 
   @Test
   public void
-      whenCheckingIndexGetOperationWithIndexedColumnButWrongType_shouldThrowIllegalArgumentException() {
+      whenCheckingGetWithIndexOperationWithIndexedColumnButWrongType_shouldThrowIllegalArgumentException() {
     // Arrange
     Get get =
         Get.newBuilder()
@@ -1590,7 +1590,7 @@ public class OperationCheckerTest {
   }
 
   @Test
-  public void whenCheckingIndexScanOperationWithProperArguments_shouldNotThrowAnyException() {
+  public void whenCheckingScanWithIndexOperationWithProperArguments_shouldNotThrowAnyException() {
     // Arrange
     Scan scan =
         Scan.newBuilder()
@@ -1607,7 +1607,7 @@ public class OperationCheckerTest {
 
   @Test
   public void
-      whenCheckingIndexScanOperationWithMultipleIndexedColumns_shouldThrowIllegalArgumentException() {
+      whenCheckingScanWithIndexOperationWithMultipleIndexedColumns_shouldThrowIllegalArgumentException() {
     // Arrange
     Scan scan =
         Scan.newBuilder()
@@ -1625,7 +1625,7 @@ public class OperationCheckerTest {
 
   @Test
   public void
-      whenCheckingIndexScanOperationWithNonIndexedColumn_shouldThrowIllegalArgumentException() {
+      whenCheckingScanWithIndexOperationWithNonIndexedColumn_shouldThrowIllegalArgumentException() {
     // Arrange
     Scan scan =
         Scan.newBuilder()
@@ -1643,7 +1643,7 @@ public class OperationCheckerTest {
 
   @Test
   public void
-      whenCheckingIndexScanOperationWithIndexedColumnButWrongType_shouldThrowIllegalArgumentException() {
+      whenCheckingScanWithIndexOperationWithIndexedColumnButWrongType_shouldThrowIllegalArgumentException() {
     // Arrange
     Scan scan =
         Scan.newBuilder()

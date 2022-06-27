@@ -160,17 +160,17 @@ public class GetBuilderTest {
   }
 
   @Test
-  public void buildIndexGet_WithMandatoryParameters_ShouldBuildGetWithMandatoryParameters() {
+  public void buildGetWithIndex_WithMandatoryParameters_ShouldBuildGetWithMandatoryParameters() {
     // Arrange Act
     Get actual = Get.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).indexKey(indexKey1).build();
 
     // Assert
     assertThat(actual)
-        .isEqualTo(new IndexGet(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+        .isEqualTo(new GetWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
   }
 
   @Test
-  public void buildIndexGet_WithAllParameters_ShouldBuildGetWithAllParameters() {
+  public void buildGetWithIndex_WithAllParameters_ShouldBuildGetWithAllParameters() {
     // Arrange Act
     Get get =
         Get.newBuilder()
@@ -187,7 +187,7 @@ public class GetBuilderTest {
     // Assert
     assertThat(get)
         .isEqualTo(
-            new IndexGet(indexKey1)
+            new GetWithIndex(indexKey1)
                 .forNamespace(NAMESPACE_1)
                 .forTable(TABLE_1)
                 .withProjections(Arrays.asList("c1", "c2", "c3", "c4", "c5", "c6"))
@@ -195,10 +195,10 @@ public class GetBuilderTest {
   }
 
   @Test
-  public void buildIndexGet_FromExistingWithoutChange_ShouldCopy() {
+  public void buildGetWithIndex_FromExistingWithoutChange_ShouldCopy() {
     // Arrange
-    IndexGet existingGet =
-        new IndexGet(indexKey1)
+    GetWithIndex existingGet =
+        new GetWithIndex(indexKey1)
             .forNamespace(NAMESPACE_1)
             .forTable(TABLE_1)
             .withProjections(Arrays.asList("c1", "c2"))
@@ -213,10 +213,10 @@ public class GetBuilderTest {
 
   @Test
   public void
-      buildIndexGet_FromExistingAndUpdateAllParameters_ShouldBuildGetWithUpdatedParameters() {
+      buildGetWithIndex_FromExistingAndUpdateAllParameters_ShouldBuildGetWithUpdatedParameters() {
     // Arrange
-    IndexGet existingGet =
-        new IndexGet(indexKey1)
+    GetWithIndex existingGet =
+        new GetWithIndex(indexKey1)
             .forNamespace(NAMESPACE_1)
             .forTable(TABLE_1)
             .withProjections(Arrays.asList("c1", "c2"))
@@ -238,7 +238,7 @@ public class GetBuilderTest {
     // Assert
     assertThat(newGet)
         .isEqualTo(
-            new IndexGet(indexKey2)
+            new GetWithIndex(indexKey2)
                 .forNamespace(NAMESPACE_2)
                 .forTable(TABLE_2)
                 .withConsistency(Consistency.EVENTUAL)
@@ -247,9 +247,10 @@ public class GetBuilderTest {
 
   @Test
   public void
-      buildIndexGet_FromExistingWithUnsupportedOperation_ShouldThrowUnsupportedOperationException() {
+      buildGetWithIndex_FromExistingWithUnsupportedOperation_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    IndexGet existingGet = new IndexGet(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+    GetWithIndex existingGet =
+        new GetWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
 
     // Act Assert
     assertThatThrownBy(() -> Get.newBuilder(existingGet).partitionKey(partitionKey1))

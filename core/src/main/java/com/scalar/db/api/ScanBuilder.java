@@ -50,7 +50,7 @@ public class ScanBuilder {
   }
 
   public static class PartitionKeyOrIndexKeyOrAll extends PartitionKeyBuilder<BuildableScan>
-      implements IndexKey<BuildableIndexScan>, All<BuildableScanAll> {
+      implements IndexKey<BuildableScanWithIndex>, All<BuildableScanAll> {
 
     private PartitionKeyOrIndexKeyOrAll(String namespace, String table) {
       super(namespace, table);
@@ -63,9 +63,9 @@ public class ScanBuilder {
     }
 
     @Override
-    public BuildableIndexScan indexKey(Key indexKey) {
+    public BuildableScanWithIndex indexKey(Key indexKey) {
       checkNotNull(indexKey);
-      return new BuildableIndexScan(namespaceName, tableName, indexKey);
+      return new BuildableScanWithIndex(namespaceName, tableName, indexKey);
     }
 
     @Override
@@ -184,10 +184,10 @@ public class ScanBuilder {
     }
   }
 
-  public static class BuildableIndexScan
-      implements Consistency<BuildableIndexScan>,
-          Projection<BuildableIndexScan>,
-          Limit<BuildableIndexScan> {
+  public static class BuildableScanWithIndex
+      implements Consistency<BuildableScanWithIndex>,
+          Projection<BuildableScanWithIndex>,
+          Limit<BuildableScanWithIndex> {
     private final String namespaceName;
     private final String tableName;
     private final Key indexKey;
@@ -195,46 +195,46 @@ public class ScanBuilder {
     private int limit = 0;
     @Nullable private com.scalar.db.api.Consistency consistency;
 
-    private BuildableIndexScan(String namespaceName, String tableName, Key indexKey) {
+    private BuildableScanWithIndex(String namespaceName, String tableName, Key indexKey) {
       this.namespaceName = namespaceName;
       this.tableName = tableName;
       this.indexKey = indexKey;
     }
 
     @Override
-    public BuildableIndexScan projection(String projection) {
+    public BuildableScanWithIndex projection(String projection) {
       checkNotNull(projection);
       projections.add(projection);
       return this;
     }
 
     @Override
-    public BuildableIndexScan projections(Collection<String> projections) {
+    public BuildableScanWithIndex projections(Collection<String> projections) {
       checkNotNull(projections);
       this.projections.addAll(projections);
       return this;
     }
 
     @Override
-    public BuildableIndexScan projections(String... projections) {
+    public BuildableScanWithIndex projections(String... projections) {
       return projections(Arrays.asList(projections));
     }
 
     @Override
-    public BuildableIndexScan limit(int limit) {
+    public BuildableScanWithIndex limit(int limit) {
       this.limit = limit;
       return this;
     }
 
     @Override
-    public BuildableIndexScan consistency(com.scalar.db.api.Consistency consistency) {
+    public BuildableScanWithIndex consistency(com.scalar.db.api.Consistency consistency) {
       checkNotNull(consistency);
       this.consistency = consistency;
       return this;
     }
 
     public Scan build() {
-      Scan scan = new IndexScan(indexKey);
+      Scan scan = new ScanWithIndex(indexKey);
       scan.forNamespace(namespaceName).forTable(tableName).withLimit(limit);
 
       if (!projections.isEmpty()) {
@@ -321,14 +321,14 @@ public class ScanBuilder {
           ClearOrderings<BuildableScanOrScanAllFromExisting>,
           ClearBoundaries<BuildableScanOrScanAllFromExisting> {
 
-    private final boolean isIndexScan;
+    private final boolean isScanWithIndex;
     private final boolean isScanAll;
     private Key indexKey;
 
     BuildableScanOrScanAllFromExisting(Scan scan) {
       super(scan.forNamespace().orElse(null), scan.forTable().orElse(null), scan.getPartitionKey());
-      isIndexScan = scan instanceof IndexScan;
-      if (isIndexScan) {
+      isScanWithIndex = scan instanceof ScanWithIndex;
+      if (isScanWithIndex) {
         indexKey = scan.getPartitionKey();
       }
       isScanAll = scan instanceof ScanAll;
@@ -366,7 +366,7 @@ public class ScanBuilder {
 
     @Override
     public BuildableScanOrScanAllFromExisting partitionKey(Key partitionKey) {
-      checkNotIndexScanOrScanAll();
+      checkNotScanWithIndexOrScanAll();
       checkNotNull(partitionKey);
       this.partitionKey = partitionKey;
       return this;
@@ -419,76 +419,76 @@ public class ScanBuilder {
 
     @Override
     public BuildableScanOrScanAllFromExisting ordering(Scan.Ordering ordering) {
-      checkNotIndexScanOrScanAll();
+      checkNotScanWithIndexOrScanAll();
       super.ordering(ordering);
       return this;
     }
 
     @Override
     public BuildableScanOrScanAllFromExisting orderings(Collection<Scan.Ordering> orderings) {
-      checkNotIndexScanOrScanAll();
+      checkNotScanWithIndexOrScanAll();
       super.orderings(orderings);
       return this;
     }
 
     @Override
     public BuildableScanOrScanAllFromExisting orderings(Scan.Ordering... orderings) {
-      checkNotIndexScanOrScanAll();
+      checkNotScanWithIndexOrScanAll();
       super.orderings(orderings);
       return this;
     }
 
     @Override
     public BuildableScanOrScanAllFromExisting start(Key clusteringKey, boolean inclusive) {
-      checkNotIndexScanOrScanAll();
+      checkNotScanWithIndexOrScanAll();
       super.start(clusteringKey, inclusive);
       return this;
     }
 
     @Override
     public BuildableScanOrScanAllFromExisting end(Key clusteringKey, boolean inclusive) {
-      checkNotIndexScanOrScanAll();
+      checkNotScanWithIndexOrScanAll();
       super.end(clusteringKey, inclusive);
       return this;
     }
 
     @Override
     public BuildableScanOrScanAllFromExisting start(Key clusteringKey) {
-      checkNotIndexScanOrScanAll();
+      checkNotScanWithIndexOrScanAll();
       super.start(clusteringKey);
       return this;
     }
 
     @Override
     public BuildableScanOrScanAllFromExisting end(Key clusteringKey) {
-      checkNotIndexScanOrScanAll();
+      checkNotScanWithIndexOrScanAll();
       super.end(clusteringKey);
       return this;
     }
 
     @Override
     public BuildableScanOrScanAllFromExisting clearStart() {
-      checkNotIndexScanOrScanAll();
+      checkNotScanWithIndexOrScanAll();
       this.startClusteringKey = null;
       return this;
     }
 
     @Override
     public BuildableScanOrScanAllFromExisting clearEnd() {
-      checkNotIndexScanOrScanAll();
+      checkNotScanWithIndexOrScanAll();
       this.endClusteringKey = null;
       return this;
     }
 
     @Override
     public BuildableScanOrScanAllFromExisting clearOrderings() {
-      checkNotIndexScanOrScanAll();
+      checkNotScanWithIndexOrScanAll();
       this.orderings.clear();
       return this;
     }
 
-    private void checkNotIndexScanOrScanAll() {
-      if (isIndexScan || isScanAll) {
+    private void checkNotScanWithIndexOrScanAll() {
+      if (isScanWithIndex || isScanAll) {
         throw new UnsupportedOperationException(
             "This operation is not supported when scanning all the records of a database "
                 + "or scanning records of a database using a secondary index.");
@@ -496,7 +496,7 @@ public class ScanBuilder {
     }
 
     private void checkNotScanOrScanAll() {
-      if (!isIndexScan) {
+      if (!isScanWithIndex) {
         throw new UnsupportedOperationException(
             "This operation is supported only when scanning records of a database using a secondary index.");
       }
@@ -506,8 +506,8 @@ public class ScanBuilder {
     public Scan build() {
       Scan scan;
 
-      if (isIndexScan) {
-        scan = new IndexScan(indexKey);
+      if (isScanWithIndex) {
+        scan = new ScanWithIndex(indexKey);
       } else if (isScanAll) {
         scan = new ScanAll();
       } else {

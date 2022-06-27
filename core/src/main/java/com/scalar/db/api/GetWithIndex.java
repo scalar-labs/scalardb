@@ -5,10 +5,10 @@ import com.scalar.db.io.Key;
 import java.util.Collection;
 import java.util.Objects;
 
-public class IndexGet extends Get {
+public class GetWithIndex extends Get {
 
   /**
-   * Constructs an {@code IndexGet} with the specified index {@code Key}.
+   * Constructs an {@code GetWithIndex} with the specified index {@code Key}.
    *
    * @param indexKey an index key
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link Get#newBuilder()}
@@ -16,20 +16,20 @@ public class IndexGet extends Get {
    */
   @Deprecated
   @SuppressWarnings("InlineMeSuggester")
-  public IndexGet(Key indexKey) {
+  public GetWithIndex(Key indexKey) {
     super(indexKey);
   }
 
   /**
-   * Copy a IndexGet.
+   * Copy a GetWithIndex.
    *
-   * @param indexGet an IndexGet
+   * @param getWithIndex a GetWithIndex
    * @deprecated Use {@link Get#newBuilder(Get)} instead
    */
   @Deprecated
   @SuppressWarnings("InlineMeSuggester")
-  public IndexGet(IndexGet indexGet) {
-    super(indexGet);
+  public GetWithIndex(GetWithIndex getWithIndex) {
+    super(getWithIndex);
   }
 
   /**
@@ -38,8 +38,8 @@ public class IndexGet extends Get {
    */
   @Deprecated
   @Override
-  public IndexGet forNamespace(String namespace) {
-    return (IndexGet) super.forNamespace(namespace);
+  public GetWithIndex forNamespace(String namespace) {
+    return (GetWithIndex) super.forNamespace(namespace);
   }
 
   /**
@@ -48,8 +48,8 @@ public class IndexGet extends Get {
    */
   @Deprecated
   @Override
-  public IndexGet forTable(String tableName) {
-    return (IndexGet) super.forTable(tableName);
+  public GetWithIndex forTable(String tableName) {
+    return (GetWithIndex) super.forTable(tableName);
   }
 
   /**
@@ -58,8 +58,8 @@ public class IndexGet extends Get {
    */
   @Deprecated
   @Override
-  public IndexGet withConsistency(Consistency consistency) {
-    return (IndexGet) super.withConsistency(consistency);
+  public GetWithIndex withConsistency(Consistency consistency) {
+    return (GetWithIndex) super.withConsistency(consistency);
   }
 
   /**
@@ -68,8 +68,8 @@ public class IndexGet extends Get {
    */
   @Deprecated
   @Override
-  public IndexGet withProjection(String projection) {
-    return (IndexGet) super.withProjection(projection);
+  public GetWithIndex withProjection(String projection) {
+    return (GetWithIndex) super.withProjection(projection);
   }
 
   /**
@@ -78,8 +78,8 @@ public class IndexGet extends Get {
    */
   @Deprecated
   @Override
-  public IndexGet withProjections(Collection<String> projections) {
-    return (IndexGet) super.withProjections(projections);
+  public GetWithIndex withProjections(Collection<String> projections) {
+    return (GetWithIndex) super.withProjections(projections);
   }
 
   @Override
@@ -90,7 +90,7 @@ public class IndexGet extends Get {
     if (o == this) {
       return true;
     }
-    return o instanceof IndexGet;
+    return o instanceof GetWithIndex;
   }
 
   @Override

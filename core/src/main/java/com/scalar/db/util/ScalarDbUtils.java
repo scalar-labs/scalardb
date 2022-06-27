@@ -3,13 +3,13 @@ package com.scalar.db.util;
 import com.google.common.collect.Streams;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.IndexGet;
-import com.scalar.db.api.IndexScan;
+import com.scalar.db.api.GetWithIndex;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.BigIntColumn;
@@ -109,7 +109,7 @@ public final class ScalarDbUtils {
   }
 
   public static boolean isSecondaryIndexSpecified(Selection selection, TableMetadata metadata) {
-    if (selection instanceof IndexGet || selection instanceof IndexScan) {
+    if (selection instanceof GetWithIndex || selection instanceof ScanWithIndex) {
       return true;
     }
 

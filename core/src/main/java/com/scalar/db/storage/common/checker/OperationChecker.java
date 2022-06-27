@@ -53,7 +53,7 @@ public class OperationChecker {
             "The partition key is not properly specified. Operation: " + get);
       }
 
-      // The following check is not needed when we use IndexGet. But we need to keep it for
+      // The following check is not needed when we use GetWithIndex. But we need to keep it for
       // backward compatibility. We will remove it in release 5.0.0.
       if (get.getClusteringKey().isPresent()) {
         throw new IllegalArgumentException(
@@ -93,7 +93,7 @@ public class OperationChecker {
             "The partition key is not properly specified. Operation: " + scan);
       }
 
-      // The following checks are not needed when we use IndexScan. But we need to keep them for
+      // The following checks are not needed when we use ScanWithIndex. But we need to keep them for
       // backward compatibility. We will remove them in release 5.0.0.
       if (scan.getStartClusteringKey().isPresent() || scan.getEndClusteringKey().isPresent()) {
         throw new IllegalArgumentException(

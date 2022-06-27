@@ -46,7 +46,7 @@ public class GetBuilder {
   }
 
   public static class PartitionKeyOrIndexKey extends PartitionKeyBuilder<BuildableGet>
-      implements IndexKey<BuildableIndexGet> {
+      implements IndexKey<BuildableGetWithIndex> {
 
     private PartitionKeyOrIndexKey(String namespace, String table) {
       super(namespace, table);
@@ -59,8 +59,8 @@ public class GetBuilder {
     }
 
     @Override
-    public BuildableIndexGet indexKey(Key indexKey) {
-      return new BuildableIndexGet(namespaceName, tableName, indexKey);
+    public BuildableGetWithIndex indexKey(Key indexKey) {
+      return new BuildableGetWithIndex(namespaceName, tableName, indexKey);
     }
   }
 
@@ -121,105 +121,105 @@ public class GetBuilder {
     }
   }
 
-  public static class BuildableIndexGet
-      implements Consistency<BuildableIndexGet>, Projection<BuildableIndexGet> {
+  public static class BuildableGetWithIndex
+      implements Consistency<BuildableGetWithIndex>, Projection<BuildableGetWithIndex> {
     private final String namespaceName;
     private final String tableName;
     private final Key indexKey;
     private final List<String> projections = new ArrayList<>();
     @Nullable private com.scalar.db.api.Consistency consistency;
 
-    private BuildableIndexGet(String namespace, String table, Key indexKey) {
+    private BuildableGetWithIndex(String namespace, String table, Key indexKey) {
       namespaceName = namespace;
       tableName = table;
       this.indexKey = indexKey;
     }
 
     @Override
-    public BuildableIndexGet projection(String projection) {
+    public BuildableGetWithIndex projection(String projection) {
       checkNotNull(projection);
       projections.add(projection);
       return this;
     }
 
     @Override
-    public BuildableIndexGet projections(Collection<String> projections) {
+    public BuildableGetWithIndex projections(Collection<String> projections) {
       checkNotNull(projections);
       this.projections.addAll(projections);
       return this;
     }
 
     @Override
-    public BuildableIndexGet projections(String... projections) {
+    public BuildableGetWithIndex projections(String... projections) {
       return projections(Arrays.asList(projections));
     }
 
     @Override
-    public BuildableIndexGet consistency(com.scalar.db.api.Consistency consistency) {
+    public BuildableGetWithIndex consistency(com.scalar.db.api.Consistency consistency) {
       checkNotNull(consistency);
       this.consistency = consistency;
       return this;
     }
 
     public Get build() {
-      IndexGet indexGet = new IndexGet(indexKey);
-      indexGet.forNamespace(namespaceName).forTable(tableName);
+      GetWithIndex getWithIndex = new GetWithIndex(indexKey);
+      getWithIndex.forNamespace(namespaceName).forTable(tableName);
       if (!projections.isEmpty()) {
-        indexGet.withProjections(projections);
+        getWithIndex.withProjections(projections);
       }
       if (consistency != null) {
-        indexGet.withConsistency(consistency);
+        getWithIndex.withConsistency(consistency);
       }
-      return indexGet;
+      return getWithIndex;
     }
   }
 
-  public static class BuildableGetOrIndexGetFromExisting extends BuildableGet
-      implements OperationBuilder.Namespace<BuildableGetOrIndexGetFromExisting>,
-          OperationBuilder.Table<BuildableGetOrIndexGetFromExisting>,
-          PartitionKey<BuildableGetOrIndexGetFromExisting>,
-          IndexKey<BuildableGetOrIndexGetFromExisting>,
-          ClearProjections<BuildableGetOrIndexGetFromExisting>,
-          ClearClusteringKey<BuildableGetOrIndexGetFromExisting> {
+  public static class BuildableGetOrGetWithIndexFromExisting extends BuildableGet
+      implements OperationBuilder.Namespace<BuildableGetOrGetWithIndexFromExisting>,
+          OperationBuilder.Table<BuildableGetOrGetWithIndexFromExisting>,
+          PartitionKey<BuildableGetOrGetWithIndexFromExisting>,
+          IndexKey<BuildableGetOrGetWithIndexFromExisting>,
+          ClearProjections<BuildableGetOrGetWithIndexFromExisting>,
+          ClearClusteringKey<BuildableGetOrGetWithIndexFromExisting> {
 
     private Key indexKey;
-    private final boolean isIndexGet;
+    private final boolean isGetWithIndex;
 
-    BuildableGetOrIndexGetFromExisting(Get get) {
+    BuildableGetOrGetWithIndexFromExisting(Get get) {
       super(get.forNamespace().orElse(null), get.forTable().orElse(null), get.getPartitionKey());
       clusteringKey = get.getClusteringKey().orElse(null);
       projections.addAll(get.getProjections());
       consistency = get.getConsistency();
-      isIndexGet = get instanceof IndexGet;
-      if (isIndexGet) {
+      isGetWithIndex = get instanceof GetWithIndex;
+      if (isGetWithIndex) {
         indexKey = get.getPartitionKey();
       }
     }
 
     @Override
-    public BuildableGetOrIndexGetFromExisting namespace(String namespaceName) {
+    public BuildableGetOrGetWithIndexFromExisting namespace(String namespaceName) {
       checkNotNull(namespaceName);
       this.namespaceName = namespaceName;
       return this;
     }
 
     @Override
-    public BuildableGetOrIndexGetFromExisting table(String tableName) {
+    public BuildableGetOrGetWithIndexFromExisting table(String tableName) {
       checkNotNull(tableName);
       this.tableName = tableName;
       return this;
     }
 
     @Override
-    public BuildableGetOrIndexGetFromExisting partitionKey(Key partitionKey) {
-      checkNotIndexGet();
+    public BuildableGetOrGetWithIndexFromExisting partitionKey(Key partitionKey) {
+      checkNotGetWithIndex();
       checkNotNull(partitionKey);
       this.partitionKey = partitionKey;
       return this;
     }
 
     @Override
-    public BuildableGetOrIndexGetFromExisting indexKey(Key indexKey) {
+    public BuildableGetOrGetWithIndexFromExisting indexKey(Key indexKey) {
       checkNotGet();
       checkNotNull(indexKey);
       this.indexKey = indexKey;
@@ -227,59 +227,59 @@ public class GetBuilder {
     }
 
     @Override
-    public BuildableGetOrIndexGetFromExisting clusteringKey(Key clusteringKey) {
-      checkNotIndexGet();
+    public BuildableGetOrGetWithIndexFromExisting clusteringKey(Key clusteringKey) {
+      checkNotGetWithIndex();
       super.clusteringKey(clusteringKey);
       return this;
     }
 
     @Override
-    public BuildableGetOrIndexGetFromExisting consistency(
+    public BuildableGetOrGetWithIndexFromExisting consistency(
         com.scalar.db.api.Consistency consistency) {
       super.consistency(consistency);
       return this;
     }
 
     @Override
-    public BuildableGetOrIndexGetFromExisting projection(String projection) {
+    public BuildableGetOrGetWithIndexFromExisting projection(String projection) {
       super.projection(projection);
       return this;
     }
 
     @Override
-    public BuildableGetOrIndexGetFromExisting projections(Collection<String> projections) {
+    public BuildableGetOrGetWithIndexFromExisting projections(Collection<String> projections) {
       super.projections(projections);
       return this;
     }
 
     @Override
-    public BuildableGetOrIndexGetFromExisting projections(String... projections) {
+    public BuildableGetOrGetWithIndexFromExisting projections(String... projections) {
       super.projections(projections);
       return this;
     }
 
     @Override
-    public BuildableGetOrIndexGetFromExisting clearProjections() {
+    public BuildableGetOrGetWithIndexFromExisting clearProjections() {
       this.projections.clear();
       return this;
     }
 
     @Override
-    public BuildableGetOrIndexGetFromExisting clearClusteringKey() {
-      checkNotIndexGet();
+    public BuildableGetOrGetWithIndexFromExisting clearClusteringKey() {
+      checkNotGetWithIndex();
       this.clusteringKey = null;
       return this;
     }
 
     private void checkNotGet() {
-      if (!isIndexGet) {
+      if (!isGetWithIndex) {
         throw new UnsupportedOperationException(
             "This operation is not supported when getting records of a database without using a secondary index.");
       }
     }
 
-    private void checkNotIndexGet() {
-      if (isIndexGet) {
+    private void checkNotGetWithIndex() {
+      if (isGetWithIndex) {
         throw new UnsupportedOperationException(
             "This operation is not supported when getting records of a database using a secondary index.");
       }
@@ -289,8 +289,8 @@ public class GetBuilder {
     public Get build() {
       Get get;
 
-      if (isIndexGet) {
-        get = new IndexGet(indexKey);
+      if (isGetWithIndex) {
+        get = new GetWithIndex(indexKey);
       } else {
         get = new Get(partitionKey, clusteringKey);
       }
