@@ -491,14 +491,14 @@ public class ScanBuilder {
       if (isIndexScan || isScanAll) {
         throw new UnsupportedOperationException(
             "This operation is not supported when scanning all the records of a database "
-                + "or scanning records of a database with using secondary index.");
+                + "or scanning records of a database using a secondary index.");
       }
     }
 
     private void checkNotScanOrScanAll() {
       if (!isIndexScan) {
         throw new UnsupportedOperationException(
-            "This operation is supported only when scanning records of a database with using secondary index.");
+            "This operation is supported only when scanning records of a database using a secondary index.");
       }
     }
 

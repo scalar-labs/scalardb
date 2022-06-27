@@ -281,7 +281,7 @@ public class GetBuilder {
     private void checkNotIndexGet() {
       if (isIndexGet) {
         throw new UnsupportedOperationException(
-            "This operation is not supported when getting records of a database with using a secondary index.");
+            "This operation is not supported when getting records of a database using a secondary index.");
       }
     }
 
