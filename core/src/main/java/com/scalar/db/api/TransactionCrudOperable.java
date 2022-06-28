@@ -5,7 +5,11 @@ import com.scalar.db.exception.transaction.CrudException;
 import java.util.List;
 import java.util.Optional;
 
-/** An interface for transaction CRUD operations. */
+/**
+ * An interface for transaction CRUD operations. Note that LINEARIZABLE consistency is always used
+ * in transactional CRUD operations, so {@link Consistency} specified for CRUD operations is
+ * ignored.
+ */
 public interface TransactionCrudOperable {
 
   /**
@@ -77,7 +81,8 @@ public interface TransactionCrudOperable {
 
   /**
    * Mutates entries of the storage through a transaction with the specified list of {@link
-   * Mutation} commands.
+   * Mutation} commands. Note that the conditions set in Mutation will be ignored. Please program
+   * such conditions in a transaction if you want to implement conditional mutation.
    *
    * @param mutations a list of {@code Mutation} commands
    * @throws CrudConflictException if conflicts happened. You can retry the transaction in this case

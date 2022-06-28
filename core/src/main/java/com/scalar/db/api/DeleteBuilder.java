@@ -2,6 +2,8 @@ package com.scalar.db.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
+import com.scalar.db.api.OperationBuilder.ClearCondition;
 import com.scalar.db.api.OperationBuilder.ClusteringKey;
 import com.scalar.db.api.OperationBuilder.Condition;
 import com.scalar.db.api.OperationBuilder.Consistency;
@@ -13,6 +15,9 @@ import javax.annotation.Nullable;
 public class DeleteBuilder {
 
   public static class Namespace implements OperationBuilder.Namespace<Table> {
+
+    Namespace() {}
+
     @Override
     public Table namespace(String namespaceName) {
       checkNotNull(namespaceName);
@@ -22,7 +27,7 @@ public class DeleteBuilder {
 
   public static class Table extends TableBuilder<PartitionKey> {
 
-    public Table(String namespaceName) {
+    private Table(String namespaceName) {
       super(namespaceName);
     }
 
@@ -34,7 +39,8 @@ public class DeleteBuilder {
   }
 
   public static class PartitionKey extends PartitionKeyBuilder<Buildable> {
-    public PartitionKey(String namespace, String table) {
+
+    private PartitionKey(String namespace, String table) {
       super(namespace, table);
     }
 
@@ -51,7 +57,7 @@ public class DeleteBuilder {
     @Nullable com.scalar.db.api.Consistency consistency;
     @Nullable MutationCondition condition;
 
-    public Buildable(String namespace, String table, Key partitionKey) {
+    private Buildable(String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
     }
 
@@ -95,10 +101,10 @@ public class DeleteBuilder {
       implements OperationBuilder.Namespace<BuildableFromExisting>,
           OperationBuilder.Table<BuildableFromExisting>,
           OperationBuilder.PartitionKey<BuildableFromExisting>,
-          OperationBuilder.ClearCondition<BuildableFromExisting>,
-          OperationBuilder.ClearClusteringKey<BuildableFromExisting> {
+          ClearCondition<BuildableFromExisting>,
+          ClearClusteringKey<BuildableFromExisting> {
 
-    public BuildableFromExisting(Delete delete) {
+    BuildableFromExisting(Delete delete) {
       super(
           delete.forNamespace().orElse(null),
           delete.forTable().orElse(null),

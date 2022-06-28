@@ -113,10 +113,23 @@ public class DoubleColumn implements Column<Double> {
         .toString();
   }
 
+  /**
+   * Returns a Double column instance with the specified column name and value.
+   *
+   * @param columnName a column name
+   * @param value a column value
+   * @return a Double column instance with the specified column name and value
+   */
   public static DoubleColumn of(String columnName, double value) {
     return new DoubleColumn(columnName, value);
   }
 
+  /**
+   * Returns a Double column instance with the specified column name and a null value.
+   *
+   * @param columnName a column name
+   * @return a Double column instance with the specified column name and a null value
+   */
   public static DoubleColumn ofNull(String columnName) {
     return new DoubleColumn(columnName);
   }

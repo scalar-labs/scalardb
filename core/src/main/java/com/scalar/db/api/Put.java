@@ -38,6 +38,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 public class Put extends Mutation {
 
   private final Map<String, Column<?>> columns;
+
   /**
    * Constructs a {@code Put} with the specified partition {@link Key}.
    *
@@ -68,7 +69,7 @@ public class Put extends Mutation {
   }
 
   /**
-   * Copy a Put
+   * Copy a Put.
    *
    * @param put a Put
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
@@ -82,7 +83,7 @@ public class Put extends Mutation {
   }
 
   /**
-   * Build a {@code Put} operation using a builder
+   * Build a {@code Put} operation using a builder.
    *
    * @return a {@code Put} operation builder
    */
@@ -723,6 +724,7 @@ public class Put extends Mutation {
   public Put forTable(String tableName) {
     return (Put) super.forTable(tableName);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
@@ -737,6 +739,7 @@ public class Put extends Mutation {
   public void accept(OperationVisitor v) {
     v.visit(this);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}

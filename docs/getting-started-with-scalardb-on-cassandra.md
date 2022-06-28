@@ -19,7 +19,7 @@ From here, we assume Oracle JDK 8 and Cassandra 3.11.x are properly installed in
 
 The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for Scalar DB. Basically, it describes the Cassandra installation that will be used.
 
-```
+```properties
 # Comma separated contact points
 scalar.db.contact_points=localhost
 

@@ -8,4 +8,3 @@ RUN groupadd -r --gid 201 scalar && \
 USER 201
 
 ENTRYPOINT ["java", "-jar", "/app.jar"]
-

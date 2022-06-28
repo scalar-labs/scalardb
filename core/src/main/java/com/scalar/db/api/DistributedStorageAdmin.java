@@ -10,13 +10,15 @@ package com.scalar.db.api;
  * readability.)
  *
  * <pre>{@code
- * StorageFactory factory = new StorageFactory(databaseConfig);
+ * StorageFactory factory = StorageFactory.create(configFilePath);
  * DistributedStorageAdmin admin = factory.getAdmin();
  *
  * // Create a namespace
+ * // Assumes that the namespace name is NAMESPACE
  * admin.createNamespace(NAMESPACE);
  *
  * // Create a table
+ * // Assumes that the namespace name and the table name are NAMESPACE and TABLE respectively
  * TableMetadata tableMetadata = TableMetadata.newBuilder()
  *     ...
  *     .build();

@@ -113,10 +113,23 @@ public class IntColumn implements Column<Integer> {
         .toString();
   }
 
+  /**
+   * Returns an Int column instance with the specified column name and value.
+   *
+   * @param columnName a column name
+   * @param value a column value
+   * @return an Int column instance with the specified column name and value
+   */
   public static IntColumn of(String columnName, int value) {
     return new IntColumn(columnName, value);
   }
 
+  /**
+   * Returns an Int column instance with the specified column name and a null value.
+   *
+   * @param columnName a column name
+   * @return an Int column instance with the specified column name and a null value
+   */
   public static IntColumn ofNull(String columnName) {
     return new IntColumn(columnName);
   }

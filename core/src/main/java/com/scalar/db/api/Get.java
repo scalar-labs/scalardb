@@ -3,7 +3,7 @@ package com.scalar.db.api;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
-import com.scalar.db.api.GetBuilder.BuildableFromExisting;
+import com.scalar.db.api.GetBuilder.BuildableGetOrGetWithIndexFromExisting;
 import com.scalar.db.api.GetBuilder.Namespace;
 import com.scalar.db.io.Key;
 import java.util.Collection;
@@ -46,7 +46,7 @@ public class Get extends Selection {
   }
 
   /**
-   * Copy a Get
+   * Copy a Get.
    *
    * @param get a Get
    * @deprecated Use {@link Get#newBuilder(Get)} instead
@@ -58,7 +58,7 @@ public class Get extends Selection {
   }
 
   /**
-   * Build a {@code Get} operation using a builder
+   * Build a {@code Get} operation using a builder.
    *
    * @return a {@code Get} operation builder
    */
@@ -73,9 +73,9 @@ public class Get extends Selection {
    * @param get an existing {@code Get} operation
    * @return a {@code Get} operation builder
    */
-  public static BuildableFromExisting newBuilder(Get get) {
+  public static BuildableGetOrGetWithIndexFromExisting newBuilder(Get get) {
     checkNotNull(get);
-    return new BuildableFromExisting(get);
+    return new BuildableGetOrGetWithIndexFromExisting(get);
   }
 
   /**
@@ -87,6 +87,7 @@ public class Get extends Selection {
   public Get forNamespace(String namespace) {
     return (Get) super.forNamespace(namespace);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
@@ -96,6 +97,7 @@ public class Get extends Selection {
   public Get forTable(String tableName) {
     return (Get) super.forTable(tableName);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
@@ -110,6 +112,7 @@ public class Get extends Selection {
   public void accept(OperationVisitor v) {
     v.visit(this);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
@@ -119,6 +122,7 @@ public class Get extends Selection {
   public Get withProjection(String projection) {
     return (Get) super.withProjection(projection);
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}

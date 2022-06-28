@@ -13,15 +13,14 @@ import java.util.Optional;
 public interface DistributedTransaction extends TransactionCrudOperable {
 
   /**
-   * Returns the ID of a transaction. Whether or not it can return the transaction ID is dependent
-   * on underlining implementations.
+   * Returns the ID of a transaction.
    *
    * @return the ID of a transaction
    */
   String getId();
 
   /**
-   * Sets the specified namespace and the table name as default values in the instance
+   * Sets the specified namespace and the table name as default values in the instance.
    *
    * @param namespace default namespace to operate for
    * @param tableName default table name to operate for
@@ -31,7 +30,7 @@ public interface DistributedTransaction extends TransactionCrudOperable {
   void with(String namespace, String tableName);
 
   /**
-   * Sets the specified namespace as a default value in the instance
+   * Sets the specified namespace as a default value in the instance.
    *
    * @param namespace default namespace to operate for
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
@@ -40,7 +39,7 @@ public interface DistributedTransaction extends TransactionCrudOperable {
   void withNamespace(String namespace);
 
   /**
-   * Returns the namespace
+   * Returns the namespace.
    *
    * @return an {@code Optional} with the namespace
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
@@ -49,7 +48,7 @@ public interface DistributedTransaction extends TransactionCrudOperable {
   Optional<String> getNamespace();
 
   /**
-   * Sets the specified table name as a default value in the instance
+   * Sets the specified table name as a default value in the instance.
    *
    * @param tableName default table name to operate for
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
@@ -58,7 +57,7 @@ public interface DistributedTransaction extends TransactionCrudOperable {
   void withTable(String tableName);
 
   /**
-   * Returns the table name
+   * Returns the table name.
    *
    * @return an {@code Optional} with the table name
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0

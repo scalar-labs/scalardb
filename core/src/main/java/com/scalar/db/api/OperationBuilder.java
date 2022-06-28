@@ -86,10 +86,17 @@ class OperationBuilder {
      * @return the operation builder
      */
     T projections(Collection<String> projections);
+
+    /**
+     * Appends the specified collection of the specified column names to the list of projections.
+     *
+     * @param projections the column names to project
+     * @return the operation builder
+     */
+    T projections(String... projections);
   }
 
   interface ClearProjections<T> {
-
     /**
      * Clear the list of projections
      *
@@ -109,7 +116,6 @@ class OperationBuilder {
   }
 
   interface ClearCondition<T> {
-
     /**
      * Remove the condition
      *
@@ -119,7 +125,6 @@ class OperationBuilder {
   }
 
   interface Values<T> {
-
     /**
      * Adds the specified BOOLEAN value to the list of put values.
      *
@@ -250,13 +255,13 @@ class OperationBuilder {
   }
 
   interface ClearValues<T> {
-
     /**
      * Clear the list of values
      *
      * @return the operation builder
      */
     T clearValues();
+
     /**
      * Clear the value for the given column
      *
@@ -280,12 +285,28 @@ class OperationBuilder {
     /**
      * Sets the specified scan ordering. Ordering can only be specified with clustering keys. To
      * sort results by multiple clustering keys, call this method multiple times in the order of
-     * sorting.
+     * sorting or call {@link #orderings(Collection)} or {@link #orderings(Scan.Ordering...)}.
      *
      * @param ordering a scan ordering
      * @return the scan operation builder
      */
     T ordering(Scan.Ordering ordering);
+
+    /**
+     * Sets the specified scan orderings. Ordering can only be specified with clustering keys.
+     *
+     * @param orderings scan orderings
+     * @return the scan operation builder
+     */
+    T orderings(Collection<Scan.Ordering> orderings);
+
+    /**
+     * Sets the specified scan orderings. Ordering can only be specified with clustering keys.
+     *
+     * @param orderings scan orderings
+     * @return the scan operation builder
+     */
+    T orderings(Scan.Ordering... orderings);
   }
 
   interface ClearOrderings<T> {
@@ -338,13 +359,13 @@ class OperationBuilder {
   }
 
   interface ClearBoundaries<T> {
-
     /**
      * Remove the scan starting boundary
      *
      * @return the scan operation builder
      */
     T clearStart();
+
     /**
      * Remove the scan ending boundary
      *
@@ -354,13 +375,22 @@ class OperationBuilder {
   }
 
   interface All<T> {
-
     /**
      * Specify the Scan operation will retrieve all the entries of the database
      *
      * @return the scan operation builder
      */
     T all();
+  }
+
+  interface IndexKey<T> {
+    /**
+     * Constructs the operation with the specified index {@link Key}.
+     *
+     * @param indexKey an index {@code Key}
+     * @return the operation builder
+     */
+    T indexKey(Key indexKey);
   }
 
   abstract static class TableBuilder<T> implements Table<T> {
