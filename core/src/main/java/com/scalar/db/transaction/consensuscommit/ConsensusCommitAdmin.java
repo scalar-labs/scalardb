@@ -113,6 +113,18 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
+  public void repairTable(
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      throws ExecutionException {
+    admin.repairTable(namespace, table, buildTransactionalTableMetadata(metadata), options);
+  }
+
+  @Override
+  public void repairCoordinatorTables(Map<String, String> options) throws ExecutionException {
+    admin.repairTable(coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
+  }
+
+  @Override
   public void close() {
     admin.close();
   }

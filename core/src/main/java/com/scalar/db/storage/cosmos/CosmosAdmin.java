@@ -22,6 +22,7 @@ import com.azure.cosmos.models.IndexingPolicy;
 import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.models.ThroughputProperties;
 import com.azure.cosmos.util.CosmosPagedIterable;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan.Ordering.Order;
@@ -59,7 +60,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   private static final String CLUSTERING_KEY_PATH_PREFIX = "/clusteringKey/";
   private static final String SECONDARY_INDEX_KEY_PATH_PREFIX = "/values/";
   private static final String EXCLUDED_PATH = "/*";
-  private static final String STORED_PROCEDURE_FILE_NAME = "mutate.js";
+  @VisibleForTesting public static final String STORED_PROCEDURE_FILE_NAME = "mutate.js";
   private static final String STORED_PROCEDURE_PATH =
       "cosmosdb_stored_procedure/" + STORED_PROCEDURE_FILE_NAME;
 
@@ -115,12 +116,34 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     CosmosContainerProperties properties = computeContainerProperties(table, metadata);
     cosmosDatabase.createContainer(properties);
 
+    addStoredProcedure(database, table);
+  }
+
+  private void addStoredProcedure(String namespace, String table) throws ExecutionException {
+    CosmosDatabase cosmosDatabase = client.getDatabase(namespace);
     CosmosStoredProcedureProperties storedProcedureProperties =
         computeContainerStoredProcedureProperties();
     cosmosDatabase
         .getContainer(table)
         .getScripts()
         .createStoredProcedure(storedProcedureProperties);
+  }
+
+  private boolean storedProcedureExists(String namespace, String table) {
+    try {
+      client
+          .getDatabase(namespace)
+          .getContainer(table)
+          .getScripts()
+          .getStoredProcedure(STORED_PROCEDURE_FILE_NAME)
+          .read();
+      return true;
+    } catch (CosmosException e) {
+      if (e.getStatusCode() == 404) {
+        return false;
+      }
+      throw e;
+    }
   }
 
   private CosmosStoredProcedureProperties computeContainerStoredProcedureProperties()
@@ -458,6 +481,29 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
     return databaseExists(namespace);
+  }
+
+  @Override
+  public void repairTable(
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      throws ExecutionException {
+    try {
+      // Since the metadata table may be missing, we cannot use CosmosAdmin.tableExists() as it
+      // query the metadata table to verify if the given table exists
+      client.getDatabase(namespace).getContainer(table).read();
+    } catch (CosmosException e) {
+      if (e.getStatusCode() == 404) {
+        throw new IllegalArgumentException(
+            "The table " + getFullTableName(namespace, table) + "  does not exist");
+      }
+    }
+    createMetadataDatabaseAndContainerIfNotExists();
+    if (getTableMetadata(namespace, table) == null) {
+      putTableMetadata(namespace, table, metadata);
+    }
+    if (!storedProcedureExists(namespace, table)) {
+      addStoredProcedure(namespace, table);
+    }
   }
 
   private boolean databaseExists(String id) throws ExecutionException {

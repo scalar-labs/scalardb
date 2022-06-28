@@ -20,6 +20,8 @@ import com.scalar.db.rpc.GetTableMetadataRequest;
 import com.scalar.db.rpc.GetTableMetadataResponse;
 import com.scalar.db.rpc.NamespaceExistsRequest;
 import com.scalar.db.rpc.NamespaceExistsResponse;
+import com.scalar.db.rpc.RepairCoordinatorTablesRequest;
+import com.scalar.db.rpc.RepairTableRequest;
 import com.scalar.db.rpc.TruncateCoordinatorTablesRequest;
 import com.scalar.db.rpc.TruncateTableRequest;
 import com.scalar.db.util.ProtoUtils;
@@ -246,6 +248,36 @@ public class DistributedTransactionAdminService
         },
         responseObserver,
         "coordinator_tables_exist");
+  }
+
+  @Override
+  public void repairTable(RepairTableRequest request, StreamObserver<Empty> responseObserver) {
+    execute(
+        () -> {
+          admin.repairTable(
+              request.getNamespace(),
+              request.getTable(),
+              ProtoUtils.toTableMetadata(request.getTableMetadata()),
+              request.getOptionsMap());
+          responseObserver.onNext(Empty.getDefaultInstance());
+          responseObserver.onCompleted();
+        },
+        responseObserver,
+        "repair_table");
+  }
+
+  @Override
+  public void repairCoordinatorTables(
+      RepairCoordinatorTablesRequest request, StreamObserver<Empty> responseObserver) {
+
+    execute(
+        () -> {
+          admin.repairCoordinatorTables(request.getOptionsMap());
+          responseObserver.onNext(Empty.getDefaultInstance());
+          responseObserver.onCompleted();
+        },
+        responseObserver,
+        "repair_coordinator_tables");
   }
 
   private void execute(

@@ -2,6 +2,7 @@ package com.scalar.db.storage.multistorage;
 
 import static org.mockito.Mockito.verify;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -361,5 +362,65 @@ public class MultiStorageAdminTest {
 
     // Assert
     verify(admin3).namespaceExists(namespace);
+  }
+
+  @Test
+  public void repairTable_ForTable1InNamespace1_ShouldRepairTableInAdmin1()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE1;
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    multiStorageAdmin.repairTable(namespace, table, tableMetadata, options);
+
+    // Assert
+    verify(admin1).repairTable(namespace, table, tableMetadata, options);
+  }
+
+  @Test
+  public void repairTable_ForTable2InNamespace1_ShouldRepairTableInAdmin2()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE2;
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    multiStorageAdmin.repairTable(namespace, table, tableMetadata, options);
+
+    // Assert
+    verify(admin2).repairTable(namespace, table, tableMetadata, options);
+  }
+
+  @Test
+  public void repairTable_ForTable3InNamespace1_ShouldRepairTableInDefaultAdmin()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE3;
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    multiStorageAdmin.repairTable(namespace, table, tableMetadata, options);
+
+    // Assert
+    verify(admin3).repairTable(namespace, table, tableMetadata, options);
+  }
+
+  @Test
+  public void repairTable_ForTable1InNamespace2_ShouldRepairTableInAdmin2()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE2;
+    String table = TABLE1;
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    multiStorageAdmin.repairTable(namespace, table, tableMetadata, options);
+
+    // Assert
+    verify(admin2).repairTable(namespace, table, tableMetadata, options);
   }
 }

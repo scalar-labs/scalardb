@@ -325,6 +325,37 @@ public final class DistributedStorageAdminGrpc {
     return getNamespaceExistsMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.RepairTableRequest,
+      com.google.protobuf.Empty> getRepairTableMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RepairTable",
+      requestType = com.scalar.db.rpc.RepairTableRequest.class,
+      responseType = com.google.protobuf.Empty.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.RepairTableRequest,
+      com.google.protobuf.Empty> getRepairTableMethod() {
+    io.grpc.MethodDescriptor<com.scalar.db.rpc.RepairTableRequest, com.google.protobuf.Empty> getRepairTableMethod;
+    if ((getRepairTableMethod = DistributedStorageAdminGrpc.getRepairTableMethod) == null) {
+      synchronized (DistributedStorageAdminGrpc.class) {
+        if ((getRepairTableMethod = DistributedStorageAdminGrpc.getRepairTableMethod) == null) {
+          DistributedStorageAdminGrpc.getRepairTableMethod = getRepairTableMethod =
+              io.grpc.MethodDescriptor.<com.scalar.db.rpc.RepairTableRequest, com.google.protobuf.Empty>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RepairTable"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.RepairTableRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.google.protobuf.Empty.getDefaultInstance()))
+              .setSchemaDescriptor(new DistributedStorageAdminMethodDescriptorSupplier("RepairTable"))
+              .build();
+        }
+      }
+    }
+    return getRepairTableMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -443,6 +474,13 @@ public final class DistributedStorageAdminGrpc {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getNamespaceExistsMethod(), responseObserver);
     }
 
+    /**
+     */
+    public void repairTable(com.scalar.db.rpc.RepairTableRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRepairTableMethod(), responseObserver);
+    }
+
     @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
       return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
           .addMethod(
@@ -515,6 +553,13 @@ public final class DistributedStorageAdminGrpc {
                 com.scalar.db.rpc.NamespaceExistsRequest,
                 com.scalar.db.rpc.NamespaceExistsResponse>(
                   this, METHODID_NAMESPACE_EXISTS)))
+          .addMethod(
+            getRepairTableMethod(),
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
+              new MethodHandlers<
+                com.scalar.db.rpc.RepairTableRequest,
+                com.google.protobuf.Empty>(
+                  this, METHODID_REPAIR_TABLE)))
           .build();
     }
   }
@@ -612,6 +657,14 @@ public final class DistributedStorageAdminGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getNamespaceExistsMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     */
+    public void repairTable(com.scalar.db.rpc.RepairTableRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRepairTableMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -696,6 +749,13 @@ public final class DistributedStorageAdminGrpc {
     public com.scalar.db.rpc.NamespaceExistsResponse namespaceExists(com.scalar.db.rpc.NamespaceExistsRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getNamespaceExistsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.google.protobuf.Empty repairTable(com.scalar.db.rpc.RepairTableRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRepairTableMethod(), getCallOptions(), request);
     }
   }
 
@@ -792,6 +852,14 @@ public final class DistributedStorageAdminGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getNamespaceExistsMethod(), getCallOptions()), request);
     }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> repairTable(
+        com.scalar.db.rpc.RepairTableRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRepairTableMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_NAMESPACE = 0;
@@ -804,6 +872,7 @@ public final class DistributedStorageAdminGrpc {
   private static final int METHODID_GET_TABLE_METADATA = 7;
   private static final int METHODID_GET_NAMESPACE_TABLE_NAMES = 8;
   private static final int METHODID_NAMESPACE_EXISTS = 9;
+  private static final int METHODID_REPAIR_TABLE = 10;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -861,6 +930,10 @@ public final class DistributedStorageAdminGrpc {
         case METHODID_NAMESPACE_EXISTS:
           serviceImpl.namespaceExists((com.scalar.db.rpc.NamespaceExistsRequest) request,
               (io.grpc.stub.StreamObserver<com.scalar.db.rpc.NamespaceExistsResponse>) responseObserver);
+          break;
+        case METHODID_REPAIR_TABLE:
+          serviceImpl.repairTable((com.scalar.db.rpc.RepairTableRequest) request,
+              (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -933,6 +1006,7 @@ public final class DistributedStorageAdminGrpc {
               .addMethod(getGetTableMetadataMethod())
               .addMethod(getGetNamespaceTableNamesMethod())
               .addMethod(getNamespaceExistsMethod())
+              .addMethod(getRepairTableMethod())
               .build();
         }
       }

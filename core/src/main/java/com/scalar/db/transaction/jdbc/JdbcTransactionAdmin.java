@@ -104,6 +104,18 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
+  public void repairTable(
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      throws ExecutionException {
+    admin.repairTable(namespace, table, metadata, options);
+  }
+
+  @Override
+  public void repairCoordinatorTables(Map<String, String> options) {
+    // Do nothing since JDBC transactions don't have coordinator tables
+  }
+
+  @Override
   public void close() {
     admin.close();
   }

@@ -194,6 +194,8 @@ service DistributedStorageAdmin {
   }
   rpc NamespaceExists(NamespaceExistsRequest) returns (NamespaceExistsResponse) {
   }
+  rpc RepairTable(RepairTableRequest) returns (google.protobuf.Empty) {
+  }
 }
 
 enum DataType {
@@ -283,6 +285,14 @@ message NamespaceExistsRequest {
 message NamespaceExistsResponse {
   bool exists = 1;
 }
+
+message RepairTableRequest {
+  string namespace = 1;
+  string table = 2;
+  TableMetadata table_metadata = 3;
+  map<string, string> options = 4;
+}
+
 
 // DistributedTransaction
 
@@ -502,6 +512,10 @@ service DistributedTransactionAdmin {
   }
   rpc CoordinatorTablesExist(CoordinatorTablesExistRequest) returns (CoordinatorTablesExistResponse) {
   }
+  rpc RepairTable(RepairTableRequest) returns (google.protobuf.Empty) {
+  }
+  rpc RepairCoordinatorTables(RepairCoordinatorTablesRequest) returns (google.protobuf.Empty){
+  }
 }
 
 message CreateCoordinatorTablesRequest {
@@ -521,4 +535,8 @@ message CoordinatorTablesExistRequest {
 
 message CoordinatorTablesExistResponse {
   bool exist = 1;
+}
+
+message RepairCoordinatorTablesRequest {
+  map<string, string> options = 1;
 }

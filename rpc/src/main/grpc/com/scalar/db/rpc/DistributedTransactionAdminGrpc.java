@@ -449,6 +449,68 @@ public final class DistributedTransactionAdminGrpc {
     return getCoordinatorTablesExistMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.RepairTableRequest,
+      com.google.protobuf.Empty> getRepairTableMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RepairTable",
+      requestType = com.scalar.db.rpc.RepairTableRequest.class,
+      responseType = com.google.protobuf.Empty.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.RepairTableRequest,
+      com.google.protobuf.Empty> getRepairTableMethod() {
+    io.grpc.MethodDescriptor<com.scalar.db.rpc.RepairTableRequest, com.google.protobuf.Empty> getRepairTableMethod;
+    if ((getRepairTableMethod = DistributedTransactionAdminGrpc.getRepairTableMethod) == null) {
+      synchronized (DistributedTransactionAdminGrpc.class) {
+        if ((getRepairTableMethod = DistributedTransactionAdminGrpc.getRepairTableMethod) == null) {
+          DistributedTransactionAdminGrpc.getRepairTableMethod = getRepairTableMethod =
+              io.grpc.MethodDescriptor.<com.scalar.db.rpc.RepairTableRequest, com.google.protobuf.Empty>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RepairTable"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.RepairTableRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.google.protobuf.Empty.getDefaultInstance()))
+              .setSchemaDescriptor(new DistributedTransactionAdminMethodDescriptorSupplier("RepairTable"))
+              .build();
+        }
+      }
+    }
+    return getRepairTableMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.RepairCoordinatorTablesRequest,
+      com.google.protobuf.Empty> getRepairCoordinatorTablesMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RepairCoordinatorTables",
+      requestType = com.scalar.db.rpc.RepairCoordinatorTablesRequest.class,
+      responseType = com.google.protobuf.Empty.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.RepairCoordinatorTablesRequest,
+      com.google.protobuf.Empty> getRepairCoordinatorTablesMethod() {
+    io.grpc.MethodDescriptor<com.scalar.db.rpc.RepairCoordinatorTablesRequest, com.google.protobuf.Empty> getRepairCoordinatorTablesMethod;
+    if ((getRepairCoordinatorTablesMethod = DistributedTransactionAdminGrpc.getRepairCoordinatorTablesMethod) == null) {
+      synchronized (DistributedTransactionAdminGrpc.class) {
+        if ((getRepairCoordinatorTablesMethod = DistributedTransactionAdminGrpc.getRepairCoordinatorTablesMethod) == null) {
+          DistributedTransactionAdminGrpc.getRepairCoordinatorTablesMethod = getRepairCoordinatorTablesMethod =
+              io.grpc.MethodDescriptor.<com.scalar.db.rpc.RepairCoordinatorTablesRequest, com.google.protobuf.Empty>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RepairCoordinatorTables"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.RepairCoordinatorTablesRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.google.protobuf.Empty.getDefaultInstance()))
+              .setSchemaDescriptor(new DistributedTransactionAdminMethodDescriptorSupplier("RepairCoordinatorTables"))
+              .build();
+        }
+      }
+    }
+    return getRepairCoordinatorTablesMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -595,6 +657,20 @@ public final class DistributedTransactionAdminGrpc {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCoordinatorTablesExistMethod(), responseObserver);
     }
 
+    /**
+     */
+    public void repairTable(com.scalar.db.rpc.RepairTableRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRepairTableMethod(), responseObserver);
+    }
+
+    /**
+     */
+    public void repairCoordinatorTables(com.scalar.db.rpc.RepairCoordinatorTablesRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRepairCoordinatorTablesMethod(), responseObserver);
+    }
+
     @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
       return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
           .addMethod(
@@ -695,6 +771,20 @@ public final class DistributedTransactionAdminGrpc {
                 com.scalar.db.rpc.CoordinatorTablesExistRequest,
                 com.scalar.db.rpc.CoordinatorTablesExistResponse>(
                   this, METHODID_COORDINATOR_TABLES_EXIST)))
+          .addMethod(
+            getRepairTableMethod(),
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
+              new MethodHandlers<
+                com.scalar.db.rpc.RepairTableRequest,
+                com.google.protobuf.Empty>(
+                  this, METHODID_REPAIR_TABLE)))
+          .addMethod(
+            getRepairCoordinatorTablesMethod(),
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
+              new MethodHandlers<
+                com.scalar.db.rpc.RepairCoordinatorTablesRequest,
+                com.google.protobuf.Empty>(
+                  this, METHODID_REPAIR_COORDINATOR_TABLES)))
           .build();
     }
   }
@@ -824,6 +914,22 @@ public final class DistributedTransactionAdminGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getCoordinatorTablesExistMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     */
+    public void repairTable(com.scalar.db.rpc.RepairTableRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRepairTableMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void repairCoordinatorTables(com.scalar.db.rpc.RepairCoordinatorTablesRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRepairCoordinatorTablesMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -936,6 +1042,20 @@ public final class DistributedTransactionAdminGrpc {
     public com.scalar.db.rpc.CoordinatorTablesExistResponse coordinatorTablesExist(com.scalar.db.rpc.CoordinatorTablesExistRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getCoordinatorTablesExistMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.google.protobuf.Empty repairTable(com.scalar.db.rpc.RepairTableRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRepairTableMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.google.protobuf.Empty repairCoordinatorTables(com.scalar.db.rpc.RepairCoordinatorTablesRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRepairCoordinatorTablesMethod(), getCallOptions(), request);
     }
   }
 
@@ -1064,6 +1184,22 @@ public final class DistributedTransactionAdminGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getCoordinatorTablesExistMethod(), getCallOptions()), request);
     }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> repairTable(
+        com.scalar.db.rpc.RepairTableRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRepairTableMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> repairCoordinatorTables(
+        com.scalar.db.rpc.RepairCoordinatorTablesRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRepairCoordinatorTablesMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_NAMESPACE = 0;
@@ -1080,6 +1216,8 @@ public final class DistributedTransactionAdminGrpc {
   private static final int METHODID_DROP_COORDINATOR_TABLES = 11;
   private static final int METHODID_TRUNCATE_COORDINATOR_TABLES = 12;
   private static final int METHODID_COORDINATOR_TABLES_EXIST = 13;
+  private static final int METHODID_REPAIR_TABLE = 14;
+  private static final int METHODID_REPAIR_COORDINATOR_TABLES = 15;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -1153,6 +1291,14 @@ public final class DistributedTransactionAdminGrpc {
         case METHODID_COORDINATOR_TABLES_EXIST:
           serviceImpl.coordinatorTablesExist((com.scalar.db.rpc.CoordinatorTablesExistRequest) request,
               (io.grpc.stub.StreamObserver<com.scalar.db.rpc.CoordinatorTablesExistResponse>) responseObserver);
+          break;
+        case METHODID_REPAIR_TABLE:
+          serviceImpl.repairTable((com.scalar.db.rpc.RepairTableRequest) request,
+              (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
+          break;
+        case METHODID_REPAIR_COORDINATOR_TABLES:
+          serviceImpl.repairCoordinatorTables((com.scalar.db.rpc.RepairCoordinatorTablesRequest) request,
+              (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -1229,6 +1375,8 @@ public final class DistributedTransactionAdminGrpc {
               .addMethod(getDropCoordinatorTablesMethod())
               .addMethod(getTruncateCoordinatorTablesMethod())
               .addMethod(getCoordinatorTablesExistMethod())
+              .addMethod(getRepairTableMethod())
+              .addMethod(getRepairCoordinatorTablesMethod())
               .build();
         }
       }

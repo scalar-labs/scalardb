@@ -77,6 +77,13 @@ public class AdminService implements DistributedStorageAdmin {
   }
 
   @Override
+  public void repairTable(
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      throws ExecutionException {
+    admin.repairTable(namespace, table, metadata, options);
+  }
+
+  @Override
   public void close() {
     admin.close();
   }

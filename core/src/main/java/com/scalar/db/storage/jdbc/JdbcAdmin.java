@@ -40,6 +40,15 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class JdbcAdmin implements DistributedStorageAdmin {
 
+  public static final String METADATA_SCHEMA = "scalardb";
+  public static final String METADATA_TABLE = "metadata";
+  @VisibleForTesting static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
+  @VisibleForTesting static final String METADATA_COL_COLUMN_NAME = "column_name";
+  @VisibleForTesting static final String METADATA_COL_DATA_TYPE = "data_type";
+  @VisibleForTesting static final String METADATA_COL_KEY_TYPE = "key_type";
+  @VisibleForTesting static final String METADATA_COL_CLUSTERING_ORDER = "clustering_order";
+  @VisibleForTesting static final String METADATA_COL_INDEXED = "indexed";
+  @VisibleForTesting static final String METADATA_COL_ORDINAL_POSITION = "ordinal_position";
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
   private static final ImmutableMap<RdbEngine, ImmutableMap<DataType, String>> DATA_TYPE_MAPPING =
       ImmutableMap.<RdbEngine, ImmutableMap<DataType, String>>builder()
@@ -110,16 +119,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                       .build())
               .put(RdbEngine.SQL_SERVER, ImmutableMap.<DataType, String>builder().build())
               .build();
-
-  public static final String METADATA_SCHEMA = "scalardb";
-  public static final String METADATA_TABLE = "metadata";
-  @VisibleForTesting static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
-  @VisibleForTesting static final String METADATA_COL_COLUMN_NAME = "column_name";
-  @VisibleForTesting static final String METADATA_COL_DATA_TYPE = "data_type";
-  @VisibleForTesting static final String METADATA_COL_KEY_TYPE = "key_type";
-  @VisibleForTesting static final String METADATA_COL_CLUSTERING_ORDER = "clustering_order";
-  @VisibleForTesting static final String METADATA_COL_INDEXED = "indexed";
-  @VisibleForTesting static final String METADATA_COL_ORDINAL_POSITION = "ordinal_position";
   private static final String INDEX_NAME_PREFIX = "index";
 
   private final BasicDataSource dataSource;
@@ -679,7 +678,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       // An exception will be thrown if the metadata table does not exist when executing the select
       // query
       if ((rdbEngine == RdbEngine.MYSQL && (e.getErrorCode() == 1049 || e.getErrorCode() == 1146))
-          || (rdbEngine == RdbEngine.POSTGRESQL && e.getSQLState().equals("42P01"))
+          || (rdbEngine == RdbEngine.POSTGRESQL && "42P01".equals(e.getSQLState()))
           || (rdbEngine == RdbEngine.ORACLE && e.getErrorCode() == 942)
           || (rdbEngine == RdbEngine.SQL_SERVER && e.getErrorCode() == 208)) {
         return Collections.emptySet();
@@ -784,6 +783,59 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       updateTableMetadata(connection, namespace, table, columnName, false);
     } catch (SQLException e) {
       throw new ExecutionException("dropping the secondary index failed", e);
+    }
+  }
+
+  private boolean tableExistsInternal(String namespace, String table) throws ExecutionException {
+    String fullTableName = encloseFullTableName(namespace, table);
+    String tableExistsStatement;
+    switch (rdbEngine) {
+      case POSTGRESQL:
+      case MYSQL:
+        tableExistsStatement = "SELECT 1 FROM " + fullTableName + " LIMIT 1";
+        break;
+      case ORACLE:
+        tableExistsStatement = "SELECT 1 FROM " + fullTableName + " FETCH FIRST 1 ROWS ONLY";
+        break;
+      case SQL_SERVER:
+        tableExistsStatement = "SELECT TOP 1 1 FROM " + fullTableName;
+        break;
+      default:
+        throw new AssertionError();
+    }
+
+    try (Connection connection = dataSource.getConnection()) {
+      execute(connection, tableExistsStatement);
+      return true;
+    } catch (SQLException e) {
+      // An exception will be thrown if the table does not exist when executing the select
+      // query
+      if ((rdbEngine == RdbEngine.MYSQL && (e.getErrorCode() == 1049 || e.getErrorCode() == 1146))
+          || (rdbEngine == RdbEngine.POSTGRESQL && "42P01".equals(e.getSQLState()))
+          || (rdbEngine == RdbEngine.ORACLE && e.getErrorCode() == 942)
+          || (rdbEngine == RdbEngine.SQL_SERVER && e.getErrorCode() == 208)) {
+        return false;
+      }
+      throw new ExecutionException("checking if the table exists failed", e);
+    }
+  }
+
+  @Override
+  public void repairTable(
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      throws ExecutionException {
+    if (!tableExistsInternal(namespace, table)) {
+      throw new IllegalArgumentException(
+          "The table " + getFullTableName(namespace, table) + "  does not exist");
+    }
+
+    if (!tableExistsInternal(metadataSchema, METADATA_TABLE)
+        || getTableMetadata(namespace, table) == null) {
+      try (Connection connection = dataSource.getConnection()) {
+        addTableMetadata(connection, namespace, table, metadata);
+      } catch (SQLException e) {
+        throw new ExecutionException("creating the table metadata failed", e);
+      }
     }
   }
 
