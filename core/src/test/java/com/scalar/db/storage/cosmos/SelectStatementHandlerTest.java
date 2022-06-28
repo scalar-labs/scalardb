@@ -24,6 +24,7 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -31,7 +32,6 @@ import com.scalar.db.io.Key;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
-import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -134,7 +134,7 @@ public class SelectStatementHandlerTest {
   }
 
   @Test
-  public void handle_CosmosExceptionWithNotFound_ShouldReturnEmptyList() throws Exception {
+  public void handle_CosmosExceptionWithNotFound_ShouldReturnEmptyScanner() throws Exception {
     // Arrange
     CosmosException toThrow = mock(CosmosException.class);
     doThrow(toThrow)
@@ -145,10 +145,10 @@ public class SelectStatementHandlerTest {
     Get get = prepareGet();
 
     // Act Assert
-    List<Record> actual = handler.handle(get);
+    Scanner scanner = handler.handle(get);
 
     // Assert
-    assertThat(actual).isEmpty();
+    assertThat(scanner.all()).isEmpty();
   }
 
   @Test
