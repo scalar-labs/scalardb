@@ -115,7 +115,9 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
   }
 
   @AfterAll
-  protected void afterAll() throws Exception {}
+  protected void afterAll() throws Exception {
+    admin.close();
+  }
 
   @Test
   public void repairTableAndCoordinatorTable_ForDeletedMetadataTable_ShouldRepairProperly()
@@ -131,7 +133,9 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     assertThat(admin.tableExists(getNamespace(), TABLE)).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), TABLE)).isEqualTo(TABLE_METADATA);
     assertThat(admin.coordinatorTablesExist()).isTrue();
-    assertTableMetadataForCoordinatorTableArePresent();
+    if (hasCoordinatorTables()) {
+      assertTableMetadataForCoordinatorTableArePresent();
+    }
   }
 
   @Test
@@ -147,14 +151,12 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     // Assert
     assertThat(admin.tableExists(getNamespace(), TABLE)).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), TABLE)).isEqualTo(TABLE_METADATA);
-    assertTableMetadataForCoordinatorTableArePresent();
+    if (hasCoordinatorTables()) {
+      assertTableMetadataForCoordinatorTableArePresent();
+    }
   }
 
   private void assertTableMetadataForCoordinatorTableArePresent() throws Exception {
-    // There is no coordinator table when using JdbcTransaction
-    if (getStorageProperties().getProperty(DatabaseConfig.TRANSACTION_MANAGER, "").equals("jdbc")) {
-      return;
-    }
     Properties properties = TestUtils.addSuffix(getStorageProperties(), TEST_NAME);
     String coordinatorNamespace =
         new ConsensusCommitConfig(new DatabaseConfig(properties))
@@ -162,14 +164,19 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
             .orElse(Coordinator.NAMESPACE);
     String coordinatorTable = Coordinator.TABLE;
     // Use the DistributedStorageAdmin instead of the DistributedTransactionAdmin because the latter
-    // expects the
-    // table to hold transactional table metadata columns which is not the case for the coordinator
-    // table
+    // expects the table to hold transactional table metadata columns which is not the case for the
+    // coordinator table
     DistributedStorageAdmin storageAdmin =
         StorageFactory.create(TestUtils.addSuffix(getStorageProperties(), TEST_NAME))
             .getStorageAdmin();
 
     assertThat(storageAdmin.getTableMetadata(coordinatorNamespace, coordinatorTable))
         .isEqualTo(Coordinator.TABLE_METADATA);
+
+    storageAdmin.close();
+  }
+
+  protected boolean hasCoordinatorTables() {
+    return true;
   }
 }

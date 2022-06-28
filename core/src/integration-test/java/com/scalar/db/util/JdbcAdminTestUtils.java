@@ -6,7 +6,6 @@ import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -49,7 +48,6 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
     execute(truncateTableStatement);
   }
 
-  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   private void execute(String sql) throws SQLException {
     try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config);
         Connection connection = dataSource.getConnection();

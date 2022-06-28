@@ -19,6 +19,7 @@
       <Class name="~.*\.*TestBase"/>
       <Class name="~.*\.*TestBase\$.*"/>
       <Class name="~.*\.*TestBase\..*"/>
+      <Class name="~.*\.*TestUtils"/>
       <Class name="~.*\.*TestUtils\$.*"/>
       <Class name="~.*\.*IntegrationTest.*"/>
     </Or>

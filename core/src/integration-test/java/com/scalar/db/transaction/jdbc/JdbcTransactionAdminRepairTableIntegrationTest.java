@@ -15,4 +15,9 @@ public class JdbcTransactionAdminRepairTableIntegrationTest
     properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "jdbc");
     return properties;
   }
+
+  @Override
+  protected boolean hasCoordinatorTables() {
+    return false;
+  }
 }
