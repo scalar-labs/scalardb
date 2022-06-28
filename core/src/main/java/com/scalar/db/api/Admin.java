@@ -332,4 +332,17 @@ public interface Admin {
   default boolean tableExists(String namespace, String table) throws ExecutionException {
     return getNamespaceTableNames(namespace).contains(table);
   }
+
+  /**
+   * Repair a table which may be in an unknown state
+   *
+   * @param namespace an existing namespace
+   * @param table an existing table
+   * @param metadata the metadata associated to the table to repair
+   * @param options options to repair
+   * @throws ExecutionException if the operation failed
+   */
+  void repairTable(
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      throws ExecutionException;
 }

@@ -1062,4 +1062,216 @@ public class DynamoAdminTest {
     verify(applicationAutoScalingClient, times(2))
         .deregisterScalableTarget(any(DeregisterScalableTargetRequest.class));
   }
+
+  @Test
+  public void repairTable_WithNonExistingTableToRepair_shouldThrowIllegalArgumentException() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
+    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
+    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
+    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
+    when(listTablesResponse.tableNames()).thenReturn(ImmutableList.of());
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void repairTable_WithNonExistingMetadataForTable_shouldAddMetadataForTable()
+      throws ExecutionException {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
+
+    // The table to repair exists
+    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
+    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
+    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
+    when(listTablesResponse.tableNames())
+        .thenReturn(ImmutableList.of(getFullTableName(NAMESPACE, TABLE)));
+
+    // Wait for metadata table creation
+    DescribeTableResponse describeTableResponseMetadataTableCreation =
+        mock(DescribeTableResponse.class);
+    TableDescription tableDescriptionMetadataTableCreation = mock(TableDescription.class);
+    when(describeTableResponseMetadataTableCreation.table())
+        .thenReturn(tableDescriptionMetadataTableCreation);
+    when(tableDescriptionMetadataTableCreation.tableStatus()).thenReturn(TableStatus.ACTIVE);
+
+    when(client.describeTable(
+            DescribeTableRequest.builder()
+                .tableName(
+                    getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE))
+                .build()))
+        .thenThrow(ResourceNotFoundException.class)
+        .thenReturn(describeTableResponseMetadataTableCreation);
+
+    // Continuous backup check
+    DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
+        mock(DescribeContinuousBackupsResponse.class);
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(describeContinuousBackupsResponse);
+    ContinuousBackupsDescription continuousBackupsDescription =
+        mock(ContinuousBackupsDescription.class);
+    when(describeContinuousBackupsResponse.continuousBackupsDescription())
+        .thenReturn(continuousBackupsDescription);
+    when(continuousBackupsDescription.continuousBackupsStatus())
+        .thenReturn(ContinuousBackupsStatus.ENABLED);
+
+    // Read the metadata table
+    GetItemResponse getItemResponse = mock(GetItemResponse.class);
+    Map<String, AttributeValue> key = new HashMap<>();
+    key.put(DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(FULL_TABLE_NAME).build());
+    when(client.getItem(
+            GetItemRequest.builder()
+                .tableName(
+                    getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE))
+                .key(key)
+                .consistentRead(true)
+                .build()))
+        .thenReturn(getItemResponse);
+    when(getItemResponse.item()).thenReturn(ImmutableMap.of());
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
+
+    // Assert
+    // Check metadata table creation
+    ArgumentCaptor<CreateTableRequest> createTableRequestArgumentCaptor =
+        ArgumentCaptor.forClass(CreateTableRequest.class);
+    verify(client).createTable(createTableRequestArgumentCaptor.capture());
+    CreateTableRequest actualCreateTableRequest = createTableRequestArgumentCaptor.getValue();
+    assertThat(actualCreateTableRequest.tableName())
+        .isEqualTo(getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE));
+
+    // Check continuous backup
+    ArgumentCaptor<UpdateContinuousBackupsRequest> updateContinuousBackupsRequestCaptor =
+        ArgumentCaptor.forClass(UpdateContinuousBackupsRequest.class);
+    verify(client).updateContinuousBackups(updateContinuousBackupsRequestCaptor.capture());
+    UpdateContinuousBackupsRequest updateContinuousBackupsRequest =
+        updateContinuousBackupsRequestCaptor.getValue();
+    assertThat(updateContinuousBackupsRequest.tableName())
+        .isEqualTo(getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE));
+
+    // Check added metadata
+    Map<String, AttributeValue> itemValues = new HashMap<>();
+    itemValues.put(
+        DynamoAdmin.METADATA_ATTR_TABLE,
+        AttributeValue.builder().s(getFullTableName(NAMESPACE, TABLE)).build());
+    Map<String, AttributeValue> columns = new HashMap<>();
+    columns.put("c1", AttributeValue.builder().s(DataType.TEXT.name().toLowerCase()).build());
+    itemValues.put(DynamoAdmin.METADATA_ATTR_COLUMNS, AttributeValue.builder().m(columns).build());
+    itemValues.put(
+        DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
+        AttributeValue.builder()
+            .l(ImmutableList.of(AttributeValue.builder().s("c1").build()))
+            .build());
+    verify(client)
+        .putItem(
+            PutItemRequest.builder()
+                .tableName(
+                    getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE))
+                .item(itemValues)
+                .build());
+  }
+
+  @Test
+  public void repairTable_WithExistingMetadataForTable_shouldNotAddMetadata()
+      throws ExecutionException {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
+
+    // The table to repair exists
+    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
+    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
+    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
+    when(listTablesResponse.tableNames()).thenReturn(ImmutableList.of(FULL_TABLE_NAME));
+
+    DescribeTableResponse describeTableResponseMetadataTableCreation =
+        mock(DescribeTableResponse.class);
+
+    // Wait for metadata table creation
+    TableDescription tableDescriptionMetadataTableCreation = mock(TableDescription.class);
+    when(describeTableResponseMetadataTableCreation.table())
+        .thenReturn(tableDescriptionMetadataTableCreation);
+    when(tableDescriptionMetadataTableCreation.tableStatus()).thenReturn(TableStatus.ACTIVE);
+
+    // Continuous backup check
+    DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
+        mock(DescribeContinuousBackupsResponse.class);
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(describeContinuousBackupsResponse);
+    ContinuousBackupsDescription continuousBackupsDescription =
+        mock(ContinuousBackupsDescription.class);
+    when(describeContinuousBackupsResponse.continuousBackupsDescription())
+        .thenReturn(continuousBackupsDescription);
+    when(continuousBackupsDescription.continuousBackupsStatus())
+        .thenReturn(ContinuousBackupsStatus.ENABLED);
+
+    when(client.describeTable(
+            DescribeTableRequest.builder()
+                .tableName(
+                    getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE))
+                .build()))
+        .thenThrow(ResourceNotFoundException.class)
+        .thenReturn(describeTableResponseMetadataTableCreation);
+
+    // Read the metadata table
+    GetItemResponse getItemResponse = mock(GetItemResponse.class);
+    Map<String, AttributeValue> key = new HashMap<>();
+    key.put(DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(FULL_TABLE_NAME).build());
+    when(client.getItem(
+            GetItemRequest.builder()
+                .tableName(
+                    getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE))
+                .key(key)
+                .consistentRead(true)
+                .build()))
+        .thenReturn(getItemResponse);
+    when(getItemResponse.item())
+        .thenReturn(
+            ImmutableMap.<String, AttributeValue>builder()
+                .put(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s(FULL_TABLE_NAME).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_COLUMNS,
+                    AttributeValue.builder()
+                        .m(
+                            ImmutableMap.<String, AttributeValue>builder()
+                                .put("c1", AttributeValue.builder().s("text").build())
+                                .build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
+                    AttributeValue.builder().l(AttributeValue.builder().s("c1").build()).build())
+                .build());
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
+
+    // Assert
+    // Check metadata table creation
+    ArgumentCaptor<CreateTableRequest> createTableRequestArgumentCaptor =
+        ArgumentCaptor.forClass(CreateTableRequest.class);
+    verify(client).createTable(createTableRequestArgumentCaptor.capture());
+    CreateTableRequest actualCreateTableRequest = createTableRequestArgumentCaptor.getValue();
+    assertThat(actualCreateTableRequest.tableName())
+        .isEqualTo(getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE));
+
+    // Check continuous backup
+    ArgumentCaptor<UpdateContinuousBackupsRequest> updateContinuousBackupsRequestCaptor =
+        ArgumentCaptor.forClass(UpdateContinuousBackupsRequest.class);
+    verify(client).updateContinuousBackups(updateContinuousBackupsRequestCaptor.capture());
+    UpdateContinuousBackupsRequest updateContinuousBackupsRequest =
+        updateContinuousBackupsRequestCaptor.getValue();
+    assertThat(updateContinuousBackupsRequest.tableName())
+        .isEqualTo(getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE));
+
+    // Check metadata are not added
+    verify(client, never()).putItem(any(PutItemRequest.class));
+  }
 }

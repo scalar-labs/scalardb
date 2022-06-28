@@ -1118,6 +1118,21 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void repairTable(
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      throws ExecutionException {
+    if (!tableExists(namespace, table)) {
+      throw new IllegalArgumentException(
+          "The table " + getFullTableName(namespace, table) + "  does not exist");
+    }
+    boolean noBackup = Boolean.parseBoolean(options.getOrDefault(NO_BACKUP, DEFAULT_NO_BACKUP));
+    createMetadataTableIfNotExists(noBackup);
+    if (getTableMetadata(namespace, table) == null) {
+      putTableMetadata(namespace, table, metadata);
+    }
+  }
+
+  @Override
   public void close() {
     client.close();
     applicationAutoScalingClient.close();

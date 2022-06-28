@@ -2,6 +2,8 @@ package com.scalar.db.storage.cassandra;
 
 import static com.datastax.driver.core.Metadata.quote;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -513,5 +515,53 @@ public class CassandraAdminTest {
     ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
     verify(cassandraSession).execute(captor.capture());
     assertThat(captor.getValue().trim()).isEqualTo("DROP INDEX sample_ns.tbl_index_col");
+  }
+
+  @Test
+  public void repairTable_WithExistingTable_ShouldDoNothing() {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "tbl";
+    com.datastax.driver.core.TableMetadata tableMetadata1 =
+        mock(com.datastax.driver.core.TableMetadata.class);
+    when(tableMetadata1.getName()).thenReturn(table);
+    List<com.datastax.driver.core.TableMetadata> tableMetadataList =
+        ImmutableList.of(tableMetadata1);
+
+    when(cassandraSession.getCluster()).thenReturn(cluster);
+    when(cluster.getMetadata()).thenReturn(metadata);
+    when(metadata.getKeyspace(any())).thenReturn(keyspaceMetadata);
+    when(keyspaceMetadata.getTables()).thenReturn(tableMetadataList);
+
+    // Act
+    assertThatCode(
+            () ->
+                cassandraAdmin.repairTable(
+                    namespace, table, mock(TableMetadata.class), Collections.emptyMap()))
+        .doesNotThrowAnyException();
+
+    // Assert
+    verify(metadata).getKeyspace(namespace);
+  }
+
+  @Test
+  public void repairTable_WithNonExistingTable_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "tbl";
+    when(cassandraSession.getCluster()).thenReturn(cluster);
+    when(cluster.getMetadata()).thenReturn(metadata);
+    when(metadata.getKeyspace(any())).thenReturn(keyspaceMetadata);
+    when(keyspaceMetadata.getTables()).thenReturn(ImmutableList.of());
+
+    // Act
+    assertThatThrownBy(
+            () ->
+                cassandraAdmin.repairTable(
+                    namespace, table, mock(TableMetadata.class), Collections.emptyMap()))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    // Assert
+    verify(metadata).getKeyspace(namespace);
   }
 }

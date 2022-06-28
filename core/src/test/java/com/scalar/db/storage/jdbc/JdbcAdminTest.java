@@ -1,7 +1,9 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -12,6 +14,7 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.jdbc.JdbcAdminTest.GetColumnsResultSetMocker.Row;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -1309,8 +1312,302 @@ public class JdbcAdminTest {
     assertThat(captor.getAllValues().get(1)).isEqualTo(expectedUpdateTableMetadataStatement);
   }
 
+  @Test
+  public void
+      repairTable_WithMissingMetadataTableForMysql_shouldCreateMetadataTableAndAddMetadataForTable()
+          throws SQLException, ExecutionException {
+    repairTable_WithMissingMetadataForMysql(false);
+  }
+
+  @Test
+  public void
+      repairTable_WithMissingMetadataTableForOracle_shouldCreateMetadataTableAndAddMetadataForTable()
+          throws SQLException, ExecutionException {
+    repairTable_WithMissingMetadataForOracle(false);
+  }
+
+  @Test
+  public void
+      repairTable_WithMissingMetadataTableForPostgresql_shouldCreateMetadataTableAndAddMetadataForTable()
+          throws SQLException, ExecutionException {
+    repairTable_WithMissingMetadataForPostgresql(false);
+  }
+
+  @Test
+  public void
+      repairTable_WithMissingMetadataTableForSqlServer_shouldCreateMetadataTableAndAddMetadataForTable()
+          throws SQLException, ExecutionException {
+    repairTable_WithMissingMetadataForSqlServer(false);
+  }
+
+  @Test
+  public void repairTable_WithEmptyMetadataTableForMysql_shouldAddMetadataForTable()
+      throws SQLException, ExecutionException {
+    repairTable_WithMissingMetadataForMysql(true);
+  }
+
+  @Test
+  public void repairTable_WithEmptyMetadataTableForOracle_shouldAddMetadataForTable()
+      throws SQLException, ExecutionException {
+    repairTable_WithMissingMetadataForOracle(true);
+  }
+
+  @Test
+  public void repairTable_WithEmptyMetadataTableForPostgresql_shouldAddMetadataForTable()
+      throws SQLException, ExecutionException {
+    repairTable_WithMissingMetadataForPostgresql(true);
+  }
+
+  @Test
+  public void repairTable_WithEmptyMetadataTableForSqlServer_shouldAddMetadataForTable()
+      throws SQLException, ExecutionException {
+    repairTable_WithMissingMetadataForSqlServer(true);
+  }
+
+  private void repairTable_WithMissingMetadataForMysql(boolean isMetadataTableExisting)
+      throws SQLException, ExecutionException {
+    repairTable_WithMissingMetadataForX_shouldAddMetadataForTable(
+        RdbEngine.MYSQL,
+        isMetadataTableExisting,
+        "SELECT 1 FROM `my_ns`.`foo_table` LIMIT 1",
+        "SELECT 1 FROM `scalardb`.`metadata` LIMIT 1",
+        "CREATE SCHEMA IF NOT EXISTS `scalardb`",
+        "CREATE TABLE IF NOT EXISTS `scalardb`.`metadata`(`full_table_name` VARCHAR(128),`column_name` VARCHAR(128),`data_type` VARCHAR(20) NOT NULL,`key_type` VARCHAR(20),`clustering_order` VARCHAR(10),`indexed` BOOLEAN NOT NULL,`ordinal_position` INTEGER NOT NULL,PRIMARY KEY (`full_table_name`, `column_name`))",
+        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
+  }
+
+  private void repairTable_WithMissingMetadataForOracle(boolean isMetadataTableExisting)
+      throws SQLException, ExecutionException {
+    repairTable_WithMissingMetadataForX_shouldAddMetadataForTable(
+        RdbEngine.ORACLE,
+        isMetadataTableExisting,
+        "SELECT 1 FROM \"my_ns\".\"foo_table\" FETCH FIRST 1 ROWS ONLY",
+        "SELECT 1 FROM \"scalardb\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
+        "CREATE USER \"scalardb\" IDENTIFIED BY \"oracle\"",
+        "ALTER USER \"scalardb\" quota unlimited on USERS",
+        "CREATE TABLE \"scalardb\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
+  }
+
+  private void repairTable_WithMissingMetadataForPostgresql(boolean isMetadataTableExisting)
+      throws SQLException, ExecutionException {
+    repairTable_WithMissingMetadataForX_shouldAddMetadataForTable(
+        RdbEngine.POSTGRESQL,
+        isMetadataTableExisting,
+        "SELECT 1 FROM \"my_ns\".\"foo_table\" LIMIT 1",
+        "SELECT 1 FROM \"scalardb\".\"metadata\" LIMIT 1",
+        "CREATE SCHEMA IF NOT EXISTS \"scalardb\"",
+        "CREATE TABLE IF NOT EXISTS \"scalardb\".\"metadata\"(\"full_table_name\" VARCHAR(128),\"column_name\" VARCHAR(128),\"data_type\" VARCHAR(20) NOT NULL,\"key_type\" VARCHAR(20),\"clustering_order\" VARCHAR(10),\"indexed\" BOOLEAN NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
+  }
+
+  private void repairTable_WithMissingMetadataForSqlServer(boolean isMetadataTableExisting)
+      throws SQLException, ExecutionException {
+    repairTable_WithMissingMetadataForX_shouldAddMetadataForTable(
+        RdbEngine.SQL_SERVER,
+        isMetadataTableExisting,
+        "SELECT TOP 1 1 FROM [my_ns].[foo_table]",
+        "SELECT TOP 1 1 FROM [scalardb].[metadata]",
+        "CREATE SCHEMA [scalardb]",
+        "CREATE TABLE [scalardb].[metadata]([full_table_name] VARCHAR(128),[column_name] VARCHAR(128),[data_type] VARCHAR(20) NOT NULL,[key_type] VARCHAR(20),[clustering_order] VARCHAR(10),[indexed] BIT NOT NULL,[ordinal_position] INTEGER NOT NULL,PRIMARY KEY ([full_table_name], [column_name]))",
+        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
+  }
+
+  private void repairTable_WithMissingMetadataForX_shouldAddMetadataForTable(
+      RdbEngine rdbEngine, boolean isMetadataTableExisting, String... expectedSqlStatements)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
+
+    List<Statement> mockedStatements = new ArrayList<>();
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      mockedStatements.add(mock(Statement.class));
+    }
+
+    when(connection.createStatement())
+        .thenReturn(
+            mockedStatements.get(0),
+            mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+
+    if (isMetadataTableExisting) {
+      // Mock that the metadata table exists but it is empty
+      PreparedStatement selectStatement = mock(PreparedStatement.class);
+      ResultSet resultSet = mock(ResultSet.class);
+      when(resultSet.next()).thenReturn(false);
+      when(selectStatement.executeQuery()).thenReturn(resultSet);
+      when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    } else {
+      // Mock that the metadata table does not exist
+      SQLException sqlException = mock(SQLException.class);
+      if (rdbEngine == RdbEngine.MYSQL) {
+        when(sqlException.getErrorCode()).thenReturn(1049);
+      } else if (rdbEngine == RdbEngine.POSTGRESQL) {
+        when(sqlException.getSQLState()).thenReturn("42P01");
+      } else if (rdbEngine == RdbEngine.ORACLE) {
+        when(sqlException.getErrorCode()).thenReturn(942);
+      } else {
+        when(sqlException.getErrorCode()).thenReturn(208);
+      }
+      when(mockedStatements.get(1).execute(anyString())).thenThrow(sqlException);
+    }
+
+    // Act
+    admin.repairTable(namespace, table, metadata, new HashMap<>());
+
+    // Assert
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
+    }
+  }
+
+  @Test
+  public void repairTable_WithExistingMetadataForTableForMySql_shouldNotAddMetadata()
+      throws SQLException, ExecutionException {
+    repairTable_WithExistingMetadataForTableForX_shouldNotAddMetadata(
+        RdbEngine.MYSQL,
+        "SELECT 1 FROM `my_ns`.`foo_table` LIMIT 1",
+        "SELECT 1 FROM `scalardb`.`metadata` LIMIT 1");
+  }
+
+  @Test
+  public void repairTable_WithExistingMetadataForTableForOracle_shouldNotAddMetadata()
+      throws SQLException, ExecutionException {
+    repairTable_WithExistingMetadataForTableForX_shouldNotAddMetadata(
+        RdbEngine.ORACLE,
+        "SELECT 1 FROM \"my_ns\".\"foo_table\" FETCH FIRST 1 ROWS ONLY",
+        "SELECT 1 FROM \"scalardb\".\"metadata\" FETCH FIRST 1 ROWS ONLY");
+  }
+
+  @Test
+  public void repairTable_WithExistingMetadataForTableForPostgresql_shouldNotAddMetadata()
+      throws SQLException, ExecutionException {
+    repairTable_WithExistingMetadataForTableForX_shouldNotAddMetadata(
+        RdbEngine.POSTGRESQL,
+        "SELECT 1 FROM \"my_ns\".\"foo_table\" LIMIT 1",
+        "SELECT 1 FROM \"scalardb\".\"metadata\" LIMIT 1");
+  }
+
+  @Test
+  public void repairTable_WithExistingMetadataForTableForSqlServer_shouldNotAddMetadata()
+      throws SQLException, ExecutionException {
+    repairTable_WithExistingMetadataForTableForX_shouldNotAddMetadata(
+        RdbEngine.SQL_SERVER,
+        "SELECT TOP 1 1 FROM [my_ns].[foo_table]",
+        "SELECT TOP 1 1 FROM [scalardb].[metadata]");
+  }
+
+  private void repairTable_WithExistingMetadataForTableForX_shouldNotAddMetadata(
+      RdbEngine rdbEngine, String... expectedSqlStatements)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
+
+    List<Statement> mockedStatements = new ArrayList<>();
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      mockedStatements.add(mock(Statement.class));
+    }
+
+    when(connection.createStatement())
+        .thenReturn(
+            mockedStatements.get(0),
+            mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            Collections.singletonList(
+                new Row("c1", DataType.TEXT.toString(), "PARTITION", null, false)));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+
+    // Act
+    admin.repairTable(namespace, table, metadata, new HashMap<>());
+
+    // Assert
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
+    }
+  }
+
+  @Test
+  public void repairTable_WithNonExistingTableToRepairForMysql_shouldThrowIllegalArgumentException()
+      throws SQLException {
+    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
+        RdbEngine.MYSQL, "SELECT 1 FROM `my_ns`.`foo_table` LIMIT 1");
+  }
+
+  @Test
+  public void
+      repairTable_WithNonExistingTableToRepairForOracle_shouldThrowIllegalArgumentException()
+          throws SQLException {
+    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
+        RdbEngine.ORACLE, "SELECT 1 FROM \"my_ns\".\"foo_table\" FETCH FIRST 1 ROWS ONLY");
+  }
+
+  @Test
+  public void
+      repairTable_WithNonExistingTableToRepairForPostgresql_shouldThrowIllegalArgumentException()
+          throws SQLException {
+    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
+        RdbEngine.POSTGRESQL, "SELECT 1 FROM \"my_ns\".\"foo_table\" LIMIT 1");
+  }
+
+  @Test
+  public void
+      repairTable_WithNonExistingTableToRepairForSqlServer_shouldThrowIllegalArgumentException()
+          throws SQLException {
+    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
+        RdbEngine.SQL_SERVER, "SELECT TOP 1 1 FROM [my_ns].[foo_table]");
+  }
+
+  private void repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
+      RdbEngine rdbEngine, String expectedCheckTableExistStatement) throws SQLException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
+
+    Statement checkTableExistStatement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(checkTableExistStatement);
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    SQLException sqlException = mock(SQLException.class);
+    if (rdbEngine == RdbEngine.MYSQL) {
+      when(sqlException.getErrorCode()).thenReturn(1049);
+    } else if (rdbEngine == RdbEngine.POSTGRESQL) {
+      when(sqlException.getSQLState()).thenReturn("42P01");
+    } else if (rdbEngine == RdbEngine.ORACLE) {
+      when(sqlException.getErrorCode()).thenReturn(942);
+    } else {
+      when(sqlException.getErrorCode()).thenReturn(208);
+    }
+    when(checkTableExistStatement.execute(any())).thenThrow(sqlException);
+
+    // Act
+    assertThatThrownBy(() -> admin.repairTable(namespace, table, metadata, new HashMap<>()))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    // Assert
+    verify(checkTableExistStatement).execute(expectedCheckTableExistStatement);
+  }
+
   // Utility class used to mock ResultSet for getTableMetadata test
   static class GetColumnsResultSetMocker implements org.mockito.stubbing.Answer<Object> {
+
     final List<GetColumnsResultSetMocker.Row> rows;
     int row = -1;
 
@@ -1336,6 +1633,7 @@ public class JdbcAdminTest {
     }
 
     static class Row {
+
       final String columnName;
       final String dataType;
       final String keyType;
@@ -1359,6 +1657,7 @@ public class JdbcAdminTest {
 
   // Utility class used to mock ResultSet for getTablesNames test
   static class GetTablesNamesResultSetMocker implements org.mockito.stubbing.Answer<Object> {
+
     final List<GetTablesNamesResultSetMocker.Row> rows;
     int row = -1;
 
@@ -1380,6 +1679,7 @@ public class JdbcAdminTest {
     }
 
     static class Row {
+
       final String fullTableName;
 
       public Row(String fullTableName) {

@@ -169,6 +169,13 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
     return getAdmin(namespace).namespaceExists(namespace);
   }
 
+  @Override
+  public void repairTable(
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      throws ExecutionException {
+    getAdmin(namespace, table).repairTable(namespace, table, metadata, options);
+  }
+
   private DistributedStorageAdmin getAdmin(String namespace) {
     DistributedStorageAdmin admin = namespaceAdminMap.get(namespace);
     return admin != null ? admin : defaultAdmin;
