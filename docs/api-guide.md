@@ -504,10 +504,6 @@ transaction.put(put);
 You also put a record with null values as follows:
 
 ```java
-// Create a Put operation with null values
-Key partitionKey = Key.ofInt("c1", 10);
-Key clusteringKey = Key.of("c2", "aaa", "c3", 100L);
-
 Put put =
     Put.newBuilder()
         .namespace("ns")
@@ -517,9 +513,6 @@ Put put =
         .floatValue("c4", null)
         .doubleValue("c5", null)
         .build();
-
-// Execute the Put operation
-transaction.put(put);
 ```
 
 #### Delete operation
