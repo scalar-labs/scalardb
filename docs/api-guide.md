@@ -322,6 +322,8 @@ Get get =
 Optional<Result> result = transaction.get(get);
 ```
 
+You can also specify projections to choose which columns are returned.
+
 ##### Handle Result objects
 
 The Get operation and Scan operation return `Result` objects.
@@ -415,6 +417,11 @@ Scan scan =
 // Execute the Scan operation
 List<Result> results = transaction.scan(scan);
 ```
+
+You can omit the clustering key boundaries, or you can specify either a start boundary or an end boundary.
+If you don't specify orderings, you get results ordered by clustering order you defined when creating the table.
+
+Also, you can specify projections to choose which columns are returned, and limit to specify the number of records to return in Scan operations.
 
 ##### Scan with a secondary index
 
