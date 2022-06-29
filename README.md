@@ -32,6 +32,7 @@ To add a dependency using Maven:
 * [Multi-storage Transactions](docs/multi-storage-transactions.md)
 * [Two-phase Commit Transactions](docs/two-phase-commit-transactions.md)
 * [Design document](docs/design.md)
+* [Configurations for Consensus Commit](docs/configurations-for-consensus-commit.md)
 * Slides
     * [Making Cassandra more capable, faster, and more reliable](https://www.slideshare.net/scalar-inc/making-cassandra-more-capable-faster-and-more-reliable-at-apacheconhome-2020) at ApacheCon@Home 2020
     * [Scalar DB: A library that makes non-ACID databases ACID-compliant](https://www.slideshare.net/scalar-inc/scalar-db-a-library-that-makes-nonacid-databases-acidcompliant) at Database Lounge Tokyo #6 2020
