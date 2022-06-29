@@ -24,10 +24,10 @@ Before creating tables, namespaces must be created since a table belongs to one 
 You can create a namespace as follows:
 
 ```java
-// Create a namespace "ns"
+// Create a namespace "ns". It will throw an exception if the namespace already exists
 admin.createNamespace("ns");
 
-// Create a namespace if not exists
+// Create a namespace only if it does not already exist
 boolean ifNotExists = true;
 admin.createNamespace("ns", ifNotExists);
 
@@ -96,10 +96,10 @@ Please see [Scalar DB design document - Data Model](design.md#Data Model) for th
 And then, you can create a table as follows: 
 
 ```java
-// Create a table "ns.tbl"
+// Create a table "ns.tbl". It will throw an exception if the table already exists
 admin.createTable("ns", "tbl", tableMetadata);
 
-// Create a table if not exists
+// Create a table only if it does not already exist
 boolean ifNotExists = true;
 admin.createTable("ns", "tbl", tableMetadata, ifNotExists);
 
@@ -448,7 +448,7 @@ List<Result> results = transaction.scan(scan);
 
 Note that you can't specify clustering key boundaries and orderings in Scan with a secondary index.
 
-##### Scan without a partition key
+##### Scan without a partition key to retrieve all the records of a table
 
 You can also execute a Scan operation without specifying a partition key.
 
@@ -477,7 +477,7 @@ Note that you can't specify clustering key boundaries and orderings in Scan with
 
 #### Put operation
 
-`Put` is an operation to put a record specified a primary key.
+`Put` is an operation to put a record specified by a primary key.
 It inserts a new record if the record doesn't exist and updates the record if the record exists.
 
 You need to create a Put object first, and then you can execute it with the `transaction.put()` method as follows:
@@ -517,7 +517,7 @@ Put put =
 
 #### Delete operation
 
-`Delete` is an operation to delete a record specified a primary key.
+`Delete` is an operation to delete a record specified by a primary key.
 
 You need to create a Delete object first, and then you can execute it with the `transaction.delete()` method as follows:
 
@@ -689,10 +689,10 @@ If you catch `CrudException`, it indicates some failure (e.g., database failure 
 If you catch `CrudConflictException`, it indicates conflicts happen during a transaction so that you can retry the transaction, preferably with well-adjusted exponential backoff based on your application and environment.
 The sample code retries three times maximum and sleeps 100 milliseconds before retrying the transaction.
 
-Also, the `commit()` API could throw `CommitException`, `CommitConflictException`, and `UnknownTransactionException`.
+Also, the `commit()` API could throw `CommitException`, `CommitConflictException`, and `UnknownTransactionStatusException`.
 If you catch `CommitException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure/error is fixed.
 If you catch `CommitConflictException`, like the `CrudConflictException` case, you can retry the transaction.
-If you catch `UnknownTransactionException`, you are not sure if the transaction succeeds or not.
+If you catch `UnknownTransactionStatusException`, you are not sure if the transaction succeeds or not.
 In such a case, you need to check if the transaction is committed successfully or not and retry it if it fails.
 How to identify a transaction status is delegated to users.
 You may want to create a transaction status table and update it transactionally with other application data so that you can get the status of a transaction from the status table.

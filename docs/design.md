@@ -43,7 +43,7 @@ It is similar to Google BigTable [2] but it differs in clustering-key structure 
 ### Clustering order
 
 As mentioned, records in Scalar DB are sorted by the clustering-key in a partition.
-You can specify the default sort orders of the clustering-key, that's called clustering orders, when you create tables.
+You can specify the default sort orders of the clustering-key, that's called clustering order, when you create tables.
 If the clustering-key consists of multiple columns, you can specify clustering order for each column.
 
 ### Secondary index
