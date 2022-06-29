@@ -155,7 +155,7 @@ you can drop a table as follows:
 // Drop a table "ns.tbl". It will throw an exception if the table does not exist
 admin.dropTable("ns", "tbl");
 
-// Drop a table if exists only if it exists
+// Drop a table only if it exists
 boolean ifExists = true;
 admin.dropTable("ns", "tbl", ifExists);
 ```
