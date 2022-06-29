@@ -113,10 +113,10 @@ admin.createTable("ns", "tbl", tableMetadata, options);
 you can create a secondary index as follows:
 
 ```java
-// Create a secondary index on a column "c5" of a table "ns.tbl"
+// Create a secondary index on a column "c5" of a table "ns.tbl". It will throw an exception if the secondary index already exists
 admin.createIndex("ns", "tbl", "c5");
 
-// Create a secondary index if not exists
+// Create a secondary index only if it does not already exist
 boolean ifNotExists = true;
 admin.createIndex("ns", "tbl", "c5", ifNotExists);
 
@@ -139,10 +139,10 @@ admin.truncateTable("ns", "tbl");
 you can drop a secondary index as follows:
 
 ```java
-// Drop a secondary index on a column "c5" of a table "ns.tbl"
+// Drop a secondary index on a column "c5" of a table "ns.tbl". It will throw an exception if the secondary index does not exist
 admin.dropIndex("ns", "tbl", "c5");
 
-// Drop a secondary index if exists
+// Drop a secondary index only if it exists
 boolean ifExists = true;
 admin.dropIndex("ns", "tbl", "c5", ifExists);
 ```
@@ -152,10 +152,10 @@ admin.dropIndex("ns", "tbl", "c5", ifExists);
 you can drop a table as follows:
 
 ```java
-// Drop a table "ns.tbl"
+// Drop a table "ns.tbl". It will throw an exception if the table does not exist
 admin.dropTable("ns", "tbl");
 
-// Drop a table if exists
+// Drop a table if exists only if it exists
 boolean ifExists = true;
 admin.dropTable("ns", "tbl", ifExists);
 ```
@@ -165,10 +165,10 @@ admin.dropTable("ns", "tbl", ifExists);
 you can drop a namespace as follows:
 
 ```java
-// Drop a namespace "ns"
+// Drop a namespace "ns". It will throw an exception if the namespace does not exist
 admin.dropNamespace("ns");
 
-// Drop a namespace if exists
+// Drop a namespace only if it exists
 boolean ifExists = true;
 admin.dropNamespace("ns", ifExists);
 ```
