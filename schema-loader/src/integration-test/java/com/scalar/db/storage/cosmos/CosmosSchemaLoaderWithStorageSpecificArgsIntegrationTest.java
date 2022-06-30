@@ -57,7 +57,20 @@ public class CosmosSchemaLoaderWithStorageSpecificArgsIntegrationTest
     return builder.build();
   }
 
+  @Override
+  protected List<String> getCommandArgsForTableReparationWithCoordinator(
+      String configFile, String schemaFile) throws Exception {
+    return ImmutableList.<String>builder()
+        .addAll(getCommandArgsForCreationWithCoordinator(configFile, schemaFile))
+        .add("--repair-all")
+        .build();
+  }
+
   @Disabled
   @Override
   public void createTablesThenDeleteTables_ShouldExecuteProperly() {}
+
+  @Disabled
+  @Override
+  public void createTableThenDropMetadataTableThenRepairTables_ShouldExecuteProperly() {}
 }

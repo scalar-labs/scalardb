@@ -6,10 +6,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.util.AdminTestUtils;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -39,7 +45,34 @@ public abstract class SchemaLoaderIntegrationTestBase {
   private static final String TABLE_1 = "test_table2";
   private static final String NAMESPACE_2 = "integration_testing_schema_loader2";
   private static final String TABLE_2 = "test_table3";
-
+  private static final TableMetadata TABLE_1_METADATA =
+      TableMetadata.newBuilder()
+          .addPartitionKey("pk1")
+          .addClusteringKey("ck1", Order.DESC)
+          .addClusteringKey("ck2", Order.ASC)
+          .addColumn("pk1", DataType.INT)
+          .addColumn("ck1", DataType.INT)
+          .addColumn("ck2", DataType.TEXT)
+          .addColumn("col1", DataType.INT)
+          .addColumn("col2", DataType.BIGINT)
+          .addColumn("col3", DataType.FLOAT)
+          .addColumn("col4", DataType.DOUBLE)
+          .addColumn("col5", DataType.TEXT)
+          .addColumn("col6", DataType.BLOB)
+          .addColumn("col7", DataType.BOOLEAN)
+          .addSecondaryIndex("col1")
+          .addSecondaryIndex("col5")
+          .build();
+  private static final TableMetadata TABLE_2_METADATA =
+      TableMetadata.newBuilder()
+          .addPartitionKey("pk1")
+          .addClusteringKey("ck1", Order.ASC)
+          .addColumn("pk1", DataType.INT)
+          .addColumn("ck1", DataType.INT)
+          .addColumn("col1", DataType.INT)
+          .addColumn("col2", DataType.BIGINT)
+          .addColumn("col3", DataType.FLOAT)
+          .build();
   private static final String schemaLoaderJarPath =
       System.getProperty("scalardb.schemaloader.jar_path");
 
@@ -147,6 +180,18 @@ public abstract class SchemaLoaderIntegrationTestBase {
         .build();
   }
 
+  protected List<String> getCommandArgsForTableReparation(String configFile, String schemaFile) {
+    return ImmutableList.of("--config", configFile, "--schema-file", schemaFile, "--repair-all");
+  }
+
+  protected List<String> getCommandArgsForTableReparationWithCoordinator(
+      String configFile, String schemaFile) throws Exception {
+    return ImmutableList.<String>builder()
+        .addAll(getCommandArgsForTableReparation(configFile, schemaFile))
+        .add("--coordinator")
+        .build();
+  }
+
   protected List<String> getCommandArgsForDeletion(String configFile, String schemaFile)
       throws Exception {
     return ImmutableList.<String>builder()
@@ -178,8 +223,11 @@ public abstract class SchemaLoaderIntegrationTestBase {
   }
 
   private void dropTablesIfExist() throws ExecutionException {
-    admin.dropTable(namespace1, TABLE_1, true);
-    admin.dropNamespace(namespace1, true);
+    consensusCommitAdmin.dropTable(namespace1, TABLE_1, true);
+    consensusCommitAdmin.dropNamespace(namespace1, true);
+    if (consensusCommitAdmin.coordinatorTablesExist()) {
+      consensusCommitAdmin.dropCoordinatorTables();
+    }
     admin.dropTable(namespace2, TABLE_2, true);
     admin.dropNamespace(namespace2, true);
   }
@@ -196,7 +244,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
-    assertThat(admin.tableExists(namespace1, TABLE_1)).isTrue();
+    assertThat(consensusCommitAdmin.tableExists(namespace1, TABLE_1)).isTrue();
     assertThat(admin.tableExists(namespace2, TABLE_2)).isTrue();
     assertThat(consensusCommitAdmin.coordinatorTablesExist()).isFalse();
   }
@@ -207,7 +255,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
-    assertThat(admin.tableExists(namespace1, TABLE_1)).isFalse();
+    assertThat(consensusCommitAdmin.tableExists(namespace1, TABLE_1)).isFalse();
     assertThat(admin.tableExists(namespace2, TABLE_2)).isFalse();
     assertThat(consensusCommitAdmin.coordinatorTablesExist()).isFalse();
   }
@@ -218,6 +266,49 @@ public abstract class SchemaLoaderIntegrationTestBase {
     deleteTables_ShouldDeleteTablesWithCoordinator();
   }
 
+  @Test
+  public void createTableThenDropMetadataTableThenRepairTables_ShouldExecuteProperly()
+      throws Exception {
+    // Arrange
+    int exitCodeCreation =
+        executeCommandWithArgs(getCommandArgsForCreation(CONFIG_FILE, SCHEMA_FILE));
+    assertThat(exitCodeCreation).isZero();
+    dropMetadataTable();
+
+    // Act
+    int exitCodeReparation =
+        executeCommandWithArgs(getCommandArgsForTableReparation(CONFIG_FILE, SCHEMA_FILE));
+
+    // Assert
+    assertThat(exitCodeReparation).isZero();
+    assertThat(consensusCommitAdmin.getTableMetadata(namespace1, TABLE_1))
+        .isEqualTo(TABLE_1_METADATA);
+    assertThat(admin.getTableMetadata(namespace2, TABLE_2)).isEqualTo(TABLE_2_METADATA);
+  }
+
+  @Test
+  public void
+      createTableThenDropMetadataTableThenRepairTablesWithCoordinator_ShouldExecuteProperly()
+          throws Exception {
+    // Arrange
+    int exitCodeCreation =
+        executeCommandWithArgs(getCommandArgsForCreationWithCoordinator(CONFIG_FILE, SCHEMA_FILE));
+    assertThat(exitCodeCreation).isZero();
+    dropMetadataTable();
+
+    // Act
+    int exitCodeReparation =
+        executeCommandWithArgs(
+            getCommandArgsForTableReparationWithCoordinator(CONFIG_FILE, SCHEMA_FILE));
+
+    // Assert
+    assertThat(exitCodeReparation).isZero();
+    assertThat(consensusCommitAdmin.getTableMetadata(namespace1, TABLE_1))
+        .isEqualTo(TABLE_1_METADATA);
+    assertThat(admin.getTableMetadata(namespace2, TABLE_2)).isEqualTo(TABLE_2_METADATA);
+    assertTableMetadataForCoordinatorTableArePresent();
+  }
+
   private void createTables_ShouldCreateTablesWithCoordinator() throws Exception {
     // Act
     int exitCode =
@@ -225,7 +316,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
-    assertThat(admin.tableExists(namespace1, TABLE_1)).isTrue();
+    assertThat(consensusCommitAdmin.tableExists(namespace1, TABLE_1)).isTrue();
     assertThat(admin.tableExists(namespace2, TABLE_2)).isTrue();
     assertThat(consensusCommitAdmin.coordinatorTablesExist()).isTrue();
   }
@@ -237,7 +328,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
-    assertThat(admin.tableExists(namespace1, TABLE_1)).isFalse();
+    assertThat(consensusCommitAdmin.tableExists(namespace1, TABLE_1)).isFalse();
     assertThat(admin.tableExists(namespace2, TABLE_2)).isFalse();
     assertThat(consensusCommitAdmin.coordinatorTablesExist()).isFalse();
   }
@@ -263,5 +354,33 @@ public abstract class SchemaLoaderIntegrationTestBase {
     }
 
     return process.waitFor();
+  }
+
+  protected void assertTableMetadataForCoordinatorTableArePresent() throws Exception {
+    assertTableMetadataForCoordinatorTableArePresentForStorage(getProperties());
+  }
+
+  protected void assertTableMetadataForCoordinatorTableArePresentForStorage(
+      Properties coordinatorStorageProperties) throws Exception {
+    String coordinatorNamespace =
+        new ConsensusCommitConfig(new DatabaseConfig(coordinatorStorageProperties))
+            .getCoordinatorNamespace()
+            .orElse(Coordinator.NAMESPACE);
+    String coordinatorTable = Coordinator.TABLE;
+    // Use the DistributedStorageAdmin instead of the DistributedTransactionAdmin because the latter
+    // expects the table to hold transactional table metadata columns which is not the case for the
+    // coordinator table
+    DistributedStorageAdmin storageAdmin =
+        StorageFactory.create(coordinatorStorageProperties).getStorageAdmin();
+
+    assertThat(storageAdmin.getTableMetadata(coordinatorNamespace, coordinatorTable))
+        .isEqualTo(Coordinator.TABLE_METADATA);
+
+    storageAdmin.close();
+  }
+
+  protected void dropMetadataTable() throws Exception {
+    AdminTestUtils adminTestUtils = AdminTestUtils.create(getProperties());
+    adminTestUtils.dropMetadataTable();
   }
 }

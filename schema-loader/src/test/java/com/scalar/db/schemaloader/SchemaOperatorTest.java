@@ -4,6 +4,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorageAdmin;
@@ -150,5 +151,55 @@ public class SchemaOperatorTest {
     // Assert
     verify(consensusCommitAdmin).coordinatorTablesExist();
     verify(consensusCommitAdmin, never()).dropCoordinatorTables();
+  }
+
+  @Test
+  public void repairTables_WithTransactionalTables_ShouldCallProperMethods() throws Exception {
+    // Arrange
+    List<TableSchema> tableSchemaList = Arrays.asList(tableSchema, tableSchema, tableSchema);
+    when(tableSchema.getNamespace()).thenReturn("ns");
+    when(tableSchema.getOptions()).thenReturn(options);
+    when(tableSchema.isTransactionalTable()).thenReturn(true);
+    when(tableSchema.getTable()).thenReturn("tb");
+    TableMetadata tableMetadata = mock(TableMetadata.class);
+    when(tableSchema.getTableMetadata()).thenReturn(tableMetadata);
+
+    // Act
+    operator.repairTables(tableSchemaList);
+
+    // Assert
+    verify(consensusCommitAdmin, times(3)).repairTable("ns", "tb", tableMetadata, options);
+    verifyNoInteractions(admin);
+  }
+
+  @Test
+  public void repairTables_WithoutTransactionalTables_ShouldCallProperMethods() throws Exception {
+    // Arrange
+    List<TableSchema> tableSchemaList = Arrays.asList(tableSchema, tableSchema, tableSchema);
+    when(tableSchema.getNamespace()).thenReturn("ns");
+    when(tableSchema.getOptions()).thenReturn(options);
+    when(tableSchema.isTransactionalTable()).thenReturn(false);
+    when(tableSchema.getTable()).thenReturn("tb");
+    TableMetadata tableMetadata = mock(TableMetadata.class);
+    when(tableSchema.getTableMetadata()).thenReturn(tableMetadata);
+
+    // Act
+    operator.repairTables(tableSchemaList);
+
+    // Assert
+    verify(admin, times(3)).repairTable("ns", "tb", tableMetadata, options);
+    verifyNoInteractions(consensusCommitAdmin);
+  }
+
+  @Test
+  public void repairCoordinatorTables_ShouldCallProperMethods() throws Exception {
+    // Arrange
+
+    // Act
+    operator.repairCoordinatorTables(options);
+
+    // Assert
+    verify(consensusCommitAdmin).repairCoordinatorTables(options);
+    verifyNoInteractions(admin);
   }
 }

@@ -274,6 +274,109 @@ public class SchemaLoader {
       operator.close();
     }
   }
+  /**
+   * Repair tables defined in the schema.
+   *
+   * @param configProperties Scalar DB config properties
+   * @param serializedSchemaJson serialized json string schema.
+   * @param options specific options for creating tables.
+   * @param repairCoordinatorTable repair coordinator tables or not.
+   * @throws SchemaLoaderException thrown when creating tables failed.
+   */
+  public static void repairTables(
+      Properties configProperties,
+      String serializedSchemaJson,
+      Map<String, String> options,
+      boolean repairCoordinatorTable)
+      throws SchemaLoaderException {
+    Either<Path, Properties> config = new Right<>(configProperties);
+    Either<Path, String> schema = new Right<>(serializedSchemaJson);
+    repairTables(config, schema, options, repairCoordinatorTable);
+  }
+  /**
+   * Repair tables defined in the schema file.
+   *
+   * @param configProperties Scalar DB properties.
+   * @param schemaPath path to the schema file.
+   * @param options specific options for creating tables.
+   * @param repairCoordinatorTable repair coordinator tables or not.
+   * @throws SchemaLoaderException thrown when creating tables failed.
+   */
+  public static void repairTables(
+      Properties configProperties,
+      Path schemaPath,
+      Map<String, String> options,
+      boolean repairCoordinatorTable)
+      throws SchemaLoaderException {
+    Either<Path, Properties> config = new Right<>(configProperties);
+    Either<Path, String> schema = new Left<>(schemaPath);
+    repairTables(config, schema, options, repairCoordinatorTable);
+  }
+
+  /**
+   * Repair tables defined in the schema.
+   *
+   * @param configPath path to the Scalar DB config.
+   * @param serializedSchemaJson serialized json string schema.
+   * @param options specific options for creating tables.
+   * @param repairCoordinatorTable repair coordinator tables or not.
+   * @throws SchemaLoaderException thrown when creating tables failed.
+   */
+  public static void repairTables(
+      Path configPath,
+      String serializedSchemaJson,
+      Map<String, String> options,
+      boolean repairCoordinatorTable)
+      throws SchemaLoaderException {
+    Either<Path, Properties> config = new Left<>(configPath);
+    Either<Path, String> schema = new Right<>(serializedSchemaJson);
+    repairTables(config, schema, options, repairCoordinatorTable);
+  }
+  /**
+   * Repair tables defined in the schema file.
+   *
+   * @param configPath path to the Scalar DB config.
+   * @param schemaPath path to the schema file.
+   * @param options specific options for creating tables.
+   * @param repairCoordinatorTable repair coordinator tables or not.
+   * @throws SchemaLoaderException thrown when creating tables failed.
+   */
+  public static void repairTables(
+      Path configPath, Path schemaPath, Map<String, String> options, boolean repairCoordinatorTable)
+      throws SchemaLoaderException {
+    Either<Path, Properties> config = new Left<>(configPath);
+    Either<Path, String> schema = new Left<>(schemaPath);
+    repairTables(config, schema, options, repairCoordinatorTable);
+  }
+  /**
+   * Repair tables defined in the schema file.
+   *
+   * @param config Scalar DB config
+   * @param schema schema.
+   * @param options specific options for creating tables.
+   * @param repairCoordinatorTable repair coordinator tables or not.
+   * @throws SchemaLoaderException thrown when creating tables failed.
+   */
+  private static void repairTables(
+      Either<Path, Properties> config,
+      Either<Path, String> schema,
+      Map<String, String> options,
+      boolean repairCoordinatorTable)
+      throws SchemaLoaderException {
+    // Parse the schema
+    List<TableSchema> tableSchemaList = getTableSchemaList(schema, options);
+
+    // Repair tables
+    SchemaOperator operator = getSchemaOperator(config);
+    try {
+      operator.repairTables(tableSchemaList);
+      if (repairCoordinatorTable) {
+        operator.repairCoordinatorTables(options);
+      }
+    } finally {
+      operator.close();
+    }
+  }
 
   @VisibleForTesting
   static SchemaOperator getSchemaOperator(Either<Path, Properties> config)

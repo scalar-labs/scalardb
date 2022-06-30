@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -55,7 +56,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
 
   @Option(
       names = "--coordinator",
-      description = "Create/delete coordinator tables",
+      description = "Create/delete/repair coordinator tables",
       defaultValue = "false")
   private boolean coordinator;
 
@@ -64,18 +65,30 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       description = "Path to the schema json file")
   private Path schemaFile;
 
-  @Option(
-      names = {"-D", "--delete-all"},
-      description = "Delete tables",
-      defaultValue = "false")
-  private boolean deleteTables;
+  @ArgGroup(exclusive = true)
+  DeleteOrRepairTablesTables deleteOrRepairTables;
+
+  static class DeleteOrRepairTablesTables {
+    @Option(
+        names = {"-D", "--delete-all"},
+        description = "Delete tables",
+        defaultValue = "false")
+    boolean deleteTables;
+
+    @Option(
+        names = {"--repair-all"},
+        description =
+            "Repair tables : it repairs the table metadata of existing tables. When using Cosmos DB, it additionally repairs stored procedure attached to each table",
+        defaultValue = "false")
+    boolean repairTables;
+  }
 
   @Override
   public Integer call() throws Exception {
     logger.info("Config path: {}", configPath);
     logger.info("Schema path: {}", schemaFile);
 
-    if (!deleteTables) {
+    if (deleteOrRepairTables == null) {
       Map<String, String> options = new HashMap<>();
       if (replicationStrategy != null) {
         options.put(CassandraAdmin.REPLICATION_STRATEGY, replicationStrategy.toString());
@@ -97,8 +110,18 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       }
 
       SchemaLoader.load(configPath, schemaFile, options, coordinator);
-    } else {
+    } else if (deleteOrRepairTables.deleteTables) {
       SchemaLoader.unload(configPath, schemaFile, coordinator);
+    } else {
+      if (schemaFile == null) {
+        throw new IllegalArgumentException(
+            "Specifying the '--schema-file' option is required when using the '--repair-all' option");
+      }
+      Map<String, String> options = new HashMap<>();
+      if (noBackup != null) {
+        options.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
+      }
+      SchemaLoader.repairTables(configPath, schemaFile, options, coordinator);
     }
     return 0;
   }

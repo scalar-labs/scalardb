@@ -21,4 +21,12 @@ public class DynamoSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTe
         .add("--no-backup")
         .build();
   }
+
+  @Override
+  protected List<String> getCommandArgsForTableReparation(String configFile, String schemaFile) {
+    return ImmutableList.<String>builder()
+        .addAll(super.getCommandArgsForTableReparation(configFile, schemaFile))
+        .add("--no-backup")
+        .build();
+  }
 }
