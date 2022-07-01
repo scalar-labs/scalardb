@@ -10,7 +10,8 @@ This document briefly explains how to execute Two-phase Commit Transactions in S
 The configuration for Two-phase Commit Transactions is the same as the one for the transaction API.
 
 For example, you can set the following configuration when you use Cassandra:
-```
+
+```properties
 # Comma separated contact points
 scalar.db.contact_points=cassandra
 

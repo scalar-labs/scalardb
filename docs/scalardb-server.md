@@ -32,16 +32,16 @@ Of course, you can archive the jar and libraries by `./gradlew distZip` and so o
 You need a property file holding the configuration for Scalar DB Server. 
 It contains two sections, Server configurations and Underlining storage/database configurations.
 
-```
+```properties
 #
 # Server configurations
 #
 
 # Port number of Scalar DB server. 60051 by deafult
-#scalar.db.server.port=60051
+scalar.db.server.port=60051
 
 # Prometheus exporter port. Use 8080 if this is not given. Prometheus exporter will not be started if a negative number is given.
-#scalar.db.server.prometheus_exporter_port=8080
+scalar.db.server.prometheus_exporter_port=8080
 
 #
 # Underlining storage/database configurations
@@ -51,14 +51,14 @@ It contains two sections, Server configurations and Underlining storage/database
 scalar.db.contact_points=localhost
 
 # Port number for all the contact points. Default port number for each database is used if empty.
-#scalar.db.contact_port=9042
+scalar.db.contact_port=9042
 
 # Credential information to access the database
-#scalar.db.username=cassandra
-#scalar.db.password=cassandra
+scalar.db.username=cassandra
+scalar.db.password=cassandra
 
 # Storage implementation. Either cassandra or cosmos or dynamo or jdbc can be set. Default storage is cassandra.
-#scalar.db.storage=cassandra
+scalar.db.storage=cassandra
 ```
 
 ### Start Scalar DB server
@@ -83,7 +83,7 @@ bin/scalardb-server --config <your property file path>
 You can use the Java client of Scalar DB server in almost the same way as other storages/databases.
 The difference is that you need to set `scalar.db.storage` and `scalar.db.transaction_manager` to `grpc` in your client side property file.
 
-```
+```properties
 # Comma separated contact points
 scalar.db.contact_points=<Scalar DB server host>
 
@@ -97,7 +97,7 @@ scalar.db.storage=grpc
 scalar.db.transaction_manager=grpc
 
 # The deadline duration for gRPC connections. The default is 60000 milliseconds (60 seconds)
-#scalar.db.grpc.deadline_duration_millis=
+scalar.db.grpc.deadline_duration_millis=60000
 ```
 
 ## Further documentation

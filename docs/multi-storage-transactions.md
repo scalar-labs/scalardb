@@ -16,7 +16,7 @@ You can use Multi-storage transactions in the same way as the other storages/dat
 level as long as the configuration is properly set for `multi-storage`. An example of the
 configuration is shown as follows:
 
-```
+```properties
 # The storage is "multi-storage"
 scalar.db.storage=multi-storage
 

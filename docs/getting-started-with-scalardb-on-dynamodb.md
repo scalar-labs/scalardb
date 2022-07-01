@@ -28,10 +28,10 @@ scalar.db.password=<SECRET_ACCESS_KEY>
 scalar.db.storage=dynamo
 
 # Override the DynamoDB endpoint to use a local instance instead of an AWS service
-#scalar.db.dynamo.endpoint-override=
+scalar.db.dynamo.endpoint-override=
 
 # The namespace name for the table metadata (used as a table prefix of the table metadata)
-#scalar.db.dynamo.table_metadata.namespace=
+scalar.db.dynamo.table_metadata.namespace=
 ```
 
 Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md) to run the application.
