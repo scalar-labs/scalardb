@@ -2,10 +2,12 @@ package com.scalar.db.storage.cosmos;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.azure.cosmos.models.FeedResponse;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.storage.common.ScannerIterator;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -14,34 +16,61 @@ import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
 public final class ScannerImpl implements Scanner {
-  private final List<Record> records;
-  private final ResultInterpreter resultInterpreter;
 
+  private final ResultInterpreter resultInterpreter;
+  private Iterator<FeedResponse<Record>> recordsPages;
+  private Iterator<Record> currentPageRecords;
   private ScannerIterator scannerIterator;
 
-  public ScannerImpl(List<Record> records, ResultInterpreter resultInterpreter) {
-    this.records = checkNotNull(records);
+  /**
+   * Create a Scanner for Cosmos DB query operations
+   *
+   * @param recordsPages an iterator over the pages {@code FeedResponse<Record>}, each containing
+   *     records.
+   * @param resultInterpreter to interpret the result
+   */
+  public ScannerImpl(
+      Iterator<FeedResponse<Record>> recordsPages, ResultInterpreter resultInterpreter) {
+    this.recordsPages = checkNotNull(recordsPages);
+    this.currentPageRecords = Collections.emptyIterator();
     this.resultInterpreter = checkNotNull(resultInterpreter);
   }
 
   @Override
   @Nonnull
   public Optional<Result> one() {
-    if (records.isEmpty()) {
-      return Optional.empty();
+    while (currentPageRecords.hasNext() || recordsPages.hasNext()) {
+      // Return the next record of the current page if there is one
+      if (currentPageRecords.hasNext()) {
+        Record currentRecord = currentPageRecords.next();
+        Optional<Result> ret = Optional.of(resultInterpreter.interpret(currentRecord));
+        currentPageRecords.remove();
+        return ret;
+        // Otherwise, advance to the next page
+      } else {
+        currentPageRecords = recordsPages.next().getResults().iterator();
+      }
     }
-    Record record = records.remove(0);
-
-    return Optional.of(resultInterpreter.interpret(record));
+    // There is no records left
+    return Optional.empty();
   }
 
   @Override
   @Nonnull
   public List<Result> all() {
-    List<Result> results = new ArrayList<>();
-    records.forEach(r -> results.add(resultInterpreter.interpret(r)));
-    records.clear();
-    return results;
+    List<Result> ret = new ArrayList<>();
+    // Consume the remaining records of the current page
+    currentPageRecords.forEachRemaining(record -> ret.add(resultInterpreter.interpret(record)));
+
+    // Consume all the records of the remaining pages
+    recordsPages.forEachRemaining(
+        page -> page.getResults().forEach(record -> ret.add(resultInterpreter.interpret(record))));
+
+    // Set to empty iterator to release the records from the memory
+    currentPageRecords = Collections.emptyIterator();
+    recordsPages = Collections.emptyIterator();
+
+    return ret;
   }
 
   @Override

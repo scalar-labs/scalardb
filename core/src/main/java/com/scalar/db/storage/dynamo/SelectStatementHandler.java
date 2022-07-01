@@ -16,6 +16,7 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
+import com.scalar.db.storage.common.EmptyScanner;
 import com.scalar.db.storage.dynamo.bytes.BytesUtils;
 import com.scalar.db.storage.dynamo.bytes.KeyBytesEncoder;
 import com.scalar.db.util.ScalarDbUtils;

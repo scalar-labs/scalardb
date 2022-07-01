@@ -3,16 +3,13 @@ package com.scalar.db.storage.cosmos;
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosException;
 import com.scalar.db.api.Mutation;
-import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,18 +23,23 @@ public abstract class MutateStatementHandler extends StatementHandler {
   public MutateStatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
     super(client, metadataManager);
   }
-
-  @Override
-  @Nonnull
-  public List<Record> handle(Operation operation) throws ExecutionException {
+  /**
+   * Executes the specified {@code Mutation}
+   *
+   * @param mutation a {@code Mutation} to execute
+   * @throws ExecutionException if the execution failed
+   */
+  public void handle(Mutation mutation) throws ExecutionException {
     try {
-      return execute(operation);
+      execute(mutation);
     } catch (CosmosException e) {
       throwException(e);
+    } catch (RuntimeException e) {
+      throw new ExecutionException(e.getMessage(), e);
     }
-
-    return Collections.emptyList();
   }
+
+  abstract void execute(Mutation mutation) throws CosmosException, ExecutionException;
 
   protected void executeStoredProcedure(Mutation mutation, TableMetadata tableMetadata)
       throws CosmosException {

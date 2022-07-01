@@ -14,7 +14,6 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -75,17 +74,13 @@ public class Cosmos extends AbstractDistributedStorage {
     get = copyAndSetTargetToIfNot(get);
     operationChecker.check(get);
 
-    List<Record> records = selectStatementHandler.handle(get);
-    if (records.size() > 1) {
+    Scanner scanner = selectStatementHandler.handle(get);
+    Optional<Result> ret = scanner.one();
+    if (scanner.one().isPresent()) {
       throw new IllegalArgumentException("please use scan() for non-exact match selection");
     }
-    if (records.isEmpty() || records.get(0) == null) {
-      return Optional.empty();
-    }
 
-    TableMetadata metadata = metadataManager.getTableMetadata(get);
-    return Optional.of(
-        new ResultInterpreter(get.getProjections(), metadata).interpret(records.get(0)));
+    return ret;
   }
 
   @Override
@@ -93,10 +88,7 @@ public class Cosmos extends AbstractDistributedStorage {
     scan = copyAndSetTargetToIfNot(scan);
     operationChecker.check(scan);
 
-    List<Record> records = selectStatementHandler.handle(scan);
-
-    TableMetadata metadata = metadataManager.getTableMetadata(scan);
-    return new ScannerImpl(records, new ResultInterpreter(scan.getProjections(), metadata));
+    return selectStatementHandler.handle(scan);
   }
 
   @Override

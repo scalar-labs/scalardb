@@ -5,22 +5,22 @@ import static com.scalar.db.storage.cosmos.CosmosUtils.quoteKeyword;
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
+import com.azure.cosmos.models.FeedResponse;
 import com.azure.cosmos.models.PartitionKey;
-import com.azure.cosmos.util.CosmosPagedIterable;
-import com.google.common.collect.Lists;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
+import com.scalar.db.storage.common.EmptyScanner;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -42,31 +42,39 @@ import org.jooq.impl.DSL;
  */
 @ThreadSafe
 public class SelectStatementHandler extends StatementHandler {
+
   public SelectStatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
     super(client, metadataManager);
   }
 
-  @Override
+  /**
+   * Executes the specified {@code Selection}
+   *
+   * @param selection a {@code Selection} to execute
+   * @return a {@code Scanner}
+   * @throws ExecutionException if the execution failed
+   */
   @Nonnull
-  protected List<Record> execute(Operation operation) throws CosmosException, ExecutionException {
-    assert operation instanceof Selection;
-    Selection selection = (Selection) operation;
-    TableMetadata tableMetadata = metadataManager.getTableMetadata(operation);
+  protected Scanner handle(Selection selection) throws ExecutionException {
+    TableMetadata tableMetadata = metadataManager.getTableMetadata(selection);
     try {
       if (selection instanceof Get) {
         return executeRead((Get) selection, tableMetadata);
       } else {
         return executeQuery((Scan) selection, tableMetadata);
       }
+
     } catch (CosmosException e) {
       if (e.getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
-        return Collections.emptyList();
+        return new EmptyScanner();
       }
-      throw e;
+      throw new ExecutionException(e.getMessage(), e);
+    } catch (RuntimeException e) {
+      throw new ExecutionException(e.getMessage(), e);
     }
   }
 
-  private List<Record> executeRead(Get get, TableMetadata tableMetadata) throws CosmosException {
+  private Scanner executeRead(Get get, TableMetadata tableMetadata) throws CosmosException {
     CosmosOperation cosmosOperation = new CosmosOperation(get, tableMetadata);
     cosmosOperation.checkArgument(Get.class);
 
@@ -77,8 +85,9 @@ public class SelectStatementHandler extends StatementHandler {
     if (get.getProjections().isEmpty()) {
       String id = cosmosOperation.getId();
       PartitionKey partitionKey = cosmosOperation.getCosmosPartitionKey();
-      return Collections.singletonList(
-          getContainer(get).readItem(id, partitionKey, Record.class).getItem());
+      Record record = getContainer(get).readItem(id, partitionKey, Record.class).getItem();
+      return new SingleRecordScanner(
+          record, new ResultInterpreter(get.getProjections(), tableMetadata));
     }
 
     String query =
@@ -89,22 +98,16 @@ public class SelectStatementHandler extends StatementHandler {
                 DSL.field("r.id").eq(cosmosOperation.getId()))
             .getSQL(ParamType.INLINED);
 
-    return getContainer(get).queryItems(query, new CosmosQueryRequestOptions(), Record.class)
-        .stream()
-        .collect(Collectors.toList());
+    return executeQuery(get, tableMetadata, query);
   }
 
-  private List<Record> executeReadWithIndex(Selection selection, TableMetadata tableMetadata)
+  private Scanner executeReadWithIndex(Selection selection, TableMetadata tableMetadata)
       throws CosmosException {
     String query = makeQueryWithIndex(selection, tableMetadata);
-    CosmosQueryRequestOptions options = new CosmosQueryRequestOptions();
-    CosmosPagedIterable<Record> iterable =
-        getContainer(selection).queryItems(query, options, Record.class);
-
-    return Lists.newArrayList(iterable);
+    return executeQuery(selection, tableMetadata, query);
   }
 
-  private List<Record> executeQuery(Scan scan, TableMetadata tableMetadata) throws CosmosException {
+  private Scanner executeQuery(Scan scan, TableMetadata tableMetadata) throws CosmosException {
     CosmosOperation cosmosOperation = new CosmosOperation(scan, tableMetadata);
     String query;
     CosmosQueryRequestOptions options;
@@ -127,10 +130,7 @@ public class SelectStatementHandler extends StatementHandler {
       query += " offset 0 limit " + scan.getLimit();
     }
 
-    CosmosPagedIterable<Record> iterable =
-        getContainer(scan).queryItems(query, options, Record.class);
-
-    return Lists.newArrayList(iterable);
+    return executeQuery(scan, tableMetadata, query, options);
   }
 
   private String makeQueryWithCondition(
@@ -315,5 +315,24 @@ public class SelectStatementHandler extends StatementHandler {
     column.accept(binder);
 
     return select.getSQL(ParamType.INLINED);
+  }
+
+  private Scanner executeQuery(
+      Selection selection,
+      TableMetadata tableMetadata,
+      String query,
+      CosmosQueryRequestOptions queryOptions) {
+    Iterator<FeedResponse<Record>> pagesIterator =
+        getContainer(selection)
+            .queryItems(query, queryOptions, Record.class)
+            .iterableByPage()
+            .iterator();
+
+    return new ScannerImpl(
+        pagesIterator, new ResultInterpreter(selection.getProjections(), tableMetadata));
+  }
+
+  private Scanner executeQuery(Selection selection, TableMetadata tableMetadata, String query) {
+    return executeQuery(selection, tableMetadata, query, new CosmosQueryRequestOptions());
   }
 }

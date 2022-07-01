@@ -1,4 +1,4 @@
-package com.scalar.db.storage.dynamo;
+package com.scalar.db.storage.common;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
