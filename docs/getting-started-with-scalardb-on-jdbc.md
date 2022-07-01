@@ -29,43 +29,43 @@ scalar.db.password=mysql
 scalar.db.storage=jdbc
 
 # The minimum number of idle connections in the connection pool. The default is 20
-#scalar.db.jdbc.connection_pool.min_idle=20
+scalar.db.jdbc.connection_pool.min_idle=20
 
 # The maximum number of connections that can remain idle in the connection pool. The default is 50
-#scalar.db.jdbc.connection_pool.max_idle=50
+scalar.db.jdbc.connection_pool.max_idle=50
 
 # The maximum total number of idle and borrowed connections that can be active at the same time for the connection pool. Use a negative value for no limit. The default is 100
-#scalar.db.jdbc.connection_pool.max_total=100
+scalar.db.jdbc.connection_pool.max_total=100
 
 # Setting true to this property enables prepared statement pooling. The default is false
-#scalar.db.jdbc.prepared_statements_pool.enabled=false
+scalar.db.jdbc.prepared_statements_pool.enabled=false
 
 # The maximum number of open statements that can be allocated from the statement pool at the same time, or negative for no limit. The default is -1
-#scalar.db.jdbc.prepared_statements_pool.max_open=-1
+scalar.db.jdbc.prepared_statements_pool.max_open=-1
 
 # Isolation level for JDBC. Either READ_UNCOMMITTED or READ_COMMITTED or REPEATABLE_READ or SERIALIZABLE can be specified
-#scalar.db.jdbc.isolation_level=
+scalar.db.jdbc.isolation_level=
 
 # The schema name of the table metadata. If not specified, the default name ("scalardb") is used
-#scalar.db.jdbc.table_metadata.schema=
+scalar.db.jdbc.table_metadata.schema=
 
 # The minimum number of idle connections in the connection pool for the table metadata. The default is 5
-#scalar.db.jdbc.table_metadata.connection_pool.min_idle=5
+scalar.db.jdbc.table_metadata.connection_pool.min_idle=5
 
 # The maximum number of connections that can remain idle in the connection pool for the table metadata. The default is 10
-#scalar.db.jdbc.table_metadata.connection_pool.max_idle=10
+scalar.db.jdbc.table_metadata.connection_pool.max_idle=10
 
 # The maximum total number of idle and borrowed connections that can be active at the same time for the connection pool for the table metadata. Use a negative value for no limit. The default is 25
-#scalar.db.jdbc.table_metadata.connection_pool.max_total=25
+scalar.db.jdbc.table_metadata.connection_pool.max_total=25
 
 # The minimum number of idle connections in the connection pool for admin. The default is 5
-#scalar.db.jdbc.admin.connection_pool.min_idle=5
+scalar.db.jdbc.admin.connection_pool.min_idle=5
 
 # The maximum number of connections that can remain idle in the connection pool for admin. The default is 10
-#scalar.db.jdbc.admin.connection_pool.max_idle=10
+scalar.db.jdbc.admin.connection_pool.max_idle=10
 
 # The maximum total number of idle and borrowed connections that can be active at the same time for the connection pool for admin. Use a negative value for no limit. The default is 25
-#scalar.db.jdbc.admin.connection_pool.max_total=25
+scalar.db.jdbc.admin.connection_pool.max_total=25
 ```
 
 Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md) to run the application.
@@ -79,3 +79,6 @@ To use the native transaction manager, you need to set `jdbc` to a transaction m
 ```properties
 scalar.db.transaction_manager=jdbc
 ```
+
+When using JDBC transaction, the `SERIALIZABLE` isolation level is used by default.
+And you can change it with the `scalar.db.jdbc.isolation_level` property.
