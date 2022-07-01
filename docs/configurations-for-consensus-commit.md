@@ -11,44 +11,24 @@ The following sections describes the configurations for Consensus Commit.
 
 ## Basic configurations
 
-The basic configurations for Consensus Commit is as follows:
+The basic configurations for Consensus Commit are as follows:
 
-```properties
-# Default isolation level for ConsensusCommit. Either SNAPSHOT or SERIALIZABLE can be specified. SNAPSHOT is used by default.
-scalar.db.consensus_commit.isolation_level=SNAPSHOT
+| name | description | default |
+| ---- | ----------- | ------- |
+| scalar.db.consensus_commit.isolation_level | Isolation level used for ConsensusCommit. Either `SNAPSHOT` or `SERIALIZABLE` can be specified. | SNAPSHOT |
+| scalar.db.consensus_commit.serializable_strategy | Serializable strategy used for ConsensusCommit transaction manager. Either `EXTRA_READ` or `EXTRA_WRITE` can be specified. If `SNAPSHOT` is specified in the property `scalar.db.consensus_commit.isolation_level`, this is ignored. | EXTRA_READ |
+| scalar.db.consensus_commit.coordinator.namespace | Namespace name of coordinator tables. | coordinator |
 
-# Default serializable strategy for ConsensusCommit transaction manager.
-# Either EXTRA_READ or EXTRA_WRITE can be specified. EXTRA_READ is used by default.
-# If SNAPSHOT is specified, this is ignored.
-scalar.db.consensus_commit.serializable_strategy=EXTRA_READ
+## Performance related configurations
 
-# Namespace name of coordinator tables. The default is "coordinator"
-scalar.db.consensus_commit.coordinator.namespace=
-```
+The Performance related configurations for Consensus Commit are as follows:
 
-### Performance related configurations
-
-The Performance related configurations for Consensus Commit is as follows:
-
-```properties
-# The number of the executors (threads) for the parallel execution
-scalar.db.consensus_commit.parallel_executor_count=30
-
-# Whether or not the preparation phase is executed in parallel
-scalar.db.consensus_commit.parallel_preparation.enabled=false
-
-# Whether or not the validation phase (in EXTRA_READ) is executed in parallel. Use the value of "scalar.db.consensus_commit.parallel_commit.enabled" as default value
-scalar.db.consensus_commit.parallel_validation.enabled=
-
-# Whether or not the commit phase is executed in parallel
-scalar.db.consensus_commit.parallel_commit.enabled=false
-
-# Whether or not the rollback phase is executed in parallel.Use the value of "scalar.db.consensus_commit.parallel_commit.enabled" as default value
-scalar.db.consensus_commit.parallel_rollback.enabled=
-
-# Whether or not the commit phase is executed asynchronously
-scalar.db.consensus_commit.async_commit.enabled=false
-
-# Whether or not the rollback phase is executed asynchronously. Use the value of "scalar.db.consensus_commit.async_commit.enabled" as default value
-scalar.db.consensus_commit.async_rollback.enabled=
-```
+| name | description | default |
+| ---- | ----------- | ------- |
+| scalar.db.consensus_commit.parallel_executor_count | The number of the executors (threads) for the parallel execution. | 30 |
+| scalar.db.consensus_commit.parallel_preparation.enabled | Whether or not the preparation phase is executed in parallel. | false |
+| scalar.db.consensus_commit.parallel_validation.enabled | Whether or not the validation phase (in `EXTRA_READ`) is executed in parallel. | The value of `scalar.db.consensus_commit.parallel_commit.enabled` |
+| scalar.db.consensus_commit.parallel_commit.enabled | Whether or not the commit phase is executed in parallel. | false |
+| scalar.db.consensus_commit.parallel_rollback.enabled | Whether or not the rollback phase is executed in parallel. | The value of `scalar.db.consensus_commit.parallel_commit.enabled` |
+| scalar.db.consensus_commit.async_commit.enabled | Whether or not the commit phase is executed asynchronously. | false |
+| scalar.db.consensus_commit.async_rollback.enabled | Whether or not the rollback phase is executed asynchronously. | The value of `scalar.db.consensus_commit.async_commit.enabled` |

@@ -14,15 +14,15 @@ scalar.db.storage={{ default .Env.SCALAR_DB_STORAGE "" }}
 # The type of the transaction manager. "consensus-commit" or "jdbc" or "grpc" can be set. The default is "consensus-commit"
 scalar.db.transaction_manager={{ default .Env.SCALAR_DB_TRANSACTION_MANAGER "" }}
 
-# Default isolation level for ConsensusCommit. Either SNAPSHOT or SERIALIZABLE can be specified. SNAPSHOT is used by default.
+# Isolation level used for ConsensusCommit. Either SNAPSHOT or SERIALIZABLE can be specified. SNAPSHOT is used by default.
 scalar.db.consensus_commit.isolation_level={{ default .Env.SCALAR_DB_CONSENSUSCOMMIT_ISOLATION_LEVEL "" }}
 
 # For backward compatibility
 scalar.db.isolation_level={{ default .Env.SCALAR_DB_ISOLATION_LEVEL "" }}
 
-# Default serializable strategy for ConsensusCommit transaction manager.
+# Serializable strategy used for ConsensusCommit transaction manager.
 # Either EXTRA_READ or EXTRA_WRITE can be specified. EXTRA_READ is used by default.
-# If SNAPSHOT is specified, this is ignored.
+# If SNAPSHOT is specified in the property "scalar.db.consensus_commit.isolation_level", this is ignored.
 scalar.db.consensus_commit.serializable_strategy={{ default .Env.SCALAR_DB_CONSENSUSCOMMIT_SERIALIZABLE_STRATEGY "" }}
 
 # Port number for grpc server. Default port number is 60051.
