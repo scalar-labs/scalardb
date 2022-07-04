@@ -1,11 +1,12 @@
 # Java API Guide
 
-This guide briefly explains how to use Scalar DB Java API.
+Scalar DB Java API is mainly composed of Administrative API and Transactional API.
+This guide briefly explains what kind of APIs exist and how to use them.
 
-* [Administrative operations](#administrative-operations)
-* [Transactional operations](#transactional-operations)
+* [Administrative API](#administrative-api)
+* [Transactional API](#transactional-api)
 
-## Administrative operations
+## Administrative API
 
 This section explains how to execute administrative operations in Scalar DB.
 You can execute administrative operations programmatically as follows, but you can also execute those operations through [Schema Loader](https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md).
@@ -230,7 +231,7 @@ boolean ifExist = true;
 admin.dropCoordinatorTables(ifExist);
 ```
 
-## Transactional operations
+## Transactional API
 
 This section explains how to execute transactional operations in Scalar DB.
 
