@@ -79,7 +79,7 @@ You need to specify the transaction ID associated with the transaction that the 
 ### CRUD operations for the transaction
 
 The CRUD operations of `TwoPhaseCommitTransacton` are the same as the ones of `DistributedTransaction`.
-So please see also [Java API Guide - CRUD operations](api-guide.md#CRUD operations) for the details.
+So please see also [Java API Guide - CRUD operations](api-guide.md#crud-operations) for the details.
 
 This is an example code for CRUD operations in Two-phase Commit Transactions:
 ```java

@@ -2,8 +2,8 @@
 
 This guide briefly explains how to use Scalar DB Java API.
 
-* [Administrative operations](#Administrative operations)
-* [Transactional operations](#Transactional operations)
+* [Administrative operations](#administrative-operations)
+* [Transactional operations](#transactional-operations)
 
 ## Administrative operations
 
@@ -95,7 +95,7 @@ TableMetadata tableMetadata =
 
 Here you define columns, a partition key, a clustering key including clustering orders, and secondary indexes of a table.
 
-Please see [Scalar DB design document - Data Model](design.md#Data Model) for the details of the Scalar DB Data Model.
+Please see [Scalar DB design document - Data Model](design.md#data-model) for the details of the Scalar DB Data Model.
 
 And then, you can create a table as follows: 
 
@@ -391,7 +391,7 @@ Optional<Result> result = transaction.get(get);
 ```
 
 Note that if the result has more than one record, the `transaction.get()` throws an exception.
-If you want to handle multiple results, use [Scan with a secondary index](#Scan with a secondary index).
+If you want to handle multiple results, use [Scan with a secondary index](#scan-with-a-secondary-index).
 
 #### Scan operation
 
@@ -606,7 +606,7 @@ You can abort a transaction as follows;
 transaction.abort();
 ```
 
-Please see [Handle Exceptions](#Handle Exceptions) for the details of how to handle exceptions in Scalar DB. 
+Please see [Handle Exceptions](#handle-exceptions) for the details of how to handle exceptions in Scalar DB. 
 
 ## Transactional operations for Two-phase Commit Transaction
 
