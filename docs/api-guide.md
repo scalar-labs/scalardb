@@ -36,7 +36,7 @@ Map<String, String> options = ...;
 admin.createNamespace("ns", options);
 ```
 
-#### Create Options
+#### Creation Options
 
 In the creation operations (creating a namespace, creating a table, etc.), you can specify options that are maps of option name and value (`Map<String, String>`).
 With the options, we can set storage adapter specific configurations 
