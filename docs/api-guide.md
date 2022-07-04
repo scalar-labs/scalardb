@@ -2,9 +2,13 @@
 
 This guide briefly explains how to use Scalar DB Java API.
 
+* [Administrative operations](#Administrative operations)
+* [Transactional operations](#Transactional operations)
+
 ## Administrative operations
 
-This chapter explains how to execute administrative operations in Scalar DB.
+This section explains how to execute administrative operations in Scalar DB.
+You can execute administrative operations programmatically as follows, but you can also execute those operations through [Schema Loader](https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md).
 
 ### Get a DistributedTransactionAdmin instance
 
@@ -185,7 +189,7 @@ TableMetadata tableMetadata = admin.getTableMetadata("ns", "tbl");
 ### Operations for Coordinator tables
 
 Depending on the transaction manager type, you need to create coordinator tables to execute transactions. 
-The following sections describe the operations for the coordinator table.
+The following items describe the operations for the coordinator table.
 
 #### Create Coordinator tables
 
@@ -228,7 +232,7 @@ admin.dropCoordinatorTables(ifExist);
 
 ## Transactional operations
 
-This chapter explains how to execute transactional operations in Scalar DB.
+This section explains how to execute transactional operations in Scalar DB.
 
 ### Get a DistributedTransactionManager instance
 
@@ -254,7 +258,7 @@ DistributedTransaction transaction = manager.start();
 #### Key construction
 
 Most CRUD operations need to specify `Key` objects (partition-key, clustering-key, etc.).
-So, before moving on to CRUD operations, this section explains how to construct a `Key` object. 
+So, before moving on to CRUD operations, here explains how to construct a `Key` object.
 
 For a single column key, you can use the `Key.ofXXX()` methods (XXX is a type name) to construct it as follows:
 
