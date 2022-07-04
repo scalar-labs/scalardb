@@ -238,6 +238,7 @@ These are just simple examples of how Scalar DB is used. For more information, p
 
 * [Design Document](design.md)
 * [Scalar DB Sample](https://github.com/scalar-labs/scalardb-samples/tree/main/scalardb-sample)
+* [Java API Guide](api-guide.md)
 * Javadoc
     * [scalardb](https://javadoc.io/doc/com.scalar-labs/scalardb/latest/index.html) - A library that makes non-ACID distributed databases/storages ACID-compliant
     * [scalardb-rpc](https://javadoc.io/doc/com.scalar-labs/scalardb-rpc/latest/index.html) - Scalar DB RPC libraries
@@ -249,4 +250,3 @@ These are just simple examples of how Scalar DB is used. For more information, p
 * [Multi-storage Transactions](multi-storage-transactions.md)
 * [Two-phase Commit Transactions](two-phase-commit-transactions.md)
 * [Scalar DB server](scalardb-server.md)
-* [A Guide on How to Handle Exceptions](how-to-handle-exceptions.md)

@@ -28,6 +28,7 @@ To add a dependency using Maven:
 
 ## Docs
 * [Getting started](docs/getting-started.md)
+* [Java API Guide](docs/api-guide.md)
 * [Scalar DB supported databases](docs/scalardb-supported-databases.md)
 * [Multi-storage Transactions](docs/multi-storage-transactions.md)
 * [Two-phase Commit Transactions](docs/two-phase-commit-transactions.md)

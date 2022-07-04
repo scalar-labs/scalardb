@@ -7,7 +7,7 @@ This document briefly explains how to execute Two-phase Commit Transactions in S
 
 ## Configuration
 
-The configuration for Two-phase Commit Transactions is the same as the one for the transaction API.
+The configuration for Two-phase Commit Transactions is the same as the one for the normal transaction.
 
 For example, you can set the following configuration when you use Cassandra:
 
@@ -45,7 +45,7 @@ The coordinator process first starts a transaction, and the participant processe
 First, you need to get a `TwoPhaseCommitTransactionManager` instance to execute Two-phase Commit Transactions.
 You can use `TransactionFactory` to get a `TwoPhaseCommitTransactionManager` instance as follows:
 ```java
-TransactionFactory factory = new TransactionFactory(new DatabaseConfig(new File("<configuration file path>")));
+TransactionFactory factory = TransactionFactory.create("<configuration file path>");
 TwoPhaseCommitTransactionManager manager = factory.getTwoPhaseCommitTransactionManager();
 ```
 
@@ -79,8 +79,8 @@ You need to specify the transaction ID associated with the transaction that the 
 
 ### CRUD operations for the transaction
 
-The way to execute CRUD operations in Two-phase Commit Transactions is the same as the transaction API.
-`TwoPhaseCommitTransacton` has `get()`/`put()`/`delete()`/`mutate()` to execute CRUD operations.
+The CRUD operations of `TwoPhaseCommitTransacton` are the same as the ones of `DistributedTransaction`.
+So please see also [Java API Guide - CRUD operations](api-guide.md#crud-operations) for the details.
 
 This is an example code for CRUD operations in Two-phase Commit Transactions:
 ```java
