@@ -29,7 +29,6 @@ The data model of Scalar DB is a multi-dimensional map based on the key-value da
 
 (partition-key, clustering-key, column-name) -> column-value
 
-
 <p align="center">
 <img src="https://github.com/scalar-labs/scalardb/raw/master/docs/images/data_model.png" width="480" />
 </p>
@@ -40,6 +39,19 @@ Scalar DB is a multi-dimensional map distributed to multiple nodes by key-based 
 Records are assumed to be hash-partitioned by partition-key (even though an underlining implementation may support range partitioning).
 Records with the same partition-key define a partition. A partition is clustered (sorted) by the clustering-key.
 It is similar to Google BigTable [2] but it differs in clustering-key structure and partitioning scheme.
+
+### Clustering order
+
+As mentioned, records in Scalar DB are sorted by the clustering-key in a partition.
+You can specify the default sort orders of the clustering-key, that's called clustering order, when you create tables.
+If the clustering-key consists of multiple columns, you can specify clustering order for each column.
+
+### Secondary index
+
+In Scalar DB, you can basically scan a table only using columns that are part of the primary key.
+Secondary Indexes in Scalar DB solve the need for querying columns that are not part of the primary key.
+You can create a secondary index on a single column on a table.
+Secondary indexes are used to scan a table using a column that is not normally queryable.
 
 ### Limitation of the data model
 
@@ -75,7 +87,6 @@ Please see the javadoc for more details and usage.
 - [2] Fay Chang , Jeffrey Dean , Sanjay Ghemawat , Wilson C. Hsieh , Deborah A. Wallach , Mike Burrows , Tushar Chandra , Andrew Fikes , Robert E. Gruber, Bigtable: A Distributed Storage System for Structured Data, ACM Transactions on Computer Systems (TOCS), v.26 n.2, p.1-26, June 2008.
 - [3] A. Dey, A. Fekete, U. Röhm, "Scalable Distributed Transactions across Heterogeneous Stores", IEEE 31th International Conference on Data Engineering (ICDE), 2015.
 - [4] Jim Gray , Leslie Lamport, Consensus on transaction commit, ACM Transactions on Database Systems (TODS), v.31 n.1, p.133-160, March 2006.
-
 
 ## Further documentation
 
