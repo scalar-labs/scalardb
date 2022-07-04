@@ -8,7 +8,7 @@ This guide briefly explains what kind of APIs exist and how to use them.
 
 ## Administrative API
 
-This section explains how to execute administrative operations in Scalar DB.
+This section explains how to execute administrative operations with Administrative API in Scalar DB.
 You can execute administrative operations programmatically as follows, but you can also execute those operations through [Schema Loader](https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md).
 
 ### Get a DistributedTransactionAdmin instance
@@ -233,7 +233,7 @@ admin.dropCoordinatorTables(ifExist);
 
 ## Transactional API
 
-This section explains how to execute transactional operations in Scalar DB.
+This section explains how to execute transactional operations with Transactional API in Scalar DB.
 
 ### Get a DistributedTransactionManager instance
 
