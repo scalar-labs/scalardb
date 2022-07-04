@@ -43,11 +43,9 @@ public final class ScannerImpl implements Scanner {
       // Return the next record of the current page if there is one
       if (currentPageRecords.hasNext()) {
         Record currentRecord = currentPageRecords.next();
-        Optional<Result> ret = Optional.of(resultInterpreter.interpret(currentRecord));
-        currentPageRecords.remove();
-        return ret;
-        // Otherwise, advance to the next page
+        return Optional.of(resultInterpreter.interpret(currentRecord));
       } else {
+        // Otherwise, advance to the next page
         currentPageRecords = recordsPages.next().getResults().iterator();
       }
     }
