@@ -1,10 +1,10 @@
 # Storage abstraction
 
-Scalar DB is middleware on top of existing storage/database systems and provides a storage/database abstraction and a storage/database-agnostic ACID transaction manager on top of the abstraction.
+Scalar DB is a middleware on top of existing storage/database systems and provides a storage/database abstraction and a storage/database-agnostic ACID transaction manager on top of the abstraction.
 You usually use the ACID transaction manager but can also use the storage/database abstraction directly.
 With the abstraction, you can write code without being aware of the storage/database implementation.
 
-Note that the storage abstraction operations are not transactional, and data inconsistencies can happen when failures happen during the execution of the operations.
+Note that the storage abstraction operations are not transactional, and data inconsistencies can happen when failures occur during the execution of the operations.
 
 This document briefly explains how to use the storage abstraction.
 
@@ -165,7 +165,7 @@ public class ElectronicMoney {
 }
 ```
 
-Again, note that the storage abstraction operations are not transactional, and data inconsistencies can happen when failures happen during the execution of the operations.
+Again, note that the storage abstraction operations are not transactional, and data inconsistencies can happen when failures occur during the execution of the operations.
 
 ## Storage abstraction API Guide
 
@@ -254,7 +254,7 @@ admin.createTable("ns", "tbl", tableMetadata, options);
 
 #### Create a secondary index
 
-you can create a secondary index as follows:
+You can create a secondary index as follows:
 
 ```java
 // Create a secondary index on a column "c5" of a table "ns.tbl". It will throw an exception if the secondary index already exists
@@ -271,7 +271,7 @@ admin.createIndex("ns", "tbl", "c5", options);
 
 #### Truncate a table
 
-you can truncate a table as follows:
+You can truncate a table as follows:
 
 ```java
 // Truncate a table "ns.tbl"
@@ -280,10 +280,10 @@ admin.truncateTable("ns", "tbl");
 
 #### Drop a secondary index
 
-you can drop a secondary index as follows:
+You can drop a secondary index as follows:
 
 ```java
-// Drop a secondary index on a column "c5" of a table "ns.tbl". It will throw an exception if the secondary index dose not exists
+// Drop a secondary index on a column "c5" of a table "ns.tbl". It will throw an exception if the secondary index does not exists
 admin.dropIndex("ns", "tbl", "c5");
 
 // Drop a secondary index only if it exists
@@ -293,10 +293,10 @@ admin.dropIndex("ns", "tbl", "c5", ifExists);
 
 #### Drop a table
 
-you can drop a table as follows:
+You can drop a table as follows:
 
 ```java
-// Drop a table "ns.tbl". It will throw an exception if the table dose not exists
+// Drop a table "ns.tbl". It will throw an exception if the table does not exists
 admin.dropTable("ns", "tbl");
 
 // Drop a table only if it exists
@@ -306,10 +306,10 @@ admin.dropTable("ns", "tbl", ifExists);
 
 #### Drop a namespace
 
-you can drop a namespace as follows:
+You can drop a namespace as follows:
 
 ```java
-// Drop a namespace "ns". It will throw an exception if the namespace dose not exists
+// Drop a namespace "ns". It will throw an exception if the namespace does not exists
 admin.dropNamespace("ns");
 
 // Drop a namespace only if it exists
@@ -319,7 +319,7 @@ admin.dropNamespace("ns", ifExists);
 
 #### Get a table metadata
 
-you can get a table metadata as follows:
+You can get a table metadata as follows:
 
 ```java
 // Get a table metadata of "ns.tbl"
@@ -458,12 +458,12 @@ If you want to get results one by one from the Scanner object, you can use the `
 Optional<Result> result = scanner.one();
 ```
 
-Or, if you want to get results as `List` at a time, you can use the `all()` method as follows:
+Or, if you want to get results all at once as a `List`, you can use the `all()` method as follows:
 ```java
 List<Result> results = scanner.all();
 ```
 
-Also, as Scanner implements `Iterable`, you can use `Enhanced For Loop` as follows:
+Also, as Scanner implements `Iterable`, you can use it in a for-each loop as follows:
 
 ```java
 for (Result result : scanner) {
@@ -539,7 +539,7 @@ Note that you can't specify clustering key boundaries and orderings in Scan with
 #### Put operation
 
 `Put` is an operation to put a record specified by a primary key.
-It inserts a new record if the record doesn't exist and updates the record if the record exists.
+It behaves as an upsert operation: If it exists, it updates it; otherwise, it inserts it.
 
 You need to create a Put object first, and then you can execute it with the `storage.put()` method as follows:
 
@@ -562,7 +562,7 @@ Put put =
 storage.put(put);
 ```
 
-You also put a record with null values as follows:
+You can also put a record with null values as follows:
 
 ```java
 Put put =
