@@ -115,7 +115,7 @@ admin.createTable("ns", "tbl", tableMetadata, options);
 
 ### Create a secondary index
 
-you can create a secondary index as follows:
+You can create a secondary index as follows:
 
 ```java
 // Create a secondary index on a column "c5" of a table "ns.tbl". It will throw an exception if the secondary index already exists
@@ -132,7 +132,7 @@ admin.createIndex("ns", "tbl", "c5", options);
 
 ### Truncate a table
 
-you can truncate a table as follows:
+You can truncate a table as follows:
 
 ```java
 // Truncate a table "ns.tbl"
@@ -141,7 +141,7 @@ admin.truncateTable("ns", "tbl");
 
 ### Drop a secondary index
 
-you can drop a secondary index as follows:
+You can drop a secondary index as follows:
 
 ```java
 // Drop a secondary index on a column "c5" of a table "ns.tbl". It will throw an exception if the secondary index does not exist
@@ -154,7 +154,7 @@ admin.dropIndex("ns", "tbl", "c5", ifExists);
 
 ### Drop a table
 
-you can drop a table as follows:
+You can drop a table as follows:
 
 ```java
 // Drop a table "ns.tbl". It will throw an exception if the table does not exist
@@ -167,7 +167,7 @@ admin.dropTable("ns", "tbl", ifExists);
 
 ### Drop a namespace
 
-you can drop a namespace as follows:
+You can drop a namespace as follows:
 
 ```java
 // Drop a namespace "ns". It will throw an exception if the namespace does not exist
@@ -180,7 +180,7 @@ admin.dropNamespace("ns", ifExists);
 
 ### Get a table metadata
 
-you can get a table metadata as follows:
+You can get a table metadata as follows:
 
 ```java
 // Get a table metadata of "ns.tbl"
@@ -483,7 +483,7 @@ Note that you can't specify clustering key boundaries and orderings in Scan with
 #### Put operation
 
 `Put` is an operation to put a record specified by a primary key.
-It inserts a new record if the record doesn't exist and updates the record if the record exists.
+It behaves as an upsert operation: If it exists, it updates it; otherwise, it inserts it.
 
 You need to create a Put object first, and then you can execute it with the `transaction.put()` method as follows:
 
@@ -506,7 +506,7 @@ Put put =
 transaction.put(put);
 ```
 
-You also put a record with null values as follows:
+You can also put a record with null values as follows:
 
 ```java
 Put put =
