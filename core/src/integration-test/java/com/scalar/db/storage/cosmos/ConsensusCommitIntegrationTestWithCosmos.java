@@ -20,7 +20,7 @@ public class ConsensusCommitIntegrationTestWithCosmos extends ConsensusCommitInt
   }
 
   @Override
-  protected Map<String, String> getCreateOptions() {
-    return CosmosEnv.getCreateOptions();
+  protected Map<String, String> getCreationOptions() {
+    return CosmosEnv.getCreationOptions();
   }
 }

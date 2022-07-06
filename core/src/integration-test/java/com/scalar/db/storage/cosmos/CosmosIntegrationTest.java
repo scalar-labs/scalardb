@@ -20,7 +20,7 @@ public class CosmosIntegrationTest extends DistributedStorageIntegrationTestBase
   }
 
   @Override
-  protected Map<String, String> getCreateOptions() {
-    return CosmosEnv.getCreateOptions();
+  protected Map<String, String> getCreationOptions() {
+    return CosmosEnv.getCreationOptions();
   }
 }

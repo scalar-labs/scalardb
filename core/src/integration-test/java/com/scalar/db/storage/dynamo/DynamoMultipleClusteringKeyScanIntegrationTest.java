@@ -36,8 +36,8 @@ public class DynamoMultipleClusteringKeyScanIntegrationTest
   }
 
   @Override
-  protected Map<String, String> getCreateOptions() {
-    return DynamoEnv.getCreateOptions();
+  protected Map<String, String> getCreationOptions() {
+    return DynamoEnv.getCreationOptions();
   }
 
   @Override

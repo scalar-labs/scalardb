@@ -81,13 +81,13 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
   }
 
   private void createTable() throws ExecutionException {
-    Map<String, String> options = getCreateOptions();
+    Map<String, String> options = getCreationOptions();
     admin.createNamespace(getNamespace(), options);
     admin.createTable(getNamespace(), getTable(), TABLE_METADATA, options);
     admin.createCoordinatorTables(true, options);
   }
 
-  protected Map<String, String> getCreateOptions() {
+  protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
   }
 
@@ -126,8 +126,8 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     adminTestUtils.dropMetadataTable();
 
     // Act
-    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreateOptions());
-    admin.repairCoordinatorTables(getCreateOptions());
+    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
+    admin.repairCoordinatorTables(getCreationOptions());
 
     // Assert
     assertThat(admin.tableExists(getNamespace(), TABLE)).isTrue();
@@ -145,8 +145,8 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     adminTestUtils.truncateMetadataTable();
 
     // Act
-    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreateOptions());
-    admin.repairCoordinatorTables(getCreateOptions());
+    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
+    admin.repairCoordinatorTables(getCreationOptions());
 
     // Assert
     assertThat(admin.tableExists(getNamespace(), TABLE)).isTrue();

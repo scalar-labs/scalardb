@@ -91,7 +91,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   private void createTables() throws ExecutionException {
-    Map<String, String> options = getCreateOptions();
+    Map<String, String> options = getCreationOptions();
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(ACCOUNT_ID, DataType.INT)
@@ -106,7 +106,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     consensusCommitAdmin.createCoordinatorTables(true, options);
   }
 
-  protected Map<String, String> getCreateOptions() {
+  protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
   }
 

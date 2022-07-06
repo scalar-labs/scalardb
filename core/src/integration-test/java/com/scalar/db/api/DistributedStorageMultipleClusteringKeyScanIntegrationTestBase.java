@@ -113,7 +113,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
   private void createTables() throws java.util.concurrent.ExecutionException, InterruptedException {
     List<Callable<Void>> testCallables = new ArrayList<>();
 
-    Map<String, String> options = getCreateOptions();
+    Map<String, String> options = getCreationOptions();
     for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
       Callable<Void> testCallable =
           () -> {
@@ -143,7 +143,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     executeInParallel(testCallables.subList(1, testCallables.size()));
   }
 
-  protected Map<String, String> getCreateOptions() {
+  protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
   }
 

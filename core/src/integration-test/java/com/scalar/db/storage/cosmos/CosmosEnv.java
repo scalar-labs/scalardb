@@ -42,7 +42,7 @@ public final class CosmosEnv {
     return Optional.ofNullable(System.getProperty(PROP_COSMOS_DATABASE_PREFIX));
   }
 
-  public static Map<String, String> getCreateOptions() {
+  public static Map<String, String> getCreationOptions() {
     String createOptionsString = System.getProperty(PROP_COSMOS_CREATE_OPTIONS);
     if (createOptionsString == null) {
       return DEFAULT_COSMOS_CREATE_OPTIONS;

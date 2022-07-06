@@ -58,7 +58,7 @@ public class ElectronicMoneyMain {
 
   private static void printUsageAndExit() {
     System.err.println(
-        "ElectronicMoneyMain -action charge/pay [-amount number (needed for charge and pay)] [-to id (needed for charge and pay)] [-from id (needed for pay)] [-id id (needed for getBalance)]");
+        "ElectronicMoneyMain -action charge/pay/getBalance [-amount number (needed for charge and pay)] [-to id (needed for charge and pay)] [-from id (needed for pay)] [-id id (needed for getBalance)]");
     System.exit(1);
   }
 }

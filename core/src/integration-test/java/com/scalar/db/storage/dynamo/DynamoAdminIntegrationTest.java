@@ -14,8 +14,8 @@ public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrati
   }
 
   @Override
-  protected Map<String, String> getCreateOptions() {
-    return DynamoEnv.getCreateOptions();
+  protected Map<String, String> getCreationOptions() {
+    return DynamoEnv.getCreationOptions();
   }
 
   // Since DynamoDB doesn't have the namespace concept, some behaviors around the namespace are

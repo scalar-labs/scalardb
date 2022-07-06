@@ -69,14 +69,14 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
   }
 
   private void createTables() throws ExecutionException {
-    Map<String, String> options = getCreateOptions();
+    Map<String, String> options = getCreationOptions();
     admin.createNamespace(namespace, true, options);
     for (DataType secondaryIndexType : secondaryIndexTypes) {
       createTable(secondaryIndexType, options);
     }
   }
 
-  protected Map<String, String> getCreateOptions() {
+  protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
   }
 
