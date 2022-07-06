@@ -27,6 +27,11 @@ publishing {
                         name = 'Toshihiro Suzuki'
                         email = 'brfrn169@gmail.com'
                     }
+                    developer {
+                        id = 'Torch3333'
+                        name = 'Vincent Guilpain'
+                        email = 'vincent.guilpain@scalar-labs.com'
+                    }
                 }
                 scm {
                     connection = 'scm:git:https://github.com/scalar-labs/scalardb.git'
