@@ -50,7 +50,7 @@ public class PrepareMutationComposerTest {
   private static final int ANY_INT_3 = 300;
 
   private static final TableMetadata TABLE_METADATA =
-      ConsensusCommitUtils.buildTransactionalTableMetadata(
+      ConsensusCommitUtils.buildTransactionTableMetadata(
           TableMetadata.newBuilder()
               .addColumn(ANY_NAME_1, DataType.TEXT)
               .addColumn(ANY_NAME_2, DataType.TEXT)

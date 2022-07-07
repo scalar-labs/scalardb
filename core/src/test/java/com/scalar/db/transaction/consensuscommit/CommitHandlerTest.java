@@ -44,7 +44,7 @@ public class CommitHandlerTest {
 
   @Mock private DistributedStorage storage;
   @Mock private Coordinator coordinator;
-  @Mock private TransactionalTableMetadataManager tableMetadataManager;
+  @Mock private TransactionTableMetadataManager tableMetadataManager;
   @Mock private ConsensusCommitConfig config;
 
   private CommitHandler handler;

@@ -40,7 +40,7 @@ public class DynamoCommandTest extends StorageSpecificCommandTestBase {
 
   @Test
   public void
-      call_WithProperArgumentsForCreatingTablesWithTransactionalTableSchema_ShouldCallCreateTablesProperly()
+      call_WithProperArgumentsForCreatingTablesWithTransactionTableSchema_ShouldCallCreateTablesProperly()
           throws SchemaLoaderException {
     // Arrange
     Map<String, String> options =
@@ -51,7 +51,7 @@ public class DynamoCommandTest extends StorageSpecificCommandTestBase {
             .build();
 
     TableSchema tableSchema = mock(TableSchema.class);
-    when(tableSchema.isTransactionalTable()).thenReturn(true);
+    when(tableSchema.isTransactionTable()).thenReturn(true);
     when(parser.parse()).thenReturn(Collections.singletonList(tableSchema));
 
     Properties properties = new Properties();
@@ -88,7 +88,7 @@ public class DynamoCommandTest extends StorageSpecificCommandTestBase {
 
   @Test
   public void
-      call_WithProperArgumentsForCreatingTablesWithNonTransactionalTableSchema_ShouldCallCreateTablesProperly()
+      call_WithProperArgumentsForCreatingTablesWithNonTransactionTableSchema_ShouldCallCreateTablesProperly()
           throws SchemaLoaderException {
     // Arrange
     Map<String, String> options =
@@ -99,7 +99,7 @@ public class DynamoCommandTest extends StorageSpecificCommandTestBase {
             .build();
 
     TableSchema tableSchema = mock(TableSchema.class);
-    when(tableSchema.isTransactionalTable()).thenReturn(false);
+    when(tableSchema.isTransactionTable()).thenReturn(false);
     when(parser.parse()).thenReturn(Collections.singletonList(tableSchema));
 
     Properties properties = new Properties();
@@ -136,11 +136,11 @@ public class DynamoCommandTest extends StorageSpecificCommandTestBase {
 
   @Test
   public void
-      call_WithProperArgumentsForDeletingTablesWithTransactionalTableSchema_ShouldCallDeleteTablesProperly()
+      call_WithProperArgumentsForDeletingTablesWithTransactionTableSchema_ShouldCallDeleteTablesProperly()
           throws SchemaLoaderException {
     // Arrange
     TableSchema tableSchema = mock(TableSchema.class);
-    when(tableSchema.isTransactionalTable()).thenReturn(true);
+    when(tableSchema.isTransactionTable()).thenReturn(true);
     when(parser.parse()).thenReturn(Collections.singletonList(tableSchema));
 
     Properties properties = new Properties();
@@ -174,11 +174,11 @@ public class DynamoCommandTest extends StorageSpecificCommandTestBase {
 
   @Test
   public void
-      call_WithProperArgumentsForDeletingTablesWithNonTransactionalTableSchema_ShouldCallDeleteTablesProperly()
+      call_WithProperArgumentsForDeletingTablesWithNonTransactionTableSchema_ShouldCallDeleteTablesProperly()
           throws SchemaLoaderException {
     // Arrange
     TableSchema tableSchema = mock(TableSchema.class);
-    when(tableSchema.isTransactionalTable()).thenReturn(false);
+    when(tableSchema.isTransactionTable()).thenReturn(false);
     when(parser.parse()).thenReturn(Collections.singletonList(tableSchema));
 
     Properties properties = new Properties();
@@ -212,28 +212,28 @@ public class DynamoCommandTest extends StorageSpecificCommandTestBase {
 
   @Test
   public void
-      call_ProperArgumentsForRepairingTablesGivenWithNonTransactionalTableSchemaAndNoBackupOption_ShouldCallRepairTablesProperly()
+      call_ProperArgumentsForRepairingTablesGivenWithNonTransactionTableSchemaAndNoBackupOption_ShouldCallRepairTablesProperly()
           throws SchemaLoaderException {
     callProperArgumentsForRepairingTables(false, true);
   }
 
   @Test
   public void
-      call_ProperArgumentsForRepairingTablesGivenWithNonTransactionalTableSchema_ShouldCallRepairTablesProperly()
+      call_ProperArgumentsForRepairingTablesGivenWithNonTransactionTableSchema_ShouldCallRepairTablesProperly()
           throws SchemaLoaderException {
     callProperArgumentsForRepairingTables(false, false);
   }
 
   @Test
   public void
-      call_ProperArgumentsForRepairingTablesGivenWithTransactionalTableSchema_ShouldCallRepairTablesProperly()
+      call_ProperArgumentsForRepairingTablesGivenWithTransactionTableSchema_ShouldCallRepairTablesProperly()
           throws SchemaLoaderException {
     callProperArgumentsForRepairingTables(true, false);
   }
 
   @Test
   public void
-      call_ProperArgumentsForRepairingTablesGivenWithTransactionalTableSchemaAndNoBackupOption_ShouldCallRepairTablesProperly()
+      call_ProperArgumentsForRepairingTablesGivenWithTransactionTableSchemaAndNoBackupOption_ShouldCallRepairTablesProperly()
           throws SchemaLoaderException {
     callProperArgumentsForRepairingTables(true, true);
   }
@@ -248,9 +248,9 @@ public class DynamoCommandTest extends StorageSpecificCommandTestBase {
 
     TableSchema tableSchema = mock(TableSchema.class);
     if (hasTransactionTables) {
-      when(tableSchema.isTransactionalTable()).thenReturn(true);
+      when(tableSchema.isTransactionTable()).thenReturn(true);
     } else {
-      when(tableSchema.isTransactionalTable()).thenReturn(false);
+      when(tableSchema.isTransactionTable()).thenReturn(false);
     }
     when(parser.parse()).thenReturn(Collections.singletonList(tableSchema));
 

@@ -198,7 +198,7 @@ public class ConsensusCommitAdminTest {
   }
 
   @Test
-  public void createTable_tableMetadataGiven_shouldCreateTransactionalTableProperly()
+  public void createTable_tableMetadataGiven_shouldCreateTransactionTableProperly()
       throws ExecutionException {
     // Arrange
     final String ACCOUNT_ID = "account_id";

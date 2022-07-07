@@ -50,22 +50,22 @@ public abstract class StorageSpecificCommand {
     // Create or delete tables
     SchemaOperator operator = getSchemaOperator(props);
     try {
-      boolean hasTransactionalTable =
-          tableSchemaList.stream().anyMatch(TableSchema::isTransactionalTable);
+      boolean hasTransactionTable =
+          tableSchemaList.stream().anyMatch(TableSchema::isTransactionTable);
 
       if (getDeleteOrRepairTables() == null) {
         operator.createTables(tableSchemaList);
-        if (hasTransactionalTable) {
+        if (hasTransactionTable) {
           operator.createCoordinatorTables(options);
         }
       } else if (getDeleteOrRepairTables().deleteTables) {
         operator.deleteTables(tableSchemaList);
-        if (hasTransactionalTable) {
+        if (hasTransactionTable) {
           operator.dropCoordinatorTables();
         }
       } else {
         operator.repairTables(tableSchemaList);
-        if (hasTransactionalTable) {
+        if (hasTransactionTable) {
           operator.repairCoordinatorTables(options);
         }
       }

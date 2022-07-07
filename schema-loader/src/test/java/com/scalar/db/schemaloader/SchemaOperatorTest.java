@@ -35,12 +35,12 @@ public class SchemaOperatorTest {
   }
 
   @Test
-  public void createTables_WithTransactionalTables_ShouldCallProperMethods() throws Exception {
+  public void createTables_WithTransactionTables_ShouldCallProperMethods() throws Exception {
     // Arrange
     List<TableSchema> tableSchemaList = Arrays.asList(tableSchema, tableSchema, tableSchema);
     when(tableSchema.getNamespace()).thenReturn("ns");
     when(tableSchema.getOptions()).thenReturn(options);
-    when(tableSchema.isTransactionalTable()).thenReturn(true);
+    when(tableSchema.isTransactionTable()).thenReturn(true);
     when(tableSchema.getTable()).thenReturn("tb");
     TableMetadata tableMetadata = mock(TableMetadata.class);
     when(tableSchema.getTableMetadata()).thenReturn(tableMetadata);
@@ -55,12 +55,12 @@ public class SchemaOperatorTest {
   }
 
   @Test
-  public void createTables_WithNonTransactionalTables_ShouldCallProperMethods() throws Exception {
+  public void createTables_WithNonTransactionTables_ShouldCallProperMethods() throws Exception {
     // Arrange
     List<TableSchema> tableSchemaList = Arrays.asList(tableSchema, tableSchema, tableSchema);
     when(tableSchema.getNamespace()).thenReturn("ns");
     when(tableSchema.getOptions()).thenReturn(options);
-    when(tableSchema.isTransactionalTable()).thenReturn(false);
+    when(tableSchema.isTransactionTable()).thenReturn(false);
     when(tableSchema.getTable()).thenReturn("tb");
     TableMetadata tableMetadata = mock(TableMetadata.class);
     when(tableSchema.getTableMetadata()).thenReturn(tableMetadata);
@@ -110,7 +110,7 @@ public class SchemaOperatorTest {
     List<TableSchema> tableSchemaList = Arrays.asList(tableSchema, tableSchema, tableSchema);
     when(tableSchema.getNamespace()).thenReturn("ns");
     when(tableSchema.getOptions()).thenReturn(options);
-    when(tableSchema.isTransactionalTable()).thenReturn(true);
+    when(tableSchema.isTransactionTable()).thenReturn(true);
     when(tableSchema.getTable()).thenReturn("tb");
     TableMetadata tableMetadata = mock(TableMetadata.class);
     when(tableSchema.getTableMetadata()).thenReturn(tableMetadata);
@@ -154,12 +154,12 @@ public class SchemaOperatorTest {
   }
 
   @Test
-  public void repairTables_WithTransactionalTables_ShouldCallProperMethods() throws Exception {
+  public void repairTables_WithTransactionTables_ShouldCallProperMethods() throws Exception {
     // Arrange
     List<TableSchema> tableSchemaList = Arrays.asList(tableSchema, tableSchema, tableSchema);
     when(tableSchema.getNamespace()).thenReturn("ns");
     when(tableSchema.getOptions()).thenReturn(options);
-    when(tableSchema.isTransactionalTable()).thenReturn(true);
+    when(tableSchema.isTransactionTable()).thenReturn(true);
     when(tableSchema.getTable()).thenReturn("tb");
     TableMetadata tableMetadata = mock(TableMetadata.class);
     when(tableSchema.getTableMetadata()).thenReturn(tableMetadata);
@@ -173,12 +173,12 @@ public class SchemaOperatorTest {
   }
 
   @Test
-  public void repairTables_WithoutTransactionalTables_ShouldCallProperMethods() throws Exception {
+  public void repairTables_WithoutTransactionTables_ShouldCallProperMethods() throws Exception {
     // Arrange
     List<TableSchema> tableSchemaList = Arrays.asList(tableSchema, tableSchema, tableSchema);
     when(tableSchema.getNamespace()).thenReturn("ns");
     when(tableSchema.getOptions()).thenReturn(options);
-    when(tableSchema.isTransactionalTable()).thenReturn(false);
+    when(tableSchema.isTransactionTable()).thenReturn(false);
     when(tableSchema.getTable()).thenReturn("tb");
     TableMetadata tableMetadata = mock(TableMetadata.class);
     when(tableSchema.getTableMetadata()).thenReturn(tableMetadata);

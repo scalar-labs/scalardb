@@ -58,7 +58,7 @@ public class RollbackMutationComposerTest {
   private static final int ANY_INT_3 = 300;
 
   private static final TableMetadata TABLE_METADATA =
-      ConsensusCommitUtils.buildTransactionalTableMetadata(
+      ConsensusCommitUtils.buildTransactionTableMetadata(
           TableMetadata.newBuilder()
               .addColumn(ANY_NAME_1, DataType.TEXT)
               .addColumn(ANY_NAME_2, DataType.TEXT)
@@ -70,7 +70,7 @@ public class RollbackMutationComposerTest {
   private RollbackMutationComposer composer;
   private List<Mutation> mutations;
   @Mock private DistributedStorage storage;
-  @Mock private TransactionalTableMetadataManager tableMetadataManager;
+  @Mock private TransactionTableMetadataManager tableMetadataManager;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -78,8 +78,8 @@ public class RollbackMutationComposerTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    when(tableMetadataManager.getTransactionalTableMetadata(any()))
-        .thenReturn(new TransactionalTableMetadata(TABLE_METADATA));
+    when(tableMetadataManager.getTransactionTableMetadata(any()))
+        .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
   }
 
   private Get prepareGet() {

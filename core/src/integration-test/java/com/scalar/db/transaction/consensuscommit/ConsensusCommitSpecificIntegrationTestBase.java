@@ -137,8 +137,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     truncateTables();
     storage = spy(originalStorage);
     coordinator = spy(new Coordinator(storage, consensusCommitConfig));
-    TransactionalTableMetadataManager tableMetadataManager =
-        new TransactionalTableMetadataManager(admin, -1);
+    TransactionTableMetadataManager tableMetadataManager =
+        new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
     commit = spy(new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor));
     manager =

@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public class TransactionalTableMetadataManagerTest {
+public class TransactionTableMetadataManagerTest {
 
   private static final String ACCOUNT_ID = "account_id";
   private static final String ACCOUNT_TYPE = "account_type";
@@ -65,62 +65,62 @@ public class TransactionalTableMetadataManagerTest {
   }
 
   @Test
-  public void getTransactionalTableMetadata_CalledOnce_ShouldCallDistributedStorageAdminOnce()
+  public void getTransactionTableMetadata_CalledOnce_ShouldCallDistributedStorageAdminOnce()
       throws ExecutionException {
     // Arrange
-    TransactionalTableMetadataManager tableMetadataManager =
-        new TransactionalTableMetadataManager(admin, -1);
+    TransactionTableMetadataManager tableMetadataManager =
+        new TransactionTableMetadataManager(admin, -1);
 
     // Act
-    TransactionalTableMetadata actual =
-        tableMetadataManager.getTransactionalTableMetadata(
+    TransactionTableMetadata actual =
+        tableMetadataManager.getTransactionTableMetadata(
             new Get(new Key("c1", "aaa")).forNamespace("ns").forTable("tbl"));
 
     // Assert
     verify(admin).getTableMetadata(anyString(), anyString());
-    assertTransactionalMetadata(actual);
+    assertTransactionMetadata(actual);
   }
 
   @Test
-  public void getTransactionalTableMetadata_CalledTwice_ShouldCallDistributedStorageAdminOnlyOnce()
+  public void getTransactionTableMetadata_CalledTwice_ShouldCallDistributedStorageAdminOnlyOnce()
       throws ExecutionException {
     // Arrange
-    TransactionalTableMetadataManager tableMetadataManager =
-        new TransactionalTableMetadataManager(admin, -1);
+    TransactionTableMetadataManager tableMetadataManager =
+        new TransactionTableMetadataManager(admin, -1);
 
     Get get = new Get(new Key("c1", "aaa")).forNamespace("ns").forTable("tbl");
 
     // Act
-    tableMetadataManager.getTransactionalTableMetadata(get);
-    TransactionalTableMetadata actual = tableMetadataManager.getTransactionalTableMetadata(get);
+    tableMetadataManager.getTransactionTableMetadata(get);
+    TransactionTableMetadata actual = tableMetadataManager.getTransactionTableMetadata(get);
 
     // Assert
     verify(admin).getTableMetadata(anyString(), anyString());
-    assertTransactionalMetadata(actual);
+    assertTransactionMetadata(actual);
   }
 
   @Test
   public void
-      getTransactionalTableMetadata_CalledAfterCacheExpiration_ShouldCallDistributedStorageAdminAgain()
+      getTransactionTableMetadata_CalledAfterCacheExpiration_ShouldCallDistributedStorageAdminAgain()
           throws ExecutionException {
     // Arrange
-    TransactionalTableMetadataManager tableMetadataManager =
-        new TransactionalTableMetadataManager(admin, 1); // one second
+    TransactionTableMetadataManager tableMetadataManager =
+        new TransactionTableMetadataManager(admin, 1); // one second
 
     Get get = new Get(new Key("c1", "aaa")).forNamespace("ns").forTable("tbl");
 
     // Act
-    tableMetadataManager.getTransactionalTableMetadata(get);
+    tableMetadataManager.getTransactionTableMetadata(get);
     // Wait for cache to be expired
     Uninterruptibles.sleepUninterruptibly(1200, TimeUnit.MILLISECONDS);
-    TransactionalTableMetadata actual = tableMetadataManager.getTransactionalTableMetadata(get);
+    TransactionTableMetadata actual = tableMetadataManager.getTransactionTableMetadata(get);
 
     // Assert
     verify(admin, times(2)).getTableMetadata(anyString(), anyString());
-    assertTransactionalMetadata(actual);
+    assertTransactionMetadata(actual);
   }
 
-  private void assertTransactionalMetadata(TransactionalTableMetadata actual) {
+  private void assertTransactionMetadata(TransactionTableMetadata actual) {
     assertThat(actual.getTableMetadata()).isEqualTo(tableMetadata);
     assertThat(actual.getPartitionKeyNames())
         .isEqualTo(new LinkedHashSet<>(Collections.singletonList(ACCOUNT_ID)));
@@ -165,7 +165,7 @@ public class TransactionalTableMetadataManagerTest {
     assertThat(actual.getColumnDataType(Attribute.BEFORE_COMMITTED_AT)).isEqualTo(DataType.BIGINT);
     assertThat(actual.getSecondaryIndexNames())
         .isEqualTo(new HashSet<>(Collections.singletonList(BRANCH)));
-    assertThat(actual.getTransactionalMetaColumnNames())
+    assertThat(actual.getTransactionMetaColumnNames())
         .isEqualTo(
             new LinkedHashSet<>(
                 Arrays.asList(

@@ -42,7 +42,7 @@ public class TableSchema {
   private String tableName;
   private TableMetadata tableMetadata;
   private ImmutableMap<String, String> options;
-  private boolean isTransactionalTable = false;
+  private boolean isTransactionTable = false;
   private Set<String> traveledKeys;
 
   @VisibleForTesting
@@ -114,7 +114,7 @@ public class TableSchema {
     }
 
     if (transaction) {
-      isTransactionalTable = true;
+      isTransactionTable = true;
     }
 
     // Add columns
@@ -180,7 +180,7 @@ public class TableSchema {
     return options;
   }
 
-  public boolean isTransactionalTable() {
-    return isTransactionalTable;
+  public boolean isTransactionTable() {
+    return isTransactionTable;
   }
 }
