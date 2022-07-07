@@ -59,5 +59,5 @@ Here are the contributors we are especially thankful for:
 ## License
 Scalar DB is dual-licensed under both the Apache 2.0 License (found in the LICENSE file in the root directory) and a commercial license.
 You may select, at your option, one of the above-listed licenses.
-The commercial license includes enterprise-grade tools, such as a multi-table consistent backup/restore tool for Cassandra, and the GraphQL and SQL features.
+The commercial license includes several enterprise-grade features such as management tools and declarative query interfaces like GraphQL and SQL interfaces.
 Regarding the commercial license, please [contact us](https://scalar-labs.com/contact_us/) for more information.
