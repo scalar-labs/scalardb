@@ -6,6 +6,7 @@ import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.schemaloader.SchemaOperator;
 import com.scalar.db.schemaloader.SchemaParser;
 import com.scalar.db.schemaloader.TableSchema;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -23,11 +24,20 @@ public abstract class StorageSpecificCommand {
       required = true)
   private Path schemaFile;
 
-  @Option(
-      names = {"-D", "--delete-all"},
-      description = "Delete tables",
-      defaultValue = "false")
-  private boolean deleteTables;
+  static class DeleteOrRepairTables {
+    @Option(
+        names = {"-D", "--delete-all"},
+        description = "Delete tables",
+        defaultValue = "false")
+    boolean deleteTables;
+
+    @SuppressFBWarnings("URF_UNREAD_FIELD")
+    @Option(
+        names = {"--repair-all"},
+        description = "Repair tables : it repairs the table metadata of existing tables",
+        defaultValue = "false")
+    boolean repairTables;
+  }
 
   protected void execute(Properties props, Map<String, String> options)
       throws SchemaLoaderException {
@@ -43,15 +53,20 @@ public abstract class StorageSpecificCommand {
       boolean hasTransactionalTable =
           tableSchemaList.stream().anyMatch(TableSchema::isTransactionalTable);
 
-      if (!deleteTables) {
+      if (getDeleteOrRepairTables() == null) {
         operator.createTables(tableSchemaList);
         if (hasTransactionalTable) {
           operator.createCoordinatorTables(options);
         }
-      } else {
+      } else if (getDeleteOrRepairTables().deleteTables) {
         operator.deleteTables(tableSchemaList);
         if (hasTransactionalTable) {
           operator.dropCoordinatorTables();
+        }
+      } else {
+        operator.repairTables(tableSchemaList);
+        if (hasTransactionalTable) {
+          operator.repairCoordinatorTables(options);
         }
       }
     } finally {
@@ -68,4 +83,6 @@ public abstract class StorageSpecificCommand {
   SchemaOperator getSchemaOperator(Properties props) {
     return new SchemaOperator(new DatabaseConfig(props));
   }
+
+  abstract DeleteOrRepairTables getDeleteOrRepairTables();
 }

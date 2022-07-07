@@ -50,6 +50,26 @@ public class SchemaOperator {
     }
   }
 
+  public void repairTables(List<TableSchema> tableSchemaList) throws SchemaLoaderException {
+    for (TableSchema tableSchema : tableSchemaList) {
+      String namespace = tableSchema.getNamespace();
+      String tableName = tableSchema.getTable();
+      try {
+        if (tableSchema.isTransactionalTable()) {
+          transactionAdmin.repairTable(
+              namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
+        } else {
+          storageAdmin.repairTable(
+              namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
+        }
+        logger.info("Repairing the table {} in the namespace {} succeeded.", tableName, namespace);
+      } catch (ExecutionException e) {
+        throw new SchemaLoaderException(
+            "Repairing the table " + tableName + " in the namespace " + namespace + " failed.", e);
+      }
+    }
+  }
+
   private void createNamespace(String namespace, Map<String, String> options)
       throws SchemaLoaderException {
     try {
@@ -159,6 +179,15 @@ public class SchemaOperator {
     } catch (ExecutionException e) {
       throw new SchemaLoaderException(
           "Checking the existence of the coordinator tables failed.", e);
+    }
+  }
+
+  public void repairCoordinatorTables(Map<String, String> options) throws SchemaLoaderException {
+    try {
+      transactionAdmin.repairCoordinatorTables(options);
+      logger.info("Repairing the coordinator tables succeeded.");
+    } catch (ExecutionException e) {
+      throw new SchemaLoaderException("Repairing the coordinator tables failed.", e);
     }
   }
 

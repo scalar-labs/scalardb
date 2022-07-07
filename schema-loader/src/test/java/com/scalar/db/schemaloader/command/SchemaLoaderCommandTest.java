@@ -193,6 +193,56 @@ public class SchemaLoaderCommandTest {
 
   @Test
   public void
+      call_WithProperArgumentsForRepairingTablesWithoutCoordinatorArgument_ShouldCallRepairTableProperly() {
+    // Arrange
+    String schemaFile = "path_to_file";
+    String configFile = "path_to_config_file";
+    Map<String, String> options = ImmutableMap.of(DynamoAdmin.NO_BACKUP, noBackup.toString());
+
+    // Act
+    commandLine.execute("-f", schemaFile, "--repair-all", "--config", configFile, "--no-backup");
+
+    // Assert
+    schemaLoaderMockedStatic.verify(
+        () ->
+            SchemaLoader.repairTables(
+                Paths.get(configFile), Paths.get(schemaFile), options, false));
+  }
+
+  @Test
+  public void
+      call_WithProperArgumentsForRepairingTablesWithCoordinatorArgument_ShouldCallRepairTableProperly() {
+    // Arrange
+    String schemaFile = "path_to_file";
+    String configFile = "path_to_config_file";
+    Map<String, String> options = ImmutableMap.of(DynamoAdmin.NO_BACKUP, noBackup.toString());
+
+    // Act
+    commandLine.execute(
+        "-f", schemaFile, "--repair-all", "--config", configFile, "--coordinator", "--no-backup");
+
+    // Assert
+    schemaLoaderMockedStatic.verify(
+        () ->
+            SchemaLoader.repairTables(Paths.get(configFile), Paths.get(schemaFile), options, true));
+  }
+
+  @Test
+  public void call_forRepairingTablesWithoutSchemaFile_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    String configFile = "path_to_config_file";
+
+    // Act
+    int exitCode =
+        commandLine.execute("--repair-all", "--config", configFile, "--coordinator", "--no-backup");
+
+    // Assert
+    Assertions.assertThat(exitCode).isEqualTo(1);
+    schemaLoaderMockedStatic.verifyNoInteractions();
+  }
+
+  @Test
+  public void
       call_WithProperArgumentsForDeletingTablesWithoutSchemaFileArgument_ShouldCallUnloadProperly() {
     // Arrange
     String configFile = "path_to_config_file";

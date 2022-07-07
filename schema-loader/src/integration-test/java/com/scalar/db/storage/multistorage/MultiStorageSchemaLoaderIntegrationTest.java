@@ -3,10 +3,10 @@ package com.scalar.db.storage.multistorage;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 
 public class MultiStorageSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTestBase {
-
   @Override
   protected Properties getProperties() {
     Properties props = new Properties();
@@ -68,5 +68,21 @@ public class MultiStorageSchemaLoaderIntegrationTest extends SchemaLoaderIntegra
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "storage1");
 
     return props;
+  }
+
+  @Override
+  protected void dropMetadataTable() throws Exception {
+    AdminTestUtils storage1AdminUtils =
+        AdminTestUtils.create(MultiStorageEnv.getPropertiesForStorage1());
+    storage1AdminUtils.dropMetadataTable();
+    AdminTestUtils storage2AdminUtils =
+        AdminTestUtils.create(MultiStorageEnv.getPropertiesForStorage2());
+    storage2AdminUtils.dropMetadataTable();
+  }
+
+  @Override
+  protected void assertTableMetadataForCoordinatorTableArePresent() throws Exception {
+    assertTableMetadataForCoordinatorTableArePresentForStorage(
+        MultiStorageEnv.getPropertiesForStorage1());
   }
 }

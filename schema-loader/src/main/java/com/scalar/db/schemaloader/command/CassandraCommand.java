@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
+import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -55,6 +56,9 @@ public class CassandraCommand extends StorageSpecificCommand implements Callable
       description = "Cassandra replication factor")
   private String replicationFactor;
 
+  @ArgGroup(exclusive = true)
+  private DeleteOrRepairTables deleteOrRepairTables;
+
   @Override
   public Integer call() throws SchemaLoaderException {
     Properties props = new Properties();
@@ -79,5 +83,10 @@ public class CassandraCommand extends StorageSpecificCommand implements Callable
 
     execute(props, options);
     return 0;
+  }
+
+  @Override
+  DeleteOrRepairTables getDeleteOrRepairTables() {
+    return deleteOrRepairTables;
   }
 }
