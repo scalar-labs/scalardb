@@ -21,7 +21,7 @@ public abstract class AdminTestUtils {
       case "jdbc":
         return new JdbcAdminTestUtils(properties);
       default:
-        return null;
+        return new CassandraAdminTestUtils();
     }
   }
 

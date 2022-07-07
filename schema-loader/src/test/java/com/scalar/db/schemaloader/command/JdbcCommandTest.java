@@ -6,6 +6,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.schemaloader.TableSchema;
@@ -134,6 +135,55 @@ public class JdbcCommandTest extends StorageSpecificCommandTestBase {
     verify(command).getSchemaOperator(properties);
     verify(operator).deleteTables(anyList());
     verify(operator, never()).dropCoordinatorTables();
+  }
+
+  @Test
+  public void
+      call_ProperArgumentsForRepairingTablesGivenWithNonTransactionalTableSchema_ShouldCallRepairTablesProperly()
+          throws SchemaLoaderException {
+    callProperArgumentsForRepairingTables(false);
+  }
+
+  @Test
+  public void
+      call_ProperArgumentsForRepairingTablesGivenWithTransactionalTableSchema_ShouldCallRepairTablesProperly()
+          throws SchemaLoaderException {
+    callProperArgumentsForRepairingTables(true);
+  }
+
+  private void callProperArgumentsForRepairingTables(boolean hasTransactionTables)
+      throws SchemaLoaderException {
+    // Arrange
+    Map<String, String> options = ImmutableMap.of();
+
+    TableSchema tableSchema = mock(TableSchema.class);
+    if (hasTransactionTables) {
+      when(tableSchema.isTransactionalTable()).thenReturn(true);
+    } else {
+      when(tableSchema.isTransactionalTable()).thenReturn(false);
+    }
+    when(parser.parse()).thenReturn(Collections.singletonList(tableSchema));
+
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcUrl);
+    properties.setProperty(DatabaseConfig.USERNAME, user);
+    properties.setProperty(DatabaseConfig.PASSWORD, password);
+    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+
+    // Act
+    commandLine.execute(
+        "-j", jdbcUrl, "-u", user, "-p", password, "-f", schemaFile, "--repair-all");
+
+    // Assert
+    verify(command).getSchemaParser(options);
+    verify(parser).parse();
+    verify(command).getSchemaOperator(properties);
+    verify(operator).repairTables(anyList());
+    if (hasTransactionTables) {
+      verify(operator).repairCoordinatorTables(options);
+    } else {
+      verify(operator, never()).repairCoordinatorTables(options);
+    }
   }
 
   @Test

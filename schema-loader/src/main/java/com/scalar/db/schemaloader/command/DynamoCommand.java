@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
+import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -47,6 +48,9 @@ public class DynamoCommand extends StorageSpecificCommand implements Callable<In
       description = "Endpoint with which the DynamoDB SDK should communicate")
   private String endpointOverride;
 
+  @ArgGroup(exclusive = true)
+  private DeleteOrRepairTables deleteOrRepairTables;
+
   @Override
   public Integer call() throws SchemaLoaderException {
     Properties props = new Properties();
@@ -72,5 +76,10 @@ public class DynamoCommand extends StorageSpecificCommand implements Callable<In
 
     execute(props, options);
     return 0;
+  }
+
+  @Override
+  DeleteOrRepairTables getDeleteOrRepairTables() {
+    return deleteOrRepairTables;
   }
 }

@@ -31,7 +31,7 @@ public class SchemaLoaderTest {
   @Mock private Path configFilePath;
   @Mock private Properties configProperties;
   @Mock private Path schemaFilePath;
-  @Mock private Path serializedSchemaJson;
+  private static final String SERIALIZED_SCHEMA_JSON = "some_schema";
   @Mock private Map<String, String> options;
 
   @BeforeEach
@@ -121,7 +121,7 @@ public class SchemaLoaderTest {
     // Arrange
 
     // Act
-    SchemaLoader.load(configFilePath, serializedSchemaJson, options, true);
+    SchemaLoader.load(configFilePath, SERIALIZED_SCHEMA_JSON, options, true);
 
     // Assert
     verify(parser).parse();
@@ -136,7 +136,7 @@ public class SchemaLoaderTest {
     // Arrange
 
     // Act
-    SchemaLoader.load(configFilePath, serializedSchemaJson, options, false);
+    SchemaLoader.load(configFilePath, SERIALIZED_SCHEMA_JSON, options, false);
 
     // Assert
     verify(parser).parse();
@@ -241,7 +241,7 @@ public class SchemaLoaderTest {
     // Arrange
 
     // Act
-    SchemaLoader.load(configProperties, serializedSchemaJson, options, true);
+    SchemaLoader.load(configProperties, SERIALIZED_SCHEMA_JSON, options, true);
 
     // Assert
     verify(parser).parse();
@@ -256,7 +256,7 @@ public class SchemaLoaderTest {
     // Arrange
 
     // Act
-    SchemaLoader.load(configProperties, serializedSchemaJson, options, false);
+    SchemaLoader.load(configProperties, SERIALIZED_SCHEMA_JSON, options, false);
 
     // Assert
     verify(parser).parse();
@@ -361,7 +361,7 @@ public class SchemaLoaderTest {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configFilePath, serializedSchemaJson, true);
+    SchemaLoader.unload(configFilePath, SERIALIZED_SCHEMA_JSON, true);
 
     // Assert
     verify(parser).parse();
@@ -376,7 +376,7 @@ public class SchemaLoaderTest {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configFilePath, serializedSchemaJson, false);
+    SchemaLoader.unload(configFilePath, SERIALIZED_SCHEMA_JSON, false);
 
     // Assert
     verify(parser).parse();
@@ -481,7 +481,7 @@ public class SchemaLoaderTest {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configProperties, serializedSchemaJson, true);
+    SchemaLoader.unload(configProperties, SERIALIZED_SCHEMA_JSON, true);
 
     // Assert
     verify(parser).parse();
@@ -496,7 +496,7 @@ public class SchemaLoaderTest {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configProperties, serializedSchemaJson, false);
+    SchemaLoader.unload(configProperties, SERIALIZED_SCHEMA_JSON, false);
 
     // Assert
     verify(parser).parse();
@@ -532,5 +532,125 @@ public class SchemaLoaderTest {
     verify(parser, never()).parse();
     verify(operator).deleteTables(anyList());
     verify(operator, never()).dropCoordinatorTables();
+  }
+
+  @Test
+  public void
+      repairTable_WithConfigFilePathAndSerializedSchemaAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.repairTables(configFilePath, SERIALIZED_SCHEMA_JSON, options, true);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).repairTables(anyList());
+    verify(operator).repairCoordinatorTables(options);
+  }
+
+  @Test
+  public void
+      repairTable_WithConfigFilePathAndSerializedSchemaAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.repairTables(configFilePath, SERIALIZED_SCHEMA_JSON, options, false);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).repairTables(anyList());
+    verify(operator, never()).repairCoordinatorTables(anyMap());
+  }
+
+  @Test
+  public void
+      repairTable_WithConfigPropertiesAndSerializedSchemaAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.repairTables(configProperties, SERIALIZED_SCHEMA_JSON, options, true);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).repairTables(anyList());
+    verify(operator).repairCoordinatorTables(options);
+  }
+
+  @Test
+  public void
+      repairTable_WithConfigPropertiesAndSerializedSchemaAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.repairTables(configProperties, SERIALIZED_SCHEMA_JSON, options, false);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).repairTables(anyList());
+    verify(operator, never()).repairCoordinatorTables(anyMap());
+  }
+
+  @Test
+  public void
+      repairTable_WithConfigPropertiesAndSchemaFilePathAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.repairTables(configProperties, schemaFilePath, options, true);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).repairTables(anyList());
+    verify(operator).repairCoordinatorTables(options);
+  }
+
+  @Test
+  public void
+      repairTable_WithConfigPropertiesAndSchemaFilePathAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.repairTables(configProperties, schemaFilePath, options, false);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).repairTables(anyList());
+    verify(operator, never()).repairCoordinatorTables(anyMap());
+  }
+
+  @Test
+  public void
+      repairTable_WithConfigFilePathAndSchemaFilePathAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.repairTables(configFilePath, schemaFilePath, options, true);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).repairTables(anyList());
+    verify(operator).repairCoordinatorTables(options);
+  }
+
+  @Test
+  public void
+      repairTable_WithConfigFilePathAndSchemaFilePathAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.repairTables(configFilePath, schemaFilePath, options, false);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).repairTables(anyList());
+    verify(operator, never()).repairCoordinatorTables(anyMap());
   }
 }

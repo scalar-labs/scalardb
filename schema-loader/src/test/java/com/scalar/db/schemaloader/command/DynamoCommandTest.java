@@ -13,9 +13,12 @@ import com.scalar.db.schemaloader.TableSchema;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
 import com.scalar.db.storage.dynamo.DynamoConfig;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import org.assertj.core.api.Assertions;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine.ExitCode;
 
@@ -205,6 +208,89 @@ public class DynamoCommandTest extends StorageSpecificCommandTestBase {
     verify(command).getSchemaOperator(properties);
     verify(operator).deleteTables(anyList());
     verify(operator, never()).dropCoordinatorTables();
+  }
+
+  @Test
+  public void
+      call_ProperArgumentsForRepairingTablesGivenWithNonTransactionalTableSchemaAndNoBackupOption_ShouldCallRepairTablesProperly()
+          throws SchemaLoaderException {
+    callProperArgumentsForRepairingTables(false, true);
+  }
+
+  @Test
+  public void
+      call_ProperArgumentsForRepairingTablesGivenWithNonTransactionalTableSchema_ShouldCallRepairTablesProperly()
+          throws SchemaLoaderException {
+    callProperArgumentsForRepairingTables(false, false);
+  }
+
+  @Test
+  public void
+      call_ProperArgumentsForRepairingTablesGivenWithTransactionalTableSchema_ShouldCallRepairTablesProperly()
+          throws SchemaLoaderException {
+    callProperArgumentsForRepairingTables(true, false);
+  }
+
+  @Test
+  public void
+      call_ProperArgumentsForRepairingTablesGivenWithTransactionalTableSchemaAndNoBackupOption_ShouldCallRepairTablesProperly()
+          throws SchemaLoaderException {
+    callProperArgumentsForRepairingTables(true, true);
+  }
+
+  private void callProperArgumentsForRepairingTables(
+      boolean hasTransactionTables, boolean hasBackupOption) throws SchemaLoaderException {
+    // Arrange
+    Map<String, String> options = new HashMap<>();
+    if (hasBackupOption) {
+      options.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
+    }
+
+    TableSchema tableSchema = mock(TableSchema.class);
+    if (hasTransactionTables) {
+      when(tableSchema.isTransactionalTable()).thenReturn(true);
+    } else {
+      when(tableSchema.isTransactionalTable()).thenReturn(false);
+    }
+    when(parser.parse()).thenReturn(Collections.singletonList(tableSchema));
+
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, region);
+    properties.setProperty(DatabaseConfig.USERNAME, user);
+    properties.setProperty(DatabaseConfig.PASSWORD, password);
+    properties.setProperty(DatabaseConfig.STORAGE, "dynamo");
+    properties.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);
+
+    List<String> args =
+        Lists.newArrayList(
+            "-u",
+            user,
+            "--region",
+            region,
+            "--endpoint-override",
+            endpointOverride,
+            "-p",
+            password,
+            "-f",
+            schemaFile,
+            "--repair-all");
+    if (hasBackupOption) {
+      args.add("--no-backup");
+    }
+
+    // Act
+    commandLine.execute(args.toArray(new String[0]));
+
+    // Assert
+    verify(command).getSchemaParser(options);
+    verify(parser).parse();
+    verify(command).getSchemaOperator(properties);
+    verify(operator).repairTables(anyList());
+    if (hasTransactionTables) {
+      verify(operator).repairCoordinatorTables(options);
+    } else {
+      verify(operator, never()).repairCoordinatorTables(options);
+    }
   }
 
   @Test
