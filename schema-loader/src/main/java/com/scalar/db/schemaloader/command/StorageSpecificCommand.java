@@ -6,14 +6,13 @@ import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.schemaloader.SchemaOperator;
 import com.scalar.db.schemaloader.SchemaParser;
 import com.scalar.db.schemaloader.TableSchema;
-import com.scalar.db.schemaloader.command.SchemaLoaderCommand.DeleteOrRepairTablesTables;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 
 public abstract class StorageSpecificCommand {
@@ -25,21 +24,17 @@ public abstract class StorageSpecificCommand {
       required = true)
   private Path schemaFile;
 
-  @ArgGroup(exclusive = true)
-  DeleteOrRepairTablesTables deleteOrRepairTables;
-
-  static class DeleteOrRepair {
-
+  static class DeleteOrRepairTables {
     @Option(
         names = {"-D", "--delete-all"},
         description = "Delete tables",
         defaultValue = "false")
     boolean deleteTables;
 
+    @SuppressFBWarnings("URF_UNREAD_FIELD")
     @Option(
         names = {"--repair-all"},
-        description =
-            "Repair tables : it repairs the table metadata of existing tables. When using Cosmos DB, it additionally repairs stored procedure attached to each table",
+        description = "Repair tables : it repairs the table metadata of existing tables",
         defaultValue = "false")
     boolean repairTables;
   }
@@ -58,12 +53,12 @@ public abstract class StorageSpecificCommand {
       boolean hasTransactionalTable =
           tableSchemaList.stream().anyMatch(TableSchema::isTransactionalTable);
 
-      if (deleteOrRepairTables == null) {
+      if (getDeleteOrRepairTables() == null) {
         operator.createTables(tableSchemaList);
         if (hasTransactionalTable) {
           operator.createCoordinatorTables(options);
         }
-      } else if (deleteOrRepairTables.deleteTables) {
+      } else if (getDeleteOrRepairTables().deleteTables) {
         operator.deleteTables(tableSchemaList);
         if (hasTransactionalTable) {
           operator.dropCoordinatorTables();
@@ -88,4 +83,6 @@ public abstract class StorageSpecificCommand {
   SchemaOperator getSchemaOperator(Properties props) {
     return new SchemaOperator(new DatabaseConfig(props));
   }
+
+  abstract DeleteOrRepairTables getDeleteOrRepairTables();
 }

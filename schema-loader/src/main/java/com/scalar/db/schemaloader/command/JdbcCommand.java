@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
+import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -31,6 +32,9 @@ public class JdbcCommand extends StorageSpecificCommand implements Callable<Inte
       required = true)
   private String password;
 
+  @ArgGroup(exclusive = true)
+  DeleteOrRepairTables deleteOrRepairTables;
+
   @Override
   public Integer call() throws Exception {
     Properties props = new Properties();
@@ -43,5 +47,10 @@ public class JdbcCommand extends StorageSpecificCommand implements Callable<Inte
 
     execute(props, options);
     return 0;
+  }
+
+  @Override
+  DeleteOrRepairTables getDeleteOrRepairTables() {
+    return deleteOrRepairTables;
   }
 }

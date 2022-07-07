@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
+import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -60,6 +61,32 @@ public class CosmosCommand extends StorageSpecificCommand implements Callable<In
       hidden = true)
   private String coordinatorNamespacePrefix;
 
+  @ArgGroup(exclusive = true)
+  DeleteOrRepairCosmosTables deleteOrRepairCosmosTables;
+
+  /**
+   * To be able to have a "--repair-all" option description that is different only for the
+   * CosmosCommand, a cosmos specific version of {@link StorageSpecificCommand.DeleteOrRepairTables}
+   * had to be created. Eventually, the only difference with {@link
+   * StorageSpecificCommand.DeleteOrRepairTables} is the {@link
+   * DeleteOrRepairCosmosTables#repairTables} description value
+   */
+  static class DeleteOrRepairCosmosTables {
+
+    @Option(
+        names = {"-D", "--delete-all"},
+        description = "Delete tables",
+        defaultValue = "false")
+    boolean deleteTables;
+
+    @Option(
+        names = {"--repair-all"},
+        description =
+            "Repair tables : it repairs the table metadata of existing tables and repairs stored procedure attached to each table",
+        defaultValue = "false")
+    boolean repairTables;
+  }
+
   @Override
   public Integer call() throws SchemaLoaderException {
     Properties props = new Properties();
@@ -89,5 +116,20 @@ public class CosmosCommand extends StorageSpecificCommand implements Callable<In
 
     execute(props, options);
     return 0;
+  }
+
+  @Override
+  DeleteOrRepairTables getDeleteOrRepairTables() {
+    if (deleteOrRepairCosmosTables == null) {
+      return null;
+    }
+
+    DeleteOrRepairTables deleteOrRepairTables = new DeleteOrRepairTables();
+    if (deleteOrRepairCosmosTables.deleteTables) {
+      deleteOrRepairTables.deleteTables = true;
+    } else {
+      deleteOrRepairTables.repairTables = true;
+    }
+    return deleteOrRepairTables;
   }
 }

@@ -85,9 +85,8 @@ Create/Delete Cosmos DB schemas
   -p, --password=<key>   Cosmos DB key
   -r, --ru=<ru>          Base resource unit
       --repair-all       Repair tables : it repairs the table metadata of
-                               existing tables. When using Cosmos DB, it
-                               additionally repairs stored procedure attached
-                               to each table
+                           existing tables and repairs stored procedure
+                           attached to each table
 ```
 
 For DynamoDB (Deprecated. Please use the command using a config file instead):
@@ -109,9 +108,7 @@ Create/Delete DynamoDB schemas
   -r, --ru=<ru>              Base resource unit
       --region=<awsRegion>   AWS region
       --repair-all           Repair tables : it repairs the table metadata of
-                               existing tables. When using Cosmos DB, it
-                               additionally repairs stored procedure attached
-                               to each table
+                               existing tables
   -u, --user=<awsKeyId>      AWS access key ID
 ```
 
@@ -137,9 +134,7 @@ Create/Delete Cassandra schemas
   -R, --replication-factor=<replicationFactor>
                         Cassandra replication factor
       --repair-all     Repair tables : it repairs the table metadata of
-                               existing tables. When using Cosmos DB, it
-                               additionally repairs stored procedure attached
-                               to each table
+                         existing tables
   -u, --user=<user>     Cassandra user
 ```
 
@@ -155,9 +150,7 @@ Create/Delete JDBC schemas
   -p, --password=<password>
                          JDBC password
       --repair-all       Repair tables : it repairs the table metadata of
-                               existing tables. When using Cosmos DB, it
-                               additionally repairs stored procedure attached
-                               to each table
+                           existing tables
   -u, --user=<user>      JDBC user
 ```
 
