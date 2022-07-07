@@ -12,7 +12,7 @@ import java.util.Optional;
 
 /**
  * A transaction abstraction based on a two-phase commit protocol for interacting with the
- * underlining storage and database implementations.
+ * underlying storage and database implementations.
  */
 public interface TwoPhaseCommitTransaction extends TransactionCrudOperable {
 

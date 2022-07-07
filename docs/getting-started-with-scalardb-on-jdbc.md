@@ -5,7 +5,7 @@ This document briefly explains how you can get started with Scalar DB on JDBC da
 
 ## Install prerequisites
 
-Scalar DB is written in Java and uses a JDBC database as an underlining storage implementation, so the following software is required to run it.
+Scalar DB is written in Java and uses a JDBC database as an underlying storage implementation, so the following software is required to run it.
 
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (or OpenJDK 8)
 * A JDBC database instance. Currently, MySQL, PostgreSQL, Oracle Database, SQL Server, and Amazon Aurora are officially supported

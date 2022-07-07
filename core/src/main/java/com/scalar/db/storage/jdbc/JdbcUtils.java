@@ -32,7 +32,7 @@ public final class JdbcUtils {
     BasicDataSource dataSource = new BasicDataSource();
 
     /*
-     * We need to set the driver class of an underlining database to the dataSource in order
+     * We need to set the driver class of an underlying database to the dataSource in order
      * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
      * work (e.g., when we dynamically load a driver class from a fatJar).
      */
@@ -86,7 +86,7 @@ public final class JdbcUtils {
     BasicDataSource dataSource = new BasicDataSource();
 
     /*
-     * We need to set the driver class of an underlining database to the dataSource in order
+     * We need to set the driver class of an underlying database to the dataSource in order
      * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
      * work (e.g., when we dynamically load a driver class from a fatJar).
      */
@@ -108,7 +108,7 @@ public final class JdbcUtils {
     BasicDataSource dataSource = new BasicDataSource();
 
     /*
-     * We need to set the driver class of an underlining database to the dataSource in order
+     * We need to set the driver class of an underlying database to the dataSource in order
      * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
      * work (e.g., when we dynamically load a driver class from a fatJar).
      */

@@ -13,7 +13,7 @@ Scalar DB is a simple and practical solution to solve the above-mentioned proble
 
 ## Design Goals
 
-The primary design goal of Scalar DB is achieving ACID transaction capability without losing high availability, horizontal scalability, and strong consistency of underlining storage. The performance of the Scalar DB is highly dependent on the underlying storage performance and is usually slower than other scratch-built distributed databases since it adds a storage abstraction layer and storage-oblivious transaction layer, which makes various optimizations hard.
+The primary design goal of Scalar DB is achieving ACID transaction capability without losing high availability, horizontal scalability, and strong consistency of underlying storage. The performance of the Scalar DB is highly dependent on the underlying storage performance and is usually slower than other scratch-built distributed databases since it adds a storage abstraction layer and storage-oblivious transaction layer, which makes various optimizations hard.
 
 ## High-level Architecture
 
@@ -36,7 +36,7 @@ The data model of Scalar DB is a multi-dimensional map based on the key-value da
 ### Physical Data Model
 
 Scalar DB is a multi-dimensional map distributed to multiple nodes by key-based hash partitioning.
-Records are assumed to be hash-partitioned by partition-key (even though an underlining implementation may support range partitioning).
+Records are assumed to be hash-partitioned by partition-key (even though an underlying implementation may support range partitioning).
 Records with the same partition-key define a partition. A partition is clustered (sorted) by the clustering-key.
 It is similar to Google BigTable [2] but it differs in clustering-key structure and partitioning scheme.
 

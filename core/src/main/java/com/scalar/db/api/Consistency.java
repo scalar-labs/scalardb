@@ -7,18 +7,18 @@ package com.scalar.db.api;
  */
 public enum Consistency {
   /**
-   * Sequential consistency. With this consistency, it assumes that the underlining storage
+   * Sequential consistency. With this consistency, it assumes that the underlying storage
    * implementation makes all operations appear to take effect in some sequential order, and the
    * operations of each individual process appear in this sequence.
    */
   SEQUENTIAL,
   /**
-   * Eventual consistency. With this consistency, it assumes that the underlining storage
+   * Eventual consistency. With this consistency, it assumes that the underlying storage
    * implementation makes all operations take effect eventually.
    */
   EVENTUAL,
   /**
-   * Linearizable consistency. With this consistency, it assumes that the underlining storage
+   * Linearizable consistency. With this consistency, it assumes that the underlying storage
    * implementation makes each operation appears to take effect atomically at some point between its
    * invocation and completion.
    */
