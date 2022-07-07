@@ -62,7 +62,7 @@ public class CosmosCommand extends StorageSpecificCommand implements Callable<In
   private String coordinatorNamespacePrefix;
 
   @ArgGroup(exclusive = true)
-  DeleteOrRepairCosmosTables deleteOrRepairCosmosTables;
+  private DeleteOrRepairCosmosTables deleteOrRepairCosmosTables;
 
   /**
    * To be able to have a "--repair-all" option description that is different only for the
@@ -71,7 +71,7 @@ public class CosmosCommand extends StorageSpecificCommand implements Callable<In
    * StorageSpecificCommand.DeleteOrRepairTables} is the {@link
    * DeleteOrRepairCosmosTables#repairTables} description value
    */
-  static class DeleteOrRepairCosmosTables {
+  private static class DeleteOrRepairCosmosTables {
 
     @Option(
         names = {"-D", "--delete-all"},

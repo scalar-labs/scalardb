@@ -66,9 +66,9 @@ public class SchemaLoaderCommand implements Callable<Integer> {
   private Path schemaFile;
 
   @ArgGroup(exclusive = true)
-  DeleteOrRepairTables deleteOrRepairTables;
+  private DeleteOrRepairTables deleteOrRepairTables;
 
-  static class DeleteOrRepairTables {
+  private static class DeleteOrRepairTables {
     @Option(
         names = {"-D", "--delete-all"},
         description = "Delete tables",

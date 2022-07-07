@@ -49,7 +49,7 @@ public class DynamoCommand extends StorageSpecificCommand implements Callable<In
   private String endpointOverride;
 
   @ArgGroup(exclusive = true)
-  DeleteOrRepairTables deleteOrRepairTables;
+  private DeleteOrRepairTables deleteOrRepairTables;
 
   @Override
   public Integer call() throws SchemaLoaderException {

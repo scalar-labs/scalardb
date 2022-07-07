@@ -33,7 +33,7 @@ public class JdbcCommand extends StorageSpecificCommand implements Callable<Inte
   private String password;
 
   @ArgGroup(exclusive = true)
-  DeleteOrRepairTables deleteOrRepairTables;
+  private DeleteOrRepairTables deleteOrRepairTables;
 
   @Override
   public Integer call() throws Exception {
