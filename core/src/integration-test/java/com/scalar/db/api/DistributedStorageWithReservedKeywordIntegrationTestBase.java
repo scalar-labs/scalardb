@@ -184,10 +184,9 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
 
     // Assert
     actual.forEach(
-        a -> {
-          assertThat(a.getContainedColumnNames())
-              .containsOnly(columnName1, columnName2, columnName3);
-        });
+        a ->
+            assertThat(a.getContainedColumnNames())
+                .containsOnly(columnName1, columnName2, columnName3));
     assertThat(actual.size()).isEqualTo(3);
     assertThat(actual.get(0).getInt(columnName1)).isEqualTo(0);
     assertThat(actual.get(0).getInt(columnName3)).isEqualTo(0);

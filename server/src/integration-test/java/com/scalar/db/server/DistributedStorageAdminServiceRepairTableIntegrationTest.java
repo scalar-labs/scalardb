@@ -35,6 +35,7 @@ public class DistributedStorageAdminServiceRepairTableIntegrationTest
       server.shutdown();
     }
   }
+
   /** This test is disabled if {@link #isExternalServerOrCassandraUsed()} return true */
   @Override
   @Test
@@ -42,6 +43,7 @@ public class DistributedStorageAdminServiceRepairTableIntegrationTest
   public void repairTable_ForDeletedMetadataTable_ShouldRepairProperly() throws Exception {
     super.repairTable_ForDeletedMetadataTable_ShouldRepairProperly();
   }
+
   /** This test is disabled if {@link #isExternalServerOrCassandraUsed()} return true */
   @Override
   @Test

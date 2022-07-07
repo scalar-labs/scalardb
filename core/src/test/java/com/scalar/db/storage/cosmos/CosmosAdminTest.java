@@ -886,6 +886,7 @@ public class CosmosAdminTest {
     when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
         .thenReturn(metadataContainer, metadataContainer);
 
+    @SuppressWarnings("unchecked")
     CosmosItemResponse<CosmosTableMetadata> itemResponse =
         (CosmosItemResponse<CosmosTableMetadata>) mock(CosmosItemResponse.class);
     when(metadataContainer.readItem(
@@ -942,6 +943,7 @@ public class CosmosAdminTest {
     when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
         .thenReturn(metadataContainer, metadataContainer);
 
+    @SuppressWarnings("unchecked")
     CosmosItemResponse<CosmosTableMetadata> itemResponse =
         (CosmosItemResponse<CosmosTableMetadata>) mock(CosmosItemResponse.class);
     when(metadataContainer.readItem(

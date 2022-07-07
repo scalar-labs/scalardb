@@ -148,6 +148,7 @@ public class ScannerImplTest {
   private final ScannerImpl buildScanner(List<Record>... pages) {
     List<FeedResponse<Record>> pagesFeed = new ArrayList<>();
     for (List<Record> page : pages) {
+      @SuppressWarnings("unchecked")
       FeedResponse<Record> pageFeed = (FeedResponse<Record>) mock(FeedResponse.class);
       when(pageFeed.getResults()).thenReturn(page);
       pagesFeed.add(pageFeed);

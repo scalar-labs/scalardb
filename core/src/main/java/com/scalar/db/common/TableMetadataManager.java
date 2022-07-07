@@ -27,6 +27,7 @@ public class TableMetadataManager {
     tableMetadataCache =
         builder.build(
             new CacheLoader<TableKey, Optional<TableMetadata>>() {
+              @Nonnull
               @Override
               public Optional<TableMetadata> load(@Nonnull TableKey key) throws ExecutionException {
                 return Optional.ofNullable(admin.getTableMetadata(key.namespace, key.table));
