@@ -1,16 +1,18 @@
 # Storage abstraction
 
-Scalar DB is a middleware on top of existing storage/database systems and provides a storage/database abstraction and a storage/database-agnostic ACID transaction manager on top of the abstraction.
+Scalar DB is middleware on top of existing storage/database systems and provides storage/database-agnostic ACID transactions on top of the systems.
+One of the keys to achieving the storage/database-agnostic ACID transactions is a storage abstraction that Scalar DB provides.
+The storage abstraction defines [a data model](maybe-link?) and APIs (Storage API) that issue operations on the basis of the data model.
 You usually use the ACID transaction manager but can also use the storage/database abstraction directly.
-With the abstraction, you can write code without being aware of the storage/database implementation.
+There are a few benefits of using the Storage API. First, as with Transaction API, you can write your application code without caring about the underlying storage implementation too much. Second, when you don't need transactions for some data in your application, you can use the Storage API to (partially) avoid transactions for achieving faster execution.
 
-Note that the storage abstraction operations are not transactional, and data inconsistencies can happen when failures occur during the execution of the operations.
+However, directly using the Storage API or mixing the Transaction API and the Storage API could cause unexpected behaviors. For example, since the Storage API cannot provide transaction capability, it could cause data inconsistencies/anomalies when failures occur during the execution of the operations. Therefore, you should be very careful about using the Storage API, and please use it only if you know exactly what you are doing.
 
-This document briefly explains how to use the storage abstraction.
+In this document, we explain how to use the Storage API for users who are experts in Scalar DB.
 
-## Storage abstraction Example
+## Storage API Example
 
-This section briefly explains the storage abstraction with a simple electronic money application.
+This section explains how the Storage API can be used in a simple electronic money example application.
 
 ### Scalar DB configuration
 
@@ -41,7 +43,7 @@ You can create a JSON file emoney-storage.json with the JSON below.
 }
 ```
 
-Note that the `transaction` field is set to `false`, which indicates you use this table with the storage abstraction.
+Note that the `transaction` field is set to `false`, which indicates you use this table with the Storage API.
 
 To apply the schema, download the Schema Loader that matches the version you use from [scalardb releases](https://github.com/scalar-labs/scalardb/releases), and run the following command to load the schema.
 
@@ -51,7 +53,7 @@ $ java -jar scalardb-schema-loader-<version>.jar --config scalardb.properties -f
 
 ### Example code
 
-This is a simple electronic money application with the storage abstraction.
+This is a simple electronic money application with the Storage API.
 (Be careful: it is simplified for ease of reading and far from practical and is certainly not production-ready.)
 
 ```java
@@ -165,12 +167,12 @@ public class ElectronicMoney {
 }
 ```
 
-Again, note that the storage abstraction operations are not transactional, and data inconsistencies can happen when failures occur during the execution of the operations.
+Again, note that the Storage API doesn't provide transaction capability and could cause data inconsistencies when failures occur during the execution of the operations.
 
-## Storage abstraction API Guide
+## Storage API Guide
 
-The storage abstraction API is mainly composed of Administrative API and CRUD API.
-This section briefly explains what kind of APIs exist and how to use them.
+The Storage API is mainly composed of Administrative API and CRUD API.
+This section explains how to use them.
 
 * [Administrative API](#administrative-api)
 * [CRUD API](#crud-api)
@@ -330,7 +332,7 @@ TableMetadata tableMetadata = admin.getTableMetadata("ns", "tbl");
 
 #### Get a DistributedStorage instance
 
-You need to get a `DistributedStorage` instance to execute CRUD operations in the storage abstraction.
+You need to get a `DistributedStorage` instance to execute CRUD operations in the Storage API.
 You can get it in the following way:
 
 ```java
@@ -370,7 +372,7 @@ Also, please see [Handle Result objects](api-guide.md#handle-result-objects) for
 
 ##### Consistency level
 
-You can specify a consistency level in all the operations (Get, Scan, Put, and Delete) in the storage abstraction as follows:
+You can specify a consistency level in each operation (Get, Scan, Put, and Delete) in the Storage API as follows:
 
 ```java
 Get get =
@@ -451,7 +453,7 @@ Also, you can specify projections to choose which columns are returned, and limi
 
 ##### Handle Scanner objects
 
-Scan operations in the storage abstraction return a `Scanner` object.
+A Scan operation in the Storage API returns a `Scanner` object.
 
 If you want to get results one by one from the Scanner object, you can use the `one()` method as follows:
 ```java
@@ -578,10 +580,10 @@ Put put =
 
 ##### Put with a condition
 
-In Put operations in the storage abstraction, you can specify a condition, and only when the specified condition matches, the Put operation executes.
+In a Put operation in the Storage API, you can specify a condition, and only when the specified condition matches, the Put operation is executed.
 It's like a well-known CAS (compare and swap) operation, and the condition comparison and the update are performed atomically.
 
-You can specify a condition in Put operations as follows:
+You can specify a condition in a Put operation as follows:
 
 ```java
 // Build a condition
@@ -637,9 +639,9 @@ storage.delete(delete);
 
 ##### Delete with a condition
 
-Similar to Put operations, you can specify a condition in Delete operations in the storage abstraction.
+Similar to a Put operation, you can specify a condition in a Delete operation in the Storage API.
 
-You can specify a condition in Delete operations as follows:
+You can specify a condition in a Delete operation as follows:
 
 ```java
 // Build a condition
@@ -703,7 +705,7 @@ storage.mutate(Arrays.asList(put, delete));
 
 Note that a Mutate operation only accepts mutations for a single partition; otherwise, it throws an exception.
 
-And if you specify conditions in the specified mutations, the mutations execute only when all the conditions in the mutations match.
+And if you specify multiple conditions in a Mutate operation, the operation is executed only when all the conditions match.
 
 ## References
 
