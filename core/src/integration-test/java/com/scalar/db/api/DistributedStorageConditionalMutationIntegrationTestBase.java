@@ -111,12 +111,12 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   }
 
   private void createTable() throws ExecutionException {
-    Map<String, String> options = getCreateOptions();
+    Map<String, String> options = getCreationOptions();
     admin.createNamespace(namespace, true, options);
     admin.createTable(namespace, TABLE, TABLE_METADATA, true, options);
   }
 
-  protected Map<String, String> getCreateOptions() {
+  protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
   }
 

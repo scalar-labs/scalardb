@@ -31,7 +31,8 @@ public class CassandraAdminRepairTableIntegrationTest
   public void repairTable_ShouldDoNothing() throws ExecutionException {
     // Act
     assertThatCode(
-            () -> admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreateOptions()))
+            () ->
+                admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions()))
         .doesNotThrowAnyException();
 
     // Assert

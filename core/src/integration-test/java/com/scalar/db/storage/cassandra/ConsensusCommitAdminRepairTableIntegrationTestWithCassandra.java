@@ -32,8 +32,8 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithCassandra
     // Act
     assertThatCode(
             () -> {
-              admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreateOptions());
-              admin.repairCoordinatorTables(getCreateOptions());
+              admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
+              admin.repairCoordinatorTables(getCreationOptions());
             })
         .doesNotThrowAnyException();
 

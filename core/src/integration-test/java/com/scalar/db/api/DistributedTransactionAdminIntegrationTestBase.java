@@ -104,7 +104,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   private void createTables() throws ExecutionException {
-    Map<String, String> options = getCreateOptions();
+    Map<String, String> options = getCreationOptions();
     for (String namespace : Arrays.asList(namespace1, namespace2)) {
       admin.createNamespace(namespace, true, options);
       for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
@@ -114,7 +114,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     admin.createCoordinatorTables(true, options);
   }
 
-  protected Map<String, String> getCreateOptions() {
+  protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
   }
 
@@ -280,7 +280,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       throws ExecutionException {
     try {
       // Arrange
-      Map<String, String> options = getCreateOptions();
+      Map<String, String> options = getCreationOptions();
 
       // Act
       admin.createTable(namespace1, TABLE4, TABLE_METADATA, options);
@@ -314,7 +314,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   public void dropTable_ForExistingTable_ShouldDropTableProperly() throws ExecutionException {
     try {
       // Arrange
-      Map<String, String> options = getCreateOptions();
+      Map<String, String> options = getCreationOptions();
       admin.createTable(namespace1, TABLE4, TABLE_METADATA, options);
 
       // Act
@@ -411,7 +411,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   public void createIndex_ShouldCreateIndexCorrectly() throws ExecutionException {
     try {
       // Arrange
-      Map<String, String> options = getCreateOptions();
+      Map<String, String> options = getCreationOptions();
       admin.createTable(namespace1, TABLE4, TABLE_METADATA, options);
 
       // Act
@@ -430,7 +430,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   public void dropIndex_ShouldDropIndexCorrectly() throws ExecutionException {
     try {
       // Arrange
-      Map<String, String> options = getCreateOptions();
+      Map<String, String> options = getCreationOptions();
       admin.createTable(namespace1, TABLE4, TABLE_METADATA, options);
 
       // Act
