@@ -30,7 +30,7 @@ Of course, you can archive the jar and libraries by `./gradlew distZip` and so o
 ## Configure Scalar DB Server
 
 You need a property file holding the configuration for Scalar DB Server. 
-It contains two sections, Scalar DB Server configurations and underlining storage/database configurations.
+It contains two sections: Scalar DB Server configurations and underlying storage/database configurations.
 
 ```properties
 #
@@ -44,7 +44,7 @@ scalar.db.server.port=60051
 scalar.db.server.prometheus_exporter_port=8080
 
 #
-# Underlining storage/database configurations
+# Underlying storage/database configurations
 #
 
 # Comma separated contact points. For DynamoDB, the region is specified by this parameter.
