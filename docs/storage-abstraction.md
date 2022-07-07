@@ -391,9 +391,9 @@ We have three consistency levels as described in the following:
 
 | consistency level | description |
 | ----------------- | ----------- |
-| SEQUENTIAL        | Sequential consistency. With this consistency, it assumes that the underlining storage implementation makes all operations appear to take effect in some sequential order, and the operations of each individual process appear in this sequence. |
-| EVENTUAL          | Eventual consistency. With this consistency, it assumes that the underlining storage implementation makes all operations take effect eventually. |
-| LINEARIZABLE      | Linearizable consistency. With this consistency, it assumes that the underlining storage implementation makes each operation appears to take effect atomically at some point between its invocation and completion. |
+| SEQUENTIAL        | Sequential consistency. With this consistency, it assumes that the underlying storage implementation makes all operations appear to take effect in some sequential order, and the operations of each individual process appear in this sequence. |
+| EVENTUAL          | Eventual consistency. With this consistency, it assumes that the underlying storage implementation makes all operations take effect eventually. |
+| LINEARIZABLE      | Linearizable consistency. With this consistency, it assumes that the underlying storage implementation makes each operation appears to take effect atomically at some point between its invocation and completion. |
 
 ##### Get with a secondary index
 
