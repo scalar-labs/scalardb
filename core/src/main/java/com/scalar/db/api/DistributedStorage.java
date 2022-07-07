@@ -19,7 +19,7 @@ import java.util.Optional;
  *
  * <p>The physical data model is a multi-dimensional map distributed to multiple nodes by key-based
  * hash partitioning. Entries are assumed to be hash-partitioned by partition key (even though an
- * underlining implementation supports range partitioning). Records with the same partition key,
+ * underlying implementation supports range partitioning). Records with the same partition key,
  * which we call a partition, are sorted by clustering key. Thus, each entry in the storage can be
  * located with the partition key and the clustering key, which we call it primary key. Both a
  * partition key and a clustering key also comprise a list of values. Having clustering key is

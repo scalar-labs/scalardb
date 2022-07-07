@@ -7,7 +7,7 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import java.util.Optional;
 
 /**
- * A transaction abstraction for interacting with the underlining storage and database
+ * A transaction abstraction for interacting with the underlying storage and database
  * implementations.
  */
 public interface DistributedTransaction extends TransactionCrudOperable {
