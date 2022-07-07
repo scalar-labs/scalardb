@@ -141,4 +141,6 @@ scalar.db.grpc.deadline_duration_millis=60000
 
 ## Further documentation
 
+Please see the following sample to learn Scalar DB Server further:
+
 [Scalar DB Server Sample](https://github.com/scalar-labs/scalardb-samples/tree/main/scalardb-server-sample)
