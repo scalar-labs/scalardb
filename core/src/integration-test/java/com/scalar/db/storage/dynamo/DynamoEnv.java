@@ -42,7 +42,7 @@ public final class DynamoEnv {
     return props;
   }
 
-  public static Map<String, String> getCreateOptions() {
+  public static Map<String, String> getCreationOptions() {
     String createOptionsString = System.getProperty(PROP_DYNAMO_CREATE_OPTIONS);
     if (createOptionsString == null) {
       return DEFAULT_DYNAMO_CREATE_OPTIONS;

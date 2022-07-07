@@ -95,7 +95,7 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
   private void createTables() throws java.util.concurrent.ExecutionException, InterruptedException {
     List<Callable<Void>> testCallables = new ArrayList<>();
 
-    Map<String, String> options = getCreateOptions();
+    Map<String, String> options = getCreationOptions();
     for (DataType firstPartitionKeyType : partitionKeyTypes.keySet()) {
       Callable<Void> testCallable =
           () -> {
@@ -115,7 +115,7 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
     executeInParallel(testCallables.subList(1, testCallables.size()));
   }
 
-  protected Map<String, String> getCreateOptions() {
+  protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
   }
 

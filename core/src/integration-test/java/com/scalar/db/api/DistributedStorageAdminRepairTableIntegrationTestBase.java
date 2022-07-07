@@ -78,12 +78,12 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
   }
 
   private void createTable() throws ExecutionException {
-    Map<String, String> options = getCreateOptions();
+    Map<String, String> options = getCreationOptions();
     admin.createNamespace(getNamespace(), options);
     admin.createTable(getNamespace(), getTable(), TABLE_METADATA, options);
   }
 
-  protected Map<String, String> getCreateOptions() {
+  protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
   }
 
@@ -119,7 +119,7 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
     adminTestUtils.dropMetadataTable();
 
     // Act
-    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreateOptions());
+    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
 
     // Assert
     assertThat(admin.tableExists(getNamespace(), getTable())).isTrue();
@@ -132,7 +132,7 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
     adminTestUtils.truncateMetadataTable();
 
     // Act
-    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreateOptions());
+    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
 
     // Assert
     assertThat(admin.tableExists(getNamespace(), getTable())).isTrue();

@@ -75,7 +75,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   private void createTables() throws ExecutionException {
-    Map<String, String> options = getCreateOptions();
+    Map<String, String> options = getCreationOptions();
     admin.createNamespace(namespace, true, options);
     admin.createTable(
         namespace,
@@ -94,7 +94,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     admin.createCoordinatorTables(true, options);
   }
 
-  protected Map<String, String> getCreateOptions() {
+  protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
   }
 

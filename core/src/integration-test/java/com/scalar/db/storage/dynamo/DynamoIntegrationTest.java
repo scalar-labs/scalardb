@@ -13,8 +13,8 @@ public class DynamoIntegrationTest extends DistributedStorageIntegrationTestBase
   }
 
   @Override
-  protected Map<String, String> getCreateOptions() {
-    return DynamoEnv.getCreateOptions();
+  protected Map<String, String> getCreationOptions() {
+    return DynamoEnv.getCreationOptions();
   }
 
   // DynamoDB doesn't support putting a null value for a secondary index column

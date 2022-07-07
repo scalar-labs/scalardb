@@ -70,14 +70,14 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
   }
 
   private void createTables() throws ExecutionException {
-    Map<String, String> options = getCreateOptions();
+    Map<String, String> options = getCreationOptions();
     admin.createNamespace(namespace, true, options);
     for (DataType partitionKeyType : partitionKeyTypes) {
       createTable(partitionKeyType, options);
     }
   }
 
-  protected Map<String, String> getCreateOptions() {
+  protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
   }
 

@@ -81,7 +81,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   }
 
   private void createTables() throws ExecutionException {
-    Map<String, String> options = getCreateOptions();
+    Map<String, String> options = getCreationOptions();
     admin.createNamespace(namespace, true, options);
     for (DataType clusteringKeyType : clusteringKeyTypes) {
       for (Order clusteringOrder : Order.values()) {
@@ -90,7 +90,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
     }
   }
 
-  protected Map<String, String> getCreateOptions() {
+  protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
   }
 

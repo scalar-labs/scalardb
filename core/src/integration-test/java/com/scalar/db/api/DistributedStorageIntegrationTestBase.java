@@ -75,7 +75,7 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   private void createTable() throws ExecutionException {
-    Map<String, String> options = getCreateOptions();
+    Map<String, String> options = getCreationOptions();
     admin.createNamespace(namespace, true, options);
     admin.createTable(
         namespace,
@@ -95,7 +95,7 @@ public abstract class DistributedStorageIntegrationTestBase {
         options);
   }
 
-  protected Map<String, String> getCreateOptions() {
+  protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
   }
 

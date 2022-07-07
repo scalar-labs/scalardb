@@ -74,7 +74,7 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
   }
 
   private void createTable() throws ExecutionException {
-    Map<String, String> options = getCreateOptions();
+    Map<String, String> options = getCreationOptions();
     admin.createNamespace(namespace, true, options);
     admin.createTable(
         namespace,
@@ -94,7 +94,7 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
         options);
   }
 
-  protected Map<String, String> getCreateOptions() {
+  protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
   }
 

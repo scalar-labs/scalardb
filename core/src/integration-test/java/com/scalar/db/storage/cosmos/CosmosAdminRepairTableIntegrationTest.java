@@ -29,8 +29,8 @@ public class CosmosAdminRepairTableIntegrationTest
   }
 
   @Override
-  protected Map<String, String> getCreateOptions() {
-    return CosmosEnv.getCreateOptions();
+  protected Map<String, String> getCreationOptions() {
+    return CosmosEnv.getCreationOptions();
   }
 
   @Test
@@ -41,7 +41,7 @@ public class CosmosAdminRepairTableIntegrationTest
     cosmosAdminTestUtils.getTableStoredProcedure(getNamespace(), getTable()).delete();
 
     // Act
-    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreateOptions());
+    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
 
     // Assert
     assertThatCode(
