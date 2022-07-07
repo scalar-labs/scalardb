@@ -1,4 +1,4 @@
-## Scalar DB
+# Scalar DB
 
 [![CI](https://github.com/scalar-labs/scalardb/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/scalar-labs/scalardb/actions/workflows/ci.yaml)
 
@@ -7,7 +7,7 @@ Scalar DB is a universal transaction manager that achieves:
 - multi-storage/database/service ACID transactions that can span multiple (possibly different) databases, storages, and services.
 
 ## Install
-The library is available on [Maven Central](https://search.maven.org/search?q=a:scalardb). 
+The library is available on [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb).
 You can install it in your application using your build tool such as Gradle and Maven. 
 
 To add a dependency on Scalar DB using Gradle, use the following:
@@ -34,6 +34,7 @@ To add a dependency using Maven:
 * [Two-phase Commit Transactions](two-phase-commit-transactions.md)
 * [Design document](design.md)
 * [Configurations for Consensus Commit](configurations-for-consensus-commit.md)
+* [Storage abstraction](storage-abstraction.md)
 * Slides
     * [Making Cassandra more capable, faster, and more reliable](https://www.slideshare.net/scalar-inc/making-cassandra-more-capable-faster-and-more-reliable-at-apacheconhome-2020) at ApacheCon@Home 2020
     * [Scalar DB: A library that makes non-ACID databases ACID-compliant](https://www.slideshare.net/scalar-inc/scalar-db-a-library-that-makes-nonacid-databases-acidcompliant) at Database Lounge Tokyo #6 2020

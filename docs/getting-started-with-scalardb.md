@@ -242,7 +242,7 @@ These are just simple examples of how Scalar DB is used. For more information, p
 * Javadoc
     * [scalardb](https://javadoc.io/doc/com.scalar-labs/scalardb/latest/index.html) - A library that makes non-ACID distributed databases/storages ACID-compliant
     * [scalardb-rpc](https://javadoc.io/doc/com.scalar-labs/scalardb-rpc/latest/index.html) - Scalar DB RPC libraries
-    * [scalardb-server](https://javadoc.io/doc/com.scalar-labs/scalardb-server/latest/index.html) - Scalar DB Server that is the gRPC interfarce of Scalar DB
+    * [scalardb-server](https://javadoc.io/doc/com.scalar-labs/scalardb-server/latest/index.html) - Scalar DB Server that is the gRPC interface of Scalar DB
 * [Requirements in the underlining databases](requirements.md)
 * [Database schema in Scalar DB](schema.md)
 * [Schema Loader](https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md)
