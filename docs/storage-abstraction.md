@@ -3,7 +3,7 @@
 Scalar DB is middleware on top of existing storage/database systems and provides storage/database-agnostic ACID transactions on top of the systems.
 One of the keys to achieving the storage/database-agnostic ACID transactions is a storage abstraction that Scalar DB provides.
 The storage abstraction defines [a data model](maybe-link?) and APIs (Storage API) that issue operations on the basis of the data model.
-You usually use the ACID transaction manager but can also use the storage/database abstraction directly.
+Although you use the [Transaction API](maybe-link?) in most cases, you can also directly use the Storage API.
 There are a few benefits of using the Storage API. First, as with Transaction API, you can write your application code without caring about the underlying storage implementation too much. Second, when you don't need transactions for some data in your application, you can use the Storage API to (partially) avoid transactions for achieving faster execution.
 
 However, directly using the Storage API or mixing the Transaction API and the Storage API could cause unexpected behaviors. For example, since the Storage API cannot provide transaction capability, it could cause data inconsistencies/anomalies when failures occur during the execution of the operations. Therefore, you should be very careful about using the Storage API, and please use it only if you know exactly what you are doing.

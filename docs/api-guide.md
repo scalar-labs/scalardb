@@ -483,7 +483,7 @@ Note that you can't specify clustering key boundaries and orderings in Scan with
 #### Put operation
 
 `Put` is an operation to put a record specified by a primary key.
-It behaves as an upsert operation: If it exists, it updates it; otherwise, it inserts it.
+It behaves as an upsert operation for a record, i.e., updating the record if the record exists; otherwise, inserting the record.
 
 You need to create a Put object first, and then you can execute it with the `transaction.put()` method as follows:
 
