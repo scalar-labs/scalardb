@@ -3,14 +3,15 @@ package com.scalar.db.schemaloader;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -23,16 +24,24 @@ public class SchemaOperator {
   private final DistributedStorageAdmin storageAdmin;
   private final DistributedTransactionAdmin transactionAdmin;
 
-  public SchemaOperator(DatabaseConfig config) {
-    StorageFactory storageFactory = new StorageFactory(config);
-    storageAdmin = storageFactory.getAdmin();
-    TransactionFactory transactionFactory = new TransactionFactory(config);
+  public SchemaOperator(Path propertiesFilePath) throws IOException {
+    StorageFactory storageFactory = StorageFactory.create(propertiesFilePath);
+    storageAdmin = storageFactory.getStorageAdmin();
+    TransactionFactory transactionFactory = TransactionFactory.create(propertiesFilePath);
+    transactionAdmin = transactionFactory.getTransactionAdmin();
+  }
+
+  public SchemaOperator(Properties properties) {
+    StorageFactory storageFactory = StorageFactory.create(properties);
+    storageAdmin = storageFactory.getStorageAdmin();
+    TransactionFactory transactionFactory = TransactionFactory.create(properties);
     transactionAdmin = transactionFactory.getTransactionAdmin();
   }
 
   @VisibleForTesting
-  SchemaOperator(DistributedStorageAdmin admin, ConsensusCommitAdmin transactionAdmin) {
-    this.storageAdmin = admin;
+  SchemaOperator(
+      DistributedStorageAdmin storageAdmin, DistributedTransactionAdmin transactionAdmin) {
+    this.storageAdmin = storageAdmin;
     this.transactionAdmin = transactionAdmin;
   }
 

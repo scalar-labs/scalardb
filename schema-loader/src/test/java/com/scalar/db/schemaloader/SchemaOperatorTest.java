@@ -8,8 +8,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -19,8 +19,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class SchemaOperatorTest {
-  @Mock private DistributedStorageAdmin admin;
-  @Mock private ConsensusCommitAdmin consensusCommitAdmin;
+  @Mock private DistributedStorageAdmin storageAdmin;
+  @Mock private DistributedTransactionAdmin transactionAdmin;
   @Mock private TableSchema tableSchema;
   @Mock private Map<String, String> options;
 
@@ -31,7 +31,7 @@ public class SchemaOperatorTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    operator = new SchemaOperator(admin, consensusCommitAdmin);
+    operator = new SchemaOperator(storageAdmin, transactionAdmin);
   }
 
   @Test
@@ -49,9 +49,9 @@ public class SchemaOperatorTest {
     operator.createTables(tableSchemaList);
 
     // Assert
-    verify(admin, times(3)).createNamespace("ns", true, options);
-    verify(admin, times(3)).tableExists("ns", "tb");
-    verify(consensusCommitAdmin, times(3)).createTable("ns", "tb", tableMetadata, options);
+    verify(storageAdmin, times(3)).createNamespace("ns", true, options);
+    verify(storageAdmin, times(3)).tableExists("ns", "tb");
+    verify(transactionAdmin, times(3)).createTable("ns", "tb", tableMetadata, options);
   }
 
   @Test
@@ -69,9 +69,9 @@ public class SchemaOperatorTest {
     operator.createTables(tableSchemaList);
 
     // Assert
-    verify(admin, times(3)).createNamespace("ns", true, options);
-    verify(admin, times(3)).tableExists("ns", "tb");
-    verify(admin, times(3)).createTable("ns", "tb", tableMetadata, options);
+    verify(storageAdmin, times(3)).createNamespace("ns", true, options);
+    verify(storageAdmin, times(3)).tableExists("ns", "tb");
+    verify(storageAdmin, times(3)).createTable("ns", "tb", tableMetadata, options);
   }
 
   @Test
@@ -79,14 +79,14 @@ public class SchemaOperatorTest {
       createCoordinatorTables_IfCoordinatorTablesNotExist_ShouldCallCreateCoordinatorTables()
           throws Exception {
     // Arrange
-    when(consensusCommitAdmin.coordinatorTablesExist()).thenReturn(false);
+    when(transactionAdmin.coordinatorTablesExist()).thenReturn(false);
 
     // Act
     operator.createCoordinatorTables(options);
 
     // Assert
-    verify(consensusCommitAdmin).coordinatorTablesExist();
-    verify(consensusCommitAdmin).createCoordinatorTables(options);
+    verify(transactionAdmin).coordinatorTablesExist();
+    verify(transactionAdmin).createCoordinatorTables(options);
   }
 
   @Test
@@ -94,14 +94,14 @@ public class SchemaOperatorTest {
       createCoordinatorTables_IfCoordinatorTablesExist_ShouldNotCallCreateCoordinatorTables()
           throws Exception {
     // Arrange
-    when(consensusCommitAdmin.coordinatorTablesExist()).thenReturn(true);
+    when(transactionAdmin.coordinatorTablesExist()).thenReturn(true);
 
     // Act
     operator.createCoordinatorTables(options);
 
     // Assert
-    verify(consensusCommitAdmin).coordinatorTablesExist();
-    verify(consensusCommitAdmin, never()).createCoordinatorTables(options);
+    verify(transactionAdmin).coordinatorTablesExist();
+    verify(transactionAdmin, never()).createCoordinatorTables(options);
   }
 
   @Test
@@ -114,43 +114,43 @@ public class SchemaOperatorTest {
     when(tableSchema.getTable()).thenReturn("tb");
     TableMetadata tableMetadata = mock(TableMetadata.class);
     when(tableSchema.getTableMetadata()).thenReturn(tableMetadata);
-    when(admin.tableExists("ns", "tb")).thenReturn(true);
+    when(storageAdmin.tableExists("ns", "tb")).thenReturn(true);
 
     // Act
     operator.deleteTables(tableSchemaList);
 
     // Assert
-    verify(admin, times(3)).tableExists("ns", "tb");
-    verify(admin, times(3)).dropTable("ns", "tb");
-    verify(admin).dropNamespace("ns", true);
+    verify(storageAdmin, times(3)).tableExists("ns", "tb");
+    verify(storageAdmin, times(3)).dropTable("ns", "tb");
+    verify(storageAdmin).dropNamespace("ns", true);
   }
 
   @Test
   public void dropCoordinatorTables_IfCoordinatorTablesExist_ShouldCallDropCoordinatorTables()
       throws Exception {
     // Arrange
-    when(consensusCommitAdmin.coordinatorTablesExist()).thenReturn(true);
+    when(transactionAdmin.coordinatorTablesExist()).thenReturn(true);
 
     // Act
     operator.dropCoordinatorTables();
 
     // Assert
-    verify(consensusCommitAdmin).coordinatorTablesExist();
-    verify(consensusCommitAdmin).dropCoordinatorTables();
+    verify(transactionAdmin).coordinatorTablesExist();
+    verify(transactionAdmin).dropCoordinatorTables();
   }
 
   @Test
   public void dropCoordinatorTables_IfCoordinatorTablesNotExist_ShouldCallNotDropCoordinatorTables()
       throws Exception {
     // Arrange
-    when(consensusCommitAdmin.coordinatorTablesExist()).thenReturn(false);
+    when(transactionAdmin.coordinatorTablesExist()).thenReturn(false);
 
     // Act
     operator.dropCoordinatorTables();
 
     // Assert
-    verify(consensusCommitAdmin).coordinatorTablesExist();
-    verify(consensusCommitAdmin, never()).dropCoordinatorTables();
+    verify(transactionAdmin).coordinatorTablesExist();
+    verify(transactionAdmin, never()).dropCoordinatorTables();
   }
 
   @Test
@@ -168,8 +168,8 @@ public class SchemaOperatorTest {
     operator.repairTables(tableSchemaList);
 
     // Assert
-    verify(consensusCommitAdmin, times(3)).repairTable("ns", "tb", tableMetadata, options);
-    verifyNoInteractions(admin);
+    verify(transactionAdmin, times(3)).repairTable("ns", "tb", tableMetadata, options);
+    verifyNoInteractions(storageAdmin);
   }
 
   @Test
@@ -187,8 +187,8 @@ public class SchemaOperatorTest {
     operator.repairTables(tableSchemaList);
 
     // Assert
-    verify(admin, times(3)).repairTable("ns", "tb", tableMetadata, options);
-    verifyNoInteractions(consensusCommitAdmin);
+    verify(storageAdmin, times(3)).repairTable("ns", "tb", tableMetadata, options);
+    verifyNoInteractions(transactionAdmin);
   }
 
   @Test
@@ -199,7 +199,7 @@ public class SchemaOperatorTest {
     operator.repairCoordinatorTables(options);
 
     // Assert
-    verify(consensusCommitAdmin).repairCoordinatorTables(options);
-    verifyNoInteractions(admin);
+    verify(transactionAdmin).repairCoordinatorTables(options);
+    verifyNoInteractions(storageAdmin);
   }
 }
