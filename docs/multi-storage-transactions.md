@@ -49,7 +49,7 @@ scalar.db.multi_storage.namespace_mapping=user:cassandra,coordinator:mysql
 scalar.db.multi_storage.default_storage=cassandra
 ```
 
-## Further documents
+## Further reading
 
 Please see the following sample to learn Multi-storage Transactions further:
 

@@ -232,7 +232,7 @@ $ ./gradlew run --args="-action getBalance -id user1"
 $ ./gradlew run --args="-action getBalance -id merchant1"
 ```
 
-## Further documents
+## Further reading
 
 These are just simple examples of how Scalar DB is used. For more information, please take a look at the following documents.
 
