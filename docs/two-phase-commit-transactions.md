@@ -345,7 +345,7 @@ public class ServiceBImpl implements ServiceB {
 
 As you can see, by resuming and suspending the transaction, you can execute a transaction across multiple endpoints.
 
-## Further documentation
+## Further reading
 
 One of the use cases for Two-phase Commit Transactions is Microservice Transaction.
 Please see the following sample to learn Two-phase Commit Transactions further:
