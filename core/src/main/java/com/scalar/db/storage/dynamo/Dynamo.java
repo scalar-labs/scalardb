@@ -38,8 +38,8 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 @ThreadSafe
 public class Dynamo extends AbstractDistributedStorage {
   private static final Logger logger = LoggerFactory.getLogger(Dynamo.class);
+
   private final DynamoDbClient client;
-  private final TableMetadataManager metadataManager;
   private final SelectStatementHandler selectStatementHandler;
   private final PutStatementHandler putStatementHandler;
   private final DeleteStatementHandler deleteStatementHandler;
@@ -61,7 +61,7 @@ public class Dynamo extends AbstractDistributedStorage {
             .region(Region.of(config.getRegion()))
             .build();
 
-    metadataManager =
+    TableMetadataManager metadataManager =
         new TableMetadataManager(
             new DynamoAdmin(client, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
     operationChecker = new DynamoOperationChecker(metadataManager);

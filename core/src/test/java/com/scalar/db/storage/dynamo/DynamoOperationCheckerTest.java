@@ -9,7 +9,6 @@ import static org.mockito.MockitoAnnotations.openMocks;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,8 +38,7 @@ public class DynamoOperationCheckerTest {
   }
 
   @Test
-  public void check_ForPutWithNullIndex_ShouldThrowIllegalArgumentException()
-      throws ExecutionException {
+  public void check_ForPutWithNullIndex_ShouldThrowIllegalArgumentException() {
     // Arrange
     Put put = new Put(Key.ofInt(PKEY1, 0)).withIntValue(COL1, null);
 

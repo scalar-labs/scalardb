@@ -65,8 +65,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       description = "Path to the schema json file")
   private Path schemaFile;
 
-  @ArgGroup(exclusive = true)
-  private DeleteOrRepairTables deleteOrRepairTables;
+  @ArgGroup private DeleteOrRepairTables deleteOrRepairTables;
 
   private static class DeleteOrRepairTables {
     @Option(

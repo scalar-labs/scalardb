@@ -61,8 +61,7 @@ public class CosmosCommand extends StorageSpecificCommand implements Callable<In
       hidden = true)
   private String coordinatorNamespacePrefix;
 
-  @ArgGroup(exclusive = true)
-  private DeleteOrRepairCosmosTables deleteOrRepairCosmosTables;
+  @ArgGroup private DeleteOrRepairCosmosTables deleteOrRepairCosmosTables;
 
   /**
    * To be able to have a "--repair-all" option description that is different only for the

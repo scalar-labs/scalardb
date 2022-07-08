@@ -205,7 +205,7 @@ public class JdbcTransactionAdminTest {
   }
 
   @Test
-  public void repairCoordinatorTables_ShouldDoNothing() throws ExecutionException {
+  public void repairCoordinatorTables_ShouldDoNothing() {
     // Arrange
 
     // Act

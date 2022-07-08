@@ -1562,10 +1562,9 @@ public abstract class DistributedStorageIntegrationTestBase {
                         }));
     assertResultsContainsExactlyInAnyOrder(actualResults, expectedResults);
     actualResults.forEach(
-        actualResult -> {
-          assertThat(actualResult.getContainedColumnNames())
-              .containsOnly(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME6);
-        });
+        actualResult ->
+            assertThat(actualResult.getContainedColumnNames())
+                .containsOnly(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME6));
   }
 
   @Test

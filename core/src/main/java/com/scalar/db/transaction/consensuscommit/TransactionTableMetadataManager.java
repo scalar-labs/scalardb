@@ -28,6 +28,7 @@ public class TransactionTableMetadataManager {
     tableMetadataCache =
         builder.build(
             new CacheLoader<TableKey, Optional<TransactionTableMetadata>>() {
+              @Nonnull
               @Override
               public Optional<TransactionTableMetadata> load(@Nonnull TableKey key)
                   throws ExecutionException {

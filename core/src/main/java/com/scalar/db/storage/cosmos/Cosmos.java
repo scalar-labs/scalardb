@@ -36,7 +36,6 @@ public class Cosmos extends AbstractDistributedStorage {
   private static final Logger logger = LoggerFactory.getLogger(Cosmos.class);
 
   private final CosmosClient client;
-  private final TableMetadataManager metadataManager;
   private final SelectStatementHandler selectStatementHandler;
   private final PutStatementHandler putStatementHandler;
   private final DeleteStatementHandler deleteStatementHandler;
@@ -55,7 +54,7 @@ public class Cosmos extends AbstractDistributedStorage {
             .consistencyLevel(ConsistencyLevel.STRONG)
             .buildClient();
 
-    metadataManager =
+    TableMetadataManager metadataManager =
         new TableMetadataManager(
             new CosmosAdmin(client, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
     operationChecker = new OperationChecker(metadataManager);
