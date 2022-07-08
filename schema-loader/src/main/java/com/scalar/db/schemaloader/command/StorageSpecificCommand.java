@@ -1,7 +1,6 @@
 package com.scalar.db.schemaloader.command;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.schemaloader.SchemaOperator;
 import com.scalar.db.schemaloader.SchemaParser;
@@ -81,7 +80,7 @@ public abstract class StorageSpecificCommand {
 
   @VisibleForTesting
   SchemaOperator getSchemaOperator(Properties props) {
-    return new SchemaOperator(new DatabaseConfig(props));
+    return new SchemaOperator(props);
   }
 
   abstract DeleteOrRepairTables getDeleteOrRepairTables();

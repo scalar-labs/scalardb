@@ -6,13 +6,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
+import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.util.AdminTestUtils;
@@ -76,8 +77,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
   private static final String schemaLoaderJarPath =
       System.getProperty("scalardb.schemaloader.jar_path");
 
-  private DistributedStorageAdmin admin;
-  private ConsensusCommitAdmin consensusCommitAdmin;
+  private DistributedStorageAdmin storageAdmin;
+  private DistributedTransactionAdmin transactionAdmin;
   private String namespace1;
   private String namespace2;
 
@@ -91,8 +92,9 @@ public abstract class SchemaLoaderIntegrationTestBase {
     Map<String, Object> schemaJsonMap = getSchemaJsonMap();
     writeSchemaFile(schemaJsonMap);
     StorageFactory factory = StorageFactory.create(properties);
-    admin = factory.getAdmin();
-    consensusCommitAdmin = new ConsensusCommitAdmin(admin, new DatabaseConfig(properties));
+    storageAdmin = factory.getStorageAdmin();
+    TransactionFactory transactionFactory = TransactionFactory.create(properties);
+    transactionAdmin = transactionFactory.getTransactionAdmin();
   }
 
   @BeforeEach
@@ -211,7 +213,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
   @AfterAll
   public void afterAll() throws ExecutionException {
     dropTablesIfExist();
-    admin.close();
+    storageAdmin.close();
 
     // Delete the files
     if (!new File(CONFIG_FILE).delete()) {
@@ -223,13 +225,11 @@ public abstract class SchemaLoaderIntegrationTestBase {
   }
 
   private void dropTablesIfExist() throws ExecutionException {
-    consensusCommitAdmin.dropTable(namespace1, TABLE_1, true);
-    consensusCommitAdmin.dropNamespace(namespace1, true);
-    if (consensusCommitAdmin.coordinatorTablesExist()) {
-      consensusCommitAdmin.dropCoordinatorTables();
-    }
-    admin.dropTable(namespace2, TABLE_2, true);
-    admin.dropNamespace(namespace2, true);
+    transactionAdmin.dropTable(namespace1, TABLE_1, true);
+    transactionAdmin.dropNamespace(namespace1, true);
+    transactionAdmin.dropCoordinatorTables(true);
+    storageAdmin.dropTable(namespace2, TABLE_2, true);
+    storageAdmin.dropNamespace(namespace2, true);
   }
 
   @Test
@@ -244,9 +244,9 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
-    assertThat(consensusCommitAdmin.tableExists(namespace1, TABLE_1)).isTrue();
-    assertThat(admin.tableExists(namespace2, TABLE_2)).isTrue();
-    assertThat(consensusCommitAdmin.coordinatorTablesExist()).isFalse();
+    assertThat(transactionAdmin.tableExists(namespace1, TABLE_1)).isTrue();
+    assertThat(storageAdmin.tableExists(namespace2, TABLE_2)).isTrue();
+    assertThat(transactionAdmin.coordinatorTablesExist()).isFalse();
   }
 
   private void deleteTables_ShouldDeleteTables() throws Exception {
@@ -255,9 +255,9 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
-    assertThat(consensusCommitAdmin.tableExists(namespace1, TABLE_1)).isFalse();
-    assertThat(admin.tableExists(namespace2, TABLE_2)).isFalse();
-    assertThat(consensusCommitAdmin.coordinatorTablesExist()).isFalse();
+    assertThat(transactionAdmin.tableExists(namespace1, TABLE_1)).isFalse();
+    assertThat(storageAdmin.tableExists(namespace2, TABLE_2)).isFalse();
+    assertThat(transactionAdmin.coordinatorTablesExist()).isFalse();
   }
 
   @Test
@@ -281,9 +281,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Assert
     assertThat(exitCodeReparation).isZero();
-    assertThat(consensusCommitAdmin.getTableMetadata(namespace1, TABLE_1))
-        .isEqualTo(TABLE_1_METADATA);
-    assertThat(admin.getTableMetadata(namespace2, TABLE_2)).isEqualTo(TABLE_2_METADATA);
+    assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1)).isEqualTo(TABLE_1_METADATA);
+    assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2)).isEqualTo(TABLE_2_METADATA);
   }
 
   @Test
@@ -303,9 +302,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Assert
     assertThat(exitCodeReparation).isZero();
-    assertThat(consensusCommitAdmin.getTableMetadata(namespace1, TABLE_1))
-        .isEqualTo(TABLE_1_METADATA);
-    assertThat(admin.getTableMetadata(namespace2, TABLE_2)).isEqualTo(TABLE_2_METADATA);
+    assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1)).isEqualTo(TABLE_1_METADATA);
+    assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2)).isEqualTo(TABLE_2_METADATA);
     assertTableMetadataForCoordinatorTableArePresent();
   }
 
@@ -316,9 +314,9 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
-    assertThat(consensusCommitAdmin.tableExists(namespace1, TABLE_1)).isTrue();
-    assertThat(admin.tableExists(namespace2, TABLE_2)).isTrue();
-    assertThat(consensusCommitAdmin.coordinatorTablesExist()).isTrue();
+    assertThat(transactionAdmin.tableExists(namespace1, TABLE_1)).isTrue();
+    assertThat(storageAdmin.tableExists(namespace2, TABLE_2)).isTrue();
+    assertThat(transactionAdmin.coordinatorTablesExist()).isTrue();
   }
 
   private void deleteTables_ShouldDeleteTablesWithCoordinator() throws Exception {
@@ -328,9 +326,9 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
-    assertThat(consensusCommitAdmin.tableExists(namespace1, TABLE_1)).isFalse();
-    assertThat(admin.tableExists(namespace2, TABLE_2)).isFalse();
-    assertThat(consensusCommitAdmin.coordinatorTablesExist()).isFalse();
+    assertThat(transactionAdmin.tableExists(namespace1, TABLE_1)).isFalse();
+    assertThat(storageAdmin.tableExists(namespace2, TABLE_2)).isFalse();
+    assertThat(transactionAdmin.coordinatorTablesExist()).isFalse();
   }
 
   private int executeCommandWithArgs(List<String> args) throws Exception {
