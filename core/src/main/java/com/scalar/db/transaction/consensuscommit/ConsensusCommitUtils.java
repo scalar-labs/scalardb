@@ -37,15 +37,15 @@ public final class ConsensusCommitUtils {
   private ConsensusCommitUtils() {}
 
   /**
-   * Builds a transactional table metadata based on the specified table metadata.
+   * Builds a transaction table metadata based on the specified table metadata.
    *
-   * @param tableMetadata the base table metadata to build a transactional table metadata
-   * @return a transactional table metadata based on the table metadata
+   * @param tableMetadata the base table metadata to build a transaction table metadata
+   * @return a transaction table metadata based on the table metadata
    */
-  public static TableMetadata buildTransactionalTableMetadata(TableMetadata tableMetadata) {
+  public static TableMetadata buildTransactionTableMetadata(TableMetadata tableMetadata) {
     List<String> nonPrimaryKeyColumns = getNonPrimaryKeyColumns(tableMetadata);
 
-    // Check if the table metadata already has the transactional columns
+    // Check if the table metadata already has the transaction columns
     TRANSACTION_META_COLUMNS
         .keySet()
         .forEach(
@@ -68,7 +68,7 @@ public final class ConsensusCommitUtils {
           }
         });
 
-    // Build a transactional table metadata
+    // Build a transaction table metadata
     TableMetadata.Builder builder = TableMetadata.newBuilder(tableMetadata);
     TRANSACTION_META_COLUMNS.forEach(builder::addColumn);
     nonPrimaryKeyColumns.forEach(
@@ -79,14 +79,14 @@ public final class ConsensusCommitUtils {
   /**
    * Returns whether the specified table metadata is transactional.
    *
-   * <p>This method checks all the transactional meta columns including the before prefix column,
-   * and if any of them is missing, it returns false.
+   * <p>This method checks all the transaction meta columns including the before prefix column, and
+   * if any of them is missing, it returns false.
    *
    * @param tableMetadata a table metadata
    * @return whether the table metadata is transactional
    */
-  public static boolean isTransactionalTableMetadata(TableMetadata tableMetadata) {
-    // if the table metadata doesn't have the transactional meta columns, it's not transactional
+  public static boolean isTransactionTableMetadata(TableMetadata tableMetadata) {
+    // if the table metadata doesn't have the transaction meta columns, it's not transactional
     for (String column : TRANSACTION_META_COLUMNS.keySet()) {
       if (!tableMetadata.getColumnNames().contains(column)) {
         return false;
@@ -121,12 +121,12 @@ public final class ConsensusCommitUtils {
   }
 
   /**
-   * Removes transactional meta columns from the specified table metadata.
+   * Removes transaction meta columns from the specified table metadata.
    *
-   * @param tableMetadata a transactional table metadata
-   * @return a table metadata without transactional meta columns
+   * @param tableMetadata a transaction table metadata
+   * @return a table metadata without transaction meta columns
    */
-  public static TableMetadata removeTransactionalMetaColumns(TableMetadata tableMetadata) {
+  public static TableMetadata removeTransactionMetaColumns(TableMetadata tableMetadata) {
     Set<String> transactionMetaColumns = new HashSet<>(TRANSACTION_META_COLUMNS.keySet());
     transactionMetaColumns.addAll(
         tableMetadata.getColumnNames().stream()
@@ -151,23 +151,23 @@ public final class ConsensusCommitUtils {
   }
 
   /**
-   * Returns whether the specified column is a transactional meta column or not.
+   * Returns whether the specified column is a transaction meta column or not.
    *
    * @param columnName a column name
-   * @param tableMetadata a transactional table metadata
-   * @return whether the specified column is a transactional meta column or not
+   * @param tableMetadata a transaction table metadata
+   * @return whether the specified column is a transaction meta column or not
    */
-  public static boolean isTransactionalMetaColumn(String columnName, TableMetadata tableMetadata) {
+  public static boolean isTransactionMetaColumn(String columnName, TableMetadata tableMetadata) {
     return AFTER_IMAGE_META_COLUMNS.containsKey(columnName)
         || isBeforeImageColumn(columnName, tableMetadata);
   }
 
   /**
-   * Returns whether the specified column is a before image column or not.
+   * Returns whether the specified column is a part of the before image columns or not.
    *
    * @param columnName a column name
-   * @param tableMetadata a transactional table metadata
-   * @return whether the specified column is transactional or not
+   * @param tableMetadata a transaction table metadata
+   * @return whether the specified column is a part of the before image columns or not
    */
   public static boolean isBeforeImageColumn(String columnName, TableMetadata tableMetadata) {
     if (!tableMetadata.getColumnNames().contains(columnName)
@@ -180,7 +180,8 @@ public final class ConsensusCommitUtils {
       return true;
     }
     if (columnName.startsWith(Attribute.BEFORE_PREFIX)) {
-      // if the column name without the "before_" prefix exists, it's a transactional meta column
+      // if the column name without the "before_" prefix exists, it's a part of the before image
+      // columns
       return tableMetadata
           .getColumnNames()
           .contains(columnName.substring(Attribute.BEFORE_PREFIX.length()));
@@ -189,11 +190,11 @@ public final class ConsensusCommitUtils {
   }
 
   /**
-   * Returns whether the specified column is an after image column or not.
+   * Returns whether the specified column is a part of the after image columns or not.
    *
    * @param columnName a column name
-   * @param tableMetadata a transactional table metadata
-   * @return whether the specified column is transactional or not
+   * @param tableMetadata a transaction table metadata
+   * @return whether the specified column is a part of the after image columns or not
    */
   public static boolean isAfterImageColumn(String columnName, TableMetadata tableMetadata) {
     if (!tableMetadata.getColumnNames().contains(columnName)) {

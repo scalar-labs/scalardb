@@ -36,7 +36,7 @@ public class CassandraCommandTest extends StorageSpecificCommandTestBase {
 
   @Test
   public void
-      call_ProperArgumentsForCreatingTablesGivenWithTransactionalTableSchema_ShouldCallCreateTablesProperly()
+      call_ProperArgumentsForCreatingTablesGivenWithTransactionTableSchema_ShouldCallCreateTablesProperly()
           throws SchemaLoaderException {
     // Arrange
     Map<String, String> options =
@@ -47,7 +47,7 @@ public class CassandraCommandTest extends StorageSpecificCommandTestBase {
             .build();
 
     TableSchema tableSchema = mock(TableSchema.class);
-    when(tableSchema.isTransactionalTable()).thenReturn(true);
+    when(tableSchema.isTransactionTable()).thenReturn(true);
     when(parser.parse()).thenReturn(Collections.singletonList(tableSchema));
 
     Properties properties = new Properties();
@@ -86,7 +86,7 @@ public class CassandraCommandTest extends StorageSpecificCommandTestBase {
 
   @Test
   public void
-      call_ProperArgumentsForCreatingTablesGivenWithNonTransactionalTableSchema_ShouldCallCreateTablesProperly()
+      call_ProperArgumentsForCreatingTablesGivenWithNonTransactionTableSchema_ShouldCallCreateTablesProperly()
           throws SchemaLoaderException {
     // Arrange
     Map<String, String> options =
@@ -97,7 +97,7 @@ public class CassandraCommandTest extends StorageSpecificCommandTestBase {
             .build();
 
     TableSchema tableSchema = mock(TableSchema.class);
-    when(tableSchema.isTransactionalTable()).thenReturn(false);
+    when(tableSchema.isTransactionTable()).thenReturn(false);
     when(parser.parse()).thenReturn(Collections.singletonList(tableSchema));
 
     Properties properties = new Properties();
@@ -136,11 +136,11 @@ public class CassandraCommandTest extends StorageSpecificCommandTestBase {
 
   @Test
   public void
-      call_WithProperArgumentsForDeletingTablesWithTransactionalTableSchema_ShouldCallDeleteTablesProperly()
+      call_WithProperArgumentsForDeletingTablesWithTransactionTableSchema_ShouldCallDeleteTablesProperly()
           throws SchemaLoaderException {
     // Arrange
     TableSchema tableSchema = mock(TableSchema.class);
-    when(tableSchema.isTransactionalTable()).thenReturn(true);
+    when(tableSchema.isTransactionTable()).thenReturn(true);
     when(parser.parse()).thenReturn(Collections.singletonList(tableSchema));
 
     Properties properties = new Properties();
@@ -163,11 +163,11 @@ public class CassandraCommandTest extends StorageSpecificCommandTestBase {
 
   @Test
   public void
-      call_WithProperArgumentsForDeletingTablesWithNonTransactionalTableSchema_ShouldCallDeleteTablesProperly()
+      call_WithProperArgumentsForDeletingTablesWithNonTransactionTableSchema_ShouldCallDeleteTablesProperly()
           throws SchemaLoaderException {
     // Arrange
     TableSchema tableSchema = mock(TableSchema.class);
-    when(tableSchema.isTransactionalTable()).thenReturn(false);
+    when(tableSchema.isTransactionTable()).thenReturn(false);
     when(parser.parse()).thenReturn(Collections.singletonList(tableSchema));
 
     Properties properties = new Properties();
@@ -190,14 +190,14 @@ public class CassandraCommandTest extends StorageSpecificCommandTestBase {
 
   @Test
   public void
-      call_ProperArgumentsForRepairingTablesGivenWithNonTransactionalTableSchema_ShouldCallRepairTablesProperly()
+      call_ProperArgumentsForRepairingTablesGivenWithNonTransactionTableSchema_ShouldCallRepairTablesProperly()
           throws SchemaLoaderException {
     callProperArgumentsForRepairingTables(false);
   }
 
   @Test
   public void
-      call_ProperArgumentsForRepairingTablesGivenWithTransactionalTableSchema_ShouldCallRepairTablesProperly()
+      call_ProperArgumentsForRepairingTablesGivenWithTransactionTableSchema_ShouldCallRepairTablesProperly()
           throws SchemaLoaderException {
     callProperArgumentsForRepairingTables(true);
   }
@@ -209,9 +209,9 @@ public class CassandraCommandTest extends StorageSpecificCommandTestBase {
 
     TableSchema tableSchema = mock(TableSchema.class);
     if (hasTransactionTables) {
-      when(tableSchema.isTransactionalTable()).thenReturn(true);
+      when(tableSchema.isTransactionTable()).thenReturn(true);
     } else {
-      when(tableSchema.isTransactionalTable()).thenReturn(false);
+      when(tableSchema.isTransactionTable()).thenReturn(false);
     }
     when(parser.parse()).thenReturn(Collections.singletonList(tableSchema));
 

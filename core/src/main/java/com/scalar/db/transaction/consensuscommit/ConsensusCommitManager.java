@@ -25,7 +25,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final DistributedStorage storage;
   private final DistributedStorageAdmin admin;
   private final ConsensusCommitConfig config;
-  private final TransactionalTableMetadataManager tableMetadataManager;
+  private final TransactionTableMetadataManager tableMetadataManager;
   private final Coordinator coordinator;
   private final ParallelExecutor parallelExecutor;
   private final RecoveryHandler recovery;
@@ -40,7 +40,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     this.coordinator = new Coordinator(storage, config);
     this.parallelExecutor = new ParallelExecutor(config);
     tableMetadataManager =
-        new TransactionalTableMetadataManager(
+        new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
@@ -60,7 +60,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     this.admin = admin;
     this.config = config;
     tableMetadataManager =
-        new TransactionalTableMetadataManager(
+        new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     this.coordinator = coordinator;
     this.parallelExecutor = parallelExecutor;

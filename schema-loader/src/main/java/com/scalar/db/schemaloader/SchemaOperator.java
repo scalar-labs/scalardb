@@ -64,7 +64,7 @@ public class SchemaOperator {
       String namespace = tableSchema.getNamespace();
       String tableName = tableSchema.getTable();
       try {
-        if (tableSchema.isTransactionalTable()) {
+        if (tableSchema.isTransactionTable()) {
           transactionAdmin.repairTable(
               namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
         } else {
@@ -92,7 +92,7 @@ public class SchemaOperator {
     String namespace = tableSchema.getNamespace();
     String tableName = tableSchema.getTable();
     try {
-      if (tableSchema.isTransactionalTable()) {
+      if (tableSchema.isTransactionTable()) {
         transactionAdmin.createTable(
             namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
       } else {

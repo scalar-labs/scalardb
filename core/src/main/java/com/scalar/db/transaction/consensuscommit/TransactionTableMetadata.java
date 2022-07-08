@@ -12,19 +12,19 @@ import java.util.stream.Collectors;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
-public class TransactionalTableMetadata {
+public class TransactionTableMetadata {
 
   private final TableMetadata tableMetadata;
-  private final ImmutableLinkedHashSet<String> transactionalMetaColumnNames;
+  private final ImmutableLinkedHashSet<String> transactionMetaColumnNames;
   private final ImmutableLinkedHashSet<String> beforeImageColumnNames;
   private final ImmutableLinkedHashSet<String> afterImageColumnNames;
 
-  public TransactionalTableMetadata(TableMetadata tableMetadata) {
+  public TransactionTableMetadata(TableMetadata tableMetadata) {
     this.tableMetadata = tableMetadata;
-    transactionalMetaColumnNames =
+    transactionMetaColumnNames =
         new ImmutableLinkedHashSet<>(
             tableMetadata.getColumnNames().stream()
-                .filter(c -> ConsensusCommitUtils.isTransactionalMetaColumn(c, tableMetadata))
+                .filter(c -> ConsensusCommitUtils.isTransactionMetaColumn(c, tableMetadata))
                 .collect(Collectors.toList()));
     beforeImageColumnNames =
         new ImmutableLinkedHashSet<>(
@@ -70,8 +70,8 @@ public class TransactionalTableMetadata {
     return tableMetadata.getSecondaryIndexNames();
   }
 
-  public LinkedHashSet<String> getTransactionalMetaColumnNames() {
-    return transactionalMetaColumnNames;
+  public LinkedHashSet<String> getTransactionMetaColumnNames() {
+    return transactionMetaColumnNames;
   }
 
   public LinkedHashSet<String> getBeforeImageColumnNames() {
