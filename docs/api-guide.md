@@ -23,6 +23,12 @@ DistributedTransactionAdmin admin = transactionFactory.getTransactionAdmin();
 
 Please see [Getting Started](getting-started.md) for the details of the configuration file.
 
+Once you have executed all administrative operations, you should close the `DistributedTransactionAdmin` instance as follows:
+
+```java
+admin.close();
+```
+
 ### Create a namespace
 
 Before creating tables, namespaces must be created since a table belongs to one namespace.
@@ -43,8 +49,8 @@ admin.createNamespace("ns", options);
 
 #### Creation Options
 
-In the creation operations (creating a namespace, creating a table, etc.), you can specify options that are maps of option name and value (`Map<String, String>`).
-With the options, we can set storage adapter specific configurations 
+In the creation operations (creating a namespace, creating a table, etc.), you can specify options that are maps of option names and values (`Map<String, String>`).
+With the options, we can set storage adapter specific configurations.
 
 Currently, we can set the following options for the storage adapters:
 
@@ -243,6 +249,12 @@ You can get it in the following way:
 ```java
 TransactionFactory transactionFactory = TransactionFactory.create("<configuration file path>");
 DistributedTransactionManager manager = transactionFactory.getTransactionManager();
+```
+
+Once you have executed all transactional operations, you should close the `DistributedTransactionManager` instance as follows:
+
+```java
+manager.close();
 ```
 
 ### Start transaction
@@ -607,7 +619,7 @@ You can abort a transaction as follows;
 transaction.abort();
 ```
 
-Please see [Handle Exceptions](#handle-exceptions) for the details of how to handle exceptions in Scalar DB. 
+Please see [Handle Exceptions](#handle-exceptions) for the details of how to handle exceptions in Scalar DB.
 
 ## Transactional operations for Two-phase Commit Transaction
 

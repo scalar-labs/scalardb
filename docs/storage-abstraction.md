@@ -195,6 +195,12 @@ DistributedStorageAdmin admin = storageFactory.getStorageAdmin();
 
 Please see [Getting Started](getting-started.md) for the details of the configuration file.
 
+Once you have executed all administrative operations, you should close the `DistributedStorageAdmin` instance as follows:
+
+```java
+admin.close();
+```
+
 #### Create a namespace
 
 Before creating tables, namespaces must be created since a table belongs to one namespace.
@@ -340,6 +346,12 @@ You can get it in the following way:
 ```java
 StorageFactory storageFactory = StorageFactory.create("<configuration file path>");
 DistributedStorage storage = storageFactory.getStorage();
+```
+
+Once you have executed all CRUD operations, you should close the `DistributedStorage` instance as follows:
+
+```java
+storage.close();
 ```
 
 #### Get operation
