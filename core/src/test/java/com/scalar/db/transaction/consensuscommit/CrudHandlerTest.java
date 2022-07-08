@@ -52,7 +52,7 @@ public class CrudHandlerTest {
   private static final String ANY_TX_ID = "tx_id";
 
   private static final TableMetadata TABLE_METADATA =
-      ConsensusCommitUtils.buildTransactionalTableMetadata(
+      ConsensusCommitUtils.buildTransactionTableMetadata(
           TableMetadata.newBuilder()
               .addColumn(ANY_NAME_1, DataType.TEXT)
               .addColumn(ANY_NAME_2, DataType.TEXT)
@@ -63,7 +63,7 @@ public class CrudHandlerTest {
   @InjectMocks private CrudHandler handler;
   @Mock private DistributedStorage storage;
   @Mock private Snapshot snapshot;
-  @Mock private TransactionalTableMetadataManager tableMetadataManager;
+  @Mock private TransactionTableMetadataManager tableMetadataManager;
   @Mock private ParallelExecutor parallelExecutor;
   @Mock private Scanner scanner;
   @Mock private Result result;
@@ -73,10 +73,10 @@ public class CrudHandlerTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    when(tableMetadataManager.getTransactionalTableMetadata(any()))
-        .thenReturn(new TransactionalTableMetadata(TABLE_METADATA));
-    when(tableMetadataManager.getTransactionalTableMetadata(any(), any()))
-        .thenReturn(new TransactionalTableMetadata(TABLE_METADATA));
+    when(tableMetadataManager.getTransactionTableMetadata(any()))
+        .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
+    when(tableMetadataManager.getTransactionTableMetadata(any(), any()))
+        .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
   }
 
   private Get prepareGet() {

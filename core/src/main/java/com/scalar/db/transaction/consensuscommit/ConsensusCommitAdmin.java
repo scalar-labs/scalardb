@@ -1,7 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.buildTransactionalTableMetadata;
-import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.removeTransactionalMetaColumns;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.buildTransactionTableMetadata;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.removeTransactionMetaColumns;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
@@ -65,7 +65,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    admin.createTable(namespace, table, buildTransactionalTableMetadata(metadata), options);
+    admin.createTable(namespace, table, buildTransactionTableMetadata(metadata), options);
   }
 
   @Override
@@ -99,7 +99,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     TableMetadata metadata = admin.getTableMetadata(namespace, table);
-    return metadata == null ? null : removeTransactionalMetaColumns(metadata);
+    return metadata == null ? null : removeTransactionMetaColumns(metadata);
   }
 
   @Override
@@ -116,7 +116,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    admin.repairTable(namespace, table, buildTransactionalTableMetadata(metadata), options);
+    admin.repairTable(namespace, table, buildTransactionTableMetadata(metadata), options);
   }
 
   @Override

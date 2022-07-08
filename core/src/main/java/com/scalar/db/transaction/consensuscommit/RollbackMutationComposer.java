@@ -34,12 +34,10 @@ import org.slf4j.LoggerFactory;
 public class RollbackMutationComposer extends AbstractMutationComposer {
   private static final Logger logger = LoggerFactory.getLogger(RollbackMutationComposer.class);
   private final DistributedStorage storage;
-  private final TransactionalTableMetadataManager tableMetadataManager;
+  private final TransactionTableMetadataManager tableMetadataManager;
 
   public RollbackMutationComposer(
-      String id,
-      DistributedStorage storage,
-      TransactionalTableMetadataManager tableMetadataManager) {
+      String id, DistributedStorage storage, TransactionTableMetadataManager tableMetadataManager) {
     super(id);
     this.storage = storage;
     this.tableMetadataManager = tableMetadataManager;
@@ -49,7 +47,7 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
   RollbackMutationComposer(
       String id,
       DistributedStorage storage,
-      TransactionalTableMetadataManager tableMetadataManager,
+      TransactionTableMetadataManager tableMetadataManager,
       List<Mutation> mutations) {
     super(id, mutations, System.currentTimeMillis());
     this.storage = storage;
@@ -89,7 +87,7 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
     assert result.getState().equals(TransactionState.PREPARED)
         || result.getState().equals(TransactionState.DELETED);
 
-    TransactionalTableMetadata metadata = tableMetadataManager.getTransactionalTableMetadata(base);
+    TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(base);
     LinkedHashSet<String> beforeImageColumnNames = metadata.getBeforeImageColumnNames();
 
     Map<String, Value<?>> map = new HashMap<>();

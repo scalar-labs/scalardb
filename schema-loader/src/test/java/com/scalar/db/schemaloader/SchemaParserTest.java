@@ -93,7 +93,7 @@ public class SchemaParserTest {
 
     assertThat(actual.get(0).getNamespace()).isEqualTo("sample_db");
     assertThat(actual.get(0).getTable()).isEqualTo("sample_table");
-    assertThat(actual.get(0).isTransactionalTable()).isFalse();
+    assertThat(actual.get(0).isTransactionTable()).isFalse();
     assertThat(actual.get(0).getOptions())
         .isEqualTo(ImmutableMap.of("ru", "5000", "compaction-strategy", "LCS"));
     TableMetadata tableMetadata = actual.get(0).getTableMetadata();
@@ -117,7 +117,7 @@ public class SchemaParserTest {
 
     assertThat(actual.get(1).getNamespace()).isEqualTo("sample_db");
     assertThat(actual.get(1).getTable()).isEqualTo("sample_table1");
-    assertThat(actual.get(1).isTransactionalTable()).isTrue();
+    assertThat(actual.get(1).isTransactionTable()).isTrue();
     assertThat(actual.get(1).getOptions()).isEmpty();
     tableMetadata = actual.get(1).getTableMetadata();
     assertThat(tableMetadata.getPartitionKeyNames())
@@ -136,7 +136,7 @@ public class SchemaParserTest {
 
     assertThat(actual.get(2).getNamespace()).isEqualTo("sample_db2");
     assertThat(actual.get(2).getTable()).isEqualTo("sample_table2");
-    assertThat(actual.get(2).isTransactionalTable()).isFalse();
+    assertThat(actual.get(2).isTransactionTable()).isFalse();
     assertThat(actual.get(2).getOptions()).isEmpty();
     tableMetadata = actual.get(2).getTableMetadata();
     assertThat(tableMetadata.getPartitionKeyNames())

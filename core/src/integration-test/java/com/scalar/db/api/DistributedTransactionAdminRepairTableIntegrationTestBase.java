@@ -164,7 +164,7 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
             .orElse(Coordinator.NAMESPACE);
     String coordinatorTable = Coordinator.TABLE;
     // Use the DistributedStorageAdmin instead of the DistributedTransactionAdmin because the latter
-    // expects the table to hold transactional table metadata columns which is not the case for the
+    // expects the table to hold transaction table metadata columns which is not the case for the
     // coordinator table
     DistributedStorageAdmin storageAdmin =
         StorageFactory.create(TestUtils.addSuffix(getStorageProperties(), TEST_NAME))

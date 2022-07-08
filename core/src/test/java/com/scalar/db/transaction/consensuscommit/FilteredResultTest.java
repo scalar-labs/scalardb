@@ -27,7 +27,7 @@ public class FilteredResultTest {
   private static final String BALANCE = "balance";
 
   private static final TableMetadata TABLE_METADATA =
-      ConsensusCommitUtils.buildTransactionalTableMetadata(
+      ConsensusCommitUtils.buildTransactionTableMetadata(
           TableMetadata.newBuilder()
               .addColumn(ACCOUNT_ID, DataType.INT)
               .addColumn(ACCOUNT_TYPE, DataType.INT)
