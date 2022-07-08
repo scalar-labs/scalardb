@@ -739,7 +739,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
    * @param columnName a column name
    * @return a vendor DB data type
    */
-  @SuppressFBWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
   private String getVendorDbColumnType(TableMetadata metadata, String columnName) {
     HashSet<String> keysAndIndexes =
         Sets.newHashSet(
@@ -748,13 +747,18 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                 metadata.getClusteringKeyNames(),
                 metadata.getSecondaryIndexNames()));
     DataType scalarDbColumnType = metadata.getColumnDataType(columnName);
+
+    ImmutableMap<DataType, String> typeNameMap = DATA_TYPE_MAPPING.get(rdbEngine);
+    assert typeNameMap != null;
+
     if (keysAndIndexes.contains(columnName)) {
-      return DATA_TYPE_MAPPING_FOR_KEY
-          .get(rdbEngine)
-          .getOrDefault(
-              scalarDbColumnType, DATA_TYPE_MAPPING.get(rdbEngine).get(scalarDbColumnType));
+      ImmutableMap<DataType, String> typeNameMapForKey = DATA_TYPE_MAPPING_FOR_KEY.get(rdbEngine);
+      assert typeNameMapForKey != null;
+
+      return typeNameMapForKey.getOrDefault(
+          scalarDbColumnType, typeNameMap.get(scalarDbColumnType));
     } else {
-      return DATA_TYPE_MAPPING.get(rdbEngine).get(scalarDbColumnType);
+      return typeNameMap.get(scalarDbColumnType);
     }
   }
 

@@ -56,8 +56,7 @@ public class CassandraCommand extends StorageSpecificCommand implements Callable
       description = "Cassandra replication factor")
   private String replicationFactor;
 
-  @ArgGroup(exclusive = true)
-  private DeleteOrRepairTables deleteOrRepairTables;
+  @ArgGroup private DeleteOrRepairTables deleteOrRepairTables;
 
   @Override
   public Integer call() throws SchemaLoaderException {

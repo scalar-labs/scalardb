@@ -48,8 +48,7 @@ public class DynamoCommand extends StorageSpecificCommand implements Callable<In
       description = "Endpoint with which the DynamoDB SDK should communicate")
   private String endpointOverride;
 
-  @ArgGroup(exclusive = true)
-  private DeleteOrRepairTables deleteOrRepairTables;
+  @ArgGroup private DeleteOrRepairTables deleteOrRepairTables;
 
   @Override
   public Integer call() throws SchemaLoaderException {

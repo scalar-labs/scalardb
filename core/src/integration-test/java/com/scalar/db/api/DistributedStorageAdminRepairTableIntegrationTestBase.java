@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -91,9 +90,6 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
     admin.dropTable(getNamespace(), getTable());
     admin.dropNamespace(getNamespace());
   }
-
-  @BeforeAll
-  protected void beforeAll() throws Exception {}
 
   @BeforeEach
   protected void beforeEach() throws Exception {
