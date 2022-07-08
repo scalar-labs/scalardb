@@ -22,7 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * An implementation of {@code Result} to filter out unprojected columns and transactional columns.
+ * An implementation of {@code Result} to filter out unprojected columns and transaction columns.
  */
 @Immutable
 public class FilteredResult extends AbstractResult {
@@ -37,7 +37,7 @@ public class FilteredResult extends AbstractResult {
     ImmutableSet.Builder<String> builder = ImmutableSet.builder();
     original.getContainedColumnNames().stream()
         .filter(c -> projections.isEmpty() || projections.contains(c))
-        .filter(c -> !ConsensusCommitUtils.isTransactionalMetaColumn(c, metadata))
+        .filter(c -> !ConsensusCommitUtils.isTransactionMetaColumn(c, metadata))
         .forEach(builder::add);
     containedColumnNames = builder.build();
   }

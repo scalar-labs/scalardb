@@ -32,7 +32,7 @@ public class RecoveryHandlerTest {
   private static final long ANY_TIME_1 = 100;
 
   private static final TableMetadata TABLE_METADATA =
-      ConsensusCommitUtils.buildTransactionalTableMetadata(
+      ConsensusCommitUtils.buildTransactionTableMetadata(
           TableMetadata.newBuilder()
               .addColumn(ANY_NAME_1, DataType.TEXT)
               .addPartitionKey(ANY_NAME_1)
@@ -40,7 +40,7 @@ public class RecoveryHandlerTest {
 
   @Mock private DistributedStorage storage;
   @Mock private Coordinator coordinator;
-  @Mock private TransactionalTableMetadataManager tableMetadataManager;
+  @Mock private TransactionTableMetadataManager tableMetadataManager;
   @Mock private Selection selection;
 
   private RecoveryHandler handler;

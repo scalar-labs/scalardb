@@ -3,7 +3,6 @@ package com.scalar.db.schemaloader;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.command.CassandraCommand;
 import com.scalar.db.schemaloader.command.CosmosCommand;
 import com.scalar.db.schemaloader.command.DynamoCommand;
@@ -381,19 +380,17 @@ public class SchemaLoader {
   @VisibleForTesting
   static SchemaOperator getSchemaOperator(Either<Path, Properties> config)
       throws SchemaLoaderException {
-    DatabaseConfig databaseConfig;
     if (config.isLeft()) {
       try {
         assert config.getLeft() != null;
-        databaseConfig = new DatabaseConfig(config.getLeft());
+        return new SchemaOperator(config.getLeft());
       } catch (IOException e) {
         throw new SchemaLoaderException("Initializing schema operator failed.", e);
       }
     } else {
       assert config.getRight() != null;
-      databaseConfig = new DatabaseConfig(config.getRight());
+      return new SchemaOperator(config.getRight());
     }
-    return new SchemaOperator(databaseConfig);
   }
 
   private static List<TableSchema> getTableSchemaList(

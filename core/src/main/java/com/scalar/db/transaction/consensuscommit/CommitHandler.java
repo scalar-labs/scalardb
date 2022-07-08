@@ -24,13 +24,13 @@ public class CommitHandler {
   private static final Logger logger = LoggerFactory.getLogger(CommitHandler.class);
   private final DistributedStorage storage;
   private final Coordinator coordinator;
-  private final TransactionalTableMetadataManager tableMetadataManager;
+  private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
 
   public CommitHandler(
       DistributedStorage storage,
       Coordinator coordinator,
-      TransactionalTableMetadataManager tableMetadataManager,
+      TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);

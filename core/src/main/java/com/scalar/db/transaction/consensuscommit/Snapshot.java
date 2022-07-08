@@ -41,7 +41,7 @@ public class Snapshot {
   private final String id;
   private final Isolation isolation;
   private final SerializableStrategy strategy;
-  private final TransactionalTableMetadataManager tableMetadataManager;
+  private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
   private final Map<Key, Optional<TransactionResult>> readSet;
   private final Map<Scan, List<Key>> scanSet;
@@ -52,7 +52,7 @@ public class Snapshot {
       String id,
       Isolation isolation,
       SerializableStrategy strategy,
-      TransactionalTableMetadataManager tableMetadataManager,
+      TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor) {
     this.id = id;
     this.isolation = isolation;
@@ -70,7 +70,7 @@ public class Snapshot {
       String id,
       Isolation isolation,
       SerializableStrategy strategy,
-      TransactionalTableMetadataManager tableMetadataManager,
+      TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
       Map<Key, Optional<TransactionResult>> readSet,
       Map<Scan, List<Key>> scanSet,
@@ -147,8 +147,8 @@ public class Snapshot {
 
   private TableMetadata getTableMetadata(Key key) throws CrudException {
     try {
-      TransactionalTableMetadata metadata =
-          tableMetadataManager.getTransactionalTableMetadata(key.getNamespace(), key.getTable());
+      TransactionTableMetadata metadata =
+          tableMetadataManager.getTransactionTableMetadata(key.getNamespace(), key.getTable());
       if (metadata == null) {
         throw new IllegalArgumentException(
             "The specified table is not found: "
@@ -162,8 +162,8 @@ public class Snapshot {
 
   private TableMetadata getTableMetadata(Scan scan) throws ExecutionException {
     try {
-      TransactionalTableMetadata metadata =
-          tableMetadataManager.getTransactionalTableMetadata(
+      TransactionTableMetadata metadata =
+          tableMetadataManager.getTransactionTableMetadata(
               scan.forNamespace().get(), scan.forTable().get());
       if (metadata == null) {
         throw new IllegalArgumentException(

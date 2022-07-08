@@ -1,7 +1,6 @@
 package com.scalar.db.schemaloader.command;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.schemaloader.SchemaOperator;
 import com.scalar.db.schemaloader.SchemaParser;
@@ -50,22 +49,22 @@ public abstract class StorageSpecificCommand {
     // Create or delete tables
     SchemaOperator operator = getSchemaOperator(props);
     try {
-      boolean hasTransactionalTable =
-          tableSchemaList.stream().anyMatch(TableSchema::isTransactionalTable);
+      boolean hasTransactionTable =
+          tableSchemaList.stream().anyMatch(TableSchema::isTransactionTable);
 
       if (getDeleteOrRepairTables() == null) {
         operator.createTables(tableSchemaList);
-        if (hasTransactionalTable) {
+        if (hasTransactionTable) {
           operator.createCoordinatorTables(options);
         }
       } else if (getDeleteOrRepairTables().deleteTables) {
         operator.deleteTables(tableSchemaList);
-        if (hasTransactionalTable) {
+        if (hasTransactionTable) {
           operator.dropCoordinatorTables();
         }
       } else {
         operator.repairTables(tableSchemaList);
-        if (hasTransactionalTable) {
+        if (hasTransactionTable) {
           operator.repairCoordinatorTables(options);
         }
       }
@@ -81,7 +80,7 @@ public abstract class StorageSpecificCommand {
 
   @VisibleForTesting
   SchemaOperator getSchemaOperator(Properties props) {
-    return new SchemaOperator(new DatabaseConfig(props));
+    return new SchemaOperator(props);
   }
 
   abstract DeleteOrRepairTables getDeleteOrRepairTables();

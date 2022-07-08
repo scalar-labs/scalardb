@@ -25,12 +25,12 @@ public class RecoveryHandler {
   private static final Logger logger = LoggerFactory.getLogger(RecoveryHandler.class);
   private final DistributedStorage storage;
   private final Coordinator coordinator;
-  private final TransactionalTableMetadataManager tableMetadataManager;
+  private final TransactionTableMetadataManager tableMetadataManager;
 
   public RecoveryHandler(
       DistributedStorage storage,
       Coordinator coordinator,
-      TransactionalTableMetadataManager tableMetadataManager) {
+      TransactionTableMetadataManager tableMetadataManager) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);

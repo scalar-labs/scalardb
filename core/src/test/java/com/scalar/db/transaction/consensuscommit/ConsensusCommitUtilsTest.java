@@ -11,7 +11,7 @@ public class ConsensusCommitUtilsTest {
 
   @Test
   public void
-      buildTransactionalTableMetadata_tableMetadataGiven_shouldCreateTransactionalTableProperly() {
+      buildTransactionTableMetadata_tableMetadataGiven_shouldCreateTransactionTableProperly() {
     // Arrange
     final String ACCOUNT_ID = "account_id";
     final String ACCOUNT_TYPE = "account_type";
@@ -47,7 +47,7 @@ public class ConsensusCommitUtilsTest {
             .build();
 
     // Act
-    TableMetadata actual = ConsensusCommitUtils.buildTransactionalTableMetadata(tableMetadata);
+    TableMetadata actual = ConsensusCommitUtils.buildTransactionTableMetadata(tableMetadata);
 
     // Assert
     assertThat(actual).isEqualTo(expected);
@@ -55,13 +55,13 @@ public class ConsensusCommitUtilsTest {
 
   @Test
   public void
-      buildTransactionalTableMetadata_tableMetadataThatHasTransactionMetaColumnGiven_shouldThrowIllegalArgumentException() {
+      buildTransactionTableMetadata_tableMetadataThatHasTransactionMetaColumnGiven_shouldThrowIllegalArgumentException() {
     // Arrange
 
     // Act Assert
     assertThatThrownBy(
             () ->
-                ConsensusCommitUtils.buildTransactionalTableMetadata(
+                ConsensusCommitUtils.buildTransactionTableMetadata(
                     TableMetadata.newBuilder()
                         .addColumn("col1", DataType.INT)
                         .addColumn("col2", DataType.INT)
@@ -73,13 +73,13 @@ public class ConsensusCommitUtilsTest {
 
   @Test
   public void
-      buildTransactionalTableMetadata_tableMetadataThatHasNonPrimaryKeyColumnWithBeforePrefixGiven_shouldThrowIllegalArgumentException() {
+      buildTransactionTableMetadata_tableMetadataThatHasNonPrimaryKeyColumnWithBeforePrefixGiven_shouldThrowIllegalArgumentException() {
     // Arrange
 
     // Act Assert
     assertThatThrownBy(
             () ->
-                ConsensusCommitUtils.buildTransactionalTableMetadata(
+                ConsensusCommitUtils.buildTransactionTableMetadata(
                     TableMetadata.newBuilder()
                         .addColumn("col1", DataType.INT)
                         .addColumn("col2", DataType.INT)
@@ -92,8 +92,7 @@ public class ConsensusCommitUtilsTest {
   }
 
   @Test
-  public void
-      isTransactionalTableMetadata_properTransactionalTableMetadataGiven_shouldReturnTrue() {
+  public void isTransactionTableMetadata_properTransactionTableMetadataGiven_shouldReturnTrue() {
     // Arrange
     final String ACCOUNT_ID = "account_id";
     final String ACCOUNT_TYPE = "account_type";
@@ -120,7 +119,7 @@ public class ConsensusCommitUtilsTest {
             .build();
 
     // Act
-    boolean actual = ConsensusCommitUtils.isTransactionalTableMetadata(metadata);
+    boolean actual = ConsensusCommitUtils.isTransactionTableMetadata(metadata);
 
     // Assert
     assertThat(actual).isTrue();
@@ -128,7 +127,7 @@ public class ConsensusCommitUtilsTest {
 
   @Test
   public void
-      isTransactionalTableMetadata_transactionalTableMetadataWithoutMetaColumnGiven_shouldReturnFalse() {
+      isTransactionTableMetadata_TransactionTableMetadataWithoutMetaColumnGiven_shouldReturnFalse() {
     // Arrange
     final String ACCOUNT_ID = "account_id";
     final String ACCOUNT_TYPE = "account_type";
@@ -154,7 +153,7 @@ public class ConsensusCommitUtilsTest {
             .build();
 
     // Act
-    boolean actual = ConsensusCommitUtils.isTransactionalTableMetadata(metadata);
+    boolean actual = ConsensusCommitUtils.isTransactionTableMetadata(metadata);
 
     // Assert
     assertThat(actual).isFalse();
@@ -162,7 +161,7 @@ public class ConsensusCommitUtilsTest {
 
   @Test
   public void
-      isTransactionalTableMetadata_transactionalTableMetadataWithoutProperBeforeColumnGiven_shouldReturnFalse() {
+      isTransactionTableMetadata_TransactionTableMetadataWithoutProperBeforeColumnGiven_shouldReturnFalse() {
     // Arrange
     final String ACCOUNT_ID = "account_id";
     final String ACCOUNT_TYPE = "account_type";
@@ -188,7 +187,7 @@ public class ConsensusCommitUtilsTest {
             .build();
 
     // Act
-    boolean actual = ConsensusCommitUtils.isTransactionalTableMetadata(metadata);
+    boolean actual = ConsensusCommitUtils.isTransactionTableMetadata(metadata);
 
     // Assert
     assertThat(actual).isFalse();
@@ -196,7 +195,7 @@ public class ConsensusCommitUtilsTest {
 
   @Test
   public void
-      removeTransactionalMetaColumns_transactionalTableMetadataWithoutProperBeforeColumnGiven_shouldReturnFalse() {
+      removeTransactionMetaColumns_TransactionTableMetadataWithoutProperBeforeColumnGiven_shouldReturnFalse() {
     // Arrange
     final String ACCOUNT_ID = "account_id";
     final String ACCOUNT_TYPE = "account_type";
@@ -223,7 +222,7 @@ public class ConsensusCommitUtilsTest {
             .build();
 
     // Act
-    TableMetadata actual = ConsensusCommitUtils.removeTransactionalMetaColumns(metadata);
+    TableMetadata actual = ConsensusCommitUtils.removeTransactionMetaColumns(metadata);
 
     // Assert
     assertThat(actual)
@@ -238,7 +237,7 @@ public class ConsensusCommitUtilsTest {
   }
 
   @Test
-  public void isTransactionalMetaColumn_TableMetadataGiven_shouldReturnProperResult() {
+  public void isTransactionMetaColumn_TableMetadataGiven_shouldReturnProperResult() {
     // Arrange
     final String ACCOUNT_ID = "account_id";
     final String ACCOUNT_TYPE = "account_type";
@@ -265,38 +264,36 @@ public class ConsensusCommitUtilsTest {
             .build();
 
     // Act Assert
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(ACCOUNT_ID, metadata)).isFalse();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(ACCOUNT_TYPE, metadata)).isFalse();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(BALANCE, metadata)).isFalse();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.ID, metadata)).isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.STATE, metadata)).isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.VERSION, metadata))
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(ACCOUNT_ID, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(ACCOUNT_TYPE, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(BALANCE, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.ID, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.STATE, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.VERSION, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.PREPARED_AT, metadata))
         .isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.PREPARED_AT, metadata))
-        .isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.COMMITTED_AT, metadata))
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.COMMITTED_AT, metadata))
         .isTrue();
     assertThat(
-            ConsensusCommitUtils.isTransactionalMetaColumn(
+            ConsensusCommitUtils.isTransactionMetaColumn(
                 Attribute.BEFORE_PREFIX + BALANCE, metadata))
         .isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.BEFORE_ID, metadata))
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.BEFORE_ID, metadata))
         .isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.BEFORE_STATE, metadata))
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.BEFORE_STATE, metadata))
         .isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.BEFORE_VERSION, metadata))
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.BEFORE_VERSION, metadata))
+        .isTrue();
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.BEFORE_PREPARED_AT, metadata))
         .isTrue();
     assertThat(
-            ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.BEFORE_PREPARED_AT, metadata))
+            ConsensusCommitUtils.isTransactionMetaColumn(Attribute.BEFORE_COMMITTED_AT, metadata))
         .isTrue();
-    assertThat(
-            ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.BEFORE_COMMITTED_AT, metadata))
-        .isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn("aaa", metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn("aaa", metadata)).isFalse();
   }
 
   @Test
-  public void isTransactionalMetaColumn_ResultGiven_shouldReturnProperResult() {
+  public void isTransactionMetaColumn_ResultGiven_shouldReturnProperResult() {
     // Arrange
     final String ACCOUNT_ID = "account_id";
     final String ACCOUNT_TYPE = "account_type";
@@ -323,34 +320,32 @@ public class ConsensusCommitUtilsTest {
             .build();
 
     // Act Assert
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(ACCOUNT_ID, metadata)).isFalse();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(ACCOUNT_TYPE, metadata)).isFalse();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(BALANCE, metadata)).isFalse();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.ID, metadata)).isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.STATE, metadata)).isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.VERSION, metadata))
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(ACCOUNT_ID, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(ACCOUNT_TYPE, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(BALANCE, metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.ID, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.STATE, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.VERSION, metadata)).isTrue();
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.PREPARED_AT, metadata))
         .isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.PREPARED_AT, metadata))
-        .isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.COMMITTED_AT, metadata))
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.COMMITTED_AT, metadata))
         .isTrue();
     assertThat(
-            ConsensusCommitUtils.isTransactionalMetaColumn(
+            ConsensusCommitUtils.isTransactionMetaColumn(
                 Attribute.BEFORE_PREFIX + BALANCE, metadata))
         .isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.BEFORE_ID, metadata))
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.BEFORE_ID, metadata))
         .isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.BEFORE_STATE, metadata))
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.BEFORE_STATE, metadata))
         .isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.BEFORE_VERSION, metadata))
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.BEFORE_VERSION, metadata))
+        .isTrue();
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn(Attribute.BEFORE_PREPARED_AT, metadata))
         .isTrue();
     assertThat(
-            ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.BEFORE_PREPARED_AT, metadata))
+            ConsensusCommitUtils.isTransactionMetaColumn(Attribute.BEFORE_COMMITTED_AT, metadata))
         .isTrue();
-    assertThat(
-            ConsensusCommitUtils.isTransactionalMetaColumn(Attribute.BEFORE_COMMITTED_AT, metadata))
-        .isTrue();
-    assertThat(ConsensusCommitUtils.isTransactionalMetaColumn("aaa", metadata)).isFalse();
+    assertThat(ConsensusCommitUtils.isTransactionMetaColumn("aaa", metadata)).isFalse();
   }
 
   @Test

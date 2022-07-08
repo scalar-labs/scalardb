@@ -14,11 +14,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
-public class TransactionalTableMetadataManager {
+public class TransactionTableMetadataManager {
 
-  private final LoadingCache<TableKey, Optional<TransactionalTableMetadata>> tableMetadataCache;
+  private final LoadingCache<TableKey, Optional<TransactionTableMetadata>> tableMetadataCache;
 
-  public TransactionalTableMetadataManager(
+  public TransactionTableMetadataManager(
       DistributedStorageAdmin admin, long cacheExpirationTimeSecs) {
 
     CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
@@ -27,45 +27,44 @@ public class TransactionalTableMetadataManager {
     }
     tableMetadataCache =
         builder.build(
-            new CacheLoader<TableKey, Optional<TransactionalTableMetadata>>() {
+            new CacheLoader<TableKey, Optional<TransactionTableMetadata>>() {
               @Nonnull
               @Override
-              public Optional<TransactionalTableMetadata> load(@Nonnull TableKey key)
+              public Optional<TransactionTableMetadata> load(@Nonnull TableKey key)
                   throws ExecutionException {
                 TableMetadata tableMetadata = admin.getTableMetadata(key.namespace, key.table);
                 if (tableMetadata == null) {
                   return Optional.empty();
                 }
-                return Optional.of(new TransactionalTableMetadata(tableMetadata));
+                return Optional.of(new TransactionTableMetadata(tableMetadata));
               }
             });
   }
 
   /**
-   * Returns a transactional table metadata corresponding to the specified operation.
+   * Returns a transaction table metadata corresponding to the specified operation.
    *
    * @param operation an operation
    * @return a table metadata. null if the table is not found.
    * @throws ExecutionException if the operation failed
    */
-  public TransactionalTableMetadata getTransactionalTableMetadata(Operation operation)
+  public TransactionTableMetadata getTransactionTableMetadata(Operation operation)
       throws ExecutionException {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
       throw new IllegalArgumentException("operation has no target namespace and table name");
     }
-    return getTransactionalTableMetadata(
-        operation.forNamespace().get(), operation.forTable().get());
+    return getTransactionTableMetadata(operation.forNamespace().get(), operation.forTable().get());
   }
 
   /**
-   * Returns a transactional table metadata corresponding to the specified namespace and table.
+   * Returns a transaction table metadata corresponding to the specified namespace and table.
    *
    * @param namespace a namespace
    * @param table a table
    * @return a table metadata. null if the table is not found.
    * @throws ExecutionException if the operation failed
    */
-  public TransactionalTableMetadata getTransactionalTableMetadata(String namespace, String table)
+  public TransactionTableMetadata getTransactionTableMetadata(String namespace, String table)
       throws ExecutionException {
     try {
       TableKey key = new TableKey(namespace, table);

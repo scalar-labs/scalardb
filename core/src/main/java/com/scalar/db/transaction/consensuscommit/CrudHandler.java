@@ -29,12 +29,12 @@ public class CrudHandler {
   private static final Logger logger = LoggerFactory.getLogger(CrudHandler.class);
   private final DistributedStorage storage;
   private final Snapshot snapshot;
-  private final TransactionalTableMetadataManager tableMetadataManager;
+  private final TransactionTableMetadataManager tableMetadataManager;
 
   public CrudHandler(
       DistributedStorage storage,
       Snapshot snapshot,
-      TransactionalTableMetadataManager tableMetadataManager) {
+      TransactionTableMetadataManager tableMetadataManager) {
     this.storage = checkNotNull(storage);
     this.snapshot = checkNotNull(snapshot);
     this.tableMetadataManager = tableMetadataManager;
@@ -131,7 +131,7 @@ public class CrudHandler {
       // get only after image columns
       get.clearProjections();
       LinkedHashSet<String> afterImageColumnNames =
-          tableMetadataManager.getTransactionalTableMetadata(get).getAfterImageColumnNames();
+          tableMetadataManager.getTransactionTableMetadata(get).getAfterImageColumnNames();
       get.withProjections(afterImageColumnNames);
 
       get.withConsistency(Consistency.LINEARIZABLE);
@@ -146,7 +146,7 @@ public class CrudHandler {
       // get only after image columns
       scan.clearProjections();
       LinkedHashSet<String> afterImageColumnNames =
-          tableMetadataManager.getTransactionalTableMetadata(scan).getAfterImageColumnNames();
+          tableMetadataManager.getTransactionTableMetadata(scan).getAfterImageColumnNames();
       scan.withProjections(afterImageColumnNames);
 
       scan.withConsistency(Consistency.LINEARIZABLE);
@@ -158,8 +158,8 @@ public class CrudHandler {
 
   private TableMetadata getTableMetadata(String namespace, String table) throws CrudException {
     try {
-      TransactionalTableMetadata metadata =
-          tableMetadataManager.getTransactionalTableMetadata(namespace, table);
+      TransactionTableMetadata metadata =
+          tableMetadataManager.getTransactionTableMetadata(namespace, table);
       if (metadata == null) {
         throw new IllegalArgumentException(
             "The specified table is not found: "
