@@ -139,7 +139,7 @@ scalar.db.transaction_manager=grpc
 scalar.db.grpc.deadline_duration_millis=60000
 ```
 
-## Further documentation
+## Further documents
 
 Please see the following sample to learn Scalar DB Server further:
 
