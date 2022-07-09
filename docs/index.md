@@ -40,10 +40,10 @@ To add a dependency using Maven:
     * [Scalar DB: A library that makes non-ACID databases ACID-compliant](https://www.slideshare.net/scalar-inc/scalar-db-a-library-that-makes-nonacid-databases-acidcompliant) at Database Lounge Tokyo #6 2020
     * [Transaction Management on Cassandra](https://www.slideshare.net/scalar-inc/transaction-management-on-cassandra) at Next Generation Cassandra Conference / ApacheCon NA 2019
 * Javadoc
-    * [scalardb](https://javadoc.io/doc/com.scalar-labs/scalardb/latest/index.html) - A library that makes non-ACID distributed databases/storages ACID-compliant
+    * [scalardb](https://javadoc.io/doc/com.scalar-labs/scalardb/latest/index.html) - Scalar DB: A universal transaction manager that achieves database-agnostic transactions and transactions that span multiple databases
     * [scalardb-rpc](https://javadoc.io/doc/com.scalar-labs/scalardb-rpc/latest/index.html) - Scalar DB RPC libraries
-    * [scalardb-server](https://javadoc.io/doc/com.scalar-labs/scalardb-server/latest/index.html) - Scalar DB Server that is the gRPC interfarce of Scalar DB
-    * [scalardb-schema-loader](https://javadoc.io/doc/com.scalar-labs/scalardb-schema-loader/latest/index.html) - Scalar DB Schema Loader that creates and deletes Scalar DB schemas
+    * [scalardb-server](https://javadoc.io/doc/com.scalar-labs/scalardb-server/latest/index.html) - Scalar DB Server: A gRPC interface of Scalar DB
+    * [scalardb-schema-loader](https://javadoc.io/doc/com.scalar-labs/scalardb-schema-loader/latest/index.html) - Scalar DB Schema Loader: A tool for schema creation and schema deletion in Scalar DB
 * [Jepsen tests](https://github.com/scalar-labs/scalar-jepsen)
 * [TLA+](https://github.com/scalar-labs/scalardb/tree/master/tla+/consensus-commit)
 

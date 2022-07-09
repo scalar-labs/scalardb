@@ -8,7 +8,7 @@ publishing {
             from components.java
             pom {
                 name = 'Scalar DB Server'
-                description = 'Scalar DB Server that is the gRPC interfarce of Scalar DB'
+                description = 'A gRPC interface of Scalar DB'
                 url = 'https://github.com/scalar-labs/scalardb'
                 licenses {
                     license {
