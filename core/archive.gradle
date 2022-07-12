@@ -8,7 +8,7 @@ publishing {
             from components.java
             pom {
                 name = 'Scalar DB'
-                description = 'A universal transaction manager that achieves database-agnostic transactions and transactions that span multiple databases'
+                description = 'A universal transaction manager that achieves database-agnostic transactions and distributed transactions that span multiple databases'
                 url = 'https://github.com/scalar-labs/scalardb'
                 licenses {
                     license {
