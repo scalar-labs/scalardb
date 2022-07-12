@@ -511,6 +511,37 @@ public final class DistributedTransactionAdminGrpc {
     return getRepairCoordinatorTablesMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.AddNewColumnToTableRequest,
+      com.google.protobuf.Empty> getAddNewColumnToTableMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "AddNewColumnToTable",
+      requestType = com.scalar.db.rpc.AddNewColumnToTableRequest.class,
+      responseType = com.google.protobuf.Empty.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.AddNewColumnToTableRequest,
+      com.google.protobuf.Empty> getAddNewColumnToTableMethod() {
+    io.grpc.MethodDescriptor<com.scalar.db.rpc.AddNewColumnToTableRequest, com.google.protobuf.Empty> getAddNewColumnToTableMethod;
+    if ((getAddNewColumnToTableMethod = DistributedTransactionAdminGrpc.getAddNewColumnToTableMethod) == null) {
+      synchronized (DistributedTransactionAdminGrpc.class) {
+        if ((getAddNewColumnToTableMethod = DistributedTransactionAdminGrpc.getAddNewColumnToTableMethod) == null) {
+          DistributedTransactionAdminGrpc.getAddNewColumnToTableMethod = getAddNewColumnToTableMethod =
+              io.grpc.MethodDescriptor.<com.scalar.db.rpc.AddNewColumnToTableRequest, com.google.protobuf.Empty>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "AddNewColumnToTable"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.AddNewColumnToTableRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.google.protobuf.Empty.getDefaultInstance()))
+              .setSchemaDescriptor(new DistributedTransactionAdminMethodDescriptorSupplier("AddNewColumnToTable"))
+              .build();
+        }
+      }
+    }
+    return getAddNewColumnToTableMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -671,6 +702,13 @@ public final class DistributedTransactionAdminGrpc {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRepairCoordinatorTablesMethod(), responseObserver);
     }
 
+    /**
+     */
+    public void addNewColumnToTable(com.scalar.db.rpc.AddNewColumnToTableRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAddNewColumnToTableMethod(), responseObserver);
+    }
+
     @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
       return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
           .addMethod(
@@ -785,6 +823,13 @@ public final class DistributedTransactionAdminGrpc {
                 com.scalar.db.rpc.RepairCoordinatorTablesRequest,
                 com.google.protobuf.Empty>(
                   this, METHODID_REPAIR_COORDINATOR_TABLES)))
+          .addMethod(
+            getAddNewColumnToTableMethod(),
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
+              new MethodHandlers<
+                com.scalar.db.rpc.AddNewColumnToTableRequest,
+                com.google.protobuf.Empty>(
+                  this, METHODID_ADD_NEW_COLUMN_TO_TABLE)))
           .build();
     }
   }
@@ -930,6 +975,14 @@ public final class DistributedTransactionAdminGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getRepairCoordinatorTablesMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     */
+    public void addNewColumnToTable(com.scalar.db.rpc.AddNewColumnToTableRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getAddNewColumnToTableMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -1056,6 +1109,13 @@ public final class DistributedTransactionAdminGrpc {
     public com.google.protobuf.Empty repairCoordinatorTables(com.scalar.db.rpc.RepairCoordinatorTablesRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getRepairCoordinatorTablesMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.google.protobuf.Empty addNewColumnToTable(com.scalar.db.rpc.AddNewColumnToTableRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getAddNewColumnToTableMethod(), getCallOptions(), request);
     }
   }
 
@@ -1200,6 +1260,14 @@ public final class DistributedTransactionAdminGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getRepairCoordinatorTablesMethod(), getCallOptions()), request);
     }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> addNewColumnToTable(
+        com.scalar.db.rpc.AddNewColumnToTableRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getAddNewColumnToTableMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_NAMESPACE = 0;
@@ -1218,6 +1286,7 @@ public final class DistributedTransactionAdminGrpc {
   private static final int METHODID_COORDINATOR_TABLES_EXIST = 13;
   private static final int METHODID_REPAIR_TABLE = 14;
   private static final int METHODID_REPAIR_COORDINATOR_TABLES = 15;
+  private static final int METHODID_ADD_NEW_COLUMN_TO_TABLE = 16;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -1300,6 +1369,10 @@ public final class DistributedTransactionAdminGrpc {
           serviceImpl.repairCoordinatorTables((com.scalar.db.rpc.RepairCoordinatorTablesRequest) request,
               (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
           break;
+        case METHODID_ADD_NEW_COLUMN_TO_TABLE:
+          serviceImpl.addNewColumnToTable((com.scalar.db.rpc.AddNewColumnToTableRequest) request,
+              (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
+          break;
         default:
           throw new AssertionError();
       }
@@ -1377,6 +1450,7 @@ public final class DistributedTransactionAdminGrpc {
               .addMethod(getCoordinatorTablesExistMethod())
               .addMethod(getRepairTableMethod())
               .addMethod(getRepairCoordinatorTablesMethod())
+              .addMethod(getAddNewColumnToTableMethod())
               .build();
         }
       }

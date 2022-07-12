@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Session;
@@ -563,5 +564,61 @@ public class CassandraAdminTest {
 
     // Assert
     verify(metadata).getKeyspace(namespace);
+  }
+
+  @Test
+  public void addNewColumnToTable_WithAlreadyExistingColumn_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "tbl";
+    String column = "c1";
+    com.datastax.driver.core.TableMetadata tableMetadata =
+        mock(com.datastax.driver.core.TableMetadata.class);
+    ColumnMetadata c1 = mock(ColumnMetadata.class);
+    when(c1.getName()).thenReturn(column);
+    when(c1.getType()).thenReturn(com.datastax.driver.core.DataType.text());
+    when(tableMetadata.getPartitionKey()).thenReturn(Collections.singletonList(c1));
+    when(tableMetadata.getClusteringColumns()).thenReturn(Collections.emptyList());
+    when(tableMetadata.getIndexes()).thenReturn(Collections.emptyList());
+    when(tableMetadata.getColumns()).thenReturn(Collections.singletonList(c1));
+    when(clusterManager.getMetadata(any(), any())).thenReturn(tableMetadata);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> cassandraAdmin.addNewColumnToTable(namespace, table, column, DataType.TEXT))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    verify(clusterManager).getMetadata(namespace, table);
+  }
+
+  @Test
+  public void addNewColumnToTable_ShouldWorkProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "tbl";
+    String column = "c2";
+    com.datastax.driver.core.TableMetadata tableMetadata =
+        mock(com.datastax.driver.core.TableMetadata.class);
+    ColumnMetadata c1 = mock(ColumnMetadata.class);
+    when(c1.getName()).thenReturn("c1");
+    when(c1.getType()).thenReturn(com.datastax.driver.core.DataType.text());
+    when(tableMetadata.getPartitionKey()).thenReturn(Collections.singletonList(c1));
+    when(tableMetadata.getClusteringColumns()).thenReturn(Collections.emptyList());
+    when(tableMetadata.getIndexes()).thenReturn(Collections.emptyList());
+    when(tableMetadata.getColumns()).thenReturn(Collections.singletonList(c1));
+    when(clusterManager.getMetadata(any(), any())).thenReturn(tableMetadata);
+    when(clusterManager.getSession()).thenReturn(cassandraSession);
+
+    // Act
+    cassandraAdmin.addNewColumnToTable(namespace, table, column, DataType.TEXT);
+
+    // Assert
+    verify(clusterManager).getMetadata(namespace, table);
+    String alterTableQuery =
+        SchemaBuilder.alterTable(namespace, table)
+            .addColumn(column)
+            .type(com.datastax.driver.core.DataType.text())
+            .getQueryString();
+    verify(cassandraSession).execute(alterTableQuery);
   }
 }

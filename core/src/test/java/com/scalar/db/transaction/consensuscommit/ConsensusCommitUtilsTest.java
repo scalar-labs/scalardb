@@ -92,6 +92,66 @@ public class ConsensusCommitUtilsTest {
   }
 
   @Test
+  public void getBeforeImageColumnName_tableMetadataGiven_shouldCreateTransactionalTableProperly() {
+    // Arrange
+    final String ACCOUNT_ID = "account_id";
+    final String ACCOUNT_TYPE = "account_type";
+    final String BALANCE = "balance";
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build();
+
+    String expectedBeforeColumnName = Attribute.BEFORE_PREFIX + BALANCE;
+
+    // Act
+    String actualBeforeColumnName =
+        ConsensusCommitUtils.getBeforeImageColumnName(BALANCE, tableMetadata);
+
+    // Assert
+    assertThat(actualBeforeColumnName).isEqualTo(expectedBeforeColumnName);
+  }
+
+  @Test
+  public void
+      getBeforeImageColumnName_tableMetadataThatHasTransactionMetaColumnGiven_shouldThrowIllegalArgumentException() {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> ConsensusCommitUtils.getBeforeImageColumnName(Attribute.ID, tableMetadata))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      getBeforeImageColumnName_tableMetadataThatHasNonPrimaryKeyColumnWithBeforePrefixGiven_shouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                ConsensusCommitUtils.getBeforeImageColumnName(
+                    "col2",
+                    TableMetadata.newBuilder()
+                        .addColumn("col1", DataType.INT)
+                        .addColumn("col2", DataType.INT)
+                        .addColumn(
+                            Attribute.BEFORE_PREFIX + "col2",
+                            DataType.INT) // non-primary key column with the "before_" prefix
+                        .addPartitionKey("col1")
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void isTransactionTableMetadata_properTransactionTableMetadataGiven_shouldReturnTrue() {
     // Arrange
     final String ACCOUNT_ID = "account_id";

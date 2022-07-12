@@ -13,6 +13,7 @@ import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.rpc.AddNewColumnToTableRequest;
 import com.scalar.db.rpc.CoordinatorTablesExistRequest;
 import com.scalar.db.rpc.CoordinatorTablesExistResponse;
 import com.scalar.db.rpc.CreateCoordinatorTablesRequest;
@@ -348,6 +349,33 @@ public class DistributedTransactionAdminServiceTest {
     verify(admin).coordinatorTablesExist();
     verify(responseObserver)
         .onNext(CoordinatorTablesExistResponse.newBuilder().setExist(true).build());
+    verify(responseObserver).onCompleted();
+  }
+
+  @Test
+  public void addNewColumnToTable_IsCalledWithProperArguments_AdminShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    String column = "c1";
+
+    AddNewColumnToTableRequest request =
+        AddNewColumnToTableRequest.newBuilder()
+            .setNamespace(namespace)
+            .setTable(table)
+            .setColumnName(column)
+            .setColumnType(com.scalar.db.rpc.DataType.DATA_TYPE_TEXT)
+            .build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
+
+    // Act
+    adminService.addNewColumnToTable(request, responseObserver);
+
+    // Assert
+    verify(admin).addNewColumnToTable(namespace, table, column, DataType.TEXT);
+    verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }
 }

@@ -6,6 +6,8 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.DataType;
+import com.scalar.db.rpc.AddNewColumnToTableRequest;
 import com.scalar.db.rpc.CreateIndexRequest;
 import com.scalar.db.rpc.CreateNamespaceRequest;
 import com.scalar.db.rpc.CreateTableRequest;
@@ -304,6 +306,25 @@ public class GrpcAdmin implements DistributedStorageAdmin {
                                 .setTable(table)
                                 .setTableMetadata(ProtoUtils.toTableMetadata(metadata))
                                 .putAllOptions(options)
+                                .build())));
+  }
+
+  @Override
+  public void addNewColumnToTable(
+      String namespace, String table, String columnName, DataType columnType)
+      throws ExecutionException {
+    execute(
+        () ->
+            execute(
+                () ->
+                    stub.withDeadlineAfter(
+                            config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                        .addNewColumnToTable(
+                            AddNewColumnToTableRequest.newBuilder()
+                                .setNamespace(namespace)
+                                .setTable(table)
+                                .setColumnName(columnName)
+                                .setColumnType(ProtoUtils.toDataType(columnType))
                                 .build())));
   }
 

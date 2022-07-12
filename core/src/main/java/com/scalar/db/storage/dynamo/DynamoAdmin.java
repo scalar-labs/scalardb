@@ -1133,6 +1133,28 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void addNewColumnToTable(
+      String namespace, String table, String columnName, DataType columnType)
+      throws ExecutionException {
+    try {
+      TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
+      if (currentTableMetadata.getColumnNames().contains(columnName)) {
+        throw new IllegalArgumentException(
+            String.format("The column %s already exists", columnName));
+      }
+
+      TableMetadata updatedTableMetadata =
+          TableMetadata.newBuilder(currentTableMetadata).addColumn(columnName, columnType).build();
+      putTableMetadata(namespace, table, updatedTableMetadata);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          String.format(
+              "Adding the new column %s to the %s.%s table failed", columnName, namespace, table),
+          e);
+    }
+  }
+
+  @Override
   public void close() {
     client.close();
     applicationAutoScalingClient.close();
