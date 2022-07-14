@@ -200,13 +200,13 @@ The following items describe the operations for the coordinator table.
 
 #### Create Coordinator tables
 
-You can create coordinator table as follows:
+You can create coordinator tables as follows:
 
 ```java
 // Create coordinator tables
 admin.createCoordinatorTables();
 
-// Create coordinator tables if not exist
+// Create coordinator tables only if they do not already exist
 boolean ifNotExist = true;
 admin.createCoordinatorTables(ifNotExist);
 
@@ -217,7 +217,7 @@ admin.createCoordinatorTables(options);
 
 #### Truncate Coordinator tables
 
-You can create truncate table as follows:
+You can truncate coordinator tables as follows:
 
 ```java
 // Truncate coordinator tables
@@ -226,13 +226,13 @@ admin.truncateCoordinatorTables();
 
 #### Drop Coordinator tables
 
-You can drop truncate table as follows:
+You can drop coordinator tables as follows:
 
 ```java
 // Drop coordinator tables
 admin.dropCoordinatorTables();
 
-// Drop coordinator tables if exist
+// Drop coordinator tables if they exist
 boolean ifExist = true;
 admin.dropCoordinatorTables(ifExist);
 ```
@@ -271,7 +271,7 @@ DistributedTransaction transaction = manager.start();
 #### Key construction
 
 Most CRUD operations need to specify `Key` objects (partition-key, clustering-key, etc.).
-So, before moving on to CRUD operations, here explains how to construct a `Key` object.
+So, before moving on to CRUD operations, the following explains how to construct a `Key` object.
 
 For a single column key, you can use the `Key.ofXXX()` methods (XXX is a type name) to construct it as follows:
 
@@ -344,7 +344,7 @@ You can also specify projections to choose which columns are returned.
 ##### Handle Result objects
 
 The Get operation and Scan operation return `Result` objects.
-So this section shows how to handle `Result` objects.
+So the following shows how to handle `Result` objects.
 
 You can get a column value of a result with `getXXX("<column name>")` methods (XXX is a type name) as follows:
 
@@ -380,6 +380,8 @@ And if you need to check if a value of a column is null, you can use the `isNull
 // Check if a value of a column is null
 boolean isNull = result.isNull("<column name>");
 ```
+
+Please see also [Javadoc of `Result`](https://javadoc.io/static/com.scalar-labs/scalardb/3.6.0/com/scalar/db/api/Result.html) for more details.
 
 ##### Get with a secondary index
 
@@ -690,10 +692,10 @@ public class Sample {
         }
         return;
       } catch (UnknownTransactionStatusException e) {
-        // If you catch `UnknownTransactionException`, you are not sure if the transaction succeeds
-        // or not. In such a case, you need to check if the transaction is committed successfully
-        // or not and retry it if it failed. How to identify a transaction status is delegated to
-        // users
+        // If you catch `UnknownTransactionStatusException` when committing the transaction, you are
+        // not sure if the transaction succeeds or not. In such a case, you need to check if the
+        // transaction is committed successfully or not and retry it if it failed. How to identify a
+        // transaction status is delegated to users
         return;
       }
     }
