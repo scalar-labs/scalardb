@@ -5,7 +5,6 @@ import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.schemaloader.SchemaOperator;
 import com.scalar.db.schemaloader.SchemaParser;
 import com.scalar.db.schemaloader.TableSchema;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -23,19 +22,27 @@ public abstract class StorageSpecificCommand {
       required = true)
   private Path schemaFile;
 
-  static class DeleteOrRepairTables {
+  static class Mode {
+
     @Option(
         names = {"-D", "--delete-all"},
         description = "Delete tables",
         defaultValue = "false")
     boolean deleteTables;
 
-    @SuppressFBWarnings("URF_UNREAD_FIELD")
     @Option(
         names = {"--repair-all"},
         description = "Repair tables : it repairs the table metadata of existing tables",
         defaultValue = "false")
     boolean repairTables;
+
+    @Option(
+        names = {"-A", "--alter"},
+        description =
+            "Alter tables : it will add new columns and create/delete secondary index for existing tables. "
+                + "It compares the provided table schema to the existing schema to decide which columns need to be added and which indexes need to be created or deleted",
+        defaultValue = "false")
+    boolean alterTables;
   }
 
   protected void execute(Properties props, Map<String, String> options)
@@ -52,24 +59,50 @@ public abstract class StorageSpecificCommand {
       boolean hasTransactionTable =
           tableSchemaList.stream().anyMatch(TableSchema::isTransactionTable);
 
-      if (getDeleteOrRepairTables() == null) {
-        operator.createTables(tableSchemaList);
-        if (hasTransactionTable) {
-          operator.createCoordinatorTables(options);
-        }
-      } else if (getDeleteOrRepairTables().deleteTables) {
-        operator.deleteTables(tableSchemaList);
-        if (hasTransactionTable) {
-          operator.dropCoordinatorTables();
-        }
-      } else {
-        operator.repairTables(tableSchemaList);
-        if (hasTransactionTable) {
-          operator.repairCoordinatorTables(options);
-        }
+      if (getMode() == null) {
+        createTables(options, tableSchemaList, operator, hasTransactionTable);
+      } else if (getMode().deleteTables) {
+        deleteTables(tableSchemaList, operator, hasTransactionTable);
+      } else if (getMode().repairTables) {
+        repairTables(options, tableSchemaList, operator, hasTransactionTable);
+      } else if (getMode().alterTables) {
+        operator.alterTables(tableSchemaList, options);
       }
     } finally {
       operator.close();
+    }
+  }
+
+  private void createTables(
+      Map<String, String> options,
+      List<TableSchema> tableSchemaList,
+      SchemaOperator operator,
+      boolean hasTransactionTable)
+      throws SchemaLoaderException {
+    operator.createTables(tableSchemaList);
+    if (hasTransactionTable) {
+      operator.createCoordinatorTables(options);
+    }
+  }
+
+  private void deleteTables(
+      List<TableSchema> tableSchemaList, SchemaOperator operator, boolean hasTransactionTable)
+      throws SchemaLoaderException {
+    operator.deleteTables(tableSchemaList);
+    if (hasTransactionTable) {
+      operator.dropCoordinatorTables();
+    }
+  }
+
+  private void repairTables(
+      Map<String, String> options,
+      List<TableSchema> tableSchemaList,
+      SchemaOperator operator,
+      boolean hasTransactionTable)
+      throws SchemaLoaderException {
+    operator.repairTables(tableSchemaList);
+    if (hasTransactionTable) {
+      operator.repairCoordinatorTables(options);
     }
   }
 
@@ -83,5 +116,5 @@ public abstract class StorageSpecificCommand {
     return new SchemaOperator(props);
   }
 
-  abstract DeleteOrRepairTables getDeleteOrRepairTables();
+  abstract Mode getMode();
 }

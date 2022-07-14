@@ -191,6 +191,30 @@ public class CosmosCommandTest extends StorageSpecificCommandTestBase {
   }
 
   @Test
+  public void call_ProperArgumentsForAlteringTables_ShouldAlterTablesProperly()
+      throws SchemaLoaderException {
+    // Arrange
+    Map<String, String> options = ImmutableMap.of();
+
+    TableSchema tableSchema = mock(TableSchema.class);
+    when(parser.parse()).thenReturn(Collections.singletonList(tableSchema));
+
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, host);
+    properties.setProperty(DatabaseConfig.PASSWORD, password);
+    properties.setProperty(DatabaseConfig.STORAGE, "cosmos");
+
+    // Act
+    commandLine.execute("-h", host, "-p", password, "-f", schemaFile, "--alter");
+
+    // Assert
+    verify(command).getSchemaParser(options);
+    verify(parser).parse();
+    verify(command).getSchemaOperator(properties);
+    verify(operator).alterTables(Collections.singletonList(tableSchema), options);
+  }
+
+  @Test
   public void call_MissingSchemaFile_ShouldExitWithErrorCode() {
     // Arrange
 
