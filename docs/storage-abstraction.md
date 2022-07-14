@@ -8,7 +8,9 @@ There are a few benefits of using the Storage API.
 First, as with Transaction API, you can write your application code without caring about the underlying storage implementation too much.
 Second, when you don't need transactions for some data in your application, you can use the Storage API to (partially) avoid transactions for achieving faster execution.
 
-However, directly using the Storage API or mixing the Transaction API and the Storage API could cause unexpected behaviors. For example, since the Storage API cannot provide transaction capability, it could cause data inconsistencies/anomalies when failures occur during the execution of the operations. Therefore, you should be very careful about using the Storage API, and please use it only if you know exactly what you are doing.
+However, directly using the Storage API or mixing the Transaction API and the Storage API could cause unexpected behaviors.
+For example, since the Storage API cannot provide transaction capability, it could cause data inconsistencies/anomalies when failures occur during the execution of the operations.
+Therefore, you should be very careful about using the Storage API, and please use it only if you know exactly what you are doing.
 
 In this document, we explain how to use the Storage API for users who are experts in Scalar DB.
 
