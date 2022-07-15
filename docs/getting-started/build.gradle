@@ -9,8 +9,7 @@ repositories {
 mainClassName = "sample.ElectronicMoneyMain"
 
 dependencies {
-    implementation fileTree(dir: '../../core/build/install/core', include: '*.jar')
-    implementation fileTree(dir: '../../core/build/install/core/lib', include: '*.jar')
+    implementation 'com.scalar-labs:scalardb:3.6.0'
 }
 
 sourceCompatibility = 1.8 
