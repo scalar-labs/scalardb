@@ -46,7 +46,7 @@ public class ConsensusCommitConfig {
   public ConsensusCommitConfig(DatabaseConfig databaseConfig) {
     if (databaseConfig.getProperties().containsValue("scalar.db.isolation_level")) {
       logger.warn(
-          "The property \"scalar.db.isolation_level\" is deprecated and will be removed. "
+          "The property \"scalar.db.isolation_level\" is deprecated and will be removed in 5.0.0. "
               + "Please use \""
               + ISOLATION_LEVEL
               + "\" instead.");

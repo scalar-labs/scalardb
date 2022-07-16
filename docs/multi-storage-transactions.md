@@ -6,9 +6,9 @@ feature called *Multi-storage Transactions*. This documentation explains the fea
 ## How Multi-storage Transactions works
 
 Internally, the `multi-storage` implementation holds multiple storage instances and has mappings
-from a table name/a namespace name to a proper storage instance. When an operation is executed, it
-chooses a proper storage instance from the specified table/namespace by using the
-table-storage/namespace-storage mappings and uses it.
+from a namespace name to a proper storage instance. When an operation is executed, it chooses a
+proper storage instance from the specified namespace by using the namespace-storage mappings and
+uses it.
 
 ## Configuration
 
@@ -39,13 +39,10 @@ scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.min_idle=5
 scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.max_idle=10
 scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.max_total=25
 
-# Define table mappings from a table name to a storage. The format is "<table name>:<storage name>,..."
-scalar.db.multi_storage.table_mapping=user.ORDER:cassandra,user.CUSTOMER:mysql,coordinator.state:cassandra
-
 # Define namespace mappings from a namespace name to a storage. The format is "<namespace name>:<storage name>,..."
 scalar.db.multi_storage.namespace_mapping=user:cassandra,coordinator:mysql
 
-# Define the default storage that’s used if a specified table doesn’t have any table mapping
+# Define the default storage that's used if a specified table doesn't have any mapping
 scalar.db.multi_storage.default_storage=cassandra
 ```
 

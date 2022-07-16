@@ -8,9 +8,13 @@ import com.scalar.db.config.DatabaseConfig;
 import java.util.Map;
 import java.util.Properties;
 import javax.annotation.concurrent.Immutable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Immutable
 public class MultiStorageConfig {
+
+  private static final Logger logger = LoggerFactory.getLogger(MultiStorageConfig.class);
 
   public static final String PREFIX = DatabaseConfig.PREFIX + "multi_storage.";
   public static final String STORAGES = PREFIX + "storages";
@@ -72,6 +76,14 @@ public class MultiStorageConfig {
       return ImmutableMap.of();
     }
 
+    logger.warn(
+        "The table mapping property \""
+            + TABLE_MAPPING
+            + "\" is deprecated and will be removed in 5.0.0. "
+            + "Please use the namespace mapping property \""
+            + NAMESPACE_MAPPING
+            + "\" instead.");
+
     ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
     for (String tableAndStorage : tableMapping) {
       String[] s = tableAndStorage.split(":", -1);
@@ -110,6 +122,11 @@ public class MultiStorageConfig {
     return databasePropertiesMap;
   }
 
+  /**
+   * @return a table storage mapping
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   */
+  @Deprecated
   public Map<String, String> getTableStorageMap() {
     return tableStorageMap;
   }

@@ -28,9 +28,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * A storage implementation with multi-storage for {@link DistributedStorage}.
  *
  * <p>This storage implementation holds multiple storage instances. It chooses a storage instance on
- * the basis of the specified configuration and a given operation. If there is a conflict between a
- * table mapping and a namespace mapping, it prefers the table mapping because table mappings are
- * more specific than namespace mappings.
+ * the basis of the specified configuration and a given operation.
  *
  * @author Toshihiro Suzuki
  */
