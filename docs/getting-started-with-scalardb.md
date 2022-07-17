@@ -3,22 +3,6 @@
 Here we assume Oracle JDK 8 and the underlying storage/database such as Cassandra are properly configured.
 If you haven't done it, please configure them first by following [this](getting-started.md).
 
-## Build
-
-For building Scalar DB, what you will need to do is as follows.
-```shell
-$ SCALARDB_HOME=/path/to/scalardb
-$ cd $SCALARDB_HOME
-$ ./gradlew installDist
-```
-Or you can download from [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb).
-For example in Gradle, you can add the following dependency to your build.gradle. Please replace the `<version>` with the version you want to use.
-```gradle
-dependencies {
-    implementation 'com.scalar-labs:scalardb:<version>'
-}
-```
-
 Let's move to the `getting-started` directory so that we can avoid too much copy-and-paste.
 ```shell
 $ cd docs/getting-started
