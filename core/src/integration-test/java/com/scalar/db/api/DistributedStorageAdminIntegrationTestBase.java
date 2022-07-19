@@ -66,7 +66,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
           .addSecondaryIndex(COL_NAME5)
           .addSecondaryIndex(COL_NAME6)
           .build();
-
+  private StorageFactory storageFactory;
   private DistributedStorageAdmin admin;
   private DistributedStorage storage;
   private String namespace1;
@@ -76,13 +76,13 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize();
-    StorageFactory factory = StorageFactory.create(TestUtils.addSuffix(getProperties(), TEST_NAME));
-    admin = factory.getAdmin();
+    storageFactory = StorageFactory.create(TestUtils.addSuffix(getProperties(), TEST_NAME));
+    admin = storageFactory.getAdmin();
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
     namespace3 = getNamespace3();
     createTables();
-    storage = factory.getStorage();
+    storage = storageFactory.getStorage();
   }
 
   protected void initialize() throws Exception {}
@@ -119,6 +119,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   public void afterAll() throws ExecutionException {
     dropTables();
     admin.close();
+    storage.close();
   }
 
   private void dropTables() throws ExecutionException {
@@ -400,40 +401,155 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
-  public void createIndex_ShouldCreateIndexCorrectly() throws ExecutionException {
+  public void createIndex_ForAllDataTypesWithExistingData_ShouldCreateIndexesCorrectly()
+      throws ExecutionException {
+    DistributedStorage storage = null;
     try {
       // Arrange
       Map<String, String> options = getCreationOptions();
-      admin.createTable(namespace1, TABLE4, TABLE_METADATA, options);
-
+      TableMetadata metadata =
+          TableMetadata.newBuilder()
+              .addColumn(COL_NAME1, DataType.INT)
+              .addColumn(COL_NAME2, DataType.INT)
+              .addColumn(COL_NAME3, DataType.TEXT)
+              .addColumn(COL_NAME4, DataType.BIGINT)
+              .addColumn(COL_NAME5, DataType.FLOAT)
+              .addColumn(COL_NAME6, DataType.DOUBLE)
+              .addColumn(COL_NAME7, DataType.BOOLEAN)
+              .addColumn(COL_NAME8, DataType.BLOB)
+              .addColumn(COL_NAME9, DataType.TEXT)
+              .addPartitionKey(COL_NAME1)
+              .addSecondaryIndex(COL_NAME9)
+              .build();
+      admin.createTable(namespace1, TABLE4, metadata, options);
+      storage = storageFactory.getStorage();
+      storage.put(
+          Put.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE4)
+              .partitionKey(Key.ofInt(COL_NAME1, 1))
+              .intValue(COL_NAME2, 2)
+              .textValue(COL_NAME3, "3")
+              .bigIntValue(COL_NAME4, 4)
+              .floatValue(COL_NAME5, 5)
+              .doubleValue(COL_NAME6, 6)
+              .booleanValue(COL_NAME7, true)
+              .blobValue(COL_NAME8, "8".getBytes(StandardCharsets.UTF_8))
+              .textValue(COL_NAME9, "9")
+              .build());
       // Act
-      admin.createIndex(namespace1, TABLE4, COL_NAME7, options);
+      admin.createIndex(namespace1, TABLE4, COL_NAME2, options);
+      admin.createIndex(namespace1, TABLE4, COL_NAME3, options);
+      admin.createIndex(namespace1, TABLE4, COL_NAME4, options);
+      admin.createIndex(namespace1, TABLE4, COL_NAME5, options);
+      admin.createIndex(namespace1, TABLE4, COL_NAME6, options);
+      if (isIndexOnBooleanColumnSupported()) {
+        admin.createIndex(namespace1, TABLE4, COL_NAME7, options);
+      }
+      admin.createIndex(namespace1, TABLE4, COL_NAME8, options);
 
       // Assert
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME7)).isTrue();
-      assertThat(admin.getTableMetadata(namespace1, TABLE4).getSecondaryIndexNames())
-          .contains(COL_NAME7);
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME2)).isTrue();
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME3)).isTrue();
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME4)).isTrue();
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME5)).isTrue();
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME6)).isTrue();
+      if (isIndexOnBooleanColumnSupported()) {
+        assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME7)).isTrue();
+      }
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME8)).isTrue();
+      if (isIndexOnBooleanColumnSupported()) {
+        assertThat(admin.getTableMetadata(namespace1, TABLE4).getSecondaryIndexNames())
+            .containsOnly(
+                COL_NAME2, COL_NAME3, COL_NAME4, COL_NAME5, COL_NAME6, COL_NAME7, COL_NAME8,
+                COL_NAME9);
+      } else {
+        assertThat(admin.getTableMetadata(namespace1, TABLE4).getSecondaryIndexNames())
+            .containsOnly(
+                COL_NAME2, COL_NAME3, COL_NAME4, COL_NAME5, COL_NAME6, COL_NAME8, COL_NAME9);
+      }
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
+      if (storage != null) {
+        storage.close();
+      }
     }
   }
 
   @Test
-  public void dropIndex_ShouldDropIndexCorrectly() throws ExecutionException {
+  public void dropIndex_ForAllDataTypesWithExistingData_ShouldDropIndexCorrectly()
+      throws ExecutionException {
+    DistributedStorage storage = null;
     try {
       // Arrange
       Map<String, String> options = getCreationOptions();
-      admin.createTable(namespace1, TABLE4, TABLE_METADATA, options);
+      TableMetadata metadata =
+          TableMetadata.newBuilder()
+              .addColumn(COL_NAME1, DataType.INT)
+              .addColumn(COL_NAME2, DataType.INT)
+              .addColumn(COL_NAME3, DataType.TEXT)
+              .addColumn(COL_NAME4, DataType.BIGINT)
+              .addColumn(COL_NAME5, DataType.FLOAT)
+              .addColumn(COL_NAME6, DataType.DOUBLE)
+              .addColumn(COL_NAME7, DataType.BOOLEAN)
+              .addColumn(COL_NAME8, DataType.BLOB)
+              .addColumn(COL_NAME9, DataType.TEXT)
+              .addPartitionKey(COL_NAME1)
+              .addSecondaryIndex(COL_NAME2)
+              .addSecondaryIndex(COL_NAME3)
+              .addSecondaryIndex(COL_NAME4)
+              .addSecondaryIndex(COL_NAME5)
+              .addSecondaryIndex(COL_NAME6)
+              .addSecondaryIndex(COL_NAME8)
+              .addSecondaryIndex(COL_NAME9)
+              .addSecondaryIndex(COL_NAME9)
+              .build();
+      if (isIndexOnBooleanColumnSupported()) {
+        metadata = TableMetadata.newBuilder(metadata).addSecondaryIndex(COL_NAME7).build();
+      }
+      admin.createTable(namespace1, TABLE4, metadata, options);
+      storage = storageFactory.getStorage();
+      storage.put(
+          Put.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE4)
+              .partitionKey(Key.ofInt(COL_NAME1, 1))
+              .intValue(COL_NAME2, 2)
+              .textValue(COL_NAME3, "3")
+              .bigIntValue(COL_NAME4, 4)
+              .floatValue(COL_NAME5, 5)
+              .doubleValue(COL_NAME6, 6)
+              .booleanValue(COL_NAME7, true)
+              .blobValue(COL_NAME8, "8".getBytes(StandardCharsets.UTF_8))
+              .textValue(COL_NAME9, "9")
+              .build());
 
       // Act
+      admin.dropIndex(namespace1, TABLE4, COL_NAME2);
+      admin.dropIndex(namespace1, TABLE4, COL_NAME3);
+      admin.dropIndex(namespace1, TABLE4, COL_NAME4);
+      admin.dropIndex(namespace1, TABLE4, COL_NAME5);
       admin.dropIndex(namespace1, TABLE4, COL_NAME6);
+      if (isIndexOnBooleanColumnSupported()) {
+        admin.dropIndex(namespace1, TABLE4, COL_NAME7);
+      }
+      admin.dropIndex(namespace1, TABLE4, COL_NAME8);
 
       // Assert
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME2)).isFalse();
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME3)).isFalse();
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME4)).isFalse();
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME5)).isFalse();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME6)).isFalse();
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME7)).isFalse();
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME8)).isFalse();
       assertThat(admin.getTableMetadata(namespace1, TABLE4).getSecondaryIndexNames())
-          .doesNotContain(COL_NAME6);
+          .containsOnly(COL_NAME9);
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
+      if (storage != null) {
+        storage.close();
+      }
     }
   }
 
@@ -475,5 +591,9 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
     }
+  }
+
+  protected boolean isIndexOnBooleanColumnSupported() {
+    return true;
   }
 }

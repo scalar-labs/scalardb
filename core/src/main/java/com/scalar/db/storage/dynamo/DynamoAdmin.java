@@ -767,6 +767,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public void createIndex(
       String namespace, String table, String columnName, Map<String, String> options)
       throws ExecutionException {
+    if (getTableMetadata(namespace, table).getColumnDataType(columnName) == DataType.BOOLEAN) {
+      throw new IllegalArgumentException(
+          "Currently, BOOLEAN type is not supported for a secondary index in DynamoDB: "
+              + columnName);
+    }
 
     long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_REQUEST_UNIT));
     TableMetadata metadata = getTableMetadata(namespace, table);
