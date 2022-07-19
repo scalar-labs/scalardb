@@ -149,6 +149,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
                 .build(),
         namespace2 + "." + TABLE_2,
             ImmutableMap.<String, Object>builder()
+                .put("transaction", false)
                 .put("partition-key", Collections.singletonList("pk1"))
                 .put("clustering-key", Collections.singletonList("ck1"))
                 .put(
