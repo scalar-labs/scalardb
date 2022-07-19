@@ -14,6 +14,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.rpc.AddNewColumnToTableRequest;
 import com.scalar.db.rpc.CoordinatorTablesExistRequest;
 import com.scalar.db.rpc.CoordinatorTablesExistResponse;
 import com.scalar.db.rpc.CreateCoordinatorTablesRequest;
@@ -387,5 +388,27 @@ public class GrpcTransactionAdminTest {
     verify(stub)
         .repairCoordinatorTables(
             RepairCoordinatorTablesRequest.newBuilder().putAllOptions(options).build());
+  }
+
+  @Test
+  public void addNewColumnToTable_CalledWithProperArguments_StubShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "namespace";
+    String table = "table";
+    String columnName = "c1";
+
+    // Act
+    admin.addNewColumnToTable(namespace, table, columnName, DataType.TEXT);
+
+    // Assert
+    verify(stub)
+        .addNewColumnToTable(
+            AddNewColumnToTableRequest.newBuilder()
+                .setNamespace(namespace)
+                .setTable(table)
+                .setColumnName(columnName)
+                .setColumnType(com.scalar.db.rpc.DataType.DATA_TYPE_TEXT)
+                .build());
   }
 }

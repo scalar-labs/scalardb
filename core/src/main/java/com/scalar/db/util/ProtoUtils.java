@@ -644,7 +644,7 @@ public final class ProtoUtils {
     return builder.build();
   }
 
-  private static DataType toDataType(com.scalar.db.rpc.DataType dataType) {
+  public static DataType toDataType(com.scalar.db.rpc.DataType dataType) {
     switch (dataType) {
       case DATA_TYPE_BOOLEAN:
         return DataType.BOOLEAN;
@@ -665,7 +665,7 @@ public final class ProtoUtils {
     }
   }
 
-  private static com.scalar.db.rpc.DataType toDataType(DataType dataType) {
+  public static com.scalar.db.rpc.DataType toDataType(DataType dataType) {
     switch (dataType) {
       case BOOLEAN:
         return com.scalar.db.rpc.DataType.DATA_TYPE_BOOLEAN;

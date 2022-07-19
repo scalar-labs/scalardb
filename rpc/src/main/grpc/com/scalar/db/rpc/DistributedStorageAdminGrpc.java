@@ -356,6 +356,37 @@ public final class DistributedStorageAdminGrpc {
     return getRepairTableMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.AddNewColumnToTableRequest,
+      com.google.protobuf.Empty> getAddNewColumnToTableMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "AddNewColumnToTable",
+      requestType = com.scalar.db.rpc.AddNewColumnToTableRequest.class,
+      responseType = com.google.protobuf.Empty.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.AddNewColumnToTableRequest,
+      com.google.protobuf.Empty> getAddNewColumnToTableMethod() {
+    io.grpc.MethodDescriptor<com.scalar.db.rpc.AddNewColumnToTableRequest, com.google.protobuf.Empty> getAddNewColumnToTableMethod;
+    if ((getAddNewColumnToTableMethod = DistributedStorageAdminGrpc.getAddNewColumnToTableMethod) == null) {
+      synchronized (DistributedStorageAdminGrpc.class) {
+        if ((getAddNewColumnToTableMethod = DistributedStorageAdminGrpc.getAddNewColumnToTableMethod) == null) {
+          DistributedStorageAdminGrpc.getAddNewColumnToTableMethod = getAddNewColumnToTableMethod =
+              io.grpc.MethodDescriptor.<com.scalar.db.rpc.AddNewColumnToTableRequest, com.google.protobuf.Empty>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "AddNewColumnToTable"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.AddNewColumnToTableRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.google.protobuf.Empty.getDefaultInstance()))
+              .setSchemaDescriptor(new DistributedStorageAdminMethodDescriptorSupplier("AddNewColumnToTable"))
+              .build();
+        }
+      }
+    }
+    return getAddNewColumnToTableMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -481,6 +512,13 @@ public final class DistributedStorageAdminGrpc {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRepairTableMethod(), responseObserver);
     }
 
+    /**
+     */
+    public void addNewColumnToTable(com.scalar.db.rpc.AddNewColumnToTableRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAddNewColumnToTableMethod(), responseObserver);
+    }
+
     @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
       return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
           .addMethod(
@@ -560,6 +598,13 @@ public final class DistributedStorageAdminGrpc {
                 com.scalar.db.rpc.RepairTableRequest,
                 com.google.protobuf.Empty>(
                   this, METHODID_REPAIR_TABLE)))
+          .addMethod(
+            getAddNewColumnToTableMethod(),
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
+              new MethodHandlers<
+                com.scalar.db.rpc.AddNewColumnToTableRequest,
+                com.google.protobuf.Empty>(
+                  this, METHODID_ADD_NEW_COLUMN_TO_TABLE)))
           .build();
     }
   }
@@ -665,6 +710,14 @@ public final class DistributedStorageAdminGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getRepairTableMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     */
+    public void addNewColumnToTable(com.scalar.db.rpc.AddNewColumnToTableRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getAddNewColumnToTableMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -756,6 +809,13 @@ public final class DistributedStorageAdminGrpc {
     public com.google.protobuf.Empty repairTable(com.scalar.db.rpc.RepairTableRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getRepairTableMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.google.protobuf.Empty addNewColumnToTable(com.scalar.db.rpc.AddNewColumnToTableRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getAddNewColumnToTableMethod(), getCallOptions(), request);
     }
   }
 
@@ -860,6 +920,14 @@ public final class DistributedStorageAdminGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getRepairTableMethod(), getCallOptions()), request);
     }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> addNewColumnToTable(
+        com.scalar.db.rpc.AddNewColumnToTableRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getAddNewColumnToTableMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_NAMESPACE = 0;
@@ -873,6 +941,7 @@ public final class DistributedStorageAdminGrpc {
   private static final int METHODID_GET_NAMESPACE_TABLE_NAMES = 8;
   private static final int METHODID_NAMESPACE_EXISTS = 9;
   private static final int METHODID_REPAIR_TABLE = 10;
+  private static final int METHODID_ADD_NEW_COLUMN_TO_TABLE = 11;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -933,6 +1002,10 @@ public final class DistributedStorageAdminGrpc {
           break;
         case METHODID_REPAIR_TABLE:
           serviceImpl.repairTable((com.scalar.db.rpc.RepairTableRequest) request,
+              (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
+          break;
+        case METHODID_ADD_NEW_COLUMN_TO_TABLE:
+          serviceImpl.addNewColumnToTable((com.scalar.db.rpc.AddNewColumnToTableRequest) request,
               (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
           break;
         default:
@@ -1007,6 +1080,7 @@ public final class DistributedStorageAdminGrpc {
               .addMethod(getGetNamespaceTableNamesMethod())
               .addMethod(getNamespaceExistsMethod())
               .addMethod(getRepairTableMethod())
+              .addMethod(getAddNewColumnToTableMethod())
               .build();
         }
       }

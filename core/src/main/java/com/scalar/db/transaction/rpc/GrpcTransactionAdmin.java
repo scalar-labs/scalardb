@@ -6,6 +6,8 @@ import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.DataType;
+import com.scalar.db.rpc.AddNewColumnToTableRequest;
 import com.scalar.db.rpc.CoordinatorTablesExistRequest;
 import com.scalar.db.rpc.CoordinatorTablesExistResponse;
 import com.scalar.db.rpc.CreateCoordinatorTablesRequest;
@@ -375,6 +377,22 @@ public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
             stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
                 .repairCoordinatorTables(
                     RepairCoordinatorTablesRequest.newBuilder().putAllOptions(options).build()));
+  }
+
+  @Override
+  public void addNewColumnToTable(
+      String namespace, String table, String columnName, DataType columnType)
+      throws ExecutionException {
+    execute(
+        () ->
+            stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                .addNewColumnToTable(
+                    AddNewColumnToTableRequest.newBuilder()
+                        .setNamespace(namespace)
+                        .setTable(table)
+                        .setColumnName(columnName)
+                        .setColumnType(ProtoUtils.toDataType(columnType))
+                        .build()));
   }
 
   private static <T> T execute(ThrowableSupplier<T, ExecutionException> supplier)

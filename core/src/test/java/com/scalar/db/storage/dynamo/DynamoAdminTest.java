@@ -1274,4 +1274,117 @@ public class DynamoAdminTest {
     // Check metadata are not added
     verify(client, never()).putItem(any(PutItemRequest.class));
   }
+
+  @Test
+  public void addNewColumnToTable_WithAlreadyExistingColumn_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    String column = "c1";
+
+    GetItemResponse response = mock(GetItemResponse.class);
+    when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
+    when(response.item())
+        .thenReturn(
+            ImmutableMap.<String, AttributeValue>builder()
+                .put(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s(FULL_TABLE_NAME).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_COLUMNS,
+                    AttributeValue.builder()
+                        .m(
+                            ImmutableMap.<String, AttributeValue>builder()
+                                .put(column, AttributeValue.builder().s("text").build())
+                                .build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
+                    AttributeValue.builder().l(AttributeValue.builder().s(column).build()).build())
+                .build());
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.addNewColumnToTable(NAMESPACE, TABLE, column, DataType.TEXT))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    Map<String, AttributeValue> key = new HashMap<>();
+    key.put(DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(FULL_TABLE_NAME).build());
+    verify(client)
+        .getItem(
+            GetItemRequest.builder()
+                .tableName(
+                    getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE))
+                .key(key)
+                .consistentRead(true)
+                .build());
+  }
+
+  @Test
+  public void addNewColumnToTable_ShouldWorkProperly() throws ExecutionException {
+    // Arrange
+    String currentColumn = "c1";
+    String newColumn = "c2";
+
+    GetItemResponse response = mock(GetItemResponse.class);
+    when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
+    when(response.item())
+        .thenReturn(
+            ImmutableMap.<String, AttributeValue>builder()
+                .put(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s(FULL_TABLE_NAME).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_COLUMNS,
+                    AttributeValue.builder()
+                        .m(
+                            ImmutableMap.<String, AttributeValue>builder()
+                                .put(currentColumn, AttributeValue.builder().s("text").build())
+                                .build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
+                    AttributeValue.builder()
+                        .l(AttributeValue.builder().s(currentColumn).build())
+                        .build())
+                .build());
+
+    // Act
+    admin.addNewColumnToTable(NAMESPACE, TABLE, newColumn, DataType.INT);
+
+    // Assert
+    // Get metadata
+    Map<String, AttributeValue> key = new HashMap<>();
+    key.put(DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(FULL_TABLE_NAME).build());
+    verify(client)
+        .getItem(
+            GetItemRequest.builder()
+                .tableName(
+                    getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE))
+                .key(key)
+                .consistentRead(true)
+                .build());
+
+    // Put metadata
+    Map<String, AttributeValue> itemValues = new HashMap<>();
+    itemValues.put(
+        DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(FULL_TABLE_NAME).build());
+    Map<String, AttributeValue> columns = new HashMap<>();
+
+    columns.put(
+        currentColumn, AttributeValue.builder().s(DataType.TEXT.toString().toLowerCase()).build());
+    columns.put(
+        newColumn, AttributeValue.builder().s(DataType.INT.toString().toLowerCase()).build());
+
+    itemValues.put(DynamoAdmin.METADATA_ATTR_COLUMNS, AttributeValue.builder().m(columns).build());
+    itemValues.put(
+        DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
+        AttributeValue.builder()
+            .l(Collections.singletonList(AttributeValue.builder().s(currentColumn).build()))
+            .build());
+    verify(client)
+        .putItem(
+            PutItemRequest.builder()
+                .tableName(
+                    getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE))
+                .item(itemValues)
+                .build());
+  }
 }

@@ -6,6 +6,7 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -172,6 +173,13 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     getAdmin(namespace, table).repairTable(namespace, table, metadata, options);
+  }
+
+  @Override
+  public void addNewColumnToTable(
+      String namespace, String table, String columnName, DataType columnType)
+      throws ExecutionException {
+    getAdmin(namespace, table).addNewColumnToTable(namespace, table, columnName, columnType);
   }
 
   private DistributedStorageAdmin getAdmin(String namespace) {

@@ -245,6 +245,33 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     // here
   }
 
+  @Override
+  public void addNewColumnToTable(
+      String namespace, String table, String columnName, DataType columnType)
+      throws ExecutionException {
+    try {
+      if (getTableMetadata(namespace, table).getColumnNames().contains(columnName)) {
+        throw new IllegalArgumentException(
+            String.format("The column %s already exists", columnName));
+      }
+
+      String alterTableQuery =
+          SchemaBuilder.alterTable(namespace, table)
+              .addColumn(columnName)
+              .type(toCassandraDataType(columnType))
+              .getQueryString();
+
+      clusterManager.getSession().execute(alterTableQuery);
+    } catch (IllegalArgumentException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw new ExecutionException(
+          String.format(
+              "Adding the new column %s to the %s.%s table failed", columnName, namespace, table),
+          e);
+    }
+  }
+
   @VisibleForTesting
   void createTableInternal(
       String keyspace, String table, TableMetadata metadata, Map<String, String> options)
