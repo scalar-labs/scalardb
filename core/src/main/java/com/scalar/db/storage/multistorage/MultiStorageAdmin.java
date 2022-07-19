@@ -19,9 +19,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * An implementation with multi-storage for {@link DistributedStorageAdmin}.
  *
  * <p>This implementation holds multiple DistributedStorageAdmin instances. It chooses an instance
- * on the basis of the specified configuration and a given operation. If there is a conflict between
- * a table mapping and a namespace mapping, it prefers the table mapping because table mappings are
- * more specific than namespace mappings.
+ * on the basis of the specified configuration and a given operation.
  *
  * @author Toshihiro Suzuki
  */
