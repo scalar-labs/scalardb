@@ -1,7 +1,7 @@
 # Scalar DB Schema Loader
 
 Scalar DB Schema Loader creates, deletes and repairs Scalar DB schemas (namespaces and tables) on the basis of a provided schema file.
-Also, it automatically adds the Scalar DB transaction metadata (used in the Consensus Commit protocol) to the tables when you set the `transaction` parameter to `true` in the schema file.
+Also, when you use the Consensus Commit transaction manager, it automatically adds the Scalar DB transaction metadata to the tables.
 
 There are two ways to specify general CLI options in Schema Loader:
   - Pass a Scalar DB configuration file and database/storage-specific options additionally.
@@ -168,7 +168,7 @@ For using CLI arguments fully for configuration (Deprecated. Please use the comm
 $ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json [-r BASE_RESOURCE_UNIT]
 ```
   - `<COSMOS_DB_KEY>` you can use a primary key or a secondary key.
-  - `-r BASE_RESOURCE_UNIT` is an option. You can specify the RU of each database. The maximum RU in tables in the database will be set. If you don't specify RU of tables, the database RU will be set with this option. When you use transaction function, the RU of the coordinator tables of Scalar DB is specified by this option. By default, it's 400.
+  - `-r BASE_RESOURCE_UNIT` is an option. You can specify the RU of each database. The maximum RU in tables in the database will be set. If you don't specify RU of tables, the database RU will be set with this option. By default, it's 400.
 
 ```console
 # For DynamoDB
@@ -250,7 +250,11 @@ $ java -jar scalardb-schema-loader-<version>.jar --cassandra -h <CASSANDRA_IP> [
 # For a JDBC database
 $ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json --repair-all
 ```
+
 ### Sample schema file
+
+The sample schema is as follows (Sample schema file can be found [here](sample/schema_sample.json)):
+
 ```json
 {
   "sample_db.sample_table": {
@@ -312,6 +316,14 @@ $ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> 
   }
 }
 ```
+
+The schema has table definitions that include `columns`, `partition-key`, `clustering-key`, `secondary-index`,  and `transaction` fields.
+The `columns` field defines columns of the table and their data types.
+The `partition-key` field defines which columns the partition key is composed of, and `clustering-key` defines which columns the partition key is composed of.
+The `secondary-index` field defines which columns are indexed.
+The `transaction` field indicates whether the table is for transactions or not.
+If you set the `transaction` field to `true` or don't specify the `transaction` field, this tool creates a table with transaction metadata if needed.
+If not, it creates a table without any transaction metadata (that is, for a table with [Storage API](https://github.com/scalar-labs/scalardb/blob/master/docs/storage-abstraction.md)).
 
 You can also specify database/storage-specific options in the table definition as follows:
 ```json
