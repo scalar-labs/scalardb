@@ -52,7 +52,7 @@ public class SchemaLoader {
         if (STORAGE_SPECIFIC_OPTION_LIST.contains(arg)) {
           logger.warn(
               "Storage-specific options (--cassandra, --cosmos, --dynamo, --jdbc) "
-                  + "are deprecated and will be removed in the future. Please use "
+                  + "are deprecated and will be removed in 5.0.0. Please use "
                   + "the --config option along with your config file instead.");
           // Remove the storage specific option from args
           commandArgs = Arrays.stream(args).filter(a -> !a.equals(arg)).toArray(String[]::new);
