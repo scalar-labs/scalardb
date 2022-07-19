@@ -6,6 +6,7 @@ import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
 import java.util.Map;
 import java.util.Set;
@@ -113,6 +114,13 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
   @Override
   public void repairCoordinatorTables(Map<String, String> options) {
     // Do nothing since JDBC transactions don't have coordinator tables
+  }
+
+  @Override
+  public void addNewColumnToTable(
+      String namespace, String table, String columnName, DataType columnType)
+      throws ExecutionException {
+    admin.addNewColumnToTable(namespace, table, columnName, columnType);
   }
 
   @Override

@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -1603,6 +1604,160 @@ public class JdbcAdminTest {
 
     // Assert
     verify(checkTableExistStatement).execute(expectedCheckTableExistStatement);
+  }
+
+  @Test
+  public void
+      addNewColumnToTable_WithAlreadyExistingColumnForMysql_ShouldThrowIllegalArgumentException()
+          throws SQLException {
+    addNewColumnToTable_WithAlreadyExistingColumnForX_ShouldThrowIllegalArgumentException(
+        RdbEngine.MYSQL,
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `scalardb`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC");
+  }
+
+  @Test
+  public void
+      addNewColumnToTable_WithAlreadyExistingColumnForOracle_ShouldThrowIllegalArgumentException()
+          throws SQLException {
+    addNewColumnToTable_WithAlreadyExistingColumnForX_ShouldThrowIllegalArgumentException(
+        RdbEngine.ORACLE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
+  }
+
+  @Test
+  public void
+      addNewColumnToTable_WithAlreadyExistingColumnForPostgresql_ShouldThrowIllegalArgumentException()
+          throws SQLException {
+    addNewColumnToTable_WithAlreadyExistingColumnForX_ShouldThrowIllegalArgumentException(
+        RdbEngine.POSTGRESQL,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
+  }
+
+  @Test
+  public void
+      addNewColumnToTable_WithAlreadyExistingColumnForSqlServer_ShouldThrowIllegalArgumentException()
+          throws SQLException {
+    addNewColumnToTable_WithAlreadyExistingColumnForX_ShouldThrowIllegalArgumentException(
+        RdbEngine.SQL_SERVER,
+        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM [scalardb].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC");
+  }
+
+  private void
+      addNewColumnToTable_WithAlreadyExistingColumnForX_ShouldThrowIllegalArgumentException(
+          RdbEngine rdbEngine, String expectedGetMetadataStatement) throws SQLException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String currentColumn = "c1";
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            Collections.singletonList(
+                new Row(currentColumn, DataType.TEXT.toString(), "PARTITION", null, false)));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+
+    // Act
+    // Act Assert
+    assertThatThrownBy(
+            () -> admin.addNewColumnToTable(namespace, table, currentColumn, DataType.INT))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    // Assert
+    verify(connection).prepareStatement(expectedGetMetadataStatement);
+    verify(selectStatement).setString(1, getFullTableName(namespace, table));
+  }
+
+  @Test
+  public void addNewColumnToTable_ForMysql_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    addNewColumnToTable_ForX_ShouldWorkProperly(
+        RdbEngine.MYSQL,
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `scalardb`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
+        "ALTER TABLE `ns`.`table` ADD `c2` INT",
+        "DELETE FROM `scalardb`.`metadata` WHERE `full_table_name` = 'ns.table'",
+        "INSERT INTO `scalardb`.`metadata` VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO `scalardb`.`metadata` VALUES ('ns.table','c2','INT',NULL,NULL,false,2)");
+  }
+
+  @Test
+  public void addNewColumnToTable_ForOracle_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    addNewColumnToTable_ForX_ShouldWorkProperly(
+        RdbEngine.ORACLE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" ADD \"c2\" INT",
+        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('ns.table','c2','INT',NULL,NULL,0,2)");
+  }
+
+  @Test
+  public void addNewColumnToTable_ForPostgrsql_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    addNewColumnToTable_ForX_ShouldWorkProperly(
+        RdbEngine.POSTGRESQL,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" ADD \"c2\" INT",
+        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('ns.table','c2','INT',NULL,NULL,false,2)");
+  }
+
+  @Test
+  public void addNewColumnToTable_ForSqlServer_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    addNewColumnToTable_ForX_ShouldWorkProperly(
+        RdbEngine.SQL_SERVER,
+        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM [scalardb].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
+        "ALTER TABLE [ns].[table] ADD [c2] INT",
+        "DELETE FROM [scalardb].[metadata] WHERE [full_table_name] = 'ns.table'",
+        "INSERT INTO [scalardb].[metadata] VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)",
+        "INSERT INTO [scalardb].[metadata] VALUES ('ns.table','c2','INT',NULL,NULL,0,2)");
+  }
+
+  private void addNewColumnToTable_ForX_ShouldWorkProperly(
+      RdbEngine rdbEngine, String expectedGetMetadataStatement, String... expectedSqlStatements)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String currentColumn = "c1";
+    String newColumn = "c2";
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            Collections.singletonList(
+                new Row(currentColumn, DataType.TEXT.toString(), "PARTITION", null, false)));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    List<Statement> expectedStatements = new ArrayList<>();
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      Statement expectedStatement = mock(Statement.class);
+      expectedStatements.add(expectedStatement);
+    }
+    when(connection.createStatement())
+        .thenReturn(
+            expectedStatements.get(0),
+            expectedStatements.subList(1, expectedStatements.size()).toArray(new Statement[0]));
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+
+    // Act
+    admin.addNewColumnToTable(namespace, table, newColumn, DataType.INT);
+
+    // Assert
+    verify(selectStatement).setString(1, getFullTableName(namespace, table));
+    verify(connection).prepareStatement(expectedGetMetadataStatement);
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      verify(expectedStatements.get(i)).execute(expectedSqlStatements[i]);
+    }
   }
 
   // Utility class used to mock ResultSet for getTableMetadata test

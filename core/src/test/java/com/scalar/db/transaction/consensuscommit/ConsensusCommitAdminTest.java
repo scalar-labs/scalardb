@@ -497,4 +497,23 @@ public class ConsensusCommitAdminTest {
     verify(distributedStorageAdmin)
         .repairTable(customNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
   }
+
+  @Test
+  public void addNewColumnToTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String newColumn = "c2";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder().addColumn("col1", DataType.INT).addPartitionKey("col1").build();
+    when(distributedStorageAdmin.getTableMetadata(any(), any()))
+        .thenReturn(ConsensusCommitUtils.buildTransactionTableMetadata(tableMetadata));
+
+    // Act
+    admin.addNewColumnToTable(NAMESPACE, TABLE, newColumn, DataType.TEXT);
+
+    // Assert
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin).addNewColumnToTable(NAMESPACE, TABLE, newColumn, DataType.TEXT);
+    verify(distributedStorageAdmin)
+        .addNewColumnToTable(NAMESPACE, TABLE, Attribute.BEFORE_PREFIX + newColumn, DataType.TEXT);
+  }
 }

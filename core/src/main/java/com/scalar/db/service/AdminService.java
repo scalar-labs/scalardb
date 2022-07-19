@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.DataType;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
@@ -81,6 +82,13 @@ public class AdminService implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     admin.repairTable(namespace, table, metadata, options);
+  }
+
+  @Override
+  public void addNewColumnToTable(
+      String namespace, String table, String columnName, DataType columnType)
+      throws ExecutionException {
+    admin.addNewColumnToTable(namespace, table, columnName, columnType);
   }
 
   @Override
