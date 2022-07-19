@@ -3,6 +3,7 @@ package com.scalar.db.server;
 import com.google.protobuf.Empty;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.rpc.AddNewColumnToTableRequest;
 import com.scalar.db.rpc.CreateIndexRequest;
 import com.scalar.db.rpc.CreateNamespaceRequest;
 import com.scalar.db.rpc.CreateTableRequest;
@@ -204,6 +205,23 @@ public class DistributedStorageAdminService
         },
         responseObserver,
         "repair_table");
+  }
+
+  @Override
+  public void addNewColumnToTable(
+      AddNewColumnToTableRequest request, StreamObserver<Empty> responseObserver) {
+    execute(
+        () -> {
+          admin.addNewColumnToTable(
+              request.getNamespace(),
+              request.getTable(),
+              request.getColumnName(),
+              ProtoUtils.toDataType(request.getColumnType()));
+          responseObserver.onNext(Empty.getDefaultInstance());
+          responseObserver.onCompleted();
+        },
+        responseObserver,
+        "add_new_column_to_table");
   }
 
   private void execute(

@@ -212,4 +212,19 @@ public class JdbcTransactionAdminTest {
     assertThatCode(() -> admin.repairCoordinatorTables(Collections.emptyMap()))
         .doesNotThrowAnyException();
   }
+
+  @Test
+  public void addNewColumnToTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    String column = "c1";
+    DataType dataType = DataType.TEXT;
+
+    // Act
+    admin.addNewColumnToTable(namespace, table, column, dataType);
+
+    // Assert
+    verify(jdbcAdmin).addNewColumnToTable(namespace, table, column, dataType);
+  }
 }

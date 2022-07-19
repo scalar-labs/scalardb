@@ -444,4 +444,44 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       admin.dropTable(namespace1, TABLE4, true);
     }
   }
+
+  @Test
+  public void addNewColumnToTable_AddColumnForEachExistingDataType_ShouldAddNewColumnsCorrectly()
+      throws ExecutionException, TransactionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addPartitionKey("pk1")
+              .addColumn("pk1", DataType.TEXT)
+              .addColumn("c1", DataType.TEXT)
+              .build();
+      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
+
+      // Act
+      admin.addNewColumnToTable(namespace1, TABLE4, "c2", DataType.TEXT);
+      admin.addNewColumnToTable(namespace1, TABLE4, "c3", DataType.DOUBLE);
+      admin.addNewColumnToTable(namespace1, TABLE4, "c4", DataType.INT);
+      admin.addNewColumnToTable(namespace1, TABLE4, "c5", DataType.BIGINT);
+      admin.addNewColumnToTable(namespace1, TABLE4, "c6", DataType.BLOB);
+      admin.addNewColumnToTable(namespace1, TABLE4, "c7", DataType.BOOLEAN);
+      admin.addNewColumnToTable(namespace1, TABLE4, "c8", DataType.FLOAT);
+
+      // Assert
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder(currentTableMetadata)
+              .addColumn("c2", DataType.TEXT)
+              .addColumn("c3", DataType.DOUBLE)
+              .addColumn("c4", DataType.INT)
+              .addColumn("c5", DataType.BIGINT)
+              .addColumn("c6", DataType.BLOB)
+              .addColumn("c7", DataType.BOOLEAN)
+              .addColumn("c8", DataType.FLOAT)
+              .build();
+      assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
+  }
 }

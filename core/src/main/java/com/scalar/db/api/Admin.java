@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -344,5 +345,17 @@ public interface Admin {
    */
   void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      throws ExecutionException;
+
+  /**
+   * Add a new column to an existing table. The new column cannot be a partition or clustering key
+   *
+   * @param namespace the table namespace
+   * @param table the table name
+   * @param columnName the name of the new column
+   * @param columnType the type of the new column
+   * @throws ExecutionException if the operation failed
+   */
+  void addNewColumnToTable(String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException;
 }

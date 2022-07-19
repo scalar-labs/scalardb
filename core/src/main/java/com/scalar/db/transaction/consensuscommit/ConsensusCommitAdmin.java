@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.buildTransactionTableMetadata;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getBeforeImageColumnName;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.removeTransactionMetaColumns;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -10,6 +11,7 @@ import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.DataType;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
@@ -122,6 +124,17 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public void repairCoordinatorTables(Map<String, String> options) throws ExecutionException {
     admin.repairTable(coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
+  }
+
+  @Override
+  public void addNewColumnToTable(
+      String namespace, String table, String columnName, DataType columnType)
+      throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    String beforeColumnName = getBeforeImageColumnName(columnName, tableMetadata);
+
+    admin.addNewColumnToTable(namespace, table, columnName, columnType);
+    admin.addNewColumnToTable(namespace, table, beforeColumnName, columnType);
   }
 
   @Override

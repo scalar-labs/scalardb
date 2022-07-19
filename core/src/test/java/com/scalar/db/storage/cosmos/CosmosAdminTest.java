@@ -33,6 +33,7 @@ import com.azure.cosmos.models.IndexingPolicy;
 import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.models.ThroughputProperties;
 import com.azure.cosmos.util.CosmosPagedIterable;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Scan.Ordering.Order;
@@ -970,5 +971,85 @@ public class CosmosAdminTest {
     verify(metadataContainer).readItem(anyString(), any(), any());
     verify(metadataContainer, never()).upsertItem(any());
     verify(scripts).createStoredProcedure(any());
+  }
+
+  @Test
+  public void addNewColumnToTable_WithAlreadyExistingColumn_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String column = "c1";
+    String fullTableName = getFullTableName(namespace, table);
+    @SuppressWarnings("unchecked")
+    CosmosItemResponse<CosmosTableMetadata> response = mock(CosmosItemResponse.class);
+
+    when(client.getDatabase(CosmosAdmin.METADATA_DATABASE)).thenReturn(database);
+    when(database.getContainer(CosmosAdmin.METADATA_CONTAINER)).thenReturn(container);
+    when(container.readItem(
+            anyString(),
+            any(PartitionKey.class),
+            ArgumentMatchers.<Class<CosmosTableMetadata>>any()))
+        .thenReturn(response);
+
+    CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
+    cosmosTableMetadata.setColumns(ImmutableMap.of(column, "text"));
+    cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList(column));
+    cosmosTableMetadata.setSecondaryIndexNames(Collections.emptySet());
+    cosmosTableMetadata.setClusteringKeyNames(Collections.emptyList());
+
+    when(response.getItem()).thenReturn(cosmosTableMetadata);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.addNewColumnToTable(namespace, table, column, DataType.TEXT))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    verify(container)
+        .readItem(fullTableName, new PartitionKey(fullTableName), CosmosTableMetadata.class);
+  }
+
+  @Test
+  public void addNewColumnToTable_ShouldWorkProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String currentColumn = "c1";
+    String newColumn = "c2";
+    String fullTableName = getFullTableName(namespace, table);
+    @SuppressWarnings("unchecked")
+    CosmosItemResponse<CosmosTableMetadata> response = mock(CosmosItemResponse.class);
+
+    when(client.getDatabase(CosmosAdmin.METADATA_DATABASE)).thenReturn(database);
+    when(database.getContainer(CosmosAdmin.METADATA_CONTAINER)).thenReturn(container);
+    when(container.readItem(
+            anyString(),
+            any(PartitionKey.class),
+            ArgumentMatchers.<Class<CosmosTableMetadata>>any()))
+        .thenReturn(response);
+
+    CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
+    cosmosTableMetadata.setColumns(ImmutableMap.of(currentColumn, "text"));
+    cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList(currentColumn));
+    cosmosTableMetadata.setSecondaryIndexNames(Collections.emptySet());
+    cosmosTableMetadata.setClusteringKeyNames(Collections.emptyList());
+
+    when(response.getItem()).thenReturn(cosmosTableMetadata);
+
+    // Act
+    admin.addNewColumnToTable(namespace, table, newColumn, DataType.INT);
+
+    // Assert
+    verify(container)
+        .readItem(fullTableName, new PartitionKey(fullTableName), CosmosTableMetadata.class);
+
+    CosmosTableMetadata expectedCosmosTableMetadata = new CosmosTableMetadata();
+    expectedCosmosTableMetadata.setId(fullTableName);
+    expectedCosmosTableMetadata.setPartitionKeyNames(ImmutableList.of(currentColumn));
+    expectedCosmosTableMetadata.setClusteringKeyNames(Collections.emptyList());
+    expectedCosmosTableMetadata.setClusteringOrders(Collections.emptyMap());
+    expectedCosmosTableMetadata.setSecondaryIndexNames(Collections.emptySet());
+    expectedCosmosTableMetadata.setColumns(
+        ImmutableMap.of(currentColumn, "text", newColumn, "int"));
+
+    verify(container).upsertItem(expectedCosmosTableMetadata);
   }
 }

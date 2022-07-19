@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.DataType;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -422,5 +423,69 @@ public class MultiStorageAdminTest {
 
     // Assert
     verify(admin2).repairTable(namespace, table, tableMetadata, options);
+  }
+
+  @Test
+  public void addNewColumnToTable_ForTable1InNamespace1_ShouldCallAddNewColumnOfAdmin1()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE1;
+    String column = "c1";
+    DataType dataType = DataType.TEXT;
+
+    // Act
+    multiStorageAdmin.addNewColumnToTable(namespace, table, column, dataType);
+
+    // Assert
+    verify(admin1).addNewColumnToTable(namespace, table, column, dataType);
+  }
+
+  @Test
+  public void addNewColumnToTable_ForTable2InNamespace1_ShouldShouldCallAddNewColumnOfAdmin2()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE2;
+    String column = "c1";
+    DataType dataType = DataType.TEXT;
+
+    // Act
+    multiStorageAdmin.addNewColumnToTable(namespace, table, column, dataType);
+
+    // Assert
+    verify(admin2).addNewColumnToTable(namespace, table, column, dataType);
+  }
+
+  @Test
+  public void addNewColumnToTable_ForTable3InNamespace1_ShouldCallAddNewColumnOfDefaultAdmin()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE3;
+    String column = "c1";
+    DataType dataType = DataType.TEXT;
+
+    // Act
+    multiStorageAdmin.addNewColumnToTable(namespace, table, column, dataType);
+
+    // Assert
+    verify(admin3).addNewColumnToTable(namespace, table, column, dataType);
+  }
+
+  @Test
+  public void addNewColumnToTable_ForTable1InNamespace2_ShouldCallAddNewColumnOfAdmin2()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE2;
+    String table = TABLE1;
+    String column = "c1";
+    DataType dataType = DataType.TEXT;
+
+    // Act
+    multiStorageAdmin.addNewColumnToTable(namespace, table, column, dataType);
+
+    // Assert
+    verify(admin2).addNewColumnToTable(namespace, table, column, dataType);
   }
 }

@@ -3,6 +3,7 @@ package com.scalar.db.server;
 import com.google.protobuf.Empty;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.rpc.AddNewColumnToTableRequest;
 import com.scalar.db.rpc.CoordinatorTablesExistRequest;
 import com.scalar.db.rpc.CoordinatorTablesExistResponse;
 import com.scalar.db.rpc.CreateCoordinatorTablesRequest;
@@ -278,6 +279,23 @@ public class DistributedTransactionAdminService
         },
         responseObserver,
         "repair_coordinator_tables");
+  }
+
+  @Override
+  public void addNewColumnToTable(
+      AddNewColumnToTableRequest request, StreamObserver<Empty> responseObserver) {
+    execute(
+        () -> {
+          admin.addNewColumnToTable(
+              request.getNamespace(),
+              request.getTable(),
+              request.getColumnName(),
+              ProtoUtils.toDataType(request.getColumnType()));
+          responseObserver.onNext(Empty.getDefaultInstance());
+          responseObserver.onCompleted();
+        },
+        responseObserver,
+        "add_new_column_to_table");
   }
 
   private void execute(

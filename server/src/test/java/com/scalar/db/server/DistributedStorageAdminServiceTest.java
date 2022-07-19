@@ -11,6 +11,7 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.rpc.AddNewColumnToTableRequest;
 import com.scalar.db.rpc.CreateIndexRequest;
 import com.scalar.db.rpc.CreateNamespaceRequest;
 import com.scalar.db.rpc.CreateTableRequest;
@@ -240,6 +241,33 @@ public class DistributedStorageAdminServiceTest {
 
     // Assert
     verify(admin).namespaceExists(any());
+    verify(responseObserver).onNext(any());
+    verify(responseObserver).onCompleted();
+  }
+
+  @Test
+  public void addNewColumnToTable_IsCalledWithProperArguments_AdminShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    String column = "c1";
+
+    AddNewColumnToTableRequest request =
+        AddNewColumnToTableRequest.newBuilder()
+            .setNamespace(namespace)
+            .setTable(table)
+            .setColumnName(column)
+            .setColumnType(com.scalar.db.rpc.DataType.DATA_TYPE_TEXT)
+            .build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
+
+    // Act
+    adminService.addNewColumnToTable(request, responseObserver);
+
+    // Assert
+    verify(admin).addNewColumnToTable(namespace, table, column, DataType.TEXT);
     verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }

@@ -172,7 +172,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection()) {
       createTableInternal(connection, namespace, table, metadata);
       createIndex(connection, namespace, table, metadata);
-      addTableMetadata(connection, namespace, table, metadata);
+      addTableMetadata(connection, namespace, table, metadata, true);
     } catch (SQLException e) {
       throw new ExecutionException(
           "creating the table failed: " + getFullTableName(namespace, table), e);
@@ -267,9 +267,15 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   private void addTableMetadata(
-      Connection connection, String namespace, String table, TableMetadata metadata)
+      Connection connection,
+      String namespace,
+      String table,
+      TableMetadata metadata,
+      boolean createMetadataTableIfNotExists)
       throws SQLException {
-    createMetadataSchemaAndTableIfNotExists(connection);
+    if (createMetadataTableIfNotExists) {
+      createMetadataSchemaAndTableIfNotExists(connection);
+    }
     LinkedHashSet<String> orderedColumns = new LinkedHashSet<>(metadata.getPartitionKeyNames());
     orderedColumns.addAll(metadata.getClusteringKeyNames());
     orderedColumns.addAll(metadata.getColumnNames());
@@ -836,10 +842,43 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     if (!tableExistsInternal(metadataSchema, METADATA_TABLE)
         || getTableMetadata(namespace, table) == null) {
       try (Connection connection = dataSource.getConnection()) {
-        addTableMetadata(connection, namespace, table, metadata);
+        addTableMetadata(connection, namespace, table, metadata, true);
       } catch (SQLException e) {
         throw new ExecutionException("creating the table metadata failed", e);
       }
+    }
+  }
+
+  @Override
+  public void addNewColumnToTable(
+      String namespace, String table, String columnName, DataType columnType)
+      throws ExecutionException {
+    try {
+      TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
+      if (currentTableMetadata.getColumnNames().contains(columnName)) {
+        throw new IllegalArgumentException(
+            String.format("The column %s already exists", columnName));
+      }
+
+      TableMetadata updatedTableMetadata =
+          TableMetadata.newBuilder(currentTableMetadata).addColumn(columnName, columnType).build();
+      String addNewColumnStatement =
+          "ALTER TABLE "
+              + encloseFullTableName(namespace, table)
+              + " ADD "
+              + enclose(columnName)
+              + " "
+              + getVendorDbColumnType(updatedTableMetadata, columnName);
+      try (Connection connection = dataSource.getConnection()) {
+        execute(connection, addNewColumnStatement);
+        execute(connection, getDeleteTableMetadataStatement(namespace, table));
+        addTableMetadata(connection, namespace, table, updatedTableMetadata, false);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          String.format(
+              "Adding the new column %s to the %s.%s table failed", columnName, namespace, table),
+          e);
     }
   }
 

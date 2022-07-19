@@ -3,8 +3,8 @@ package com.scalar.db.transaction.consensuscommit;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -43,18 +43,32 @@ public final class ConsensusCommitUtils {
    * @return a transaction table metadata based on the table metadata
    */
   public static TableMetadata buildTransactionTableMetadata(TableMetadata tableMetadata) {
-    List<String> nonPrimaryKeyColumns = getNonPrimaryKeyColumns(tableMetadata);
+    checkIsNotTransactionMetaColumn(tableMetadata.getColumnNames());
+    Set<String> nonPrimaryKeyColumns = getNonPrimaryKeyColumns(tableMetadata);
+    checkBeforeColumnsDoNotAlreadyExist(nonPrimaryKeyColumns, tableMetadata);
 
-    // Check if the table metadata already has the transaction columns
+    // Build a transaction table metadata
+    TableMetadata.Builder builder = TableMetadata.newBuilder(tableMetadata);
+    TRANSACTION_META_COLUMNS.forEach(builder::addColumn);
+    nonPrimaryKeyColumns.forEach(
+        c -> builder.addColumn(Attribute.BEFORE_PREFIX + c, tableMetadata.getColumnDataType(c)));
+    return builder.build();
+  }
+
+  private static void checkIsNotTransactionMetaColumn(Set<String> columnNames) {
     TRANSACTION_META_COLUMNS
         .keySet()
         .forEach(
             c -> {
-              if (tableMetadata.getColumnNames().contains(c)) {
+              if (columnNames.contains(c)) {
                 throw new IllegalArgumentException(
                     "column \"" + c + "\" is reserved as transaction metadata");
               }
             });
+  }
+
+  private static void checkBeforeColumnsDoNotAlreadyExist(
+      Set<String> nonPrimaryKeyColumns, TableMetadata tableMetadata) {
     nonPrimaryKeyColumns.forEach(
         c -> {
           String beforePrefixed = Attribute.BEFORE_PREFIX + c;
@@ -67,13 +81,13 @@ public final class ConsensusCommitUtils {
                     + "\", is reserved as transaction metadata");
           }
         });
+  }
 
-    // Build a transaction table metadata
-    TableMetadata.Builder builder = TableMetadata.newBuilder(tableMetadata);
-    TRANSACTION_META_COLUMNS.forEach(builder::addColumn);
-    nonPrimaryKeyColumns.forEach(
-        c -> builder.addColumn(Attribute.BEFORE_PREFIX + c, tableMetadata.getColumnDataType(c)));
-    return builder.build();
+  public static String getBeforeImageColumnName(String columnName, TableMetadata tableMetadata) {
+    checkIsNotTransactionMetaColumn(Collections.singleton(columnName));
+    checkBeforeColumnsDoNotAlreadyExist(Collections.singleton(columnName), tableMetadata);
+
+    return Attribute.BEFORE_PREFIX + columnName;
   }
 
   /**
@@ -113,11 +127,11 @@ public final class ConsensusCommitUtils {
     return true;
   }
 
-  private static List<String> getNonPrimaryKeyColumns(TableMetadata tableMetadata) {
+  private static Set<String> getNonPrimaryKeyColumns(TableMetadata tableMetadata) {
     return tableMetadata.getColumnNames().stream()
         .filter(c -> !tableMetadata.getPartitionKeyNames().contains(c))
         .filter(c -> !tableMetadata.getClusteringKeyNames().contains(c))
-        .collect(Collectors.toList());
+        .collect(Collectors.toSet());
   }
 
   /**
