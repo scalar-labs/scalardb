@@ -42,7 +42,7 @@ public class TableSchema {
   private String tableName;
   private TableMetadata tableMetadata;
   private ImmutableMap<String, String> options;
-  private boolean isTransactionTable = false;
+  private boolean isTransactionTable = true;
   private Set<String> traveledKeys;
 
   @VisibleForTesting
@@ -107,14 +107,9 @@ public class TableSchema {
       }
     }
 
-    boolean transaction = false;
     if (tableDefinition.keySet().contains(TRANSACTION)) {
-      transaction = tableDefinition.get(TRANSACTION).getAsBoolean();
+      isTransactionTable = tableDefinition.get(TRANSACTION).getAsBoolean();
       traveledKeys.add(TRANSACTION);
-    }
-
-    if (transaction) {
-      isTransactionTable = true;
     }
 
     // Add columns
