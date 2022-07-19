@@ -348,7 +348,21 @@ public interface Admin {
       throws ExecutionException;
 
   /**
-   * Add a new column to an existing table. The new column cannot be a partition or clustering key
+   * Add a new column to an existing table. The new column cannot be a partition or clustering key.
+   * <br>
+   * <br>
+   * <strong>Warning :</strong> this should be executed with significant consideration as the
+   * execution time may vary greatly depending on the underlying storage. Please plan accordingly
+   * especially if the database runs in production:
+   *
+   * <ul>
+   *   <li>for Cosmos and Dynamo DB: this operation is almost instantaneous as the table schema is
+   *       not modified. Only the table metadata stored in a separated table are updated.
+   *   <li>for Cassandra : adding a column is a constant-time operation based on the amount of data
+   *       in the table.
+   *   <li>for relational databases (Mysql, Oracle, etc.): it may take a very long time to execute
+   *       and a table-lock may be performed.
+   * </ul>
    *
    * @param namespace the table namespace
    * @param table the table name
