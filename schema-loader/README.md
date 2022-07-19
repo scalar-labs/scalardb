@@ -319,7 +319,7 @@ The sample schema is as follows (Sample schema file can be found [here](sample/s
 
 The schema has table definitions that include `columns`, `partition-key`, `clustering-key`, `secondary-index`,  and `transaction` fields.
 The `columns` field defines columns of the table and their data types.
-The `partition-key` field defines which columns the partition key is composed of, and `clustering-key` defines which columns the partition key is composed of.
+The `partition-key` field defines which columns the partition key is composed of, and `clustering-key` defines which columns the clustering key is composed of.
 The `secondary-index` field defines which columns are indexed.
 The `transaction` field indicates whether the table is for transactions or not.
 If you set the `transaction` field to `true` or don't specify the `transaction` field, this tool creates a table with transaction metadata if needed.
