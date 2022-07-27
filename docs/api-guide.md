@@ -734,4 +734,4 @@ If you catch `ValidationConflictException`, like the `CrudConflictException` cas
 * [Getting started](getting-started.md)
 * [Multi-storage Transactions](multi-storage-transactions.md)
 * [Two-phase Commit Transactions](two-phase-commit-transactions.md)
-* [Scalar DB server](scalardb-server.md)
+* [Scalar DB Server](scalardb-server.md)

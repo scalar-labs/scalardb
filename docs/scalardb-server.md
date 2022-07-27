@@ -1,23 +1,23 @@
-# Scalar DB server
+# Scalar DB Server
 
-Scalar DB server is a gRPC server that implements Scalar DB interface. 
-With Scalar DB server, you can use Scalar DB features from multiple programming languages that are supported by gRPC.
+Scalar DB Server is a gRPC server that implements Scalar DB interface. 
+With Scalar DB Server, you can use Scalar DB features from multiple programming languages that are supported by gRPC.
 
 Currently, we provide only a Java client officially, and we will support other language clients officially in the future.
 Of course, you can generate language-specific client stubs by yourself.
 However, note that it is not necessarily straightforward to implement a client since it's using a bidirectional streaming RPC in gRPC, and you need to be familiar with it.
 
-This document explains how to install and use Scalar DB server.
+This document explains how to install and use Scalar DB Server.
 
 ## Install prerequisites
 
-Scalar DB server is written in Java. So the following software is required to run it.
+Scalar DB Server is written in Java. So the following software is required to run it.
 
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (OpenJDK 8) or higher
 
-## Install Scalar DB server
+## Install Scalar DB Server
 
-We have Docker images in [our repository](https://github.com/orgs/scalar-labs/packages/container/package/scalardb-server) and zip archives of Scalar DB server available in [releases](https://github.com/scalar-labs/scalardb/releases).
+We have Docker images in [our repository](https://github.com/orgs/scalar-labs/packages/container/package/scalardb-server) and zip archives of Scalar DB Server available in [releases](https://github.com/scalar-labs/scalardb/releases).
 
 If you are interested in building from source, run the following command: 
 
@@ -37,7 +37,7 @@ It contains two sections: Scalar DB Server configurations and underlying storage
 # Scalar DB Server configurations
 #
 
-# Port number of Scalar DB server. 60051 by default
+# Port number of Scalar DB Server. 60051 by default
 scalar.db.server.port=60051
 
 # Prometheus exporter port. Use 8080 if this is not given. Prometheus exporter will not be started if a negative number is given.
@@ -72,16 +72,16 @@ scalar.db.consensus_commit.isolation_level=SNAPSHOT
 scalar.db.consensus_commit.serializable_strategy=
 ```
 
-## Start Scalar DB server
+## Start Scalar DB Server
 
 ### Docker images
 
-For Docker images, you need to pull the Scalar DB server image first:
+For Docker images, you need to pull the Scalar DB Server image first:
 ```shell
 $ docker pull ghcr.io/scalar-labs/scalardb-server:<version>
 ```
 
-And then, you can start Scalar DB server with the following command:
+And then, you can start Scalar DB Server with the following command:
 ```shell
 $ docker run -v <your local property file path>:/scalardb/server/database.properties.tmpl -d -p 60051:60051 -p 8080:8080 ghcr.io/scalar-labs/scalardb-server:<version>
 ```
@@ -108,7 +108,7 @@ $ docker run -v <your local property file path>:/scalardb/server/database.proper
 
 ### Zip archives
 
-For zip archives, you can start Scalar DB server with the following commands:
+For zip archives, you can start Scalar DB Server with the following commands:
 
 ```shell
 $ unzip scalardb-server-<version>.zip
@@ -117,14 +117,14 @@ $ export JAVA_OPTS="<your JVM options>"
 $ bin/scalardb-server --config <your property file path>
 ```
 
-## Usage of the Java client of Scalar DB server
+## Usage of the Java client of Scalar DB Server
 
-You can use the Java client of Scalar DB server in almost the same way as other storages/databases.
+You can use the Java client of Scalar DB Server in almost the same way as other storages/databases.
 The difference is that you need to set `scalar.db.storage` and `scalar.db.transaction_manager` to `grpc` in your client side property file.
 
 ```properties
 # Comma separated contact points
-scalar.db.contact_points=<Scalar DB server host>
+scalar.db.contact_points=<Scalar DB Server host>
 
 # Port number for all the contact points
 scalar.db.contact_port=60051
@@ -143,4 +143,9 @@ scalar.db.grpc.deadline_duration_millis=60000
 
 Please see the following sample to learn Scalar DB Server further:
 
-[Scalar DB Server Sample](https://github.com/scalar-labs/scalardb-samples/tree/main/scalardb-server-sample)
+- [Scalar DB Server Sample](https://github.com/scalar-labs/scalardb-samples/tree/main/scalardb-server-sample)
+
+Please also see the following documents to learn how to deploy Scalar DB Server:
+
+- [Deploy Scalar DB Server on AWS](https://github.com/scalar-labs/scalar-kubernetes/blob/master/docs/ManualDeploymentGuideScalarDBServerOnEKS.md)
+- [Deploy Scalar DB Server on Azure](https://github.com/scalar-labs/scalar-kubernetes/blob/master/docs/ManualDeploymentGuideScalarDBServerOnAKS.md)

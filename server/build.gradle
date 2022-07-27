@@ -81,7 +81,7 @@ task dockerfileLint(type: Exec) {
 
 task integrationTestScalarDbServer(type: Test) {
     useJUnitPlatform()
-    description = 'Runs the integration tests for the Scalar DB server.'
+    description = 'Runs the integration tests for the Scalar DB Server.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestScalarDbServer.output.classesDirs
     classpath = sourceSets.integrationTestScalarDbServer.runtimeClasspath
