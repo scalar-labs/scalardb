@@ -69,7 +69,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
           .build();
   private TransactionFactory transactionFactory;
   private DistributedTransactionAdmin admin;
-  private DistributedTransactionManager manager;
   private String namespace1;
   private String namespace2;
   private String namespace3;
@@ -83,7 +82,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     namespace2 = getNamespace2();
     namespace3 = getNamespace3();
     createTables();
-    manager = transactionFactory.getTransactionManager();
   }
 
   protected void initialize() throws Exception {}
@@ -121,7 +119,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   public void afterAll() throws ExecutionException {
     dropTables();
     admin.close();
-    manager.close();
   }
 
   private void dropTables() throws ExecutionException {
@@ -347,32 +344,40 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   @Test
   public void truncateTable_ShouldTruncateProperly()
       throws ExecutionException, TransactionException {
-    // Arrange
-    Key partitionKey = new Key(COL_NAME2, "aaa", COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME4, 2, COL_NAME3, "bbb");
-    DistributedTransaction transaction = manager.start();
-    transaction.put(
-        new Put(partitionKey, clusteringKey)
-            .withValue(COL_NAME5, 3)
-            .withValue(COL_NAME6, "ccc")
-            .withValue(COL_NAME7, 4L)
-            .withValue(COL_NAME8, 1.0f)
-            .withValue(COL_NAME9, 1.0d)
-            .withValue(COL_NAME10, true)
-            .withValue(COL_NAME11, "ddd".getBytes(StandardCharsets.UTF_8))
-            .forNamespace(namespace1)
-            .forTable(TABLE1));
-    transaction.commit();
+    DistributedTransactionManager manager = null;
+    try {
+      // Arrange
+      Key partitionKey = new Key(COL_NAME2, "aaa", COL_NAME1, 1);
+      Key clusteringKey = new Key(COL_NAME4, 2, COL_NAME3, "bbb");
+      manager = transactionFactory.getTransactionManager();
+      DistributedTransaction transaction = manager.start();
+      transaction.put(
+          new Put(partitionKey, clusteringKey)
+              .withValue(COL_NAME5, 3)
+              .withValue(COL_NAME6, "ccc")
+              .withValue(COL_NAME7, 4L)
+              .withValue(COL_NAME8, 1.0f)
+              .withValue(COL_NAME9, 1.0d)
+              .withValue(COL_NAME10, true)
+              .withValue(COL_NAME11, "ddd".getBytes(StandardCharsets.UTF_8))
+              .forNamespace(namespace1)
+              .forTable(TABLE1));
+      transaction.commit();
 
-    // Act
-    admin.truncateTable(namespace1, TABLE1);
+      // Act
+      admin.truncateTable(namespace1, TABLE1);
 
-    // Assert
-    transaction = manager.start();
-    List<Result> results =
-        transaction.scan(new Scan(partitionKey).forNamespace(namespace1).forTable(TABLE1));
-    assertThat(results).isEmpty();
-    transaction.commit();
+      // Assert
+      transaction = manager.start();
+      List<Result> results =
+          transaction.scan(new Scan(partitionKey).forNamespace(namespace1).forTable(TABLE1));
+      assertThat(results).isEmpty();
+      transaction.commit();
+    } finally {
+      if (manager != null) {
+        manager.close();
+      }
+    }
   }
 
   @Test

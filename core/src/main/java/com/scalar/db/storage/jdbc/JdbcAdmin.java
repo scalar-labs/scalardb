@@ -808,8 +808,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void alterToRegularColumnTypeIfNecessary(
       Connection connection, String namespace, String table, String columnName)
       throws ExecutionException, SQLException {
-    ImmutableMap<DataType, String> typeMappingForIndexes = DATA_TYPE_MAPPING_FOR_KEY.get(rdbEngine);
     DataType indexType = getTableMetadata(namespace, table).getColumnDataType(columnName);
+    ImmutableMap<DataType, String> typeMappingForIndexes = DATA_TYPE_MAPPING_FOR_KEY.get(rdbEngine);
     assert typeMappingForIndexes != null;
 
     if (typeMappingForIndexes.get(indexType) == null) {

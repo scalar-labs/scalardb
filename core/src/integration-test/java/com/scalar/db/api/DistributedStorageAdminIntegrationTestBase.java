@@ -68,7 +68,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
           .build();
   private StorageFactory storageFactory;
   private DistributedStorageAdmin admin;
-  private DistributedStorage storage;
   private String namespace1;
   private String namespace2;
   private String namespace3;
@@ -82,7 +81,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     namespace2 = getNamespace2();
     namespace3 = getNamespace3();
     createTables();
-    storage = storageFactory.getStorage();
   }
 
   protected void initialize() throws Exception {}
@@ -119,7 +117,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   public void afterAll() throws ExecutionException {
     dropTables();
     admin.close();
-    storage.close();
   }
 
   private void dropTables() throws ExecutionException {
@@ -343,29 +340,37 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
   @Test
   public void truncateTable_ShouldTruncateProperly() throws ExecutionException, IOException {
-    // Arrange
-    Key partitionKey = new Key(COL_NAME2, "aaa", COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME4, 2, COL_NAME3, "bbb");
-    storage.put(
-        new Put(partitionKey, clusteringKey)
-            .withValue(COL_NAME5, 3)
-            .withValue(COL_NAME6, "ccc")
-            .withValue(COL_NAME7, 4L)
-            .withValue(COL_NAME8, 1.0f)
-            .withValue(COL_NAME9, 1.0d)
-            .withValue(COL_NAME10, true)
-            .withValue(COL_NAME11, "ddd".getBytes(StandardCharsets.UTF_8))
-            .forNamespace(namespace1)
-            .forTable(TABLE1));
+    DistributedStorage storage = null;
+    try {
+      // Arrange
+      Key partitionKey = new Key(COL_NAME2, "aaa", COL_NAME1, 1);
+      Key clusteringKey = new Key(COL_NAME4, 2, COL_NAME3, "bbb");
+      storage = storageFactory.getStorage();
+      storage.put(
+          new Put(partitionKey, clusteringKey)
+              .withValue(COL_NAME5, 3)
+              .withValue(COL_NAME6, "ccc")
+              .withValue(COL_NAME7, 4L)
+              .withValue(COL_NAME8, 1.0f)
+              .withValue(COL_NAME9, 1.0d)
+              .withValue(COL_NAME10, true)
+              .withValue(COL_NAME11, "ddd".getBytes(StandardCharsets.UTF_8))
+              .forNamespace(namespace1)
+              .forTable(TABLE1));
 
-    // Act
-    admin.truncateTable(namespace1, TABLE1);
+      // Act
+      admin.truncateTable(namespace1, TABLE1);
 
-    // Assert
-    Scanner scanner =
-        storage.scan(new Scan(partitionKey).forNamespace(namespace1).forTable(TABLE1));
-    assertThat(scanner.all()).isEmpty();
-    scanner.close();
+      // Assert
+      Scanner scanner =
+          storage.scan(new Scan(partitionKey).forNamespace(namespace1).forTable(TABLE1));
+      assertThat(scanner.all()).isEmpty();
+      scanner.close();
+    } finally {
+      if (storage != null) {
+        storage.close();
+      }
+    }
   }
 
   @Test
