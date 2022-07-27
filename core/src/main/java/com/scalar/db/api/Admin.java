@@ -358,9 +358,11 @@ public interface Admin {
    * <ul>
    *   <li>for Cosmos and Dynamo DB: this operation is almost instantaneous as the table schema is
    *       not modified. Only the table metadata stored in a separated table are updated.
-   *   <li>for Cassandra : adding a column is a constant-time operation based on the amount of data
-   *       in the table.
-   *   <li>for relational databases (Mysql, Oracle, etc.): it may take a very long time to execute
+   *   <li>for Cassandra: adding a column will only update the schema metadata and do not modify
+   *       existing schema records. The cluster topology is the main factor for the execution time.
+   *       Since the schema metadata change propagates to each cluster node via a gossip protocol,
+   *       the larger the cluster, the longer it will take for all nodes to be updated.
+   *   <li>for relational databases (MySQL, Oracle, etc.): it may take a very long time to execute
    *       and a table-lock may be performed.
    * </ul>
    *
