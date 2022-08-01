@@ -204,20 +204,20 @@ There are several approaches to achieve it depending on the protocol between the
 
 Please see [this document](https://grpc.io/blog/grpc-load-balancing/) for the details of gRPC Load Balancing.
 
-When you use a client-side load balancer, you can use the same gRPC connection to send requests in a transaction, which guarantees that the requests go to the same hosts/servers.
+When you use a client-side load balancer, you can use the same gRPC connection to send requests in a transaction, which guarantees that the requests go to the same servers.
 
 When you use a server-side (proxy) load balancer, solutions are different between when using L3/L4 (transport level) and L7 (application level) load balancer.
 When using an L3/L4 load balancer, you can use the same gRPC connection to send requests in a transaction, similar to when you use a client-side load balancer.
-Requests in the same gRPC connection always go to the same host/server in L3/L4 load balancing.
-When using an L7 load balancer, since requests in the same gRPC connection do not necessarily go to the same host/server, you need to use cookies or similar for routing requests to correct host/server.
+Requests in the same gRPC connection always go to the same server in L3/L4 load balancing.
+When using an L7 load balancer, since requests in the same gRPC connection do not necessarily go to the same server, you need to use cookies or similar for routing requests to correct server.
 For example, when you use [Envoy](https://www.envoyproxy.io/), you can use session affinity (sticky session) for gRPC.
-Or you can also use [Bidirectional streaming RPC in gRPC](https://grpc.io/docs/what-is-grpc/core-concepts/#bidirectional-streaming-rpc) since the L7 load balancer distributes requests in the same stream to the same host/server.
+Or you can also use [Bidirectional streaming RPC in gRPC](https://grpc.io/docs/what-is-grpc/core-concepts/#bidirectional-streaming-rpc) since the L7 load balancer distributes requests in the same stream to the same server.
 
 #### HTTP/1.1
 
 Typically, you use a server-side (proxy) load balancer with HTTP/1.1.
-When using an L3/L4 load balancer, you can use the same HTTP connection to send requests in a transaction, which guarantees the requests go to the same host/server.
-When using an L7 load balancer, since requests in the same HTTP connection do not necessarily go to the same host/server, you need to use cookies or similar for routing requests to correct host/server.
+When using an L3/L4 load balancer, you can use the same HTTP connection to send requests in a transaction, which guarantees the requests go to the same server.
+When using an L7 load balancer, since requests in the same HTTP connection do not necessarily go to the same server, you need to use cookies or similar for routing requests to correct server.
 You can use session affinity (sticky session) in that case.
 
 #### Suspend and resume a transaction
