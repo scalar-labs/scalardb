@@ -183,23 +183,22 @@ Similar to `prepare()`, you can call `validate()` in the coordinator/participant
 Currently, you need to call `validate()` when you use the `Consensus Commit` transaction manager with `EXTRA_READ` serializable strategy in `SERIALIZABLE` isolation level.
 In other cases, `validate()` does nothing.
 
-### Load balancing in Two-phase Commit Transactions
+### Request Routing in Two-phase Commit Transactions
 
-Usually, services using Two-phase Commit Transactions achieve a transaction while exchanging multiple requests/responses as follows:
+Services using Two-phase Commit Transactions usually execute a transaction by exchanging multiple requests and responses as follows:
 
 <p align="center">
 <img src="images/two_phase_commit_sequence_diagram.png" width="400" />
 </p>
 
-Also, a service typically has multiple hosts/servers for scalability and availability, and uses server-side (proxy) or client-side load balancing to distribute the requests to the hosts/servers.
-Since a transaction processing in Two-phase Commit Transactions is stateful, operations in a transaction must be executed in the same hosts/servers.
-In other words, the load balancing must distribute the requests in a transaction to the same host/server.
+Also, each service typically has multiple servers (or hosts) for scalability and availability and uses server-side (proxy) or client-side load balancing to distribute requests to the servers.
+In such a case, since a transaction processing in Two-phase Commit Transactions is stateful, requests in a transaction must be routed to the same servers while different transactions need to be distributed to balance the load.
 
 <p align="center">
 <img src="images/two_phase_commit_load_balancing.png" width="500" />
 </p>
 
-As solutions to this issue depend on the protocol between the services, we introduce some solutions for gRPC and HTTP/1.1 here.
+There are several approaches to achieve it depending on the protocol between the services. Here, we introduce some approaches for gRPC and HTTP/1.1.
 
 #### gPRC
 
