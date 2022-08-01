@@ -192,4 +192,44 @@ public class TableSchemaTest {
             () -> new TableSchema(tableFullName, tableDefinition, Collections.emptyMap()))
         .isInstanceOf(SchemaLoaderException.class);
   }
+
+  @Test
+  public void constructor_TableDefinitionWithoutTransactionGiven_ShouldConstructProperTableSchema()
+      throws SchemaLoaderException {
+    String tableDefinitionJson =
+        "{\"partition-key\": [\"c1\"],"
+            + "\"clustering-key\": [\"c3\",\"c4 ASC\",\"c6 DESC\"],"
+            + "\"columns\": {"
+            + "  \"c1\": \"INT\","
+            + "  \"c2\": \"TEXT\","
+            + "  \"c3\": \"BLOB\","
+            + "  \"c4\": \"INT\","
+            + "  \"c5\": \"BOOLEAN\","
+            + "  \"c6\": \"INT\""
+            + "},"
+            + "\"secondary-index\": [\"c2\",\"c4\"]}";
+    JsonObject tableDefinition = JsonParser.parseString(tableDefinitionJson).getAsJsonObject();
+
+    TableMetadata.Builder tableBuilder = TableMetadata.newBuilder();
+    tableBuilder.addPartitionKey("c1");
+    tableBuilder.addClusteringKey("c3");
+    tableBuilder.addClusteringKey("c4");
+    tableBuilder.addClusteringKey("c6", Order.DESC);
+    tableBuilder.addSecondaryIndex("c2");
+    tableBuilder.addSecondaryIndex("c4");
+    tableBuilder.addColumn("c1", DataType.INT);
+    tableBuilder.addColumn("c2", DataType.TEXT);
+    tableBuilder.addColumn("c3", DataType.BLOB);
+    tableBuilder.addColumn("c4", DataType.INT);
+    tableBuilder.addColumn("c5", DataType.BOOLEAN);
+    tableBuilder.addColumn("c6", DataType.INT);
+    TableMetadata expectedTableMetadata = tableBuilder.build();
+
+    // Act
+    TableSchema tableSchema = new TableSchema("ns.tb", tableDefinition, Collections.emptyMap());
+
+    // Assert
+    Assertions.assertThat(tableSchema.getTableMetadata()).isEqualTo(expectedTableMetadata);
+    Assertions.assertThat(tableSchema.isTransactionTable()).isTrue();
+  }
 }
