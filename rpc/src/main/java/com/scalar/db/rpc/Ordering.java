@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code rpc.Ordering}
+ * Protobuf type {@code scalardb.rpc.Ordering}
  */
 public final class Ordering extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:rpc.Ordering)
+    // @@protoc_insertion_point(message_implements:scalardb.rpc.Ordering)
     OrderingOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use Ordering.newBuilder() to construct.
@@ -85,13 +85,13 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Ordering_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Ordering_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Ordering_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Ordering_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.Ordering.class, com.scalar.db.rpc.Ordering.Builder.class);
   }
@@ -137,14 +137,14 @@ private static final long serialVersionUID = 0L;
   public static final int ORDER_FIELD_NUMBER = 2;
   private int order_;
   /**
-   * <code>.rpc.Order order = 2;</code>
+   * <code>.scalardb.rpc.Order order = 2;</code>
    * @return The enum numeric value on the wire for order.
    */
   @java.lang.Override public int getOrderValue() {
     return order_;
   }
   /**
-   * <code>.rpc.Order order = 2;</code>
+   * <code>.scalardb.rpc.Order order = 2;</code>
    * @return The order.
    */
   @java.lang.Override public com.scalar.db.rpc.Order getOrder() {
@@ -318,21 +318,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code rpc.Ordering}
+   * Protobuf type {@code scalardb.rpc.Ordering}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:rpc.Ordering)
+      // @@protoc_insertion_point(builder_implements:scalardb.rpc.Ordering)
       com.scalar.db.rpc.OrderingOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Ordering_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Ordering_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Ordering_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Ordering_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.Ordering.class, com.scalar.db.rpc.Ordering.Builder.class);
     }
@@ -365,7 +365,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Ordering_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Ordering_descriptor;
     }
 
     @java.lang.Override
@@ -549,14 +549,14 @@ private static final long serialVersionUID = 0L;
 
     private int order_ = 0;
     /**
-     * <code>.rpc.Order order = 2;</code>
+     * <code>.scalardb.rpc.Order order = 2;</code>
      * @return The enum numeric value on the wire for order.
      */
     @java.lang.Override public int getOrderValue() {
       return order_;
     }
     /**
-     * <code>.rpc.Order order = 2;</code>
+     * <code>.scalardb.rpc.Order order = 2;</code>
      * @param value The enum numeric value on the wire for order to set.
      * @return This builder for chaining.
      */
@@ -567,7 +567,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Order order = 2;</code>
+     * <code>.scalardb.rpc.Order order = 2;</code>
      * @return The order.
      */
     @java.lang.Override
@@ -577,7 +577,7 @@ private static final long serialVersionUID = 0L;
       return result == null ? com.scalar.db.rpc.Order.UNRECOGNIZED : result;
     }
     /**
-     * <code>.rpc.Order order = 2;</code>
+     * <code>.scalardb.rpc.Order order = 2;</code>
      * @param value The order to set.
      * @return This builder for chaining.
      */
@@ -591,7 +591,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Order order = 2;</code>
+     * <code>.scalardb.rpc.Order order = 2;</code>
      * @return This builder for chaining.
      */
     public Builder clearOrder() {
@@ -613,10 +613,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:rpc.Ordering)
+    // @@protoc_insertion_point(builder_scope:scalardb.rpc.Ordering)
   }
 
-  // @@protoc_insertion_point(class_scope:rpc.Ordering)
+  // @@protoc_insertion_point(class_scope:scalardb.rpc.Ordering)
   private static final com.scalar.db.rpc.Ordering DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.Ordering();

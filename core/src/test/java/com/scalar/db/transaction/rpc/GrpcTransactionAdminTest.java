@@ -221,12 +221,12 @@ public class GrpcTransactionAdminTest {
     when(response.getTableMetadata())
         .thenReturn(
             com.scalar.db.rpc.TableMetadata.newBuilder()
-                .putColumn("col1", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
-                .putColumn("col2", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
-                .putColumn("col3", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
-                .addPartitionKeyName("col1")
-                .addClusteringKeyName("col2")
-                .putClusteringOrder("col2", com.scalar.db.rpc.Order.ORDER_DESC)
+                .putColumns("col1", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
+                .putColumns("col2", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
+                .putColumns("col3", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
+                .addPartitionKeyNames("col1")
+                .addClusteringKeyNames("col2")
+                .putClusteringOrders("col2", com.scalar.db.rpc.Order.ORDER_DESC)
                 .build());
 
     // Act
@@ -259,7 +259,7 @@ public class GrpcTransactionAdminTest {
     tableNames.add("tbl1");
     tableNames.add("tbl2");
     tableNames.add("tbl3");
-    when(response.getTableNameList()).thenReturn(tableNames);
+    when(response.getTableNamesList()).thenReturn(tableNames);
 
     // Act
     Set<String> results = admin.getNamespaceTableNames(namespace);

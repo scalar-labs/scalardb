@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 public interface AddNewColumnToTableRequestOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.AddNewColumnToTableRequest)
+    // @@protoc_insertion_point(interface_extends:scalardb.rpc.AddNewColumnToTableRequest)
     com.google.protobuf.MessageOrBuilder {
 
   /**
@@ -44,12 +44,12 @@ public interface AddNewColumnToTableRequestOrBuilder extends
       getColumnNameBytes();
 
   /**
-   * <code>.rpc.DataType column_type = 4;</code>
+   * <code>.scalardb.rpc.DataType column_type = 4;</code>
    * @return The enum numeric value on the wire for columnType.
    */
   int getColumnTypeValue();
   /**
-   * <code>.rpc.DataType column_type = 4;</code>
+   * <code>.scalardb.rpc.DataType column_type = 4;</code>
    * @return The columnType.
    */
   com.scalar.db.rpc.DataType getColumnType();

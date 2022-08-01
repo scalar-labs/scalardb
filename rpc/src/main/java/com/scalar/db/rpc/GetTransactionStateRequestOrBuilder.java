@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 public interface GetTransactionStateRequestOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.GetTransactionStateRequest)
+    // @@protoc_insertion_point(interface_extends:scalardb.rpc.GetTransactionStateRequest)
     com.google.protobuf.MessageOrBuilder {
 
   /**

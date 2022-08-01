@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 public interface OrderingOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.Ordering)
+    // @@protoc_insertion_point(interface_extends:scalardb.rpc.Ordering)
     com.google.protobuf.MessageOrBuilder {
 
   /**
@@ -20,12 +20,12 @@ public interface OrderingOrBuilder extends
       getNameBytes();
 
   /**
-   * <code>.rpc.Order order = 2;</code>
+   * <code>.scalardb.rpc.Order order = 2;</code>
    * @return The enum numeric value on the wire for order.
    */
   int getOrderValue();
   /**
-   * <code>.rpc.Order order = 2;</code>
+   * <code>.scalardb.rpc.Order order = 2;</code>
    * @return The order.
    */
   com.scalar.db.rpc.Order getOrder();

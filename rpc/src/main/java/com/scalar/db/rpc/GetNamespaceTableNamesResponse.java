@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code rpc.GetNamespaceTableNamesResponse}
+ * Protobuf type {@code scalardb.rpc.GetNamespaceTableNamesResponse}
  */
 public final class GetNamespaceTableNamesResponse extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:rpc.GetNamespaceTableNamesResponse)
+    // @@protoc_insertion_point(message_implements:scalardb.rpc.GetNamespaceTableNamesResponse)
     GetNamespaceTableNamesResponseOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use GetNamespaceTableNamesResponse.newBuilder() to construct.
@@ -16,7 +16,7 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private GetNamespaceTableNamesResponse() {
-    tableName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    tableNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
   }
 
   @java.lang.Override
@@ -53,10 +53,10 @@ private static final long serialVersionUID = 0L;
           case 10: {
             java.lang.String s = input.readStringRequireUtf8();
             if (!((mutable_bitField0_ & 0x00000001) != 0)) {
-              tableName_ = new com.google.protobuf.LazyStringArrayList();
+              tableNames_ = new com.google.protobuf.LazyStringArrayList();
               mutable_bitField0_ |= 0x00000001;
             }
-            tableName_.add(s);
+            tableNames_.add(s);
             break;
           }
           default: {
@@ -77,7 +77,7 @@ private static final long serialVersionUID = 0L;
           e).setUnfinishedMessage(this);
     } finally {
       if (((mutable_bitField0_ & 0x00000001) != 0)) {
-        tableName_ = tableName_.getUnmodifiableView();
+        tableNames_ = tableNames_.getUnmodifiableView();
       }
       this.unknownFields = unknownFields.build();
       makeExtensionsImmutable();
@@ -85,50 +85,50 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetNamespaceTableNamesResponse_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetNamespaceTableNamesResponse_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetNamespaceTableNamesResponse_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetNamespaceTableNamesResponse_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.GetNamespaceTableNamesResponse.class, com.scalar.db.rpc.GetNamespaceTableNamesResponse.Builder.class);
   }
 
-  public static final int TABLE_NAME_FIELD_NUMBER = 1;
-  private com.google.protobuf.LazyStringList tableName_;
+  public static final int TABLE_NAMES_FIELD_NUMBER = 1;
+  private com.google.protobuf.LazyStringList tableNames_;
   /**
-   * <code>repeated string table_name = 1;</code>
-   * @return A list containing the tableName.
+   * <code>repeated string table_names = 1;</code>
+   * @return A list containing the tableNames.
    */
   public com.google.protobuf.ProtocolStringList
-      getTableNameList() {
-    return tableName_;
+      getTableNamesList() {
+    return tableNames_;
   }
   /**
-   * <code>repeated string table_name = 1;</code>
-   * @return The count of tableName.
+   * <code>repeated string table_names = 1;</code>
+   * @return The count of tableNames.
    */
-  public int getTableNameCount() {
-    return tableName_.size();
+  public int getTableNamesCount() {
+    return tableNames_.size();
   }
   /**
-   * <code>repeated string table_name = 1;</code>
+   * <code>repeated string table_names = 1;</code>
    * @param index The index of the element to return.
-   * @return The tableName at the given index.
+   * @return The tableNames at the given index.
    */
-  public java.lang.String getTableName(int index) {
-    return tableName_.get(index);
+  public java.lang.String getTableNames(int index) {
+    return tableNames_.get(index);
   }
   /**
-   * <code>repeated string table_name = 1;</code>
+   * <code>repeated string table_names = 1;</code>
    * @param index The index of the value to return.
-   * @return The bytes of the tableName at the given index.
+   * @return The bytes of the tableNames at the given index.
    */
   public com.google.protobuf.ByteString
-      getTableNameBytes(int index) {
-    return tableName_.getByteString(index);
+      getTableNamesBytes(int index) {
+    return tableNames_.getByteString(index);
   }
 
   private byte memoizedIsInitialized = -1;
@@ -145,8 +145,8 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    for (int i = 0; i < tableName_.size(); i++) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 1, tableName_.getRaw(i));
+    for (int i = 0; i < tableNames_.size(); i++) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 1, tableNames_.getRaw(i));
     }
     unknownFields.writeTo(output);
   }
@@ -159,11 +159,11 @@ private static final long serialVersionUID = 0L;
     size = 0;
     {
       int dataSize = 0;
-      for (int i = 0; i < tableName_.size(); i++) {
-        dataSize += computeStringSizeNoTag(tableName_.getRaw(i));
+      for (int i = 0; i < tableNames_.size(); i++) {
+        dataSize += computeStringSizeNoTag(tableNames_.getRaw(i));
       }
       size += dataSize;
-      size += 1 * getTableNameList().size();
+      size += 1 * getTableNamesList().size();
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -180,8 +180,8 @@ private static final long serialVersionUID = 0L;
     }
     com.scalar.db.rpc.GetNamespaceTableNamesResponse other = (com.scalar.db.rpc.GetNamespaceTableNamesResponse) obj;
 
-    if (!getTableNameList()
-        .equals(other.getTableNameList())) return false;
+    if (!getTableNamesList()
+        .equals(other.getTableNamesList())) return false;
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -193,9 +193,9 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    if (getTableNameCount() > 0) {
-      hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
-      hash = (53 * hash) + getTableNameList().hashCode();
+    if (getTableNamesCount() > 0) {
+      hash = (37 * hash) + TABLE_NAMES_FIELD_NUMBER;
+      hash = (53 * hash) + getTableNamesList().hashCode();
     }
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
@@ -293,21 +293,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code rpc.GetNamespaceTableNamesResponse}
+   * Protobuf type {@code scalardb.rpc.GetNamespaceTableNamesResponse}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:rpc.GetNamespaceTableNamesResponse)
+      // @@protoc_insertion_point(builder_implements:scalardb.rpc.GetNamespaceTableNamesResponse)
       com.scalar.db.rpc.GetNamespaceTableNamesResponseOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetNamespaceTableNamesResponse_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetNamespaceTableNamesResponse_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetNamespaceTableNamesResponse_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetNamespaceTableNamesResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.GetNamespaceTableNamesResponse.class, com.scalar.db.rpc.GetNamespaceTableNamesResponse.Builder.class);
     }
@@ -330,7 +330,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
-      tableName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      tableNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       bitField0_ = (bitField0_ & ~0x00000001);
       return this;
     }
@@ -338,7 +338,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetNamespaceTableNamesResponse_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetNamespaceTableNamesResponse_descriptor;
     }
 
     @java.lang.Override
@@ -360,10 +360,10 @@ private static final long serialVersionUID = 0L;
       com.scalar.db.rpc.GetNamespaceTableNamesResponse result = new com.scalar.db.rpc.GetNamespaceTableNamesResponse(this);
       int from_bitField0_ = bitField0_;
       if (((bitField0_ & 0x00000001) != 0)) {
-        tableName_ = tableName_.getUnmodifiableView();
+        tableNames_ = tableNames_.getUnmodifiableView();
         bitField0_ = (bitField0_ & ~0x00000001);
       }
-      result.tableName_ = tableName_;
+      result.tableNames_ = tableNames_;
       onBuilt();
       return result;
     }
@@ -412,13 +412,13 @@ private static final long serialVersionUID = 0L;
 
     public Builder mergeFrom(com.scalar.db.rpc.GetNamespaceTableNamesResponse other) {
       if (other == com.scalar.db.rpc.GetNamespaceTableNamesResponse.getDefaultInstance()) return this;
-      if (!other.tableName_.isEmpty()) {
-        if (tableName_.isEmpty()) {
-          tableName_ = other.tableName_;
+      if (!other.tableNames_.isEmpty()) {
+        if (tableNames_.isEmpty()) {
+          tableNames_ = other.tableNames_;
           bitField0_ = (bitField0_ & ~0x00000001);
         } else {
-          ensureTableNameIsMutable();
-          tableName_.addAll(other.tableName_);
+          ensureTableNamesIsMutable();
+          tableNames_.addAll(other.tableNames_);
         }
         onChanged();
       }
@@ -452,112 +452,112 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private com.google.protobuf.LazyStringList tableName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-    private void ensureTableNameIsMutable() {
+    private com.google.protobuf.LazyStringList tableNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    private void ensureTableNamesIsMutable() {
       if (!((bitField0_ & 0x00000001) != 0)) {
-        tableName_ = new com.google.protobuf.LazyStringArrayList(tableName_);
+        tableNames_ = new com.google.protobuf.LazyStringArrayList(tableNames_);
         bitField0_ |= 0x00000001;
        }
     }
     /**
-     * <code>repeated string table_name = 1;</code>
-     * @return A list containing the tableName.
+     * <code>repeated string table_names = 1;</code>
+     * @return A list containing the tableNames.
      */
     public com.google.protobuf.ProtocolStringList
-        getTableNameList() {
-      return tableName_.getUnmodifiableView();
+        getTableNamesList() {
+      return tableNames_.getUnmodifiableView();
     }
     /**
-     * <code>repeated string table_name = 1;</code>
-     * @return The count of tableName.
+     * <code>repeated string table_names = 1;</code>
+     * @return The count of tableNames.
      */
-    public int getTableNameCount() {
-      return tableName_.size();
+    public int getTableNamesCount() {
+      return tableNames_.size();
     }
     /**
-     * <code>repeated string table_name = 1;</code>
+     * <code>repeated string table_names = 1;</code>
      * @param index The index of the element to return.
-     * @return The tableName at the given index.
+     * @return The tableNames at the given index.
      */
-    public java.lang.String getTableName(int index) {
-      return tableName_.get(index);
+    public java.lang.String getTableNames(int index) {
+      return tableNames_.get(index);
     }
     /**
-     * <code>repeated string table_name = 1;</code>
+     * <code>repeated string table_names = 1;</code>
      * @param index The index of the value to return.
-     * @return The bytes of the tableName at the given index.
+     * @return The bytes of the tableNames at the given index.
      */
     public com.google.protobuf.ByteString
-        getTableNameBytes(int index) {
-      return tableName_.getByteString(index);
+        getTableNamesBytes(int index) {
+      return tableNames_.getByteString(index);
     }
     /**
-     * <code>repeated string table_name = 1;</code>
+     * <code>repeated string table_names = 1;</code>
      * @param index The index to set the value at.
-     * @param value The tableName to set.
+     * @param value The tableNames to set.
      * @return This builder for chaining.
      */
-    public Builder setTableName(
+    public Builder setTableNames(
         int index, java.lang.String value) {
       if (value == null) {
     throw new NullPointerException();
   }
-  ensureTableNameIsMutable();
-      tableName_.set(index, value);
+  ensureTableNamesIsMutable();
+      tableNames_.set(index, value);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string table_name = 1;</code>
-     * @param value The tableName to add.
+     * <code>repeated string table_names = 1;</code>
+     * @param value The tableNames to add.
      * @return This builder for chaining.
      */
-    public Builder addTableName(
+    public Builder addTableNames(
         java.lang.String value) {
       if (value == null) {
     throw new NullPointerException();
   }
-  ensureTableNameIsMutable();
-      tableName_.add(value);
+  ensureTableNamesIsMutable();
+      tableNames_.add(value);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string table_name = 1;</code>
-     * @param values The tableName to add.
+     * <code>repeated string table_names = 1;</code>
+     * @param values The tableNames to add.
      * @return This builder for chaining.
      */
-    public Builder addAllTableName(
+    public Builder addAllTableNames(
         java.lang.Iterable<java.lang.String> values) {
-      ensureTableNameIsMutable();
+      ensureTableNamesIsMutable();
       com.google.protobuf.AbstractMessageLite.Builder.addAll(
-          values, tableName_);
+          values, tableNames_);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string table_name = 1;</code>
+     * <code>repeated string table_names = 1;</code>
      * @return This builder for chaining.
      */
-    public Builder clearTableName() {
-      tableName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    public Builder clearTableNames() {
+      tableNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       bitField0_ = (bitField0_ & ~0x00000001);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string table_name = 1;</code>
-     * @param value The bytes of the tableName to add.
+     * <code>repeated string table_names = 1;</code>
+     * @param value The bytes of the tableNames to add.
      * @return This builder for chaining.
      */
-    public Builder addTableNameBytes(
+    public Builder addTableNamesBytes(
         com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
   checkByteStringIsUtf8(value);
-      ensureTableNameIsMutable();
-      tableName_.add(value);
+      ensureTableNamesIsMutable();
+      tableNames_.add(value);
       onChanged();
       return this;
     }
@@ -574,10 +574,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:rpc.GetNamespaceTableNamesResponse)
+    // @@protoc_insertion_point(builder_scope:scalardb.rpc.GetNamespaceTableNamesResponse)
   }
 
-  // @@protoc_insertion_point(class_scope:rpc.GetNamespaceTableNamesResponse)
+  // @@protoc_insertion_point(class_scope:scalardb.rpc.GetNamespaceTableNamesResponse)
   private static final com.scalar.db.rpc.GetNamespaceTableNamesResponse DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.GetNamespaceTableNamesResponse();

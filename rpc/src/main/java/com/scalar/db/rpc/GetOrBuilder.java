@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 public interface GetOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.Get)
+    // @@protoc_insertion_point(interface_extends:scalardb.rpc.Get)
     com.google.protobuf.MessageOrBuilder {
 
   /**
@@ -32,68 +32,68 @@ public interface GetOrBuilder extends
       getTableBytes();
 
   /**
-   * <code>.rpc.Key partition_key = 3;</code>
+   * <code>.scalardb.rpc.Key partition_key = 3;</code>
    * @return Whether the partitionKey field is set.
    */
   boolean hasPartitionKey();
   /**
-   * <code>.rpc.Key partition_key = 3;</code>
+   * <code>.scalardb.rpc.Key partition_key = 3;</code>
    * @return The partitionKey.
    */
   com.scalar.db.rpc.Key getPartitionKey();
   /**
-   * <code>.rpc.Key partition_key = 3;</code>
+   * <code>.scalardb.rpc.Key partition_key = 3;</code>
    */
   com.scalar.db.rpc.KeyOrBuilder getPartitionKeyOrBuilder();
 
   /**
-   * <code>.rpc.Key clustering_key = 4;</code>
+   * <code>.scalardb.rpc.Key clustering_key = 4;</code>
    * @return Whether the clusteringKey field is set.
    */
   boolean hasClusteringKey();
   /**
-   * <code>.rpc.Key clustering_key = 4;</code>
+   * <code>.scalardb.rpc.Key clustering_key = 4;</code>
    * @return The clusteringKey.
    */
   com.scalar.db.rpc.Key getClusteringKey();
   /**
-   * <code>.rpc.Key clustering_key = 4;</code>
+   * <code>.scalardb.rpc.Key clustering_key = 4;</code>
    */
   com.scalar.db.rpc.KeyOrBuilder getClusteringKeyOrBuilder();
 
   /**
-   * <code>.rpc.Consistency consistency = 5;</code>
+   * <code>.scalardb.rpc.Consistency consistency = 5;</code>
    * @return The enum numeric value on the wire for consistency.
    */
   int getConsistencyValue();
   /**
-   * <code>.rpc.Consistency consistency = 5;</code>
+   * <code>.scalardb.rpc.Consistency consistency = 5;</code>
    * @return The consistency.
    */
   com.scalar.db.rpc.Consistency getConsistency();
 
   /**
-   * <code>repeated string projection = 6;</code>
-   * @return A list containing the projection.
+   * <code>repeated string projections = 6;</code>
+   * @return A list containing the projections.
    */
   java.util.List<java.lang.String>
-      getProjectionList();
+      getProjectionsList();
   /**
-   * <code>repeated string projection = 6;</code>
-   * @return The count of projection.
+   * <code>repeated string projections = 6;</code>
+   * @return The count of projections.
    */
-  int getProjectionCount();
+  int getProjectionsCount();
   /**
-   * <code>repeated string projection = 6;</code>
+   * <code>repeated string projections = 6;</code>
    * @param index The index of the element to return.
-   * @return The projection at the given index.
+   * @return The projections at the given index.
    */
-  java.lang.String getProjection(int index);
+  java.lang.String getProjections(int index);
   /**
-   * <code>repeated string projection = 6;</code>
+   * <code>repeated string projections = 6;</code>
    * @param index The index of the value to return.
-   * @return The bytes of the projection at the given index.
+   * @return The bytes of the projections at the given index.
    */
   com.google.protobuf.ByteString
-      getProjectionBytes(int index);
+      getProjectionsBytes(int index);
 }

@@ -5,20 +5,22 @@ import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DeleteBuilder;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.GetWithIndex;
+import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
-import com.scalar.db.api.ScanWithIndex;
+import com.scalar.db.api.ScanBuilder;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
@@ -32,8 +34,6 @@ import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
-import com.scalar.db.rpc.MutateCondition;
-import com.scalar.db.rpc.Order;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -42,28 +42,27 @@ public final class ProtoUtils {
   private ProtoUtils() {}
 
   public static Get toGet(com.scalar.db.rpc.Get get, TableMetadata metadata) {
-    Get ret;
+    GetBuilder.PartitionKeyOrIndexKey partitionKeyOrIndexKeyBuilder =
+        Get.newBuilder().namespace(get.getNamespace()).table(get.getTable());
 
-    Key partitionKey = toKey(get.getPartitionKey(), metadata);
-    if (isIndexKey(partitionKey, metadata)) {
-      ret = new GetWithIndex(partitionKey);
+    Key partitionKeyOrIndexKey = toKey(get.getPartitionKey(), metadata);
+    if (isIndexKey(partitionKeyOrIndexKey, metadata)) {
+      return partitionKeyOrIndexKeyBuilder
+          .indexKey(partitionKeyOrIndexKey)
+          .consistency(toConsistency(get.getConsistency()))
+          .projections(get.getProjectionsList())
+          .build();
     } else {
-      Key clusteringKey = null;
+      GetBuilder.BuildableGet buildableGet =
+          partitionKeyOrIndexKeyBuilder.partitionKey(partitionKeyOrIndexKey);
       if (get.hasClusteringKey()) {
-        clusteringKey = toKey(get.getClusteringKey(), metadata);
+        buildableGet = buildableGet.clusteringKey(toKey(get.getClusteringKey(), metadata));
       }
-      ret = new Get(partitionKey, clusteringKey);
+      return buildableGet
+          .consistency(toConsistency(get.getConsistency()))
+          .projections(get.getProjectionsList())
+          .build();
     }
-
-    if (!get.getNamespace().isEmpty()) {
-      ret.forNamespace(get.getNamespace());
-    }
-    if (!get.getTable().isEmpty()) {
-      ret.forTable(get.getTable());
-    }
-    ret.withConsistency(toConsistency(get.getConsistency()));
-    ret.withProjections(get.getProjectionList());
-    return ret;
   }
 
   public static com.scalar.db.rpc.Get toGet(Get get) {
@@ -74,7 +73,7 @@ public final class ProtoUtils {
     get.forTable().ifPresent(builder::setTable);
     return builder
         .setConsistency(toConsistency(get.getConsistency()))
-        .addAllProjection(get.getProjections())
+        .addAllProjections(get.getProjections())
         .build();
   }
 
@@ -85,7 +84,7 @@ public final class ProtoUtils {
     if (!key.getValueList().isEmpty()) {
       key.getValueList().forEach(v -> builder.add(toColumn(v.getName(), v)));
     } else {
-      key.getColumnList().forEach(c -> builder.add(toColumn(c, metadata)));
+      key.getColumnsList().forEach(c -> builder.add(toColumn(c, metadata)));
     }
 
     return builder.build();
@@ -93,7 +92,7 @@ public final class ProtoUtils {
 
   private static com.scalar.db.rpc.Key toKey(Key key) {
     com.scalar.db.rpc.Key.Builder builder = com.scalar.db.rpc.Key.newBuilder();
-    key.getColumns().forEach(c -> builder.addColumn(toColumn(c)));
+    key.getColumns().forEach(c -> builder.addColumns(toColumn(c)));
     return builder.build();
   }
 
@@ -199,6 +198,8 @@ public final class ProtoUtils {
         } else {
           return BlobColumn.ofNull(columnName);
         }
+      case VALUE_NOT_SET:
+        throw new IllegalArgumentException("the value is not set");
       default:
         throw new AssertionError();
     }
@@ -255,6 +256,8 @@ public final class ProtoUtils {
         return Consistency.EVENTUAL;
       case CONSISTENCY_LINEARIZABLE:
         return Consistency.LINEARIZABLE;
+      case UNRECOGNIZED:
+        throw new IllegalArgumentException("the consistency is not set");
       default:
         throw new AssertionError();
     }
@@ -274,35 +277,48 @@ public final class ProtoUtils {
   }
 
   public static Scan toScan(com.scalar.db.rpc.Scan scan, TableMetadata metadata) {
-    Scan ret;
+    ScanBuilder.PartitionKeyOrIndexKeyOrAll partitionKeyOrIndexKeyOrAll =
+        Scan.newBuilder().namespace(scan.getNamespace()).table(scan.getTable());
+
     if (scan.hasPartitionKey()) {
-      Key partitionKey = toKey(scan.getPartitionKey(), metadata);
-      if (isIndexKey(partitionKey, metadata)) {
-        ret = new ScanWithIndex(partitionKey);
+      Key partitionKeyOrIndexKey = toKey(scan.getPartitionKey(), metadata);
+      if (isIndexKey(partitionKeyOrIndexKey, metadata)) {
+        return partitionKeyOrIndexKeyOrAll
+            .indexKey(partitionKeyOrIndexKey)
+            .limit(scan.getLimit())
+            .consistency(toConsistency(scan.getConsistency()))
+            .projections(scan.getProjectionsList())
+            .build();
       } else {
-        ret = new Scan(partitionKey);
+        ScanBuilder.BuildableScan buildableScan =
+            partitionKeyOrIndexKeyOrAll.partitionKey(partitionKeyOrIndexKey);
         if (scan.hasStartClusteringKey()) {
-          ret.withStart(toKey(scan.getStartClusteringKey(), metadata), scan.getStartInclusive());
+          buildableScan =
+              buildableScan.start(
+                  toKey(scan.getStartClusteringKey(), metadata), scan.getStartInclusive());
         }
         if (scan.hasEndClusteringKey()) {
-          ret.withEnd(toKey(scan.getEndClusteringKey(), metadata), scan.getEndInclusive());
+          buildableScan =
+              buildableScan.end(
+                  toKey(scan.getEndClusteringKey(), metadata), scan.getEndInclusive());
         }
-        scan.getOrderingList().forEach(o -> ret.withOrdering(toOrdering(o)));
+        for (com.scalar.db.rpc.Ordering ordering : scan.getOrderingsList()) {
+          buildableScan = buildableScan.ordering(toOrdering(ordering));
+        }
+        return buildableScan
+            .limit(scan.getLimit())
+            .consistency(toConsistency(scan.getConsistency()))
+            .projections(scan.getProjectionsList())
+            .build();
       }
     } else {
-      ret = new ScanAll();
+      return partitionKeyOrIndexKeyOrAll
+          .all()
+          .limit(scan.getLimit())
+          .consistency(toConsistency(scan.getConsistency()))
+          .projections(scan.getProjectionsList())
+          .build();
     }
-
-    ret.withLimit(scan.getLimit());
-    if (!scan.getNamespace().isEmpty()) {
-      ret.forNamespace(scan.getNamespace());
-    }
-    if (!scan.getTable().isEmpty()) {
-      ret.forTable(scan.getTable());
-    }
-    ret.withConsistency(toConsistency(scan.getConsistency()));
-    ret.withProjections(scan.getProjectionList());
-    return ret;
   }
 
   private static boolean isIndexKey(Key key, TableMetadata metadata) {
@@ -328,7 +344,7 @@ public final class ProtoUtils {
       scan.getEndClusteringKey()
           .ifPresent(
               k -> builder.setEndClusteringKey(toKey(k)).setEndInclusive(scan.getEndInclusive()));
-      scan.getOrderings().forEach(o -> builder.addOrdering(toOrdering(o)));
+      scan.getOrderings().forEach(o -> builder.addOrderings(toOrdering(o)));
     }
 
     builder.setLimit(scan.getLimit());
@@ -336,7 +352,7 @@ public final class ProtoUtils {
     scan.forTable().ifPresent(builder::setTable);
     return builder
         .setConsistency(toConsistency(scan.getConsistency()))
-        .addAllProjection(scan.getProjections())
+        .addAllProjections(scan.getProjections())
         .build();
   }
 
@@ -346,6 +362,8 @@ public final class ProtoUtils {
         return Scan.Ordering.asc(ordering.getName());
       case ORDER_DESC:
         return Scan.Ordering.desc(ordering.getName());
+      case UNRECOGNIZED:
+        throw new IllegalArgumentException("the order is unrecognized");
       default:
         throw new AssertionError();
     }
@@ -364,6 +382,8 @@ public final class ProtoUtils {
         return Scan.Ordering.Order.ASC;
       case ORDER_DESC:
         return Scan.Ordering.Order.DESC;
+      case UNRECOGNIZED:
+        throw new IllegalArgumentException("the order is unrecognized");
       default:
         throw new AssertionError();
     }
@@ -389,32 +409,41 @@ public final class ProtoUtils {
       clusteringKey = null;
     }
 
-    Mutation ret;
     if (mutation.getType() == com.scalar.db.rpc.Mutation.Type.PUT) {
-      Put put = new Put(partitionKey, clusteringKey);
+      PutBuilder.Buildable buildable =
+          Put.newBuilder()
+              .namespace(mutation.getNamespace())
+              .table(mutation.getTable())
+              .partitionKey(partitionKey);
+      if (mutation.hasClusteringKey()) {
+        buildable.clusteringKey(clusteringKey);
+      }
 
       // For backward compatibility
       if (!mutation.getValueList().isEmpty()) {
-        mutation.getValueList().forEach(v -> put.withValue(toColumn(v.getName(), v)));
+        mutation.getValueList().forEach(v -> buildable.value(toColumn(v.getName(), v)));
       } else {
-        mutation.getColumnList().forEach(c -> put.withValue(toColumn(c, metadata)));
+        mutation.getColumnsList().forEach(c -> buildable.value(toColumn(c, metadata)));
       }
 
-      ret = put;
+      if (mutation.hasCondition()) {
+        buildable.condition(toCondition(mutation.getCondition(), metadata));
+      }
+      return buildable.consistency(toConsistency(mutation.getConsistency())).build();
     } else {
-      ret = new Delete(partitionKey, clusteringKey);
+      DeleteBuilder.Buildable buildable =
+          Delete.newBuilder()
+              .namespace(mutation.getNamespace())
+              .table(mutation.getTable())
+              .partitionKey(partitionKey);
+      if (mutation.hasClusteringKey()) {
+        buildable.clusteringKey(clusteringKey);
+      }
+      if (mutation.hasCondition()) {
+        buildable.condition(toCondition(mutation.getCondition(), metadata));
+      }
+      return buildable.consistency(toConsistency(mutation.getConsistency())).build();
     }
-    if (!mutation.getNamespace().isEmpty()) {
-      ret.forNamespace(mutation.getNamespace());
-    }
-    if (!mutation.getTable().isEmpty()) {
-      ret.forTable(mutation.getTable());
-    }
-    ret.withConsistency(toConsistency(mutation.getConsistency()));
-    if (mutation.hasCondition()) {
-      ret.withCondition(toCondition(mutation.getCondition(), metadata));
-    }
-    return ret;
   }
 
   public static com.scalar.db.rpc.Mutation toMutation(Mutation mutation) {
@@ -423,7 +452,7 @@ public final class ProtoUtils {
     mutation.getClusteringKey().ifPresent(k -> builder.setClusteringKey(toKey(k)));
     if (mutation instanceof Put) {
       builder.setType(com.scalar.db.rpc.Mutation.Type.PUT);
-      ((Put) mutation).getColumns().values().forEach(c -> builder.addColumn(toColumn(c)));
+      ((Put) mutation).getColumns().values().forEach(c -> builder.addColumns(toColumn(c)));
     } else {
       builder.setType(com.scalar.db.rpc.Mutation.Type.DELETE);
     }
@@ -439,7 +468,7 @@ public final class ProtoUtils {
     switch (condition.getType()) {
       case PUT_IF:
         return ConditionBuilder.putIf(
-            condition.getExpressionList().stream()
+            condition.getExpressionsList().stream()
                 .map(e -> toExpression(e, metadata))
                 .collect(Collectors.toList()));
       case PUT_IF_EXISTS:
@@ -448,11 +477,13 @@ public final class ProtoUtils {
         return ConditionBuilder.putIfNotExists();
       case DELETE_IF:
         return ConditionBuilder.deleteIf(
-            condition.getExpressionList().stream()
+            condition.getExpressionsList().stream()
                 .map(e -> toExpression(e, metadata))
                 .collect(Collectors.toList()));
       case DELETE_IF_EXISTS:
         return ConditionBuilder.deleteIfExists();
+      case UNRECOGNIZED:
+        throw new IllegalArgumentException("the condition type is unrecognized");
       default:
         throw new AssertionError();
     }
@@ -460,9 +491,10 @@ public final class ProtoUtils {
 
   private static com.scalar.db.rpc.MutateCondition toCondition(MutationCondition condition) {
     if (condition instanceof PutIf) {
-      MutateCondition.Builder builder =
-          MutateCondition.newBuilder().setType(com.scalar.db.rpc.MutateCondition.Type.PUT_IF);
-      condition.getExpressions().forEach(e -> builder.addExpression(toExpression(e)));
+      com.scalar.db.rpc.MutateCondition.Builder builder =
+          com.scalar.db.rpc.MutateCondition.newBuilder()
+              .setType(com.scalar.db.rpc.MutateCondition.Type.PUT_IF);
+      condition.getExpressions().forEach(e -> builder.addExpressions(toExpression(e)));
       return builder.build();
     } else if (condition instanceof PutIfExists) {
       return com.scalar.db.rpc.MutateCondition.newBuilder()
@@ -473,9 +505,10 @@ public final class ProtoUtils {
           .setType(com.scalar.db.rpc.MutateCondition.Type.PUT_IF_NOT_EXISTS)
           .build();
     } else if (condition instanceof DeleteIf) {
-      MutateCondition.Builder builder =
-          MutateCondition.newBuilder().setType(com.scalar.db.rpc.MutateCondition.Type.DELETE_IF);
-      condition.getExpressions().forEach(e -> builder.addExpression(toExpression(e)));
+      com.scalar.db.rpc.MutateCondition.Builder builder =
+          com.scalar.db.rpc.MutateCondition.newBuilder()
+              .setType(com.scalar.db.rpc.MutateCondition.Type.DELETE_IF);
+      condition.getExpressions().forEach(e -> builder.addExpressions(toExpression(e)));
       return builder.build();
     } else if (condition instanceof DeleteIfExists) {
       return com.scalar.db.rpc.MutateCondition.newBuilder()
@@ -526,6 +559,8 @@ public final class ProtoUtils {
         return ConditionalExpression.Operator.IS_NULL;
       case IS_NOT_NULL:
         return ConditionalExpression.Operator.IS_NOT_NULL;
+      case UNRECOGNIZED:
+        throw new IllegalArgumentException("the condition operator is unrecognized");
       default:
         throw new AssertionError();
     }
@@ -557,7 +592,7 @@ public final class ProtoUtils {
 
   public static Result toResult(com.scalar.db.rpc.Result result, TableMetadata metadata) {
     Map<String, Column<?>> columns =
-        result.getColumnList().stream()
+        result.getColumnsList().stream()
             .collect(
                 Collectors.toMap(com.scalar.db.rpc.Column::getName, c -> toColumn(c, metadata)));
     return new ResultImpl(columns, metadata);
@@ -565,7 +600,7 @@ public final class ProtoUtils {
 
   public static com.scalar.db.rpc.Result toResult(Result result) {
     com.scalar.db.rpc.Result.Builder builder = com.scalar.db.rpc.Result.newBuilder();
-    result.getColumns().values().forEach(c -> builder.addColumn(toColumn(c)));
+    result.getColumns().values().forEach(c -> builder.addColumns(toColumn(c)));
     return builder.build();
   }
 
@@ -617,13 +652,14 @@ public final class ProtoUtils {
 
   public static TableMetadata toTableMetadata(com.scalar.db.rpc.TableMetadata tableMetadata) {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
-    tableMetadata.getColumnMap().forEach((n, t) -> builder.addColumn(n, toDataType(t)));
-    tableMetadata.getPartitionKeyNameList().forEach(builder::addPartitionKey);
-    Map<String, Order> clusteringOrderMap = tableMetadata.getClusteringOrderMap();
+    tableMetadata.getColumnsMap().forEach((n, t) -> builder.addColumn(n, toDataType(t)));
+    tableMetadata.getPartitionKeyNamesList().forEach(builder::addPartitionKey);
+    Map<String, com.scalar.db.rpc.Order> clusteringOrderMap =
+        tableMetadata.getClusteringOrdersMap();
     tableMetadata
-        .getClusteringKeyNameList()
+        .getClusteringKeyNamesList()
         .forEach(n -> builder.addClusteringKey(n, toOrder(clusteringOrderMap.get(n))));
-    tableMetadata.getSecondaryIndexNameList().forEach(builder::addSecondaryIndex);
+    tableMetadata.getSecondaryIndexNamesList().forEach(builder::addSecondaryIndex);
     return builder.build();
   }
 
@@ -631,16 +667,16 @@ public final class ProtoUtils {
     com.scalar.db.rpc.TableMetadata.Builder builder = com.scalar.db.rpc.TableMetadata.newBuilder();
     tableMetadata
         .getColumnNames()
-        .forEach(n -> builder.putColumn(n, toDataType(tableMetadata.getColumnDataType(n))));
-    tableMetadata.getPartitionKeyNames().forEach(builder::addPartitionKeyName);
+        .forEach(n -> builder.putColumns(n, toDataType(tableMetadata.getColumnDataType(n))));
+    tableMetadata.getPartitionKeyNames().forEach(builder::addPartitionKeyNames);
     tableMetadata
         .getClusteringKeyNames()
         .forEach(
             n -> {
-              builder.addClusteringKeyName(n);
-              builder.putClusteringOrder(n, toOrder(tableMetadata.getClusteringOrder(n)));
+              builder.addClusteringKeyNames(n);
+              builder.putClusteringOrders(n, toOrder(tableMetadata.getClusteringOrder(n)));
             });
-    tableMetadata.getSecondaryIndexNames().forEach(builder::addSecondaryIndexName);
+    tableMetadata.getSecondaryIndexNames().forEach(builder::addSecondaryIndexNames);
     return builder.build();
   }
 
@@ -660,6 +696,8 @@ public final class ProtoUtils {
         return DataType.TEXT;
       case DATA_TYPE_BLOB:
         return DataType.BLOB;
+      case UNRECOGNIZED:
+        throw new IllegalArgumentException("the data type is unrecognized");
       default:
         throw new AssertionError();
     }
@@ -707,6 +745,8 @@ public final class ProtoUtils {
         return TransactionState.ABORTED;
       case TRANSACTION_STATE_UNKNOWN:
         return TransactionState.UNKNOWN;
+      case UNRECOGNIZED:
+        throw new IllegalArgumentException("the transaction state is unrecognized");
       default:
         throw new AssertionError();
     }

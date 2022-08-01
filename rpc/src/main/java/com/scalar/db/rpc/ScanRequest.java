@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code rpc.ScanRequest}
+ * Protobuf type {@code scalardb.rpc.ScanRequest}
  */
 public final class ScanRequest extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:rpc.ScanRequest)
+    // @@protoc_insertion_point(message_implements:scalardb.rpc.ScanRequest)
     ScanRequestOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use ScanRequest.newBuilder() to construct.
@@ -90,13 +90,13 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ScanRequest_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_ScanRequest_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ScanRequest_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_ScanRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.ScanRequest.class, com.scalar.db.rpc.ScanRequest.Builder.class);
   }
@@ -105,7 +105,7 @@ private static final long serialVersionUID = 0L;
   public static final int SCAN_FIELD_NUMBER = 1;
   private com.scalar.db.rpc.Scan scan_;
   /**
-   * <code>.rpc.Scan scan = 1;</code>
+   * <code>.scalardb.rpc.Scan scan = 1;</code>
    * @return Whether the scan field is set.
    */
   @java.lang.Override
@@ -113,7 +113,7 @@ private static final long serialVersionUID = 0L;
     return scan_ != null;
   }
   /**
-   * <code>.rpc.Scan scan = 1;</code>
+   * <code>.scalardb.rpc.Scan scan = 1;</code>
    * @return The scan.
    */
   @java.lang.Override
@@ -121,7 +121,7 @@ private static final long serialVersionUID = 0L;
     return scan_ == null ? com.scalar.db.rpc.Scan.getDefaultInstance() : scan_;
   }
   /**
-   * <code>.rpc.Scan scan = 1;</code>
+   * <code>.scalardb.rpc.Scan scan = 1;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.ScanOrBuilder getScanOrBuilder() {
@@ -324,21 +324,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code rpc.ScanRequest}
+   * Protobuf type {@code scalardb.rpc.ScanRequest}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:rpc.ScanRequest)
+      // @@protoc_insertion_point(builder_implements:scalardb.rpc.ScanRequest)
       com.scalar.db.rpc.ScanRequestOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ScanRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_ScanRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ScanRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_ScanRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.ScanRequest.class, com.scalar.db.rpc.ScanRequest.Builder.class);
     }
@@ -375,7 +375,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ScanRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_ScanRequest_descriptor;
     }
 
     @java.lang.Override
@@ -495,14 +495,14 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Scan, com.scalar.db.rpc.Scan.Builder, com.scalar.db.rpc.ScanOrBuilder> scanBuilder_;
     /**
-     * <code>.rpc.Scan scan = 1;</code>
+     * <code>.scalardb.rpc.Scan scan = 1;</code>
      * @return Whether the scan field is set.
      */
     public boolean hasScan() {
       return scanBuilder_ != null || scan_ != null;
     }
     /**
-     * <code>.rpc.Scan scan = 1;</code>
+     * <code>.scalardb.rpc.Scan scan = 1;</code>
      * @return The scan.
      */
     public com.scalar.db.rpc.Scan getScan() {
@@ -513,7 +513,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.rpc.Scan scan = 1;</code>
+     * <code>.scalardb.rpc.Scan scan = 1;</code>
      */
     public Builder setScan(com.scalar.db.rpc.Scan value) {
       if (scanBuilder_ == null) {
@@ -529,7 +529,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Scan scan = 1;</code>
+     * <code>.scalardb.rpc.Scan scan = 1;</code>
      */
     public Builder setScan(
         com.scalar.db.rpc.Scan.Builder builderForValue) {
@@ -543,7 +543,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Scan scan = 1;</code>
+     * <code>.scalardb.rpc.Scan scan = 1;</code>
      */
     public Builder mergeScan(com.scalar.db.rpc.Scan value) {
       if (scanBuilder_ == null) {
@@ -561,7 +561,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Scan scan = 1;</code>
+     * <code>.scalardb.rpc.Scan scan = 1;</code>
      */
     public Builder clearScan() {
       if (scanBuilder_ == null) {
@@ -575,7 +575,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Scan scan = 1;</code>
+     * <code>.scalardb.rpc.Scan scan = 1;</code>
      */
     public com.scalar.db.rpc.Scan.Builder getScanBuilder() {
       
@@ -583,7 +583,7 @@ private static final long serialVersionUID = 0L;
       return getScanFieldBuilder().getBuilder();
     }
     /**
-     * <code>.rpc.Scan scan = 1;</code>
+     * <code>.scalardb.rpc.Scan scan = 1;</code>
      */
     public com.scalar.db.rpc.ScanOrBuilder getScanOrBuilder() {
       if (scanBuilder_ != null) {
@@ -594,7 +594,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.rpc.Scan scan = 1;</code>
+     * <code>.scalardb.rpc.Scan scan = 1;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Scan, com.scalar.db.rpc.Scan.Builder, com.scalar.db.rpc.ScanOrBuilder> 
@@ -661,10 +661,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:rpc.ScanRequest)
+    // @@protoc_insertion_point(builder_scope:scalardb.rpc.ScanRequest)
   }
 
-  // @@protoc_insertion_point(class_scope:rpc.ScanRequest)
+  // @@protoc_insertion_point(class_scope:scalardb.rpc.ScanRequest)
   private static final com.scalar.db.rpc.ScanRequest DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.ScanRequest();

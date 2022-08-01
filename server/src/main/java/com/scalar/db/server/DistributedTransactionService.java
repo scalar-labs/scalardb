@@ -324,9 +324,9 @@ public class DistributedTransactionService
 
             // For backward compatibility
             if (ProtoUtils.isRequestFromOldClient(request.getScan())) {
-              results.forEach(r -> builder.addResult(ProtoUtils.toResultWithValue(r)));
+              results.forEach(r -> builder.addResults(ProtoUtils.toResultWithValue(r)));
             } else {
-              results.forEach(r -> builder.addResult(ProtoUtils.toResult(r)));
+              results.forEach(r -> builder.addResults(ProtoUtils.toResult(r)));
             }
 
             responseBuilder.setScanResponse(builder);
@@ -339,17 +339,17 @@ public class DistributedTransactionService
       execute(
           () -> {
             List<Mutation> mutations;
-            if (request.getMutationCount() > 0) {
+            if (request.getMutationsCount() > 0) {
               TableMetadata metadata =
                   tableMetadataManager.getTableMetadata(
-                      request.getMutationList().get(0).getNamespace(),
-                      request.getMutationList().get(0).getTable());
+                      request.getMutationsList().get(0).getNamespace(),
+                      request.getMutationsList().get(0).getTable());
               if (metadata == null) {
                 throw new IllegalArgumentException("the specified table is not found");
               }
 
               mutations =
-                  request.getMutationList().stream()
+                  request.getMutationsList().stream()
                       .map(m -> ProtoUtils.toMutation(m, metadata))
                       .collect(Collectors.toList());
             } else {
@@ -407,7 +407,7 @@ public class DistributedTransactionService
       } catch (CrudConflictException | CommitConflictException e) {
         responseBuilder.setError(
             TransactionResponse.Error.newBuilder()
-                .setErrorCode(ErrorCode.CONFLICT)
+                .setErrorCode(ErrorCode.TRANSACTION_CONFLICT)
                 .setMessage(e.getMessage())
                 .build());
       } catch (UnknownTransactionStatusException e) {

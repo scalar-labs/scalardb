@@ -138,7 +138,7 @@ public class GrpcStorage extends AbstractDistributedStorage {
           blockingStub
               .withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
               .mutate(
-                  MutateRequest.newBuilder().addMutation(ProtoUtils.toMutation(mutation)).build());
+                  MutateRequest.newBuilder().addMutations(ProtoUtils.toMutation(mutation)).build());
           return null;
         });
   }
@@ -149,7 +149,7 @@ public class GrpcStorage extends AbstractDistributedStorage {
     execute(
         () -> {
           MutateRequest.Builder builder = MutateRequest.newBuilder();
-          mutations.forEach(m -> builder.addMutation(ProtoUtils.toMutation(m)));
+          mutations.forEach(m -> builder.addMutations(ProtoUtils.toMutation(m)));
           blockingStub
               .withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
               .mutate(builder.build());

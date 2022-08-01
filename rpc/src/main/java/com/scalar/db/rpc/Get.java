@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code rpc.Get}
+ * Protobuf type {@code scalardb.rpc.Get}
  */
 public final class Get extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:rpc.Get)
+    // @@protoc_insertion_point(message_implements:scalardb.rpc.Get)
     GetOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use Get.newBuilder() to construct.
@@ -19,7 +19,7 @@ private static final long serialVersionUID = 0L;
     namespace_ = "";
     table_ = "";
     consistency_ = 0;
-    projection_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    projections_ = com.google.protobuf.LazyStringArrayList.EMPTY;
   }
 
   @java.lang.Override
@@ -100,10 +100,10 @@ private static final long serialVersionUID = 0L;
           case 50: {
             java.lang.String s = input.readStringRequireUtf8();
             if (!((mutable_bitField0_ & 0x00000001) != 0)) {
-              projection_ = new com.google.protobuf.LazyStringArrayList();
+              projections_ = new com.google.protobuf.LazyStringArrayList();
               mutable_bitField0_ |= 0x00000001;
             }
-            projection_.add(s);
+            projections_.add(s);
             break;
           }
           default: {
@@ -124,7 +124,7 @@ private static final long serialVersionUID = 0L;
           e).setUnfinishedMessage(this);
     } finally {
       if (((mutable_bitField0_ & 0x00000001) != 0)) {
-        projection_ = projection_.getUnmodifiableView();
+        projections_ = projections_.getUnmodifiableView();
       }
       this.unknownFields = unknownFields.build();
       makeExtensionsImmutable();
@@ -132,13 +132,13 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Get_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Get_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Get_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Get_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.Get.class, com.scalar.db.rpc.Get.Builder.class);
   }
@@ -222,7 +222,7 @@ private static final long serialVersionUID = 0L;
   public static final int PARTITION_KEY_FIELD_NUMBER = 3;
   private com.scalar.db.rpc.Key partitionKey_;
   /**
-   * <code>.rpc.Key partition_key = 3;</code>
+   * <code>.scalardb.rpc.Key partition_key = 3;</code>
    * @return Whether the partitionKey field is set.
    */
   @java.lang.Override
@@ -230,7 +230,7 @@ private static final long serialVersionUID = 0L;
     return partitionKey_ != null;
   }
   /**
-   * <code>.rpc.Key partition_key = 3;</code>
+   * <code>.scalardb.rpc.Key partition_key = 3;</code>
    * @return The partitionKey.
    */
   @java.lang.Override
@@ -238,7 +238,7 @@ private static final long serialVersionUID = 0L;
     return partitionKey_ == null ? com.scalar.db.rpc.Key.getDefaultInstance() : partitionKey_;
   }
   /**
-   * <code>.rpc.Key partition_key = 3;</code>
+   * <code>.scalardb.rpc.Key partition_key = 3;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.KeyOrBuilder getPartitionKeyOrBuilder() {
@@ -248,7 +248,7 @@ private static final long serialVersionUID = 0L;
   public static final int CLUSTERING_KEY_FIELD_NUMBER = 4;
   private com.scalar.db.rpc.Key clusteringKey_;
   /**
-   * <code>.rpc.Key clustering_key = 4;</code>
+   * <code>.scalardb.rpc.Key clustering_key = 4;</code>
    * @return Whether the clusteringKey field is set.
    */
   @java.lang.Override
@@ -256,7 +256,7 @@ private static final long serialVersionUID = 0L;
     return clusteringKey_ != null;
   }
   /**
-   * <code>.rpc.Key clustering_key = 4;</code>
+   * <code>.scalardb.rpc.Key clustering_key = 4;</code>
    * @return The clusteringKey.
    */
   @java.lang.Override
@@ -264,7 +264,7 @@ private static final long serialVersionUID = 0L;
     return clusteringKey_ == null ? com.scalar.db.rpc.Key.getDefaultInstance() : clusteringKey_;
   }
   /**
-   * <code>.rpc.Key clustering_key = 4;</code>
+   * <code>.scalardb.rpc.Key clustering_key = 4;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.KeyOrBuilder getClusteringKeyOrBuilder() {
@@ -274,14 +274,14 @@ private static final long serialVersionUID = 0L;
   public static final int CONSISTENCY_FIELD_NUMBER = 5;
   private int consistency_;
   /**
-   * <code>.rpc.Consistency consistency = 5;</code>
+   * <code>.scalardb.rpc.Consistency consistency = 5;</code>
    * @return The enum numeric value on the wire for consistency.
    */
   @java.lang.Override public int getConsistencyValue() {
     return consistency_;
   }
   /**
-   * <code>.rpc.Consistency consistency = 5;</code>
+   * <code>.scalardb.rpc.Consistency consistency = 5;</code>
    * @return The consistency.
    */
   @java.lang.Override public com.scalar.db.rpc.Consistency getConsistency() {
@@ -290,39 +290,39 @@ private static final long serialVersionUID = 0L;
     return result == null ? com.scalar.db.rpc.Consistency.UNRECOGNIZED : result;
   }
 
-  public static final int PROJECTION_FIELD_NUMBER = 6;
-  private com.google.protobuf.LazyStringList projection_;
+  public static final int PROJECTIONS_FIELD_NUMBER = 6;
+  private com.google.protobuf.LazyStringList projections_;
   /**
-   * <code>repeated string projection = 6;</code>
-   * @return A list containing the projection.
+   * <code>repeated string projections = 6;</code>
+   * @return A list containing the projections.
    */
   public com.google.protobuf.ProtocolStringList
-      getProjectionList() {
-    return projection_;
+      getProjectionsList() {
+    return projections_;
   }
   /**
-   * <code>repeated string projection = 6;</code>
-   * @return The count of projection.
+   * <code>repeated string projections = 6;</code>
+   * @return The count of projections.
    */
-  public int getProjectionCount() {
-    return projection_.size();
+  public int getProjectionsCount() {
+    return projections_.size();
   }
   /**
-   * <code>repeated string projection = 6;</code>
+   * <code>repeated string projections = 6;</code>
    * @param index The index of the element to return.
-   * @return The projection at the given index.
+   * @return The projections at the given index.
    */
-  public java.lang.String getProjection(int index) {
-    return projection_.get(index);
+  public java.lang.String getProjections(int index) {
+    return projections_.get(index);
   }
   /**
-   * <code>repeated string projection = 6;</code>
+   * <code>repeated string projections = 6;</code>
    * @param index The index of the value to return.
-   * @return The bytes of the projection at the given index.
+   * @return The bytes of the projections at the given index.
    */
   public com.google.protobuf.ByteString
-      getProjectionBytes(int index) {
-    return projection_.getByteString(index);
+      getProjectionsBytes(int index) {
+    return projections_.getByteString(index);
   }
 
   private byte memoizedIsInitialized = -1;
@@ -354,8 +354,8 @@ private static final long serialVersionUID = 0L;
     if (consistency_ != com.scalar.db.rpc.Consistency.CONSISTENCY_SEQUENTIAL.getNumber()) {
       output.writeEnum(5, consistency_);
     }
-    for (int i = 0; i < projection_.size(); i++) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 6, projection_.getRaw(i));
+    for (int i = 0; i < projections_.size(); i++) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 6, projections_.getRaw(i));
     }
     unknownFields.writeTo(output);
   }
@@ -386,11 +386,11 @@ private static final long serialVersionUID = 0L;
     }
     {
       int dataSize = 0;
-      for (int i = 0; i < projection_.size(); i++) {
-        dataSize += computeStringSizeNoTag(projection_.getRaw(i));
+      for (int i = 0; i < projections_.size(); i++) {
+        dataSize += computeStringSizeNoTag(projections_.getRaw(i));
       }
       size += dataSize;
-      size += 1 * getProjectionList().size();
+      size += 1 * getProjectionsList().size();
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -422,8 +422,8 @@ private static final long serialVersionUID = 0L;
           .equals(other.getClusteringKey())) return false;
     }
     if (consistency_ != other.consistency_) return false;
-    if (!getProjectionList()
-        .equals(other.getProjectionList())) return false;
+    if (!getProjectionsList()
+        .equals(other.getProjectionsList())) return false;
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -449,9 +449,9 @@ private static final long serialVersionUID = 0L;
     }
     hash = (37 * hash) + CONSISTENCY_FIELD_NUMBER;
     hash = (53 * hash) + consistency_;
-    if (getProjectionCount() > 0) {
-      hash = (37 * hash) + PROJECTION_FIELD_NUMBER;
-      hash = (53 * hash) + getProjectionList().hashCode();
+    if (getProjectionsCount() > 0) {
+      hash = (37 * hash) + PROJECTIONS_FIELD_NUMBER;
+      hash = (53 * hash) + getProjectionsList().hashCode();
     }
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
@@ -549,21 +549,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code rpc.Get}
+   * Protobuf type {@code scalardb.rpc.Get}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:rpc.Get)
+      // @@protoc_insertion_point(builder_implements:scalardb.rpc.Get)
       com.scalar.db.rpc.GetOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Get_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Get_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Get_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Get_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.Get.class, com.scalar.db.rpc.Get.Builder.class);
     }
@@ -604,7 +604,7 @@ private static final long serialVersionUID = 0L;
       }
       consistency_ = 0;
 
-      projection_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      projections_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       bitField0_ = (bitField0_ & ~0x00000001);
       return this;
     }
@@ -612,7 +612,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Get_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Get_descriptor;
     }
 
     @java.lang.Override
@@ -647,10 +647,10 @@ private static final long serialVersionUID = 0L;
       }
       result.consistency_ = consistency_;
       if (((bitField0_ & 0x00000001) != 0)) {
-        projection_ = projection_.getUnmodifiableView();
+        projections_ = projections_.getUnmodifiableView();
         bitField0_ = (bitField0_ & ~0x00000001);
       }
-      result.projection_ = projection_;
+      result.projections_ = projections_;
       onBuilt();
       return result;
     }
@@ -716,13 +716,13 @@ private static final long serialVersionUID = 0L;
       if (other.consistency_ != 0) {
         setConsistencyValue(other.getConsistencyValue());
       }
-      if (!other.projection_.isEmpty()) {
-        if (projection_.isEmpty()) {
-          projection_ = other.projection_;
+      if (!other.projections_.isEmpty()) {
+        if (projections_.isEmpty()) {
+          projections_ = other.projections_;
           bitField0_ = (bitField0_ & ~0x00000001);
         } else {
-          ensureProjectionIsMutable();
-          projection_.addAll(other.projection_);
+          ensureProjectionsIsMutable();
+          projections_.addAll(other.projections_);
         }
         onChanged();
       }
@@ -912,14 +912,14 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Key, com.scalar.db.rpc.Key.Builder, com.scalar.db.rpc.KeyOrBuilder> partitionKeyBuilder_;
     /**
-     * <code>.rpc.Key partition_key = 3;</code>
+     * <code>.scalardb.rpc.Key partition_key = 3;</code>
      * @return Whether the partitionKey field is set.
      */
     public boolean hasPartitionKey() {
       return partitionKeyBuilder_ != null || partitionKey_ != null;
     }
     /**
-     * <code>.rpc.Key partition_key = 3;</code>
+     * <code>.scalardb.rpc.Key partition_key = 3;</code>
      * @return The partitionKey.
      */
     public com.scalar.db.rpc.Key getPartitionKey() {
@@ -930,7 +930,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.rpc.Key partition_key = 3;</code>
+     * <code>.scalardb.rpc.Key partition_key = 3;</code>
      */
     public Builder setPartitionKey(com.scalar.db.rpc.Key value) {
       if (partitionKeyBuilder_ == null) {
@@ -946,7 +946,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Key partition_key = 3;</code>
+     * <code>.scalardb.rpc.Key partition_key = 3;</code>
      */
     public Builder setPartitionKey(
         com.scalar.db.rpc.Key.Builder builderForValue) {
@@ -960,7 +960,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Key partition_key = 3;</code>
+     * <code>.scalardb.rpc.Key partition_key = 3;</code>
      */
     public Builder mergePartitionKey(com.scalar.db.rpc.Key value) {
       if (partitionKeyBuilder_ == null) {
@@ -978,7 +978,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Key partition_key = 3;</code>
+     * <code>.scalardb.rpc.Key partition_key = 3;</code>
      */
     public Builder clearPartitionKey() {
       if (partitionKeyBuilder_ == null) {
@@ -992,7 +992,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Key partition_key = 3;</code>
+     * <code>.scalardb.rpc.Key partition_key = 3;</code>
      */
     public com.scalar.db.rpc.Key.Builder getPartitionKeyBuilder() {
       
@@ -1000,7 +1000,7 @@ private static final long serialVersionUID = 0L;
       return getPartitionKeyFieldBuilder().getBuilder();
     }
     /**
-     * <code>.rpc.Key partition_key = 3;</code>
+     * <code>.scalardb.rpc.Key partition_key = 3;</code>
      */
     public com.scalar.db.rpc.KeyOrBuilder getPartitionKeyOrBuilder() {
       if (partitionKeyBuilder_ != null) {
@@ -1011,7 +1011,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.rpc.Key partition_key = 3;</code>
+     * <code>.scalardb.rpc.Key partition_key = 3;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Key, com.scalar.db.rpc.Key.Builder, com.scalar.db.rpc.KeyOrBuilder> 
@@ -1031,14 +1031,14 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Key, com.scalar.db.rpc.Key.Builder, com.scalar.db.rpc.KeyOrBuilder> clusteringKeyBuilder_;
     /**
-     * <code>.rpc.Key clustering_key = 4;</code>
+     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
      * @return Whether the clusteringKey field is set.
      */
     public boolean hasClusteringKey() {
       return clusteringKeyBuilder_ != null || clusteringKey_ != null;
     }
     /**
-     * <code>.rpc.Key clustering_key = 4;</code>
+     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
      * @return The clusteringKey.
      */
     public com.scalar.db.rpc.Key getClusteringKey() {
@@ -1049,7 +1049,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.rpc.Key clustering_key = 4;</code>
+     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
      */
     public Builder setClusteringKey(com.scalar.db.rpc.Key value) {
       if (clusteringKeyBuilder_ == null) {
@@ -1065,7 +1065,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Key clustering_key = 4;</code>
+     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
      */
     public Builder setClusteringKey(
         com.scalar.db.rpc.Key.Builder builderForValue) {
@@ -1079,7 +1079,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Key clustering_key = 4;</code>
+     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
      */
     public Builder mergeClusteringKey(com.scalar.db.rpc.Key value) {
       if (clusteringKeyBuilder_ == null) {
@@ -1097,7 +1097,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Key clustering_key = 4;</code>
+     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
      */
     public Builder clearClusteringKey() {
       if (clusteringKeyBuilder_ == null) {
@@ -1111,7 +1111,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Key clustering_key = 4;</code>
+     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
      */
     public com.scalar.db.rpc.Key.Builder getClusteringKeyBuilder() {
       
@@ -1119,7 +1119,7 @@ private static final long serialVersionUID = 0L;
       return getClusteringKeyFieldBuilder().getBuilder();
     }
     /**
-     * <code>.rpc.Key clustering_key = 4;</code>
+     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
      */
     public com.scalar.db.rpc.KeyOrBuilder getClusteringKeyOrBuilder() {
       if (clusteringKeyBuilder_ != null) {
@@ -1130,7 +1130,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.rpc.Key clustering_key = 4;</code>
+     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Key, com.scalar.db.rpc.Key.Builder, com.scalar.db.rpc.KeyOrBuilder> 
@@ -1148,14 +1148,14 @@ private static final long serialVersionUID = 0L;
 
     private int consistency_ = 0;
     /**
-     * <code>.rpc.Consistency consistency = 5;</code>
+     * <code>.scalardb.rpc.Consistency consistency = 5;</code>
      * @return The enum numeric value on the wire for consistency.
      */
     @java.lang.Override public int getConsistencyValue() {
       return consistency_;
     }
     /**
-     * <code>.rpc.Consistency consistency = 5;</code>
+     * <code>.scalardb.rpc.Consistency consistency = 5;</code>
      * @param value The enum numeric value on the wire for consistency to set.
      * @return This builder for chaining.
      */
@@ -1166,7 +1166,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Consistency consistency = 5;</code>
+     * <code>.scalardb.rpc.Consistency consistency = 5;</code>
      * @return The consistency.
      */
     @java.lang.Override
@@ -1176,7 +1176,7 @@ private static final long serialVersionUID = 0L;
       return result == null ? com.scalar.db.rpc.Consistency.UNRECOGNIZED : result;
     }
     /**
-     * <code>.rpc.Consistency consistency = 5;</code>
+     * <code>.scalardb.rpc.Consistency consistency = 5;</code>
      * @param value The consistency to set.
      * @return This builder for chaining.
      */
@@ -1190,7 +1190,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Consistency consistency = 5;</code>
+     * <code>.scalardb.rpc.Consistency consistency = 5;</code>
      * @return This builder for chaining.
      */
     public Builder clearConsistency() {
@@ -1200,112 +1200,112 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private com.google.protobuf.LazyStringList projection_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-    private void ensureProjectionIsMutable() {
+    private com.google.protobuf.LazyStringList projections_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    private void ensureProjectionsIsMutable() {
       if (!((bitField0_ & 0x00000001) != 0)) {
-        projection_ = new com.google.protobuf.LazyStringArrayList(projection_);
+        projections_ = new com.google.protobuf.LazyStringArrayList(projections_);
         bitField0_ |= 0x00000001;
        }
     }
     /**
-     * <code>repeated string projection = 6;</code>
-     * @return A list containing the projection.
+     * <code>repeated string projections = 6;</code>
+     * @return A list containing the projections.
      */
     public com.google.protobuf.ProtocolStringList
-        getProjectionList() {
-      return projection_.getUnmodifiableView();
+        getProjectionsList() {
+      return projections_.getUnmodifiableView();
     }
     /**
-     * <code>repeated string projection = 6;</code>
-     * @return The count of projection.
+     * <code>repeated string projections = 6;</code>
+     * @return The count of projections.
      */
-    public int getProjectionCount() {
-      return projection_.size();
+    public int getProjectionsCount() {
+      return projections_.size();
     }
     /**
-     * <code>repeated string projection = 6;</code>
+     * <code>repeated string projections = 6;</code>
      * @param index The index of the element to return.
-     * @return The projection at the given index.
+     * @return The projections at the given index.
      */
-    public java.lang.String getProjection(int index) {
-      return projection_.get(index);
+    public java.lang.String getProjections(int index) {
+      return projections_.get(index);
     }
     /**
-     * <code>repeated string projection = 6;</code>
+     * <code>repeated string projections = 6;</code>
      * @param index The index of the value to return.
-     * @return The bytes of the projection at the given index.
+     * @return The bytes of the projections at the given index.
      */
     public com.google.protobuf.ByteString
-        getProjectionBytes(int index) {
-      return projection_.getByteString(index);
+        getProjectionsBytes(int index) {
+      return projections_.getByteString(index);
     }
     /**
-     * <code>repeated string projection = 6;</code>
+     * <code>repeated string projections = 6;</code>
      * @param index The index to set the value at.
-     * @param value The projection to set.
+     * @param value The projections to set.
      * @return This builder for chaining.
      */
-    public Builder setProjection(
+    public Builder setProjections(
         int index, java.lang.String value) {
       if (value == null) {
     throw new NullPointerException();
   }
-  ensureProjectionIsMutable();
-      projection_.set(index, value);
+  ensureProjectionsIsMutable();
+      projections_.set(index, value);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string projection = 6;</code>
-     * @param value The projection to add.
+     * <code>repeated string projections = 6;</code>
+     * @param value The projections to add.
      * @return This builder for chaining.
      */
-    public Builder addProjection(
+    public Builder addProjections(
         java.lang.String value) {
       if (value == null) {
     throw new NullPointerException();
   }
-  ensureProjectionIsMutable();
-      projection_.add(value);
+  ensureProjectionsIsMutable();
+      projections_.add(value);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string projection = 6;</code>
-     * @param values The projection to add.
+     * <code>repeated string projections = 6;</code>
+     * @param values The projections to add.
      * @return This builder for chaining.
      */
-    public Builder addAllProjection(
+    public Builder addAllProjections(
         java.lang.Iterable<java.lang.String> values) {
-      ensureProjectionIsMutable();
+      ensureProjectionsIsMutable();
       com.google.protobuf.AbstractMessageLite.Builder.addAll(
-          values, projection_);
+          values, projections_);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string projection = 6;</code>
+     * <code>repeated string projections = 6;</code>
      * @return This builder for chaining.
      */
-    public Builder clearProjection() {
-      projection_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    public Builder clearProjections() {
+      projections_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       bitField0_ = (bitField0_ & ~0x00000001);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string projection = 6;</code>
-     * @param value The bytes of the projection to add.
+     * <code>repeated string projections = 6;</code>
+     * @param value The bytes of the projections to add.
      * @return This builder for chaining.
      */
-    public Builder addProjectionBytes(
+    public Builder addProjectionsBytes(
         com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
   checkByteStringIsUtf8(value);
-      ensureProjectionIsMutable();
-      projection_.add(value);
+      ensureProjectionsIsMutable();
+      projections_.add(value);
       onChanged();
       return this;
     }
@@ -1322,10 +1322,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:rpc.Get)
+    // @@protoc_insertion_point(builder_scope:scalardb.rpc.Get)
   }
 
-  // @@protoc_insertion_point(class_scope:rpc.Get)
+  // @@protoc_insertion_point(class_scope:scalardb.rpc.Get)
   private static final com.scalar.db.rpc.Get DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.Get();

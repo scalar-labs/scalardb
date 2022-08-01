@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code rpc.DropNamespaceRequest}
+ * Protobuf type {@code scalardb.rpc.DropNamespaceRequest}
  */
 public final class DropNamespaceRequest extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:rpc.DropNamespaceRequest)
+    // @@protoc_insertion_point(message_implements:scalardb.rpc.DropNamespaceRequest)
     DropNamespaceRequestOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use DropNamespaceRequest.newBuilder() to construct.
@@ -83,13 +83,13 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_DropNamespaceRequest_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_DropNamespaceRequest_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_DropNamespaceRequest_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_DropNamespaceRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.DropNamespaceRequest.class, com.scalar.db.rpc.DropNamespaceRequest.Builder.class);
   }
@@ -310,21 +310,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code rpc.DropNamespaceRequest}
+   * Protobuf type {@code scalardb.rpc.DropNamespaceRequest}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:rpc.DropNamespaceRequest)
+      // @@protoc_insertion_point(builder_implements:scalardb.rpc.DropNamespaceRequest)
       com.scalar.db.rpc.DropNamespaceRequestOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_DropNamespaceRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_DropNamespaceRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_DropNamespaceRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_DropNamespaceRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.DropNamespaceRequest.class, com.scalar.db.rpc.DropNamespaceRequest.Builder.class);
     }
@@ -357,7 +357,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_DropNamespaceRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_DropNamespaceRequest_descriptor;
     }
 
     @java.lang.Override
@@ -582,10 +582,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:rpc.DropNamespaceRequest)
+    // @@protoc_insertion_point(builder_scope:scalardb.rpc.DropNamespaceRequest)
   }
 
-  // @@protoc_insertion_point(class_scope:rpc.DropNamespaceRequest)
+  // @@protoc_insertion_point(class_scope:scalardb.rpc.DropNamespaceRequest)
   private static final com.scalar.db.rpc.DropNamespaceRequest DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.DropNamespaceRequest();

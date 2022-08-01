@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 public interface DropIndexRequestOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.DropIndexRequest)
+    // @@protoc_insertion_point(interface_extends:scalardb.rpc.DropIndexRequest)
     com.google.protobuf.MessageOrBuilder {
 
   /**

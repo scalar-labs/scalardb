@@ -192,7 +192,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     throwIfErrorForCrud(responseOrError);
 
     TableMetadata tableMetadata = getTableMetadata(scan);
-    return responseOrError.getResponse().getScanResponse().getResultList().stream()
+    return responseOrError.getResponse().getScanResponse().getResultsList().stream()
         .map(r -> ProtoUtils.toResult(r, tableMetadata))
         .collect(Collectors.toList());
   }
@@ -212,7 +212,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
         sendRequest(
             TwoPhaseCommitTransactionRequest.newBuilder()
                 .setMutateRequest(
-                    MutateRequest.newBuilder().addMutation(ProtoUtils.toMutation(mutation)))
+                    MutateRequest.newBuilder().addMutations(ProtoUtils.toMutation(mutation)))
                 .build());
     throwIfErrorForCrud(responseOrError);
   }
@@ -221,7 +221,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     throwIfTransactionFinished();
 
     MutateRequest.Builder builder = MutateRequest.newBuilder();
-    mutations.forEach(m -> builder.addMutation(ProtoUtils.toMutation(m)));
+    mutations.forEach(m -> builder.addMutations(ProtoUtils.toMutation(m)));
     ResponseOrError responseOrError =
         sendRequest(
             TwoPhaseCommitTransactionRequest.newBuilder().setMutateRequest(builder).build());
@@ -244,7 +244,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
       switch (error.getErrorCode()) {
         case INVALID_ARGUMENT:
           throw new IllegalArgumentException(error.getMessage());
-        case CONFLICT:
+        case TRANSACTION_CONFLICT:
           throw new CrudConflictException(error.getMessage());
         default:
           throw new CrudException(error.getMessage());
@@ -277,7 +277,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     TwoPhaseCommitTransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
       TwoPhaseCommitTransactionResponse.Error error = response.getError();
-      if (error.getErrorCode() == ErrorCode.CONFLICT) {
+      if (error.getErrorCode() == ErrorCode.TRANSACTION_CONFLICT) {
         throw new PreparationConflictException(error.getMessage());
       }
       throw new PreparationException(error.getMessage());
@@ -309,7 +309,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     TwoPhaseCommitTransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
       TwoPhaseCommitTransactionResponse.Error error = response.getError();
-      if (error.getErrorCode() == ErrorCode.CONFLICT) {
+      if (error.getErrorCode() == ErrorCode.TRANSACTION_CONFLICT) {
         throw new ValidationConflictException(error.getMessage());
       }
       throw new ValidationException(error.getMessage());
@@ -342,9 +342,9 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     if (response.hasError()) {
       TwoPhaseCommitTransactionResponse.Error error = response.getError();
       switch (error.getErrorCode()) {
-        case CONFLICT:
+        case TRANSACTION_CONFLICT:
           throw new CommitConflictException(error.getMessage());
-        case UNKNOWN_TRANSACTION:
+        case UNKNOWN_TRANSACTION_STATUS:
           throw new UnknownTransactionStatusException(error.getMessage());
         default:
           throw new CommitException(error.getMessage());

@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code rpc.MutateRequest}
+ * Protobuf type {@code scalardb.rpc.MutateRequest}
  */
 public final class MutateRequest extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:rpc.MutateRequest)
+    // @@protoc_insertion_point(message_implements:scalardb.rpc.MutateRequest)
     MutateRequestOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use MutateRequest.newBuilder() to construct.
@@ -16,7 +16,7 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private MutateRequest() {
-    mutation_ = java.util.Collections.emptyList();
+    mutations_ = java.util.Collections.emptyList();
   }
 
   @java.lang.Override
@@ -52,10 +52,10 @@ private static final long serialVersionUID = 0L;
             break;
           case 10: {
             if (!((mutable_bitField0_ & 0x00000001) != 0)) {
-              mutation_ = new java.util.ArrayList<com.scalar.db.rpc.Mutation>();
+              mutations_ = new java.util.ArrayList<com.scalar.db.rpc.Mutation>();
               mutable_bitField0_ |= 0x00000001;
             }
-            mutation_.add(
+            mutations_.add(
                 input.readMessage(com.scalar.db.rpc.Mutation.parser(), extensionRegistry));
             break;
           }
@@ -77,7 +77,7 @@ private static final long serialVersionUID = 0L;
           e).setUnfinishedMessage(this);
     } finally {
       if (((mutable_bitField0_ & 0x00000001) != 0)) {
-        mutation_ = java.util.Collections.unmodifiableList(mutation_);
+        mutations_ = java.util.Collections.unmodifiableList(mutations_);
       }
       this.unknownFields = unknownFields.build();
       makeExtensionsImmutable();
@@ -85,55 +85,55 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateRequest_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateRequest_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateRequest_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.MutateRequest.class, com.scalar.db.rpc.MutateRequest.Builder.class);
   }
 
-  public static final int MUTATION_FIELD_NUMBER = 1;
-  private java.util.List<com.scalar.db.rpc.Mutation> mutation_;
+  public static final int MUTATIONS_FIELD_NUMBER = 1;
+  private java.util.List<com.scalar.db.rpc.Mutation> mutations_;
   /**
-   * <code>repeated .rpc.Mutation mutation = 1;</code>
+   * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
    */
   @java.lang.Override
-  public java.util.List<com.scalar.db.rpc.Mutation> getMutationList() {
-    return mutation_;
+  public java.util.List<com.scalar.db.rpc.Mutation> getMutationsList() {
+    return mutations_;
   }
   /**
-   * <code>repeated .rpc.Mutation mutation = 1;</code>
+   * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
    */
   @java.lang.Override
   public java.util.List<? extends com.scalar.db.rpc.MutationOrBuilder> 
-      getMutationOrBuilderList() {
-    return mutation_;
+      getMutationsOrBuilderList() {
+    return mutations_;
   }
   /**
-   * <code>repeated .rpc.Mutation mutation = 1;</code>
+   * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
    */
   @java.lang.Override
-  public int getMutationCount() {
-    return mutation_.size();
+  public int getMutationsCount() {
+    return mutations_.size();
   }
   /**
-   * <code>repeated .rpc.Mutation mutation = 1;</code>
+   * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
    */
   @java.lang.Override
-  public com.scalar.db.rpc.Mutation getMutation(int index) {
-    return mutation_.get(index);
+  public com.scalar.db.rpc.Mutation getMutations(int index) {
+    return mutations_.get(index);
   }
   /**
-   * <code>repeated .rpc.Mutation mutation = 1;</code>
+   * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
    */
   @java.lang.Override
-  public com.scalar.db.rpc.MutationOrBuilder getMutationOrBuilder(
+  public com.scalar.db.rpc.MutationOrBuilder getMutationsOrBuilder(
       int index) {
-    return mutation_.get(index);
+    return mutations_.get(index);
   }
 
   private byte memoizedIsInitialized = -1;
@@ -150,8 +150,8 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    for (int i = 0; i < mutation_.size(); i++) {
-      output.writeMessage(1, mutation_.get(i));
+    for (int i = 0; i < mutations_.size(); i++) {
+      output.writeMessage(1, mutations_.get(i));
     }
     unknownFields.writeTo(output);
   }
@@ -162,9 +162,9 @@ private static final long serialVersionUID = 0L;
     if (size != -1) return size;
 
     size = 0;
-    for (int i = 0; i < mutation_.size(); i++) {
+    for (int i = 0; i < mutations_.size(); i++) {
       size += com.google.protobuf.CodedOutputStream
-        .computeMessageSize(1, mutation_.get(i));
+        .computeMessageSize(1, mutations_.get(i));
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -181,8 +181,8 @@ private static final long serialVersionUID = 0L;
     }
     com.scalar.db.rpc.MutateRequest other = (com.scalar.db.rpc.MutateRequest) obj;
 
-    if (!getMutationList()
-        .equals(other.getMutationList())) return false;
+    if (!getMutationsList()
+        .equals(other.getMutationsList())) return false;
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -194,9 +194,9 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    if (getMutationCount() > 0) {
-      hash = (37 * hash) + MUTATION_FIELD_NUMBER;
-      hash = (53 * hash) + getMutationList().hashCode();
+    if (getMutationsCount() > 0) {
+      hash = (37 * hash) + MUTATIONS_FIELD_NUMBER;
+      hash = (53 * hash) + getMutationsList().hashCode();
     }
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
@@ -294,21 +294,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code rpc.MutateRequest}
+   * Protobuf type {@code scalardb.rpc.MutateRequest}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:rpc.MutateRequest)
+      // @@protoc_insertion_point(builder_implements:scalardb.rpc.MutateRequest)
       com.scalar.db.rpc.MutateRequestOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.MutateRequest.class, com.scalar.db.rpc.MutateRequest.Builder.class);
     }
@@ -326,17 +326,17 @@ private static final long serialVersionUID = 0L;
     private void maybeForceBuilderInitialization() {
       if (com.google.protobuf.GeneratedMessageV3
               .alwaysUseFieldBuilders) {
-        getMutationFieldBuilder();
+        getMutationsFieldBuilder();
       }
     }
     @java.lang.Override
     public Builder clear() {
       super.clear();
-      if (mutationBuilder_ == null) {
-        mutation_ = java.util.Collections.emptyList();
+      if (mutationsBuilder_ == null) {
+        mutations_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000001);
       } else {
-        mutationBuilder_.clear();
+        mutationsBuilder_.clear();
       }
       return this;
     }
@@ -344,7 +344,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateRequest_descriptor;
     }
 
     @java.lang.Override
@@ -365,14 +365,14 @@ private static final long serialVersionUID = 0L;
     public com.scalar.db.rpc.MutateRequest buildPartial() {
       com.scalar.db.rpc.MutateRequest result = new com.scalar.db.rpc.MutateRequest(this);
       int from_bitField0_ = bitField0_;
-      if (mutationBuilder_ == null) {
+      if (mutationsBuilder_ == null) {
         if (((bitField0_ & 0x00000001) != 0)) {
-          mutation_ = java.util.Collections.unmodifiableList(mutation_);
+          mutations_ = java.util.Collections.unmodifiableList(mutations_);
           bitField0_ = (bitField0_ & ~0x00000001);
         }
-        result.mutation_ = mutation_;
+        result.mutations_ = mutations_;
       } else {
-        result.mutation_ = mutationBuilder_.build();
+        result.mutations_ = mutationsBuilder_.build();
       }
       onBuilt();
       return result;
@@ -422,29 +422,29 @@ private static final long serialVersionUID = 0L;
 
     public Builder mergeFrom(com.scalar.db.rpc.MutateRequest other) {
       if (other == com.scalar.db.rpc.MutateRequest.getDefaultInstance()) return this;
-      if (mutationBuilder_ == null) {
-        if (!other.mutation_.isEmpty()) {
-          if (mutation_.isEmpty()) {
-            mutation_ = other.mutation_;
+      if (mutationsBuilder_ == null) {
+        if (!other.mutations_.isEmpty()) {
+          if (mutations_.isEmpty()) {
+            mutations_ = other.mutations_;
             bitField0_ = (bitField0_ & ~0x00000001);
           } else {
-            ensureMutationIsMutable();
-            mutation_.addAll(other.mutation_);
+            ensureMutationsIsMutable();
+            mutations_.addAll(other.mutations_);
           }
           onChanged();
         }
       } else {
-        if (!other.mutation_.isEmpty()) {
-          if (mutationBuilder_.isEmpty()) {
-            mutationBuilder_.dispose();
-            mutationBuilder_ = null;
-            mutation_ = other.mutation_;
+        if (!other.mutations_.isEmpty()) {
+          if (mutationsBuilder_.isEmpty()) {
+            mutationsBuilder_.dispose();
+            mutationsBuilder_ = null;
+            mutations_ = other.mutations_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            mutationBuilder_ = 
+            mutationsBuilder_ = 
               com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
-                 getMutationFieldBuilder() : null;
+                 getMutationsFieldBuilder() : null;
           } else {
-            mutationBuilder_.addAllMessages(other.mutation_);
+            mutationsBuilder_.addAllMessages(other.mutations_);
           }
         }
       }
@@ -478,244 +478,244 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private java.util.List<com.scalar.db.rpc.Mutation> mutation_ =
+    private java.util.List<com.scalar.db.rpc.Mutation> mutations_ =
       java.util.Collections.emptyList();
-    private void ensureMutationIsMutable() {
+    private void ensureMutationsIsMutable() {
       if (!((bitField0_ & 0x00000001) != 0)) {
-        mutation_ = new java.util.ArrayList<com.scalar.db.rpc.Mutation>(mutation_);
+        mutations_ = new java.util.ArrayList<com.scalar.db.rpc.Mutation>(mutations_);
         bitField0_ |= 0x00000001;
        }
     }
 
     private com.google.protobuf.RepeatedFieldBuilderV3<
-        com.scalar.db.rpc.Mutation, com.scalar.db.rpc.Mutation.Builder, com.scalar.db.rpc.MutationOrBuilder> mutationBuilder_;
+        com.scalar.db.rpc.Mutation, com.scalar.db.rpc.Mutation.Builder, com.scalar.db.rpc.MutationOrBuilder> mutationsBuilder_;
 
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
-    public java.util.List<com.scalar.db.rpc.Mutation> getMutationList() {
-      if (mutationBuilder_ == null) {
-        return java.util.Collections.unmodifiableList(mutation_);
+    public java.util.List<com.scalar.db.rpc.Mutation> getMutationsList() {
+      if (mutationsBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(mutations_);
       } else {
-        return mutationBuilder_.getMessageList();
+        return mutationsBuilder_.getMessageList();
       }
     }
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
-    public int getMutationCount() {
-      if (mutationBuilder_ == null) {
-        return mutation_.size();
+    public int getMutationsCount() {
+      if (mutationsBuilder_ == null) {
+        return mutations_.size();
       } else {
-        return mutationBuilder_.getCount();
+        return mutationsBuilder_.getCount();
       }
     }
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
-    public com.scalar.db.rpc.Mutation getMutation(int index) {
-      if (mutationBuilder_ == null) {
-        return mutation_.get(index);
+    public com.scalar.db.rpc.Mutation getMutations(int index) {
+      if (mutationsBuilder_ == null) {
+        return mutations_.get(index);
       } else {
-        return mutationBuilder_.getMessage(index);
+        return mutationsBuilder_.getMessage(index);
       }
     }
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
-    public Builder setMutation(
+    public Builder setMutations(
         int index, com.scalar.db.rpc.Mutation value) {
-      if (mutationBuilder_ == null) {
+      if (mutationsBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
         }
-        ensureMutationIsMutable();
-        mutation_.set(index, value);
+        ensureMutationsIsMutable();
+        mutations_.set(index, value);
         onChanged();
       } else {
-        mutationBuilder_.setMessage(index, value);
+        mutationsBuilder_.setMessage(index, value);
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
-    public Builder setMutation(
+    public Builder setMutations(
         int index, com.scalar.db.rpc.Mutation.Builder builderForValue) {
-      if (mutationBuilder_ == null) {
-        ensureMutationIsMutable();
-        mutation_.set(index, builderForValue.build());
+      if (mutationsBuilder_ == null) {
+        ensureMutationsIsMutable();
+        mutations_.set(index, builderForValue.build());
         onChanged();
       } else {
-        mutationBuilder_.setMessage(index, builderForValue.build());
+        mutationsBuilder_.setMessage(index, builderForValue.build());
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
-    public Builder addMutation(com.scalar.db.rpc.Mutation value) {
-      if (mutationBuilder_ == null) {
+    public Builder addMutations(com.scalar.db.rpc.Mutation value) {
+      if (mutationsBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
         }
-        ensureMutationIsMutable();
-        mutation_.add(value);
+        ensureMutationsIsMutable();
+        mutations_.add(value);
         onChanged();
       } else {
-        mutationBuilder_.addMessage(value);
+        mutationsBuilder_.addMessage(value);
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
-    public Builder addMutation(
+    public Builder addMutations(
         int index, com.scalar.db.rpc.Mutation value) {
-      if (mutationBuilder_ == null) {
+      if (mutationsBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
         }
-        ensureMutationIsMutable();
-        mutation_.add(index, value);
+        ensureMutationsIsMutable();
+        mutations_.add(index, value);
         onChanged();
       } else {
-        mutationBuilder_.addMessage(index, value);
+        mutationsBuilder_.addMessage(index, value);
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
-    public Builder addMutation(
+    public Builder addMutations(
         com.scalar.db.rpc.Mutation.Builder builderForValue) {
-      if (mutationBuilder_ == null) {
-        ensureMutationIsMutable();
-        mutation_.add(builderForValue.build());
+      if (mutationsBuilder_ == null) {
+        ensureMutationsIsMutable();
+        mutations_.add(builderForValue.build());
         onChanged();
       } else {
-        mutationBuilder_.addMessage(builderForValue.build());
+        mutationsBuilder_.addMessage(builderForValue.build());
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
-    public Builder addMutation(
+    public Builder addMutations(
         int index, com.scalar.db.rpc.Mutation.Builder builderForValue) {
-      if (mutationBuilder_ == null) {
-        ensureMutationIsMutable();
-        mutation_.add(index, builderForValue.build());
+      if (mutationsBuilder_ == null) {
+        ensureMutationsIsMutable();
+        mutations_.add(index, builderForValue.build());
         onChanged();
       } else {
-        mutationBuilder_.addMessage(index, builderForValue.build());
+        mutationsBuilder_.addMessage(index, builderForValue.build());
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
-    public Builder addAllMutation(
+    public Builder addAllMutations(
         java.lang.Iterable<? extends com.scalar.db.rpc.Mutation> values) {
-      if (mutationBuilder_ == null) {
-        ensureMutationIsMutable();
+      if (mutationsBuilder_ == null) {
+        ensureMutationsIsMutable();
         com.google.protobuf.AbstractMessageLite.Builder.addAll(
-            values, mutation_);
+            values, mutations_);
         onChanged();
       } else {
-        mutationBuilder_.addAllMessages(values);
+        mutationsBuilder_.addAllMessages(values);
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
-    public Builder clearMutation() {
-      if (mutationBuilder_ == null) {
-        mutation_ = java.util.Collections.emptyList();
+    public Builder clearMutations() {
+      if (mutationsBuilder_ == null) {
+        mutations_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000001);
         onChanged();
       } else {
-        mutationBuilder_.clear();
+        mutationsBuilder_.clear();
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
-    public Builder removeMutation(int index) {
-      if (mutationBuilder_ == null) {
-        ensureMutationIsMutable();
-        mutation_.remove(index);
+    public Builder removeMutations(int index) {
+      if (mutationsBuilder_ == null) {
+        ensureMutationsIsMutable();
+        mutations_.remove(index);
         onChanged();
       } else {
-        mutationBuilder_.remove(index);
+        mutationsBuilder_.remove(index);
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
-    public com.scalar.db.rpc.Mutation.Builder getMutationBuilder(
+    public com.scalar.db.rpc.Mutation.Builder getMutationsBuilder(
         int index) {
-      return getMutationFieldBuilder().getBuilder(index);
+      return getMutationsFieldBuilder().getBuilder(index);
     }
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
-    public com.scalar.db.rpc.MutationOrBuilder getMutationOrBuilder(
+    public com.scalar.db.rpc.MutationOrBuilder getMutationsOrBuilder(
         int index) {
-      if (mutationBuilder_ == null) {
-        return mutation_.get(index);  } else {
-        return mutationBuilder_.getMessageOrBuilder(index);
+      if (mutationsBuilder_ == null) {
+        return mutations_.get(index);  } else {
+        return mutationsBuilder_.getMessageOrBuilder(index);
       }
     }
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
     public java.util.List<? extends com.scalar.db.rpc.MutationOrBuilder> 
-         getMutationOrBuilderList() {
-      if (mutationBuilder_ != null) {
-        return mutationBuilder_.getMessageOrBuilderList();
+         getMutationsOrBuilderList() {
+      if (mutationsBuilder_ != null) {
+        return mutationsBuilder_.getMessageOrBuilderList();
       } else {
-        return java.util.Collections.unmodifiableList(mutation_);
+        return java.util.Collections.unmodifiableList(mutations_);
       }
     }
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
-    public com.scalar.db.rpc.Mutation.Builder addMutationBuilder() {
-      return getMutationFieldBuilder().addBuilder(
+    public com.scalar.db.rpc.Mutation.Builder addMutationsBuilder() {
+      return getMutationsFieldBuilder().addBuilder(
           com.scalar.db.rpc.Mutation.getDefaultInstance());
     }
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
-    public com.scalar.db.rpc.Mutation.Builder addMutationBuilder(
+    public com.scalar.db.rpc.Mutation.Builder addMutationsBuilder(
         int index) {
-      return getMutationFieldBuilder().addBuilder(
+      return getMutationsFieldBuilder().addBuilder(
           index, com.scalar.db.rpc.Mutation.getDefaultInstance());
     }
     /**
-     * <code>repeated .rpc.Mutation mutation = 1;</code>
+     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
      */
     public java.util.List<com.scalar.db.rpc.Mutation.Builder> 
-         getMutationBuilderList() {
-      return getMutationFieldBuilder().getBuilderList();
+         getMutationsBuilderList() {
+      return getMutationsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilderV3<
         com.scalar.db.rpc.Mutation, com.scalar.db.rpc.Mutation.Builder, com.scalar.db.rpc.MutationOrBuilder> 
-        getMutationFieldBuilder() {
-      if (mutationBuilder_ == null) {
-        mutationBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
+        getMutationsFieldBuilder() {
+      if (mutationsBuilder_ == null) {
+        mutationsBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
             com.scalar.db.rpc.Mutation, com.scalar.db.rpc.Mutation.Builder, com.scalar.db.rpc.MutationOrBuilder>(
-                mutation_,
+                mutations_,
                 ((bitField0_ & 0x00000001) != 0),
                 getParentForChildren(),
                 isClean());
-        mutation_ = null;
+        mutations_ = null;
       }
-      return mutationBuilder_;
+      return mutationsBuilder_;
     }
     @java.lang.Override
     public final Builder setUnknownFields(
@@ -730,10 +730,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:rpc.MutateRequest)
+    // @@protoc_insertion_point(builder_scope:scalardb.rpc.MutateRequest)
   }
 
-  // @@protoc_insertion_point(class_scope:rpc.MutateRequest)
+  // @@protoc_insertion_point(class_scope:scalardb.rpc.MutateRequest)
   private static final com.scalar.db.rpc.MutateRequest DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.MutateRequest();
