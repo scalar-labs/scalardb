@@ -1192,60 +1192,83 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void createIndex_forMysql_ShouldCreateIndexProperly() throws Exception {
-    createIndex_forX_ShouldCreateIndexProperly(
+  public void createIndex_ForColumnTypeWithoutRequiredAlterationForMysql_ShouldCreateIndexProperly()
+      throws Exception {
+    createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
         RdbEngine.MYSQL,
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `scalardb`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "CREATE INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl` (`my_column`)",
         "UPDATE `scalardb`.`metadata` SET `indexed`=true WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
   }
 
   @Test
-  public void createIndex_forPostgresql_ShouldCreateIndexProperly() throws Exception {
-    createIndex_forX_ShouldCreateIndexProperly(
+  public void
+      createIndex_ForColumnTypeWithoutRequiredAlterationForPostgresql_ShouldCreateIndexProperly()
+          throws Exception {
+    createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
         RdbEngine.POSTGRESQL,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
         "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=true WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
   @Test
-  public void createIndex_forSqlServer_ShouldCreateIndexProperly() throws Exception {
-    createIndex_forX_ShouldCreateIndexProperly(
+  public void
+      createIndex_ForColumnTypeWithoutRequiredAlterationForSqlServer_ShouldCreateIndexProperly()
+          throws Exception {
+    createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
         RdbEngine.SQL_SERVER,
+        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM [scalardb].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
         "CREATE INDEX [index_my_ns_my_tbl_my_column] ON [my_ns].[my_tbl] ([my_column])",
         "UPDATE [scalardb].[metadata] SET [indexed]=1 WHERE [full_table_name]='my_ns.my_tbl' AND [column_name]='my_column'");
   }
 
   @Test
-  public void createIndex_forOracle_ShouldCreateIndexProperly() throws Exception {
-    createIndex_forX_ShouldCreateIndexProperly(
+  public void
+      createIndex_ForColumnTypeWithoutRequiredAlterationForOracle_ShouldCreateIndexProperly()
+          throws Exception {
+    createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
         RdbEngine.ORACLE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
         "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=1 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
-  private void createIndex_forX_ShouldCreateIndexProperly(
+  private void createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
       RdbEngine rdbEngine,
+      String expectedGetTableMetadataStatement,
       String expectedCreateIndexStatement,
       String expectedUpdateTableMetadataStatement)
       throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
     String table = "my_tbl";
-    String column = "my_column";
+    String indexColumn = "my_column";
     JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
 
-    Connection connection = mock(Connection.class);
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            Arrays.asList(
+                new GetColumnsResultSetMocker.Row(
+                    "c1", DataType.BOOLEAN.toString(), "PARTITION", null, false),
+                new GetColumnsResultSetMocker.Row(
+                    indexColumn, DataType.BOOLEAN.toString(), null, null, false)));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
     Statement statement = mock(Statement.class);
 
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement()).thenReturn(statement);
 
     // Act
-    admin.createIndex(namespace, table, column, Collections.emptyMap());
+    admin.createIndex(namespace, table, indexColumn, Collections.emptyMap());
 
     // Assert
-    verify(connection, times(2)).createStatement();
+    verify(connection).prepareStatement(expectedGetTableMetadataStatement);
+    verify(selectStatement).setString(1, getFullTableName(namespace, table));
 
+    verify(connection, times(2)).createStatement();
     ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
     verify(statement, times(2)).execute(captor.capture());
     assertThat(captor.getAllValues().get(0)).isEqualTo(expectedCreateIndexStatement);
@@ -1253,64 +1276,242 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void dropIndex_forMysql_ShouldDropIndexProperly() throws Exception {
-    dropIndex_forX_ShouldDropIndexProperly(
+  public void
+      createIndex_forColumnTypeWithRequiredAlterationForMysql_ShouldAlterColumnAndCreateIndexProperly()
+          throws Exception {
+    createIndex_forColumnTypeWithRequiredAlterationForX_ShouldAlterColumnAndCreateIndexProperly(
         RdbEngine.MYSQL,
-        "DROP INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl`",
-        "UPDATE `scalardb`.`metadata` SET `indexed`=false WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `scalardb`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
+        "ALTER TABLE `my_ns`.`my_tbl` MODIFY`my_column` VARCHAR(64)",
+        "CREATE INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl` (`my_column`)",
+        "UPDATE `scalardb`.`metadata` SET `indexed`=true WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
   }
 
   @Test
-  public void dropIndex_forPostgresql_ShouldDropIndexProperly() throws Exception {
-    dropIndex_forX_ShouldDropIndexProperly(
+  public void
+      createIndex_forColumnTypeWithRequiredAlterationForPostgresql_ShouldAlterColumnAndCreateIndexProperly()
+          throws Exception {
+    createIndex_forColumnTypeWithRequiredAlterationForX_ShouldAlterColumnAndCreateIndexProperly(
         RdbEngine.POSTGRESQL,
-        "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
-        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN\"my_column\" TYPE VARCHAR(10485760)",
+        "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
+        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=true WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
   @Test
-  public void dropIndex_forSqlServer_ShouldDropIndexProperly() throws Exception {
-    dropIndex_forX_ShouldDropIndexProperly(
-        RdbEngine.SQL_SERVER,
-        "DROP INDEX [index_my_ns_my_tbl_my_column] ON [my_ns].[my_tbl]",
-        "UPDATE [scalardb].[metadata] SET [indexed]=0 WHERE [full_table_name]='my_ns.my_tbl' AND [column_name]='my_column'");
-  }
-
-  @Test
-  public void dropIndex_forOracle_ShouldDropIndexProperly() throws Exception {
-    dropIndex_forX_ShouldDropIndexProperly(
+  public void
+      createIndex_forColumnTypeWithRequiredAlterationForOracle_ShouldAlterColumnAndCreateIndexProperly()
+          throws Exception {
+    createIndex_forColumnTypeWithRequiredAlterationForX_ShouldAlterColumnAndCreateIndexProperly(
         RdbEngine.ORACLE,
-        "DROP INDEX \"index_my_ns_my_tbl_my_column\"",
-        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=0 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"my_ns\".\"my_tbl\" MODIFY ( \"my_column\" VARCHAR2(64) )",
+        "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
+        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=1 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
-  private void dropIndex_forX_ShouldDropIndexProperly(
-      RdbEngine rdbEngine,
-      String expectedDropIndexStatement,
-      String expectedUpdateTableMetadataStatement)
-      throws SQLException, ExecutionException {
+  private void
+      createIndex_forColumnTypeWithRequiredAlterationForX_ShouldAlterColumnAndCreateIndexProperly(
+          RdbEngine rdbEngine,
+          String expectedGetTableMetadataStatement,
+          String expectedAlterColumnTypeStatement,
+          String expectedCreateIndexStatement,
+          String expectedUpdateTableMetadataStatement)
+          throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
     String table = "my_tbl";
-    String column = "my_column";
+    String indexColumn = "my_column";
     JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
 
-    Connection connection = mock(Connection.class);
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            Arrays.asList(
+                new GetColumnsResultSetMocker.Row(
+                    "c1", DataType.BOOLEAN.toString(), "PARTITION", null, false),
+                new GetColumnsResultSetMocker.Row(
+                    indexColumn, DataType.TEXT.toString(), null, null, false)));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+
     Statement statement = mock(Statement.class);
 
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement()).thenReturn(statement);
 
     // Act
-    admin.dropIndex(namespace, table, column);
+    admin.createIndex(namespace, table, indexColumn, Collections.emptyMap());
 
     // Assert
-    verify(connection, times(2)).createStatement();
+    verify(connection).prepareStatement(expectedGetTableMetadataStatement);
+    verify(selectStatement).setString(1, getFullTableName(namespace, table));
 
+    verify(connection, times(3)).createStatement();
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(statement, times(3)).execute(captor.capture());
+    assertThat(captor.getAllValues().get(0)).isEqualTo(expectedAlterColumnTypeStatement);
+    assertThat(captor.getAllValues().get(1)).isEqualTo(expectedCreateIndexStatement);
+    assertThat(captor.getAllValues().get(2)).isEqualTo(expectedUpdateTableMetadataStatement);
+  }
+
+  @Test
+  public void dropIndex_forColumnTypeWithoutRequiredAlterationForMysql_ShouldDropIndexProperly()
+      throws Exception {
+    dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
+        RdbEngine.MYSQL,
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `scalardb`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
+        "DROP INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl`",
+        "UPDATE `scalardb`.`metadata` SET `indexed`=false WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
+  }
+
+  @Test
+  public void
+      dropIndex_forColumnTypeWithoutRequiredAlterationForPostgresql_ShouldDropIndexProperly()
+          throws Exception {
+    dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
+        RdbEngine.POSTGRESQL,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
+        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+  }
+
+  @Test
+  public void dropIndex_forColumnTypeWithoutRequiredAlterationForServer_ShouldDropIndexProperly()
+      throws Exception {
+    dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
+        RdbEngine.SQL_SERVER,
+        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM [scalardb].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
+        "DROP INDEX [index_my_ns_my_tbl_my_column] ON [my_ns].[my_tbl]",
+        "UPDATE [scalardb].[metadata] SET [indexed]=0 WHERE [full_table_name]='my_ns.my_tbl' AND [column_name]='my_column'");
+  }
+
+  @Test
+  public void dropIndex_forColumnTypeWithoutRequiredAlterationForOracle_ShouldDropIndexProperly()
+      throws Exception {
+    dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
+        RdbEngine.ORACLE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "DROP INDEX \"index_my_ns_my_tbl_my_column\"",
+        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=0 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+  }
+
+  private void dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
+      RdbEngine rdbEngine,
+      String expectedGetTableMetadataStatement,
+      String expectedDropIndexStatement,
+      String expectedUpdateTableMetadataStatement)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "my_tbl";
+    String indexColumn = "my_column";
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            Arrays.asList(
+                new GetColumnsResultSetMocker.Row(
+                    "c1", DataType.BOOLEAN.toString(), "PARTITION", null, false),
+                new GetColumnsResultSetMocker.Row(
+                    indexColumn, DataType.BOOLEAN.toString(), null, null, false)));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+
+    Statement statement = mock(Statement.class);
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+
+    // Act
+    admin.dropIndex(namespace, table, indexColumn);
+
+    // Assert
+    verify(connection).prepareStatement(expectedGetTableMetadataStatement);
+    verify(selectStatement).setString(1, getFullTableName(namespace, table));
+
+    verify(connection, times(2)).createStatement();
     ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
     verify(statement, times(2)).execute(captor.capture());
     assertThat(captor.getAllValues().get(0)).isEqualTo(expectedDropIndexStatement);
     assertThat(captor.getAllValues().get(1)).isEqualTo(expectedUpdateTableMetadataStatement);
+  }
+
+  @Test
+  public void dropIndex_forColumnTypeWithRequiredAlterationForMysql_ShouldDropIndexProperly()
+      throws Exception {
+    dropIndex_forColumnTypeWithRequiredAlterationForX_ShouldDropIndexProperly(
+        RdbEngine.MYSQL,
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `scalardb`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
+        "DROP INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl`",
+        "ALTER TABLE `my_ns`.`my_tbl` MODIFY`my_column` LONGTEXT",
+        "UPDATE `scalardb`.`metadata` SET `indexed`=false WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
+  }
+
+  @Test
+  public void dropIndex_forColumnTypeWithRequiredAlterationForPostgresql_ShouldDropIndexProperly()
+      throws Exception {
+    dropIndex_forColumnTypeWithRequiredAlterationForX_ShouldDropIndexProperly(
+        RdbEngine.POSTGRESQL,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
+        "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN\"my_column\" TYPE TEXT",
+        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+  }
+
+  @Test
+  public void dropIndex_forColumnTypeWithRequiredAlterationForOracle_ShouldDropIndexProperly()
+      throws Exception {
+    dropIndex_forColumnTypeWithRequiredAlterationForX_ShouldDropIndexProperly(
+        RdbEngine.ORACLE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "DROP INDEX \"index_my_ns_my_tbl_my_column\"",
+        "ALTER TABLE \"my_ns\".\"my_tbl\" MODIFY ( \"my_column\" VARCHAR2(4000) )",
+        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=0 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+  }
+
+  private void dropIndex_forColumnTypeWithRequiredAlterationForX_ShouldDropIndexProperly(
+      RdbEngine rdbEngine,
+      String expectedGetTableMetadataStatement,
+      String expectedDropIndexStatement,
+      String expectedAlterColumnStatement,
+      String expectedUpdateTableMetadataStatement)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "my_tbl";
+    String indexColumn = "my_column";
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            Arrays.asList(
+                new GetColumnsResultSetMocker.Row(
+                    "c1", DataType.BOOLEAN.toString(), "PARTITION", null, false),
+                new GetColumnsResultSetMocker.Row(
+                    indexColumn, DataType.TEXT.toString(), null, null, false)));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+
+    Statement statement = mock(Statement.class);
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+
+    // Act
+    admin.dropIndex(namespace, table, indexColumn);
+
+    // Assert
+    verify(connection).prepareStatement(expectedGetTableMetadataStatement);
+    verify(selectStatement).setString(1, getFullTableName(namespace, table));
+
+    verify(connection, times(3)).createStatement();
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(statement, times(3)).execute(captor.capture());
+    assertThat(captor.getAllValues().get(0)).isEqualTo(expectedDropIndexStatement);
+    assertThat(captor.getAllValues().get(1)).isEqualTo(expectedAlterColumnStatement);
+    assertThat(captor.getAllValues().get(2)).isEqualTo(expectedUpdateTableMetadataStatement);
   }
 
   @Test
