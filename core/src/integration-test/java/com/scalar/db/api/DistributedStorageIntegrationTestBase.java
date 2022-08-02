@@ -95,6 +95,10 @@ public abstract class DistributedStorageIntegrationTestBase {
         options);
   }
 
+  protected int getLargeDataSizeInBytes() {
+    return 5000;
+  }
+
   protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
   }
@@ -1388,7 +1392,9 @@ public abstract class DistributedStorageIntegrationTestBase {
     Key partitionKey = new Key(COL_NAME1, 1);
     for (int i = 0; i < 345; i++) {
       Key clusteringKey = new Key(COL_NAME4, i);
-      storage.put(new Put(partitionKey, clusteringKey).withBlobValue(COL_NAME6, new byte[5000]));
+      storage.put(
+          new Put(partitionKey, clusteringKey)
+              .withBlobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()]));
     }
     Scan scan = new Scan(partitionKey);
 
@@ -1412,7 +1418,9 @@ public abstract class DistributedStorageIntegrationTestBase {
     Key partitionKey = new Key(COL_NAME1, 1);
     for (int i = 0; i < 345; i++) {
       Key clusteringKey = new Key(COL_NAME4, i);
-      storage.put(new Put(partitionKey, clusteringKey).withBlobValue(COL_NAME6, new byte[5000]));
+      storage.put(
+          new Put(partitionKey, clusteringKey)
+              .withBlobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()]));
     }
     Scan scan = new Scan(partitionKey).withOrdering(new Ordering(COL_NAME4, Order.ASC));
 
@@ -1574,7 +1582,9 @@ public abstract class DistributedStorageIntegrationTestBase {
     for (int i = 0; i < 345; i++) {
       Key partitionKey = new Key(COL_NAME1, i % 4);
       Key clusteringKey = new Key(COL_NAME4, i);
-      storage.put(new Put(partitionKey, clusteringKey).withBlobValue(COL_NAME6, new byte[5000]));
+      storage.put(
+          new Put(partitionKey, clusteringKey)
+              .withBlobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()]));
     }
     Scan scan = new ScanAll();
 
@@ -1595,7 +1605,7 @@ public abstract class DistributedStorageIntegrationTestBase {
                       TextColumn.ofNull(COL_NAME2),
                       IntColumn.ofNull(COL_NAME3),
                       BooleanColumn.ofNull(COL_NAME5),
-                      BlobColumn.of(COL_NAME6, new byte[5000])))
+                      BlobColumn.of(COL_NAME6, new byte[getLargeDataSizeInBytes()])))
               .build());
     }
     assertResultsContainsExactlyInAnyOrder(results, expectedResults);

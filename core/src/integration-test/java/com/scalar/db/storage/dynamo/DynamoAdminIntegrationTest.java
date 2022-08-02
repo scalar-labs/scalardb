@@ -18,6 +18,11 @@ public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrati
     return DynamoEnv.getCreationOptions();
   }
 
+  @Override
+  protected boolean isIndexOnBooleanColumnSupported() {
+    return false;
+  }
+
   // Since DynamoDB doesn't have the namespace concept, some behaviors around the namespace are
   // different from the other adapters. So disable several tests that check such behaviors
 

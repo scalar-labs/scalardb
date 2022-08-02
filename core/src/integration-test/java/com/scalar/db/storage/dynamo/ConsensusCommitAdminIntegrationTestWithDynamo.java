@@ -22,6 +22,11 @@ public class ConsensusCommitAdminIntegrationTestWithDynamo
   // Since DynamoDB doesn't have the namespace concept, some behaviors around the namespace are
   // different from the other adapters. So disable several tests that check such behaviors
 
+  @Override
+  protected boolean isIndexOnBooleanColumnSupported() {
+    return false;
+  }
+
   @Disabled
   @Test
   @Override
