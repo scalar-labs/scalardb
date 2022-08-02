@@ -23,7 +23,7 @@ One way to create a transactionally-consistent backup is to take a backup while 
 If an underlying database supports a point-in-time snapshot/backup mechanism, you can take a snapshot during the period.
 If an underlying database supports a point-in-time restore/recovery mechanism, you can set a restore point to a time (preferably the mid-time) in the period.
 
-To easily make Scalar DB drain outstanding requests and stop accepting new requests to create a pause duration, it is recommended to use [Scalar DB server](https://github.com/scalar-labs/scalardb/tree/master/server) (which implements `scalar-admin` interface) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your Scalar DB applications.
+To easily make Scalar DB drain outstanding requests and stop accepting new requests to create a pause duration, it is recommended to use [Scalar DB Server](https://github.com/scalar-labs/scalardb/tree/master/server) (which implements `scalar-admin` interface) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your Scalar DB applications.
 With [scalar-admin client tool](https://github.com/scalar-labs/scalar-admin/tree/scalar-admin-dockerfile#client-side-tool), you can pause nodes/servers/applications that implement the scalar-admin interface without losing ongoing transactions.
 
 Note that when you use a point-in-time-restore/recovery mechanism, it is recommended to minimize the clock drifts between clients and servers by using clock synchronization such as NTP.
@@ -38,10 +38,10 @@ Cassandra has a built-in replication mechanism, so you do not always have to cre
 For example, if the replication factor is set to 3 and only the data of one of the nodes in a cluster is lost, you do not need a transactionally-consistent backup because the node can be recovered with a normal (transactionally-inconsistent) snapshot and the repair mechanism.
 However, if the quorum of nodes of a cluster loses their data, we need a transactionally-consistent backup to restore the cluster to a certain transactionally-consistent point.
 
-If you want to create a transactionally-consistent cluster-wide backup, pause the Scalar DB application (or Scalar DB server) and take the snapshots of nodes as described in [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup), or stop the Cassandra cluster and take the copies of all the nodes' data, and start the cluster.
+If you want to create a transactionally-consistent cluster-wide backup, pause the Scalar DB application (or Scalar DB Server) and take the snapshots of nodes as described in [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup), or stop the Cassandra cluster and take the copies of all the nodes' data, and start the cluster.
 
 To avoid mistakes, it is recommended to use [Cassy](https://github.com/scalar-labs/cassy).
-Cassy is also integrated with `scalar-admin` so it can issue a pause request to the Scalar DB application (or Scalar DB server) of a Cassandra cluster.
+Cassy is also integrated with `scalar-admin` so it can issue a pause request to the Scalar DB application (or Scalar DB Server) of a Cassandra cluster.
 Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups) for more details.
 
 **Cosmos DB**

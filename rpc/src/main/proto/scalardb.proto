@@ -490,7 +490,7 @@ message TwoPhaseCommitTransactionResponse {
   }
 }
 
-// DistributedStorageAdmin
+// DistributedTransactionAdmin
 
 service DistributedTransactionAdmin {
   rpc CreateNamespace(CreateNamespaceRequest) returns (google.protobuf.Empty) {

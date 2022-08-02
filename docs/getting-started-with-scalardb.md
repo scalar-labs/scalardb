@@ -233,4 +233,4 @@ These are just simple examples of how Scalar DB is used. For more information, p
 * [How to Back up and Restore](backup-restore.md)
 * [Multi-storage Transactions](multi-storage-transactions.md)
 * [Two-phase Commit Transactions](two-phase-commit-transactions.md)
-* [Scalar DB server](scalardb-server.md)
+* [Scalar DB Server](scalardb-server.md)
