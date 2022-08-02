@@ -28,11 +28,15 @@ To add a dependency using Maven:
 
 ## Docs
 * [Getting started](getting-started.md)
-* [Scalar DB supported databases](scalardb-supported-databases.md)
 * [Java API Guide](api-guide.md)
+* [Scalar DB Samples](https://github.com/scalar-labs/scalardb-samples)
+* [Scalar DB Server](scalardb-server.md)
 * [Multi-storage Transactions](multi-storage-transactions.md)
 * [Two-phase Commit Transactions](two-phase-commit-transactions.md)
 * [Design document](design.md)
+* [Requirements in the underlying databases](requirements.md)
+* [How to Back up and Restore](backup-restore.md)
+* [Scalar DB supported databases](scalardb-supported-databases.md)
 * [Configurations for Consensus Commit](configurations-for-consensus-commit.md)
 * [Storage abstraction](storage-abstraction.md)
 * Slides

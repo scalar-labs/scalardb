@@ -747,5 +747,5 @@ And if you specify multiple conditions in a Mutate operation, the operation is e
 * [Java API Guide](api-guide.md)
 * [Design document](design.md)
 * [Getting started](getting-started.md)
-* [Scalar DB server](scalardb-server.md)
+* [Scalar DB Server](scalardb-server.md)
 * [Schema Loader](https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md)
