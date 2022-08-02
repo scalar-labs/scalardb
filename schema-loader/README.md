@@ -2,7 +2,7 @@
 
 Scalar DB has its own data model and schema, that maps to the implementation specific data model and schema.
 Also, it stores internal metadata (e.g., transaction ID, record version, transaction status) for managing transaction logs and statuses when you use the Consensus Commit transaction manager.
-It is a little hard for application developers to care for the schema mapping and metadata for transactions, so we offer a tool called Scalar DB Schema Loader for creating schema without much knowledge about those.
+It is a little hard for application developers to manage the schema mapping and metadata for transactions, so we offer a tool called Scalar DB Schema Loader for creating schema without requiring much knowledge about those.
 
 There are two ways to specify general CLI options in Schema Loader:
   - Pass a Scalar DB configuration file and database/storage-specific options additionally.
@@ -392,7 +392,7 @@ If this data type mapping doesn't match your application, please alter the table
 
 The Consensus Commit transaction manager manages metadata (e.g., transaction ID, record version, transaction status) stored along with the actual records to handle transactions properly.
 Thus, along with any required columns by the application, additional columns for the metadata need to be defined in the schema.
-And this tool creates a table with the metadata when you use the Consensus Commit transaction manager.
+Additionaly, this tool creates a table with the metadata when you use the Consensus Commit transaction manager.
 
 ## Using Schema Loader in your program
 You can check the version of `schema-loader` from [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb-schema-loader).
