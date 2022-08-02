@@ -83,7 +83,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                   .put(DataType.FLOAT, "BINARY_FLOAT")
                   .put(DataType.DOUBLE, "BINARY_DOUBLE")
                   .put(DataType.BOOLEAN, "NUMBER(1)")
-                  .put(DataType.BLOB, "BLOB")
+                  .put(DataType.BLOB, "RAW(2000)")
                   .build())
           .put(
               RdbEngine.SQL_SERVER,
@@ -777,12 +777,93 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void createIndex(
       String namespace, String table, String columnName, Map<String, String> options)
       throws ExecutionException {
+
     try (Connection connection = dataSource.getConnection()) {
+      alterToIndexColumnTypeIfNecessary(connection, namespace, table, columnName);
       createIndex(connection, namespace, table, columnName);
       updateTableMetadata(connection, namespace, table, columnName, true);
-    } catch (SQLException e) {
+    } catch (ExecutionException | SQLException e) {
       throw new ExecutionException("creating the secondary index failed", e);
     }
+  }
+
+  private void alterToIndexColumnTypeIfNecessary(
+      Connection connection, String namespace, String table, String columnName)
+      throws ExecutionException, SQLException {
+    DataType indexType = getTableMetadata(namespace, table).getColumnDataType(columnName);
+    ImmutableMap<DataType, String> typeMappingForIndexes = DATA_TYPE_MAPPING_FOR_KEY.get(rdbEngine);
+    assert typeMappingForIndexes != null;
+
+    String indexedColumnType = typeMappingForIndexes.get(indexType);
+    if (indexedColumnType == null) {
+      // The column type does not need to be altered to be compatible with being secondary index
+      return;
+    }
+    String alterColumnStatement =
+        getAlterColumnTypeStatement(namespace, table, columnName, indexedColumnType);
+
+    execute(connection, alterColumnStatement);
+  }
+
+  private void alterToRegularColumnTypeIfNecessary(
+      Connection connection, String namespace, String table, String columnName)
+      throws ExecutionException, SQLException {
+    DataType indexType = getTableMetadata(namespace, table).getColumnDataType(columnName);
+    ImmutableMap<DataType, String> typeMappingForIndexes = DATA_TYPE_MAPPING_FOR_KEY.get(rdbEngine);
+    assert typeMappingForIndexes != null;
+
+    if (typeMappingForIndexes.get(indexType) == null) {
+      // The column type is already the type for a regular column. It was not altered to be
+      // compatible with being a secondary index, so no alteration is necessary.
+      return;
+    }
+
+    ImmutableMap<DataType, String> typeMappingForColumns = DATA_TYPE_MAPPING.get(rdbEngine);
+    assert typeMappingForColumns != null;
+    String regularColumnType = typeMappingForColumns.get(indexType);
+
+    String alterColumnStatement =
+        getAlterColumnTypeStatement(namespace, table, columnName, regularColumnType);
+
+    execute(connection, alterColumnStatement);
+  }
+
+  private String getAlterColumnTypeStatement(
+      String namespace, String table, String columnName, String newType) {
+    String alterColumnStatement;
+    switch (rdbEngine) {
+      case MYSQL:
+        alterColumnStatement =
+            "ALTER TABLE "
+                + encloseFullTableName(namespace, table)
+                + " MODIFY"
+                + enclose(columnName)
+                + " "
+                + newType;
+        break;
+      case POSTGRESQL:
+        alterColumnStatement =
+            "ALTER TABLE "
+                + encloseFullTableName(namespace, table)
+                + " ALTER COLUMN"
+                + enclose(columnName)
+                + " TYPE "
+                + newType;
+        break;
+      case ORACLE:
+        alterColumnStatement =
+            "ALTER TABLE "
+                + encloseFullTableName(namespace, table)
+                + " MODIFY ( "
+                + enclose(columnName)
+                + " "
+                + newType
+                + " )";
+        break;
+      default:
+        throw new AssertionError();
+    }
+    return alterColumnStatement;
   }
 
   @Override
@@ -790,6 +871,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
       dropIndex(connection, namespace, table, columnName);
+      alterToRegularColumnTypeIfNecessary(connection, namespace, table, columnName);
       updateTableMetadata(connection, namespace, table, columnName, false);
     } catch (SQLException e) {
       throw new ExecutionException("dropping the secondary index failed", e);

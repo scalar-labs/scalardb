@@ -1001,6 +1001,49 @@ public class DynamoAdminTest {
   }
 
   @Test
+  public void createIndex_OnBooleanColumn_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    GetItemResponse getItemResponse = mock(GetItemResponse.class);
+    when(client.getItem(any(GetItemRequest.class))).thenReturn(getItemResponse);
+    when(getItemResponse.item())
+        .thenReturn(
+            ImmutableMap.<String, AttributeValue>builder()
+                .put(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s(FULL_TABLE_NAME).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_COLUMNS,
+                    AttributeValue.builder()
+                        .m(
+                            ImmutableMap.<String, AttributeValue>builder()
+                                .put("c1", AttributeValue.builder().s("text").build())
+                                .put("c2", AttributeValue.builder().s("boolean").build())
+                                .build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
+                    AttributeValue.builder().l(AttributeValue.builder().s("c1").build()).build())
+                .build());
+
+    // Act
+    assertThatThrownBy(() -> admin.createIndex(NAMESPACE, TABLE, "c2", Collections.emptyMap()))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    // Assert
+    verify(client)
+        .getItem(
+            GetItemRequest.builder()
+                .tableName(
+                    getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE))
+                .key(
+                    ImmutableMap.of(
+                        DynamoAdmin.METADATA_ATTR_TABLE,
+                        AttributeValue.builder().s(FULL_TABLE_NAME).build()))
+                .consistentRead(true)
+                .build());
+  }
+
+  @Test
   public void dropIndex_ShouldDropIndexProperly() throws ExecutionException {
     // Arrange
     GetItemResponse getItemResponse = mock(GetItemResponse.class);

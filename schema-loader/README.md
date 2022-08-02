@@ -368,15 +368,15 @@ By default, the schema loader enables auto-scaling of RU for all tables: RU is s
 
 When creating tables for a JDBC database with this tool, Scalar DB data types are converted to RDB-specific data types as shown below.
 
-| ScalarDB | MySQL | PostgreSQL | Oracle | SQL Server |
-| ---- | ---- |  ---- |  ---- |  ---- | 
-| INT | INT | INT | INT | INT |
-| BIGINT | BIGINT | BIGINT | NUMBER(19) | BIGINT |
+| ScalarDB | MySQL | PostgreSQL | Oracle         | SQL Server |
+| ---- | ---- |  ---- |----------------|  ---- | 
+| INT | INT | INT | INT            | INT |
+| BIGINT | BIGINT | BIGINT | NUMBER(19)     | BIGINT |
 | TEXT | LONGTEXT | TEXT | VARCHAR2(4000) | VARCHAR(8000) |
-| FLOAT | DOUBLE | FLOAT | BINARY_FLOAT | FLOAT(24) |
-| DOUBLE | DOUBLE | DOUBLE PRECISION | BINARY_DOUBLE | FLOAT |
-| BOOLEAN | BOOLEAN | BOOLEAN | NUMBER(1) | BIT |
-| BLOB | LONGBLOB | BYTEA | BLOB | VARBINARY(8000) |
+| FLOAT | DOUBLE | FLOAT | BINARY_FLOAT   | FLOAT(24) |
+| DOUBLE | DOUBLE | DOUBLE PRECISION | BINARY_DOUBLE  | FLOAT |
+| BOOLEAN | BOOLEAN | BOOLEAN | NUMBER(1)      | BIT |
+| BLOB | LONGBLOB | BYTEA | RAW(2000)      | VARBINARY(8000) |
 
 However, the following types are converted differently when they are used as a primary key or a secondary index key due to the limitations of RDB data types.
 
