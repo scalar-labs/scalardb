@@ -33,7 +33,7 @@ public class ConsensusCommitAdminTest {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    admin = new ConsensusCommitAdmin(distributedStorageAdmin, config);
+    admin = new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
   }
 
   @Test
@@ -56,7 +56,7 @@ public class ConsensusCommitAdminTest {
     String coordinatorNamespaceName = coordinatorNamespace.orElse(Coordinator.NAMESPACE);
     if (coordinatorNamespace.isPresent()) {
       when(config.getCoordinatorNamespace()).thenReturn(coordinatorNamespace);
-      admin = new ConsensusCommitAdmin(distributedStorageAdmin, config);
+      admin = new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
     }
 
     // Act
@@ -93,7 +93,7 @@ public class ConsensusCommitAdminTest {
     String coordinatorNamespaceName = coordinatorNamespace.orElse(Coordinator.NAMESPACE);
     if (coordinatorNamespace.isPresent()) {
       when(config.getCoordinatorNamespace()).thenReturn(coordinatorNamespace);
-      admin = new ConsensusCommitAdmin(distributedStorageAdmin, config);
+      admin = new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
     }
 
     Map<String, String> options = ImmutableMap.of("name", "value");
@@ -128,7 +128,7 @@ public class ConsensusCommitAdminTest {
     String coordinatorNamespaceName = coordinatorNamespace.orElse(Coordinator.NAMESPACE);
     if (coordinatorNamespace.isPresent()) {
       when(config.getCoordinatorNamespace()).thenReturn(coordinatorNamespace);
-      admin = new ConsensusCommitAdmin(distributedStorageAdmin, config);
+      admin = new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
     }
 
     // Act
@@ -156,7 +156,7 @@ public class ConsensusCommitAdminTest {
     String coordinatorNamespaceName = coordinatorNamespace.orElse(Coordinator.NAMESPACE);
     if (coordinatorNamespace.isPresent()) {
       when(config.getCoordinatorNamespace()).thenReturn(coordinatorNamespace);
-      admin = new ConsensusCommitAdmin(distributedStorageAdmin, config);
+      admin = new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
     }
 
     // Act
@@ -396,6 +396,45 @@ public class ConsensusCommitAdminTest {
   }
 
   @Test
+  public void getTableMetadata_WithDebug_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    final String ACCOUNT_ID = "account_id";
+    final String ACCOUNT_TYPE = "account_type";
+    final String BALANCE = "balance";
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build();
+
+    when(distributedStorageAdmin.getTableMetadata(any(), any())).thenReturn(tableMetadata);
+    ConsensusCommitAdmin adminWithDebug =
+        new ConsensusCommitAdmin(distributedStorageAdmin, config, true);
+
+    // Act
+    TableMetadata actual = adminWithDebug.getTableMetadata("ns", "tbl");
+
+    // Assert
+    verify(distributedStorageAdmin).getTableMetadata("ns", "tbl");
+    assertThat(actual).isEqualTo(tableMetadata);
+  }
+
+  @Test
   public void getNamespaceTableNames_ShouldCallJdbcAdminProperly() throws ExecutionException {
     // Arrange
     Set<String> tableNames = ImmutableSet.of("tbl1", "tbl2", "tbl3");
@@ -488,7 +527,7 @@ public class ConsensusCommitAdminTest {
     Map<String, String> options = ImmutableMap.of("foo", "bar");
     String customNamespace = "custom";
     when(config.getCoordinatorNamespace()).thenReturn(Optional.of(customNamespace));
-    admin = new ConsensusCommitAdmin(distributedStorageAdmin, config);
+    admin = new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
 
     // Act
     admin.repairCoordinatorTables(options);

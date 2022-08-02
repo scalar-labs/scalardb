@@ -747,6 +747,16 @@ Also, the `validate()` API could throw `ValidationException` and `ValidationConf
 If you catch `ValidationException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure/error is fixed.
 If you catch `ValidationConflictException`, like the `CrudConflictException` case, you can retry the transaction.
 
+## Debug transactions errors
+
+By adding the following configuration, `Get` and `Scan` operations results will contain [transaction metadata](../schema-loader/README.md/#internal-metadata-for-consensus-commit). 
+It can be useful to investigate transaction related issues.
+
+```properties
+# By default, it is set to "false".
+scalar.db.debug=true
+```
+
 ## References
 
 * [Design document](design.md)

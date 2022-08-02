@@ -13,7 +13,7 @@ public abstract class ConsensusCommitIntegrationTestBase
   }
 
   @Override
-  protected final Properties gerProperties() {
+  protected final Properties getProperties() {
     Properties properties = new Properties();
     properties.putAll(getProps());
     properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "consensus-commit");

@@ -76,7 +76,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     admin = factory.getAdmin();
     DatabaseConfig databaseConfig = new DatabaseConfig(properties);
     ConsensusCommitConfig consensusCommitConfig = new ConsensusCommitConfig(databaseConfig);
-    consensusCommitAdmin = new ConsensusCommitAdmin(admin, consensusCommitConfig);
+    consensusCommitAdmin = new ConsensusCommitAdmin(admin, consensusCommitConfig, false);
     createTables();
     storage = factory.getStorage();
     initManagerAndCoordinator(databaseConfig, consensusCommitConfig);

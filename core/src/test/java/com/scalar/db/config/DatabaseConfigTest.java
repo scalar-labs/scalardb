@@ -439,4 +439,25 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(3600);
   }
+
+  @Test
+  public void constructor_PropertiesWithDebugGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.DEBUG, "true");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
+    assertThat(config.getUsername()).isPresent();
+    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
+    assertThat(config.getPassword()).isPresent();
+    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.isDebugging()).isTrue();
+  }
 }

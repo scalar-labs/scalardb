@@ -30,14 +30,17 @@ public class CrudHandler {
   private final DistributedStorage storage;
   private final Snapshot snapshot;
   private final TransactionTableMetadataManager tableMetadataManager;
+  private final boolean isDebugging;
 
   public CrudHandler(
       DistributedStorage storage,
       Snapshot snapshot,
-      TransactionTableMetadataManager tableMetadataManager) {
+      TransactionTableMetadataManager tableMetadataManager,
+      boolean isDebugging) {
     this.storage = checkNotNull(storage);
     this.snapshot = checkNotNull(snapshot);
     this.tableMetadataManager = tableMetadataManager;
+    this.isDebugging = isDebugging;
   }
 
   public Optional<Result> get(Get get) throws CrudException {
@@ -61,7 +64,7 @@ public class CrudHandler {
   private Optional<Result> createGetResult(Snapshot.Key key, List<String> projections)
       throws CrudException {
     TableMetadata metadata = getTableMetadata(key.getNamespace(), key.getTable());
-    return snapshot.get(key).map(r -> new FilteredResult(r, projections, metadata));
+    return snapshot.get(key).map(r -> new FilteredResult(r, projections, metadata, isDebugging));
   }
 
   public List<Result> scan(Scan scan) throws CrudException {
@@ -114,7 +117,7 @@ public class CrudHandler {
       throws CrudException {
     TableMetadata metadata = getTableMetadata(scan.forNamespace().get(), scan.forTable().get());
     return results.stream()
-        .map(r -> new FilteredResult(r, projections, metadata))
+        .map(r -> new FilteredResult(r, projections, metadata, isDebugging))
         .collect(Collectors.toList());
   }
 
@@ -128,12 +131,14 @@ public class CrudHandler {
 
   private Optional<TransactionResult> getFromStorage(Get get) throws CrudException {
     try {
-      // get only after image columns
       get.clearProjections();
-      LinkedHashSet<String> afterImageColumnNames =
-          tableMetadataManager.getTransactionTableMetadata(get).getAfterImageColumnNames();
-      get.withProjections(afterImageColumnNames);
-
+      // Retrieve only the after images columns when not debugging, otherwise retrieve all the
+      // columns
+      if (!isDebugging) {
+        LinkedHashSet<String> afterImageColumnNames =
+            tableMetadataManager.getTransactionTableMetadata(get).getAfterImageColumnNames();
+        get.withProjections(afterImageColumnNames);
+      }
       get.withConsistency(Consistency.LINEARIZABLE);
       return storage.get(get).map(TransactionResult::new);
     } catch (ExecutionException e) {
@@ -143,12 +148,14 @@ public class CrudHandler {
 
   private Scanner getFromStorage(Scan scan) throws CrudException {
     try {
-      // get only after image columns
       scan.clearProjections();
-      LinkedHashSet<String> afterImageColumnNames =
-          tableMetadataManager.getTransactionTableMetadata(scan).getAfterImageColumnNames();
-      scan.withProjections(afterImageColumnNames);
-
+      // Retrieve only the after images columns when not debugging, otherwise retrieve all the
+      // columns
+      if (!isDebugging) {
+        LinkedHashSet<String> afterImageColumnNames =
+            tableMetadataManager.getTransactionTableMetadata(scan).getAfterImageColumnNames();
+        scan.withProjections(afterImageColumnNames);
+      }
       scan.withConsistency(Consistency.LINEARIZABLE);
       return storage.scan(scan);
     } catch (ExecutionException e) {

@@ -31,13 +31,14 @@ public class FilteredResult extends AbstractResult {
   private final Result original;
   private final ImmutableSet<String> containedColumnNames;
 
-  public FilteredResult(Result original, List<String> projections, TableMetadata metadata) {
+  public FilteredResult(
+      Result original, List<String> projections, TableMetadata metadata, boolean isDebugging) {
     this.original = Objects.requireNonNull(original);
 
     ImmutableSet.Builder<String> builder = ImmutableSet.builder();
     original.getContainedColumnNames().stream()
         .filter(c -> projections.isEmpty() || projections.contains(c))
-        .filter(c -> !ConsensusCommitUtils.isTransactionMetaColumn(c, metadata))
+        .filter(c -> isDebugging || !ConsensusCommitUtils.isTransactionMetaColumn(c, metadata))
         .forEach(builder::add);
     containedColumnNames = builder.build();
   }

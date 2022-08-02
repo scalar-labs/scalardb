@@ -4,11 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import com.scalar.db.util.TestUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -69,6 +71,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
           .build();
   private TransactionFactory transactionFactory;
   private DistributedTransactionAdmin admin;
+  protected DistributedTransactionAdmin adminWithDebug;
   private String namespace1;
   private String namespace2;
   private String namespace3;
@@ -76,7 +79,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize();
-    transactionFactory = TransactionFactory.create(TestUtils.addSuffix(gerProperties(), TEST_NAME));
+    transactionFactory = TransactionFactory.create(TestUtils.addSuffix(getProperties(), TEST_NAME));
     admin = transactionFactory.getTransactionAdmin();
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
@@ -84,9 +87,13 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     createTables();
   }
 
-  protected void initialize() throws Exception {}
+  protected void initialize() throws Exception {
+    Properties debugProperties = TestUtils.addSuffix(getProperties(), TEST_NAME);
+    debugProperties.setProperty(DatabaseConfig.DEBUG, "true");
+    adminWithDebug = TransactionFactory.create(debugProperties).getTransactionAdmin();
+  }
 
-  protected abstract Properties gerProperties();
+  protected abstract Properties getProperties();
 
   protected String getNamespace1() {
     return NAMESPACE1;
@@ -119,6 +126,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   public void afterAll() throws ExecutionException {
     dropTables();
     admin.close();
+    adminWithDebug.close();
   }
 
   private void dropTables() throws ExecutionException {
@@ -129,6 +137,21 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       admin.dropNamespace(namespace);
     }
     admin.dropCoordinatorTables();
+  }
+
+  @Test
+  public void
+      getTableMetadata_WhenDebugging_ShouldReturnCorrectMetadataWithTransactionMetadataColumns()
+          throws ExecutionException {
+    // Arrange
+    TableMetadata transactionTableMetadata =
+        ConsensusCommitUtils.buildTransactionTableMetadata(TABLE_METADATA);
+
+    // Act
+    TableMetadata tableMetadata = adminWithDebug.getTableMetadata(namespace1, TABLE1);
+
+    // Assert
+    assertThat(tableMetadata).isEqualTo(transactionTableMetadata);
   }
 
   @Test

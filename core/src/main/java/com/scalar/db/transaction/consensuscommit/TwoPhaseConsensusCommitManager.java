@@ -38,8 +38,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   private final ParallelExecutor parallelExecutor;
   private final RecoveryHandler recovery;
   private final CommitHandler commit;
-
   private final ActiveExpiringMap<String, TwoPhaseConsensusCommit> activeTransactions;
+  private final boolean isDebugging;
 
   @Inject
   public TwoPhaseConsensusCommitManager(
@@ -54,7 +54,6 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     parallelExecutor = new ParallelExecutor(config);
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
-
     activeTransactions =
         new ActiveExpiringMap<>(
             TRANSACTION_LIFETIME_MILLIS,
@@ -67,6 +66,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
                 logger.warn("rollback failed", e);
               }
             });
+    isDebugging = databaseConfig.isDebugging();
   }
 
   @VisibleForTesting
@@ -90,6 +90,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     this.recovery = recovery;
     this.commit = commit;
     activeTransactions = new ActiveExpiringMap<>(Long.MAX_VALUE, Long.MAX_VALUE, t -> {});
+    this.isDebugging = databaseConfig.isDebugging();
   }
 
   @Override
@@ -130,7 +131,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
       String txId, boolean isCoordinator, Isolation isolation, SerializableStrategy strategy) {
     Snapshot snapshot =
         new Snapshot(txId, isolation, strategy, tableMetadataManager, parallelExecutor);
-    CrudHandler crud = new CrudHandler(storage, snapshot, tableMetadataManager);
+    CrudHandler crud = new CrudHandler(storage, snapshot, tableMetadataManager, isDebugging);
 
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator);
