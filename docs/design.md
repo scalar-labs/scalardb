@@ -20,7 +20,7 @@ The primary design goal of Scalar DB is achieving ACID transaction capability wi
 Scalar DB is composed of universal transaction manager, storage abstraction, and storage adapters. Universal transaction manager and storage abstraction are storage-agnostic. On the other hand, storage adapters are storage-specific so there is an adapter for each storage implementation.
 
 <p align="center">
-<img src="https://github.com/scalar-labs/scalardb/raw/master/docs/images/software_stack.png" width="440" />
+<img src="images/software_stack.png" width="440" />
 </p>
 
 ## Data Model
@@ -30,7 +30,7 @@ The data model of Scalar DB is a multi-dimensional map based on the key-value da
 (partition-key, clustering-key, column-name) -> column-value
 
 <p align="center">
-<img src="https://github.com/scalar-labs/scalardb/raw/master/docs/images/data_model.png" width="480" />
+<img src="images/data_model.png" width="480" />
 </p>
 
 ### Physical Data Model

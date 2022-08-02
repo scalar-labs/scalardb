@@ -183,9 +183,48 @@ Similar to `prepare()`, you can call `validate()` in the coordinator/participant
 Currently, you need to call `validate()` when you use the `Consensus Commit` transaction manager with `EXTRA_READ` serializable strategy in `SERIALIZABLE` isolation level.
 In other cases, `validate()` does nothing.
 
-### Suspend and resume the transaction
+### Request Routing in Two-phase Commit Transactions
 
-You can suspend and resume the transaction object (the `TwoPhaseCommitTransaction` instance) as follows:
+Services using Two-phase Commit Transactions usually execute a transaction by exchanging multiple requests and responses as follows:
+
+<p align="center">
+<img src="images/two_phase_commit_sequence_diagram.png" width="400" />
+</p>
+
+Also, each service typically has multiple servers (or hosts) for scalability and availability and uses server-side (proxy) or client-side load balancing to distribute requests to the servers.
+In such a case, since a transaction processing in Two-phase Commit Transactions is stateful, requests in a transaction must be routed to the same servers while different transactions need to be distributed to balance the load.
+
+<p align="center">
+<img src="images/two_phase_commit_load_balancing.png" width="500" />
+</p>
+
+There are several approaches to achieve it depending on the protocol between the services. Here, we introduce some approaches for gRPC and HTTP/1.1.
+
+#### gPRC
+
+Please see [this document](https://grpc.io/blog/grpc-load-balancing/) for the details of gRPC Load Balancing.
+
+When you use a client-side load balancer, you can use the same gRPC connection to send requests in a transaction, which guarantees that the requests go to the same servers.
+
+When you use a server-side (proxy) load balancer, solutions are different between when using L3/L4 (transport level) and L7 (application level) load balancer.
+When using an L3/L4 load balancer, you can use the same gRPC connection to send requests in a transaction, similar to when you use a client-side load balancer.
+Requests in the same gRPC connection always go to the same server in L3/L4 load balancing.
+When using an L7 load balancer, since requests in the same gRPC connection do not necessarily go to the same server, you need to use cookies or similar for routing requests to correct server.
+For example, when you use [Envoy](https://www.envoyproxy.io/), you can use session affinity (sticky session) for gRPC.
+Or you can also use [Bidirectional streaming RPC in gRPC](https://grpc.io/docs/what-is-grpc/core-concepts/#bidirectional-streaming-rpc) since the L7 load balancer distributes requests in the same stream to the same server.
+
+#### HTTP/1.1
+
+Typically, you use a server-side (proxy) load balancer with HTTP/1.1.
+When using an L3/L4 load balancer, you can use the same HTTP connection to send requests in a transaction, which guarantees the requests go to the same server.
+When using an L7 load balancer, since requests in the same HTTP connection do not necessarily go to the same server, you need to use cookies or similar for routing requests to correct server.
+You can use session affinity (sticky session) in that case.
+
+#### Suspend and resume a transaction
+
+Since services using Two-phase Commit Transactions exchange multiple requests/responses, you may need to execute a transaction across multiple endpoints/APIs.
+For such cases, you can suspend and resume a transaction object (a `TwoPhaseCommitTransaction` instance) as follows:
+
 ```java
 // Join the transaction
 TwoPhaseCommitTransaction tx = manager.join("<transaction ID>");
@@ -201,8 +240,7 @@ manager.suspend(tx);
 TwoPhaseCommitTransaction tx1 = manager.resume("<transaction ID>")
 ```
 
-It is useful when you execute a transaction across multiple endpoints.
-For example, let's see you have two services that have the following interfaces:
+For example, let's say you have two services that have the following endpoints:
 
 ```java
 interface ServiceA {
@@ -222,7 +260,7 @@ interface ServiceB {
 }
 ```
 
-And, let's see `ServiceA.facadeEndpoint()` starts a transaction that span the two services as follows.
+And, let's say a client calls `ServiceA.facadeEndpoint()` that starts a transaction that spans the two services (`ServiceA` and `ServiceB`) as follows:
 
 ```java
 public class ServiceAImpl implements ServiceA {
@@ -265,9 +303,10 @@ public class ServiceAImpl implements ServiceA {
 }
 ```
 
-In this example, the transaction is executed across multiple endpoints (`endpoint1()`, `endpoint2()`, `prepare()`, `commit()`, and `rollback()`) in ServiceB, and in Two-phase Commit Transactions, you need to use the same transaction object in the same transaction across the endpoints.
-In this situation, you can suspend and resume the transaction.
-The implementation of ServiceB is as follows:
+This facade endpoint in `ServiceA` calls multiple endpoints (`endpoint1()`, `endpoint2()`, `prepare()`, `commit()`, and `rollback()`) of `ServiceB`.
+And in Two-phase Commit Transactions, you need to use the same transaction object across the endpoints.
+For this situation, you can suspend and resume the transaction.
+The implementation of `ServiceB` is as follows:
 
 ```java
 public class ServiceBImpl implements ServiceB {
@@ -343,7 +382,7 @@ public class ServiceBImpl implements ServiceB {
 }
 ```
 
-As you can see, by resuming and suspending the transaction, you can execute a transaction across multiple endpoints.
+As you can see, by suspending and resuming the transaction, you can share the same transaction object across multiple endpoints in `ServiceB`.
 
 ## Further reading
 
