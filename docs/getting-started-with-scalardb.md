@@ -11,7 +11,8 @@ $ cd docs/getting-started
 ## Set up database schema
 
 First of all, you need to define how the data will be organized (a.k.a database schema) in the application with Scalar DB database schema.
-Here is a database schema for the sample application. For the supported data types, please see [this doc](schema.md) for more details.
+Here is a database schema for the sample application.
+For the supported data types, please see [this doc](https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md#data-type-mapping-between-scalar-db-and-the-other-databases) for more details.
 You can create a JSON file `emoney.json` with the JSON below.
 
 ```json
@@ -228,7 +229,6 @@ These are just simple examples of how Scalar DB is used. For more information, p
     * [scalardb-rpc](https://javadoc.io/doc/com.scalar-labs/scalardb-rpc/latest/index.html) - Scalar DB RPC libraries
     * [scalardb-server](https://javadoc.io/doc/com.scalar-labs/scalardb-server/latest/index.html) - Scalar DB Server that is the gRPC interface of Scalar DB
 * [Requirements in the underlying databases](requirements.md)
-* [Database schema in Scalar DB](schema.md)
 * [Schema Loader](https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md)
 * [How to Back up and Restore](backup-restore.md)
 * [Multi-storage Transactions](multi-storage-transactions.md)
