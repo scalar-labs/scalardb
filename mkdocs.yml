@@ -4,7 +4,6 @@ nav:
 - Home: index.md
 - How to use:
     - Getting started: getting-started.md
-    - Database schema: schema.md
     - Schema Loader: https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md
 - Design: design.md
 - Multi-storage Transactions: multi-storage-transactions.md
