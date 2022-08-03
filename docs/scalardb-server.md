@@ -60,7 +60,7 @@ scalar.db.password=cassandra
 # Storage implementation. "cassandra" or "cosmos" or "dynamo" or "jdbc" or "grpc" can be set. Default storage is "cassandra".
 scalar.db.storage=cassandra
 
-# Get and Scan operations results will contain transaction metadata. It can be useful to investigate transaction related issues. The default is "false".
+# If set to "true", Get and Scan operations results will contain transaction metadata. It can be useful to investigate transaction related issues. The default is "false".
 scalar.db.debug=false
 
 # The type of the transaction manager. "consensus-commit" or "jdbc" or "grpc" can be set. The default is "consensus-commit".
