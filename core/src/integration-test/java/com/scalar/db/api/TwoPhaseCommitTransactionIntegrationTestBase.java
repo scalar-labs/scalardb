@@ -120,6 +120,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     dropTables();
     admin.close();
     manager.close();
+    managerWithDebug.close();
   }
 
   private void dropTables() throws ExecutionException {
