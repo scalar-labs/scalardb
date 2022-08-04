@@ -749,8 +749,9 @@ If you catch `ValidationConflictException`, like the `CrudConflictException` cas
 
 ## Debug transactions errors
 
-By adding the following configuration, `Get` and `Scan` operations results will contain [transaction metadata](../schema-loader/README.md/#internal-metadata-for-consensus-commit). 
-It can be useful to investigate transaction related issues.
+By adding the following configuration, `Get` and `Scan` operations results will contain [transaction metadata](../schema-loader/README.md/#internal-metadata-for-consensus-commit).
+To see the transaction metadata columns details for a given table, you can use the `DistributedTransactionAdmin.getTableMetadata` method which will return the table metadata augmented with the transaction metadata columns. 
+All in all, using the debug mode can be useful to investigate transaction related issues.
 
 ```properties
 # By default, it is set to "false".
