@@ -103,7 +103,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       SchemaLoader.unload(configPath, schemaFile, coordinator);
     } else if (mode.repairTables) {
       repairTables();
-    } else {
+    } else if (mode.alterTables) {
       alterTables();
     }
     return 0;

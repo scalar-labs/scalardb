@@ -26,6 +26,8 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -211,7 +213,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
       throws IOException {
     Gson gson = new Gson();
     try (Writer writer =
-        new OutputStreamWriter(new FileOutputStream(fileName), StandardCharsets.UTF_8)) {
+        new OutputStreamWriter(
+            Files.newOutputStream(Paths.get(fileName)), StandardCharsets.UTF_8)) {
       gson.toJson(schemaJsonMap, writer);
     }
   }

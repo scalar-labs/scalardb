@@ -221,12 +221,12 @@ $ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> 
 
 This command will add new columns and create/delete secondary index for existing tables. It compares
 the provided table schema to the existing schema to decide which columns need to be added and which
-indexes need to be created or deleted
+indexes need to be created or deleted.
 
 For using config file (Sample config file can be found [here](../conf/database.properties)):
 
 ```console
-$ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json [--coordinator] --alter
+$ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json --alter
 ```
 
 For using CLI arguments fully for configuration (Deprecated. Please use the command using a config
@@ -480,28 +480,31 @@ public class SchemaLoaderSample {
     boolean deleteCoordinatorTables = true; // whether to delete the coordinator tables or not
     boolean repairCoordinatorTables = true; // whether to repair the coordinator tables or not
 
-    Map<String, String> creationOptions = new HashMap<>();
+    Map<String, String> tableCreationOptions = new HashMap<>();
 
-    creationOptions.put(
+    tableCreationOptions.put(
         CassandraAdmin.REPLICATION_STRATEGY, ReplicationStrategy.SIMPLE_STRATEGY.toString());
-    creationOptions.put(CassandraAdmin.COMPACTION_STRATEGY, CompactionStrategy.LCS.toString());
-    creationOptions.put(CassandraAdmin.REPLICATION_FACTOR, "1");
+    tableCreationOptions.put(CassandraAdmin.COMPACTION_STRATEGY, CompactionStrategy.LCS.toString());
+    tableCreationOptions.put(CassandraAdmin.REPLICATION_FACTOR, "1");
 
-    creationOptions.put(DynamoAdmin.REQUEST_UNIT, "1");
-    creationOptions.put(DynamoAdmin.NO_SCALING, "true");
-    creationOptions.put(DynamoAdmin.NO_BACKUP, "true");
+    tableCreationOptions.put(DynamoAdmin.REQUEST_UNIT, "1");
+    tableCreationOptions.put(DynamoAdmin.NO_SCALING, "true");
+    tableCreationOptions.put(DynamoAdmin.NO_BACKUP, "true");
 
     Map<String, String> indexCreationOptions = new HashMap<>();
     indexCreationOptions.put(DynamoAdmin.NO_SCALING, "true");
 
+    Map<String, String> tableReparationOptions = new HashMap<>();
+    indexCreationOptions.put(DynamoAdmin.NO_BACKUP, "true");
+
     // Create tables
-    SchemaLoader.load(configFilePath, schemaFilePath, creationOptions, createCoordinatorTables);
+    SchemaLoader.load(configFilePath, schemaFilePath, tableCreationOptions, createCoordinatorTables);
 
     // Alter tables 
     SchemaLoader.alterTables(configFilePath, alteredSchemaFilePath, indexCreationOptions);
 
     // Repair tables
-    SchemaLoader.repairTables(configFilePath, schemaFilePath, options, repairCoordinatorTables);
+    SchemaLoader.repairTables(configFilePath, schemaFilePath, tableReparationOptions, repairCoordinatorTables);
 
     // Delete tables
     SchemaLoader.unload(configFilePath, schemaFilePath, deleteCoordinatorTables);
@@ -514,30 +517,30 @@ public class SchemaLoaderSample {
 You can also create, delete or repair a schema by passing a serialized schema JSON string (the raw text of a schema file).
 ```java
 // Create tables
-SchemaLoader.load(configFilePath, serializedSchemaJson, options, createCoordinatorTables);
+SchemaLoader.load(configFilePath, serializedSchemaJson, tableCreationOptions, createCoordinatorTables);
 
 // Alter tables 
 SchemaLoader.alterTables(configFilePath, serializedAlteredSchemaFilePath, indexCreationOptions);
 
+// Repair tables
+SchemaLoader.repairTables(configFilePath, serializedSchemaJson, tableReparationOptions, repairCoordinatorTables);
+
 // Delete tables
 SchemaLoader.unload(configFilePath, serializedSchemaJson, deleteCoordinatorTables);
-
-// Repair tables
-SchemaLoader.repairTables(configFilePath, serializedSchemaJson, options, repairCoordinatorTables);
 ```
 
 For Scalar DB configuration, a `Properties` object can be used as well.
 
 ```java
 // Create tables
-SchemaLoader.load(properties, serializedSchemaJson, options, createCoordinatorTables);
+SchemaLoader.load(properties, serializedSchemaJson, tableCreationOptions, createCoordinatorTables);
 
 // Alter tables
 SchemaLoader.alterTables(properties, serializedAlteredSchemaFilePath, indexCreationOptions);
 
+// Repair tables
+SchemaLoader.repairTables(properties, serializedSchemaJson, tableReparationOptions, repairCoordinatorTables);
+
 // Delete tables
 SchemaLoader.unload(properties, serializedSchemaJson, deleteCoordinatorTables);
-
-// Repair tables
-SchemaLoader.repairTables(properties, serializedSchemaJson, options, repairCoordinatorTables);
 ```
