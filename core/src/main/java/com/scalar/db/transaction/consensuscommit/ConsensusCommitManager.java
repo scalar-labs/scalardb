@@ -45,7 +45,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
-    isDebugging = databaseConfig.isDebugging();
+    isDebugging = config.isDebugging();
   }
 
   @VisibleForTesting
@@ -68,7 +68,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     this.parallelExecutor = parallelExecutor;
     this.recovery = recovery;
     this.commit = commit;
-    this.isDebugging = databaseConfig.isDebugging();
+    this.isDebugging = config.isDebugging();
   }
 
   @Override

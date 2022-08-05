@@ -1,7 +1,6 @@
 package com.scalar.db.config;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.scalar.db.config.ConfigUtils.getBoolean;
 import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getLong;
 import static com.scalar.db.config.ConfigUtils.getString;
@@ -59,7 +58,6 @@ public class DatabaseConfig {
   private Class<? extends DistributedTransactionAdmin> transactionAdminClass;
   private Class<? extends TwoPhaseCommitTransactionManager> twoPhaseCommitTransactionManagerClass;
   private long metadataCacheExpirationTimeSecs;
-  private boolean isDebugging;
 
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
@@ -70,7 +68,6 @@ public class DatabaseConfig {
   public static final String TRANSACTION_MANAGER = PREFIX + "transaction_manager";
   public static final String METADATA_CACHE_EXPIRATION_TIME_SECS =
       PREFIX + "metadata.cache_expiration_time_secs";
-  public static final String DEBUG = PREFIX + "debug";
 
   public DatabaseConfig(File propertiesFile) throws IOException {
     try (FileInputStream stream = new FileInputStream(propertiesFile)) {
@@ -180,7 +177,6 @@ public class DatabaseConfig {
 
     metadataCacheExpirationTimeSecs =
         getLong(getProperties(), METADATA_CACHE_EXPIRATION_TIME_SECS, -1);
-    isDebugging = getBoolean(getProperties(), DEBUG, false);
   }
 
   public List<String> getContactPoints() {
@@ -222,9 +218,5 @@ public class DatabaseConfig {
 
   public long getMetadataCacheExpirationTimeSecs() {
     return metadataCacheExpirationTimeSecs;
-  }
-
-  public boolean isDebugging() {
-    return isDebugging;
   }
 }

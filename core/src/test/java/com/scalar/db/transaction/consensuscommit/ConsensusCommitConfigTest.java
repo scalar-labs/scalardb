@@ -29,6 +29,7 @@ public class ConsensusCommitConfigTest {
     assertThat(config.isParallelRollbackEnabled()).isEqualTo(false);
     assertThat(config.isAsyncCommitEnabled()).isEqualTo(false);
     assertThat(config.isAsyncRollbackEnabled()).isEqualTo(false);
+    assertThat(config.isDebugging()).isFalse();
   }
 
   @Test
@@ -178,5 +179,18 @@ public class ConsensusCommitConfigTest {
     // Assert
     assertThat(config.isAsyncCommitEnabled()).isEqualTo(true);
     assertThat(config.isAsyncRollbackEnabled()).isEqualTo(true); // use the async commit value
+  }
+
+  @Test
+  public void constructor_PropertiesWithDebugGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(ConsensusCommitConfig.DEBUG, "true");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.isDebugging()).isTrue();
   }
 }

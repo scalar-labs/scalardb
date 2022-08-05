@@ -60,11 +60,6 @@ scalar.db.password=cassandra
 # Storage implementation. "cassandra" or "cosmos" or "dynamo" or "jdbc" or "grpc" can be set. Default storage is "cassandra".
 scalar.db.storage=cassandra
 
-# If set to "true", Get and Scan operations results will contain transaction metadata. To see the transaction metadata columns details for a given table, you can use the `DistributedTransactionAdmin.getTableMetadata` 
-# method which will return the table metadata augmented with the transaction metadata columns. Using the debug mode can be useful to investigate transaction related issues.
-# The default is false.
-scalar.db.debug=false
-
 # The type of the transaction manager. "consensus-commit" or "jdbc" or "grpc" can be set. The default is "consensus-commit".
 scalar.db.transaction_manager=consensus-commit
 
@@ -75,6 +70,11 @@ scalar.db.consensus_commit.isolation_level=SNAPSHOT
 # Either EXTRA_READ or EXTRA_WRITE can be specified. EXTRA_READ is used by default.
 # If SNAPSHOT is specified in the property "scalar.db.consensus_commit.isolation_level", this is ignored.
 scalar.db.consensus_commit.serializable_strategy=
+
+# If set to "true", Get and Scan operations results will contain transaction metadata. To see the transaction metadata columns details for a given table, you can use the `DistributedTransactionAdmin.getTableMetadata()` 
+# method which will return the table metadata augmented with the transaction metadata columns. Using the debug mode can be useful to investigate transaction related issues.
+# The default is false.
+scalar.db.consensus_commit.debug=false
 ```
 
 ## Start Scalar DB Server

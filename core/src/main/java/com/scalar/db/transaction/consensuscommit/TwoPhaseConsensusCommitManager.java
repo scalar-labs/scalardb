@@ -66,7 +66,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
                 logger.warn("rollback failed", e);
               }
             });
-    isDebugging = databaseConfig.isDebugging();
+    isDebugging = config.isDebugging();
   }
 
   @VisibleForTesting
@@ -90,7 +90,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     this.recovery = recovery;
     this.commit = commit;
     activeTransactions = new ActiveExpiringMap<>(Long.MAX_VALUE, Long.MAX_VALUE, t -> {});
-    this.isDebugging = databaseConfig.isDebugging();
+    isDebugging = config.isDebugging();
   }
 
   @Override

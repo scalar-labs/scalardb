@@ -26,17 +26,16 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Inject
   public ConsensusCommitAdmin(DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
     this.admin = admin;
-    ConsensusCommitConfig consensusCommitConfig = new ConsensusCommitConfig(databaseConfig);
-    this.coordinatorNamespace =
-        consensusCommitConfig.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
-    this.isDebugging = databaseConfig.isDebugging();
+    ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
+    coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
+    isDebugging = config.isDebugging();
   }
 
   @VisibleForTesting
   ConsensusCommitAdmin(
       DistributedStorageAdmin admin, ConsensusCommitConfig config, boolean isDebugging) {
     this.admin = admin;
-    this.coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
+    coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
     this.isDebugging = isDebugging;
   }
 

@@ -4,6 +4,7 @@ import com.scalar.db.api.DistributedTransactionAdminIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
@@ -28,7 +29,7 @@ public class DistributedTransactionAdminServiceIntegrationTest
       serverWithDebugProperties.putAll(config.getProperties());
       String serverWithDebugContactPort = Integer.toString(config.getPort() + 1);
       serverWithDebugProperties.setProperty(ServerConfig.PORT, serverWithDebugContactPort);
-      serverWithDebugProperties.setProperty(DatabaseConfig.DEBUG, "true");
+      serverWithDebugProperties.setProperty(ConsensusCommitConfig.DEBUG, "true");
       serverWithDebug = new ScalarDbServer(new ServerConfig(serverWithDebugProperties));
       serverWithDebug.start();
 

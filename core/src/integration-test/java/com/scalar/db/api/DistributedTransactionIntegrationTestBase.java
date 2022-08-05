@@ -10,7 +10,6 @@ import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.GetBuilder.BuildableGet;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.ScanBuilder.BuildableScanOrScanAllFromExisting;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -24,6 +23,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.transaction.consensuscommit.Attribute;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import com.scalar.db.util.TestUtils;
 import com.scalar.db.util.TestUtils.ExpectedResult;
@@ -82,7 +82,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     manager = factory.getTransactionManager();
 
     Properties debugProperties = TestUtils.addSuffix(getProperties(), testName);
-    debugProperties.setProperty(DatabaseConfig.DEBUG, "true");
+    debugProperties.setProperty(ConsensusCommitConfig.DEBUG, "true");
     managerWithDebug = TransactionFactory.create(debugProperties).getTransactionManager();
   }
 
@@ -874,7 +874,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     selection_UsingDebugMode_ShouldReturnCorrectColumns(false, true);
   }
 
-  public void selection_UsingDebugMode_ShouldReturnCorrectColumns(
+  private void selection_UsingDebugMode_ShouldReturnCorrectColumns(
       boolean isScan, boolean hasProjections) throws TransactionException {
     // Arrange
     Put put =

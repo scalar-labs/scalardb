@@ -31,6 +31,8 @@ public class ConsensusCommitConfig {
 
   public static final int DEFAULT_PARALLEL_EXECUTOR_COUNT = 30;
 
+  public static final String DEBUG = PREFIX + "debug";
+
   private final Isolation isolation;
   private final SerializableStrategy strategy;
   @Nullable private final String coordinatorNamespace;
@@ -42,6 +44,8 @@ public class ConsensusCommitConfig {
   private final boolean parallelRollbackEnabled;
   private final boolean asyncCommitEnabled;
   private final boolean asyncRollbackEnabled;
+
+  private final boolean isDebugging;
 
   public ConsensusCommitConfig(DatabaseConfig databaseConfig) {
     if (databaseConfig.getProperties().containsValue("scalar.db.isolation_level")) {
@@ -93,6 +97,7 @@ public class ConsensusCommitConfig {
     asyncCommitEnabled = getBoolean(databaseConfig.getProperties(), ASYNC_COMMIT_ENABLED, false);
     asyncRollbackEnabled =
         getBoolean(databaseConfig.getProperties(), ASYNC_ROLLBACK_ENABLED, asyncCommitEnabled);
+    isDebugging = getBoolean(databaseConfig.getProperties(), DEBUG, false);
   }
 
   public Isolation getIsolation() {
@@ -133,5 +138,9 @@ public class ConsensusCommitConfig {
 
   public boolean isAsyncRollbackEnabled() {
     return asyncRollbackEnabled;
+  }
+
+  public boolean isDebugging() {
+    return isDebugging;
   }
 }

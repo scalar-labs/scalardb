@@ -4,12 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import com.scalar.db.util.TestUtils;
 import java.nio.charset.StandardCharsets;
@@ -89,7 +89,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
   protected void initialize() throws Exception {
     Properties debugProperties = TestUtils.addSuffix(getProperties(), TEST_NAME);
-    debugProperties.setProperty(DatabaseConfig.DEBUG, "true");
+    debugProperties.setProperty(ConsensusCommitConfig.DEBUG, "true");
     adminWithDebug = TransactionFactory.create(debugProperties).getTransactionAdmin();
   }
 
