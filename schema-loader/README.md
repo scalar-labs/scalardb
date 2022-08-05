@@ -244,7 +244,7 @@ $ java -jar scalardb-schema-loader-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID>
 
 ```console
 # For Cassandra
-$ java -jar scalardb-schema-loader-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSNDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json --alter
+$ java -jar scalardb-schema-loader-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json --alter
 ```
 
 ```console
@@ -273,7 +273,7 @@ $ java -jar scalardb-schema-loader-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID>
 
 ```console
 # For Cassandra
-$ java -jar scalardb-schema-loader-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSNDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json -D
+$ java -jar scalardb-schema-loader-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json -D
 ```
 
 ```console
@@ -304,7 +304,7 @@ $ java -jar scalardb-schema-loader-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID>
 
 ```console
 # For Cassandra
-$ java -jar scalardb-schema-loader-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSNDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json --repair-all
+$ java -jar scalardb-schema-loader-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json --repair-all
 ```
 
 ```console
