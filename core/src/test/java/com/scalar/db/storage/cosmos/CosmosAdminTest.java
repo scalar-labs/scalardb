@@ -21,7 +21,6 @@ import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.CosmosScripts;
 import com.azure.cosmos.CosmosStoredProcedure;
-import com.azure.cosmos.implementation.NotFoundException;
 import com.azure.cosmos.models.CompositePathSortOrder;
 import com.azure.cosmos.models.CosmosContainerProperties;
 import com.azure.cosmos.models.CosmosContainerResponse;
@@ -804,8 +803,7 @@ public class CosmosAdminTest {
   }
 
   @Test
-  public void repairTable_withMissingMetadataForTable_ShouldCreateMetadataTable()
-      throws ExecutionException {
+  public void repairTable_withStoredProcedure_ShouldUpsertMetadata() throws ExecutionException {
     // Arrange
     String namespace = "ns";
     String table = "tbl";
@@ -833,9 +831,6 @@ public class CosmosAdminTest {
     when(client.getDatabase(CosmosAdmin.METADATA_DATABASE)).thenReturn(metadataDatabase);
     when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
         .thenReturn(metadataContainer);
-    when(metadataContainer.readItem(
-            fullTableName, new PartitionKey(fullTableName), CosmosTableMetadata.class))
-        .thenThrow(mock(NotFoundException.class));
 
     CosmosScripts scripts = mock(CosmosScripts.class);
     when(container.getScripts()).thenReturn(scripts);
@@ -851,25 +846,17 @@ public class CosmosAdminTest {
     verify(client, times(2)).createDatabaseIfNotExists(eq(CosmosAdmin.METADATA_DATABASE), any());
 
     verify(metadataDatabase, times(2)).createContainerIfNotExists(any());
-    verify(metadataContainer).readItem(anyString(), any(), any());
     verify(metadataContainer).upsertItem(cosmosTableMetadata);
     verify(storedProcedure).read();
   }
 
   @Test
-  public void repairTable_withMetadataForTablePresent_ShouldNotAddMetadataForTable()
+  public void repairTable_withoutStoredProcedure_ShouldUpsertMetadataAndCreateProcedure()
       throws ExecutionException {
     // Arrange
     String namespace = "ns";
     String table = "tbl";
     String fullTableName = getFullTableName(namespace, table);
-    CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
-    cosmosTableMetadata.setColumns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"));
-    cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c1"));
-    cosmosTableMetadata.setClusteringKeyNames(Collections.emptyList());
-    cosmosTableMetadata.setSecondaryIndexNames(Collections.emptySet());
-    cosmosTableMetadata.setClusteringOrders(Collections.emptyMap());
-    cosmosTableMetadata.setId(fullTableName);
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()
             .addColumn("c1", DataType.INT)
@@ -877,49 +864,6 @@ public class CosmosAdminTest {
             .addColumn("c3", DataType.BIGINT)
             .addPartitionKey("c1")
             .build();
-
-    when(client.getDatabase(namespace)).thenReturn(database);
-    when(database.getContainer(table)).thenReturn(container);
-
-    CosmosContainer metadataContainer = mock(CosmosContainer.class);
-    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
-    when(client.getDatabase(CosmosAdmin.METADATA_DATABASE)).thenReturn(metadataDatabase);
-    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
-        .thenReturn(metadataContainer, metadataContainer);
-
-    @SuppressWarnings("unchecked")
-    CosmosItemResponse<CosmosTableMetadata> itemResponse =
-        (CosmosItemResponse<CosmosTableMetadata>) mock(CosmosItemResponse.class);
-    when(metadataContainer.readItem(
-            fullTableName, new PartitionKey(fullTableName), CosmosTableMetadata.class))
-        .thenReturn(itemResponse);
-    when(itemResponse.getItem()).thenReturn(cosmosTableMetadata);
-
-    CosmosScripts scripts = mock(CosmosScripts.class);
-    when(container.getScripts()).thenReturn(scripts);
-    CosmosStoredProcedure storedProcedure = mock(CosmosStoredProcedure.class);
-    when(scripts.getStoredProcedure(CosmosAdmin.STORED_PROCEDURE_FILE_NAME))
-        .thenReturn(storedProcedure);
-
-    // Act Assert
-    admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
-
-    // Assert
-    verify(container).read();
-    verify(client).createDatabaseIfNotExists(eq(CosmosAdmin.METADATA_DATABASE), any());
-    verify(metadataDatabase).createContainerIfNotExists(any());
-    verify(metadataContainer).readItem(anyString(), any(), any());
-    verify(metadataContainer, never()).upsertItem(any());
-    verify(storedProcedure).read();
-  }
-
-  @Test
-  public void repairTable_withTableWithoutStoredProcedure_ShouldCreateStoredProcedure()
-      throws ExecutionException {
-    // Arrange
-    String namespace = "ns";
-    String table = "tbl";
-    String fullTableName = getFullTableName(namespace, table);
     CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
     cosmosTableMetadata.setColumns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"));
     cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c1"));
@@ -927,31 +871,18 @@ public class CosmosAdminTest {
     cosmosTableMetadata.setSecondaryIndexNames(Collections.emptySet());
     cosmosTableMetadata.setClusteringOrders(Collections.emptyMap());
     cosmosTableMetadata.setId(fullTableName);
-    TableMetadata tableMetadata =
-        TableMetadata.newBuilder()
-            .addColumn("c1", DataType.INT)
-            .addColumn("c2", DataType.TEXT)
-            .addColumn("c3", DataType.BIGINT)
-            .addPartitionKey("c1")
-            .build();
 
     when(client.getDatabase(namespace)).thenReturn(database);
     when(database.getContainer(table)).thenReturn(container);
 
+    // Metadata container
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
     when(client.getDatabase(CosmosAdmin.METADATA_DATABASE)).thenReturn(metadataDatabase);
     when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
-        .thenReturn(metadataContainer, metadataContainer);
+        .thenReturn(metadataContainer);
 
-    @SuppressWarnings("unchecked")
-    CosmosItemResponse<CosmosTableMetadata> itemResponse =
-        (CosmosItemResponse<CosmosTableMetadata>) mock(CosmosItemResponse.class);
-    when(metadataContainer.readItem(
-            fullTableName, new PartitionKey(fullTableName), CosmosTableMetadata.class))
-        .thenReturn(itemResponse);
-    when(itemResponse.getItem()).thenReturn(cosmosTableMetadata);
-
+    // Missing stored procedure
     CosmosScripts scripts = mock(CosmosScripts.class);
     when(container.getScripts()).thenReturn(scripts);
     CosmosStoredProcedure storedProcedure = mock(CosmosStoredProcedure.class);
@@ -961,15 +892,16 @@ public class CosmosAdminTest {
     when(cosmosException.getStatusCode()).thenReturn(404);
     when(storedProcedure.read()).thenThrow(cosmosException);
 
-    // Act Assert
+    // Act
     admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
 
     // Assert
     verify(container).read();
-    verify(client).createDatabaseIfNotExists(eq(CosmosAdmin.METADATA_DATABASE), any());
-    verify(metadataDatabase).createContainerIfNotExists(any());
-    verify(metadataContainer).readItem(anyString(), any(), any());
-    verify(metadataContainer, never()).upsertItem(any());
+    verify(client, times(2)).createDatabaseIfNotExists(eq(CosmosAdmin.METADATA_DATABASE), any());
+
+    verify(metadataDatabase, times(2)).createContainerIfNotExists(any());
+    verify(metadataContainer).upsertItem(cosmosTableMetadata);
+    verify(storedProcedure).read();
     verify(scripts).createStoredProcedure(any());
   }
 

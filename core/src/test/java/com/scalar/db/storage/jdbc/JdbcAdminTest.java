@@ -1518,59 +1518,8 @@ public class JdbcAdminTest {
   public void
       repairTable_WithMissingMetadataTableForMysql_shouldCreateMetadataTableAndAddMetadataForTable()
           throws SQLException, ExecutionException {
-    repairTable_WithMissingMetadataForMysql(false);
-  }
-
-  @Test
-  public void
-      repairTable_WithMissingMetadataTableForOracle_shouldCreateMetadataTableAndAddMetadataForTable()
-          throws SQLException, ExecutionException {
-    repairTable_WithMissingMetadataForOracle(false);
-  }
-
-  @Test
-  public void
-      repairTable_WithMissingMetadataTableForPostgresql_shouldCreateMetadataTableAndAddMetadataForTable()
-          throws SQLException, ExecutionException {
-    repairTable_WithMissingMetadataForPostgresql(false);
-  }
-
-  @Test
-  public void
-      repairTable_WithMissingMetadataTableForSqlServer_shouldCreateMetadataTableAndAddMetadataForTable()
-          throws SQLException, ExecutionException {
-    repairTable_WithMissingMetadataForSqlServer(false);
-  }
-
-  @Test
-  public void repairTable_WithEmptyMetadataTableForMysql_shouldAddMetadataForTable()
-      throws SQLException, ExecutionException {
-    repairTable_WithMissingMetadataForMysql(true);
-  }
-
-  @Test
-  public void repairTable_WithEmptyMetadataTableForOracle_shouldAddMetadataForTable()
-      throws SQLException, ExecutionException {
-    repairTable_WithMissingMetadataForOracle(true);
-  }
-
-  @Test
-  public void repairTable_WithEmptyMetadataTableForPostgresql_shouldAddMetadataForTable()
-      throws SQLException, ExecutionException {
-    repairTable_WithMissingMetadataForPostgresql(true);
-  }
-
-  @Test
-  public void repairTable_WithEmptyMetadataTableForSqlServer_shouldAddMetadataForTable()
-      throws SQLException, ExecutionException {
-    repairTable_WithMissingMetadataForSqlServer(true);
-  }
-
-  private void repairTable_WithMissingMetadataForMysql(boolean isMetadataTableExisting)
-      throws SQLException, ExecutionException {
-    repairTable_WithMissingMetadataForX_shouldAddMetadataForTable(
+    repairTable_WithMissingMetadataTableForX_shouldCreateMetadataTableAndAddMetadataForTable(
         RdbEngine.MYSQL,
-        isMetadataTableExisting,
         "SELECT 1 FROM `my_ns`.`foo_table` LIMIT 1",
         "SELECT 1 FROM `scalardb`.`metadata` LIMIT 1",
         "CREATE SCHEMA IF NOT EXISTS `scalardb`",
@@ -1578,11 +1527,12 @@ public class JdbcAdminTest {
         "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
   }
 
-  private void repairTable_WithMissingMetadataForOracle(boolean isMetadataTableExisting)
-      throws SQLException, ExecutionException {
-    repairTable_WithMissingMetadataForX_shouldAddMetadataForTable(
+  @Test
+  public void
+      repairTable_WithMissingMetadataTableForOracle_shouldCreateMetadataTableAndAddMetadataForTable()
+          throws SQLException, ExecutionException {
+    repairTable_WithMissingMetadataTableForX_shouldCreateMetadataTableAndAddMetadataForTable(
         RdbEngine.ORACLE,
-        isMetadataTableExisting,
         "SELECT 1 FROM \"my_ns\".\"foo_table\" FETCH FIRST 1 ROWS ONLY",
         "SELECT 1 FROM \"scalardb\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
         "CREATE USER \"scalardb\" IDENTIFIED BY \"oracle\"",
@@ -1591,11 +1541,12 @@ public class JdbcAdminTest {
         "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
   }
 
-  private void repairTable_WithMissingMetadataForPostgresql(boolean isMetadataTableExisting)
-      throws SQLException, ExecutionException {
-    repairTable_WithMissingMetadataForX_shouldAddMetadataForTable(
+  @Test
+  public void
+      repairTable_WithMissingMetadataTableForPostgresql_shouldCreateMetadataTableAndAddMetadataForTable()
+          throws SQLException, ExecutionException {
+    repairTable_WithMissingMetadataTableForX_shouldCreateMetadataTableAndAddMetadataForTable(
         RdbEngine.POSTGRESQL,
-        isMetadataTableExisting,
         "SELECT 1 FROM \"my_ns\".\"foo_table\" LIMIT 1",
         "SELECT 1 FROM \"scalardb\".\"metadata\" LIMIT 1",
         "CREATE SCHEMA IF NOT EXISTS \"scalardb\"",
@@ -1603,11 +1554,12 @@ public class JdbcAdminTest {
         "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
   }
 
-  private void repairTable_WithMissingMetadataForSqlServer(boolean isMetadataTableExisting)
-      throws SQLException, ExecutionException {
-    repairTable_WithMissingMetadataForX_shouldAddMetadataForTable(
+  @Test
+  public void
+      repairTable_WithMissingMetadataTableForSqlServer_shouldCreateMetadataTableAndAddMetadataForTable()
+          throws SQLException, ExecutionException {
+    repairTable_WithMissingMetadataTableForX_shouldCreateMetadataTableAndAddMetadataForTable(
         RdbEngine.SQL_SERVER,
-        isMetadataTableExisting,
         "SELECT TOP 1 1 FROM [my_ns].[foo_table]",
         "SELECT TOP 1 1 FROM [scalardb].[metadata]",
         "CREATE SCHEMA [scalardb]",
@@ -1615,9 +1567,10 @@ public class JdbcAdminTest {
         "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
   }
 
-  private void repairTable_WithMissingMetadataForX_shouldAddMetadataForTable(
-      RdbEngine rdbEngine, boolean isMetadataTableExisting, String... expectedSqlStatements)
-      throws SQLException, ExecutionException {
+  private void
+      repairTable_WithMissingMetadataTableForX_shouldCreateMetadataTableAndAddMetadataForTable(
+          RdbEngine rdbEngine, String... expectedSqlStatements)
+          throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
     String table = "foo_table";
@@ -1635,29 +1588,20 @@ public class JdbcAdminTest {
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
 
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
-
-    if (isMetadataTableExisting) {
-      // Mock that the metadata table exists but it is empty
-      PreparedStatement selectStatement = mock(PreparedStatement.class);
-      ResultSet resultSet = mock(ResultSet.class);
-      when(resultSet.next()).thenReturn(false);
-      when(selectStatement.executeQuery()).thenReturn(resultSet);
-      when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    // Mock that the metadata table does not exist
+    SQLException sqlException = mock(SQLException.class);
+    if (rdbEngine == RdbEngine.MYSQL) {
+      when(sqlException.getErrorCode()).thenReturn(1049);
+    } else if (rdbEngine == RdbEngine.POSTGRESQL) {
+      when(sqlException.getSQLState()).thenReturn("42P01");
+    } else if (rdbEngine == RdbEngine.ORACLE) {
+      when(sqlException.getErrorCode()).thenReturn(942);
     } else {
-      // Mock that the metadata table does not exist
-      SQLException sqlException = mock(SQLException.class);
-      if (rdbEngine == RdbEngine.MYSQL) {
-        when(sqlException.getErrorCode()).thenReturn(1049);
-      } else if (rdbEngine == RdbEngine.POSTGRESQL) {
-        when(sqlException.getSQLState()).thenReturn("42P01");
-      } else if (rdbEngine == RdbEngine.ORACLE) {
-        when(sqlException.getErrorCode()).thenReturn(942);
-      } else {
-        when(sqlException.getErrorCode()).thenReturn(208);
-      }
-      when(mockedStatements.get(1).execute(anyString())).thenThrow(sqlException);
+      when(sqlException.getErrorCode()).thenReturn(208);
     }
+    when(mockedStatements.get(1).execute(anyString())).thenThrow(sqlException);
+
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
 
     // Act
     admin.repairTable(namespace, table, metadata, new HashMap<>());
@@ -1669,42 +1613,50 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void repairTable_WithExistingMetadataForTableForMySql_shouldNotAddMetadata()
+  public void repairTable_ExistingMetadataTableForMysql_shouldDeleteThenAddMetadataForTable()
       throws SQLException, ExecutionException {
-    repairTable_WithExistingMetadataForTableForX_shouldNotAddMetadata(
+    repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
         RdbEngine.MYSQL,
         "SELECT 1 FROM `my_ns`.`foo_table` LIMIT 1",
-        "SELECT 1 FROM `scalardb`.`metadata` LIMIT 1");
+        "SELECT 1 FROM `scalardb`.`metadata` LIMIT 1",
+        "DELETE FROM `scalardb`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
+        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
   }
 
   @Test
-  public void repairTable_WithExistingMetadataForTableForOracle_shouldNotAddMetadata()
+  public void repairTable_ExistingMetadataTableForOracle_shouldDeleteThenAddMetadataForTable()
       throws SQLException, ExecutionException {
-    repairTable_WithExistingMetadataForTableForX_shouldNotAddMetadata(
+    repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
         RdbEngine.ORACLE,
         "SELECT 1 FROM \"my_ns\".\"foo_table\" FETCH FIRST 1 ROWS ONLY",
-        "SELECT 1 FROM \"scalardb\".\"metadata\" FETCH FIRST 1 ROWS ONLY");
+        "SELECT 1 FROM \"scalardb\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
+        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
   }
 
   @Test
-  public void repairTable_WithExistingMetadataForTableForPostgresql_shouldNotAddMetadata()
+  public void repairTable_ExistingMetadataTableForPosgresql_shouldDeleteThenAddMetadataForTable()
       throws SQLException, ExecutionException {
-    repairTable_WithExistingMetadataForTableForX_shouldNotAddMetadata(
+    repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
         RdbEngine.POSTGRESQL,
         "SELECT 1 FROM \"my_ns\".\"foo_table\" LIMIT 1",
-        "SELECT 1 FROM \"scalardb\".\"metadata\" LIMIT 1");
+        "SELECT 1 FROM \"scalardb\".\"metadata\" LIMIT 1",
+        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
   }
 
   @Test
-  public void repairTable_WithExistingMetadataForTableForSqlServer_shouldNotAddMetadata()
+  public void repairTable_ExistingMetadataTableForSqlServer_shouldDeleteThenAddMetadataForTable()
       throws SQLException, ExecutionException {
-    repairTable_WithExistingMetadataForTableForX_shouldNotAddMetadata(
+    repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
         RdbEngine.SQL_SERVER,
         "SELECT TOP 1 1 FROM [my_ns].[foo_table]",
-        "SELECT TOP 1 1 FROM [scalardb].[metadata]");
+        "SELECT TOP 1 1 FROM [scalardb].[metadata]",
+        "DELETE FROM [scalardb].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
+        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
   }
 
-  private void repairTable_WithExistingMetadataForTableForX_shouldNotAddMetadata(
+  private void repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
       RdbEngine rdbEngine, String... expectedSqlStatements)
       throws SQLException, ExecutionException {
     // Arrange
@@ -1725,14 +1677,6 @@ public class JdbcAdminTest {
     when(dataSource.getConnection()).thenReturn(connection);
 
     JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
-
-    PreparedStatement selectStatement = mock(PreparedStatement.class);
-    ResultSet resultSet =
-        mockResultSet(
-            Collections.singletonList(
-                new Row("c1", DataType.TEXT.toString(), "PARTITION", null, false)));
-    when(selectStatement.executeQuery()).thenReturn(resultSet);
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
 
     // Act
     admin.repairTable(namespace, table, metadata, new HashMap<>());
