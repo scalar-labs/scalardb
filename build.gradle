@@ -29,7 +29,7 @@ subprojects {
         awssdkVersion = '2.17.69'
         commonsDbcp2Version = '2.8.0'
         mysqlDriverVersion = '8.0.22'
-        postgresqlDriverVersion = '42.3.3'
+        postgresqlDriverVersion = '42.4.1'
         oracleDriverVersion = '19.8.0.0'
         sqlserverDriverVersion = '8.4.1.jre8'
         grpcVersion = '1.46.0'
