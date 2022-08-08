@@ -9,8 +9,6 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.TransactionFactory;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import com.scalar.db.util.TestUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -29,11 +27,11 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedTransactionAdminIntegrationTestBase {
 
-  private static final String TEST_NAME = "tx_admin";
+  protected static final String TEST_NAME = "tx_admin";
   private static final String NAMESPACE1 = "integration_testing_" + TEST_NAME + "1";
   private static final String NAMESPACE2 = "integration_testing_" + TEST_NAME + "2";
   private static final String NAMESPACE3 = "integration_testing_" + TEST_NAME + "3";
-  private static final String TABLE1 = "test_table1";
+  protected static final String TABLE1 = "test_table1";
   private static final String TABLE2 = "test_table2";
   private static final String TABLE3 = "test_table3";
   private static final String TABLE4 = "test_table4";
@@ -49,7 +47,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   private static final String COL_NAME10 = "c10";
   private static final String COL_NAME11 = "c11";
 
-  private static final TableMetadata TABLE_METADATA =
+  protected static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
           .addColumn(COL_NAME1, DataType.INT)
           .addColumn(COL_NAME2, DataType.TEXT)
@@ -87,11 +85,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     createTables();
   }
 
-  protected void initialize() throws Exception {
-    Properties debugProperties = TestUtils.addSuffix(getProperties(), TEST_NAME);
-    debugProperties.setProperty(ConsensusCommitConfig.DEBUG, "true");
-    adminWithDebug = TransactionFactory.create(debugProperties).getTransactionAdmin();
-  }
+  protected void initialize() throws Exception {}
 
   protected abstract Properties getProperties();
 
@@ -126,7 +120,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   public void afterAll() throws ExecutionException {
     dropTables();
     admin.close();
-    adminWithDebug.close();
   }
 
   private void dropTables() throws ExecutionException {
@@ -137,21 +130,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       admin.dropNamespace(namespace);
     }
     admin.dropCoordinatorTables();
-  }
-
-  @Test
-  public void
-      getTableMetadata_WhenDebugging_ShouldReturnCorrectMetadataWithTransactionMetadataColumns()
-          throws ExecutionException {
-    // Arrange
-    TableMetadata transactionTableMetadata =
-        ConsensusCommitUtils.buildTransactionTableMetadata(TABLE_METADATA);
-
-    // Act
-    TableMetadata tableMetadata = adminWithDebug.getTableMetadata(namespace1, TABLE1);
-
-    // Assert
-    assertThat(tableMetadata).isEqualTo(transactionTableMetadata);
   }
 
   @Test

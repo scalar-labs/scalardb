@@ -6,25 +6,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.scalar.db.api.GetBuilder.BuildableGet;
 import com.scalar.db.api.Scan.Ordering;
-import com.scalar.db.api.ScanBuilder.BuildableScanOrScanAllFromExisting;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.TransactionFactory;
-import com.scalar.db.transaction.consensuscommit.Attribute;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import com.scalar.db.util.TestUtils;
 import com.scalar.db.util.TestUtils.ExpectedResult;
 import com.scalar.db.util.TestUtils.ExpectedResult.ExpectedResultBuilder;
@@ -35,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.Set;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -47,15 +39,15 @@ import org.junit.jupiter.api.TestInstance;
 public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
   private static final String NAMESPACE_BASE_NAME = "integration_testing_";
-  private static final String TABLE = "test_table";
-  private static final String ACCOUNT_ID = "account_id";
-  private static final String ACCOUNT_TYPE = "account_type";
-  private static final String BALANCE = "balance";
+  protected static final String TABLE = "test_table";
+  protected static final String ACCOUNT_ID = "account_id";
+  protected static final String ACCOUNT_TYPE = "account_type";
+  protected static final String BALANCE = "balance";
   private static final String SOME_COLUMN = "some_column";
-  private static final int INITIAL_BALANCE = 1000;
+  protected static final int INITIAL_BALANCE = 1000;
   private static final int NUM_ACCOUNTS = 4;
   private static final int NUM_TYPES = 4;
-  private static final TableMetadata TABLE_METADATA =
+  protected static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
           .addColumn(ACCOUNT_ID, DataType.INT)
           .addColumn(ACCOUNT_TYPE, DataType.INT)
@@ -68,8 +60,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   private DistributedTransactionAdmin admin;
   private TwoPhaseCommitTransactionManager manager;
 
-  private TwoPhaseCommitTransactionManager managerWithDebug;
-  private String namespace;
+  protected String namespace;
 
   @BeforeAll
   public void beforeAll() throws Exception {
@@ -81,11 +72,6 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     namespace = getNamespaceBaseName() + testName;
     createTables();
     manager = factory.getTwoPhaseCommitTransactionManager();
-
-    Properties debugProperties = TestUtils.addSuffix(getProperties(), testName);
-    debugProperties.setProperty(ConsensusCommitConfig.DEBUG, "true");
-    managerWithDebug =
-        TransactionFactory.create(debugProperties).getTwoPhaseCommitTransactionManager();
   }
 
   protected void initialize() throws Exception {}
@@ -120,7 +106,6 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     dropTables();
     admin.close();
     manager.close();
-    managerWithDebug.close();
   }
 
   private void dropTables() throws ExecutionException {
@@ -1047,91 +1032,6 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     assertResultsContainsExactlyInAnyOrder(results, Collections.singletonList(expectedResult));
   }
 
-  @Test
-  public void scan_UsingDebugMode_ShouldReturnTransactionMetadataColumns()
-      throws TransactionException {
-    selection_UsingDebugMode_ShouldReturnCorrectColumns(true, false);
-  }
-
-  @Test
-  public void scan_UsingDebugModeWithProjections_ShouldReturnProjectedColumns()
-      throws TransactionException {
-    selection_UsingDebugMode_ShouldReturnCorrectColumns(true, true);
-  }
-
-  @Test
-  public void get_UsingDebugMode_ShouldReturnTransactionMetadataColumns()
-      throws TransactionException {
-    selection_UsingDebugMode_ShouldReturnCorrectColumns(false, false);
-  }
-
-  @Test
-  public void get_UsingDebugModeWithProjections_ShouldReturnProjectedColumns()
-      throws TransactionException {
-    selection_UsingDebugMode_ShouldReturnCorrectColumns(false, true);
-  }
-
-  private void selection_UsingDebugMode_ShouldReturnCorrectColumns(
-      boolean isScan, boolean hasProjections) throws TransactionException {
-    // Arrange
-    Put put =
-        Put.newBuilder()
-            .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build();
-    TwoPhaseCommitTransaction transaction = managerWithDebug.start();
-    transaction.put(put);
-    transaction.prepare();
-    transaction.validate();
-    transaction.commit();
-    transaction = managerWithDebug.start();
-    Set<String> projections =
-        ImmutableSet.of(ACCOUNT_ID, Attribute.BEFORE_PREFIX + BALANCE, Attribute.STATE);
-
-    // Act Assert
-    Result result;
-    if (isScan) {
-      // Perform a Scan
-      BuildableScanOrScanAllFromExisting scanBuilder = Scan.newBuilder(prepareScan(0, 0, 1));
-      if (hasProjections) {
-        scanBuilder.projections(projections);
-      }
-      List<Result> results = transaction.scan(scanBuilder.build());
-      assertThat(results.size()).isOne();
-      result = results.get(0);
-    } else {
-      // Perform a Get
-      BuildableGet getBuilder = Get.newBuilder(prepareGet(0, 0));
-      if (hasProjections) {
-        getBuilder.projections(projections);
-      }
-      Optional<Result> optionalResult = transaction.get(getBuilder.build());
-      assertThat(optionalResult).isPresent();
-      result = optionalResult.get();
-    }
-    transaction.prepare();
-    transaction.validate();
-    transaction.commit();
-
-    // Assert the actual result
-    TableMetadata transactionTableMetadata =
-        ConsensusCommitUtils.buildTransactionTableMetadata(TABLE_METADATA);
-    if (hasProjections) {
-      assertThat(result.getContainedColumnNames()).isEqualTo(projections);
-    } else {
-      assertThat(result.getContainedColumnNames().size())
-          .isEqualTo(transactionTableMetadata.getColumnNames().size());
-    }
-    for (Column<?> column : result.getColumns().values()) {
-      assertThat(column.getName()).isIn(transactionTableMetadata.getColumnNames());
-      assertThat(column.getDataType())
-          .isEqualTo(transactionTableMetadata.getColumnDataType(column.getName()));
-    }
-  }
-
   private void populateRecords() throws TransactionException {
     TwoPhaseCommitTransaction transaction = manager.start();
     IntStream.range(0, NUM_ACCOUNTS)
@@ -1172,7 +1072,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     transaction.commit();
   }
 
-  private Get prepareGet(int id, int type) {
+  protected Get prepareGet(int id, int type) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Get(partitionKey, clusteringKey)
@@ -1188,7 +1088,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     return gets;
   }
 
-  private Scan prepareScan(int id, int fromType, int toType) {
+  protected Scan prepareScan(int id, int fromType, int toType) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     return new Scan(partitionKey)
         .forNamespace(namespace)
