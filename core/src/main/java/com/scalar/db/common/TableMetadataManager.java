@@ -7,6 +7,7 @@ import com.scalar.db.api.Admin;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.util.ThrowableFunction;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -20,6 +21,14 @@ public class TableMetadataManager {
   private final LoadingCache<TableKey, Optional<TableMetadata>> tableMetadataCache;
 
   public TableMetadataManager(Admin admin, long cacheExpirationTimeSecs) {
+    this(
+        (key) -> Optional.ofNullable(admin.getTableMetadata(key.namespace, key.table)),
+        cacheExpirationTimeSecs);
+  }
+
+  public TableMetadataManager(
+      ThrowableFunction<Optional<TableMetadata>, TableKey, Exception> getTableMetadataFunc,
+      long cacheExpirationTimeSecs) {
     CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
     if (cacheExpirationTimeSecs >= 0) {
       builder.expireAfterWrite(cacheExpirationTimeSecs, TimeUnit.SECONDS);
@@ -29,8 +38,8 @@ public class TableMetadataManager {
             new CacheLoader<TableKey, Optional<TableMetadata>>() {
               @Nonnull
               @Override
-              public Optional<TableMetadata> load(@Nonnull TableKey key) throws ExecutionException {
-                return Optional.ofNullable(admin.getTableMetadata(key.namespace, key.table));
+              public Optional<TableMetadata> load(@Nonnull TableKey key) throws Exception {
+                return getTableMetadataFunc.apply(key);
               }
             });
   }
@@ -66,7 +75,7 @@ public class TableMetadataManager {
     }
   }
 
-  private static class TableKey {
+  public static class TableKey {
     public final String namespace;
     public final String table;
 
