@@ -38,4 +38,13 @@ public abstract class AdminTestUtils {
    * @throws Exception if an error occurs
    */
   public abstract void truncateMetadataTable() throws Exception;
+
+  /**
+   * Modify the metadata the table in a way that it will fail if the metadata are parsed
+   *
+   * @param namespace a namespace
+   * @param table a table
+   * @throws Exception if an error occurs
+   */
+  public abstract void corruptMetadata(String namespace, String table) throws Exception;
 }

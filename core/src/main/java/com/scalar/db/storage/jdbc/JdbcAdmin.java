@@ -878,7 +878,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private boolean tableExistsInternal(String namespace, String table) throws ExecutionException {
+  private boolean tableExistsInternal(Connection connection, String namespace, String table)
+      throws ExecutionException {
     String fullTableName = encloseFullTableName(namespace, table);
     String tableExistsStatement;
     switch (rdbEngine) {
@@ -895,8 +896,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       default:
         throw new AssertionError();
     }
-
-    try (Connection connection = dataSource.getConnection()) {
+    try {
       execute(connection, tableExistsStatement);
       return true;
     } catch (SQLException e) {
@@ -908,7 +908,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           || (rdbEngine == RdbEngine.SQL_SERVER && e.getErrorCode() == 208)) {
         return false;
       }
-      throw new ExecutionException("checking if the table exists failed", e);
+      throw new ExecutionException(
+          String.format("checking if the table %s.%s exists failed", namespace, table), e);
     }
   }
 
@@ -916,18 +917,23 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    if (!tableExistsInternal(namespace, table)) {
-      throw new IllegalArgumentException(
-          "The table " + getFullTableName(namespace, table) + "  does not exist");
-    }
-
-    if (!tableExistsInternal(metadataSchema, METADATA_TABLE)
-        || getTableMetadata(namespace, table) == null) {
-      try (Connection connection = dataSource.getConnection()) {
-        addTableMetadata(connection, namespace, table, metadata, true);
-      } catch (SQLException e) {
-        throw new ExecutionException("creating the table metadata failed", e);
+    try (Connection connection = dataSource.getConnection()) {
+      if (!tableExistsInternal(connection, namespace, table)) {
+        throw new IllegalArgumentException(
+            "The table " + getFullTableName(namespace, table) + "  does not exist");
       }
+
+      if (tableExistsInternal(connection, metadataSchema, METADATA_TABLE)) {
+        // Delete then add the metadata for the table
+        execute(connection, getDeleteTableMetadataStatement(namespace, table));
+        addTableMetadata(connection, namespace, table, metadata, false);
+      } else {
+        // Create the metadata table then add the metadata for the table
+        addTableMetadata(connection, namespace, table, metadata, true);
+      }
+    } catch (ExecutionException | SQLException e) {
+      throw new ExecutionException(
+          String.format("repairing the table %s.%s failed", namespace, table), e);
     }
   }
 

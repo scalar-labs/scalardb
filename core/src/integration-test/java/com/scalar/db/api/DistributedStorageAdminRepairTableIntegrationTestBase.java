@@ -134,4 +134,17 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
     assertThat(admin.tableExists(getNamespace(), getTable())).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
   }
+
+  @Test
+  public void repairTable_ForCorruptedMetadataTable_ShouldRepairProperly() throws Exception {
+    // Arrange
+    adminTestUtils.corruptMetadata(getNamespace(), getTable());
+
+    // Act
+    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
+
+    // Assert
+    assertThat(admin.tableExists(getNamespace(), getTable())).isTrue();
+    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
+  }
 }

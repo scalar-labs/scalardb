@@ -488,21 +488,24 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try {
-      // Since the metadata table may be missing, we cannot use CosmosAdmin.tableExists() as it
-      // query the metadata table to verify if the given table exists
-      client.getDatabase(namespace).getContainer(table).read();
-    } catch (CosmosException e) {
-      if (e.getStatusCode() == 404) {
-        throw new IllegalArgumentException(
-            "The table " + getFullTableName(namespace, table) + "  does not exist");
+      try {
+        // Since the metadata table may be missing, we cannot use CosmosAdmin.tableExists() as it
+        // queries the metadata table to verify if the given table exists
+        client.getDatabase(namespace).getContainer(table).read();
+      } catch (CosmosException e) {
+        if (e.getStatusCode() == 404) {
+          throw new IllegalArgumentException(
+              "The table " + getFullTableName(namespace, table) + "  does not exist");
+        }
       }
-    }
-    createMetadataDatabaseAndContainerIfNotExists();
-    if (getTableMetadata(namespace, table) == null) {
+      createMetadataDatabaseAndContainerIfNotExists();
       putTableMetadata(namespace, table, metadata);
-    }
-    if (!storedProcedureExists(namespace, table)) {
-      addStoredProcedure(namespace, table);
+      if (!storedProcedureExists(namespace, table)) {
+        addStoredProcedure(namespace, table);
+      }
+    } catch (ExecutionException | CosmosException e) {
+      throw new ExecutionException(
+          String.format("repairing the table %s.%s failed", namespace, table), e);
     }
   }
 
