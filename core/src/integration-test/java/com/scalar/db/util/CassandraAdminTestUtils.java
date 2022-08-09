@@ -15,4 +15,9 @@ public class CassandraAdminTestUtils extends AdminTestUtils {
   public void truncateMetadataTable() {
     // Do nothing
   }
+
+  @Override
+  public void corruptMetadata(String namespace, String table) throws Exception {
+    // Do nothing
+  }
 }
