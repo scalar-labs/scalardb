@@ -28,6 +28,11 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithCassandra
   public void repairTableAndCoordinatorTable_ForTruncatedMetadataTable_ShouldRepairProperly() {}
 
   @Test
+  @Disabled("there is no metadata table for Cassandra")
+  @Override
+  public void repairTable_ForCorruptedMetadataTable_ShouldRepairProperly() {}
+
+  @Test
   public void repairTableAndCoordinatorTable_ShouldDoNothing() throws ExecutionException {
     // Act
     assertThatCode(
