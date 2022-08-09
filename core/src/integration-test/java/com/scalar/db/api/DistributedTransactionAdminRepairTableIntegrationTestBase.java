@@ -152,6 +152,22 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     }
   }
 
+  @Test
+  public void repairTable_ForCorruptedMetadataTable_ShouldRepairProperly() throws Exception {
+    // Arrange
+    adminTestUtils.corruptMetadata(getNamespace(), getTable());
+
+    // Act
+    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
+
+    // Assert
+    assertThat(admin.tableExists(getNamespace(), getTable())).isTrue();
+    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
+    if (hasCoordinatorTables()) {
+      assertTableMetadataForCoordinatorTableArePresent();
+    }
+  }
+
   private void assertTableMetadataForCoordinatorTableArePresent() throws Exception {
     Properties properties = TestUtils.addSuffix(getStorageProperties(), TEST_NAME);
     String coordinatorNamespace =
