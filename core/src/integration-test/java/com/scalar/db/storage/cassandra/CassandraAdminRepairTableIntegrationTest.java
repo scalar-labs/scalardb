@@ -28,6 +28,11 @@ public class CassandraAdminRepairTableIntegrationTest
   public void repairTable_ForTruncatedMetadataTable_ShouldRepairProperly() {}
 
   @Test
+  @Disabled("there is no metadata table for Cassandra")
+  @Override
+  public void repairTable_ForCorruptedMetadataTable_ShouldRepairProperly() {}
+
+  @Test
   public void repairTable_ShouldDoNothing() throws ExecutionException {
     // Act
     assertThatCode(

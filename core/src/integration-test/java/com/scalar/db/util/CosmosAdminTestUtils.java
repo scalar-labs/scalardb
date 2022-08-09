@@ -1,5 +1,7 @@
 package com.scalar.db.util;
 
+import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
+
 import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
@@ -10,9 +12,11 @@ import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.util.CosmosPagedIterable;
+import com.google.common.collect.ImmutableList;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cosmos.CosmosAdmin;
 import com.scalar.db.storage.cosmos.CosmosConfig;
+import com.scalar.db.storage.cosmos.CosmosTableMetadata;
 import com.scalar.db.storage.cosmos.Record;
 import java.util.Properties;
 
@@ -59,6 +63,16 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
         record ->
             container.deleteItem(
                 record.getId(), new PartitionKey(record.getId()), new CosmosItemRequestOptions()));
+  }
+
+  @Override
+  public void corruptMetadata(String namespace, String table) {
+    CosmosTableMetadata corruptedMetadata = new CosmosTableMetadata();
+    corruptedMetadata.setId(getFullTableName(namespace, table));
+    corruptedMetadata.setPartitionKeyNames(ImmutableList.of("corrupted"));
+
+    CosmosContainer container = client.getDatabase(metadataNamespace).getContainer(metadataTable);
+    container.upsertItem(corruptedMetadata);
   }
 
   /**

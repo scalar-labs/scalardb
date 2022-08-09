@@ -2,6 +2,7 @@ package com.scalar.db.util;
 
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
@@ -21,6 +22,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
@@ -107,5 +109,22 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
       }
       lastKeyEvaluated = scanResponse.lastEvaluatedKey();
     } while (!lastKeyEvaluated.isEmpty());
+  }
+
+  @Override
+  public void corruptMetadata(String namespace, String table) {
+    Map<String, AttributeValue> itemValues = new HashMap<>();
+    itemValues.put("table", AttributeValue.builder().s(getFullTableName(namespace, table)).build());
+    itemValues.put(
+        "partitionKey",
+        AttributeValue.builder()
+            .l(ImmutableList.of(AttributeValue.builder().s("corrupted").build()))
+            .build());
+
+    client.putItem(
+        PutItemRequest.builder()
+            .tableName(getFullTableName(metadataNamespace, metadataTable))
+            .item(itemValues)
+            .build());
   }
 }
