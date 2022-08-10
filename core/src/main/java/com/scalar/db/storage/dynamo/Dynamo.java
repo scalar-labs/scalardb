@@ -66,10 +66,13 @@ public class Dynamo extends AbstractDistributedStorage {
             new DynamoAdmin(client, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
     operationChecker = new DynamoOperationChecker(metadataManager);
 
-    selectStatementHandler = new SelectStatementHandler(client, metadataManager);
-    putStatementHandler = new PutStatementHandler(client, metadataManager);
-    deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
-    batchHandler = new BatchHandler(client, metadataManager);
+    selectStatementHandler =
+        new SelectStatementHandler(client, metadataManager, config.getNamespacePrefix());
+    putStatementHandler =
+        new PutStatementHandler(client, metadataManager, config.getNamespacePrefix());
+    deleteStatementHandler =
+        new DeleteStatementHandler(client, metadataManager, config.getNamespacePrefix());
+    batchHandler = new BatchHandler(client, metadataManager, config.getNamespacePrefix());
 
     logger.info("DynamoDB object is created properly.");
   }

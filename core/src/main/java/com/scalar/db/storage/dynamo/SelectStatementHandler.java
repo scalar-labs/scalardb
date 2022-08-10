@@ -46,7 +46,7 @@ import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 public class SelectStatementHandler {
   private final DynamoDbClient client;
   private final TableMetadataManager metadataManager;
-
+  private final String namespacePrefix;
   /**
    * Constructs a {@code SelectStatementHandler} with the specified {@link DynamoDbClient} and a new
    * {@link TableMetadataManager}
@@ -54,14 +54,24 @@ public class SelectStatementHandler {
    * @param client {@code DynamoDbClient}
    * @param metadataManager {@code TableMetadataManager}
    */
-  public SelectStatementHandler(DynamoDbClient client, TableMetadataManager metadataManager) {
+  public SelectStatementHandler(
+      DynamoDbClient client,
+      TableMetadataManager metadataManager,
+      Optional<String> namespacePrefix) {
     this.client = checkNotNull(client);
     this.metadataManager = checkNotNull(metadataManager);
+    this.namespacePrefix = namespacePrefix.orElse("");
   }
 
   @Nonnull
   public Scanner handle(Selection selection) throws ExecutionException {
     TableMetadata tableMetadata = metadataManager.getTableMetadata(selection);
+    if (selection instanceof Get) {
+      selection = copyAndAppendNamespacePrefix((Get) selection);
+    } else {
+      selection = copyAndAppendNamespacePrefix((Scan) selection);
+    }
+
     try {
       if (!(selection instanceof ScanAll)
           && ScalarDbUtils.isSecondaryIndexSpecified(selection, tableMetadata)) {
@@ -504,5 +514,15 @@ public class SelectStatementHandler {
       return tableMetadata.getClusteringOrder(lastValueName) == Order.DESC;
     }
     return false;
+  }
+
+  private Get copyAndAppendNamespacePrefix(Get get) {
+    assert get.forNamespace().isPresent();
+    return Get.newBuilder(get).namespace(namespacePrefix + get.forNamespace().get()).build();
+  }
+
+  private Scan copyAndAppendNamespacePrefix(Scan scan) {
+    assert scan.forNamespace().isPresent();
+    return Scan.newBuilder(scan).namespace(namespacePrefix + scan.forNamespace().get()).build();
   }
 }

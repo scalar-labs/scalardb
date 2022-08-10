@@ -21,6 +21,7 @@ import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -33,7 +34,7 @@ import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemResponse;
 
-public class PutStatementHandlerTest {
+public abstract class PutStatementHandlerTestBase {
   private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
@@ -55,11 +56,17 @@ public class PutStatementHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = new PutStatementHandler(client, metadataManager);
+    handler = new PutStatementHandler(client, metadataManager, getNamespacePrefix());
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
+  }
+
+  abstract Optional<String> getNamespacePrefix();
+
+  private String getFullTableName() {
+    return getNamespacePrefix().orElse("") + ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME;
   }
 
   private Put preparePut() {
@@ -93,6 +100,7 @@ public class PutStatementHandlerTest {
     assertThat(actualRequest.updateExpression()).isEqualTo(updateExpression);
     assertThat(actualRequest.conditionExpression()).isNull();
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -122,6 +130,7 @@ public class PutStatementHandlerTest {
     assertThat(actualRequest.updateExpression()).isEqualTo(updateExpression);
     assertThat(actualRequest.conditionExpression()).isNull();
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -161,6 +170,7 @@ public class PutStatementHandlerTest {
     assertThat(actualRequest.updateExpression()).isEqualTo(updateExpression);
     assertThat(actualRequest.conditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -185,6 +195,7 @@ public class PutStatementHandlerTest {
     assertThat(actualRequest.updateExpression()).isEqualTo(updateExpression);
     assertThat(actualRequest.conditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test

@@ -1,9 +1,11 @@
 package com.scalar.db.storage.dynamo;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Delete;
@@ -22,9 +24,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -33,7 +37,7 @@ import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.TransactWriteItemsRequest;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 
-public class BatchHandlerTest {
+public abstract class BatchHandlerTestBase {
   private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
@@ -54,11 +58,17 @@ public class BatchHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = new BatchHandler(client, metadataManager);
+    handler = new BatchHandler(client, metadataManager, getNamespacePrefix());
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
+  }
+
+  abstract Optional<String> getNamespacePrefix();
+
+  private String getFullTableName() {
+    return getNamespacePrefix().orElse("") + ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME;
   }
 
   private Put preparePut() {
@@ -140,5 +150,24 @@ public class BatchHandlerTest {
     assertThatThrownBy(() -> handler.handle(Arrays.asList(put1, put2)))
         .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
+  }
+
+  @Test
+  public void handle_WithPutAndDelete_ShouldWorkProperly() throws ExecutionException {
+    Put put = preparePut();
+    Delete delete = prepareDelete();
+
+    // Act Assert
+    handler.handle(Arrays.asList(put, delete));
+
+    ArgumentCaptor<TransactWriteItemsRequest> argument =
+        ArgumentCaptor.forClass(TransactWriteItemsRequest.class);
+    verify(client).transactWriteItems(argument.capture());
+    TransactWriteItemsRequest capturedRequest = argument.getValue();
+    assertThat(capturedRequest.transactItems()).hasSize(2);
+    assertThat(capturedRequest.transactItems().get(0).update().tableName())
+        .isEqualTo(getFullTableName());
+    assertThat(capturedRequest.transactItems().get(1).delete().tableName())
+        .isEqualTo(getFullTableName());
   }
 }
