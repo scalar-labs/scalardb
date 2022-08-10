@@ -22,7 +22,7 @@ public class TableMetadataManager {
 
   public TableMetadataManager(Admin admin, long cacheExpirationTimeSecs) {
     this(
-        (key) -> Optional.ofNullable(admin.getTableMetadata(key.namespace, key.table)),
+        key -> Optional.ofNullable(admin.getTableMetadata(key.namespace, key.table)),
         cacheExpirationTimeSecs);
   }
 
