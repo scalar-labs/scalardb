@@ -382,7 +382,7 @@ public class SchemaLoader {
   }
 
   /**
-   * Alter the tables defined in the schema. Supported alteration are :
+   * Alter the tables defined in the schema. Supported alter operations are:
    *
    * <ul>
    *   <li>add non primary-key columns
@@ -410,7 +410,7 @@ public class SchemaLoader {
   }
 
   /**
-   * Alter the tables defined in the schema. Supported alteration are :
+   * Alter the tables defined in the schema. Supported alter operations are:
    *
    * <ul>
    *   <li>add non primary-key columns
@@ -436,7 +436,7 @@ public class SchemaLoader {
   }
 
   /**
-   * Alter the tables defined in the schema. Supported alteration are :
+   * Alter the tables defined in the schema. Supported alter operations are:
    *
    * <ul>
    *   <li>add non primary-key columns
@@ -462,7 +462,7 @@ public class SchemaLoader {
   }
 
   /**
-   * Alter the tables defined in the schema. Supported alteration are :
+   * Alter the tables defined in the schema. Supported alter operations are:
    *
    * <ul>
    *   <li>add non primary-key columns

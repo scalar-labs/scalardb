@@ -9,7 +9,7 @@ There are two ways to specify general CLI options in Schema Loader:
   - Pass the options without a Scalar DB configuration (Deprecated).
 
 Note that this tool supports only basic options to create/delete/repair/alter a table. If you want
-to use advanced features of the database, please alter your tables after creating them with this tool.
+to use the advanced features of a database, please alter your tables with a database specific tool after creating them with this tool.
 
 # Usage
 
