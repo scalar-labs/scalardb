@@ -273,14 +273,15 @@ public class SchemaLoader {
       operator.close();
     }
   }
+
   /**
    * Repair tables defined in the schema.
    *
    * @param configProperties Scalar DB config properties
    * @param serializedSchemaJson serialized json string schema.
-   * @param options specific options for creating tables.
+   * @param options specific options for repairing tables.
    * @param repairCoordinatorTable repair coordinator tables or not.
-   * @throws SchemaLoaderException thrown when creating tables failed.
+   * @throws SchemaLoaderException thrown when repairing tables failed.
    */
   public static void repairTables(
       Properties configProperties,
@@ -292,14 +293,15 @@ public class SchemaLoader {
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
     repairTables(config, schema, options, repairCoordinatorTable);
   }
+
   /**
    * Repair tables defined in the schema file.
    *
    * @param configProperties Scalar DB properties.
    * @param schemaPath path to the schema file.
-   * @param options specific options for creating tables.
+   * @param options specific options for repairing tables.
    * @param repairCoordinatorTable repair coordinator tables or not.
-   * @throws SchemaLoaderException thrown when creating tables failed.
+   * @throws SchemaLoaderException thrown when repairing tables failed.
    */
   public static void repairTables(
       Properties configProperties,
@@ -317,9 +319,9 @@ public class SchemaLoader {
    *
    * @param configPath path to the Scalar DB config.
    * @param serializedSchemaJson serialized json string schema.
-   * @param options specific options for creating tables.
+   * @param options specific options for repairing tables.
    * @param repairCoordinatorTable repair coordinator tables or not.
-   * @throws SchemaLoaderException thrown when creating tables failed.
+   * @throws SchemaLoaderException thrown when repairing tables failed.
    */
   public static void repairTables(
       Path configPath,
@@ -331,14 +333,15 @@ public class SchemaLoader {
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
     repairTables(config, schema, options, repairCoordinatorTable);
   }
+
   /**
    * Repair tables defined in the schema file.
    *
    * @param configPath path to the Scalar DB config.
    * @param schemaPath path to the schema file.
-   * @param options specific options for creating tables.
+   * @param options specific options for repairing tables.
    * @param repairCoordinatorTable repair coordinator tables or not.
-   * @throws SchemaLoaderException thrown when creating tables failed.
+   * @throws SchemaLoaderException thrown when repairing tables failed.
    */
   public static void repairTables(
       Path configPath, Path schemaPath, Map<String, String> options, boolean repairCoordinatorTable)
@@ -347,14 +350,15 @@ public class SchemaLoader {
     Either<Path, String> schema = new Left<>(schemaPath);
     repairTables(config, schema, options, repairCoordinatorTable);
   }
+
   /**
    * Repair tables defined in the schema file.
    *
    * @param config Scalar DB config
    * @param schema schema.
-   * @param options specific options for creating tables.
+   * @param options specific options for repairing tables.
    * @param repairCoordinatorTable repair coordinator tables or not.
-   * @throws SchemaLoaderException thrown when creating tables failed.
+   * @throws SchemaLoaderException thrown when repairing tables failed.
    */
   private static void repairTables(
       Either<Path, Properties> config,
@@ -372,6 +376,129 @@ public class SchemaLoader {
       if (repairCoordinatorTable) {
         operator.repairCoordinatorTables(options);
       }
+    } finally {
+      operator.close();
+    }
+  }
+
+  /**
+   * Alter the tables defined in the schema. Supported alter operations are:
+   *
+   * <ul>
+   *   <li>add non primary-key columns
+   *   <li>create secondary indexes
+   *   <li>delete secondary indexes
+   * </ul>
+   *
+   * By comparing the differences between the provided schema and the current schema, it will know
+   * which columns should be added and which secondary indexes should be created or deleted. Only
+   * the tables with differences will be altered.
+   *
+   * @param configProperties Scalar DB config properties
+   * @param serializedSchemaJson serialized json string schema.
+   * @param indexCreationOptions specific options for index creation.
+   * @throws SchemaLoaderException thrown when altering tables failed.
+   */
+  public static void alterTables(
+      Properties configProperties,
+      String serializedSchemaJson,
+      Map<String, String> indexCreationOptions)
+      throws SchemaLoaderException {
+    Either<Path, Properties> config = new Right<>(configProperties);
+    Either<Path, String> schema = new Right<>(serializedSchemaJson);
+    alterTables(config, schema, indexCreationOptions);
+  }
+
+  /**
+   * Alter the tables defined in the schema. Supported alter operations are:
+   *
+   * <ul>
+   *   <li>add non primary-key columns
+   *   <li>create secondary indexes
+   *   <li>delete secondary indexes
+   * </ul>
+   *
+   * By comparing the differences between the provided schema and the current schema, it will know
+   * which columns should be added and which secondary indexes should be created or deleted. Only
+   * the tables with differences will be altered.
+   *
+   * @param configProperties Scalar DB properties.
+   * @param schemaPath path to the schema file.
+   * @param indexCreationOptions specific options for index creation.
+   * @throws SchemaLoaderException thrown when altering tables failed.
+   */
+  public static void alterTables(
+      Properties configProperties, Path schemaPath, Map<String, String> indexCreationOptions)
+      throws SchemaLoaderException {
+    Either<Path, Properties> config = new Right<>(configProperties);
+    Either<Path, String> schema = new Left<>(schemaPath);
+    alterTables(config, schema, indexCreationOptions);
+  }
+
+  /**
+   * Alter the tables defined in the schema. Supported alter operations are:
+   *
+   * <ul>
+   *   <li>add non primary-key columns
+   *   <li>create secondary indexes
+   *   <li>delete secondary indexes
+   * </ul>
+   *
+   * By comparing the differences between the provided schema and the current schema, it will know
+   * which columns should be added and which secondary indexes should be created or deleted. Only
+   * the tables with differences will be altered.
+   *
+   * @param configPath path to the Scalar DB config.
+   * @param serializedSchemaJson serialized json string schema.
+   * @param indexCreationOptions specific options for index creation.
+   * @throws SchemaLoaderException thrown when altering tables failed.
+   */
+  public static void alterTables(
+      Path configPath, String serializedSchemaJson, Map<String, String> indexCreationOptions)
+      throws SchemaLoaderException {
+    Either<Path, Properties> config = new Left<>(configPath);
+    Either<Path, String> schema = new Right<>(serializedSchemaJson);
+    alterTables(config, schema, indexCreationOptions);
+  }
+
+  /**
+   * Alter the tables defined in the schema. Supported alter operations are:
+   *
+   * <ul>
+   *   <li>add non primary-key columns
+   *   <li>create secondary indexes
+   *   <li>delete secondary indexes
+   * </ul>
+   *
+   * By comparing the differences between the provided schema and the current schema, it will know
+   * which columns should be added and which secondary indexes should be created or deleted. Only
+   * the tables with differences will be altered.
+   *
+   * @param configPath path to the Scalar DB config.
+   * @param schemaPath path to the schema file.
+   * @param indexCreationOptions specific options for index creation.
+   * @throws SchemaLoaderException thrown when altering tables failed.
+   */
+  public static void alterTables(
+      Path configPath, Path schemaPath, Map<String, String> indexCreationOptions)
+      throws SchemaLoaderException {
+    Either<Path, Properties> config = new Left<>(configPath);
+    Either<Path, String> schema = new Left<>(schemaPath);
+    alterTables(config, schema, indexCreationOptions);
+  }
+
+  private static void alterTables(
+      Either<Path, Properties> config,
+      Either<Path, String> schema,
+      Map<String, String> indexCreationOptions)
+      throws SchemaLoaderException {
+    // Parse the schema
+    List<TableSchema> tableSchemaList = getTableSchemaList(schema, indexCreationOptions);
+
+    // Alter tables
+    SchemaOperator operator = getSchemaOperator(config);
+    try {
+      operator.alterTables(tableSchemaList, indexCreationOptions);
     } finally {
       operator.close();
     }

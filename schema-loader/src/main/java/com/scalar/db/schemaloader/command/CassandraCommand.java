@@ -56,7 +56,7 @@ public class CassandraCommand extends StorageSpecificCommand implements Callable
       description = "Cassandra replication factor")
   private String replicationFactor;
 
-  @ArgGroup private DeleteOrRepairTables deleteOrRepairTables;
+  @ArgGroup private Mode mode;
 
   @Override
   public Integer call() throws SchemaLoaderException {
@@ -85,7 +85,7 @@ public class CassandraCommand extends StorageSpecificCommand implements Callable
   }
 
   @Override
-  DeleteOrRepairTables getDeleteOrRepairTables() {
-    return deleteOrRepairTables;
+  Mode getMode() {
+    return mode;
   }
 }

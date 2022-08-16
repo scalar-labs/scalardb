@@ -32,7 +32,7 @@ public class JdbcCommand extends StorageSpecificCommand implements Callable<Inte
       required = true)
   private String password;
 
-  @ArgGroup private DeleteOrRepairTables deleteOrRepairTables;
+  @ArgGroup private Mode mode;
 
   @Override
   public Integer call() throws Exception {
@@ -49,7 +49,7 @@ public class JdbcCommand extends StorageSpecificCommand implements Callable<Inte
   }
 
   @Override
-  DeleteOrRepairTables getDeleteOrRepairTables() {
-    return deleteOrRepairTables;
+  Mode getMode() {
+    return mode;
   }
 }

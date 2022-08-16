@@ -187,6 +187,30 @@ public class JdbcCommandTest extends StorageSpecificCommandTestBase {
   }
 
   @Test
+  public void call_WithProperArgumentsForAlteringTables_ShouldCallAlterTablesProperly()
+      throws SchemaLoaderException {
+    // Arrange
+    Map<String, String> options = ImmutableMap.of();
+    TableSchema tableSchema = mock(TableSchema.class);
+    when(parser.parse()).thenReturn(Collections.singletonList(tableSchema));
+
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcUrl);
+    properties.setProperty(DatabaseConfig.USERNAME, user);
+    properties.setProperty(DatabaseConfig.PASSWORD, password);
+    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+
+    // Act
+    commandLine.execute("-j", jdbcUrl, "-u", user, "-p", password, "-f", schemaFile, "--alter");
+
+    // Assert
+    verify(command).getSchemaParser(Collections.emptyMap());
+    verify(parser).parse();
+    verify(command).getSchemaOperator(properties);
+    verify(operator).alterTables(Collections.singletonList(tableSchema), options);
+  }
+
+  @Test
   public void call_MissingSchemaFile_ShouldExitWithErrorCode() {
     // Arrange
 
