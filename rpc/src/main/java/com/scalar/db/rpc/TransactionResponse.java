@@ -104,6 +104,20 @@ private static final long serialVersionUID = 0L;
             responseCase_ = 4;
             break;
           }
+          case 42: {
+            com.scalar.db.rpc.TransactionResponse.BeginResponse.Builder subBuilder = null;
+            if (responseCase_ == 5) {
+              subBuilder = ((com.scalar.db.rpc.TransactionResponse.BeginResponse) response_).toBuilder();
+            }
+            response_ =
+                input.readMessage(com.scalar.db.rpc.TransactionResponse.BeginResponse.parser(), extensionRegistry);
+            if (subBuilder != null) {
+              subBuilder.mergeFrom((com.scalar.db.rpc.TransactionResponse.BeginResponse) response_);
+              response_ = subBuilder.buildPartial();
+            }
+            responseCase_ = 5;
+            break;
+          }
           default: {
             if (!parseUnknownField(
                 input, unknownFields, extensionRegistry, tag)) {
@@ -136,6 +150,576 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionResponse_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.TransactionResponse.class, com.scalar.db.rpc.TransactionResponse.Builder.class);
+  }
+
+  public interface BeginResponseOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TransactionResponse.BeginResponse)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>string transaction_id = 1;</code>
+     * @return The transactionId.
+     */
+    java.lang.String getTransactionId();
+    /**
+     * <code>string transaction_id = 1;</code>
+     * @return The bytes for transactionId.
+     */
+    com.google.protobuf.ByteString
+        getTransactionIdBytes();
+  }
+  /**
+   * Protobuf type {@code scalardb.rpc.TransactionResponse.BeginResponse}
+   */
+  public static final class BeginResponse extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:scalardb.rpc.TransactionResponse.BeginResponse)
+      BeginResponseOrBuilder {
+  private static final long serialVersionUID = 0L;
+    // Use BeginResponse.newBuilder() to construct.
+    private BeginResponse(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private BeginResponse() {
+      transactionId_ = "";
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new BeginResponse();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private BeginResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 10: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              transactionId_ = s;
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (com.google.protobuf.UninitializedMessageException e) {
+        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionResponse_BeginResponse_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionResponse_BeginResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              com.scalar.db.rpc.TransactionResponse.BeginResponse.class, com.scalar.db.rpc.TransactionResponse.BeginResponse.Builder.class);
+    }
+
+    public static final int TRANSACTION_ID_FIELD_NUMBER = 1;
+    private volatile java.lang.Object transactionId_;
+    /**
+     * <code>string transaction_id = 1;</code>
+     * @return The transactionId.
+     */
+    @java.lang.Override
+    public java.lang.String getTransactionId() {
+      java.lang.Object ref = transactionId_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        transactionId_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string transaction_id = 1;</code>
+     * @return The bytes for transactionId.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getTransactionIdBytes() {
+      java.lang.Object ref = transactionId_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        transactionId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(transactionId_)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, transactionId_);
+      }
+      unknownFields.writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(transactionId_)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, transactionId_);
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof com.scalar.db.rpc.TransactionResponse.BeginResponse)) {
+        return super.equals(obj);
+      }
+      com.scalar.db.rpc.TransactionResponse.BeginResponse other = (com.scalar.db.rpc.TransactionResponse.BeginResponse) obj;
+
+      if (!getTransactionId()
+          .equals(other.getTransactionId())) return false;
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (37 * hash) + TRANSACTION_ID_FIELD_NUMBER;
+      hash = (53 * hash) + getTransactionId().hashCode();
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static com.scalar.db.rpc.TransactionResponse.BeginResponse parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.scalar.db.rpc.TransactionResponse.BeginResponse parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.TransactionResponse.BeginResponse parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.scalar.db.rpc.TransactionResponse.BeginResponse parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.TransactionResponse.BeginResponse parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.scalar.db.rpc.TransactionResponse.BeginResponse parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.TransactionResponse.BeginResponse parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.scalar.db.rpc.TransactionResponse.BeginResponse parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.TransactionResponse.BeginResponse parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static com.scalar.db.rpc.TransactionResponse.BeginResponse parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.TransactionResponse.BeginResponse parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.scalar.db.rpc.TransactionResponse.BeginResponse parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(com.scalar.db.rpc.TransactionResponse.BeginResponse prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code scalardb.rpc.TransactionResponse.BeginResponse}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TransactionResponse.BeginResponse)
+        com.scalar.db.rpc.TransactionResponse.BeginResponseOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionResponse_BeginResponse_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionResponse_BeginResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                com.scalar.db.rpc.TransactionResponse.BeginResponse.class, com.scalar.db.rpc.TransactionResponse.BeginResponse.Builder.class);
+      }
+
+      // Construct using com.scalar.db.rpc.TransactionResponse.BeginResponse.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        transactionId_ = "";
+
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionResponse_BeginResponse_descriptor;
+      }
+
+      @java.lang.Override
+      public com.scalar.db.rpc.TransactionResponse.BeginResponse getDefaultInstanceForType() {
+        return com.scalar.db.rpc.TransactionResponse.BeginResponse.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public com.scalar.db.rpc.TransactionResponse.BeginResponse build() {
+        com.scalar.db.rpc.TransactionResponse.BeginResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public com.scalar.db.rpc.TransactionResponse.BeginResponse buildPartial() {
+        com.scalar.db.rpc.TransactionResponse.BeginResponse result = new com.scalar.db.rpc.TransactionResponse.BeginResponse(this);
+        result.transactionId_ = transactionId_;
+        onBuilt();
+        return result;
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.setField(field, value);
+      }
+      @java.lang.Override
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+      @java.lang.Override
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.scalar.db.rpc.TransactionResponse.BeginResponse) {
+          return mergeFrom((com.scalar.db.rpc.TransactionResponse.BeginResponse)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(com.scalar.db.rpc.TransactionResponse.BeginResponse other) {
+        if (other == com.scalar.db.rpc.TransactionResponse.BeginResponse.getDefaultInstance()) return this;
+        if (!other.getTransactionId().isEmpty()) {
+          transactionId_ = other.transactionId_;
+          onChanged();
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.scalar.db.rpc.TransactionResponse.BeginResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (com.scalar.db.rpc.TransactionResponse.BeginResponse) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      private java.lang.Object transactionId_ = "";
+      /**
+       * <code>string transaction_id = 1;</code>
+       * @return The transactionId.
+       */
+      public java.lang.String getTransactionId() {
+        java.lang.Object ref = transactionId_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          transactionId_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string transaction_id = 1;</code>
+       * @return The bytes for transactionId.
+       */
+      public com.google.protobuf.ByteString
+          getTransactionIdBytes() {
+        java.lang.Object ref = transactionId_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          transactionId_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string transaction_id = 1;</code>
+       * @param value The transactionId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setTransactionId(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        transactionId_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string transaction_id = 1;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearTransactionId() {
+        
+        transactionId_ = getDefaultInstance().getTransactionId();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string transaction_id = 1;</code>
+       * @param value The bytes for transactionId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setTransactionIdBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        transactionId_ = value;
+        onChanged();
+        return this;
+      }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TransactionResponse.BeginResponse)
+    }
+
+    // @@protoc_insertion_point(class_scope:scalardb.rpc.TransactionResponse.BeginResponse)
+    private static final com.scalar.db.rpc.TransactionResponse.BeginResponse DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new com.scalar.db.rpc.TransactionResponse.BeginResponse();
+    }
+
+    public static com.scalar.db.rpc.TransactionResponse.BeginResponse getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<BeginResponse>
+        PARSER = new com.google.protobuf.AbstractParser<BeginResponse>() {
+      @java.lang.Override
+      public BeginResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new BeginResponse(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<BeginResponse> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<BeginResponse> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.scalar.db.rpc.TransactionResponse.BeginResponse getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
   }
 
   public interface StartResponseOrBuilder extends
@@ -2938,6 +3522,7 @@ private static final long serialVersionUID = 0L;
     GET_RESPONSE(2),
     SCAN_RESPONSE(3),
     ERROR(4),
+    BEGIN_RESPONSE(5),
     RESPONSE_NOT_SET(0);
     private final int value;
     private ResponseCase(int value) {
@@ -2959,6 +3544,7 @@ private static final long serialVersionUID = 0L;
         case 2: return GET_RESPONSE;
         case 3: return SCAN_RESPONSE;
         case 4: return ERROR;
+        case 5: return BEGIN_RESPONSE;
         case 0: return RESPONSE_NOT_SET;
         default: return null;
       }
@@ -3098,6 +3684,37 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TransactionResponse.Error.getDefaultInstance();
   }
 
+  public static final int BEGIN_RESPONSE_FIELD_NUMBER = 5;
+  /**
+   * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+   * @return Whether the beginResponse field is set.
+   */
+  @java.lang.Override
+  public boolean hasBeginResponse() {
+    return responseCase_ == 5;
+  }
+  /**
+   * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+   * @return The beginResponse.
+   */
+  @java.lang.Override
+  public com.scalar.db.rpc.TransactionResponse.BeginResponse getBeginResponse() {
+    if (responseCase_ == 5) {
+       return (com.scalar.db.rpc.TransactionResponse.BeginResponse) response_;
+    }
+    return com.scalar.db.rpc.TransactionResponse.BeginResponse.getDefaultInstance();
+  }
+  /**
+   * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+   */
+  @java.lang.Override
+  public com.scalar.db.rpc.TransactionResponse.BeginResponseOrBuilder getBeginResponseOrBuilder() {
+    if (responseCase_ == 5) {
+       return (com.scalar.db.rpc.TransactionResponse.BeginResponse) response_;
+    }
+    return com.scalar.db.rpc.TransactionResponse.BeginResponse.getDefaultInstance();
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -3124,6 +3741,9 @@ private static final long serialVersionUID = 0L;
     if (responseCase_ == 4) {
       output.writeMessage(4, (com.scalar.db.rpc.TransactionResponse.Error) response_);
     }
+    if (responseCase_ == 5) {
+      output.writeMessage(5, (com.scalar.db.rpc.TransactionResponse.BeginResponse) response_);
+    }
     unknownFields.writeTo(output);
   }
 
@@ -3148,6 +3768,10 @@ private static final long serialVersionUID = 0L;
     if (responseCase_ == 4) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(4, (com.scalar.db.rpc.TransactionResponse.Error) response_);
+    }
+    if (responseCase_ == 5) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(5, (com.scalar.db.rpc.TransactionResponse.BeginResponse) response_);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -3182,6 +3806,10 @@ private static final long serialVersionUID = 0L;
         if (!getError()
             .equals(other.getError())) return false;
         break;
+      case 5:
+        if (!getBeginResponse()
+            .equals(other.getBeginResponse())) return false;
+        break;
       case 0:
       default:
     }
@@ -3212,6 +3840,10 @@ private static final long serialVersionUID = 0L;
       case 4:
         hash = (37 * hash) + ERROR_FIELD_NUMBER;
         hash = (53 * hash) + getError().hashCode();
+        break;
+      case 5:
+        hash = (37 * hash) + BEGIN_RESPONSE_FIELD_NUMBER;
+        hash = (53 * hash) + getBeginResponse().hashCode();
         break;
       case 0:
       default:
@@ -3405,6 +4037,13 @@ private static final long serialVersionUID = 0L;
           result.response_ = errorBuilder_.build();
         }
       }
+      if (responseCase_ == 5) {
+        if (beginResponseBuilder_ == null) {
+          result.response_ = response_;
+        } else {
+          result.response_ = beginResponseBuilder_.build();
+        }
+      }
       result.responseCase_ = responseCase_;
       onBuilt();
       return result;
@@ -3469,6 +4108,10 @@ private static final long serialVersionUID = 0L;
         }
         case ERROR: {
           mergeError(other.getError());
+          break;
+        }
+        case BEGIN_RESPONSE: {
+          mergeBeginResponse(other.getBeginResponse());
           break;
         }
         case RESPONSE_NOT_SET: {
@@ -4085,6 +4728,148 @@ private static final long serialVersionUID = 0L;
       responseCase_ = 4;
       onChanged();;
       return errorBuilder_;
+    }
+
+    private com.google.protobuf.SingleFieldBuilderV3<
+        com.scalar.db.rpc.TransactionResponse.BeginResponse, com.scalar.db.rpc.TransactionResponse.BeginResponse.Builder, com.scalar.db.rpc.TransactionResponse.BeginResponseOrBuilder> beginResponseBuilder_;
+    /**
+     * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+     * @return Whether the beginResponse field is set.
+     */
+    @java.lang.Override
+    public boolean hasBeginResponse() {
+      return responseCase_ == 5;
+    }
+    /**
+     * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+     * @return The beginResponse.
+     */
+    @java.lang.Override
+    public com.scalar.db.rpc.TransactionResponse.BeginResponse getBeginResponse() {
+      if (beginResponseBuilder_ == null) {
+        if (responseCase_ == 5) {
+          return (com.scalar.db.rpc.TransactionResponse.BeginResponse) response_;
+        }
+        return com.scalar.db.rpc.TransactionResponse.BeginResponse.getDefaultInstance();
+      } else {
+        if (responseCase_ == 5) {
+          return beginResponseBuilder_.getMessage();
+        }
+        return com.scalar.db.rpc.TransactionResponse.BeginResponse.getDefaultInstance();
+      }
+    }
+    /**
+     * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+     */
+    public Builder setBeginResponse(com.scalar.db.rpc.TransactionResponse.BeginResponse value) {
+      if (beginResponseBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        response_ = value;
+        onChanged();
+      } else {
+        beginResponseBuilder_.setMessage(value);
+      }
+      responseCase_ = 5;
+      return this;
+    }
+    /**
+     * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+     */
+    public Builder setBeginResponse(
+        com.scalar.db.rpc.TransactionResponse.BeginResponse.Builder builderForValue) {
+      if (beginResponseBuilder_ == null) {
+        response_ = builderForValue.build();
+        onChanged();
+      } else {
+        beginResponseBuilder_.setMessage(builderForValue.build());
+      }
+      responseCase_ = 5;
+      return this;
+    }
+    /**
+     * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+     */
+    public Builder mergeBeginResponse(com.scalar.db.rpc.TransactionResponse.BeginResponse value) {
+      if (beginResponseBuilder_ == null) {
+        if (responseCase_ == 5 &&
+            response_ != com.scalar.db.rpc.TransactionResponse.BeginResponse.getDefaultInstance()) {
+          response_ = com.scalar.db.rpc.TransactionResponse.BeginResponse.newBuilder((com.scalar.db.rpc.TransactionResponse.BeginResponse) response_)
+              .mergeFrom(value).buildPartial();
+        } else {
+          response_ = value;
+        }
+        onChanged();
+      } else {
+        if (responseCase_ == 5) {
+          beginResponseBuilder_.mergeFrom(value);
+        } else {
+          beginResponseBuilder_.setMessage(value);
+        }
+      }
+      responseCase_ = 5;
+      return this;
+    }
+    /**
+     * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+     */
+    public Builder clearBeginResponse() {
+      if (beginResponseBuilder_ == null) {
+        if (responseCase_ == 5) {
+          responseCase_ = 0;
+          response_ = null;
+          onChanged();
+        }
+      } else {
+        if (responseCase_ == 5) {
+          responseCase_ = 0;
+          response_ = null;
+        }
+        beginResponseBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+     */
+    public com.scalar.db.rpc.TransactionResponse.BeginResponse.Builder getBeginResponseBuilder() {
+      return getBeginResponseFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+     */
+    @java.lang.Override
+    public com.scalar.db.rpc.TransactionResponse.BeginResponseOrBuilder getBeginResponseOrBuilder() {
+      if ((responseCase_ == 5) && (beginResponseBuilder_ != null)) {
+        return beginResponseBuilder_.getMessageOrBuilder();
+      } else {
+        if (responseCase_ == 5) {
+          return (com.scalar.db.rpc.TransactionResponse.BeginResponse) response_;
+        }
+        return com.scalar.db.rpc.TransactionResponse.BeginResponse.getDefaultInstance();
+      }
+    }
+    /**
+     * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+     */
+    private com.google.protobuf.SingleFieldBuilderV3<
+        com.scalar.db.rpc.TransactionResponse.BeginResponse, com.scalar.db.rpc.TransactionResponse.BeginResponse.Builder, com.scalar.db.rpc.TransactionResponse.BeginResponseOrBuilder> 
+        getBeginResponseFieldBuilder() {
+      if (beginResponseBuilder_ == null) {
+        if (!(responseCase_ == 5)) {
+          response_ = com.scalar.db.rpc.TransactionResponse.BeginResponse.getDefaultInstance();
+        }
+        beginResponseBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+            com.scalar.db.rpc.TransactionResponse.BeginResponse, com.scalar.db.rpc.TransactionResponse.BeginResponse.Builder, com.scalar.db.rpc.TransactionResponse.BeginResponseOrBuilder>(
+                (com.scalar.db.rpc.TransactionResponse.BeginResponse) response_,
+                getParentForChildren(),
+                isClean());
+        response_ = null;
+      }
+      responseCase_ = 5;
+      onChanged();;
+      return beginResponseBuilder_;
     }
     @java.lang.Override
     public final Builder setUnknownFields(

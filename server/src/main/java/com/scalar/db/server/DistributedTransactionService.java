@@ -10,16 +10,18 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.TableMetadataManager;
-import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
+import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.DistributedTransactionGrpc;
 import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
+import com.scalar.db.rpc.RollbackRequest;
+import com.scalar.db.rpc.RollbackResponse;
 import com.scalar.db.rpc.TransactionRequest;
-import com.scalar.db.rpc.TransactionRequest.AbortRequest;
 import com.scalar.db.rpc.TransactionRequest.CommitRequest;
 import com.scalar.db.rpc.TransactionRequest.GetRequest;
 import com.scalar.db.rpc.TransactionRequest.MutateRequest;
@@ -97,8 +99,20 @@ public class DistributedTransactionService
   }
 
   @Override
-  public void abort(
-      com.scalar.db.rpc.AbortRequest request, StreamObserver<AbortResponse> responseObserver) {
+  public void rollback(RollbackRequest request, StreamObserver<RollbackResponse> responseObserver) {
+    execute(
+        () -> {
+          TransactionState state = manager.rollback(request.getTransactionId());
+          responseObserver.onNext(
+              RollbackResponse.newBuilder().setState(ProtoUtils.toTransactionState(state)).build());
+          responseObserver.onCompleted();
+        },
+        responseObserver,
+        "rollback");
+  }
+
+  @Override
+  public void abort(AbortRequest request, StreamObserver<AbortResponse> responseObserver) {
     execute(
         () -> {
           TransactionState state = manager.abort(request.getTransactionId());
@@ -187,15 +201,53 @@ public class DistributedTransactionService
         }
       }
 
-      if (request.getRequestCase() == RequestCase.START_REQUEST) {
+      if (request.getRequestCase() == RequestCase.BEGIN_REQUEST) {
+        beginTransaction(request);
+      } else if (request.getRequestCase() == RequestCase.START_REQUEST) {
         startTransaction(request);
       } else {
         executeTransaction(request);
       }
     }
 
+    private void beginTransaction(TransactionRequest transactionRequest) {
+      if (transactionBegun()) {
+        respondInvalidArgumentError("transaction is already begun");
+        return;
+      }
+
+      try {
+        metrics.measure(
+            SERVICE_NAME,
+            "transaction.begin",
+            () -> {
+              TransactionRequest.BeginRequest request = transactionRequest.getBeginRequest();
+              if (!request.hasTransactionId()) {
+                transaction = manager.begin();
+              } else {
+                transaction = manager.begin(request.getTransactionId());
+              }
+            });
+        responseObserver.onNext(
+            TransactionResponse.newBuilder()
+                .setBeginResponse(
+                    TransactionResponse.BeginResponse.newBuilder()
+                        .setTransactionId(transaction.getId())
+                        .build())
+                .build());
+      } catch (IllegalArgumentException e) {
+        respondInvalidArgumentError(e.getMessage());
+      } catch (Throwable t) {
+        logger.error("an internal error happened when beginning a transaction", t);
+        respondInternalError(t.getMessage());
+        if (t instanceof Error) {
+          throw (Error) t;
+        }
+      }
+    }
+
     private void startTransaction(TransactionRequest transactionRequest) {
-      if (transactionStarted()) {
+      if (transactionBegun()) {
         respondInvalidArgumentError("transaction is already started");
         return;
       }
@@ -229,7 +281,7 @@ public class DistributedTransactionService
     }
 
     private void executeTransaction(TransactionRequest request) {
-      if (!transactionStarted()) {
+      if (!transactionBegun()) {
         respondInvalidArgumentError("transaction is not started");
         return;
       }
@@ -251,6 +303,10 @@ public class DistributedTransactionService
           commit(request.getCommitRequest(), responseBuilder);
           completed = true;
           break;
+        case ROLLBACK_REQUEST:
+          rollback(request.getRollbackRequest(), responseBuilder);
+          completed = true;
+          break;
         case ABORT_REQUEST:
           abort(request.getAbortRequest(), responseBuilder);
           completed = true;
@@ -267,7 +323,7 @@ public class DistributedTransactionService
       }
     }
 
-    private boolean transactionStarted() {
+    private boolean transactionBegun() {
       return transaction != null;
     }
 
@@ -365,16 +421,22 @@ public class DistributedTransactionService
       execute(() -> transaction.commit(), responseBuilder, "transaction.commit");
     }
 
-    private void abort(AbortRequest unused, TransactionResponse.Builder responseBuilder) {
+    private void rollback(
+        TransactionRequest.RollbackRequest unused, TransactionResponse.Builder responseBuilder) {
+      execute(() -> transaction.rollback(), responseBuilder, "transaction.rollback");
+    }
+
+    private void abort(
+        TransactionRequest.AbortRequest unused, TransactionResponse.Builder responseBuilder) {
       execute(() -> transaction.abort(), responseBuilder, "transaction.abort");
     }
 
     private void cleanUp() {
       if (transaction != null) {
         try {
-          transaction.abort();
-        } catch (AbortException e) {
-          logger.warn("abort failed", e);
+          transaction.rollback();
+        } catch (RollbackException e) {
+          logger.warn("rollback failed", e);
         }
       }
 

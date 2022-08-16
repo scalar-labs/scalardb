@@ -15,6 +15,8 @@ import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.DistributedTransactionGrpc;
 import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
+import com.scalar.db.rpc.RollbackRequest;
+import com.scalar.db.rpc.RollbackResponse;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.transaction.common.AbstractDistributedTransactionManager;
@@ -80,6 +82,30 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
   }
 
   @Override
+  public GrpcTransaction begin() throws TransactionException {
+    return beginInternal(null);
+  }
+
+  @Override
+  public GrpcTransaction begin(String txId) throws TransactionException {
+    return beginInternal(Objects.requireNonNull(txId));
+  }
+
+  private GrpcTransaction beginInternal(@Nullable String txId) throws TransactionException {
+    return executeWithRetries(
+        () -> {
+          GrpcTransactionOnBidirectionalStream stream =
+              new GrpcTransactionOnBidirectionalStream(config, stub, metadataManager);
+          String transactionId = stream.beginTransaction(txId);
+          GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
+          getNamespace().ifPresent(transaction::withNamespace);
+          getTable().ifPresent(transaction::withTable);
+          return transaction;
+        },
+        EXCEPTION_FACTORY);
+  }
+
+  @Override
   public GrpcTransaction start() throws TransactionException {
     return startInternal(null);
   }
@@ -108,7 +134,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
   @Deprecated
   @Override
   public GrpcTransaction start(Isolation isolation) throws TransactionException {
-    return start();
+    return begin();
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -116,7 +142,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
   @Deprecated
   @Override
   public GrpcTransaction start(String txId, Isolation isolation) throws TransactionException {
-    return start(txId);
+    return begin(txId);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -125,7 +151,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
   @Override
   public GrpcTransaction start(Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
-    return start();
+    return begin();
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -133,7 +159,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
   @Deprecated
   @Override
   public GrpcTransaction start(SerializableStrategy strategy) throws TransactionException {
-    return start();
+    return begin();
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -142,7 +168,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
   @Override
   public GrpcTransaction start(String txId, SerializableStrategy strategy)
       throws TransactionException {
-    return start(txId);
+    return begin(txId);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -151,7 +177,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
   @Override
   public GrpcTransaction start(String txId, Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
-    return start(txId);
+    return begin(txId);
   }
 
   @Override
@@ -162,6 +188,18 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
               blockingStub
                   .withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
                   .getState(GetTransactionStateRequest.newBuilder().setTransactionId(txId).build());
+          return ProtoUtils.toTransactionState(response.getState());
+        });
+  }
+
+  @Override
+  public TransactionState rollback(String txId) throws TransactionException {
+    return execute(
+        () -> {
+          RollbackResponse response =
+              blockingStub
+                  .withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                  .rollback(RollbackRequest.newBuilder().setTransactionId(txId).build());
           return ProtoUtils.toTransactionState(response.getState());
         });
   }

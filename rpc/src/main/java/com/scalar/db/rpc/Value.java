@@ -5,7 +5,7 @@ package com.scalar.db.rpc;
 
 /**
  * <pre>
- * Value is deprecated as of release 3.6.0. Will be removed in release 5.0.0
+ * Value is deprecated as of release 3.6.0. Will be removed in release 5.0.0. Use Column, instead.
  * </pre>
  *
  * Protobuf type {@code scalardb.rpc.Value}
@@ -1822,7 +1822,7 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * Value is deprecated as of release 3.6.0. Will be removed in release 5.0.0
+   * Value is deprecated as of release 3.6.0. Will be removed in release 5.0.0. Use Column, instead.
    * </pre>
    *
    * Protobuf type {@code scalardb.rpc.Value}

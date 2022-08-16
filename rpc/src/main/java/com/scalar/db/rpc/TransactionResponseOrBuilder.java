@@ -67,5 +67,20 @@ public interface TransactionResponseOrBuilder extends
    */
   com.scalar.db.rpc.TransactionResponse.ErrorOrBuilder getErrorOrBuilder();
 
+  /**
+   * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+   * @return Whether the beginResponse field is set.
+   */
+  boolean hasBeginResponse();
+  /**
+   * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+   * @return The beginResponse.
+   */
+  com.scalar.db.rpc.TransactionResponse.BeginResponse getBeginResponse();
+  /**
+   * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+   */
+  com.scalar.db.rpc.TransactionResponse.BeginResponseOrBuilder getBeginResponseOrBuilder();
+
   public com.scalar.db.rpc.TransactionResponse.ResponseCase getResponseCase();
 }

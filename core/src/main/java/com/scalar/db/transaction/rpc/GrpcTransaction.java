@@ -9,6 +9,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.common.AbstractDistributedTransaction;
 import java.util.List;
@@ -74,6 +75,11 @@ public class GrpcTransaction extends AbstractDistributedTransaction {
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
     stream.commit();
+  }
+
+  @Override
+  public void rollback() throws RollbackException {
+    stream.rollback();
   }
 
   @Override
