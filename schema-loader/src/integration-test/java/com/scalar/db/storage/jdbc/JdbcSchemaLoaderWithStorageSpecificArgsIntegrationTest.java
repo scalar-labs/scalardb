@@ -42,6 +42,15 @@ public class JdbcSchemaLoaderWithStorageSpecificArgsIntegrationTest
         .build();
   }
 
+  @Override
+  protected List<String> getCommandArgsForAlteration(String configFile, String schemaFile)
+      throws Exception {
+    return ImmutableList.<String>builder()
+        .addAll(getCommandArgsForCreationWithCoordinator(configFile, schemaFile))
+        .add("--alter")
+        .build();
+  }
+
   @Disabled
   @Override
   public void createTablesThenDeleteTables_ShouldExecuteProperly() {}

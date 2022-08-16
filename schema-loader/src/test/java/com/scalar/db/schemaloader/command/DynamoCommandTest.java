@@ -294,6 +294,63 @@ public class DynamoCommandTest extends StorageSpecificCommandTestBase {
   }
 
   @Test
+  public void call_WithProperArgumentsForAlteringTables_ShouldCallAlterTablesProperly()
+      throws SchemaLoaderException {
+    callWithProperArgumentForAlteringTables(false);
+  }
+
+  @Test
+  public void
+      call_WithProperArgumentsForAlteringTablesWithNoScalingOption_ShouldCallAlterTablesProperly()
+          throws SchemaLoaderException {
+    callWithProperArgumentForAlteringTables(true);
+  }
+
+  private void callWithProperArgumentForAlteringTables(boolean hasNoScalingOptions)
+      throws SchemaLoaderException {
+    // Arrange
+    Map<String, String> options = new HashMap<>();
+    if (hasNoScalingOptions) {
+      options.put(DynamoAdmin.NO_SCALING, "true");
+    }
+    TableSchema tableSchema = mock(TableSchema.class);
+    when(parser.parse()).thenReturn(Collections.singletonList(tableSchema));
+
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, region);
+    properties.setProperty(DatabaseConfig.USERNAME, user);
+    properties.setProperty(DatabaseConfig.PASSWORD, password);
+    properties.setProperty(DatabaseConfig.STORAGE, "dynamo");
+    properties.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);
+
+    List<String> args =
+        Lists.newArrayList(
+            "-u",
+            user,
+            "--region",
+            region,
+            "--endpoint-override",
+            endpointOverride,
+            "-p",
+            password,
+            "-f",
+            schemaFile,
+            "--alter");
+    if (hasNoScalingOptions) {
+      args.add("--no-scaling");
+    }
+
+    // Act
+    commandLine.execute(args.toArray(new String[0]));
+
+    // Assert
+    verify(command).getSchemaParser(options);
+    verify(parser).parse();
+    verify(command).getSchemaOperator(properties);
+    verify(operator).alterTables(Collections.singletonList(tableSchema), options);
+  }
+
+  @Test
   public void call_MissingSchemaFile_ShouldExitWithErrorCode() {
     // Arrange
 

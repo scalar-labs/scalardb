@@ -46,6 +46,26 @@ public class DynamoSchemaLoaderWithStorageSpecificArgsIntegrationTest
         .build();
   }
 
+  @Override
+  protected List<String> getCommandArgsForAlteration(String configFile, String schemaFile)
+      throws Exception {
+    DynamoConfig config = new DynamoConfig(new DatabaseConfig(new File(configFile)));
+    return ImmutableList.of(
+        "--dynamo",
+        "--region",
+        config.getRegion(),
+        "--schema-file",
+        schemaFile,
+        "-u",
+        config.getAccessKeyId(),
+        "-p",
+        config.getSecretAccessKey(),
+        "--endpoint-override",
+        config.getEndpointOverride().get(),
+        "--no-scaling",
+        "--alter");
+  }
+
   @Disabled
   @Override
   public void createTablesThenDeleteTables_ShouldExecuteProperly() {}

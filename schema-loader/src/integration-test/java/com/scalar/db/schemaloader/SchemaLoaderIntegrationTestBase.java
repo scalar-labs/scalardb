@@ -41,6 +41,7 @@ import org.junit.jupiter.api.TestInstance;
 public abstract class SchemaLoaderIntegrationTestBase {
   private static final String CONFIG_FILE = "config.properties";
   private static final String SCHEMA_FILE = "schema.json";
+  private static final String ALTERED_SCHEMA_FILE = "altered_schema.json";
 
   private static final String NAMESPACE_1 = "integration_testing_schema_loader1";
   private static final String TABLE_1 = "test_table2";
@@ -89,8 +90,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
     writeConfigFile(properties);
-    Map<String, Object> schemaJsonMap = getSchemaJsonMap();
-    writeSchemaFile(schemaJsonMap);
+    writeSchemaFile(SCHEMA_FILE, getSchemaJsonMap());
+    writeSchemaFile(ALTERED_SCHEMA_FILE, getAlteredSchemaJsonMap());
     StorageFactory factory = StorageFactory.create(properties);
     storageAdmin = factory.getStorageAdmin();
     TransactionFactory transactionFactory = TransactionFactory.create(properties);
@@ -162,10 +163,55 @@ public abstract class SchemaLoaderIntegrationTestBase {
                 .build());
   }
 
-  protected void writeSchemaFile(Map<String, Object> schemaJsonMap) throws IOException {
+  protected Map<String, Object> getAlteredSchemaJsonMap() {
+    return ImmutableMap.of(
+        namespace1 + "." + TABLE_1,
+        ImmutableMap.<String, Object>builder()
+            .put("transaction", true)
+            .put("partition-key", Collections.singletonList("pk1"))
+            .put("clustering-key", Arrays.asList("ck1 DESC", "ck2 ASC"))
+            .put(
+                "columns",
+                ImmutableMap.<String, Object>builder()
+                    .put("pk1", "INT")
+                    .put("ck1", "INT")
+                    .put("ck2", "TEXT")
+                    .put("col1", "INT")
+                    .put("col2", "BIGINT")
+                    .put("col3", "FLOAT")
+                    .put("col4", "DOUBLE")
+                    .put("col5", "TEXT")
+                    .put("col6", "BLOB")
+                    .put("col7", "BOOLEAN")
+                    .put("col8", "TEXT")
+                    .put("col9", "BLOB")
+                    .build())
+            .put("secondary-index", Arrays.asList("col3", "col8"))
+            .put("compaction-strategy", "LCS")
+            .put("network-strategy", "NetworkTopologyStrategy")
+            .put("replication-factor", "1")
+            .put("ru", 5000)
+            .build(),
+        namespace2 + "." + TABLE_2,
+        ImmutableMap.<String, Object>builder()
+            .put("transaction", false)
+            .put("partition-key", Collections.singletonList("pk1"))
+            .put("clustering-key", Collections.singletonList("ck1"))
+            .put(
+                "columns",
+                ImmutableMap.of(
+                    "pk1", "INT", "ck1", "INT", "col1", "INT", "col2", "BIGINT", "col3", "FLOAT",
+                    "col4", "TEXT"))
+            .put("network-strategy", "NetworkTopologyStrategy")
+            .put("replication-factor", "1")
+            .build());
+  }
+
+  protected void writeSchemaFile(String fileName, Map<String, Object> schemaJsonMap)
+      throws IOException {
     Gson gson = new Gson();
-    try (Writer writer =
-        new OutputStreamWriter(new FileOutputStream(SCHEMA_FILE), StandardCharsets.UTF_8)) {
+    try (FileOutputStream outputStream = new FileOutputStream(fileName);
+        Writer writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8)) {
       gson.toJson(schemaJsonMap, writer);
     }
   }
@@ -211,6 +257,14 @@ public abstract class SchemaLoaderIntegrationTestBase {
         .build();
   }
 
+  protected List<String> getCommandArgsForAlteration(String configFile, String schemaFile)
+      throws Exception {
+    return ImmutableList.<String>builder()
+        .addAll(getCommandArgsForCreation(configFile, schemaFile))
+        .add("--alter")
+        .build();
+  }
+
   @AfterAll
   public void afterAll() throws ExecutionException {
     dropTablesIfExist();
@@ -222,6 +276,9 @@ public abstract class SchemaLoaderIntegrationTestBase {
     }
     if (!new File(SCHEMA_FILE).delete()) {
       System.err.println("failed to delete " + SCHEMA_FILE);
+    }
+    if (!new File(ALTERED_SCHEMA_FILE).delete()) {
+      System.err.println("failed to delete " + ALTERED_SCHEMA_FILE);
     }
   }
 
@@ -306,6 +363,37 @@ public abstract class SchemaLoaderIntegrationTestBase {
     assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1)).isEqualTo(TABLE_1_METADATA);
     assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2)).isEqualTo(TABLE_2_METADATA);
     assertTableMetadataForCoordinatorTableArePresent();
+  }
+
+  @Test
+  public void createTableThenAlterTables_ShouldExecuteProperly() throws Exception {
+    // Arrange
+    int exitCodeCreation =
+        executeCommandWithArgs(getCommandArgsForCreationWithCoordinator(CONFIG_FILE, SCHEMA_FILE));
+    assertThat(exitCodeCreation).isZero();
+
+    TableMetadata expectedTable1Metadata =
+        TableMetadata.newBuilder(TABLE_1_METADATA)
+            .addColumn("col8", DataType.TEXT)
+            .addColumn("col9", DataType.BLOB)
+            .removeSecondaryIndex("col1")
+            .removeSecondaryIndex("col5")
+            .addSecondaryIndex("col3")
+            .addSecondaryIndex("col8")
+            .build();
+    TableMetadata expectedTable2Metadata =
+        TableMetadata.newBuilder(TABLE_2_METADATA).addColumn("col4", DataType.TEXT).build();
+
+    // Act
+    int exitCodeAlteration =
+        executeCommandWithArgs(getCommandArgsForAlteration(CONFIG_FILE, ALTERED_SCHEMA_FILE));
+
+    // Assert
+    assertThat(exitCodeAlteration).isZero();
+    assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1))
+        .isEqualTo(expectedTable1Metadata);
+    assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2))
+        .isEqualTo(expectedTable2Metadata);
   }
 
   private void createTables_ShouldCreateTablesWithCoordinator() throws Exception {
