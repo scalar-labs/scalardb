@@ -142,5 +142,35 @@ public interface TwoPhaseCommitTransactionRequestOrBuilder extends
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequestOrBuilder getRollbackRequestOrBuilder();
 
+  /**
+   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+   * @return Whether the beginRequest field is set.
+   */
+  boolean hasBeginRequest();
+  /**
+   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+   * @return The beginRequest.
+   */
+  com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest getBeginRequest();
+  /**
+   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+   */
+  com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequestOrBuilder getBeginRequestOrBuilder();
+
+  /**
+   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+   * @return Whether the abortRequest field is set.
+   */
+  boolean hasAbortRequest();
+  /**
+   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+   * @return The abortRequest.
+   */
+  com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest getAbortRequest();
+  /**
+   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+   */
+  com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequestOrBuilder getAbortRequestOrBuilder();
+
   public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RequestCase getRequestCase();
 }

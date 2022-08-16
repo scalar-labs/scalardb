@@ -67,5 +67,20 @@ public interface TwoPhaseCommitTransactionResponseOrBuilder extends
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ErrorOrBuilder getErrorOrBuilder();
 
+  /**
+   * <code>.scalardb.rpc.TwoPhaseCommitTransactionResponse.BeginResponse begin_response = 5;</code>
+   * @return Whether the beginResponse field is set.
+   */
+  boolean hasBeginResponse();
+  /**
+   * <code>.scalardb.rpc.TwoPhaseCommitTransactionResponse.BeginResponse begin_response = 5;</code>
+   * @return The beginResponse.
+   */
+  com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.BeginResponse getBeginResponse();
+  /**
+   * <code>.scalardb.rpc.TwoPhaseCommitTransactionResponse.BeginResponse begin_response = 5;</code>
+   */
+  com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.BeginResponseOrBuilder getBeginResponseOrBuilder();
+
   public com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ResponseCase getResponseCase();
 }

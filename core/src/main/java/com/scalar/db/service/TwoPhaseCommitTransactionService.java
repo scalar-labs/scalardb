@@ -55,6 +55,16 @@ public class TwoPhaseCommitTransactionService implements TwoPhaseCommitTransacti
   }
 
   @Override
+  public TwoPhaseCommitTransaction begin() throws TransactionException {
+    return manager.start();
+  }
+
+  @Override
+  public TwoPhaseCommitTransaction begin(String txId) throws TransactionException {
+    return manager.start(txId);
+  }
+
+  @Override
   public TwoPhaseCommitTransaction start() throws TransactionException {
     return manager.start();
   }
@@ -82,6 +92,11 @@ public class TwoPhaseCommitTransactionService implements TwoPhaseCommitTransacti
   @Override
   public TransactionState getState(String txId) throws TransactionException {
     return manager.getState(txId);
+  }
+
+  @Override
+  public TransactionState rollback(String txId) throws TransactionException {
+    return manager.rollback(txId);
   }
 
   @Override

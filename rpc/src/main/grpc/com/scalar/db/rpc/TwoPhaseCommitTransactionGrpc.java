@@ -77,6 +77,37 @@ public final class TwoPhaseCommitTransactionGrpc {
     return getGetStateMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.RollbackRequest,
+      com.scalar.db.rpc.RollbackResponse> getRollbackMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "Rollback",
+      requestType = com.scalar.db.rpc.RollbackRequest.class,
+      responseType = com.scalar.db.rpc.RollbackResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.RollbackRequest,
+      com.scalar.db.rpc.RollbackResponse> getRollbackMethod() {
+    io.grpc.MethodDescriptor<com.scalar.db.rpc.RollbackRequest, com.scalar.db.rpc.RollbackResponse> getRollbackMethod;
+    if ((getRollbackMethod = TwoPhaseCommitTransactionGrpc.getRollbackMethod) == null) {
+      synchronized (TwoPhaseCommitTransactionGrpc.class) {
+        if ((getRollbackMethod = TwoPhaseCommitTransactionGrpc.getRollbackMethod) == null) {
+          TwoPhaseCommitTransactionGrpc.getRollbackMethod = getRollbackMethod =
+              io.grpc.MethodDescriptor.<com.scalar.db.rpc.RollbackRequest, com.scalar.db.rpc.RollbackResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "Rollback"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.RollbackRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.RollbackResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new TwoPhaseCommitTransactionMethodDescriptorSupplier("Rollback"))
+              .build();
+        }
+      }
+    }
+    return getRollbackMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.AbortRequest,
       com.scalar.db.rpc.AbortResponse> getAbortMethod;
 
@@ -172,6 +203,13 @@ public final class TwoPhaseCommitTransactionGrpc {
 
     /**
      */
+    public void rollback(com.scalar.db.rpc.RollbackRequest request,
+        io.grpc.stub.StreamObserver<com.scalar.db.rpc.RollbackResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRollbackMethod(), responseObserver);
+    }
+
+    /**
+     */
     public void abort(com.scalar.db.rpc.AbortRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.AbortResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAbortMethod(), responseObserver);
@@ -193,6 +231,13 @@ public final class TwoPhaseCommitTransactionGrpc {
                 com.scalar.db.rpc.GetTransactionStateRequest,
                 com.scalar.db.rpc.GetTransactionStateResponse>(
                   this, METHODID_GET_STATE)))
+          .addMethod(
+            getRollbackMethod(),
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
+              new MethodHandlers<
+                com.scalar.db.rpc.RollbackRequest,
+                com.scalar.db.rpc.RollbackResponse>(
+                  this, METHODID_ROLLBACK)))
           .addMethod(
             getAbortMethod(),
             io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -236,6 +281,14 @@ public final class TwoPhaseCommitTransactionGrpc {
 
     /**
      */
+    public void rollback(com.scalar.db.rpc.RollbackRequest request,
+        io.grpc.stub.StreamObserver<com.scalar.db.rpc.RollbackResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRollbackMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
     public void abort(com.scalar.db.rpc.AbortRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.AbortResponse> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
@@ -262,6 +315,13 @@ public final class TwoPhaseCommitTransactionGrpc {
     public com.scalar.db.rpc.GetTransactionStateResponse getState(com.scalar.db.rpc.GetTransactionStateRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getGetStateMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.scalar.db.rpc.RollbackResponse rollback(com.scalar.db.rpc.RollbackRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRollbackMethod(), getCallOptions(), request);
     }
 
     /**
@@ -296,6 +356,14 @@ public final class TwoPhaseCommitTransactionGrpc {
 
     /**
      */
+    public com.google.common.util.concurrent.ListenableFuture<com.scalar.db.rpc.RollbackResponse> rollback(
+        com.scalar.db.rpc.RollbackRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRollbackMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
     public com.google.common.util.concurrent.ListenableFuture<com.scalar.db.rpc.AbortResponse> abort(
         com.scalar.db.rpc.AbortRequest request) {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
@@ -304,8 +372,9 @@ public final class TwoPhaseCommitTransactionGrpc {
   }
 
   private static final int METHODID_GET_STATE = 0;
-  private static final int METHODID_ABORT = 1;
-  private static final int METHODID_TWO_PHASE_COMMIT_TRANSACTION = 2;
+  private static final int METHODID_ROLLBACK = 1;
+  private static final int METHODID_ABORT = 2;
+  private static final int METHODID_TWO_PHASE_COMMIT_TRANSACTION = 3;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -327,6 +396,10 @@ public final class TwoPhaseCommitTransactionGrpc {
         case METHODID_GET_STATE:
           serviceImpl.getState((com.scalar.db.rpc.GetTransactionStateRequest) request,
               (io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetTransactionStateResponse>) responseObserver);
+          break;
+        case METHODID_ROLLBACK:
+          serviceImpl.rollback((com.scalar.db.rpc.RollbackRequest) request,
+              (io.grpc.stub.StreamObserver<com.scalar.db.rpc.RollbackResponse>) responseObserver);
           break;
         case METHODID_ABORT:
           serviceImpl.abort((com.scalar.db.rpc.AbortRequest) request,
@@ -398,6 +471,7 @@ public final class TwoPhaseCommitTransactionGrpc {
               .setSchemaDescriptor(new TwoPhaseCommitTransactionFileDescriptorSupplier())
               .addMethod(getTwoPhaseCommitTransactionMethod())
               .addMethod(getGetStateMethod())
+              .addMethod(getRollbackMethod())
               .addMethod(getAbortMethod())
               .build();
         }

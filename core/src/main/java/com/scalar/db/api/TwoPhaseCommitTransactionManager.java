@@ -61,23 +61,45 @@ public interface TwoPhaseCommitTransactionManager {
   Optional<String> getTable();
 
   /**
-   * Starts a new transaction. This method is assumed to be called by a coordinator process.
+   * Begins a new transaction. This method is assumed to be called by a coordinator process.
    *
-   * @return {@link TwoPhaseCommitTransaction}
+   * @return {@link DistributedTransaction}
    * @throws TransactionException if starting the transaction failed
    */
-  TwoPhaseCommitTransaction start() throws TransactionException;
+  TwoPhaseCommitTransaction begin() throws TransactionException;
 
   /**
-   * Starts a new transaction with the specified transaction ID. It is users' responsibility to
+   * Begins a new transaction with the specified transaction ID. It is users' responsibility to
    * guarantee uniqueness of the ID so it is not recommended to use this method unless you know
    * exactly what you are doing. This method is assumed to be called by a coordinator process.
    *
    * @param txId an user-provided unique transaction ID
-   * @return {@link TwoPhaseCommitTransaction}
+   * @return {@link DistributedTransaction}
    * @throws TransactionException if starting the transaction failed
    */
-  TwoPhaseCommitTransaction start(String txId) throws TransactionException;
+  TwoPhaseCommitTransaction begin(String txId) throws TransactionException;
+
+  /**
+   * Starts a new transaction. This method is an alias of {@link #begin()}.
+   *
+   * @return {@link DistributedTransaction}
+   * @throws TransactionException if starting the transaction failed
+   */
+  default TwoPhaseCommitTransaction start() throws TransactionException {
+    return begin();
+  }
+
+  /**
+   * Starts a new transaction with the specified transaction ID. This method is an alias of {@link
+   * #begin(String)}.
+   *
+   * @param txId an user-provided unique transaction ID
+   * @return {@link DistributedTransaction}
+   * @throws TransactionException if starting the transaction failed
+   */
+  default TwoPhaseCommitTransaction start(String txId) throws TransactionException {
+    return begin(txId);
+  }
 
   /**
    * Joins a transaction associated with the specified transaction ID. The transaction should be
@@ -116,13 +138,24 @@ public interface TwoPhaseCommitTransactionManager {
   TransactionState getState(String txId) throws TransactionException;
 
   /**
-   * Aborts a given transaction.
+   * Rolls back a given transaction.
    *
    * @param txId a transaction ID
    * @return {@link TransactionState}
    * @throws TransactionException if aborting the given transaction failed
    */
-  TransactionState abort(String txId) throws TransactionException;
+  TransactionState rollback(String txId) throws TransactionException;
+
+  /**
+   * Aborts a given transaction. This method is an alias of {@link #rollback(String)}.
+   *
+   * @param txId a transaction ID
+   * @return {@link TransactionState}
+   * @throws TransactionException if aborting the given transaction failed
+   */
+  default TransactionState abort(String txId) throws TransactionException {
+    return rollback(txId);
+  }
 
   /**
    * Closes connections to the cluster. The connections are shared among multiple services such as

@@ -20,6 +20,8 @@ import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
+import com.scalar.db.rpc.RollbackRequest;
+import com.scalar.db.rpc.RollbackResponse;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionGrpc;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest;
@@ -28,7 +30,6 @@ import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RequestCase;
-import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest;
@@ -101,6 +102,19 @@ public class TwoPhaseCommitTransactionService
         },
         responseObserver,
         "get_state");
+  }
+
+  @Override
+  public void rollback(RollbackRequest request, StreamObserver<RollbackResponse> responseObserver) {
+    execute(
+        () -> {
+          TransactionState state = manager.rollback(request.getTransactionId());
+          responseObserver.onNext(
+              RollbackResponse.newBuilder().setState(ProtoUtils.toTransactionState(state)).build());
+          responseObserver.onCompleted();
+        },
+        responseObserver,
+        "rollback");
   }
 
   @Override
@@ -194,7 +208,9 @@ public class TwoPhaseCommitTransactionService
         }
       }
 
-      if (request.getRequestCase() == RequestCase.START_REQUEST) {
+      if (request.getRequestCase() == RequestCase.BEGIN_REQUEST) {
+        beginTransaction(request);
+      } else if (request.getRequestCase() == RequestCase.START_REQUEST) {
         startTransaction(request);
       } else if (request.getRequestCase() == RequestCase.JOIN_REQUEST) {
         joinTransaction(request);
@@ -203,8 +219,45 @@ public class TwoPhaseCommitTransactionService
       }
     }
 
+    private void beginTransaction(TwoPhaseCommitTransactionRequest transactionRequest) {
+      if (transactionBegun()) {
+        respondInvalidArgumentError("transaction is already begun");
+        return;
+      }
+
+      try {
+        metrics.measure(
+            SERVICE_NAME,
+            "transaction.begin",
+            () -> {
+              TwoPhaseCommitTransactionRequest.BeginRequest request =
+                  transactionRequest.getBeginRequest();
+              if (!request.hasTransactionId()) {
+                transaction = manager.begin();
+              } else {
+                transaction = manager.begin(request.getTransactionId());
+              }
+            });
+        responseObserver.onNext(
+            TwoPhaseCommitTransactionResponse.newBuilder()
+                .setBeginResponse(
+                    TwoPhaseCommitTransactionResponse.BeginResponse.newBuilder()
+                        .setTransactionId(transaction.getId())
+                        .build())
+                .build());
+      } catch (IllegalArgumentException e) {
+        respondInvalidArgumentError(e.getMessage());
+      } catch (Throwable t) {
+        logger.error("an internal error happened when Beginning a transaction", t);
+        respondInternalError(t.getMessage());
+        if (t instanceof Error) {
+          throw (Error) t;
+        }
+      }
+    }
+
     private void startTransaction(TwoPhaseCommitTransactionRequest transactionRequest) {
-      if (transactionStarted()) {
+      if (transactionBegun()) {
         respondInvalidArgumentError("transaction is already started");
         return;
       }
@@ -238,7 +291,7 @@ public class TwoPhaseCommitTransactionService
     }
 
     private void joinTransaction(TwoPhaseCommitTransactionRequest transactionRequest) {
-      if (transactionStarted()) {
+      if (transactionBegun()) {
         respondInvalidArgumentError("transaction is already started");
         return;
       }
@@ -264,7 +317,7 @@ public class TwoPhaseCommitTransactionService
     }
 
     private void executeTransaction(TwoPhaseCommitTransactionRequest request) {
-      if (!transactionStarted()) {
+      if (!transactionBegun()) {
         respondInvalidArgumentError("transaction is not started");
         return;
       }
@@ -297,6 +350,10 @@ public class TwoPhaseCommitTransactionService
           rollback(request.getRollbackRequest(), responseBuilder);
           completed = true;
           break;
+        case ABORT_REQUEST:
+          abort(request.getAbortRequest(), responseBuilder);
+          completed = true;
+          break;
         default:
           respondInvalidArgumentError("invalid request specified: " + request.getRequestCase());
           return;
@@ -309,7 +366,7 @@ public class TwoPhaseCommitTransactionService
       }
     }
 
-    private boolean transactionStarted() {
+    private boolean transactionBegun() {
       return transaction != null;
     }
 
@@ -421,8 +478,15 @@ public class TwoPhaseCommitTransactionService
     }
 
     private void rollback(
-        RollbackRequest unused, TwoPhaseCommitTransactionResponse.Builder responseBuilder) {
+        TwoPhaseCommitTransactionRequest.RollbackRequest unused,
+        TwoPhaseCommitTransactionResponse.Builder responseBuilder) {
       execute(() -> transaction.rollback(), responseBuilder, "transaction.rollback");
+    }
+
+    private void abort(
+        TwoPhaseCommitTransactionRequest.AbortRequest unused,
+        TwoPhaseCommitTransactionResponse.Builder responseBuilder) {
+      execute(() -> transaction.abort(), responseBuilder, "transaction.abort");
     }
 
     private void cleanUp() {

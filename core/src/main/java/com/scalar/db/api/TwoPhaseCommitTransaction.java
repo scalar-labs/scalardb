@@ -1,5 +1,6 @@
 package com.scalar.db.api;
 
+import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
@@ -104,4 +105,17 @@ public interface TwoPhaseCommitTransaction extends TransactionCrudOperable {
    * @throws RollbackException if the operation fails
    */
   void rollback() throws RollbackException;
+
+  /**
+   * Aborts a transaction. This method is an alias of {@link #rollback()}.
+   *
+   * @throws AbortException if the operation fails
+   */
+  default void abort() throws AbortException {
+    try {
+      rollback();
+    } catch (RollbackException e) {
+      throw new AbortException(e.getMessage(), e);
+    }
+  }
 }
