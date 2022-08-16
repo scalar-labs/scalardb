@@ -4,31 +4,31 @@
 package com.scalar.db.rpc;
 
 public interface ScanResponseOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.ScanResponse)
+    // @@protoc_insertion_point(interface_extends:scalardb.rpc.ScanResponse)
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>repeated .rpc.Result result = 2;</code>
+   * <code>repeated .scalardb.rpc.Result results = 2;</code>
    */
   java.util.List<com.scalar.db.rpc.Result> 
-      getResultList();
+      getResultsList();
   /**
-   * <code>repeated .rpc.Result result = 2;</code>
+   * <code>repeated .scalardb.rpc.Result results = 2;</code>
    */
-  com.scalar.db.rpc.Result getResult(int index);
+  com.scalar.db.rpc.Result getResults(int index);
   /**
-   * <code>repeated .rpc.Result result = 2;</code>
+   * <code>repeated .scalardb.rpc.Result results = 2;</code>
    */
-  int getResultCount();
+  int getResultsCount();
   /**
-   * <code>repeated .rpc.Result result = 2;</code>
+   * <code>repeated .scalardb.rpc.Result results = 2;</code>
    */
   java.util.List<? extends com.scalar.db.rpc.ResultOrBuilder> 
-      getResultOrBuilderList();
+      getResultsOrBuilderList();
   /**
-   * <code>repeated .rpc.Result result = 2;</code>
+   * <code>repeated .scalardb.rpc.Result results = 2;</code>
    */
-  com.scalar.db.rpc.ResultOrBuilder getResultOrBuilder(
+  com.scalar.db.rpc.ResultOrBuilder getResultsOrBuilder(
       int index);
 
   /**

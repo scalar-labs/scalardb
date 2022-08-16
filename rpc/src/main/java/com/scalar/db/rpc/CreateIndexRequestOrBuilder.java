@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 public interface CreateIndexRequestOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.CreateIndexRequest)
+    // @@protoc_insertion_point(interface_extends:scalardb.rpc.CreateIndexRequest)
     com.google.protobuf.MessageOrBuilder {
 
   /**

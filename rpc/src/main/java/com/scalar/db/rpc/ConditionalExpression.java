@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code rpc.ConditionalExpression}
+ * Protobuf type {@code scalardb.rpc.ConditionalExpression}
  */
 public final class ConditionalExpression extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:rpc.ConditionalExpression)
+    // @@protoc_insertion_point(message_implements:scalardb.rpc.ConditionalExpression)
     ConditionalExpressionOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use ConditionalExpression.newBuilder() to construct.
@@ -111,19 +111,19 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ConditionalExpression_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_ConditionalExpression_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ConditionalExpression_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_ConditionalExpression_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.ConditionalExpression.class, com.scalar.db.rpc.ConditionalExpression.Builder.class);
   }
 
   /**
-   * Protobuf enum {@code rpc.ConditionalExpression.Operator}
+   * Protobuf enum {@code scalardb.rpc.ConditionalExpression.Operator}
    */
   public enum Operator
       implements com.google.protobuf.ProtocolMessageEnum {
@@ -281,14 +281,14 @@ private static final long serialVersionUID = 0L;
       this.value = value;
     }
 
-    // @@protoc_insertion_point(enum_scope:rpc.ConditionalExpression.Operator)
+    // @@protoc_insertion_point(enum_scope:scalardb.rpc.ConditionalExpression.Operator)
   }
 
   public static final int NAME_FIELD_NUMBER = 1;
   private volatile java.lang.Object name_;
   /**
    * <code>string name = 1 [deprecated = true];</code>
-   * @deprecated rpc.ConditionalExpression.name is deprecated.
+   * @deprecated scalardb.rpc.ConditionalExpression.name is deprecated.
    *     See scalardb.proto;l=91
    * @return The name.
    */
@@ -307,7 +307,7 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <code>string name = 1 [deprecated = true];</code>
-   * @deprecated rpc.ConditionalExpression.name is deprecated.
+   * @deprecated scalardb.rpc.ConditionalExpression.name is deprecated.
    *     See scalardb.proto;l=91
    * @return The bytes for name.
    */
@@ -329,8 +329,8 @@ private static final long serialVersionUID = 0L;
   public static final int VALUE_FIELD_NUMBER = 2;
   private com.scalar.db.rpc.Value value_;
   /**
-   * <code>.rpc.Value value = 2 [deprecated = true];</code>
-   * @deprecated rpc.ConditionalExpression.value is deprecated.
+   * <code>.scalardb.rpc.Value value = 2 [deprecated = true];</code>
+   * @deprecated scalardb.rpc.ConditionalExpression.value is deprecated.
    *     See scalardb.proto;l=92
    * @return Whether the value field is set.
    */
@@ -339,8 +339,8 @@ private static final long serialVersionUID = 0L;
     return value_ != null;
   }
   /**
-   * <code>.rpc.Value value = 2 [deprecated = true];</code>
-   * @deprecated rpc.ConditionalExpression.value is deprecated.
+   * <code>.scalardb.rpc.Value value = 2 [deprecated = true];</code>
+   * @deprecated scalardb.rpc.ConditionalExpression.value is deprecated.
    *     See scalardb.proto;l=92
    * @return The value.
    */
@@ -349,7 +349,7 @@ private static final long serialVersionUID = 0L;
     return value_ == null ? com.scalar.db.rpc.Value.getDefaultInstance() : value_;
   }
   /**
-   * <code>.rpc.Value value = 2 [deprecated = true];</code>
+   * <code>.scalardb.rpc.Value value = 2 [deprecated = true];</code>
    */
   @java.lang.Override
   @java.lang.Deprecated public com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder() {
@@ -359,14 +359,14 @@ private static final long serialVersionUID = 0L;
   public static final int OPERATOR_FIELD_NUMBER = 3;
   private int operator_;
   /**
-   * <code>.rpc.ConditionalExpression.Operator operator = 3;</code>
+   * <code>.scalardb.rpc.ConditionalExpression.Operator operator = 3;</code>
    * @return The enum numeric value on the wire for operator.
    */
   @java.lang.Override public int getOperatorValue() {
     return operator_;
   }
   /**
-   * <code>.rpc.ConditionalExpression.Operator operator = 3;</code>
+   * <code>.scalardb.rpc.ConditionalExpression.Operator operator = 3;</code>
    * @return The operator.
    */
   @java.lang.Override public com.scalar.db.rpc.ConditionalExpression.Operator getOperator() {
@@ -378,7 +378,7 @@ private static final long serialVersionUID = 0L;
   public static final int COLUMN_FIELD_NUMBER = 4;
   private com.scalar.db.rpc.Column column_;
   /**
-   * <code>.rpc.Column column = 4;</code>
+   * <code>.scalardb.rpc.Column column = 4;</code>
    * @return Whether the column field is set.
    */
   @java.lang.Override
@@ -386,7 +386,7 @@ private static final long serialVersionUID = 0L;
     return column_ != null;
   }
   /**
-   * <code>.rpc.Column column = 4;</code>
+   * <code>.scalardb.rpc.Column column = 4;</code>
    * @return The column.
    */
   @java.lang.Override
@@ -394,7 +394,7 @@ private static final long serialVersionUID = 0L;
     return column_ == null ? com.scalar.db.rpc.Column.getDefaultInstance() : column_;
   }
   /**
-   * <code>.rpc.Column column = 4;</code>
+   * <code>.scalardb.rpc.Column column = 4;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.ColumnOrBuilder getColumnOrBuilder() {
@@ -598,21 +598,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code rpc.ConditionalExpression}
+   * Protobuf type {@code scalardb.rpc.ConditionalExpression}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:rpc.ConditionalExpression)
+      // @@protoc_insertion_point(builder_implements:scalardb.rpc.ConditionalExpression)
       com.scalar.db.rpc.ConditionalExpressionOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ConditionalExpression_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_ConditionalExpression_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ConditionalExpression_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_ConditionalExpression_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.ConditionalExpression.class, com.scalar.db.rpc.ConditionalExpression.Builder.class);
     }
@@ -657,7 +657,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ConditionalExpression_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_ConditionalExpression_descriptor;
     }
 
     @java.lang.Override
@@ -782,7 +782,7 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object name_ = "";
     /**
      * <code>string name = 1 [deprecated = true];</code>
-     * @deprecated rpc.ConditionalExpression.name is deprecated.
+     * @deprecated scalardb.rpc.ConditionalExpression.name is deprecated.
      *     See scalardb.proto;l=91
      * @return The name.
      */
@@ -800,7 +800,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <code>string name = 1 [deprecated = true];</code>
-     * @deprecated rpc.ConditionalExpression.name is deprecated.
+     * @deprecated scalardb.rpc.ConditionalExpression.name is deprecated.
      *     See scalardb.proto;l=91
      * @return The bytes for name.
      */
@@ -819,7 +819,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <code>string name = 1 [deprecated = true];</code>
-     * @deprecated rpc.ConditionalExpression.name is deprecated.
+     * @deprecated scalardb.rpc.ConditionalExpression.name is deprecated.
      *     See scalardb.proto;l=91
      * @param value The name to set.
      * @return This builder for chaining.
@@ -836,7 +836,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <code>string name = 1 [deprecated = true];</code>
-     * @deprecated rpc.ConditionalExpression.name is deprecated.
+     * @deprecated scalardb.rpc.ConditionalExpression.name is deprecated.
      *     See scalardb.proto;l=91
      * @return This builder for chaining.
      */
@@ -848,7 +848,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <code>string name = 1 [deprecated = true];</code>
-     * @deprecated rpc.ConditionalExpression.name is deprecated.
+     * @deprecated scalardb.rpc.ConditionalExpression.name is deprecated.
      *     See scalardb.proto;l=91
      * @param value The bytes for name to set.
      * @return This builder for chaining.
@@ -869,8 +869,8 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Value, com.scalar.db.rpc.Value.Builder, com.scalar.db.rpc.ValueOrBuilder> valueBuilder_;
     /**
-     * <code>.rpc.Value value = 2 [deprecated = true];</code>
-     * @deprecated rpc.ConditionalExpression.value is deprecated.
+     * <code>.scalardb.rpc.Value value = 2 [deprecated = true];</code>
+     * @deprecated scalardb.rpc.ConditionalExpression.value is deprecated.
      *     See scalardb.proto;l=92
      * @return Whether the value field is set.
      */
@@ -878,8 +878,8 @@ private static final long serialVersionUID = 0L;
       return valueBuilder_ != null || value_ != null;
     }
     /**
-     * <code>.rpc.Value value = 2 [deprecated = true];</code>
-     * @deprecated rpc.ConditionalExpression.value is deprecated.
+     * <code>.scalardb.rpc.Value value = 2 [deprecated = true];</code>
+     * @deprecated scalardb.rpc.ConditionalExpression.value is deprecated.
      *     See scalardb.proto;l=92
      * @return The value.
      */
@@ -891,7 +891,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.rpc.Value value = 2 [deprecated = true];</code>
+     * <code>.scalardb.rpc.Value value = 2 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder setValue(com.scalar.db.rpc.Value value) {
       if (valueBuilder_ == null) {
@@ -907,7 +907,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Value value = 2 [deprecated = true];</code>
+     * <code>.scalardb.rpc.Value value = 2 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder setValue(
         com.scalar.db.rpc.Value.Builder builderForValue) {
@@ -921,7 +921,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Value value = 2 [deprecated = true];</code>
+     * <code>.scalardb.rpc.Value value = 2 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder mergeValue(com.scalar.db.rpc.Value value) {
       if (valueBuilder_ == null) {
@@ -939,7 +939,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Value value = 2 [deprecated = true];</code>
+     * <code>.scalardb.rpc.Value value = 2 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder clearValue() {
       if (valueBuilder_ == null) {
@@ -953,7 +953,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Value value = 2 [deprecated = true];</code>
+     * <code>.scalardb.rpc.Value value = 2 [deprecated = true];</code>
      */
     @java.lang.Deprecated public com.scalar.db.rpc.Value.Builder getValueBuilder() {
       
@@ -961,7 +961,7 @@ private static final long serialVersionUID = 0L;
       return getValueFieldBuilder().getBuilder();
     }
     /**
-     * <code>.rpc.Value value = 2 [deprecated = true];</code>
+     * <code>.scalardb.rpc.Value value = 2 [deprecated = true];</code>
      */
     @java.lang.Deprecated public com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder() {
       if (valueBuilder_ != null) {
@@ -972,7 +972,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.rpc.Value value = 2 [deprecated = true];</code>
+     * <code>.scalardb.rpc.Value value = 2 [deprecated = true];</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Value, com.scalar.db.rpc.Value.Builder, com.scalar.db.rpc.ValueOrBuilder> 
@@ -990,14 +990,14 @@ private static final long serialVersionUID = 0L;
 
     private int operator_ = 0;
     /**
-     * <code>.rpc.ConditionalExpression.Operator operator = 3;</code>
+     * <code>.scalardb.rpc.ConditionalExpression.Operator operator = 3;</code>
      * @return The enum numeric value on the wire for operator.
      */
     @java.lang.Override public int getOperatorValue() {
       return operator_;
     }
     /**
-     * <code>.rpc.ConditionalExpression.Operator operator = 3;</code>
+     * <code>.scalardb.rpc.ConditionalExpression.Operator operator = 3;</code>
      * @param value The enum numeric value on the wire for operator to set.
      * @return This builder for chaining.
      */
@@ -1008,7 +1008,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.ConditionalExpression.Operator operator = 3;</code>
+     * <code>.scalardb.rpc.ConditionalExpression.Operator operator = 3;</code>
      * @return The operator.
      */
     @java.lang.Override
@@ -1018,7 +1018,7 @@ private static final long serialVersionUID = 0L;
       return result == null ? com.scalar.db.rpc.ConditionalExpression.Operator.UNRECOGNIZED : result;
     }
     /**
-     * <code>.rpc.ConditionalExpression.Operator operator = 3;</code>
+     * <code>.scalardb.rpc.ConditionalExpression.Operator operator = 3;</code>
      * @param value The operator to set.
      * @return This builder for chaining.
      */
@@ -1032,7 +1032,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.ConditionalExpression.Operator operator = 3;</code>
+     * <code>.scalardb.rpc.ConditionalExpression.Operator operator = 3;</code>
      * @return This builder for chaining.
      */
     public Builder clearOperator() {
@@ -1046,14 +1046,14 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Column, com.scalar.db.rpc.Column.Builder, com.scalar.db.rpc.ColumnOrBuilder> columnBuilder_;
     /**
-     * <code>.rpc.Column column = 4;</code>
+     * <code>.scalardb.rpc.Column column = 4;</code>
      * @return Whether the column field is set.
      */
     public boolean hasColumn() {
       return columnBuilder_ != null || column_ != null;
     }
     /**
-     * <code>.rpc.Column column = 4;</code>
+     * <code>.scalardb.rpc.Column column = 4;</code>
      * @return The column.
      */
     public com.scalar.db.rpc.Column getColumn() {
@@ -1064,7 +1064,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.rpc.Column column = 4;</code>
+     * <code>.scalardb.rpc.Column column = 4;</code>
      */
     public Builder setColumn(com.scalar.db.rpc.Column value) {
       if (columnBuilder_ == null) {
@@ -1080,7 +1080,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Column column = 4;</code>
+     * <code>.scalardb.rpc.Column column = 4;</code>
      */
     public Builder setColumn(
         com.scalar.db.rpc.Column.Builder builderForValue) {
@@ -1094,7 +1094,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Column column = 4;</code>
+     * <code>.scalardb.rpc.Column column = 4;</code>
      */
     public Builder mergeColumn(com.scalar.db.rpc.Column value) {
       if (columnBuilder_ == null) {
@@ -1112,7 +1112,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Column column = 4;</code>
+     * <code>.scalardb.rpc.Column column = 4;</code>
      */
     public Builder clearColumn() {
       if (columnBuilder_ == null) {
@@ -1126,7 +1126,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.Column column = 4;</code>
+     * <code>.scalardb.rpc.Column column = 4;</code>
      */
     public com.scalar.db.rpc.Column.Builder getColumnBuilder() {
       
@@ -1134,7 +1134,7 @@ private static final long serialVersionUID = 0L;
       return getColumnFieldBuilder().getBuilder();
     }
     /**
-     * <code>.rpc.Column column = 4;</code>
+     * <code>.scalardb.rpc.Column column = 4;</code>
      */
     public com.scalar.db.rpc.ColumnOrBuilder getColumnOrBuilder() {
       if (columnBuilder_ != null) {
@@ -1145,7 +1145,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.rpc.Column column = 4;</code>
+     * <code>.scalardb.rpc.Column column = 4;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Column, com.scalar.db.rpc.Column.Builder, com.scalar.db.rpc.ColumnOrBuilder> 
@@ -1173,10 +1173,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:rpc.ConditionalExpression)
+    // @@protoc_insertion_point(builder_scope:scalardb.rpc.ConditionalExpression)
   }
 
-  // @@protoc_insertion_point(class_scope:rpc.ConditionalExpression)
+  // @@protoc_insertion_point(class_scope:scalardb.rpc.ConditionalExpression)
   private static final com.scalar.db.rpc.ConditionalExpression DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.ConditionalExpression();

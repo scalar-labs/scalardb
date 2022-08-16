@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code rpc.CreateIndexRequest}
+ * Protobuf type {@code scalardb.rpc.CreateIndexRequest}
  */
 public final class CreateIndexRequest extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:rpc.CreateIndexRequest)
+    // @@protoc_insertion_point(message_implements:scalardb.rpc.CreateIndexRequest)
     CreateIndexRequestOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use CreateIndexRequest.newBuilder() to construct.
@@ -111,7 +111,7 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateIndexRequest_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_CreateIndexRequest_descriptor;
   }
 
   @SuppressWarnings({"rawtypes"})
@@ -129,7 +129,7 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateIndexRequest_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_CreateIndexRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.CreateIndexRequest.class, com.scalar.db.rpc.CreateIndexRequest.Builder.class);
   }
@@ -254,7 +254,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String, java.lang.String> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.String>newDefaultInstance(
-                com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateIndexRequest_OptionsEntry_descriptor, 
+                com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_CreateIndexRequest_OptionsEntry_descriptor, 
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.STRING,
@@ -549,15 +549,15 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code rpc.CreateIndexRequest}
+   * Protobuf type {@code scalardb.rpc.CreateIndexRequest}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:rpc.CreateIndexRequest)
+      // @@protoc_insertion_point(builder_implements:scalardb.rpc.CreateIndexRequest)
       com.scalar.db.rpc.CreateIndexRequestOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateIndexRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_CreateIndexRequest_descriptor;
     }
 
     @SuppressWarnings({"rawtypes"})
@@ -585,7 +585,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateIndexRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_CreateIndexRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.CreateIndexRequest.class, com.scalar.db.rpc.CreateIndexRequest.Builder.class);
     }
@@ -623,7 +623,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateIndexRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_CreateIndexRequest_descriptor;
     }
 
     @java.lang.Override
@@ -1147,10 +1147,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:rpc.CreateIndexRequest)
+    // @@protoc_insertion_point(builder_scope:scalardb.rpc.CreateIndexRequest)
   }
 
-  // @@protoc_insertion_point(class_scope:rpc.CreateIndexRequest)
+  // @@protoc_insertion_point(class_scope:scalardb.rpc.CreateIndexRequest)
   private static final com.scalar.db.rpc.CreateIndexRequest DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.CreateIndexRequest();

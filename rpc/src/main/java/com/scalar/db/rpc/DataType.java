@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf enum {@code rpc.DataType}
+ * Protobuf enum {@code scalardb.rpc.DataType}
  */
 public enum DataType
     implements com.google.protobuf.ProtocolMessageEnum {
@@ -153,6 +153,6 @@ public enum DataType
     this.value = value;
   }
 
-  // @@protoc_insertion_point(enum_scope:rpc.DataType)
+  // @@protoc_insertion_point(enum_scope:scalardb.rpc.DataType)
 }
 

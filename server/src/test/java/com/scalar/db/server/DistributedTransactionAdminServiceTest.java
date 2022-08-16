@@ -251,9 +251,9 @@ public class DistributedTransactionAdminServiceTest {
     verify(responseObserver)
         .onNext(
             GetNamespaceTableNamesResponse.newBuilder()
-                .addTableName("tbl1")
-                .addTableName("tbl2")
-                .addTableName("tbl3")
+                .addTableNames("tbl1")
+                .addTableNames("tbl2")
+                .addTableNames("tbl3")
                 .build());
     verify(responseObserver).onCompleted();
   }

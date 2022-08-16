@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code rpc.Key}
+ * Protobuf type {@code scalardb.rpc.Key}
  */
 public final class Key extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:rpc.Key)
+    // @@protoc_insertion_point(message_implements:scalardb.rpc.Key)
     KeyOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use Key.newBuilder() to construct.
@@ -17,7 +17,7 @@ private static final long serialVersionUID = 0L;
   }
   private Key() {
     value_ = java.util.Collections.emptyList();
-    column_ = java.util.Collections.emptyList();
+    columns_ = java.util.Collections.emptyList();
   }
 
   @java.lang.Override
@@ -62,10 +62,10 @@ private static final long serialVersionUID = 0L;
           }
           case 18: {
             if (!((mutable_bitField0_ & 0x00000002) != 0)) {
-              column_ = new java.util.ArrayList<com.scalar.db.rpc.Column>();
+              columns_ = new java.util.ArrayList<com.scalar.db.rpc.Column>();
               mutable_bitField0_ |= 0x00000002;
             }
-            column_.add(
+            columns_.add(
                 input.readMessage(com.scalar.db.rpc.Column.parser(), extensionRegistry));
             break;
           }
@@ -90,7 +90,7 @@ private static final long serialVersionUID = 0L;
         value_ = java.util.Collections.unmodifiableList(value_);
       }
       if (((mutable_bitField0_ & 0x00000002) != 0)) {
-        column_ = java.util.Collections.unmodifiableList(column_);
+        columns_ = java.util.Collections.unmodifiableList(columns_);
       }
       this.unknownFields = unknownFields.build();
       makeExtensionsImmutable();
@@ -98,13 +98,13 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Key_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Key_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Key_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Key_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.Key.class, com.scalar.db.rpc.Key.Builder.class);
   }
@@ -112,14 +112,14 @@ private static final long serialVersionUID = 0L;
   public static final int VALUE_FIELD_NUMBER = 1;
   private java.util.List<com.scalar.db.rpc.Value> value_;
   /**
-   * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+   * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
    */
   @java.lang.Override
   @java.lang.Deprecated public java.util.List<com.scalar.db.rpc.Value> getValueList() {
     return value_;
   }
   /**
-   * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+   * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
    */
   @java.lang.Override
   @java.lang.Deprecated public java.util.List<? extends com.scalar.db.rpc.ValueOrBuilder> 
@@ -127,21 +127,21 @@ private static final long serialVersionUID = 0L;
     return value_;
   }
   /**
-   * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+   * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
    */
   @java.lang.Override
   @java.lang.Deprecated public int getValueCount() {
     return value_.size();
   }
   /**
-   * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+   * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
    */
   @java.lang.Override
   @java.lang.Deprecated public com.scalar.db.rpc.Value getValue(int index) {
     return value_.get(index);
   }
   /**
-   * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+   * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
    */
   @java.lang.Override
   @java.lang.Deprecated public com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder(
@@ -149,44 +149,44 @@ private static final long serialVersionUID = 0L;
     return value_.get(index);
   }
 
-  public static final int COLUMN_FIELD_NUMBER = 2;
-  private java.util.List<com.scalar.db.rpc.Column> column_;
+  public static final int COLUMNS_FIELD_NUMBER = 2;
+  private java.util.List<com.scalar.db.rpc.Column> columns_;
   /**
-   * <code>repeated .rpc.Column column = 2;</code>
+   * <code>repeated .scalardb.rpc.Column columns = 2;</code>
    */
   @java.lang.Override
-  public java.util.List<com.scalar.db.rpc.Column> getColumnList() {
-    return column_;
+  public java.util.List<com.scalar.db.rpc.Column> getColumnsList() {
+    return columns_;
   }
   /**
-   * <code>repeated .rpc.Column column = 2;</code>
+   * <code>repeated .scalardb.rpc.Column columns = 2;</code>
    */
   @java.lang.Override
   public java.util.List<? extends com.scalar.db.rpc.ColumnOrBuilder> 
-      getColumnOrBuilderList() {
-    return column_;
+      getColumnsOrBuilderList() {
+    return columns_;
   }
   /**
-   * <code>repeated .rpc.Column column = 2;</code>
+   * <code>repeated .scalardb.rpc.Column columns = 2;</code>
    */
   @java.lang.Override
-  public int getColumnCount() {
-    return column_.size();
+  public int getColumnsCount() {
+    return columns_.size();
   }
   /**
-   * <code>repeated .rpc.Column column = 2;</code>
+   * <code>repeated .scalardb.rpc.Column columns = 2;</code>
    */
   @java.lang.Override
-  public com.scalar.db.rpc.Column getColumn(int index) {
-    return column_.get(index);
+  public com.scalar.db.rpc.Column getColumns(int index) {
+    return columns_.get(index);
   }
   /**
-   * <code>repeated .rpc.Column column = 2;</code>
+   * <code>repeated .scalardb.rpc.Column columns = 2;</code>
    */
   @java.lang.Override
-  public com.scalar.db.rpc.ColumnOrBuilder getColumnOrBuilder(
+  public com.scalar.db.rpc.ColumnOrBuilder getColumnsOrBuilder(
       int index) {
-    return column_.get(index);
+    return columns_.get(index);
   }
 
   private byte memoizedIsInitialized = -1;
@@ -206,8 +206,8 @@ private static final long serialVersionUID = 0L;
     for (int i = 0; i < value_.size(); i++) {
       output.writeMessage(1, value_.get(i));
     }
-    for (int i = 0; i < column_.size(); i++) {
-      output.writeMessage(2, column_.get(i));
+    for (int i = 0; i < columns_.size(); i++) {
+      output.writeMessage(2, columns_.get(i));
     }
     unknownFields.writeTo(output);
   }
@@ -222,9 +222,9 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(1, value_.get(i));
     }
-    for (int i = 0; i < column_.size(); i++) {
+    for (int i = 0; i < columns_.size(); i++) {
       size += com.google.protobuf.CodedOutputStream
-        .computeMessageSize(2, column_.get(i));
+        .computeMessageSize(2, columns_.get(i));
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -243,8 +243,8 @@ private static final long serialVersionUID = 0L;
 
     if (!getValueList()
         .equals(other.getValueList())) return false;
-    if (!getColumnList()
-        .equals(other.getColumnList())) return false;
+    if (!getColumnsList()
+        .equals(other.getColumnsList())) return false;
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -260,9 +260,9 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + VALUE_FIELD_NUMBER;
       hash = (53 * hash) + getValueList().hashCode();
     }
-    if (getColumnCount() > 0) {
-      hash = (37 * hash) + COLUMN_FIELD_NUMBER;
-      hash = (53 * hash) + getColumnList().hashCode();
+    if (getColumnsCount() > 0) {
+      hash = (37 * hash) + COLUMNS_FIELD_NUMBER;
+      hash = (53 * hash) + getColumnsList().hashCode();
     }
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
@@ -360,21 +360,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code rpc.Key}
+   * Protobuf type {@code scalardb.rpc.Key}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:rpc.Key)
+      // @@protoc_insertion_point(builder_implements:scalardb.rpc.Key)
       com.scalar.db.rpc.KeyOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Key_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Key_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Key_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Key_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.Key.class, com.scalar.db.rpc.Key.Builder.class);
     }
@@ -393,7 +393,7 @@ private static final long serialVersionUID = 0L;
       if (com.google.protobuf.GeneratedMessageV3
               .alwaysUseFieldBuilders) {
         getValueFieldBuilder();
-        getColumnFieldBuilder();
+        getColumnsFieldBuilder();
       }
     }
     @java.lang.Override
@@ -405,11 +405,11 @@ private static final long serialVersionUID = 0L;
       } else {
         valueBuilder_.clear();
       }
-      if (columnBuilder_ == null) {
-        column_ = java.util.Collections.emptyList();
+      if (columnsBuilder_ == null) {
+        columns_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000002);
       } else {
-        columnBuilder_.clear();
+        columnsBuilder_.clear();
       }
       return this;
     }
@@ -417,7 +417,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Key_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Key_descriptor;
     }
 
     @java.lang.Override
@@ -447,14 +447,14 @@ private static final long serialVersionUID = 0L;
       } else {
         result.value_ = valueBuilder_.build();
       }
-      if (columnBuilder_ == null) {
+      if (columnsBuilder_ == null) {
         if (((bitField0_ & 0x00000002) != 0)) {
-          column_ = java.util.Collections.unmodifiableList(column_);
+          columns_ = java.util.Collections.unmodifiableList(columns_);
           bitField0_ = (bitField0_ & ~0x00000002);
         }
-        result.column_ = column_;
+        result.columns_ = columns_;
       } else {
-        result.column_ = columnBuilder_.build();
+        result.columns_ = columnsBuilder_.build();
       }
       onBuilt();
       return result;
@@ -530,29 +530,29 @@ private static final long serialVersionUID = 0L;
           }
         }
       }
-      if (columnBuilder_ == null) {
-        if (!other.column_.isEmpty()) {
-          if (column_.isEmpty()) {
-            column_ = other.column_;
+      if (columnsBuilder_ == null) {
+        if (!other.columns_.isEmpty()) {
+          if (columns_.isEmpty()) {
+            columns_ = other.columns_;
             bitField0_ = (bitField0_ & ~0x00000002);
           } else {
-            ensureColumnIsMutable();
-            column_.addAll(other.column_);
+            ensureColumnsIsMutable();
+            columns_.addAll(other.columns_);
           }
           onChanged();
         }
       } else {
-        if (!other.column_.isEmpty()) {
-          if (columnBuilder_.isEmpty()) {
-            columnBuilder_.dispose();
-            columnBuilder_ = null;
-            column_ = other.column_;
+        if (!other.columns_.isEmpty()) {
+          if (columnsBuilder_.isEmpty()) {
+            columnsBuilder_.dispose();
+            columnsBuilder_ = null;
+            columns_ = other.columns_;
             bitField0_ = (bitField0_ & ~0x00000002);
-            columnBuilder_ = 
+            columnsBuilder_ = 
               com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
-                 getColumnFieldBuilder() : null;
+                 getColumnsFieldBuilder() : null;
           } else {
-            columnBuilder_.addAllMessages(other.column_);
+            columnsBuilder_.addAllMessages(other.columns_);
           }
         }
       }
@@ -599,7 +599,7 @@ private static final long serialVersionUID = 0L;
         com.scalar.db.rpc.Value, com.scalar.db.rpc.Value.Builder, com.scalar.db.rpc.ValueOrBuilder> valueBuilder_;
 
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public java.util.List<com.scalar.db.rpc.Value> getValueList() {
       if (valueBuilder_ == null) {
@@ -609,7 +609,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public int getValueCount() {
       if (valueBuilder_ == null) {
@@ -619,7 +619,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public com.scalar.db.rpc.Value getValue(int index) {
       if (valueBuilder_ == null) {
@@ -629,7 +629,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder setValue(
         int index, com.scalar.db.rpc.Value value) {
@@ -646,7 +646,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder setValue(
         int index, com.scalar.db.rpc.Value.Builder builderForValue) {
@@ -660,7 +660,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder addValue(com.scalar.db.rpc.Value value) {
       if (valueBuilder_ == null) {
@@ -676,7 +676,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder addValue(
         int index, com.scalar.db.rpc.Value value) {
@@ -693,7 +693,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder addValue(
         com.scalar.db.rpc.Value.Builder builderForValue) {
@@ -707,7 +707,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder addValue(
         int index, com.scalar.db.rpc.Value.Builder builderForValue) {
@@ -721,7 +721,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder addAllValue(
         java.lang.Iterable<? extends com.scalar.db.rpc.Value> values) {
@@ -736,7 +736,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder clearValue() {
       if (valueBuilder_ == null) {
@@ -749,7 +749,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder removeValue(int index) {
       if (valueBuilder_ == null) {
@@ -762,14 +762,14 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public com.scalar.db.rpc.Value.Builder getValueBuilder(
         int index) {
       return getValueFieldBuilder().getBuilder(index);
     }
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder(
         int index) {
@@ -779,7 +779,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public java.util.List<? extends com.scalar.db.rpc.ValueOrBuilder> 
          getValueOrBuilderList() {
@@ -790,14 +790,14 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public com.scalar.db.rpc.Value.Builder addValueBuilder() {
       return getValueFieldBuilder().addBuilder(
           com.scalar.db.rpc.Value.getDefaultInstance());
     }
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public com.scalar.db.rpc.Value.Builder addValueBuilder(
         int index) {
@@ -805,7 +805,7 @@ private static final long serialVersionUID = 0L;
           index, com.scalar.db.rpc.Value.getDefaultInstance());
     }
     /**
-     * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+     * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
      */
     @java.lang.Deprecated public java.util.List<com.scalar.db.rpc.Value.Builder> 
          getValueBuilderList() {
@@ -826,244 +826,244 @@ private static final long serialVersionUID = 0L;
       return valueBuilder_;
     }
 
-    private java.util.List<com.scalar.db.rpc.Column> column_ =
+    private java.util.List<com.scalar.db.rpc.Column> columns_ =
       java.util.Collections.emptyList();
-    private void ensureColumnIsMutable() {
+    private void ensureColumnsIsMutable() {
       if (!((bitField0_ & 0x00000002) != 0)) {
-        column_ = new java.util.ArrayList<com.scalar.db.rpc.Column>(column_);
+        columns_ = new java.util.ArrayList<com.scalar.db.rpc.Column>(columns_);
         bitField0_ |= 0x00000002;
        }
     }
 
     private com.google.protobuf.RepeatedFieldBuilderV3<
-        com.scalar.db.rpc.Column, com.scalar.db.rpc.Column.Builder, com.scalar.db.rpc.ColumnOrBuilder> columnBuilder_;
+        com.scalar.db.rpc.Column, com.scalar.db.rpc.Column.Builder, com.scalar.db.rpc.ColumnOrBuilder> columnsBuilder_;
 
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
-    public java.util.List<com.scalar.db.rpc.Column> getColumnList() {
-      if (columnBuilder_ == null) {
-        return java.util.Collections.unmodifiableList(column_);
+    public java.util.List<com.scalar.db.rpc.Column> getColumnsList() {
+      if (columnsBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(columns_);
       } else {
-        return columnBuilder_.getMessageList();
+        return columnsBuilder_.getMessageList();
       }
     }
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
-    public int getColumnCount() {
-      if (columnBuilder_ == null) {
-        return column_.size();
+    public int getColumnsCount() {
+      if (columnsBuilder_ == null) {
+        return columns_.size();
       } else {
-        return columnBuilder_.getCount();
+        return columnsBuilder_.getCount();
       }
     }
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
-    public com.scalar.db.rpc.Column getColumn(int index) {
-      if (columnBuilder_ == null) {
-        return column_.get(index);
+    public com.scalar.db.rpc.Column getColumns(int index) {
+      if (columnsBuilder_ == null) {
+        return columns_.get(index);
       } else {
-        return columnBuilder_.getMessage(index);
+        return columnsBuilder_.getMessage(index);
       }
     }
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
-    public Builder setColumn(
+    public Builder setColumns(
         int index, com.scalar.db.rpc.Column value) {
-      if (columnBuilder_ == null) {
+      if (columnsBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
         }
-        ensureColumnIsMutable();
-        column_.set(index, value);
+        ensureColumnsIsMutable();
+        columns_.set(index, value);
         onChanged();
       } else {
-        columnBuilder_.setMessage(index, value);
+        columnsBuilder_.setMessage(index, value);
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
-    public Builder setColumn(
+    public Builder setColumns(
         int index, com.scalar.db.rpc.Column.Builder builderForValue) {
-      if (columnBuilder_ == null) {
-        ensureColumnIsMutable();
-        column_.set(index, builderForValue.build());
+      if (columnsBuilder_ == null) {
+        ensureColumnsIsMutable();
+        columns_.set(index, builderForValue.build());
         onChanged();
       } else {
-        columnBuilder_.setMessage(index, builderForValue.build());
+        columnsBuilder_.setMessage(index, builderForValue.build());
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
-    public Builder addColumn(com.scalar.db.rpc.Column value) {
-      if (columnBuilder_ == null) {
+    public Builder addColumns(com.scalar.db.rpc.Column value) {
+      if (columnsBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
         }
-        ensureColumnIsMutable();
-        column_.add(value);
+        ensureColumnsIsMutable();
+        columns_.add(value);
         onChanged();
       } else {
-        columnBuilder_.addMessage(value);
+        columnsBuilder_.addMessage(value);
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
-    public Builder addColumn(
+    public Builder addColumns(
         int index, com.scalar.db.rpc.Column value) {
-      if (columnBuilder_ == null) {
+      if (columnsBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
         }
-        ensureColumnIsMutable();
-        column_.add(index, value);
+        ensureColumnsIsMutable();
+        columns_.add(index, value);
         onChanged();
       } else {
-        columnBuilder_.addMessage(index, value);
+        columnsBuilder_.addMessage(index, value);
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
-    public Builder addColumn(
+    public Builder addColumns(
         com.scalar.db.rpc.Column.Builder builderForValue) {
-      if (columnBuilder_ == null) {
-        ensureColumnIsMutable();
-        column_.add(builderForValue.build());
+      if (columnsBuilder_ == null) {
+        ensureColumnsIsMutable();
+        columns_.add(builderForValue.build());
         onChanged();
       } else {
-        columnBuilder_.addMessage(builderForValue.build());
+        columnsBuilder_.addMessage(builderForValue.build());
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
-    public Builder addColumn(
+    public Builder addColumns(
         int index, com.scalar.db.rpc.Column.Builder builderForValue) {
-      if (columnBuilder_ == null) {
-        ensureColumnIsMutable();
-        column_.add(index, builderForValue.build());
+      if (columnsBuilder_ == null) {
+        ensureColumnsIsMutable();
+        columns_.add(index, builderForValue.build());
         onChanged();
       } else {
-        columnBuilder_.addMessage(index, builderForValue.build());
+        columnsBuilder_.addMessage(index, builderForValue.build());
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
-    public Builder addAllColumn(
+    public Builder addAllColumns(
         java.lang.Iterable<? extends com.scalar.db.rpc.Column> values) {
-      if (columnBuilder_ == null) {
-        ensureColumnIsMutable();
+      if (columnsBuilder_ == null) {
+        ensureColumnsIsMutable();
         com.google.protobuf.AbstractMessageLite.Builder.addAll(
-            values, column_);
+            values, columns_);
         onChanged();
       } else {
-        columnBuilder_.addAllMessages(values);
+        columnsBuilder_.addAllMessages(values);
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
-    public Builder clearColumn() {
-      if (columnBuilder_ == null) {
-        column_ = java.util.Collections.emptyList();
+    public Builder clearColumns() {
+      if (columnsBuilder_ == null) {
+        columns_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000002);
         onChanged();
       } else {
-        columnBuilder_.clear();
+        columnsBuilder_.clear();
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
-    public Builder removeColumn(int index) {
-      if (columnBuilder_ == null) {
-        ensureColumnIsMutable();
-        column_.remove(index);
+    public Builder removeColumns(int index) {
+      if (columnsBuilder_ == null) {
+        ensureColumnsIsMutable();
+        columns_.remove(index);
         onChanged();
       } else {
-        columnBuilder_.remove(index);
+        columnsBuilder_.remove(index);
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
-    public com.scalar.db.rpc.Column.Builder getColumnBuilder(
+    public com.scalar.db.rpc.Column.Builder getColumnsBuilder(
         int index) {
-      return getColumnFieldBuilder().getBuilder(index);
+      return getColumnsFieldBuilder().getBuilder(index);
     }
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
-    public com.scalar.db.rpc.ColumnOrBuilder getColumnOrBuilder(
+    public com.scalar.db.rpc.ColumnOrBuilder getColumnsOrBuilder(
         int index) {
-      if (columnBuilder_ == null) {
-        return column_.get(index);  } else {
-        return columnBuilder_.getMessageOrBuilder(index);
+      if (columnsBuilder_ == null) {
+        return columns_.get(index);  } else {
+        return columnsBuilder_.getMessageOrBuilder(index);
       }
     }
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
     public java.util.List<? extends com.scalar.db.rpc.ColumnOrBuilder> 
-         getColumnOrBuilderList() {
-      if (columnBuilder_ != null) {
-        return columnBuilder_.getMessageOrBuilderList();
+         getColumnsOrBuilderList() {
+      if (columnsBuilder_ != null) {
+        return columnsBuilder_.getMessageOrBuilderList();
       } else {
-        return java.util.Collections.unmodifiableList(column_);
+        return java.util.Collections.unmodifiableList(columns_);
       }
     }
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
-    public com.scalar.db.rpc.Column.Builder addColumnBuilder() {
-      return getColumnFieldBuilder().addBuilder(
+    public com.scalar.db.rpc.Column.Builder addColumnsBuilder() {
+      return getColumnsFieldBuilder().addBuilder(
           com.scalar.db.rpc.Column.getDefaultInstance());
     }
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
-    public com.scalar.db.rpc.Column.Builder addColumnBuilder(
+    public com.scalar.db.rpc.Column.Builder addColumnsBuilder(
         int index) {
-      return getColumnFieldBuilder().addBuilder(
+      return getColumnsFieldBuilder().addBuilder(
           index, com.scalar.db.rpc.Column.getDefaultInstance());
     }
     /**
-     * <code>repeated .rpc.Column column = 2;</code>
+     * <code>repeated .scalardb.rpc.Column columns = 2;</code>
      */
     public java.util.List<com.scalar.db.rpc.Column.Builder> 
-         getColumnBuilderList() {
-      return getColumnFieldBuilder().getBuilderList();
+         getColumnsBuilderList() {
+      return getColumnsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilderV3<
         com.scalar.db.rpc.Column, com.scalar.db.rpc.Column.Builder, com.scalar.db.rpc.ColumnOrBuilder> 
-        getColumnFieldBuilder() {
-      if (columnBuilder_ == null) {
-        columnBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
+        getColumnsFieldBuilder() {
+      if (columnsBuilder_ == null) {
+        columnsBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
             com.scalar.db.rpc.Column, com.scalar.db.rpc.Column.Builder, com.scalar.db.rpc.ColumnOrBuilder>(
-                column_,
+                columns_,
                 ((bitField0_ & 0x00000002) != 0),
                 getParentForChildren(),
                 isClean());
-        column_ = null;
+        columns_ = null;
       }
-      return columnBuilder_;
+      return columnsBuilder_;
     }
     @java.lang.Override
     public final Builder setUnknownFields(
@@ -1078,10 +1078,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:rpc.Key)
+    // @@protoc_insertion_point(builder_scope:scalardb.rpc.Key)
   }
 
-  // @@protoc_insertion_point(class_scope:rpc.Key)
+  // @@protoc_insertion_point(class_scope:scalardb.rpc.Key)
   private static final com.scalar.db.rpc.Key DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.Key();

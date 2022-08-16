@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 public interface ScanOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.Scan)
+    // @@protoc_insertion_point(interface_extends:scalardb.rpc.Scan)
     com.google.protobuf.MessageOrBuilder {
 
   /**
@@ -32,68 +32,68 @@ public interface ScanOrBuilder extends
       getTableBytes();
 
   /**
-   * <code>.rpc.Key partition_key = 3;</code>
+   * <code>.scalardb.rpc.Key partition_key = 3;</code>
    * @return Whether the partitionKey field is set.
    */
   boolean hasPartitionKey();
   /**
-   * <code>.rpc.Key partition_key = 3;</code>
+   * <code>.scalardb.rpc.Key partition_key = 3;</code>
    * @return The partitionKey.
    */
   com.scalar.db.rpc.Key getPartitionKey();
   /**
-   * <code>.rpc.Key partition_key = 3;</code>
+   * <code>.scalardb.rpc.Key partition_key = 3;</code>
    */
   com.scalar.db.rpc.KeyOrBuilder getPartitionKeyOrBuilder();
 
   /**
-   * <code>.rpc.Consistency consistency = 4;</code>
+   * <code>.scalardb.rpc.Consistency consistency = 4;</code>
    * @return The enum numeric value on the wire for consistency.
    */
   int getConsistencyValue();
   /**
-   * <code>.rpc.Consistency consistency = 4;</code>
+   * <code>.scalardb.rpc.Consistency consistency = 4;</code>
    * @return The consistency.
    */
   com.scalar.db.rpc.Consistency getConsistency();
 
   /**
-   * <code>repeated string projection = 5;</code>
-   * @return A list containing the projection.
+   * <code>repeated string projections = 5;</code>
+   * @return A list containing the projections.
    */
   java.util.List<java.lang.String>
-      getProjectionList();
+      getProjectionsList();
   /**
-   * <code>repeated string projection = 5;</code>
-   * @return The count of projection.
+   * <code>repeated string projections = 5;</code>
+   * @return The count of projections.
    */
-  int getProjectionCount();
+  int getProjectionsCount();
   /**
-   * <code>repeated string projection = 5;</code>
+   * <code>repeated string projections = 5;</code>
    * @param index The index of the element to return.
-   * @return The projection at the given index.
+   * @return The projections at the given index.
    */
-  java.lang.String getProjection(int index);
+  java.lang.String getProjections(int index);
   /**
-   * <code>repeated string projection = 5;</code>
+   * <code>repeated string projections = 5;</code>
    * @param index The index of the value to return.
-   * @return The bytes of the projection at the given index.
+   * @return The bytes of the projections at the given index.
    */
   com.google.protobuf.ByteString
-      getProjectionBytes(int index);
+      getProjectionsBytes(int index);
 
   /**
-   * <code>.rpc.Key start_clustering_key = 6;</code>
+   * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
    * @return Whether the startClusteringKey field is set.
    */
   boolean hasStartClusteringKey();
   /**
-   * <code>.rpc.Key start_clustering_key = 6;</code>
+   * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
    * @return The startClusteringKey.
    */
   com.scalar.db.rpc.Key getStartClusteringKey();
   /**
-   * <code>.rpc.Key start_clustering_key = 6;</code>
+   * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
    */
   com.scalar.db.rpc.KeyOrBuilder getStartClusteringKeyOrBuilder();
 
@@ -104,17 +104,17 @@ public interface ScanOrBuilder extends
   boolean getStartInclusive();
 
   /**
-   * <code>.rpc.Key end_clustering_key = 8;</code>
+   * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
    * @return Whether the endClusteringKey field is set.
    */
   boolean hasEndClusteringKey();
   /**
-   * <code>.rpc.Key end_clustering_key = 8;</code>
+   * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
    * @return The endClusteringKey.
    */
   com.scalar.db.rpc.Key getEndClusteringKey();
   /**
-   * <code>.rpc.Key end_clustering_key = 8;</code>
+   * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
    */
   com.scalar.db.rpc.KeyOrBuilder getEndClusteringKeyOrBuilder();
 
@@ -125,27 +125,27 @@ public interface ScanOrBuilder extends
   boolean getEndInclusive();
 
   /**
-   * <code>repeated .rpc.Ordering ordering = 10;</code>
+   * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
    */
   java.util.List<com.scalar.db.rpc.Ordering> 
-      getOrderingList();
+      getOrderingsList();
   /**
-   * <code>repeated .rpc.Ordering ordering = 10;</code>
+   * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
    */
-  com.scalar.db.rpc.Ordering getOrdering(int index);
+  com.scalar.db.rpc.Ordering getOrderings(int index);
   /**
-   * <code>repeated .rpc.Ordering ordering = 10;</code>
+   * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
    */
-  int getOrderingCount();
+  int getOrderingsCount();
   /**
-   * <code>repeated .rpc.Ordering ordering = 10;</code>
+   * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
    */
   java.util.List<? extends com.scalar.db.rpc.OrderingOrBuilder> 
-      getOrderingOrBuilderList();
+      getOrderingsOrBuilderList();
   /**
-   * <code>repeated .rpc.Ordering ordering = 10;</code>
+   * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
    */
-  com.scalar.db.rpc.OrderingOrBuilder getOrderingOrBuilder(
+  com.scalar.db.rpc.OrderingOrBuilder getOrderingsOrBuilder(
       int index);
 
   /**

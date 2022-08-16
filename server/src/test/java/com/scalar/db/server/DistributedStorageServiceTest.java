@@ -134,57 +134,57 @@ public class DistributedStorageServiceTest {
             GetResponse.newBuilder()
                 .setResult(
                     com.scalar.db.rpc.Result.newBuilder()
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("p1")
                                 .setIntValue(10)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("p2")
                                 .setTextValue("text1")
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c1")
                                 .setTextValue("text2")
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c2")
                                 .setIntValue(20)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("col1")
                                 .setBooleanValue(true)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("col2")
                                 .setIntValue(10)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("col3")
                                 .setBigintValue(100L)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("col4")
                                 .setFloatValue(1.23F)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("col5")
                                 .setDoubleValue(4.56)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("col6")
                                 .setTextValue("text")
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("col7")
                                 .setBlobValue(
@@ -392,94 +392,94 @@ public class DistributedStorageServiceTest {
     verify(responseObserver)
         .onNext(
             ScanResponse.newBuilder()
-                .addResult(
+                .addResults(
                     com.scalar.db.rpc.Result.newBuilder()
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("p1")
                                 .setIntValue(10)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("p2")
                                 .setTextValue("text1")
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c1")
                                 .setTextValue("text2")
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c2")
                                 .setIntValue(20)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("col1")
                                 .setBooleanValue(true)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("col2")
                                 .setIntValue(10)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("col3")
                                 .setBigintValue(100L)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("col4")
                                 .setFloatValue(1.23F)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("col5")
                                 .setDoubleValue(4.56)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("col6")
                                 .setTextValue("text")
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("col7")
                                 .setBlobValue(
                                     ByteString.copyFrom("blob".getBytes(StandardCharsets.UTF_8)))
                                 .build())
                         .build())
-                .addResult(
+                .addResults(
                     com.scalar.db.rpc.Result.newBuilder()
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("p1")
                                 .setIntValue(10)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("p2")
                                 .setTextValue("text1")
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c1")
                                 .setTextValue("text2")
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c2")
                                 .setIntValue(20)
                                 .build())
-                        .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col1").build())
-                        .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col2").build())
-                        .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col3").build())
-                        .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col4").build())
-                        .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col5").build())
-                        .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col6").build())
-                        .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col7").build())
+                        .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col1").build())
+                        .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col2").build())
+                        .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col3").build())
+                        .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col4").build())
+                        .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col5").build())
+                        .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col6").build())
+                        .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col7").build())
                         .build())
                 .build());
     verify(responseObserver).onCompleted();
@@ -556,7 +556,7 @@ public class DistributedStorageServiceTest {
     verify(responseObserver)
         .onNext(
             ScanResponse.newBuilder()
-                .addResult(
+                .addResults(
                     com.scalar.db.rpc.Result.newBuilder()
                         .addValue(Value.newBuilder().setName("p1").setIntValue(10).build())
                         .addValue(
@@ -591,7 +591,7 @@ public class DistributedStorageServiceTest {
                                         .build())
                                 .build())
                         .build())
-                .addResult(
+                .addResults(
                     com.scalar.db.rpc.Result.newBuilder()
                         .addValue(Value.newBuilder().setName("p1").setIntValue(10).build())
                         .addValue(
@@ -632,7 +632,7 @@ public class DistributedStorageServiceTest {
     Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
-            .addMutation(ProtoUtils.toMutation(new Put(partitionKey)))
+            .addMutations(ProtoUtils.toMutation(new Put(partitionKey)))
             .build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
@@ -653,7 +653,7 @@ public class DistributedStorageServiceTest {
     Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
-            .addAllMutation(
+            .addAllMutations(
                 Arrays.asList(
                     ProtoUtils.toMutation(new Put(partitionKey)),
                     ProtoUtils.toMutation(new Put(partitionKey))))
@@ -677,7 +677,7 @@ public class DistributedStorageServiceTest {
     Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
-            .addMutation(ProtoUtils.toMutation(new Delete(partitionKey)))
+            .addMutations(ProtoUtils.toMutation(new Delete(partitionKey)))
             .build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
@@ -698,7 +698,7 @@ public class DistributedStorageServiceTest {
     Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
-            .addAllMutation(
+            .addAllMutations(
                 Arrays.asList(
                     ProtoUtils.toMutation(new Delete(partitionKey)),
                     ProtoUtils.toMutation(new Delete(partitionKey))))
@@ -722,7 +722,7 @@ public class DistributedStorageServiceTest {
     Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
-            .addAllMutation(
+            .addAllMutations(
                 Arrays.asList(
                     ProtoUtils.toMutation(new Put(partitionKey)),
                     ProtoUtils.toMutation(new Delete(partitionKey))))
@@ -746,7 +746,7 @@ public class DistributedStorageServiceTest {
     Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
-            .addMutation(ProtoUtils.toMutation(new Put(partitionKey)))
+            .addMutations(ProtoUtils.toMutation(new Put(partitionKey)))
             .build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
@@ -768,7 +768,7 @@ public class DistributedStorageServiceTest {
     Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
-            .addMutation(ProtoUtils.toMutation(new Put(partitionKey)))
+            .addMutations(ProtoUtils.toMutation(new Put(partitionKey)))
             .build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
@@ -790,7 +790,7 @@ public class DistributedStorageServiceTest {
     Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
-            .addMutation(ProtoUtils.toMutation(new Put(partitionKey)))
+            .addMutations(ProtoUtils.toMutation(new Put(partitionKey)))
             .build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
@@ -810,7 +810,7 @@ public class DistributedStorageServiceTest {
     Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
-            .addMutation(ProtoUtils.toMutation(new Put(partitionKey)))
+            .addMutations(ProtoUtils.toMutation(new Put(partitionKey)))
             .build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);

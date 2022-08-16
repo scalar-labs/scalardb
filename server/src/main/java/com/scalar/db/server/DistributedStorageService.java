@@ -101,17 +101,17 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
     execute(
         () -> {
           List<Mutation> mutations;
-          if (request.getMutationCount() > 0) {
+          if (request.getMutationsCount() > 0) {
             TableMetadata metadata =
                 tableMetadataManager.getTableMetadata(
-                    request.getMutationList().get(0).getNamespace(),
-                    request.getMutationList().get(0).getTable());
+                    request.getMutationsList().get(0).getNamespace(),
+                    request.getMutationsList().get(0).getTable());
             if (metadata == null) {
               throw new IllegalArgumentException("the specified table is not found");
             }
 
-            mutations = new ArrayList<>(request.getMutationCount());
-            for (com.scalar.db.rpc.Mutation mutation : request.getMutationList()) {
+            mutations = new ArrayList<>(request.getMutationsCount());
+            for (com.scalar.db.rpc.Mutation mutation : request.getMutationsList()) {
               mutations.add(ProtoUtils.toMutation(mutation, metadata));
             }
           } else {
@@ -288,9 +288,9 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
 
               // For backward compatibility
               if (requestFromOldClient) {
-                results.forEach(r -> builder.addResult(ProtoUtils.toResultWithValue(r)));
+                results.forEach(r -> builder.addResults(ProtoUtils.toResultWithValue(r)));
               } else {
-                results.forEach(r -> builder.addResult(ProtoUtils.toResult(r)));
+                results.forEach(r -> builder.addResults(ProtoUtils.toResult(r)));
               }
 
               return builder.setHasMoreResults(resultIterator.hasNext()).build();

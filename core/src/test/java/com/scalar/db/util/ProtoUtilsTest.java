@@ -8,14 +8,11 @@ import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.GetWithIndex;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
-import com.scalar.db.api.ScanAll;
-import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.io.BigIntColumn;
@@ -66,11 +63,14 @@ public class ProtoUtilsTest {
   public void toGet_GetGiven_ShouldConvertProperly() {
     // Arrange
     Get get =
-        new Get(Key.of("p1", 10, "p2", "text1"), Key.of("c1", "text2", "c2", 20))
-            .withProjections(Arrays.asList("col1", "col2", "col3"))
-            .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace("ns")
-            .forTable("tbl");
+        Get.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.of("p1", 10, "p2", "text1"))
+            .clusteringKey(Key.of("c1", "text2", "c2", 20))
+            .projections("col1", "col2", "col3")
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
 
     // Act
     com.scalar.db.rpc.Get actual = ProtoUtils.toGet(get);
@@ -81,12 +81,12 @@ public class ProtoUtilsTest {
             com.scalar.db.rpc.Get.newBuilder()
                 .setPartitionKey(
                     com.scalar.db.rpc.Key.newBuilder()
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("p1")
                                 .setIntValue(10)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("p2")
                                 .setTextValue("text1")
@@ -94,18 +94,18 @@ public class ProtoUtilsTest {
                         .build())
                 .setClusteringKey(
                     com.scalar.db.rpc.Key.newBuilder()
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c1")
                                 .setTextValue("text2")
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c2")
                                 .setIntValue(20)
                                 .build())
                         .build())
-                .addAllProjection(Arrays.asList("col1", "col2", "col3"))
+                .addAllProjections(Arrays.asList("col1", "col2", "col3"))
                 .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_LINEARIZABLE)
                 .setNamespace("ns")
                 .setTable("tbl")
@@ -119,9 +119,9 @@ public class ProtoUtilsTest {
         com.scalar.db.rpc.Get.newBuilder()
             .setPartitionKey(
                 com.scalar.db.rpc.Key.newBuilder()
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder().setName("p1").setIntValue(10).build())
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder()
                             .setName("p2")
                             .setTextValue("text1")
@@ -129,15 +129,15 @@ public class ProtoUtilsTest {
                     .build())
             .setClusteringKey(
                 com.scalar.db.rpc.Key.newBuilder()
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder()
                             .setName("c1")
                             .setTextValue("text2")
                             .build())
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder().setName("c2").setIntValue(20).build())
                     .build())
-            .addAllProjection(Arrays.asList("col1", "col2", "col3"))
+            .addAllProjections(Arrays.asList("col1", "col2", "col3"))
             .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_LINEARIZABLE)
             .setNamespace("ns")
             .setTable("tbl")
@@ -149,22 +149,27 @@ public class ProtoUtilsTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            new Get(Key.of("p1", 10, "p2", "text1"), Key.of("c1", "text2", "c2", 20))
-                .withProjections(Arrays.asList("col1", "col2", "col3"))
-                .withConsistency(Consistency.LINEARIZABLE)
-                .forNamespace("ns")
-                .forTable("tbl"));
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.of("p1", 10, "p2", "text1"))
+                .clusteringKey(Key.of("c1", "text2", "c2", 20))
+                .projections("col1", "col2", "col3")
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
   }
 
   @Test
   public void toGet_GetWithIndexGiven_ShouldConvertProperly() {
     // Arrange
-    GetWithIndex getWithIndex =
-        new GetWithIndex(Key.ofInt("col2", 1))
-            .withProjections(Arrays.asList("col1", "col2", "col3"))
-            .withConsistency(Consistency.SEQUENTIAL)
-            .forNamespace("ns")
-            .forTable("tbl");
+    Get getWithIndex =
+        Get.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .indexKey(Key.ofInt("col2", 1))
+            .projections("col1", "col2", "col3")
+            .consistency(Consistency.SEQUENTIAL)
+            .build();
 
     // Act
     com.scalar.db.rpc.Get actual = ProtoUtils.toGet(getWithIndex);
@@ -175,12 +180,12 @@ public class ProtoUtilsTest {
             com.scalar.db.rpc.Get.newBuilder()
                 .setPartitionKey(
                     com.scalar.db.rpc.Key.newBuilder()
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("col2")
                                 .setIntValue(1)
                                 .build()))
-                .addAllProjection(Arrays.asList("col1", "col2", "col3"))
+                .addAllProjections(Arrays.asList("col1", "col2", "col3"))
                 .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_SEQUENTIAL)
                 .setNamespace("ns")
                 .setTable("tbl")
@@ -194,12 +199,12 @@ public class ProtoUtilsTest {
         com.scalar.db.rpc.Get.newBuilder()
             .setPartitionKey(
                 com.scalar.db.rpc.Key.newBuilder()
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder()
                             .setName("col2")
                             .setIntValue(1)
                             .build()))
-            .addAllProjection(Arrays.asList("col1", "col2", "col3"))
+            .addAllProjections(Arrays.asList("col1", "col2", "col3"))
             .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_SEQUENTIAL)
             .setNamespace("ns")
             .setTable("tbl")
@@ -211,11 +216,13 @@ public class ProtoUtilsTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            new GetWithIndex(Key.ofInt("col2", 1))
-                .withProjections(Arrays.asList("col1", "col2", "col3"))
-                .withConsistency(Consistency.SEQUENTIAL)
-                .forNamespace("ns")
-                .forTable("tbl"));
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .indexKey(Key.ofInt("col2", 1))
+                .projections("col1", "col2", "col3")
+                .consistency(Consistency.SEQUENTIAL)
+                .build());
   }
 
   @Test
@@ -241,7 +248,7 @@ public class ProtoUtilsTest {
                             .build())
                     .addValue(Value.newBuilder().setName("c2").setIntValue(20).build())
                     .build())
-            .addAllProjection(Arrays.asList("col1", "col2", "col3"))
+            .addAllProjections(Arrays.asList("col1", "col2", "col3"))
             .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_LINEARIZABLE)
             .setNamespace("ns")
             .setTable("tbl")
@@ -253,27 +260,31 @@ public class ProtoUtilsTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            new Get(Key.of("p1", 10, "p2", "text1"), Key.of("c1", "text2", "c2", 20))
-                .withProjections(Arrays.asList("col1", "col2", "col3"))
-                .withConsistency(Consistency.LINEARIZABLE)
-                .forNamespace("ns")
-                .forTable("tbl"));
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.of("p1", 10, "p2", "text1"))
+                .clusteringKey(Key.of("c1", "text2", "c2", 20))
+                .projections("col1", "col2", "col3")
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
   }
 
   @Test
   public void toScan_ScanGiven_ShouldConvertProperly() {
     // Arrange
     Scan scan =
-        new Scan(Key.of("p1", 10, "p2", "text1"))
-            .withStart(Key.of("c1", "text2", "c2", 0))
-            .withEnd(Key.of("c1", "text2", "c2", 100), false)
-            .withOrdering(Ordering.desc("c1"))
-            .withOrdering(Ordering.asc("c2"))
-            .withLimit(10)
-            .withProjections(Arrays.asList("col1", "col2", "col3"))
-            .withConsistency(Consistency.SEQUENTIAL)
-            .forNamespace("ns")
-            .forTable("tbl");
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.of("p1", 10, "p2", "text1"))
+            .start(Key.of("c1", "text2", "c2", 0))
+            .end(Key.of("c1", "text2", "c2", 100), false)
+            .orderings(Ordering.desc("c1"), Ordering.asc("c2"))
+            .limit(10)
+            .projections("col1", "col2", "col3")
+            .consistency(Consistency.SEQUENTIAL)
+            .build();
 
     // Act
     com.scalar.db.rpc.Scan actual = ProtoUtils.toScan(scan);
@@ -284,12 +295,12 @@ public class ProtoUtilsTest {
             com.scalar.db.rpc.Scan.newBuilder()
                 .setPartitionKey(
                     com.scalar.db.rpc.Key.newBuilder()
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("p1")
                                 .setIntValue(10)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("p2")
                                 .setTextValue("text1")
@@ -297,12 +308,12 @@ public class ProtoUtilsTest {
                         .build())
                 .setStartClusteringKey(
                     com.scalar.db.rpc.Key.newBuilder()
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c1")
                                 .setTextValue("text2")
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c2")
                                 .setIntValue(0)
@@ -311,19 +322,19 @@ public class ProtoUtilsTest {
                 .setStartInclusive(true)
                 .setEndClusteringKey(
                     com.scalar.db.rpc.Key.newBuilder()
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c1")
                                 .setTextValue("text2")
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c2")
                                 .setIntValue(100)
                                 .build())
                         .build())
                 .setEndInclusive(false)
-                .addAllOrdering(
+                .addAllOrderings(
                     Arrays.asList(
                         com.scalar.db.rpc.Ordering.newBuilder()
                             .setName("c1")
@@ -334,7 +345,7 @@ public class ProtoUtilsTest {
                             .setOrder(Order.ORDER_ASC)
                             .build()))
                 .setLimit(10)
-                .addAllProjection(Arrays.asList("col1", "col2", "col3"))
+                .addAllProjections(Arrays.asList("col1", "col2", "col3"))
                 .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_SEQUENTIAL)
                 .setNamespace("ns")
                 .setTable("tbl")
@@ -348,9 +359,9 @@ public class ProtoUtilsTest {
         com.scalar.db.rpc.Scan.newBuilder()
             .setPartitionKey(
                 com.scalar.db.rpc.Key.newBuilder()
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder().setName("p1").setIntValue(10).build())
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder()
                             .setName("p2")
                             .setTextValue("text1")
@@ -358,30 +369,30 @@ public class ProtoUtilsTest {
                     .build())
             .setStartClusteringKey(
                 com.scalar.db.rpc.Key.newBuilder()
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder()
                             .setName("c1")
                             .setTextValue("text2")
                             .build())
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder().setName("c2").setIntValue(0).build())
                     .build())
             .setStartInclusive(true)
             .setEndClusteringKey(
                 com.scalar.db.rpc.Key.newBuilder()
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder()
                             .setName("c1")
                             .setTextValue("text2")
                             .build())
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder()
                             .setName("c2")
                             .setIntValue(100)
                             .build())
                     .build())
             .setEndInclusive(false)
-            .addAllOrdering(
+            .addAllOrderings(
                 Arrays.asList(
                     com.scalar.db.rpc.Ordering.newBuilder()
                         .setName("c1")
@@ -392,7 +403,7 @@ public class ProtoUtilsTest {
                         .setOrder(Order.ORDER_ASC)
                         .build()))
             .setLimit(10)
-            .addAllProjection(Arrays.asList("col1", "col2", "col3"))
+            .addAllProjections(Arrays.asList("col1", "col2", "col3"))
             .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_SEQUENTIAL)
             .setNamespace("ns")
             .setTable("tbl")
@@ -404,16 +415,17 @@ public class ProtoUtilsTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            new Scan(Key.of("p1", 10, "p2", "text1"))
-                .withStart(Key.of("c1", "text2", "c2", 0))
-                .withEnd(Key.of("c1", "text2", "c2", 100), false)
-                .withOrdering(Ordering.desc("c1"))
-                .withOrdering(Ordering.asc("c2"))
-                .withLimit(10)
-                .withProjections(Arrays.asList("col1", "col2", "col3"))
-                .withConsistency(Consistency.SEQUENTIAL)
-                .forNamespace("ns")
-                .forTable("tbl"));
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.of("p1", 10, "p2", "text1"))
+                .start(Key.of("c1", "text2", "c2", 0))
+                .end(Key.of("c1", "text2", "c2", 100), false)
+                .orderings(Ordering.desc("c1"), Ordering.asc("c2"))
+                .limit(10)
+                .projections("col1", "col2", "col3")
+                .consistency(Consistency.SEQUENTIAL)
+                .build());
   }
 
   @Test
@@ -450,7 +462,7 @@ public class ProtoUtilsTest {
                     .addValue(Value.newBuilder().setName("c2").setIntValue(100).build())
                     .build())
             .setEndInclusive(false)
-            .addAllOrdering(
+            .addAllOrderings(
                 Arrays.asList(
                     com.scalar.db.rpc.Ordering.newBuilder()
                         .setName("c1")
@@ -461,7 +473,7 @@ public class ProtoUtilsTest {
                         .setOrder(Order.ORDER_ASC)
                         .build()))
             .setLimit(10)
-            .addAllProjection(Arrays.asList("col1", "col2", "col3"))
+            .addAllProjections(Arrays.asList("col1", "col2", "col3"))
             .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_SEQUENTIAL)
             .setNamespace("ns")
             .setTable("tbl")
@@ -473,28 +485,31 @@ public class ProtoUtilsTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            new Scan(Key.of("p1", 10, "p2", "text1"))
-                .withStart(Key.of("c1", "text2", "c2", 0))
-                .withEnd(Key.of("c1", "text2", "c2", 100), false)
-                .withOrdering(Ordering.desc("c1"))
-                .withOrdering(Ordering.asc("c2"))
-                .withLimit(10)
-                .withProjections(Arrays.asList("col1", "col2", "col3"))
-                .withConsistency(Consistency.SEQUENTIAL)
-                .forNamespace("ns")
-                .forTable("tbl"));
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.of("p1", 10, "p2", "text1"))
+                .start(Key.of("c1", "text2", "c2", 0))
+                .end(Key.of("c1", "text2", "c2", 100), false)
+                .orderings(Ordering.desc("c1"), Ordering.asc("c2"))
+                .limit(10)
+                .projections("col1", "col2", "col3")
+                .consistency(Consistency.SEQUENTIAL)
+                .build());
   }
 
   @Test
   public void toScan_ScanWithIndexGiven_ShouldConvertProperly() {
     // Arrange
-    ScanWithIndex scanWithIndex =
-        new ScanWithIndex(Key.ofInt("col2", 1))
-            .withLimit(10)
-            .withProjections(Arrays.asList("col1", "col2", "col3"))
-            .withConsistency(Consistency.SEQUENTIAL)
-            .forNamespace("ns")
-            .forTable("tbl");
+    Scan scanWithIndex =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .indexKey(Key.ofInt("col2", 1))
+            .limit(10)
+            .projections("col1", "col2", "col3")
+            .consistency(Consistency.SEQUENTIAL)
+            .build();
 
     // Act
     com.scalar.db.rpc.Scan actual = ProtoUtils.toScan(scanWithIndex);
@@ -505,13 +520,13 @@ public class ProtoUtilsTest {
             com.scalar.db.rpc.Scan.newBuilder()
                 .setPartitionKey(
                     com.scalar.db.rpc.Key.newBuilder()
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("col2")
                                 .setIntValue(1)
                                 .build()))
                 .setLimit(10)
-                .addAllProjection(Arrays.asList("col1", "col2", "col3"))
+                .addAllProjections(Arrays.asList("col1", "col2", "col3"))
                 .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_SEQUENTIAL)
                 .setNamespace("ns")
                 .setTable("tbl")
@@ -525,13 +540,13 @@ public class ProtoUtilsTest {
         com.scalar.db.rpc.Scan.newBuilder()
             .setPartitionKey(
                 com.scalar.db.rpc.Key.newBuilder()
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder()
                             .setName("col2")
                             .setIntValue(1)
                             .build()))
             .setLimit(10)
-            .addAllProjection(Arrays.asList("col1", "col2", "col3"))
+            .addAllProjections(Arrays.asList("col1", "col2", "col3"))
             .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_SEQUENTIAL)
             .setNamespace("ns")
             .setTable("tbl")
@@ -543,24 +558,28 @@ public class ProtoUtilsTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            new ScanWithIndex(Key.ofInt("col2", 1))
-                .withLimit(10)
-                .withProjections(Arrays.asList("col1", "col2", "col3"))
-                .withConsistency(Consistency.SEQUENTIAL)
-                .forNamespace("ns")
-                .forTable("tbl"));
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .indexKey(Key.ofInt("col2", 1))
+                .limit(10)
+                .projections("col1", "col2", "col3")
+                .consistency(Consistency.SEQUENTIAL)
+                .build());
   }
 
   @Test
   public void toScan_ScanAllGiven_ShouldConvertProperly() {
     // Arrange
-    ScanAll scanAll =
-        new ScanAll()
-            .withLimit(10)
-            .withProjections(Arrays.asList("col1", "col2", "col3"))
-            .withConsistency(Consistency.SEQUENTIAL)
-            .forNamespace("ns")
-            .forTable("tbl");
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .limit(10)
+            .projections("col1", "col2", "col3")
+            .consistency(Consistency.SEQUENTIAL)
+            .build();
 
     // Act
     com.scalar.db.rpc.Scan actual = ProtoUtils.toScan(scanAll);
@@ -570,7 +589,7 @@ public class ProtoUtilsTest {
         .isEqualTo(
             com.scalar.db.rpc.Scan.newBuilder()
                 .setLimit(10)
-                .addAllProjection(Arrays.asList("col1", "col2", "col3"))
+                .addAllProjections(Arrays.asList("col1", "col2", "col3"))
                 .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_SEQUENTIAL)
                 .setNamespace("ns")
                 .setTable("tbl")
@@ -583,7 +602,7 @@ public class ProtoUtilsTest {
     com.scalar.db.rpc.Scan scan =
         com.scalar.db.rpc.Scan.newBuilder()
             .setLimit(10)
-            .addAllProjection(Arrays.asList("col1", "col2", "col3"))
+            .addAllProjections(Arrays.asList("col1", "col2", "col3"))
             .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_SEQUENTIAL)
             .setNamespace("ns")
             .setTable("tbl")
@@ -595,27 +614,33 @@ public class ProtoUtilsTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            new ScanAll()
-                .withLimit(10)
-                .withProjections(Arrays.asList("col1", "col2", "col3"))
-                .withConsistency(Consistency.SEQUENTIAL)
-                .forNamespace("ns")
-                .forTable("tbl"));
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .all()
+                .limit(10)
+                .projections("col1", "col2", "col3")
+                .consistency(Consistency.SEQUENTIAL)
+                .build());
   }
 
   @Test
   public void toMutation_PutGiven_ShouldConvertProperly() {
     // Arrange
     Put put =
-        new Put(Key.of("p1", 10, "p2", "text1"), Key.of("c1", "text2", "c2", 20))
-            .withBooleanValue("col1", true)
-            .withIntValue("col2", 10)
-            .withBigIntValue("col3", 100L)
-            .withFloatValue("col4", 1.23F)
-            .withDoubleValue("col5", 4.56)
-            .withTextValue("col6", "text")
-            .withBlobValue("col7", "blob".getBytes(StandardCharsets.UTF_8))
-            .withCondition(
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.of("p1", 10, "p2", "text1"))
+            .clusteringKey(Key.of("c1", "text2", "c2", 20))
+            .booleanValue("col1", true)
+            .intValue("col2", 10)
+            .bigIntValue("col3", 100L)
+            .floatValue("col4", 1.23F)
+            .doubleValue("col5", 4.56)
+            .textValue("col6", "text")
+            .blobValue("col7", "blob".getBytes(StandardCharsets.UTF_8))
+            .condition(
                 ConditionBuilder.putIf(ConditionBuilder.column("col1").isEqualToBoolean(true))
                     .and(ConditionBuilder.column("col1").isNotEqualToBoolean(false))
                     .and(ConditionBuilder.column("col2").isGreaterThanInt(10))
@@ -625,9 +650,8 @@ public class ProtoUtilsTest {
                     .and(ConditionBuilder.column("col6").isNullText())
                     .and(ConditionBuilder.column("col7").isNotNullBlob())
                     .build())
-            .withConsistency(Consistency.EVENTUAL)
-            .forNamespace("ns")
-            .forTable("tbl");
+            .consistency(Consistency.EVENTUAL)
+            .build();
 
     // Act
     com.scalar.db.rpc.Mutation actual = ProtoUtils.toMutation(put);
@@ -639,12 +663,12 @@ public class ProtoUtilsTest {
                 .setType(com.scalar.db.rpc.Mutation.Type.PUT)
                 .setPartitionKey(
                     com.scalar.db.rpc.Key.newBuilder()
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("p1")
                                 .setIntValue(10)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("p2")
                                 .setTextValue("text1")
@@ -652,45 +676,45 @@ public class ProtoUtilsTest {
                         .build())
                 .setClusteringKey(
                     com.scalar.db.rpc.Key.newBuilder()
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c1")
                                 .setTextValue("text2")
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c2")
                                 .setIntValue(20)
                                 .build())
                         .build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder()
                         .setName("col1")
                         .setBooleanValue(true)
                         .build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder().setName("col2").setIntValue(10).build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder()
                         .setName("col3")
                         .setBigintValue(100L)
                         .build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder()
                         .setName("col4")
                         .setFloatValue(1.23F)
                         .build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder()
                         .setName("col5")
                         .setDoubleValue(4.56)
                         .build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder()
                         .setName("col6")
                         .setTextValue("text")
                         .build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder()
                         .setName("col7")
                         .setBlobValue(ByteString.copyFrom("blob".getBytes(StandardCharsets.UTF_8)))
@@ -698,7 +722,7 @@ public class ProtoUtilsTest {
                 .setCondition(
                     MutateCondition.newBuilder()
                         .setType(com.scalar.db.rpc.MutateCondition.Type.PUT_IF)
-                        .addExpression(
+                        .addExpressions(
                             ConditionalExpression.newBuilder()
                                 .setColumn(
                                     com.scalar.db.rpc.Column.newBuilder()
@@ -707,7 +731,7 @@ public class ProtoUtilsTest {
                                         .build())
                                 .setOperator(Operator.EQ)
                                 .build())
-                        .addExpression(
+                        .addExpressions(
                             ConditionalExpression.newBuilder()
                                 .setColumn(
                                     com.scalar.db.rpc.Column.newBuilder()
@@ -716,7 +740,7 @@ public class ProtoUtilsTest {
                                         .build())
                                 .setOperator(Operator.NE)
                                 .build())
-                        .addExpression(
+                        .addExpressions(
                             ConditionalExpression.newBuilder()
                                 .setColumn(
                                     com.scalar.db.rpc.Column.newBuilder()
@@ -725,7 +749,7 @@ public class ProtoUtilsTest {
                                         .build())
                                 .setOperator(Operator.GT)
                                 .build())
-                        .addExpression(
+                        .addExpressions(
                             ConditionalExpression.newBuilder()
                                 .setColumn(
                                     com.scalar.db.rpc.Column.newBuilder()
@@ -734,7 +758,7 @@ public class ProtoUtilsTest {
                                         .build())
                                 .setOperator(Operator.GTE)
                                 .build())
-                        .addExpression(
+                        .addExpressions(
                             ConditionalExpression.newBuilder()
                                 .setColumn(
                                     com.scalar.db.rpc.Column.newBuilder()
@@ -743,7 +767,7 @@ public class ProtoUtilsTest {
                                         .build())
                                 .setOperator(Operator.LT)
                                 .build())
-                        .addExpression(
+                        .addExpressions(
                             ConditionalExpression.newBuilder()
                                 .setColumn(
                                     com.scalar.db.rpc.Column.newBuilder()
@@ -752,13 +776,13 @@ public class ProtoUtilsTest {
                                         .build())
                                 .setOperator(Operator.LTE)
                                 .build())
-                        .addExpression(
+                        .addExpressions(
                             ConditionalExpression.newBuilder()
                                 .setColumn(
                                     com.scalar.db.rpc.Column.newBuilder().setName("col6").build())
                                 .setOperator(Operator.IS_NULL)
                                 .build())
-                        .addExpression(
+                        .addExpressions(
                             ConditionalExpression.newBuilder()
                                 .setColumn(
                                     com.scalar.db.rpc.Column.newBuilder().setName("col7").build())
@@ -779,9 +803,9 @@ public class ProtoUtilsTest {
             .setType(com.scalar.db.rpc.Mutation.Type.PUT)
             .setPartitionKey(
                 com.scalar.db.rpc.Key.newBuilder()
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder().setName("p1").setIntValue(10).build())
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder()
                             .setName("p2")
                             .setTextValue("text1")
@@ -789,27 +813,27 @@ public class ProtoUtilsTest {
                     .build())
             .setClusteringKey(
                 com.scalar.db.rpc.Key.newBuilder()
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder()
                             .setName("c1")
                             .setTextValue("text2")
                             .build())
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder().setName("c2").setIntValue(20).build())
                     .build())
-            .addColumn(
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder().setName("col1").setBooleanValue(true).build())
-            .addColumn(
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder().setName("col2").setIntValue(10).build())
-            .addColumn(
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder().setName("col3").setBigintValue(100L).build())
-            .addColumn(
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder().setName("col4").setFloatValue(1.23F).build())
-            .addColumn(
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder().setName("col5").setDoubleValue(4.56).build())
-            .addColumn(
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder().setName("col6").setTextValue("text").build())
-            .addColumn(
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder()
                     .setName("col7")
                     .setBlobValue(ByteString.copyFrom("blob".getBytes(StandardCharsets.UTF_8)))
@@ -817,7 +841,7 @@ public class ProtoUtilsTest {
             .setCondition(
                 MutateCondition.newBuilder()
                     .setType(com.scalar.db.rpc.MutateCondition.Type.PUT_IF)
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setColumn(
                                 com.scalar.db.rpc.Column.newBuilder()
@@ -826,7 +850,7 @@ public class ProtoUtilsTest {
                                     .build())
                             .setOperator(Operator.EQ)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setColumn(
                                 com.scalar.db.rpc.Column.newBuilder()
@@ -835,7 +859,7 @@ public class ProtoUtilsTest {
                                     .build())
                             .setOperator(Operator.NE)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setColumn(
                                 com.scalar.db.rpc.Column.newBuilder()
@@ -844,7 +868,7 @@ public class ProtoUtilsTest {
                                     .build())
                             .setOperator(Operator.GT)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setColumn(
                                 com.scalar.db.rpc.Column.newBuilder()
@@ -853,7 +877,7 @@ public class ProtoUtilsTest {
                                     .build())
                             .setOperator(Operator.GTE)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setColumn(
                                 com.scalar.db.rpc.Column.newBuilder()
@@ -862,7 +886,7 @@ public class ProtoUtilsTest {
                                     .build())
                             .setOperator(Operator.LT)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setColumn(
                                 com.scalar.db.rpc.Column.newBuilder()
@@ -871,13 +895,13 @@ public class ProtoUtilsTest {
                                     .build())
                             .setOperator(Operator.LTE)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setColumn(
                                 com.scalar.db.rpc.Column.newBuilder().setName("col6").build())
                             .setOperator(Operator.IS_NULL)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setColumn(
                                 com.scalar.db.rpc.Column.newBuilder().setName("col7").build())
@@ -895,15 +919,19 @@ public class ProtoUtilsTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            new Put(Key.of("p1", 10, "p2", "text1"), Key.of("c1", "text2", "c2", 20))
-                .withBooleanValue("col1", true)
-                .withIntValue("col2", 10)
-                .withBigIntValue("col3", 100L)
-                .withFloatValue("col4", 1.23F)
-                .withDoubleValue("col5", 4.56)
-                .withTextValue("col6", "text")
-                .withBlobValue("col7", "blob".getBytes(StandardCharsets.UTF_8))
-                .withCondition(
+            Put.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.of("p1", 10, "p2", "text1"))
+                .clusteringKey(Key.of("c1", "text2", "c2", 20))
+                .booleanValue("col1", true)
+                .intValue("col2", 10)
+                .bigIntValue("col3", 100L)
+                .floatValue("col4", 1.23F)
+                .doubleValue("col5", 4.56)
+                .textValue("col6", "text")
+                .blobValue("col7", "blob".getBytes(StandardCharsets.UTF_8))
+                .condition(
                     ConditionBuilder.putIf(ConditionBuilder.column("col1").isEqualToBoolean(true))
                         .and(ConditionBuilder.column("col1").isNotEqualToBoolean(false))
                         .and(ConditionBuilder.column("col2").isGreaterThanInt(10))
@@ -913,27 +941,29 @@ public class ProtoUtilsTest {
                         .and(ConditionBuilder.column("col6").isNullText())
                         .and(ConditionBuilder.column("col7").isNotNullBlob())
                         .build())
-                .withConsistency(Consistency.EVENTUAL)
-                .forNamespace("ns")
-                .forTable("tbl"));
+                .consistency(Consistency.EVENTUAL)
+                .build());
   }
 
   @Test
   public void toMutation_PutWithNullValuesGiven_ShouldConvertProperly() {
     // Arrange
     Put put =
-        new Put(Key.of("p1", 10, "p2", "text1"), Key.of("c1", "text2", "c2", 20))
-            .withBooleanValue("col1", null)
-            .withIntValue("col2", null)
-            .withBigIntValue("col3", null)
-            .withFloatValue("col4", null)
-            .withDoubleValue("col5", null)
-            .withTextValue("col6", null)
-            .withBlobValue("col7", (byte[]) null)
-            .withCondition(ConditionBuilder.putIfNotExists())
-            .withConsistency(Consistency.EVENTUAL)
-            .forNamespace("ns")
-            .forTable("tbl");
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.of("p1", 10, "p2", "text1"))
+            .clusteringKey(Key.of("c1", "text2", "c2", 20))
+            .booleanValue("col1", null)
+            .intValue("col2", null)
+            .bigIntValue("col3", null)
+            .floatValue("col4", null)
+            .doubleValue("col5", null)
+            .textValue("col6", null)
+            .blobValue("col7", (byte[]) null)
+            .condition(ConditionBuilder.putIfNotExists())
+            .consistency(Consistency.EVENTUAL)
+            .build();
 
     // Act
     com.scalar.db.rpc.Mutation actual = ProtoUtils.toMutation(put);
@@ -945,12 +975,12 @@ public class ProtoUtilsTest {
                 .setType(com.scalar.db.rpc.Mutation.Type.PUT)
                 .setPartitionKey(
                     com.scalar.db.rpc.Key.newBuilder()
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("p1")
                                 .setIntValue(10)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("p2")
                                 .setTextValue("text1")
@@ -958,24 +988,24 @@ public class ProtoUtilsTest {
                         .build())
                 .setClusteringKey(
                     com.scalar.db.rpc.Key.newBuilder()
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c1")
                                 .setTextValue("text2")
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c2")
                                 .setIntValue(20)
                                 .build())
                         .build())
-                .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col1").build())
-                .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col2").build())
-                .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col3").build())
-                .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col4").build())
-                .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col5").build())
-                .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col6").build())
-                .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col7").build())
+                .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col1").build())
+                .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col2").build())
+                .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col3").build())
+                .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col4").build())
+                .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col5").build())
+                .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col6").build())
+                .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col7").build())
                 .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_EVENTUAL)
                 .setCondition(
                     MutateCondition.newBuilder()
@@ -993,9 +1023,9 @@ public class ProtoUtilsTest {
             .setType(com.scalar.db.rpc.Mutation.Type.PUT)
             .setPartitionKey(
                 com.scalar.db.rpc.Key.newBuilder()
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder().setName("p1").setIntValue(10).build())
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder()
                             .setName("p2")
                             .setTextValue("text1")
@@ -1003,21 +1033,21 @@ public class ProtoUtilsTest {
                     .build())
             .setClusteringKey(
                 com.scalar.db.rpc.Key.newBuilder()
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder()
                             .setName("c1")
                             .setTextValue("text2")
                             .build())
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder().setName("c2").setIntValue(20).build())
                     .build())
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col1").build())
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col2").build())
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col3").build())
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col4").build())
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col5").build())
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col6").build())
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col7").build())
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col1").build())
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col2").build())
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col3").build())
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col4").build())
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col5").build())
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col6").build())
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col7").build())
             .setCondition(
                 MutateCondition.newBuilder()
                     .setType(com.scalar.db.rpc.MutateCondition.Type.PUT_IF_NOT_EXISTS))
@@ -1032,18 +1062,21 @@ public class ProtoUtilsTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            new Put(Key.of("p1", 10, "p2", "text1"), Key.of("c1", "text2", "c2", 20))
-                .withBooleanValue("col1", null)
-                .withIntValue("col2", null)
-                .withBigIntValue("col3", null)
-                .withFloatValue("col4", null)
-                .withDoubleValue("col5", null)
-                .withTextValue("col6", null)
-                .withBlobValue("col7", (byte[]) null)
-                .withCondition(ConditionBuilder.putIfNotExists())
-                .withConsistency(Consistency.EVENTUAL)
-                .forNamespace("ns")
-                .forTable("tbl"));
+            Put.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.of("p1", 10, "p2", "text1"))
+                .clusteringKey(Key.of("c1", "text2", "c2", 20))
+                .booleanValue("col1", null)
+                .intValue("col2", null)
+                .bigIntValue("col3", null)
+                .floatValue("col4", null)
+                .doubleValue("col5", null)
+                .textValue("col6", null)
+                .blobValue("col7", (byte[]) null)
+                .condition(ConditionBuilder.putIfNotExists())
+                .consistency(Consistency.EVENTUAL)
+                .build());
   }
 
   @Test
@@ -1091,37 +1124,37 @@ public class ProtoUtilsTest {
             .setCondition(
                 MutateCondition.newBuilder()
                     .setType(com.scalar.db.rpc.MutateCondition.Type.PUT_IF)
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col1")
                             .setValue(Value.newBuilder().setBooleanValue(true).build())
                             .setOperator(Operator.EQ)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col1")
                             .setValue(Value.newBuilder().setBooleanValue(false).build())
                             .setOperator(Operator.NE)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col2")
                             .setValue(Value.newBuilder().setIntValue(10).build())
                             .setOperator(Operator.GT)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col3")
                             .setValue(Value.newBuilder().setBigintValue(100L).build())
                             .setOperator(Operator.GTE)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col4")
                             .setValue(Value.newBuilder().setFloatValue(1.23F).build())
                             .setOperator(Operator.LT)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col5")
                             .setValue(Value.newBuilder().setDoubleValue(4.56).build())
@@ -1139,15 +1172,19 @@ public class ProtoUtilsTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            new Put(Key.of("p1", 10, "p2", "text1"), Key.of("c1", "text2", "c2", 20))
-                .withBooleanValue("col1", true)
-                .withIntValue("col2", 10)
-                .withBigIntValue("col3", 100L)
-                .withFloatValue("col4", 1.23F)
-                .withDoubleValue("col5", 4.56)
-                .withTextValue("col6", "text")
-                .withBlobValue("col7", "blob".getBytes(StandardCharsets.UTF_8))
-                .withCondition(
+            Put.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.of("p1", 10, "p2", "text1"))
+                .clusteringKey(Key.of("c1", "text2", "c2", 20))
+                .booleanValue("col1", true)
+                .intValue("col2", 10)
+                .bigIntValue("col3", 100L)
+                .floatValue("col4", 1.23F)
+                .doubleValue("col5", 4.56)
+                .textValue("col6", "text")
+                .blobValue("col7", "blob".getBytes(StandardCharsets.UTF_8))
+                .condition(
                     ConditionBuilder.putIf(ConditionBuilder.column("col1").isEqualToBoolean(true))
                         .and(ConditionBuilder.column("col1").isNotEqualToBoolean(false))
                         .and(ConditionBuilder.column("col2").isGreaterThanInt(10))
@@ -1155,9 +1192,8 @@ public class ProtoUtilsTest {
                         .and(ConditionBuilder.column("col4").isLessThanFloat(1.23F))
                         .and(ConditionBuilder.column("col5").isLessThanOrEqualToDouble(4.56))
                         .build())
-                .withConsistency(Consistency.EVENTUAL)
-                .forNamespace("ns")
-                .forTable("tbl"));
+                .consistency(Consistency.EVENTUAL)
+                .build());
   }
 
   @Test
@@ -1202,37 +1238,37 @@ public class ProtoUtilsTest {
             .setCondition(
                 MutateCondition.newBuilder()
                     .setType(MutateCondition.Type.PUT_IF)
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col1")
                             .setValue(Value.newBuilder().setBooleanValue(true).build())
                             .setOperator(Operator.EQ)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col1")
                             .setValue(Value.newBuilder().setBooleanValue(false).build())
                             .setOperator(Operator.NE)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col2")
                             .setValue(Value.newBuilder().setIntValue(10).build())
                             .setOperator(Operator.GT)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col3")
                             .setValue(Value.newBuilder().setBigintValue(100L).build())
                             .setOperator(Operator.GTE)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col4")
                             .setValue(Value.newBuilder().setFloatValue(1.23F).build())
                             .setOperator(Operator.LT)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col5")
                             .setValue(Value.newBuilder().setDoubleValue(4.56).build())
@@ -1250,15 +1286,19 @@ public class ProtoUtilsTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            new Put(Key.of("p1", 10, "p2", "text1"), Key.of("c1", "text2", "c2", 20))
-                .withBooleanValue("col1", true)
-                .withIntValue("col2", 10)
-                .withBigIntValue("col3", 100L)
-                .withFloatValue("col4", 1.23F)
-                .withDoubleValue("col5", 4.56)
-                .withTextValue("col6", null)
-                .withBlobValue("col7", (byte[]) null)
-                .withCondition(
+            Put.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.of("p1", 10, "p2", "text1"))
+                .clusteringKey(Key.of("c1", "text2", "c2", 20))
+                .booleanValue("col1", true)
+                .intValue("col2", 10)
+                .bigIntValue("col3", 100L)
+                .floatValue("col4", 1.23F)
+                .doubleValue("col5", 4.56)
+                .textValue("col6", null)
+                .blobValue("col7", (byte[]) null)
+                .condition(
                     ConditionBuilder.putIf(ConditionBuilder.column("col1").isEqualToBoolean(true))
                         .and(ConditionBuilder.column("col1").isNotEqualToBoolean(false))
                         .and(ConditionBuilder.column("col2").isGreaterThanInt(10))
@@ -1266,17 +1306,20 @@ public class ProtoUtilsTest {
                         .and(ConditionBuilder.column("col4").isLessThanFloat(1.23F))
                         .and(ConditionBuilder.column("col5").isLessThanOrEqualToDouble(4.56))
                         .build())
-                .withConsistency(Consistency.EVENTUAL)
-                .forNamespace("ns")
-                .forTable("tbl"));
+                .consistency(Consistency.EVENTUAL)
+                .build());
   }
 
   @Test
   public void toMutation_DeleteGiven_ShouldConvertProperly() {
     // Arrange
     Delete delete =
-        new Delete(Key.of("p1", 10, "p2", "text1"), Key.of("c1", "text2", "c2", 20))
-            .withCondition(
+        Delete.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.of("p1", 10, "p2", "text1"))
+            .clusteringKey(Key.of("c1", "text2", "c2", 20))
+            .condition(
                 ConditionBuilder.deleteIf(ConditionBuilder.column("col1").isEqualToBoolean(true))
                     .and(ConditionBuilder.column("col1").isNotEqualToBoolean(false))
                     .and(ConditionBuilder.column("col2").isGreaterThanInt(10))
@@ -1286,9 +1329,8 @@ public class ProtoUtilsTest {
                     .and(ConditionBuilder.column("col6").isNullText())
                     .and(ConditionBuilder.column("col7").isNotNullBlob())
                     .build())
-            .withConsistency(Consistency.EVENTUAL)
-            .forNamespace("ns")
-            .forTable("tbl");
+            .consistency(Consistency.EVENTUAL)
+            .build();
 
     // Act
     com.scalar.db.rpc.Mutation actual = ProtoUtils.toMutation(delete);
@@ -1300,12 +1342,12 @@ public class ProtoUtilsTest {
                 .setType(com.scalar.db.rpc.Mutation.Type.DELETE)
                 .setPartitionKey(
                     com.scalar.db.rpc.Key.newBuilder()
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("p1")
                                 .setIntValue(10)
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("p2")
                                 .setTextValue("text1")
@@ -1313,12 +1355,12 @@ public class ProtoUtilsTest {
                         .build())
                 .setClusteringKey(
                     com.scalar.db.rpc.Key.newBuilder()
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c1")
                                 .setTextValue("text2")
                                 .build())
-                        .addColumn(
+                        .addColumns(
                             com.scalar.db.rpc.Column.newBuilder()
                                 .setName("c2")
                                 .setIntValue(20)
@@ -1327,7 +1369,7 @@ public class ProtoUtilsTest {
                 .setCondition(
                     MutateCondition.newBuilder()
                         .setType(com.scalar.db.rpc.MutateCondition.Type.DELETE_IF)
-                        .addExpression(
+                        .addExpressions(
                             ConditionalExpression.newBuilder()
                                 .setColumn(
                                     com.scalar.db.rpc.Column.newBuilder()
@@ -1336,7 +1378,7 @@ public class ProtoUtilsTest {
                                         .build())
                                 .setOperator(Operator.EQ)
                                 .build())
-                        .addExpression(
+                        .addExpressions(
                             ConditionalExpression.newBuilder()
                                 .setColumn(
                                     com.scalar.db.rpc.Column.newBuilder()
@@ -1345,7 +1387,7 @@ public class ProtoUtilsTest {
                                         .build())
                                 .setOperator(Operator.NE)
                                 .build())
-                        .addExpression(
+                        .addExpressions(
                             ConditionalExpression.newBuilder()
                                 .setColumn(
                                     com.scalar.db.rpc.Column.newBuilder()
@@ -1354,7 +1396,7 @@ public class ProtoUtilsTest {
                                         .build())
                                 .setOperator(Operator.GT)
                                 .build())
-                        .addExpression(
+                        .addExpressions(
                             ConditionalExpression.newBuilder()
                                 .setColumn(
                                     com.scalar.db.rpc.Column.newBuilder()
@@ -1363,7 +1405,7 @@ public class ProtoUtilsTest {
                                         .build())
                                 .setOperator(Operator.GTE)
                                 .build())
-                        .addExpression(
+                        .addExpressions(
                             ConditionalExpression.newBuilder()
                                 .setColumn(
                                     com.scalar.db.rpc.Column.newBuilder()
@@ -1372,7 +1414,7 @@ public class ProtoUtilsTest {
                                         .build())
                                 .setOperator(Operator.LT)
                                 .build())
-                        .addExpression(
+                        .addExpressions(
                             ConditionalExpression.newBuilder()
                                 .setColumn(
                                     com.scalar.db.rpc.Column.newBuilder()
@@ -1381,13 +1423,13 @@ public class ProtoUtilsTest {
                                         .build())
                                 .setOperator(Operator.LTE)
                                 .build())
-                        .addExpression(
+                        .addExpressions(
                             ConditionalExpression.newBuilder()
                                 .setColumn(
                                     com.scalar.db.rpc.Column.newBuilder().setName("col6").build())
                                 .setOperator(Operator.IS_NULL)
                                 .build())
-                        .addExpression(
+                        .addExpressions(
                             ConditionalExpression.newBuilder()
                                 .setColumn(
                                     com.scalar.db.rpc.Column.newBuilder().setName("col7").build())
@@ -1408,9 +1450,9 @@ public class ProtoUtilsTest {
             .setType(com.scalar.db.rpc.Mutation.Type.DELETE)
             .setPartitionKey(
                 com.scalar.db.rpc.Key.newBuilder()
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder().setName("p1").setIntValue(10).build())
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder()
                             .setName("p2")
                             .setTextValue("text1")
@@ -1418,18 +1460,18 @@ public class ProtoUtilsTest {
                     .build())
             .setClusteringKey(
                 com.scalar.db.rpc.Key.newBuilder()
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder()
                             .setName("c1")
                             .setTextValue("text2")
                             .build())
-                    .addColumn(
+                    .addColumns(
                         com.scalar.db.rpc.Column.newBuilder().setName("c2").setIntValue(20).build())
                     .build())
             .setCondition(
                 MutateCondition.newBuilder()
                     .setType(com.scalar.db.rpc.MutateCondition.Type.DELETE_IF)
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setColumn(
                                 com.scalar.db.rpc.Column.newBuilder()
@@ -1438,7 +1480,7 @@ public class ProtoUtilsTest {
                                     .build())
                             .setOperator(Operator.EQ)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setColumn(
                                 com.scalar.db.rpc.Column.newBuilder()
@@ -1447,7 +1489,7 @@ public class ProtoUtilsTest {
                                     .build())
                             .setOperator(Operator.NE)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setColumn(
                                 com.scalar.db.rpc.Column.newBuilder()
@@ -1456,7 +1498,7 @@ public class ProtoUtilsTest {
                                     .build())
                             .setOperator(Operator.GT)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setColumn(
                                 com.scalar.db.rpc.Column.newBuilder()
@@ -1465,7 +1507,7 @@ public class ProtoUtilsTest {
                                     .build())
                             .setOperator(Operator.GTE)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setColumn(
                                 com.scalar.db.rpc.Column.newBuilder()
@@ -1474,7 +1516,7 @@ public class ProtoUtilsTest {
                                     .build())
                             .setOperator(Operator.LT)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setColumn(
                                 com.scalar.db.rpc.Column.newBuilder()
@@ -1483,13 +1525,13 @@ public class ProtoUtilsTest {
                                     .build())
                             .setOperator(Operator.LTE)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setColumn(
                                 com.scalar.db.rpc.Column.newBuilder().setName("col6").build())
                             .setOperator(Operator.IS_NULL)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setColumn(
                                 com.scalar.db.rpc.Column.newBuilder().setName("col7").build())
@@ -1507,8 +1549,12 @@ public class ProtoUtilsTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            new Delete(Key.of("p1", 10, "p2", "text1"), Key.of("c1", "text2", "c2", 20))
-                .withCondition(
+            Delete.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.of("p1", 10, "p2", "text1"))
+                .clusteringKey(Key.of("c1", "text2", "c2", 20))
+                .condition(
                     ConditionBuilder.deleteIf(
                             ConditionBuilder.column("col1").isEqualToBoolean(true))
                         .and(ConditionBuilder.column("col1").isNotEqualToBoolean(false))
@@ -1519,9 +1565,8 @@ public class ProtoUtilsTest {
                         .and(ConditionBuilder.column("col6").isNullText())
                         .and(ConditionBuilder.column("col7").isNotNullBlob())
                         .build())
-                .withConsistency(Consistency.EVENTUAL)
-                .forNamespace("ns")
-                .forTable("tbl"));
+                .consistency(Consistency.EVENTUAL)
+                .build());
   }
 
   @Test
@@ -1551,37 +1596,37 @@ public class ProtoUtilsTest {
             .setCondition(
                 MutateCondition.newBuilder()
                     .setType(com.scalar.db.rpc.MutateCondition.Type.DELETE_IF)
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col1")
                             .setValue(Value.newBuilder().setBooleanValue(true).build())
                             .setOperator(Operator.EQ)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col1")
                             .setValue(Value.newBuilder().setBooleanValue(false).build())
                             .setOperator(Operator.NE)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col2")
                             .setValue(Value.newBuilder().setIntValue(10).build())
                             .setOperator(Operator.GT)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col3")
                             .setValue(Value.newBuilder().setBigintValue(100L).build())
                             .setOperator(Operator.GTE)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col4")
                             .setValue(Value.newBuilder().setFloatValue(1.23F).build())
                             .setOperator(Operator.LT)
                             .build())
-                    .addExpression(
+                    .addExpressions(
                         ConditionalExpression.newBuilder()
                             .setName("col5")
                             .setValue(Value.newBuilder().setDoubleValue(4.56).build())
@@ -1599,8 +1644,12 @@ public class ProtoUtilsTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            new Delete(Key.of("p1", 10, "p2", "text1"), Key.of("c1", "text2", "c2", 20))
-                .withCondition(
+            Delete.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.of("p1", 10, "p2", "text1"))
+                .clusteringKey(Key.of("c1", "text2", "c2", 20))
+                .condition(
                     ConditionBuilder.deleteIf(
                             ConditionBuilder.column("col1").isEqualToBoolean(true))
                         .and(ConditionBuilder.column("col1").isNotEqualToBoolean(false))
@@ -1609,9 +1658,8 @@ public class ProtoUtilsTest {
                         .and(ConditionBuilder.column("col4").isLessThanFloat(1.23F))
                         .and(ConditionBuilder.column("col5").isLessThanOrEqualToDouble(4.56))
                         .build())
-                .withConsistency(Consistency.EVENTUAL)
-                .forNamespace("ns")
-                .forTable("tbl"));
+                .consistency(Consistency.EVENTUAL)
+                .build());
   }
 
   @Test
@@ -1641,48 +1689,48 @@ public class ProtoUtilsTest {
     assertThat(actual)
         .isEqualTo(
             com.scalar.db.rpc.Result.newBuilder()
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder().setName("p1").setIntValue(10).build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder()
                         .setName("p2")
                         .setTextValue("text1")
                         .build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder()
                         .setName("c1")
                         .setTextValue("text2")
                         .build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder().setName("c2").setIntValue(20).build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder()
                         .setName("col1")
                         .setBooleanValue(true)
                         .build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder().setName("col2").setIntValue(10).build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder()
                         .setName("col3")
                         .setBigintValue(100L)
                         .build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder()
                         .setName("col4")
                         .setFloatValue(1.23F)
                         .build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder()
                         .setName("col5")
                         .setDoubleValue(4.56)
                         .build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder()
                         .setName("col6")
                         .setTextValue("text")
                         .build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder()
                         .setName("col7")
                         .setBlobValue(ByteString.copyFrom("blob".getBytes(StandardCharsets.UTF_8)))
@@ -1695,25 +1743,25 @@ public class ProtoUtilsTest {
     // Arrange
     com.scalar.db.rpc.Result result =
         com.scalar.db.rpc.Result.newBuilder()
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("p1").setIntValue(10).build())
-            .addColumn(
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("p1").setIntValue(10).build())
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder().setName("p2").setTextValue("text1").build())
-            .addColumn(
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder().setName("c1").setTextValue("text2").build())
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("c2").setIntValue(20).build())
-            .addColumn(
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("c2").setIntValue(20).build())
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder().setName("col1").setBooleanValue(true).build())
-            .addColumn(
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder().setName("col2").setIntValue(10).build())
-            .addColumn(
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder().setName("col3").setBigintValue(100L).build())
-            .addColumn(
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder().setName("col4").setFloatValue(1.23F).build())
-            .addColumn(
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder().setName("col5").setDoubleValue(4.56).build())
-            .addColumn(
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder().setName("col6").setTextValue("text").build())
-            .addColumn(
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder()
                     .setName("col7")
                     .setBlobValue(ByteString.copyFrom("blob".getBytes(StandardCharsets.UTF_8)))
@@ -1770,27 +1818,27 @@ public class ProtoUtilsTest {
     assertThat(actual)
         .isEqualTo(
             com.scalar.db.rpc.Result.newBuilder()
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder().setName("p1").setIntValue(10).build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder()
                         .setName("p2")
                         .setTextValue("text1")
                         .build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder()
                         .setName("c1")
                         .setTextValue("text2")
                         .build())
-                .addColumn(
+                .addColumns(
                     com.scalar.db.rpc.Column.newBuilder().setName("c2").setIntValue(20).build())
-                .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col1").build())
-                .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col2").build())
-                .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col3").build())
-                .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col4").build())
-                .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col5").build())
-                .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col6").build())
-                .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col7").build())
+                .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col1").build())
+                .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col2").build())
+                .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col3").build())
+                .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col4").build())
+                .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col5").build())
+                .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col6").build())
+                .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col7").build())
                 .build());
   }
 
@@ -1799,19 +1847,19 @@ public class ProtoUtilsTest {
     // Arrange
     com.scalar.db.rpc.Result result =
         com.scalar.db.rpc.Result.newBuilder()
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("p1").setIntValue(10).build())
-            .addColumn(
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("p1").setIntValue(10).build())
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder().setName("p2").setTextValue("text1").build())
-            .addColumn(
+            .addColumns(
                 com.scalar.db.rpc.Column.newBuilder().setName("c1").setTextValue("text2").build())
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("c2").setIntValue(20).build())
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col1").build())
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col2").build())
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col3").build())
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col4").build())
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col5").build())
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col6").build())
-            .addColumn(com.scalar.db.rpc.Column.newBuilder().setName("col7").build())
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("c2").setIntValue(20).build())
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col1").build())
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col2").build())
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col3").build())
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col4").build())
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col5").build())
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col6").build())
+            .addColumns(com.scalar.db.rpc.Column.newBuilder().setName("col7").build())
             .build();
 
     // Act
@@ -1966,25 +2014,25 @@ public class ProtoUtilsTest {
     assertThat(actual)
         .isEqualTo(
             com.scalar.db.rpc.TableMetadata.newBuilder()
-                .putColumn("p1", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
-                .putColumn("p2", com.scalar.db.rpc.DataType.DATA_TYPE_TEXT)
-                .putColumn("c1", com.scalar.db.rpc.DataType.DATA_TYPE_TEXT)
-                .putColumn("c2", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
-                .putColumn("col1", com.scalar.db.rpc.DataType.DATA_TYPE_BOOLEAN)
-                .putColumn("col2", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
-                .putColumn("col3", com.scalar.db.rpc.DataType.DATA_TYPE_BIGINT)
-                .putColumn("col4", com.scalar.db.rpc.DataType.DATA_TYPE_FLOAT)
-                .putColumn("col5", com.scalar.db.rpc.DataType.DATA_TYPE_DOUBLE)
-                .putColumn("col6", com.scalar.db.rpc.DataType.DATA_TYPE_TEXT)
-                .putColumn("col7", com.scalar.db.rpc.DataType.DATA_TYPE_BLOB)
-                .addPartitionKeyName("p1")
-                .addPartitionKeyName("p2")
-                .addClusteringKeyName("c1")
-                .addClusteringKeyName("c2")
-                .putClusteringOrder("c1", Order.ORDER_DESC)
-                .putClusteringOrder("c2", Order.ORDER_ASC)
-                .addSecondaryIndexName("col4")
-                .addSecondaryIndexName("col2")
+                .putColumns("p1", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
+                .putColumns("p2", com.scalar.db.rpc.DataType.DATA_TYPE_TEXT)
+                .putColumns("c1", com.scalar.db.rpc.DataType.DATA_TYPE_TEXT)
+                .putColumns("c2", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
+                .putColumns("col1", com.scalar.db.rpc.DataType.DATA_TYPE_BOOLEAN)
+                .putColumns("col2", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
+                .putColumns("col3", com.scalar.db.rpc.DataType.DATA_TYPE_BIGINT)
+                .putColumns("col4", com.scalar.db.rpc.DataType.DATA_TYPE_FLOAT)
+                .putColumns("col5", com.scalar.db.rpc.DataType.DATA_TYPE_DOUBLE)
+                .putColumns("col6", com.scalar.db.rpc.DataType.DATA_TYPE_TEXT)
+                .putColumns("col7", com.scalar.db.rpc.DataType.DATA_TYPE_BLOB)
+                .addPartitionKeyNames("p1")
+                .addPartitionKeyNames("p2")
+                .addClusteringKeyNames("c1")
+                .addClusteringKeyNames("c2")
+                .putClusteringOrders("c1", Order.ORDER_DESC)
+                .putClusteringOrders("c2", Order.ORDER_ASC)
+                .addSecondaryIndexNames("col4")
+                .addSecondaryIndexNames("col2")
                 .build());
   }
 
@@ -1996,25 +2044,25 @@ public class ProtoUtilsTest {
     TableMetadata actual =
         ProtoUtils.toTableMetadata(
             com.scalar.db.rpc.TableMetadata.newBuilder()
-                .putColumn("p1", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
-                .putColumn("p2", com.scalar.db.rpc.DataType.DATA_TYPE_TEXT)
-                .putColumn("c1", com.scalar.db.rpc.DataType.DATA_TYPE_TEXT)
-                .putColumn("c2", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
-                .putColumn("col1", com.scalar.db.rpc.DataType.DATA_TYPE_BOOLEAN)
-                .putColumn("col2", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
-                .putColumn("col3", com.scalar.db.rpc.DataType.DATA_TYPE_BIGINT)
-                .putColumn("col4", com.scalar.db.rpc.DataType.DATA_TYPE_FLOAT)
-                .putColumn("col5", com.scalar.db.rpc.DataType.DATA_TYPE_DOUBLE)
-                .putColumn("col6", com.scalar.db.rpc.DataType.DATA_TYPE_TEXT)
-                .putColumn("col7", com.scalar.db.rpc.DataType.DATA_TYPE_BLOB)
-                .addPartitionKeyName("p1")
-                .addPartitionKeyName("p2")
-                .addClusteringKeyName("c1")
-                .addClusteringKeyName("c2")
-                .putClusteringOrder("c1", Order.ORDER_DESC)
-                .putClusteringOrder("c2", Order.ORDER_ASC)
-                .addSecondaryIndexName("col4")
-                .addSecondaryIndexName("col2")
+                .putColumns("p1", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
+                .putColumns("p2", com.scalar.db.rpc.DataType.DATA_TYPE_TEXT)
+                .putColumns("c1", com.scalar.db.rpc.DataType.DATA_TYPE_TEXT)
+                .putColumns("c2", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
+                .putColumns("col1", com.scalar.db.rpc.DataType.DATA_TYPE_BOOLEAN)
+                .putColumns("col2", com.scalar.db.rpc.DataType.DATA_TYPE_INT)
+                .putColumns("col3", com.scalar.db.rpc.DataType.DATA_TYPE_BIGINT)
+                .putColumns("col4", com.scalar.db.rpc.DataType.DATA_TYPE_FLOAT)
+                .putColumns("col5", com.scalar.db.rpc.DataType.DATA_TYPE_DOUBLE)
+                .putColumns("col6", com.scalar.db.rpc.DataType.DATA_TYPE_TEXT)
+                .putColumns("col7", com.scalar.db.rpc.DataType.DATA_TYPE_BLOB)
+                .addPartitionKeyNames("p1")
+                .addPartitionKeyNames("p2")
+                .addClusteringKeyNames("c1")
+                .addClusteringKeyNames("c2")
+                .putClusteringOrders("c1", Order.ORDER_DESC)
+                .putClusteringOrders("c2", Order.ORDER_ASC)
+                .addSecondaryIndexNames("col4")
+                .addSecondaryIndexNames("col2")
                 .build());
 
     // Assert

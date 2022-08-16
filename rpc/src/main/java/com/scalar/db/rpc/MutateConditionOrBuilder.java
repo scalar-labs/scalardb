@@ -4,41 +4,41 @@
 package com.scalar.db.rpc;
 
 public interface MutateConditionOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.MutateCondition)
+    // @@protoc_insertion_point(interface_extends:scalardb.rpc.MutateCondition)
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>.rpc.MutateCondition.Type type = 1;</code>
+   * <code>.scalardb.rpc.MutateCondition.Type type = 1;</code>
    * @return The enum numeric value on the wire for type.
    */
   int getTypeValue();
   /**
-   * <code>.rpc.MutateCondition.Type type = 1;</code>
+   * <code>.scalardb.rpc.MutateCondition.Type type = 1;</code>
    * @return The type.
    */
   com.scalar.db.rpc.MutateCondition.Type getType();
 
   /**
-   * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+   * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
    */
   java.util.List<com.scalar.db.rpc.ConditionalExpression> 
-      getExpressionList();
+      getExpressionsList();
   /**
-   * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+   * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
    */
-  com.scalar.db.rpc.ConditionalExpression getExpression(int index);
+  com.scalar.db.rpc.ConditionalExpression getExpressions(int index);
   /**
-   * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+   * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
    */
-  int getExpressionCount();
+  int getExpressionsCount();
   /**
-   * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+   * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
    */
   java.util.List<? extends com.scalar.db.rpc.ConditionalExpressionOrBuilder> 
-      getExpressionOrBuilderList();
+      getExpressionsOrBuilderList();
   /**
-   * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+   * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
    */
-  com.scalar.db.rpc.ConditionalExpressionOrBuilder getExpressionOrBuilder(
+  com.scalar.db.rpc.ConditionalExpressionOrBuilder getExpressionsOrBuilder(
       int index);
 }

@@ -277,7 +277,7 @@ public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
               stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
                   .getNamespaceTableNames(
                       GetNamespaceTableNamesRequest.newBuilder().setNamespace(namespace).build());
-          return new HashSet<>(response.getTableNameList());
+          return new HashSet<>(response.getTableNamesList());
         });
   }
 

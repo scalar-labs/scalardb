@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 public interface ColumnOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.Column)
+    // @@protoc_insertion_point(interface_extends:scalardb.rpc.Column)
     com.google.protobuf.MessageOrBuilder {
 
   /**

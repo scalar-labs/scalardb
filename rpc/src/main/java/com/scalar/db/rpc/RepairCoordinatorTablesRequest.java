@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code rpc.RepairCoordinatorTablesRequest}
+ * Protobuf type {@code scalardb.rpc.RepairCoordinatorTablesRequest}
  */
 public final class RepairCoordinatorTablesRequest extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:rpc.RepairCoordinatorTablesRequest)
+    // @@protoc_insertion_point(message_implements:scalardb.rpc.RepairCoordinatorTablesRequest)
     RepairCoordinatorTablesRequestOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use RepairCoordinatorTablesRequest.newBuilder() to construct.
@@ -85,7 +85,7 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_RepairCoordinatorTablesRequest_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_RepairCoordinatorTablesRequest_descriptor;
   }
 
   @SuppressWarnings({"rawtypes"})
@@ -103,7 +103,7 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_RepairCoordinatorTablesRequest_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_RepairCoordinatorTablesRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.RepairCoordinatorTablesRequest.class, com.scalar.db.rpc.RepairCoordinatorTablesRequest.Builder.class);
   }
@@ -114,7 +114,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String, java.lang.String> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.String>newDefaultInstance(
-                com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_RepairCoordinatorTablesRequest_OptionsEntry_descriptor, 
+                com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_RepairCoordinatorTablesRequest_OptionsEntry_descriptor, 
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.STRING,
@@ -356,15 +356,15 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code rpc.RepairCoordinatorTablesRequest}
+   * Protobuf type {@code scalardb.rpc.RepairCoordinatorTablesRequest}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:rpc.RepairCoordinatorTablesRequest)
+      // @@protoc_insertion_point(builder_implements:scalardb.rpc.RepairCoordinatorTablesRequest)
       com.scalar.db.rpc.RepairCoordinatorTablesRequestOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_RepairCoordinatorTablesRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_RepairCoordinatorTablesRequest_descriptor;
     }
 
     @SuppressWarnings({"rawtypes"})
@@ -392,7 +392,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_RepairCoordinatorTablesRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_RepairCoordinatorTablesRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.RepairCoordinatorTablesRequest.class, com.scalar.db.rpc.RepairCoordinatorTablesRequest.Builder.class);
     }
@@ -422,7 +422,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_RepairCoordinatorTablesRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_RepairCoordinatorTablesRequest_descriptor;
     }
 
     @java.lang.Override
@@ -668,10 +668,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:rpc.RepairCoordinatorTablesRequest)
+    // @@protoc_insertion_point(builder_scope:scalardb.rpc.RepairCoordinatorTablesRequest)
   }
 
-  // @@protoc_insertion_point(class_scope:rpc.RepairCoordinatorTablesRequest)
+  // @@protoc_insertion_point(class_scope:scalardb.rpc.RepairCoordinatorTablesRequest)
   private static final com.scalar.db.rpc.RepairCoordinatorTablesRequest DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.RepairCoordinatorTablesRequest();

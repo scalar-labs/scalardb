@@ -15,395 +15,395 @@ public final class ScalarDbProto {
         (com.google.protobuf.ExtensionRegistryLite) registry);
   }
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_Value_descriptor;
+    internal_static_scalardb_rpc_Value_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_Value_fieldAccessorTable;
+      internal_static_scalardb_rpc_Value_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_Value_TextValue_descriptor;
+    internal_static_scalardb_rpc_Value_TextValue_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_Value_TextValue_fieldAccessorTable;
+      internal_static_scalardb_rpc_Value_TextValue_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_Value_BlobValue_descriptor;
+    internal_static_scalardb_rpc_Value_BlobValue_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_Value_BlobValue_fieldAccessorTable;
+      internal_static_scalardb_rpc_Value_BlobValue_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_Column_descriptor;
+    internal_static_scalardb_rpc_Column_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_Column_fieldAccessorTable;
+      internal_static_scalardb_rpc_Column_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_Key_descriptor;
+    internal_static_scalardb_rpc_Key_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_Key_fieldAccessorTable;
+      internal_static_scalardb_rpc_Key_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_Get_descriptor;
+    internal_static_scalardb_rpc_Get_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_Get_fieldAccessorTable;
+      internal_static_scalardb_rpc_Get_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_Ordering_descriptor;
+    internal_static_scalardb_rpc_Ordering_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_Ordering_fieldAccessorTable;
+      internal_static_scalardb_rpc_Ordering_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_Scan_descriptor;
+    internal_static_scalardb_rpc_Scan_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_Scan_fieldAccessorTable;
+      internal_static_scalardb_rpc_Scan_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_ConditionalExpression_descriptor;
+    internal_static_scalardb_rpc_ConditionalExpression_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_ConditionalExpression_fieldAccessorTable;
+      internal_static_scalardb_rpc_ConditionalExpression_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_MutateCondition_descriptor;
+    internal_static_scalardb_rpc_MutateCondition_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_MutateCondition_fieldAccessorTable;
+      internal_static_scalardb_rpc_MutateCondition_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_Mutation_descriptor;
+    internal_static_scalardb_rpc_Mutation_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_Mutation_fieldAccessorTable;
+      internal_static_scalardb_rpc_Mutation_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_Result_descriptor;
+    internal_static_scalardb_rpc_Result_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_Result_fieldAccessorTable;
+      internal_static_scalardb_rpc_Result_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_GetRequest_descriptor;
+    internal_static_scalardb_rpc_GetRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_GetRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_GetRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_GetResponse_descriptor;
+    internal_static_scalardb_rpc_GetResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_GetResponse_fieldAccessorTable;
+      internal_static_scalardb_rpc_GetResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_ScanRequest_descriptor;
+    internal_static_scalardb_rpc_ScanRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_ScanRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_ScanRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_ScanResponse_descriptor;
+    internal_static_scalardb_rpc_ScanResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_ScanResponse_fieldAccessorTable;
+      internal_static_scalardb_rpc_ScanResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_MutateRequest_descriptor;
+    internal_static_scalardb_rpc_MutateRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_MutateRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_MutateRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TableMetadata_descriptor;
+    internal_static_scalardb_rpc_TableMetadata_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TableMetadata_fieldAccessorTable;
+      internal_static_scalardb_rpc_TableMetadata_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TableMetadata_ColumnEntry_descriptor;
+    internal_static_scalardb_rpc_TableMetadata_ColumnsEntry_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TableMetadata_ColumnEntry_fieldAccessorTable;
+      internal_static_scalardb_rpc_TableMetadata_ColumnsEntry_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TableMetadata_ClusteringOrderEntry_descriptor;
+    internal_static_scalardb_rpc_TableMetadata_ClusteringOrdersEntry_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TableMetadata_ClusteringOrderEntry_fieldAccessorTable;
+      internal_static_scalardb_rpc_TableMetadata_ClusteringOrdersEntry_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_CreateNamespaceRequest_descriptor;
+    internal_static_scalardb_rpc_CreateNamespaceRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_CreateNamespaceRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_CreateNamespaceRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_CreateNamespaceRequest_OptionsEntry_descriptor;
+    internal_static_scalardb_rpc_CreateNamespaceRequest_OptionsEntry_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_CreateNamespaceRequest_OptionsEntry_fieldAccessorTable;
+      internal_static_scalardb_rpc_CreateNamespaceRequest_OptionsEntry_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_DropNamespaceRequest_descriptor;
+    internal_static_scalardb_rpc_DropNamespaceRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_DropNamespaceRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_DropNamespaceRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_CreateTableRequest_descriptor;
+    internal_static_scalardb_rpc_CreateTableRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_CreateTableRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_CreateTableRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_CreateTableRequest_OptionsEntry_descriptor;
+    internal_static_scalardb_rpc_CreateTableRequest_OptionsEntry_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_CreateTableRequest_OptionsEntry_fieldAccessorTable;
+      internal_static_scalardb_rpc_CreateTableRequest_OptionsEntry_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_DropTableRequest_descriptor;
+    internal_static_scalardb_rpc_DropTableRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_DropTableRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_DropTableRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TruncateTableRequest_descriptor;
+    internal_static_scalardb_rpc_TruncateTableRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TruncateTableRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TruncateTableRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_CreateIndexRequest_descriptor;
+    internal_static_scalardb_rpc_CreateIndexRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_CreateIndexRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_CreateIndexRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_CreateIndexRequest_OptionsEntry_descriptor;
+    internal_static_scalardb_rpc_CreateIndexRequest_OptionsEntry_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_CreateIndexRequest_OptionsEntry_fieldAccessorTable;
+      internal_static_scalardb_rpc_CreateIndexRequest_OptionsEntry_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_DropIndexRequest_descriptor;
+    internal_static_scalardb_rpc_DropIndexRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_DropIndexRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_DropIndexRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_GetTableMetadataRequest_descriptor;
+    internal_static_scalardb_rpc_GetTableMetadataRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_GetTableMetadataRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_GetTableMetadataRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_GetTableMetadataResponse_descriptor;
+    internal_static_scalardb_rpc_GetTableMetadataResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_GetTableMetadataResponse_fieldAccessorTable;
+      internal_static_scalardb_rpc_GetTableMetadataResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_GetNamespaceTableNamesRequest_descriptor;
+    internal_static_scalardb_rpc_GetNamespaceTableNamesRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_GetNamespaceTableNamesRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_GetNamespaceTableNamesRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_GetNamespaceTableNamesResponse_descriptor;
+    internal_static_scalardb_rpc_GetNamespaceTableNamesResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_GetNamespaceTableNamesResponse_fieldAccessorTable;
+      internal_static_scalardb_rpc_GetNamespaceTableNamesResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_NamespaceExistsRequest_descriptor;
+    internal_static_scalardb_rpc_NamespaceExistsRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_NamespaceExistsRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_NamespaceExistsRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_NamespaceExistsResponse_descriptor;
+    internal_static_scalardb_rpc_NamespaceExistsResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_NamespaceExistsResponse_fieldAccessorTable;
+      internal_static_scalardb_rpc_NamespaceExistsResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_RepairTableRequest_descriptor;
+    internal_static_scalardb_rpc_RepairTableRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_RepairTableRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_RepairTableRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_RepairTableRequest_OptionsEntry_descriptor;
+    internal_static_scalardb_rpc_RepairTableRequest_OptionsEntry_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_RepairTableRequest_OptionsEntry_fieldAccessorTable;
+      internal_static_scalardb_rpc_RepairTableRequest_OptionsEntry_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_AddNewColumnToTableRequest_descriptor;
+    internal_static_scalardb_rpc_AddNewColumnToTableRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_AddNewColumnToTableRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_AddNewColumnToTableRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TransactionRequest_descriptor;
+    internal_static_scalardb_rpc_TransactionRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TransactionRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TransactionRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TransactionRequest_StartRequest_descriptor;
+    internal_static_scalardb_rpc_TransactionRequest_StartRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TransactionRequest_StartRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TransactionRequest_StartRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TransactionRequest_GetRequest_descriptor;
+    internal_static_scalardb_rpc_TransactionRequest_GetRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TransactionRequest_GetRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TransactionRequest_GetRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TransactionRequest_ScanRequest_descriptor;
+    internal_static_scalardb_rpc_TransactionRequest_ScanRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TransactionRequest_ScanRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TransactionRequest_ScanRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TransactionRequest_MutateRequest_descriptor;
+    internal_static_scalardb_rpc_TransactionRequest_MutateRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TransactionRequest_MutateRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TransactionRequest_MutateRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TransactionRequest_CommitRequest_descriptor;
+    internal_static_scalardb_rpc_TransactionRequest_CommitRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TransactionRequest_CommitRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TransactionRequest_CommitRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TransactionRequest_AbortRequest_descriptor;
+    internal_static_scalardb_rpc_TransactionRequest_AbortRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TransactionRequest_AbortRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TransactionRequest_AbortRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TransactionResponse_descriptor;
+    internal_static_scalardb_rpc_TransactionResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TransactionResponse_fieldAccessorTable;
+      internal_static_scalardb_rpc_TransactionResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TransactionResponse_StartResponse_descriptor;
+    internal_static_scalardb_rpc_TransactionResponse_StartResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TransactionResponse_StartResponse_fieldAccessorTable;
+      internal_static_scalardb_rpc_TransactionResponse_StartResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TransactionResponse_GetResponse_descriptor;
+    internal_static_scalardb_rpc_TransactionResponse_GetResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TransactionResponse_GetResponse_fieldAccessorTable;
+      internal_static_scalardb_rpc_TransactionResponse_GetResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TransactionResponse_ScanResponse_descriptor;
+    internal_static_scalardb_rpc_TransactionResponse_ScanResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TransactionResponse_ScanResponse_fieldAccessorTable;
+      internal_static_scalardb_rpc_TransactionResponse_ScanResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TransactionResponse_Error_descriptor;
+    internal_static_scalardb_rpc_TransactionResponse_Error_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TransactionResponse_Error_fieldAccessorTable;
+      internal_static_scalardb_rpc_TransactionResponse_Error_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_GetTransactionStateRequest_descriptor;
+    internal_static_scalardb_rpc_GetTransactionStateRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_GetTransactionStateRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_GetTransactionStateRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_GetTransactionStateResponse_descriptor;
+    internal_static_scalardb_rpc_GetTransactionStateResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_GetTransactionStateResponse_fieldAccessorTable;
+      internal_static_scalardb_rpc_GetTransactionStateResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_AbortRequest_descriptor;
+    internal_static_scalardb_rpc_AbortRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_AbortRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_AbortRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_AbortResponse_descriptor;
+    internal_static_scalardb_rpc_AbortResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_AbortResponse_fieldAccessorTable;
+      internal_static_scalardb_rpc_AbortResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_descriptor;
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_StartRequest_descriptor;
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_StartRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_StartRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_StartRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_descriptor;
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_GetRequest_descriptor;
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_GetRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_GetRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_GetRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_descriptor;
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_descriptor;
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_descriptor;
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_descriptor;
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_descriptor;
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_descriptor;
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TwoPhaseCommitTransactionResponse_descriptor;
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TwoPhaseCommitTransactionResponse_fieldAccessorTable;
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TwoPhaseCommitTransactionResponse_StartResponse_descriptor;
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_StartResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TwoPhaseCommitTransactionResponse_StartResponse_fieldAccessorTable;
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_StartResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TwoPhaseCommitTransactionResponse_GetResponse_descriptor;
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_GetResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TwoPhaseCommitTransactionResponse_GetResponse_fieldAccessorTable;
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_GetResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TwoPhaseCommitTransactionResponse_ScanResponse_descriptor;
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_ScanResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TwoPhaseCommitTransactionResponse_ScanResponse_fieldAccessorTable;
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_ScanResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TwoPhaseCommitTransactionResponse_Error_descriptor;
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_Error_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TwoPhaseCommitTransactionResponse_Error_fieldAccessorTable;
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_Error_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_CreateCoordinatorTablesRequest_descriptor;
+    internal_static_scalardb_rpc_CreateCoordinatorTablesRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_CreateCoordinatorTablesRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_CreateCoordinatorTablesRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_CreateCoordinatorTablesRequest_OptionsEntry_descriptor;
+    internal_static_scalardb_rpc_CreateCoordinatorTablesRequest_OptionsEntry_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_CreateCoordinatorTablesRequest_OptionsEntry_fieldAccessorTable;
+      internal_static_scalardb_rpc_CreateCoordinatorTablesRequest_OptionsEntry_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_DropCoordinatorTablesRequest_descriptor;
+    internal_static_scalardb_rpc_DropCoordinatorTablesRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_DropCoordinatorTablesRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_DropCoordinatorTablesRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_TruncateCoordinatorTablesRequest_descriptor;
+    internal_static_scalardb_rpc_TruncateCoordinatorTablesRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_TruncateCoordinatorTablesRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_TruncateCoordinatorTablesRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_CoordinatorTablesExistRequest_descriptor;
+    internal_static_scalardb_rpc_CoordinatorTablesExistRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_CoordinatorTablesExistRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_CoordinatorTablesExistRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_CoordinatorTablesExistResponse_descriptor;
+    internal_static_scalardb_rpc_CoordinatorTablesExistResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_CoordinatorTablesExistResponse_fieldAccessorTable;
+      internal_static_scalardb_rpc_CoordinatorTablesExistResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_RepairCoordinatorTablesRequest_descriptor;
+    internal_static_scalardb_rpc_RepairCoordinatorTablesRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_RepairCoordinatorTablesRequest_fieldAccessorTable;
+      internal_static_scalardb_rpc_RepairCoordinatorTablesRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_RepairCoordinatorTablesRequest_OptionsEntry_descriptor;
+    internal_static_scalardb_rpc_RepairCoordinatorTablesRequest_OptionsEntry_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_RepairCoordinatorTablesRequest_OptionsEntry_fieldAccessorTable;
+      internal_static_scalardb_rpc_RepairCoordinatorTablesRequest_OptionsEntry_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -413,761 +413,793 @@ public final class ScalarDbProto {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\016scalardb.proto\022\003rpc\032\033google/protobuf/e" +
-      "mpty.proto\"\305\002\n\005Value\022\014\n\004name\030\001 \001(\t\022\027\n\rbo" +
-      "olean_value\030\002 \001(\010H\000\022\023\n\tint_value\030\003 \001(\005H\000" +
-      "\022\026\n\014bigint_value\030\004 \001(\003H\000\022\025\n\013float_value\030" +
-      "\005 \001(\002H\000\022\026\n\014double_value\030\006 \001(\001H\000\022*\n\ntext_" +
-      "value\030\007 \001(\0132\024.rpc.Value.TextValueH\000\022*\n\nb" +
-      "lob_value\030\010 \001(\0132\024.rpc.Value.BlobValueH\000\032" +
-      ")\n\tTextValue\022\022\n\005value\030\001 \001(\tH\000\210\001\001B\010\n\006_val" +
-      "ue\032)\n\tBlobValue\022\022\n\005value\030\001 \001(\014H\000\210\001\001B\010\n\006_" +
-      "value:\002\030\001B\007\n\005value\"\300\001\n\006Column\022\014\n\004name\030\001 " +
+      "\n\016scalardb.proto\022\014scalardb.rpc\032\033google/p" +
+      "rotobuf/empty.proto\"\327\002\n\005Value\022\014\n\004name\030\001 " +
       "\001(\t\022\027\n\rboolean_value\030\002 \001(\010H\000\022\023\n\tint_valu" +
       "e\030\003 \001(\005H\000\022\026\n\014bigint_value\030\004 \001(\003H\000\022\025\n\013flo" +
       "at_value\030\005 \001(\002H\000\022\026\n\014double_value\030\006 \001(\001H\000" +
-      "\022\024\n\ntext_value\030\007 \001(\tH\000\022\024\n\nblob_value\030\010 \001" +
-      "(\014H\000B\007\n\005value\"A\n\003Key\022\035\n\005value\030\001 \003(\0132\n.rp" +
-      "c.ValueB\002\030\001\022\033\n\006column\030\002 \003(\0132\013.rpc.Column" +
-      "\"\245\001\n\003Get\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005table\030\002 \001" +
-      "(\t\022\037\n\rpartition_key\030\003 \001(\0132\010.rpc.Key\022 \n\016c" +
-      "lustering_key\030\004 \001(\0132\010.rpc.Key\022%\n\013consist" +
-      "ency\030\005 \001(\0162\020.rpc.Consistency\022\022\n\nprojecti" +
-      "on\030\006 \003(\t\"3\n\010Ordering\022\014\n\004name\030\001 \001(\t\022\031\n\005or" +
-      "der\030\002 \001(\0162\n.rpc.Order\"\262\002\n\004Scan\022\021\n\tnamesp" +
-      "ace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\022\037\n\rpartition_ke" +
-      "y\030\003 \001(\0132\010.rpc.Key\022%\n\013consistency\030\004 \001(\0162\020" +
-      ".rpc.Consistency\022\022\n\nprojection\030\005 \003(\t\022&\n\024" +
-      "start_clustering_key\030\006 \001(\0132\010.rpc.Key\022\027\n\017" +
-      "start_inclusive\030\007 \001(\010\022$\n\022end_clustering_" +
-      "key\030\010 \001(\0132\010.rpc.Key\022\025\n\rend_inclusive\030\t \001" +
-      "(\010\022\037\n\010ordering\030\n \003(\0132\r.rpc.Ordering\022\r\n\005l" +
-      "imit\030\013 \001(\005\"\370\001\n\025ConditionalExpression\022\020\n\004" +
-      "name\030\001 \001(\tB\002\030\001\022\035\n\005value\030\002 \001(\0132\n.rpc.Valu" +
-      "eB\002\030\001\0225\n\010operator\030\003 \001(\0162#.rpc.Conditiona" +
-      "lExpression.Operator\022\033\n\006column\030\004 \001(\0132\013.r" +
-      "pc.Column\"Z\n\010Operator\022\006\n\002EQ\020\000\022\006\n\002NE\020\001\022\006\n" +
-      "\002GT\020\002\022\007\n\003GTE\020\003\022\006\n\002LT\020\004\022\007\n\003LTE\020\005\022\013\n\007IS_NU" +
-      "LL\020\006\022\017\n\013IS_NOT_NULL\020\007\"\315\001\n\017MutateConditio" +
-      "n\022\'\n\004type\030\001 \001(\0162\031.rpc.MutateCondition.Ty" +
-      "pe\022.\n\nexpression\030\002 \003(\0132\032.rpc.Conditional" +
-      "Expression\"a\n\004Type\022\n\n\006PUT_IF\020\000\022\021\n\rPUT_IF" +
-      "_EXISTS\020\001\022\025\n\021PUT_IF_NOT_EXISTS\020\002\022\r\n\tDELE" +
-      "TE_IF\020\003\022\024\n\020DELETE_IF_EXISTS\020\004\"\272\002\n\010Mutati" +
-      "on\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\022\037\n\r" +
-      "partition_key\030\003 \001(\0132\010.rpc.Key\022 \n\016cluster" +
-      "ing_key\030\004 \001(\0132\010.rpc.Key\022%\n\013consistency\030\005" +
-      " \001(\0162\020.rpc.Consistency\022\'\n\tcondition\030\006 \001(" +
-      "\0132\024.rpc.MutateCondition\022 \n\004type\030\007 \001(\0162\022." +
-      "rpc.Mutation.Type\022\035\n\005value\030\010 \003(\0132\n.rpc.V" +
-      "alueB\002\030\001\022\033\n\006column\030\t \003(\0132\013.rpc.Column\"\033\n" +
-      "\004Type\022\007\n\003PUT\020\000\022\n\n\006DELETE\020\001\"D\n\006Result\022\035\n\005" +
-      "value\030\001 \003(\0132\n.rpc.ValueB\002\030\001\022\033\n\006column\030\002 " +
-      "\003(\0132\013.rpc.Column\"#\n\nGetRequest\022\025\n\003get\030\001 " +
-      "\001(\0132\010.rpc.Get\"*\n\013GetResponse\022\033\n\006result\030\001" +
-      " \001(\0132\013.rpc.Result\"P\n\013ScanRequest\022\027\n\004scan" +
-      "\030\001 \001(\0132\t.rpc.Scan\022\030\n\013fetch_count\030\002 \001(\005H\000" +
-      "\210\001\001B\016\n\014_fetch_count\"E\n\014ScanResponse\022\033\n\006r" +
-      "esult\030\002 \003(\0132\013.rpc.Result\022\030\n\020has_more_res" +
-      "ults\030\003 \001(\010\"0\n\rMutateRequest\022\037\n\010mutation\030" +
-      "\001 \003(\0132\r.rpc.Mutation\"\333\002\n\rTableMetadata\022." +
-      "\n\006column\030\001 \003(\0132\036.rpc.TableMetadata.Colum" +
-      "nEntry\022\032\n\022partition_key_name\030\002 \003(\t\022\033\n\023cl" +
-      "ustering_key_name\030\003 \003(\t\022A\n\020clustering_or" +
-      "der\030\004 \003(\0132\'.rpc.TableMetadata.Clustering" +
-      "OrderEntry\022\034\n\024secondary_index_name\030\005 \003(\t" +
-      "\032<\n\013ColumnEntry\022\013\n\003key\030\001 \001(\t\022\034\n\005value\030\002 " +
-      "\001(\0162\r.rpc.DataType:\0028\001\032B\n\024ClusteringOrde" +
-      "rEntry\022\013\n\003key\030\001 \001(\t\022\031\n\005value\030\002 \001(\0162\n.rpc" +
-      ".Order:\0028\001\"\255\001\n\026CreateNamespaceRequest\022\021\n" +
-      "\tnamespace\030\001 \001(\t\0229\n\007options\030\002 \003(\0132(.rpc." +
+      "\0223\n\ntext_value\030\007 \001(\0132\035.scalardb.rpc.Valu" +
+      "e.TextValueH\000\0223\n\nblob_value\030\010 \001(\0132\035.scal" +
+      "ardb.rpc.Value.BlobValueH\000\032)\n\tTextValue\022" +
+      "\022\n\005value\030\001 \001(\tH\000\210\001\001B\010\n\006_value\032)\n\tBlobVal" +
+      "ue\022\022\n\005value\030\001 \001(\014H\000\210\001\001B\010\n\006_value:\002\030\001B\007\n\005" +
+      "value\"\300\001\n\006Column\022\014\n\004name\030\001 \001(\t\022\027\n\rboolea" +
+      "n_value\030\002 \001(\010H\000\022\023\n\tint_value\030\003 \001(\005H\000\022\026\n\014" +
+      "bigint_value\030\004 \001(\003H\000\022\025\n\013float_value\030\005 \001(" +
+      "\002H\000\022\026\n\014double_value\030\006 \001(\001H\000\022\024\n\ntext_valu" +
+      "e\030\007 \001(\tH\000\022\024\n\nblob_value\030\010 \001(\014H\000B\007\n\005value" +
+      "\"T\n\003Key\022&\n\005value\030\001 \003(\0132\023.scalardb.rpc.Va" +
+      "lueB\002\030\001\022%\n\007columns\030\002 \003(\0132\024.scalardb.rpc." +
+      "Column\"\301\001\n\003Get\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005tab" +
+      "le\030\002 \001(\t\022(\n\rpartition_key\030\003 \001(\0132\021.scalar" +
+      "db.rpc.Key\022)\n\016clustering_key\030\004 \001(\0132\021.sca" +
+      "lardb.rpc.Key\022.\n\013consistency\030\005 \001(\0162\031.sca" +
+      "lardb.rpc.Consistency\022\023\n\013projections\030\006 \003" +
+      "(\t\"<\n\010Ordering\022\014\n\004name\030\001 \001(\t\022\"\n\005order\030\002 " +
+      "\001(\0162\023.scalardb.rpc.Order\"\341\002\n\004Scan\022\021\n\tnam" +
+      "espace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\022(\n\rpartition" +
+      "_key\030\003 \001(\0132\021.scalardb.rpc.Key\022.\n\013consist" +
+      "ency\030\004 \001(\0162\031.scalardb.rpc.Consistency\022\023\n" +
+      "\013projections\030\005 \003(\t\022/\n\024start_clustering_k" +
+      "ey\030\006 \001(\0132\021.scalardb.rpc.Key\022\027\n\017start_inc" +
+      "lusive\030\007 \001(\010\022-\n\022end_clustering_key\030\010 \001(\013" +
+      "2\021.scalardb.rpc.Key\022\025\n\rend_inclusive\030\t \001" +
+      "(\010\022)\n\torderings\030\n \003(\0132\026.scalardb.rpc.Ord" +
+      "ering\022\r\n\005limit\030\013 \001(\005\"\223\002\n\025ConditionalExpr" +
+      "ession\022\020\n\004name\030\001 \001(\tB\002\030\001\022&\n\005value\030\002 \001(\0132" +
+      "\023.scalardb.rpc.ValueB\002\030\001\022>\n\010operator\030\003 \001" +
+      "(\0162,.scalardb.rpc.ConditionalExpression." +
+      "Operator\022$\n\006column\030\004 \001(\0132\024.scalardb.rpc." +
+      "Column\"Z\n\010Operator\022\006\n\002EQ\020\000\022\006\n\002NE\020\001\022\006\n\002GT" +
+      "\020\002\022\007\n\003GTE\020\003\022\006\n\002LT\020\004\022\007\n\003LTE\020\005\022\013\n\007IS_NULL\020" +
+      "\006\022\017\n\013IS_NOT_NULL\020\007\"\340\001\n\017MutateCondition\0220" +
+      "\n\004type\030\001 \001(\0162\".scalardb.rpc.MutateCondit" +
+      "ion.Type\0228\n\013expressions\030\002 \003(\0132#.scalardb" +
+      ".rpc.ConditionalExpression\"a\n\004Type\022\n\n\006PU" +
+      "T_IF\020\000\022\021\n\rPUT_IF_EXISTS\020\001\022\025\n\021PUT_IF_NOT_" +
+      "EXISTS\020\002\022\r\n\tDELETE_IF\020\003\022\024\n\020DELETE_IF_EXI" +
+      "STS\020\004\"\372\002\n\010Mutation\022\021\n\tnamespace\030\001 \001(\t\022\r\n" +
+      "\005table\030\002 \001(\t\022(\n\rpartition_key\030\003 \001(\0132\021.sc" +
+      "alardb.rpc.Key\022)\n\016clustering_key\030\004 \001(\0132\021" +
+      ".scalardb.rpc.Key\022.\n\013consistency\030\005 \001(\0162\031" +
+      ".scalardb.rpc.Consistency\0220\n\tcondition\030\006" +
+      " \001(\0132\035.scalardb.rpc.MutateCondition\022)\n\004t" +
+      "ype\030\007 \001(\0162\033.scalardb.rpc.Mutation.Type\022&" +
+      "\n\005value\030\010 \003(\0132\023.scalardb.rpc.ValueB\002\030\001\022%" +
+      "\n\007columns\030\t \003(\0132\024.scalardb.rpc.Column\"\033\n" +
+      "\004Type\022\007\n\003PUT\020\000\022\n\n\006DELETE\020\001\"W\n\006Result\022&\n\005" +
+      "value\030\001 \003(\0132\023.scalardb.rpc.ValueB\002\030\001\022%\n\007" +
+      "columns\030\002 \003(\0132\024.scalardb.rpc.Column\",\n\nG" +
+      "etRequest\022\036\n\003get\030\001 \001(\0132\021.scalardb.rpc.Ge" +
+      "t\"3\n\013GetResponse\022$\n\006result\030\001 \001(\0132\024.scala" +
+      "rdb.rpc.Result\"Y\n\013ScanRequest\022 \n\004scan\030\001 " +
+      "\001(\0132\022.scalardb.rpc.Scan\022\030\n\013fetch_count\030\002" +
+      " \001(\005H\000\210\001\001B\016\n\014_fetch_count\"O\n\014ScanRespons" +
+      "e\022%\n\007results\030\002 \003(\0132\024.scalardb.rpc.Result" +
+      "\022\030\n\020has_more_results\030\003 \001(\010\":\n\rMutateRequ" +
+      "est\022)\n\tmutations\030\001 \003(\0132\026.scalardb.rpc.Mu" +
+      "tation\"\210\003\n\rTableMetadata\0229\n\007columns\030\001 \003(" +
+      "\0132(.scalardb.rpc.TableMetadata.ColumnsEn" +
+      "try\022\033\n\023partition_key_names\030\002 \003(\t\022\034\n\024clus" +
+      "tering_key_names\030\003 \003(\t\022L\n\021clustering_ord" +
+      "ers\030\004 \003(\01321.scalardb.rpc.TableMetadata.C" +
+      "lusteringOrdersEntry\022\035\n\025secondary_index_" +
+      "names\030\005 \003(\t\032F\n\014ColumnsEntry\022\013\n\003key\030\001 \001(\t" +
+      "\022%\n\005value\030\002 \001(\0162\026.scalardb.rpc.DataType:" +
+      "\0028\001\032L\n\025ClusteringOrdersEntry\022\013\n\003key\030\001 \001(" +
+      "\t\022\"\n\005value\030\002 \001(\0162\023.scalardb.rpc.Order:\0028" +
+      "\001\"\266\001\n\026CreateNamespaceRequest\022\021\n\tnamespac" +
+      "e\030\001 \001(\t\022B\n\007options\030\002 \003(\01321.scalardb.rpc." +
       "CreateNamespaceRequest.OptionsEntry\022\025\n\ri" +
       "f_not_exists\030\003 \001(\010\032.\n\014OptionsEntry\022\013\n\003ke" +
       "y\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"<\n\024DropNamesp" +
       "aceRequest\022\021\n\tnamespace\030\001 \001(\t\022\021\n\tif_exis" +
-      "ts\030\002 \001(\010\"\340\001\n\022CreateTableRequest\022\021\n\tnames" +
-      "pace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\022*\n\016table_metad" +
-      "ata\030\003 \001(\0132\022.rpc.TableMetadata\0225\n\007options" +
-      "\030\004 \003(\0132$.rpc.CreateTableRequest.OptionsE" +
-      "ntry\022\025\n\rif_not_exists\030\005 \001(\010\032.\n\014OptionsEn" +
-      "try\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"G\n\020D" +
-      "ropTableRequest\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005ta" +
-      "ble\030\002 \001(\t\022\021\n\tif_exists\030\003 \001(\010\"8\n\024Truncate" +
-      "TableRequest\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005table" +
-      "\030\002 \001(\t\"\311\001\n\022CreateIndexRequest\022\021\n\tnamespa" +
-      "ce\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\022\023\n\013column_name\030\003" +
-      " \001(\t\0225\n\007options\030\004 \003(\0132$.rpc.CreateIndexR" +
-      "equest.OptionsEntry\022\025\n\rif_not_exists\030\005 \001" +
-      "(\010\032.\n\014OptionsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value" +
-      "\030\002 \001(\t:\0028\001\"\\\n\020DropIndexRequest\022\021\n\tnamesp" +
-      "ace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\022\023\n\013column_name\030" +
-      "\003 \001(\t\022\021\n\tif_exists\030\004 \001(\010\";\n\027GetTableMeta" +
-      "dataRequest\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005table\030" +
-      "\002 \001(\t\"F\n\030GetTableMetadataResponse\022*\n\016tab" +
-      "le_metadata\030\001 \001(\0132\022.rpc.TableMetadata\"2\n" +
-      "\035GetNamespaceTableNamesRequest\022\021\n\tnamesp" +
-      "ace\030\001 \001(\t\"4\n\036GetNamespaceTableNamesRespo" +
-      "nse\022\022\n\ntable_name\030\001 \003(\t\"+\n\026NamespaceExis" +
-      "tsRequest\022\021\n\tnamespace\030\001 \001(\t\")\n\027Namespac" +
-      "eExistsResponse\022\016\n\006exists\030\001 \001(\010\"\311\001\n\022Repa" +
-      "irTableRequest\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005tab" +
-      "le\030\002 \001(\t\022*\n\016table_metadata\030\003 \001(\0132\022.rpc.T" +
-      "ableMetadata\0225\n\007options\030\004 \003(\0132$.rpc.Repa" +
-      "irTableRequest.OptionsEntry\032.\n\014OptionsEn" +
-      "try\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"w\n\032A" +
-      "ddNewColumnToTableRequest\022\021\n\tnamespace\030\001" +
-      " \001(\t\022\r\n\005table\030\002 \001(\t\022\023\n\013column_name\030\003 \001(\t" +
-      "\022\"\n\013column_type\030\004 \001(\0162\r.rpc.DataType\"\367\004\n" +
-      "\022TransactionRequest\022=\n\rstart_request\030\001 \001" +
-      "(\0132$.rpc.TransactionRequest.StartRequest" +
-      "H\000\0229\n\013get_request\030\002 \001(\0132\".rpc.Transactio" +
-      "nRequest.GetRequestH\000\022;\n\014scan_request\030\003 " +
-      "\001(\0132#.rpc.TransactionRequest.ScanRequest" +
-      "H\000\022?\n\016mutate_request\030\004 \001(\0132%.rpc.Transac" +
-      "tionRequest.MutateRequestH\000\022?\n\016commit_re" +
-      "quest\030\005 \001(\0132%.rpc.TransactionRequest.Com" +
-      "mitRequestH\000\022=\n\rabort_request\030\006 \001(\0132$.rp" +
-      "c.TransactionRequest.AbortRequestH\000\032>\n\014S" +
-      "tartRequest\022\033\n\016transaction_id\030\001 \001(\tH\000\210\001\001" +
-      "B\021\n\017_transaction_id\032#\n\nGetRequest\022\025\n\003get" +
-      "\030\002 \001(\0132\010.rpc.Get\032&\n\013ScanRequest\022\027\n\004scan\030" +
-      "\002 \001(\0132\t.rpc.Scan\0320\n\rMutateRequest\022\037\n\010mut" +
-      "ation\030\002 \003(\0132\r.rpc.Mutation\032\017\n\rCommitRequ" +
-      "est\032\016\n\014AbortRequestB\t\n\007request\"\311\004\n\023Trans" +
-      "actionResponse\022@\n\016start_response\030\001 \001(\0132&" +
-      ".rpc.TransactionResponse.StartResponseH\000" +
-      "\022<\n\014get_response\030\002 \001(\0132$.rpc.Transaction" +
-      "Response.GetResponseH\000\022>\n\rscan_response\030" +
-      "\003 \001(\0132%.rpc.TransactionResponse.ScanResp" +
-      "onseH\000\022/\n\005error\030\004 \001(\0132\036.rpc.TransactionR" +
-      "esponse.ErrorH\000\032\'\n\rStartResponse\022\026\n\016tran" +
-      "saction_id\030\001 \001(\t\032*\n\013GetResponse\022\033\n\006resul" +
-      "t\030\001 \001(\0132\013.rpc.Result\032+\n\014ScanResponse\022\033\n\006" +
-      "result\030\001 \003(\0132\013.rpc.Result\032\262\001\n\005Error\022<\n\ne" +
-      "rror_code\030\001 \001(\0162(.rpc.TransactionRespons" +
-      "e.Error.ErrorCode\022\017\n\007message\030\002 \001(\t\"Z\n\tEr" +
-      "rorCode\022\024\n\020INVALID_ARGUMENT\020\000\022\014\n\010CONFLIC" +
-      "T\020\001\022\036\n\032UNKNOWN_TRANSACTION_STATUS\020\002\022\t\n\005O" +
-      "THER\020\003B\n\n\010response\"4\n\032GetTransactionStat" +
-      "eRequest\022\026\n\016transaction_id\030\001 \001(\t\"C\n\033GetT" +
-      "ransactionStateResponse\022$\n\005state\030\001 \001(\0162\025" +
-      ".rpc.TransactionState\"&\n\014AbortRequest\022\026\n" +
-      "\016transaction_id\030\001 \001(\t\"5\n\rAbortResponse\022$" +
-      "\n\005state\030\001 \001(\0162\025.rpc.TransactionState\"\235\010\n" +
-      " TwoPhaseCommitTransactionRequest\022K\n\rsta" +
-      "rt_request\030\001 \001(\01322.rpc.TwoPhaseCommitTra" +
-      "nsactionRequest.StartRequestH\000\022I\n\014join_r" +
-      "equest\030\002 \001(\01321.rpc.TwoPhaseCommitTransac" +
-      "tionRequest.JoinRequestH\000\022G\n\013get_request" +
-      "\030\003 \001(\01320.rpc.TwoPhaseCommitTransactionRe" +
-      "quest.GetRequestH\000\022I\n\014scan_request\030\004 \001(\013" +
-      "21.rpc.TwoPhaseCommitTransactionRequest." +
-      "ScanRequestH\000\022M\n\016mutate_request\030\005 \001(\01323." +
-      "rpc.TwoPhaseCommitTransactionRequest.Mut" +
-      "ateRequestH\000\022O\n\017prepare_request\030\006 \001(\01324." +
-      "rpc.TwoPhaseCommitTransactionRequest.Pre" +
-      "pareRequestH\000\022Q\n\020validate_request\030\007 \001(\0132" +
-      "5.rpc.TwoPhaseCommitTransactionRequest.V" +
-      "alidateRequestH\000\022M\n\016commit_request\030\010 \001(\013" +
-      "23.rpc.TwoPhaseCommitTransactionRequest." +
-      "CommitRequestH\000\022Q\n\020rollback_request\030\t \001(" +
-      "\01325.rpc.TwoPhaseCommitTransactionRequest" +
-      ".RollbackRequestH\000\032>\n\014StartRequest\022\033\n\016tr" +
-      "ansaction_id\030\001 \001(\tH\000\210\001\001B\021\n\017_transaction_" +
-      "id\032%\n\013JoinRequest\022\026\n\016transaction_id\030\001 \001(" +
-      "\t\032#\n\nGetRequest\022\025\n\003get\030\002 \001(\0132\010.rpc.Get\032&" +
-      "\n\013ScanRequest\022\027\n\004scan\030\002 \001(\0132\t.rpc.Scan\0320" +
-      "\n\rMutateRequest\022\037\n\010mutation\030\002 \003(\0132\r.rpc." +
-      "Mutation\032\020\n\016PrepareRequest\032\021\n\017ValidateRe" +
-      "quest\032\017\n\rCommitRequest\032\021\n\017RollbackReques" +
-      "tB\t\n\007request\"\226\005\n!TwoPhaseCommitTransacti" +
-      "onResponse\022N\n\016start_response\030\001 \001(\01324.rpc" +
-      ".TwoPhaseCommitTransactionResponse.Start" +
-      "ResponseH\000\022J\n\014get_response\030\002 \001(\01322.rpc.T" +
-      "woPhaseCommitTransactionResponse.GetResp" +
-      "onseH\000\022L\n\rscan_response\030\003 \001(\01323.rpc.TwoP" +
-      "haseCommitTransactionResponse.ScanRespon" +
-      "seH\000\022=\n\005error\030\004 \001(\0132,.rpc.TwoPhaseCommit" +
-      "TransactionResponse.ErrorH\000\032\'\n\rStartResp" +
-      "onse\022\026\n\016transaction_id\030\001 \001(\t\032*\n\013GetRespo" +
-      "nse\022\033\n\006result\030\001 \001(\0132\013.rpc.Result\032+\n\014Scan" +
-      "Response\022\033\n\006result\030\001 \003(\0132\013.rpc.Result\032\271\001" +
-      "\n\005Error\022J\n\nerror_code\030\001 \001(\01626.rpc.TwoPha" +
-      "seCommitTransactionResponse.Error.ErrorC" +
-      "ode\022\017\n\007message\030\002 \001(\t\"S\n\tErrorCode\022\024\n\020INV" +
-      "ALID_ARGUMENT\020\000\022\014\n\010CONFLICT\020\001\022\027\n\023UNKNOWN" +
-      "_TRANSACTION\020\002\022\t\n\005OTHER\020\003B\n\n\010response\"\251\001" +
-      "\n\036CreateCoordinatorTablesRequest\022A\n\007opti" +
-      "ons\030\001 \003(\01320.rpc.CreateCoordinatorTablesR" +
-      "equest.OptionsEntry\022\024\n\014if_not_exist\030\002 \001(" +
-      "\010\032.\n\014OptionsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030" +
-      "\002 \001(\t:\0028\001\"0\n\034DropCoordinatorTablesReques" +
-      "t\022\020\n\010if_exist\030\001 \001(\010\"\"\n TruncateCoordinat" +
-      "orTablesRequest\"\037\n\035CoordinatorTablesExis" +
-      "tRequest\"/\n\036CoordinatorTablesExistRespon" +
-      "se\022\r\n\005exist\030\001 \001(\010\"\223\001\n\036RepairCoordinatorT" +
-      "ablesRequest\022A\n\007options\030\001 \003(\01320.rpc.Repa" +
-      "irCoordinatorTablesRequest.OptionsEntry\032" +
-      ".\n\014OptionsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 " +
-      "\001(\t:\0028\001*a\n\013Consistency\022\032\n\026CONSISTENCY_SE" +
-      "QUENTIAL\020\000\022\030\n\024CONSISTENCY_EVENTUAL\020\001\022\034\n\030" +
-      "CONSISTENCY_LINEARIZABLE\020\002*&\n\005Order\022\r\n\tO" +
-      "RDER_ASC\020\000\022\016\n\nORDER_DESC\020\001*\235\001\n\010DataType\022" +
-      "\025\n\021DATA_TYPE_BOOLEAN\020\000\022\021\n\rDATA_TYPE_INT\020" +
-      "\001\022\024\n\020DATA_TYPE_BIGINT\020\002\022\023\n\017DATA_TYPE_FLO" +
-      "AT\020\003\022\024\n\020DATA_TYPE_DOUBLE\020\004\022\022\n\016DATA_TYPE_" +
-      "TEXT\020\005\022\022\n\016DATA_TYPE_BLOB\020\006*q\n\020Transactio" +
-      "nState\022\037\n\033TRANSACTION_STATE_COMMITTED\020\000\022" +
-      "\035\n\031TRANSACTION_STATE_ABORTED\020\001\022\035\n\031TRANSA" +
-      "CTION_STATE_UNKNOWN\020\0022\253\001\n\022DistributedSto" +
-      "rage\022*\n\003Get\022\017.rpc.GetRequest\032\020.rpc.GetRe" +
-      "sponse\"\000\0221\n\004Scan\022\020.rpc.ScanRequest\032\021.rpc" +
-      ".ScanResponse\"\000(\0010\001\0226\n\006Mutate\022\022.rpc.Muta" +
-      "teRequest\032\026.google.protobuf.Empty\"\0002\213\007\n\027" +
-      "DistributedStorageAdmin\022H\n\017CreateNamespa" +
-      "ce\022\033.rpc.CreateNamespaceRequest\032\026.google" +
-      ".protobuf.Empty\"\000\022D\n\rDropNamespace\022\031.rpc" +
-      ".DropNamespaceRequest\032\026.google.protobuf." +
-      "Empty\"\000\022@\n\013CreateTable\022\027.rpc.CreateTable" +
-      "Request\032\026.google.protobuf.Empty\"\000\022<\n\tDro" +
-      "pTable\022\025.rpc.DropTableRequest\032\026.google.p" +
-      "rotobuf.Empty\"\000\022D\n\rTruncateTable\022\031.rpc.T" +
-      "runcateTableRequest\032\026.google.protobuf.Em" +
-      "pty\"\000\022@\n\013CreateIndex\022\027.rpc.CreateIndexRe" +
-      "quest\032\026.google.protobuf.Empty\"\000\022<\n\tDropI" +
-      "ndex\022\025.rpc.DropIndexRequest\032\026.google.pro" +
-      "tobuf.Empty\"\000\022Q\n\020GetTableMetadata\022\034.rpc." +
-      "GetTableMetadataRequest\032\035.rpc.GetTableMe" +
-      "tadataResponse\"\000\022c\n\026GetNamespaceTableNam" +
-      "es\022\".rpc.GetNamespaceTableNamesRequest\032#" +
-      ".rpc.GetNamespaceTableNamesResponse\"\000\022N\n" +
-      "\017NamespaceExists\022\033.rpc.NamespaceExistsRe" +
-      "quest\032\034.rpc.NamespaceExistsResponse\"\000\022@\n" +
-      "\013RepairTable\022\027.rpc.RepairTableRequest\032\026." +
-      "google.protobuf.Empty\"\000\022P\n\023AddNewColumnT" +
-      "oTable\022\037.rpc.AddNewColumnToTableRequest\032" +
-      "\026.google.protobuf.Empty\"\0002\343\001\n\026Distribute" +
-      "dTransaction\022F\n\013Transaction\022\027.rpc.Transa" +
-      "ctionRequest\032\030.rpc.TransactionResponse\"\000" +
-      "(\0010\001\022O\n\010GetState\022\037.rpc.GetTransactionSta" +
-      "teRequest\032 .rpc.GetTransactionStateRespo" +
-      "nse\"\000\0220\n\005Abort\022\021.rpc.AbortRequest\032\022.rpc." +
-      "AbortResponse\"\0002\220\002\n\031TwoPhaseCommitTransa" +
-      "ction\022p\n\031TwoPhaseCommitTransaction\022%.rpc" +
-      ".TwoPhaseCommitTransactionRequest\032&.rpc." +
-      "TwoPhaseCommitTransactionResponse\"\000(\0010\001\022" +
-      "O\n\010GetState\022\037.rpc.GetTransactionStateReq" +
-      "uest\032 .rpc.GetTransactionStateResponse\"\000" +
-      "\0220\n\005Abort\022\021.rpc.AbortRequest\032\022.rpc.Abort" +
-      "Response\"\0002\334\n\n\033DistributedTransactionAdm" +
-      "in\022H\n\017CreateNamespace\022\033.rpc.CreateNamesp" +
-      "aceRequest\032\026.google.protobuf.Empty\"\000\022D\n\r" +
-      "DropNamespace\022\031.rpc.DropNamespaceRequest" +
-      "\032\026.google.protobuf.Empty\"\000\022@\n\013CreateTabl" +
-      "e\022\027.rpc.CreateTableRequest\032\026.google.prot" +
-      "obuf.Empty\"\000\022<\n\tDropTable\022\025.rpc.DropTabl" +
-      "eRequest\032\026.google.protobuf.Empty\"\000\022D\n\rTr" +
-      "uncateTable\022\031.rpc.TruncateTableRequest\032\026" +
-      ".google.protobuf.Empty\"\000\022@\n\013CreateIndex\022" +
-      "\027.rpc.CreateIndexRequest\032\026.google.protob" +
-      "uf.Empty\"\000\022<\n\tDropIndex\022\025.rpc.DropIndexR" +
-      "equest\032\026.google.protobuf.Empty\"\000\022Q\n\020GetT" +
-      "ableMetadata\022\034.rpc.GetTableMetadataReque" +
-      "st\032\035.rpc.GetTableMetadataResponse\"\000\022c\n\026G" +
-      "etNamespaceTableNames\022\".rpc.GetNamespace" +
-      "TableNamesRequest\032#.rpc.GetNamespaceTabl" +
-      "eNamesResponse\"\000\022N\n\017NamespaceExists\022\033.rp" +
-      "c.NamespaceExistsRequest\032\034.rpc.Namespace" +
-      "ExistsResponse\"\000\022X\n\027CreateCoordinatorTab" +
-      "les\022#.rpc.CreateCoordinatorTablesRequest" +
-      "\032\026.google.protobuf.Empty\"\000\022T\n\025DropCoordi" +
-      "natorTables\022!.rpc.DropCoordinatorTablesR" +
-      "equest\032\026.google.protobuf.Empty\"\000\022\\\n\031Trun" +
-      "cateCoordinatorTables\022%.rpc.TruncateCoor" +
-      "dinatorTablesRequest\032\026.google.protobuf.E" +
-      "mpty\"\000\022c\n\026CoordinatorTablesExist\022\".rpc.C" +
-      "oordinatorTablesExistRequest\032#.rpc.Coord" +
-      "inatorTablesExistResponse\"\000\022@\n\013RepairTab" +
-      "le\022\027.rpc.RepairTableRequest\032\026.google.pro" +
-      "tobuf.Empty\"\000\022X\n\027RepairCoordinatorTables" +
-      "\022#.rpc.RepairCoordinatorTablesRequest\032\026." +
-      "google.protobuf.Empty\"\000\022P\n\023AddNewColumnT" +
-      "oTable\022\037.rpc.AddNewColumnToTableRequest\032" +
-      "\026.google.protobuf.Empty\"\000B$\n\021com.scalar." +
-      "db.rpcB\rScalarDbProtoP\001b\006proto3"
+      "ts\030\002 \001(\010\"\362\001\n\022CreateTableRequest\022\021\n\tnames" +
+      "pace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\0223\n\016table_metad" +
+      "ata\030\003 \001(\0132\033.scalardb.rpc.TableMetadata\022>" +
+      "\n\007options\030\004 \003(\0132-.scalardb.rpc.CreateTab" +
+      "leRequest.OptionsEntry\022\025\n\rif_not_exists\030" +
+      "\005 \001(\010\032.\n\014OptionsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005va" +
+      "lue\030\002 \001(\t:\0028\001\"G\n\020DropTableRequest\022\021\n\tnam" +
+      "espace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\022\021\n\tif_exists" +
+      "\030\003 \001(\010\"8\n\024TruncateTableRequest\022\021\n\tnamesp" +
+      "ace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\"\322\001\n\022CreateIndex" +
+      "Request\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005table\030\002 \001(" +
+      "\t\022\023\n\013column_name\030\003 \001(\t\022>\n\007options\030\004 \003(\0132" +
+      "-.scalardb.rpc.CreateIndexRequest.Option" +
+      "sEntry\022\025\n\rif_not_exists\030\005 \001(\010\032.\n\014Options" +
+      "Entry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"\\\n" +
+      "\020DropIndexRequest\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005" +
+      "table\030\002 \001(\t\022\023\n\013column_name\030\003 \001(\t\022\021\n\tif_e" +
+      "xists\030\004 \001(\010\";\n\027GetTableMetadataRequest\022\021" +
+      "\n\tnamespace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\"O\n\030GetT" +
+      "ableMetadataResponse\0223\n\016table_metadata\030\001" +
+      " \001(\0132\033.scalardb.rpc.TableMetadata\"2\n\035Get" +
+      "NamespaceTableNamesRequest\022\021\n\tnamespace\030" +
+      "\001 \001(\t\"5\n\036GetNamespaceTableNamesResponse\022" +
+      "\023\n\013table_names\030\001 \003(\t\"+\n\026NamespaceExistsR" +
+      "equest\022\021\n\tnamespace\030\001 \001(\t\")\n\027NamespaceEx" +
+      "istsResponse\022\016\n\006exists\030\001 \001(\010\"\333\001\n\022RepairT" +
+      "ableRequest\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005table\030" +
+      "\002 \001(\t\0223\n\016table_metadata\030\003 \001(\0132\033.scalardb" +
+      ".rpc.TableMetadata\022>\n\007options\030\004 \003(\0132-.sc" +
+      "alardb.rpc.RepairTableRequest.OptionsEnt" +
+      "ry\032.\n\014OptionsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value" +
+      "\030\002 \001(\t:\0028\001\"\200\001\n\032AddNewColumnToTableReques" +
+      "t\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\022\023\n\013c" +
+      "olumn_name\030\003 \001(\t\022+\n\013column_type\030\004 \001(\0162\026." +
+      "scalardb.rpc.DataType\"\311\005\n\022TransactionReq" +
+      "uest\022F\n\rstart_request\030\001 \001(\0132-.scalardb.r" +
+      "pc.TransactionRequest.StartRequestH\000\022B\n\013" +
+      "get_request\030\002 \001(\0132+.scalardb.rpc.Transac" +
+      "tionRequest.GetRequestH\000\022D\n\014scan_request" +
+      "\030\003 \001(\0132,.scalardb.rpc.TransactionRequest" +
+      ".ScanRequestH\000\022H\n\016mutate_request\030\004 \001(\0132." +
+      ".scalardb.rpc.TransactionRequest.MutateR" +
+      "equestH\000\022H\n\016commit_request\030\005 \001(\0132..scala" +
+      "rdb.rpc.TransactionRequest.CommitRequest" +
+      "H\000\022F\n\rabort_request\030\006 \001(\0132-.scalardb.rpc" +
+      ".TransactionRequest.AbortRequestH\000\032>\n\014St" +
+      "artRequest\022\033\n\016transaction_id\030\001 \001(\tH\000\210\001\001B" +
+      "\021\n\017_transaction_id\032,\n\nGetRequest\022\036\n\003get\030" +
+      "\002 \001(\0132\021.scalardb.rpc.Get\032/\n\013ScanRequest\022" +
+      " \n\004scan\030\002 \001(\0132\022.scalardb.rpc.Scan\032:\n\rMut" +
+      "ateRequest\022)\n\tmutations\030\002 \003(\0132\026.scalardb" +
+      ".rpc.Mutation\032\017\n\rCommitRequest\032\016\n\014AbortR" +
+      "equestB\t\n\007request\"\225\005\n\023TransactionRespons" +
+      "e\022I\n\016start_response\030\001 \001(\0132/.scalardb.rpc" +
+      ".TransactionResponse.StartResponseH\000\022E\n\014" +
+      "get_response\030\002 \001(\0132-.scalardb.rpc.Transa" +
+      "ctionResponse.GetResponseH\000\022G\n\rscan_resp" +
+      "onse\030\003 \001(\0132..scalardb.rpc.TransactionRes" +
+      "ponse.ScanResponseH\000\0228\n\005error\030\004 \001(\0132\'.sc" +
+      "alardb.rpc.TransactionResponse.ErrorH\000\032\'" +
+      "\n\rStartResponse\022\026\n\016transaction_id\030\001 \001(\t\032" +
+      "3\n\013GetResponse\022$\n\006result\030\001 \001(\0132\024.scalard" +
+      "b.rpc.Result\0325\n\014ScanResponse\022%\n\007results\030" +
+      "\001 \003(\0132\024.scalardb.rpc.Result\032\307\001\n\005Error\022E\n" +
+      "\nerror_code\030\001 \001(\01621.scalardb.rpc.Transac" +
+      "tionResponse.Error.ErrorCode\022\017\n\007message\030" +
+      "\002 \001(\t\"f\n\tErrorCode\022\024\n\020INVALID_ARGUMENT\020\000" +
+      "\022\030\n\024TRANSACTION_CONFLICT\020\001\022\036\n\032UNKNOWN_TR" +
+      "ANSACTION_STATUS\020\002\022\t\n\005OTHER\020\003B\n\n\010respons" +
+      "e\"4\n\032GetTransactionStateRequest\022\026\n\016trans" +
+      "action_id\030\001 \001(\t\"L\n\033GetTransactionStateRe" +
+      "sponse\022-\n\005state\030\001 \001(\0162\036.scalardb.rpc.Tra" +
+      "nsactionState\"&\n\014AbortRequest\022\026\n\016transac" +
+      "tion_id\030\001 \001(\t\">\n\rAbortResponse\022-\n\005state\030" +
+      "\001 \001(\0162\036.scalardb.rpc.TransactionState\"\212\t" +
+      "\n TwoPhaseCommitTransactionRequest\022T\n\rst" +
+      "art_request\030\001 \001(\0132;.scalardb.rpc.TwoPhas" +
+      "eCommitTransactionRequest.StartRequestH\000" +
+      "\022R\n\014join_request\030\002 \001(\0132:.scalardb.rpc.Tw" +
+      "oPhaseCommitTransactionRequest.JoinReque" +
+      "stH\000\022P\n\013get_request\030\003 \001(\01329.scalardb.rpc" +
+      ".TwoPhaseCommitTransactionRequest.GetReq" +
+      "uestH\000\022R\n\014scan_request\030\004 \001(\0132:.scalardb." +
+      "rpc.TwoPhaseCommitTransactionRequest.Sca" +
+      "nRequestH\000\022V\n\016mutate_request\030\005 \001(\0132<.sca" +
+      "lardb.rpc.TwoPhaseCommitTransactionReque" +
+      "st.MutateRequestH\000\022X\n\017prepare_request\030\006 " +
+      "\001(\0132=.scalardb.rpc.TwoPhaseCommitTransac" +
+      "tionRequest.PrepareRequestH\000\022Z\n\020validate" +
+      "_request\030\007 \001(\0132>.scalardb.rpc.TwoPhaseCo" +
+      "mmitTransactionRequest.ValidateRequestH\000" +
+      "\022V\n\016commit_request\030\010 \001(\0132<.scalardb.rpc." +
+      "TwoPhaseCommitTransactionRequest.CommitR" +
+      "equestH\000\022Z\n\020rollback_request\030\t \001(\0132>.sca" +
+      "lardb.rpc.TwoPhaseCommitTransactionReque" +
+      "st.RollbackRequestH\000\032>\n\014StartRequest\022\033\n\016" +
+      "transaction_id\030\001 \001(\tH\000\210\001\001B\021\n\017_transactio" +
+      "n_id\032%\n\013JoinRequest\022\026\n\016transaction_id\030\001 " +
+      "\001(\t\032,\n\nGetRequest\022\036\n\003get\030\002 \001(\0132\021.scalard" +
+      "b.rpc.Get\032/\n\013ScanRequest\022 \n\004scan\030\002 \001(\0132\022" +
+      ".scalardb.rpc.Scan\032:\n\rMutateRequest\022)\n\tm" +
+      "utations\030\002 \003(\0132\026.scalardb.rpc.Mutation\032\020" +
+      "\n\016PrepareRequest\032\021\n\017ValidateRequest\032\017\n\rC" +
+      "ommitRequest\032\021\n\017RollbackRequestB\t\n\007reque" +
+      "st\"\351\005\n!TwoPhaseCommitTransactionResponse" +
+      "\022W\n\016start_response\030\001 \001(\0132=.scalardb.rpc." +
+      "TwoPhaseCommitTransactionResponse.StartR" +
+      "esponseH\000\022S\n\014get_response\030\002 \001(\0132;.scalar" +
+      "db.rpc.TwoPhaseCommitTransactionResponse" +
+      ".GetResponseH\000\022U\n\rscan_response\030\003 \001(\0132<." +
+      "scalardb.rpc.TwoPhaseCommitTransactionRe" +
+      "sponse.ScanResponseH\000\022F\n\005error\030\004 \001(\01325.s" +
+      "calardb.rpc.TwoPhaseCommitTransactionRes" +
+      "ponse.ErrorH\000\032\'\n\rStartResponse\022\026\n\016transa" +
+      "ction_id\030\001 \001(\t\0323\n\013GetResponse\022$\n\006result\030" +
+      "\001 \001(\0132\024.scalardb.rpc.Result\0325\n\014ScanRespo" +
+      "nse\022%\n\007results\030\001 \003(\0132\024.scalardb.rpc.Resu" +
+      "lt\032\325\001\n\005Error\022S\n\nerror_code\030\001 \001(\0162?.scala" +
+      "rdb.rpc.TwoPhaseCommitTransactionRespons" +
+      "e.Error.ErrorCode\022\017\n\007message\030\002 \001(\t\"f\n\tEr" +
+      "rorCode\022\024\n\020INVALID_ARGUMENT\020\000\022\030\n\024TRANSAC" +
+      "TION_CONFLICT\020\001\022\036\n\032UNKNOWN_TRANSACTION_S" +
+      "TATUS\020\002\022\t\n\005OTHER\020\003B\n\n\010response\"\262\001\n\036Creat" +
+      "eCoordinatorTablesRequest\022J\n\007options\030\001 \003" +
+      "(\01329.scalardb.rpc.CreateCoordinatorTable" +
+      "sRequest.OptionsEntry\022\024\n\014if_not_exist\030\002 " +
+      "\001(\010\032.\n\014OptionsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005valu" +
+      "e\030\002 \001(\t:\0028\001\"0\n\034DropCoordinatorTablesRequ" +
+      "est\022\020\n\010if_exist\030\001 \001(\010\"\"\n TruncateCoordin" +
+      "atorTablesRequest\"\037\n\035CoordinatorTablesEx" +
+      "istRequest\"/\n\036CoordinatorTablesExistResp" +
+      "onse\022\r\n\005exist\030\001 \001(\010\"\234\001\n\036RepairCoordinato" +
+      "rTablesRequest\022J\n\007options\030\001 \003(\01329.scalar" +
+      "db.rpc.RepairCoordinatorTablesRequest.Op" +
+      "tionsEntry\032.\n\014OptionsEntry\022\013\n\003key\030\001 \001(\t\022" +
+      "\r\n\005value\030\002 \001(\t:\0028\001*a\n\013Consistency\022\032\n\026CON" +
+      "SISTENCY_SEQUENTIAL\020\000\022\030\n\024CONSISTENCY_EVE" +
+      "NTUAL\020\001\022\034\n\030CONSISTENCY_LINEARIZABLE\020\002*&\n" +
+      "\005Order\022\r\n\tORDER_ASC\020\000\022\016\n\nORDER_DESC\020\001*\235\001" +
+      "\n\010DataType\022\025\n\021DATA_TYPE_BOOLEAN\020\000\022\021\n\rDAT" +
+      "A_TYPE_INT\020\001\022\024\n\020DATA_TYPE_BIGINT\020\002\022\023\n\017DA" +
+      "TA_TYPE_FLOAT\020\003\022\024\n\020DATA_TYPE_DOUBLE\020\004\022\022\n" +
+      "\016DATA_TYPE_TEXT\020\005\022\022\n\016DATA_TYPE_BLOB\020\006*q\n" +
+      "\020TransactionState\022\037\n\033TRANSACTION_STATE_C" +
+      "OMMITTED\020\000\022\035\n\031TRANSACTION_STATE_ABORTED\020" +
+      "\001\022\035\n\031TRANSACTION_STATE_UNKNOWN\020\0022\330\001\n\022Dis" +
+      "tributedStorage\022<\n\003Get\022\030.scalardb.rpc.Ge" +
+      "tRequest\032\031.scalardb.rpc.GetResponse\"\000\022C\n" +
+      "\004Scan\022\031.scalardb.rpc.ScanRequest\032\032.scala" +
+      "rdb.rpc.ScanResponse\"\000(\0010\001\022?\n\006Mutate\022\033.s" +
+      "calardb.rpc.MutateRequest\032\026.google.proto" +
+      "buf.Empty\"\0002\222\010\n\027DistributedStorageAdmin\022" +
+      "Q\n\017CreateNamespace\022$.scalardb.rpc.Create" +
+      "NamespaceRequest\032\026.google.protobuf.Empty" +
+      "\"\000\022M\n\rDropNamespace\022\".scalardb.rpc.DropN" +
+      "amespaceRequest\032\026.google.protobuf.Empty\"" +
+      "\000\022I\n\013CreateTable\022 .scalardb.rpc.CreateTa" +
+      "bleRequest\032\026.google.protobuf.Empty\"\000\022E\n\t" +
+      "DropTable\022\036.scalardb.rpc.DropTableReques" +
+      "t\032\026.google.protobuf.Empty\"\000\022M\n\rTruncateT" +
+      "able\022\".scalardb.rpc.TruncateTableRequest" +
+      "\032\026.google.protobuf.Empty\"\000\022I\n\013CreateInde" +
+      "x\022 .scalardb.rpc.CreateIndexRequest\032\026.go" +
+      "ogle.protobuf.Empty\"\000\022E\n\tDropIndex\022\036.sca" +
+      "lardb.rpc.DropIndexRequest\032\026.google.prot" +
+      "obuf.Empty\"\000\022c\n\020GetTableMetadata\022%.scala" +
+      "rdb.rpc.GetTableMetadataRequest\032&.scalar" +
+      "db.rpc.GetTableMetadataResponse\"\000\022u\n\026Get" +
+      "NamespaceTableNames\022+.scalardb.rpc.GetNa" +
+      "mespaceTableNamesRequest\032,.scalardb.rpc." +
+      "GetNamespaceTableNamesResponse\"\000\022`\n\017Name" +
+      "spaceExists\022$.scalardb.rpc.NamespaceExis" +
+      "tsRequest\032%.scalardb.rpc.NamespaceExists" +
+      "Response\"\000\022I\n\013RepairTable\022 .scalardb.rpc" +
+      ".RepairTableRequest\032\026.google.protobuf.Em" +
+      "pty\"\000\022Y\n\023AddNewColumnToTable\022(.scalardb." +
+      "rpc.AddNewColumnToTableRequest\032\026.google." +
+      "protobuf.Empty\"\0002\231\002\n\026DistributedTransact" +
+      "ion\022X\n\013Transaction\022 .scalardb.rpc.Transa" +
+      "ctionRequest\032!.scalardb.rpc.TransactionR" +
+      "esponse\"\000(\0010\001\022a\n\010GetState\022(.scalardb.rpc" +
+      ".GetTransactionStateRequest\032).scalardb.r" +
+      "pc.GetTransactionStateResponse\"\000\022B\n\005Abor" +
+      "t\022\032.scalardb.rpc.AbortRequest\032\033.scalardb" +
+      ".rpc.AbortResponse\"\0002\307\002\n\031TwoPhaseCommitT" +
+      "ransaction\022\202\001\n\031TwoPhaseCommitTransaction" +
+      "\022..scalardb.rpc.TwoPhaseCommitTransactio" +
+      "nRequest\032/.scalardb.rpc.TwoPhaseCommitTr" +
+      "ansactionResponse\"\000(\0010\001\022a\n\010GetState\022(.sc" +
+      "alardb.rpc.GetTransactionStateRequest\032)." +
+      "scalardb.rpc.GetTransactionStateResponse" +
+      "\"\000\022B\n\005Abort\022\032.scalardb.rpc.AbortRequest\032" +
+      "\033.scalardb.rpc.AbortResponse\"\0002\231\014\n\033Distr" +
+      "ibutedTransactionAdmin\022Q\n\017CreateNamespac" +
+      "e\022$.scalardb.rpc.CreateNamespaceRequest\032" +
+      "\026.google.protobuf.Empty\"\000\022M\n\rDropNamespa" +
+      "ce\022\".scalardb.rpc.DropNamespaceRequest\032\026" +
+      ".google.protobuf.Empty\"\000\022I\n\013CreateTable\022" +
+      " .scalardb.rpc.CreateTableRequest\032\026.goog" +
+      "le.protobuf.Empty\"\000\022E\n\tDropTable\022\036.scala" +
+      "rdb.rpc.DropTableRequest\032\026.google.protob" +
+      "uf.Empty\"\000\022M\n\rTruncateTable\022\".scalardb.r" +
+      "pc.TruncateTableRequest\032\026.google.protobu" +
+      "f.Empty\"\000\022I\n\013CreateIndex\022 .scalardb.rpc." +
+      "CreateIndexRequest\032\026.google.protobuf.Emp" +
+      "ty\"\000\022E\n\tDropIndex\022\036.scalardb.rpc.DropInd" +
+      "exRequest\032\026.google.protobuf.Empty\"\000\022c\n\020G" +
+      "etTableMetadata\022%.scalardb.rpc.GetTableM" +
+      "etadataRequest\032&.scalardb.rpc.GetTableMe" +
+      "tadataResponse\"\000\022u\n\026GetNamespaceTableNam" +
+      "es\022+.scalardb.rpc.GetNamespaceTableNames" +
+      "Request\032,.scalardb.rpc.GetNamespaceTable" +
+      "NamesResponse\"\000\022`\n\017NamespaceExists\022$.sca" +
+      "lardb.rpc.NamespaceExistsRequest\032%.scala" +
+      "rdb.rpc.NamespaceExistsResponse\"\000\022a\n\027Cre" +
+      "ateCoordinatorTables\022,.scalardb.rpc.Crea" +
+      "teCoordinatorTablesRequest\032\026.google.prot" +
+      "obuf.Empty\"\000\022]\n\025DropCoordinatorTables\022*." +
+      "scalardb.rpc.DropCoordinatorTablesReques" +
+      "t\032\026.google.protobuf.Empty\"\000\022e\n\031TruncateC" +
+      "oordinatorTables\022..scalardb.rpc.Truncate" +
+      "CoordinatorTablesRequest\032\026.google.protob" +
+      "uf.Empty\"\000\022u\n\026CoordinatorTablesExist\022+.s" +
+      "calardb.rpc.CoordinatorTablesExistReques" +
+      "t\032,.scalardb.rpc.CoordinatorTablesExistR" +
+      "esponse\"\000\022I\n\013RepairTable\022 .scalardb.rpc." +
+      "RepairTableRequest\032\026.google.protobuf.Emp" +
+      "ty\"\000\022a\n\027RepairCoordinatorTables\022,.scalar" +
+      "db.rpc.RepairCoordinatorTablesRequest\032\026." +
+      "google.protobuf.Empty\"\000\022Y\n\023AddNewColumnT" +
+      "oTable\022(.scalardb.rpc.AddNewColumnToTabl" +
+      "eRequest\032\026.google.protobuf.Empty\"\000B$\n\021co" +
+      "m.scalar.db.rpcB\rScalarDbProtoP\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.protobuf.EmptyProto.getDescriptor(),
         });
-    internal_static_rpc_Value_descriptor =
+    internal_static_scalardb_rpc_Value_descriptor =
       getDescriptor().getMessageTypes().get(0);
-    internal_static_rpc_Value_fieldAccessorTable = new
+    internal_static_scalardb_rpc_Value_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_Value_descriptor,
+        internal_static_scalardb_rpc_Value_descriptor,
         new java.lang.String[] { "Name", "BooleanValue", "IntValue", "BigintValue", "FloatValue", "DoubleValue", "TextValue", "BlobValue", "Value", });
-    internal_static_rpc_Value_TextValue_descriptor =
-      internal_static_rpc_Value_descriptor.getNestedTypes().get(0);
-    internal_static_rpc_Value_TextValue_fieldAccessorTable = new
+    internal_static_scalardb_rpc_Value_TextValue_descriptor =
+      internal_static_scalardb_rpc_Value_descriptor.getNestedTypes().get(0);
+    internal_static_scalardb_rpc_Value_TextValue_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_Value_TextValue_descriptor,
+        internal_static_scalardb_rpc_Value_TextValue_descriptor,
         new java.lang.String[] { "Value", "Value", });
-    internal_static_rpc_Value_BlobValue_descriptor =
-      internal_static_rpc_Value_descriptor.getNestedTypes().get(1);
-    internal_static_rpc_Value_BlobValue_fieldAccessorTable = new
+    internal_static_scalardb_rpc_Value_BlobValue_descriptor =
+      internal_static_scalardb_rpc_Value_descriptor.getNestedTypes().get(1);
+    internal_static_scalardb_rpc_Value_BlobValue_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_Value_BlobValue_descriptor,
+        internal_static_scalardb_rpc_Value_BlobValue_descriptor,
         new java.lang.String[] { "Value", "Value", });
-    internal_static_rpc_Column_descriptor =
+    internal_static_scalardb_rpc_Column_descriptor =
       getDescriptor().getMessageTypes().get(1);
-    internal_static_rpc_Column_fieldAccessorTable = new
+    internal_static_scalardb_rpc_Column_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_Column_descriptor,
+        internal_static_scalardb_rpc_Column_descriptor,
         new java.lang.String[] { "Name", "BooleanValue", "IntValue", "BigintValue", "FloatValue", "DoubleValue", "TextValue", "BlobValue", "Value", });
-    internal_static_rpc_Key_descriptor =
+    internal_static_scalardb_rpc_Key_descriptor =
       getDescriptor().getMessageTypes().get(2);
-    internal_static_rpc_Key_fieldAccessorTable = new
+    internal_static_scalardb_rpc_Key_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_Key_descriptor,
-        new java.lang.String[] { "Value", "Column", });
-    internal_static_rpc_Get_descriptor =
+        internal_static_scalardb_rpc_Key_descriptor,
+        new java.lang.String[] { "Value", "Columns", });
+    internal_static_scalardb_rpc_Get_descriptor =
       getDescriptor().getMessageTypes().get(3);
-    internal_static_rpc_Get_fieldAccessorTable = new
+    internal_static_scalardb_rpc_Get_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_Get_descriptor,
-        new java.lang.String[] { "Namespace", "Table", "PartitionKey", "ClusteringKey", "Consistency", "Projection", });
-    internal_static_rpc_Ordering_descriptor =
+        internal_static_scalardb_rpc_Get_descriptor,
+        new java.lang.String[] { "Namespace", "Table", "PartitionKey", "ClusteringKey", "Consistency", "Projections", });
+    internal_static_scalardb_rpc_Ordering_descriptor =
       getDescriptor().getMessageTypes().get(4);
-    internal_static_rpc_Ordering_fieldAccessorTable = new
+    internal_static_scalardb_rpc_Ordering_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_Ordering_descriptor,
+        internal_static_scalardb_rpc_Ordering_descriptor,
         new java.lang.String[] { "Name", "Order", });
-    internal_static_rpc_Scan_descriptor =
+    internal_static_scalardb_rpc_Scan_descriptor =
       getDescriptor().getMessageTypes().get(5);
-    internal_static_rpc_Scan_fieldAccessorTable = new
+    internal_static_scalardb_rpc_Scan_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_Scan_descriptor,
-        new java.lang.String[] { "Namespace", "Table", "PartitionKey", "Consistency", "Projection", "StartClusteringKey", "StartInclusive", "EndClusteringKey", "EndInclusive", "Ordering", "Limit", });
-    internal_static_rpc_ConditionalExpression_descriptor =
+        internal_static_scalardb_rpc_Scan_descriptor,
+        new java.lang.String[] { "Namespace", "Table", "PartitionKey", "Consistency", "Projections", "StartClusteringKey", "StartInclusive", "EndClusteringKey", "EndInclusive", "Orderings", "Limit", });
+    internal_static_scalardb_rpc_ConditionalExpression_descriptor =
       getDescriptor().getMessageTypes().get(6);
-    internal_static_rpc_ConditionalExpression_fieldAccessorTable = new
+    internal_static_scalardb_rpc_ConditionalExpression_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_ConditionalExpression_descriptor,
+        internal_static_scalardb_rpc_ConditionalExpression_descriptor,
         new java.lang.String[] { "Name", "Value", "Operator", "Column", });
-    internal_static_rpc_MutateCondition_descriptor =
+    internal_static_scalardb_rpc_MutateCondition_descriptor =
       getDescriptor().getMessageTypes().get(7);
-    internal_static_rpc_MutateCondition_fieldAccessorTable = new
+    internal_static_scalardb_rpc_MutateCondition_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_MutateCondition_descriptor,
-        new java.lang.String[] { "Type", "Expression", });
-    internal_static_rpc_Mutation_descriptor =
+        internal_static_scalardb_rpc_MutateCondition_descriptor,
+        new java.lang.String[] { "Type", "Expressions", });
+    internal_static_scalardb_rpc_Mutation_descriptor =
       getDescriptor().getMessageTypes().get(8);
-    internal_static_rpc_Mutation_fieldAccessorTable = new
+    internal_static_scalardb_rpc_Mutation_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_Mutation_descriptor,
-        new java.lang.String[] { "Namespace", "Table", "PartitionKey", "ClusteringKey", "Consistency", "Condition", "Type", "Value", "Column", });
-    internal_static_rpc_Result_descriptor =
+        internal_static_scalardb_rpc_Mutation_descriptor,
+        new java.lang.String[] { "Namespace", "Table", "PartitionKey", "ClusteringKey", "Consistency", "Condition", "Type", "Value", "Columns", });
+    internal_static_scalardb_rpc_Result_descriptor =
       getDescriptor().getMessageTypes().get(9);
-    internal_static_rpc_Result_fieldAccessorTable = new
+    internal_static_scalardb_rpc_Result_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_Result_descriptor,
-        new java.lang.String[] { "Value", "Column", });
-    internal_static_rpc_GetRequest_descriptor =
+        internal_static_scalardb_rpc_Result_descriptor,
+        new java.lang.String[] { "Value", "Columns", });
+    internal_static_scalardb_rpc_GetRequest_descriptor =
       getDescriptor().getMessageTypes().get(10);
-    internal_static_rpc_GetRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_GetRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_GetRequest_descriptor,
+        internal_static_scalardb_rpc_GetRequest_descriptor,
         new java.lang.String[] { "Get", });
-    internal_static_rpc_GetResponse_descriptor =
+    internal_static_scalardb_rpc_GetResponse_descriptor =
       getDescriptor().getMessageTypes().get(11);
-    internal_static_rpc_GetResponse_fieldAccessorTable = new
+    internal_static_scalardb_rpc_GetResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_GetResponse_descriptor,
+        internal_static_scalardb_rpc_GetResponse_descriptor,
         new java.lang.String[] { "Result", });
-    internal_static_rpc_ScanRequest_descriptor =
+    internal_static_scalardb_rpc_ScanRequest_descriptor =
       getDescriptor().getMessageTypes().get(12);
-    internal_static_rpc_ScanRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_ScanRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_ScanRequest_descriptor,
+        internal_static_scalardb_rpc_ScanRequest_descriptor,
         new java.lang.String[] { "Scan", "FetchCount", "FetchCount", });
-    internal_static_rpc_ScanResponse_descriptor =
+    internal_static_scalardb_rpc_ScanResponse_descriptor =
       getDescriptor().getMessageTypes().get(13);
-    internal_static_rpc_ScanResponse_fieldAccessorTable = new
+    internal_static_scalardb_rpc_ScanResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_ScanResponse_descriptor,
-        new java.lang.String[] { "Result", "HasMoreResults", });
-    internal_static_rpc_MutateRequest_descriptor =
+        internal_static_scalardb_rpc_ScanResponse_descriptor,
+        new java.lang.String[] { "Results", "HasMoreResults", });
+    internal_static_scalardb_rpc_MutateRequest_descriptor =
       getDescriptor().getMessageTypes().get(14);
-    internal_static_rpc_MutateRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_MutateRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_MutateRequest_descriptor,
-        new java.lang.String[] { "Mutation", });
-    internal_static_rpc_TableMetadata_descriptor =
+        internal_static_scalardb_rpc_MutateRequest_descriptor,
+        new java.lang.String[] { "Mutations", });
+    internal_static_scalardb_rpc_TableMetadata_descriptor =
       getDescriptor().getMessageTypes().get(15);
-    internal_static_rpc_TableMetadata_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TableMetadata_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TableMetadata_descriptor,
-        new java.lang.String[] { "Column", "PartitionKeyName", "ClusteringKeyName", "ClusteringOrder", "SecondaryIndexName", });
-    internal_static_rpc_TableMetadata_ColumnEntry_descriptor =
-      internal_static_rpc_TableMetadata_descriptor.getNestedTypes().get(0);
-    internal_static_rpc_TableMetadata_ColumnEntry_fieldAccessorTable = new
+        internal_static_scalardb_rpc_TableMetadata_descriptor,
+        new java.lang.String[] { "Columns", "PartitionKeyNames", "ClusteringKeyNames", "ClusteringOrders", "SecondaryIndexNames", });
+    internal_static_scalardb_rpc_TableMetadata_ColumnsEntry_descriptor =
+      internal_static_scalardb_rpc_TableMetadata_descriptor.getNestedTypes().get(0);
+    internal_static_scalardb_rpc_TableMetadata_ColumnsEntry_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TableMetadata_ColumnEntry_descriptor,
+        internal_static_scalardb_rpc_TableMetadata_ColumnsEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
-    internal_static_rpc_TableMetadata_ClusteringOrderEntry_descriptor =
-      internal_static_rpc_TableMetadata_descriptor.getNestedTypes().get(1);
-    internal_static_rpc_TableMetadata_ClusteringOrderEntry_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TableMetadata_ClusteringOrdersEntry_descriptor =
+      internal_static_scalardb_rpc_TableMetadata_descriptor.getNestedTypes().get(1);
+    internal_static_scalardb_rpc_TableMetadata_ClusteringOrdersEntry_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TableMetadata_ClusteringOrderEntry_descriptor,
+        internal_static_scalardb_rpc_TableMetadata_ClusteringOrdersEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
-    internal_static_rpc_CreateNamespaceRequest_descriptor =
+    internal_static_scalardb_rpc_CreateNamespaceRequest_descriptor =
       getDescriptor().getMessageTypes().get(16);
-    internal_static_rpc_CreateNamespaceRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_CreateNamespaceRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_CreateNamespaceRequest_descriptor,
+        internal_static_scalardb_rpc_CreateNamespaceRequest_descriptor,
         new java.lang.String[] { "Namespace", "Options", "IfNotExists", });
-    internal_static_rpc_CreateNamespaceRequest_OptionsEntry_descriptor =
-      internal_static_rpc_CreateNamespaceRequest_descriptor.getNestedTypes().get(0);
-    internal_static_rpc_CreateNamespaceRequest_OptionsEntry_fieldAccessorTable = new
+    internal_static_scalardb_rpc_CreateNamespaceRequest_OptionsEntry_descriptor =
+      internal_static_scalardb_rpc_CreateNamespaceRequest_descriptor.getNestedTypes().get(0);
+    internal_static_scalardb_rpc_CreateNamespaceRequest_OptionsEntry_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_CreateNamespaceRequest_OptionsEntry_descriptor,
+        internal_static_scalardb_rpc_CreateNamespaceRequest_OptionsEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
-    internal_static_rpc_DropNamespaceRequest_descriptor =
+    internal_static_scalardb_rpc_DropNamespaceRequest_descriptor =
       getDescriptor().getMessageTypes().get(17);
-    internal_static_rpc_DropNamespaceRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_DropNamespaceRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_DropNamespaceRequest_descriptor,
+        internal_static_scalardb_rpc_DropNamespaceRequest_descriptor,
         new java.lang.String[] { "Namespace", "IfExists", });
-    internal_static_rpc_CreateTableRequest_descriptor =
+    internal_static_scalardb_rpc_CreateTableRequest_descriptor =
       getDescriptor().getMessageTypes().get(18);
-    internal_static_rpc_CreateTableRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_CreateTableRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_CreateTableRequest_descriptor,
+        internal_static_scalardb_rpc_CreateTableRequest_descriptor,
         new java.lang.String[] { "Namespace", "Table", "TableMetadata", "Options", "IfNotExists", });
-    internal_static_rpc_CreateTableRequest_OptionsEntry_descriptor =
-      internal_static_rpc_CreateTableRequest_descriptor.getNestedTypes().get(0);
-    internal_static_rpc_CreateTableRequest_OptionsEntry_fieldAccessorTable = new
+    internal_static_scalardb_rpc_CreateTableRequest_OptionsEntry_descriptor =
+      internal_static_scalardb_rpc_CreateTableRequest_descriptor.getNestedTypes().get(0);
+    internal_static_scalardb_rpc_CreateTableRequest_OptionsEntry_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_CreateTableRequest_OptionsEntry_descriptor,
+        internal_static_scalardb_rpc_CreateTableRequest_OptionsEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
-    internal_static_rpc_DropTableRequest_descriptor =
+    internal_static_scalardb_rpc_DropTableRequest_descriptor =
       getDescriptor().getMessageTypes().get(19);
-    internal_static_rpc_DropTableRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_DropTableRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_DropTableRequest_descriptor,
+        internal_static_scalardb_rpc_DropTableRequest_descriptor,
         new java.lang.String[] { "Namespace", "Table", "IfExists", });
-    internal_static_rpc_TruncateTableRequest_descriptor =
+    internal_static_scalardb_rpc_TruncateTableRequest_descriptor =
       getDescriptor().getMessageTypes().get(20);
-    internal_static_rpc_TruncateTableRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TruncateTableRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TruncateTableRequest_descriptor,
+        internal_static_scalardb_rpc_TruncateTableRequest_descriptor,
         new java.lang.String[] { "Namespace", "Table", });
-    internal_static_rpc_CreateIndexRequest_descriptor =
+    internal_static_scalardb_rpc_CreateIndexRequest_descriptor =
       getDescriptor().getMessageTypes().get(21);
-    internal_static_rpc_CreateIndexRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_CreateIndexRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_CreateIndexRequest_descriptor,
+        internal_static_scalardb_rpc_CreateIndexRequest_descriptor,
         new java.lang.String[] { "Namespace", "Table", "ColumnName", "Options", "IfNotExists", });
-    internal_static_rpc_CreateIndexRequest_OptionsEntry_descriptor =
-      internal_static_rpc_CreateIndexRequest_descriptor.getNestedTypes().get(0);
-    internal_static_rpc_CreateIndexRequest_OptionsEntry_fieldAccessorTable = new
+    internal_static_scalardb_rpc_CreateIndexRequest_OptionsEntry_descriptor =
+      internal_static_scalardb_rpc_CreateIndexRequest_descriptor.getNestedTypes().get(0);
+    internal_static_scalardb_rpc_CreateIndexRequest_OptionsEntry_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_CreateIndexRequest_OptionsEntry_descriptor,
+        internal_static_scalardb_rpc_CreateIndexRequest_OptionsEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
-    internal_static_rpc_DropIndexRequest_descriptor =
+    internal_static_scalardb_rpc_DropIndexRequest_descriptor =
       getDescriptor().getMessageTypes().get(22);
-    internal_static_rpc_DropIndexRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_DropIndexRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_DropIndexRequest_descriptor,
+        internal_static_scalardb_rpc_DropIndexRequest_descriptor,
         new java.lang.String[] { "Namespace", "Table", "ColumnName", "IfExists", });
-    internal_static_rpc_GetTableMetadataRequest_descriptor =
+    internal_static_scalardb_rpc_GetTableMetadataRequest_descriptor =
       getDescriptor().getMessageTypes().get(23);
-    internal_static_rpc_GetTableMetadataRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_GetTableMetadataRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_GetTableMetadataRequest_descriptor,
+        internal_static_scalardb_rpc_GetTableMetadataRequest_descriptor,
         new java.lang.String[] { "Namespace", "Table", });
-    internal_static_rpc_GetTableMetadataResponse_descriptor =
+    internal_static_scalardb_rpc_GetTableMetadataResponse_descriptor =
       getDescriptor().getMessageTypes().get(24);
-    internal_static_rpc_GetTableMetadataResponse_fieldAccessorTable = new
+    internal_static_scalardb_rpc_GetTableMetadataResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_GetTableMetadataResponse_descriptor,
+        internal_static_scalardb_rpc_GetTableMetadataResponse_descriptor,
         new java.lang.String[] { "TableMetadata", });
-    internal_static_rpc_GetNamespaceTableNamesRequest_descriptor =
+    internal_static_scalardb_rpc_GetNamespaceTableNamesRequest_descriptor =
       getDescriptor().getMessageTypes().get(25);
-    internal_static_rpc_GetNamespaceTableNamesRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_GetNamespaceTableNamesRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_GetNamespaceTableNamesRequest_descriptor,
+        internal_static_scalardb_rpc_GetNamespaceTableNamesRequest_descriptor,
         new java.lang.String[] { "Namespace", });
-    internal_static_rpc_GetNamespaceTableNamesResponse_descriptor =
+    internal_static_scalardb_rpc_GetNamespaceTableNamesResponse_descriptor =
       getDescriptor().getMessageTypes().get(26);
-    internal_static_rpc_GetNamespaceTableNamesResponse_fieldAccessorTable = new
+    internal_static_scalardb_rpc_GetNamespaceTableNamesResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_GetNamespaceTableNamesResponse_descriptor,
-        new java.lang.String[] { "TableName", });
-    internal_static_rpc_NamespaceExistsRequest_descriptor =
+        internal_static_scalardb_rpc_GetNamespaceTableNamesResponse_descriptor,
+        new java.lang.String[] { "TableNames", });
+    internal_static_scalardb_rpc_NamespaceExistsRequest_descriptor =
       getDescriptor().getMessageTypes().get(27);
-    internal_static_rpc_NamespaceExistsRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_NamespaceExistsRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_NamespaceExistsRequest_descriptor,
+        internal_static_scalardb_rpc_NamespaceExistsRequest_descriptor,
         new java.lang.String[] { "Namespace", });
-    internal_static_rpc_NamespaceExistsResponse_descriptor =
+    internal_static_scalardb_rpc_NamespaceExistsResponse_descriptor =
       getDescriptor().getMessageTypes().get(28);
-    internal_static_rpc_NamespaceExistsResponse_fieldAccessorTable = new
+    internal_static_scalardb_rpc_NamespaceExistsResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_NamespaceExistsResponse_descriptor,
+        internal_static_scalardb_rpc_NamespaceExistsResponse_descriptor,
         new java.lang.String[] { "Exists", });
-    internal_static_rpc_RepairTableRequest_descriptor =
+    internal_static_scalardb_rpc_RepairTableRequest_descriptor =
       getDescriptor().getMessageTypes().get(29);
-    internal_static_rpc_RepairTableRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_RepairTableRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_RepairTableRequest_descriptor,
+        internal_static_scalardb_rpc_RepairTableRequest_descriptor,
         new java.lang.String[] { "Namespace", "Table", "TableMetadata", "Options", });
-    internal_static_rpc_RepairTableRequest_OptionsEntry_descriptor =
-      internal_static_rpc_RepairTableRequest_descriptor.getNestedTypes().get(0);
-    internal_static_rpc_RepairTableRequest_OptionsEntry_fieldAccessorTable = new
+    internal_static_scalardb_rpc_RepairTableRequest_OptionsEntry_descriptor =
+      internal_static_scalardb_rpc_RepairTableRequest_descriptor.getNestedTypes().get(0);
+    internal_static_scalardb_rpc_RepairTableRequest_OptionsEntry_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_RepairTableRequest_OptionsEntry_descriptor,
+        internal_static_scalardb_rpc_RepairTableRequest_OptionsEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
-    internal_static_rpc_AddNewColumnToTableRequest_descriptor =
+    internal_static_scalardb_rpc_AddNewColumnToTableRequest_descriptor =
       getDescriptor().getMessageTypes().get(30);
-    internal_static_rpc_AddNewColumnToTableRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_AddNewColumnToTableRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_AddNewColumnToTableRequest_descriptor,
+        internal_static_scalardb_rpc_AddNewColumnToTableRequest_descriptor,
         new java.lang.String[] { "Namespace", "Table", "ColumnName", "ColumnType", });
-    internal_static_rpc_TransactionRequest_descriptor =
+    internal_static_scalardb_rpc_TransactionRequest_descriptor =
       getDescriptor().getMessageTypes().get(31);
-    internal_static_rpc_TransactionRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TransactionRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TransactionRequest_descriptor,
+        internal_static_scalardb_rpc_TransactionRequest_descriptor,
         new java.lang.String[] { "StartRequest", "GetRequest", "ScanRequest", "MutateRequest", "CommitRequest", "AbortRequest", "Request", });
-    internal_static_rpc_TransactionRequest_StartRequest_descriptor =
-      internal_static_rpc_TransactionRequest_descriptor.getNestedTypes().get(0);
-    internal_static_rpc_TransactionRequest_StartRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TransactionRequest_StartRequest_descriptor =
+      internal_static_scalardb_rpc_TransactionRequest_descriptor.getNestedTypes().get(0);
+    internal_static_scalardb_rpc_TransactionRequest_StartRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TransactionRequest_StartRequest_descriptor,
+        internal_static_scalardb_rpc_TransactionRequest_StartRequest_descriptor,
         new java.lang.String[] { "TransactionId", "TransactionId", });
-    internal_static_rpc_TransactionRequest_GetRequest_descriptor =
-      internal_static_rpc_TransactionRequest_descriptor.getNestedTypes().get(1);
-    internal_static_rpc_TransactionRequest_GetRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TransactionRequest_GetRequest_descriptor =
+      internal_static_scalardb_rpc_TransactionRequest_descriptor.getNestedTypes().get(1);
+    internal_static_scalardb_rpc_TransactionRequest_GetRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TransactionRequest_GetRequest_descriptor,
+        internal_static_scalardb_rpc_TransactionRequest_GetRequest_descriptor,
         new java.lang.String[] { "Get", });
-    internal_static_rpc_TransactionRequest_ScanRequest_descriptor =
-      internal_static_rpc_TransactionRequest_descriptor.getNestedTypes().get(2);
-    internal_static_rpc_TransactionRequest_ScanRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TransactionRequest_ScanRequest_descriptor =
+      internal_static_scalardb_rpc_TransactionRequest_descriptor.getNestedTypes().get(2);
+    internal_static_scalardb_rpc_TransactionRequest_ScanRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TransactionRequest_ScanRequest_descriptor,
+        internal_static_scalardb_rpc_TransactionRequest_ScanRequest_descriptor,
         new java.lang.String[] { "Scan", });
-    internal_static_rpc_TransactionRequest_MutateRequest_descriptor =
-      internal_static_rpc_TransactionRequest_descriptor.getNestedTypes().get(3);
-    internal_static_rpc_TransactionRequest_MutateRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TransactionRequest_MutateRequest_descriptor =
+      internal_static_scalardb_rpc_TransactionRequest_descriptor.getNestedTypes().get(3);
+    internal_static_scalardb_rpc_TransactionRequest_MutateRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TransactionRequest_MutateRequest_descriptor,
-        new java.lang.String[] { "Mutation", });
-    internal_static_rpc_TransactionRequest_CommitRequest_descriptor =
-      internal_static_rpc_TransactionRequest_descriptor.getNestedTypes().get(4);
-    internal_static_rpc_TransactionRequest_CommitRequest_fieldAccessorTable = new
+        internal_static_scalardb_rpc_TransactionRequest_MutateRequest_descriptor,
+        new java.lang.String[] { "Mutations", });
+    internal_static_scalardb_rpc_TransactionRequest_CommitRequest_descriptor =
+      internal_static_scalardb_rpc_TransactionRequest_descriptor.getNestedTypes().get(4);
+    internal_static_scalardb_rpc_TransactionRequest_CommitRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TransactionRequest_CommitRequest_descriptor,
+        internal_static_scalardb_rpc_TransactionRequest_CommitRequest_descriptor,
         new java.lang.String[] { });
-    internal_static_rpc_TransactionRequest_AbortRequest_descriptor =
-      internal_static_rpc_TransactionRequest_descriptor.getNestedTypes().get(5);
-    internal_static_rpc_TransactionRequest_AbortRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TransactionRequest_AbortRequest_descriptor =
+      internal_static_scalardb_rpc_TransactionRequest_descriptor.getNestedTypes().get(5);
+    internal_static_scalardb_rpc_TransactionRequest_AbortRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TransactionRequest_AbortRequest_descriptor,
+        internal_static_scalardb_rpc_TransactionRequest_AbortRequest_descriptor,
         new java.lang.String[] { });
-    internal_static_rpc_TransactionResponse_descriptor =
+    internal_static_scalardb_rpc_TransactionResponse_descriptor =
       getDescriptor().getMessageTypes().get(32);
-    internal_static_rpc_TransactionResponse_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TransactionResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TransactionResponse_descriptor,
+        internal_static_scalardb_rpc_TransactionResponse_descriptor,
         new java.lang.String[] { "StartResponse", "GetResponse", "ScanResponse", "Error", "Response", });
-    internal_static_rpc_TransactionResponse_StartResponse_descriptor =
-      internal_static_rpc_TransactionResponse_descriptor.getNestedTypes().get(0);
-    internal_static_rpc_TransactionResponse_StartResponse_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TransactionResponse_StartResponse_descriptor =
+      internal_static_scalardb_rpc_TransactionResponse_descriptor.getNestedTypes().get(0);
+    internal_static_scalardb_rpc_TransactionResponse_StartResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TransactionResponse_StartResponse_descriptor,
+        internal_static_scalardb_rpc_TransactionResponse_StartResponse_descriptor,
         new java.lang.String[] { "TransactionId", });
-    internal_static_rpc_TransactionResponse_GetResponse_descriptor =
-      internal_static_rpc_TransactionResponse_descriptor.getNestedTypes().get(1);
-    internal_static_rpc_TransactionResponse_GetResponse_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TransactionResponse_GetResponse_descriptor =
+      internal_static_scalardb_rpc_TransactionResponse_descriptor.getNestedTypes().get(1);
+    internal_static_scalardb_rpc_TransactionResponse_GetResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TransactionResponse_GetResponse_descriptor,
+        internal_static_scalardb_rpc_TransactionResponse_GetResponse_descriptor,
         new java.lang.String[] { "Result", });
-    internal_static_rpc_TransactionResponse_ScanResponse_descriptor =
-      internal_static_rpc_TransactionResponse_descriptor.getNestedTypes().get(2);
-    internal_static_rpc_TransactionResponse_ScanResponse_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TransactionResponse_ScanResponse_descriptor =
+      internal_static_scalardb_rpc_TransactionResponse_descriptor.getNestedTypes().get(2);
+    internal_static_scalardb_rpc_TransactionResponse_ScanResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TransactionResponse_ScanResponse_descriptor,
-        new java.lang.String[] { "Result", });
-    internal_static_rpc_TransactionResponse_Error_descriptor =
-      internal_static_rpc_TransactionResponse_descriptor.getNestedTypes().get(3);
-    internal_static_rpc_TransactionResponse_Error_fieldAccessorTable = new
+        internal_static_scalardb_rpc_TransactionResponse_ScanResponse_descriptor,
+        new java.lang.String[] { "Results", });
+    internal_static_scalardb_rpc_TransactionResponse_Error_descriptor =
+      internal_static_scalardb_rpc_TransactionResponse_descriptor.getNestedTypes().get(3);
+    internal_static_scalardb_rpc_TransactionResponse_Error_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TransactionResponse_Error_descriptor,
+        internal_static_scalardb_rpc_TransactionResponse_Error_descriptor,
         new java.lang.String[] { "ErrorCode", "Message", });
-    internal_static_rpc_GetTransactionStateRequest_descriptor =
+    internal_static_scalardb_rpc_GetTransactionStateRequest_descriptor =
       getDescriptor().getMessageTypes().get(33);
-    internal_static_rpc_GetTransactionStateRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_GetTransactionStateRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_GetTransactionStateRequest_descriptor,
+        internal_static_scalardb_rpc_GetTransactionStateRequest_descriptor,
         new java.lang.String[] { "TransactionId", });
-    internal_static_rpc_GetTransactionStateResponse_descriptor =
+    internal_static_scalardb_rpc_GetTransactionStateResponse_descriptor =
       getDescriptor().getMessageTypes().get(34);
-    internal_static_rpc_GetTransactionStateResponse_fieldAccessorTable = new
+    internal_static_scalardb_rpc_GetTransactionStateResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_GetTransactionStateResponse_descriptor,
+        internal_static_scalardb_rpc_GetTransactionStateResponse_descriptor,
         new java.lang.String[] { "State", });
-    internal_static_rpc_AbortRequest_descriptor =
+    internal_static_scalardb_rpc_AbortRequest_descriptor =
       getDescriptor().getMessageTypes().get(35);
-    internal_static_rpc_AbortRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_AbortRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_AbortRequest_descriptor,
+        internal_static_scalardb_rpc_AbortRequest_descriptor,
         new java.lang.String[] { "TransactionId", });
-    internal_static_rpc_AbortResponse_descriptor =
+    internal_static_scalardb_rpc_AbortResponse_descriptor =
       getDescriptor().getMessageTypes().get(36);
-    internal_static_rpc_AbortResponse_fieldAccessorTable = new
+    internal_static_scalardb_rpc_AbortResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_AbortResponse_descriptor,
+        internal_static_scalardb_rpc_AbortResponse_descriptor,
         new java.lang.String[] { "State", });
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_descriptor =
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_descriptor =
       getDescriptor().getMessageTypes().get(37);
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TwoPhaseCommitTransactionRequest_descriptor,
+        internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_descriptor,
         new java.lang.String[] { "StartRequest", "JoinRequest", "GetRequest", "ScanRequest", "MutateRequest", "PrepareRequest", "ValidateRequest", "CommitRequest", "RollbackRequest", "Request", });
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_StartRequest_descriptor =
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(0);
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_StartRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_StartRequest_descriptor =
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(0);
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_StartRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TwoPhaseCommitTransactionRequest_StartRequest_descriptor,
+        internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_StartRequest_descriptor,
         new java.lang.String[] { "TransactionId", "TransactionId", });
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_descriptor =
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(1);
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_descriptor =
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(1);
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_descriptor,
+        internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_descriptor,
         new java.lang.String[] { "TransactionId", });
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_GetRequest_descriptor =
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(2);
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_GetRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_GetRequest_descriptor =
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(2);
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_GetRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TwoPhaseCommitTransactionRequest_GetRequest_descriptor,
+        internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_GetRequest_descriptor,
         new java.lang.String[] { "Get", });
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_descriptor =
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(3);
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_descriptor =
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(3);
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_descriptor,
+        internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_descriptor,
         new java.lang.String[] { "Scan", });
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_descriptor =
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(4);
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_descriptor =
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(4);
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_descriptor,
-        new java.lang.String[] { "Mutation", });
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_descriptor =
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(5);
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_fieldAccessorTable = new
+        internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_descriptor,
+        new java.lang.String[] { "Mutations", });
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_descriptor =
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(5);
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_descriptor,
+        internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_descriptor,
         new java.lang.String[] { });
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_descriptor =
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(6);
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_descriptor =
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(6);
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_descriptor,
+        internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_descriptor,
         new java.lang.String[] { });
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_descriptor =
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(7);
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_descriptor =
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(7);
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_descriptor,
+        internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_descriptor,
         new java.lang.String[] { });
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_descriptor =
-      internal_static_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(8);
-    internal_static_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_descriptor =
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_descriptor.getNestedTypes().get(8);
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_descriptor,
+        internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_descriptor,
         new java.lang.String[] { });
-    internal_static_rpc_TwoPhaseCommitTransactionResponse_descriptor =
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_descriptor =
       getDescriptor().getMessageTypes().get(38);
-    internal_static_rpc_TwoPhaseCommitTransactionResponse_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TwoPhaseCommitTransactionResponse_descriptor,
+        internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_descriptor,
         new java.lang.String[] { "StartResponse", "GetResponse", "ScanResponse", "Error", "Response", });
-    internal_static_rpc_TwoPhaseCommitTransactionResponse_StartResponse_descriptor =
-      internal_static_rpc_TwoPhaseCommitTransactionResponse_descriptor.getNestedTypes().get(0);
-    internal_static_rpc_TwoPhaseCommitTransactionResponse_StartResponse_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_StartResponse_descriptor =
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_descriptor.getNestedTypes().get(0);
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_StartResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TwoPhaseCommitTransactionResponse_StartResponse_descriptor,
+        internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_StartResponse_descriptor,
         new java.lang.String[] { "TransactionId", });
-    internal_static_rpc_TwoPhaseCommitTransactionResponse_GetResponse_descriptor =
-      internal_static_rpc_TwoPhaseCommitTransactionResponse_descriptor.getNestedTypes().get(1);
-    internal_static_rpc_TwoPhaseCommitTransactionResponse_GetResponse_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_GetResponse_descriptor =
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_descriptor.getNestedTypes().get(1);
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_GetResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TwoPhaseCommitTransactionResponse_GetResponse_descriptor,
+        internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_GetResponse_descriptor,
         new java.lang.String[] { "Result", });
-    internal_static_rpc_TwoPhaseCommitTransactionResponse_ScanResponse_descriptor =
-      internal_static_rpc_TwoPhaseCommitTransactionResponse_descriptor.getNestedTypes().get(2);
-    internal_static_rpc_TwoPhaseCommitTransactionResponse_ScanResponse_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_ScanResponse_descriptor =
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_descriptor.getNestedTypes().get(2);
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_ScanResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TwoPhaseCommitTransactionResponse_ScanResponse_descriptor,
-        new java.lang.String[] { "Result", });
-    internal_static_rpc_TwoPhaseCommitTransactionResponse_Error_descriptor =
-      internal_static_rpc_TwoPhaseCommitTransactionResponse_descriptor.getNestedTypes().get(3);
-    internal_static_rpc_TwoPhaseCommitTransactionResponse_Error_fieldAccessorTable = new
+        internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_ScanResponse_descriptor,
+        new java.lang.String[] { "Results", });
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_Error_descriptor =
+      internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_descriptor.getNestedTypes().get(3);
+    internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_Error_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TwoPhaseCommitTransactionResponse_Error_descriptor,
+        internal_static_scalardb_rpc_TwoPhaseCommitTransactionResponse_Error_descriptor,
         new java.lang.String[] { "ErrorCode", "Message", });
-    internal_static_rpc_CreateCoordinatorTablesRequest_descriptor =
+    internal_static_scalardb_rpc_CreateCoordinatorTablesRequest_descriptor =
       getDescriptor().getMessageTypes().get(39);
-    internal_static_rpc_CreateCoordinatorTablesRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_CreateCoordinatorTablesRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_CreateCoordinatorTablesRequest_descriptor,
+        internal_static_scalardb_rpc_CreateCoordinatorTablesRequest_descriptor,
         new java.lang.String[] { "Options", "IfNotExist", });
-    internal_static_rpc_CreateCoordinatorTablesRequest_OptionsEntry_descriptor =
-      internal_static_rpc_CreateCoordinatorTablesRequest_descriptor.getNestedTypes().get(0);
-    internal_static_rpc_CreateCoordinatorTablesRequest_OptionsEntry_fieldAccessorTable = new
+    internal_static_scalardb_rpc_CreateCoordinatorTablesRequest_OptionsEntry_descriptor =
+      internal_static_scalardb_rpc_CreateCoordinatorTablesRequest_descriptor.getNestedTypes().get(0);
+    internal_static_scalardb_rpc_CreateCoordinatorTablesRequest_OptionsEntry_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_CreateCoordinatorTablesRequest_OptionsEntry_descriptor,
+        internal_static_scalardb_rpc_CreateCoordinatorTablesRequest_OptionsEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
-    internal_static_rpc_DropCoordinatorTablesRequest_descriptor =
+    internal_static_scalardb_rpc_DropCoordinatorTablesRequest_descriptor =
       getDescriptor().getMessageTypes().get(40);
-    internal_static_rpc_DropCoordinatorTablesRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_DropCoordinatorTablesRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_DropCoordinatorTablesRequest_descriptor,
+        internal_static_scalardb_rpc_DropCoordinatorTablesRequest_descriptor,
         new java.lang.String[] { "IfExist", });
-    internal_static_rpc_TruncateCoordinatorTablesRequest_descriptor =
+    internal_static_scalardb_rpc_TruncateCoordinatorTablesRequest_descriptor =
       getDescriptor().getMessageTypes().get(41);
-    internal_static_rpc_TruncateCoordinatorTablesRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_TruncateCoordinatorTablesRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_TruncateCoordinatorTablesRequest_descriptor,
+        internal_static_scalardb_rpc_TruncateCoordinatorTablesRequest_descriptor,
         new java.lang.String[] { });
-    internal_static_rpc_CoordinatorTablesExistRequest_descriptor =
+    internal_static_scalardb_rpc_CoordinatorTablesExistRequest_descriptor =
       getDescriptor().getMessageTypes().get(42);
-    internal_static_rpc_CoordinatorTablesExistRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_CoordinatorTablesExistRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_CoordinatorTablesExistRequest_descriptor,
+        internal_static_scalardb_rpc_CoordinatorTablesExistRequest_descriptor,
         new java.lang.String[] { });
-    internal_static_rpc_CoordinatorTablesExistResponse_descriptor =
+    internal_static_scalardb_rpc_CoordinatorTablesExistResponse_descriptor =
       getDescriptor().getMessageTypes().get(43);
-    internal_static_rpc_CoordinatorTablesExistResponse_fieldAccessorTable = new
+    internal_static_scalardb_rpc_CoordinatorTablesExistResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_CoordinatorTablesExistResponse_descriptor,
+        internal_static_scalardb_rpc_CoordinatorTablesExistResponse_descriptor,
         new java.lang.String[] { "Exist", });
-    internal_static_rpc_RepairCoordinatorTablesRequest_descriptor =
+    internal_static_scalardb_rpc_RepairCoordinatorTablesRequest_descriptor =
       getDescriptor().getMessageTypes().get(44);
-    internal_static_rpc_RepairCoordinatorTablesRequest_fieldAccessorTable = new
+    internal_static_scalardb_rpc_RepairCoordinatorTablesRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_RepairCoordinatorTablesRequest_descriptor,
+        internal_static_scalardb_rpc_RepairCoordinatorTablesRequest_descriptor,
         new java.lang.String[] { "Options", });
-    internal_static_rpc_RepairCoordinatorTablesRequest_OptionsEntry_descriptor =
-      internal_static_rpc_RepairCoordinatorTablesRequest_descriptor.getNestedTypes().get(0);
-    internal_static_rpc_RepairCoordinatorTablesRequest_OptionsEntry_fieldAccessorTable = new
+    internal_static_scalardb_rpc_RepairCoordinatorTablesRequest_OptionsEntry_descriptor =
+      internal_static_scalardb_rpc_RepairCoordinatorTablesRequest_descriptor.getNestedTypes().get(0);
+    internal_static_scalardb_rpc_RepairCoordinatorTablesRequest_OptionsEntry_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_RepairCoordinatorTablesRequest_OptionsEntry_descriptor,
+        internal_static_scalardb_rpc_RepairCoordinatorTablesRequest_OptionsEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     com.google.protobuf.EmptyProto.getDescriptor();
   }

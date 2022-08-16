@@ -4,96 +4,96 @@
 package com.scalar.db.rpc;
 
 public interface TransactionRequestOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.TransactionRequest)
+    // @@protoc_insertion_point(interface_extends:scalardb.rpc.TransactionRequest)
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
+   * <code>.scalardb.rpc.TransactionRequest.StartRequest start_request = 1;</code>
    * @return Whether the startRequest field is set.
    */
   boolean hasStartRequest();
   /**
-   * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
+   * <code>.scalardb.rpc.TransactionRequest.StartRequest start_request = 1;</code>
    * @return The startRequest.
    */
   com.scalar.db.rpc.TransactionRequest.StartRequest getStartRequest();
   /**
-   * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
+   * <code>.scalardb.rpc.TransactionRequest.StartRequest start_request = 1;</code>
    */
   com.scalar.db.rpc.TransactionRequest.StartRequestOrBuilder getStartRequestOrBuilder();
 
   /**
-   * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
+   * <code>.scalardb.rpc.TransactionRequest.GetRequest get_request = 2;</code>
    * @return Whether the getRequest field is set.
    */
   boolean hasGetRequest();
   /**
-   * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
+   * <code>.scalardb.rpc.TransactionRequest.GetRequest get_request = 2;</code>
    * @return The getRequest.
    */
   com.scalar.db.rpc.TransactionRequest.GetRequest getGetRequest();
   /**
-   * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
+   * <code>.scalardb.rpc.TransactionRequest.GetRequest get_request = 2;</code>
    */
   com.scalar.db.rpc.TransactionRequest.GetRequestOrBuilder getGetRequestOrBuilder();
 
   /**
-   * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
+   * <code>.scalardb.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
    * @return Whether the scanRequest field is set.
    */
   boolean hasScanRequest();
   /**
-   * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
+   * <code>.scalardb.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
    * @return The scanRequest.
    */
   com.scalar.db.rpc.TransactionRequest.ScanRequest getScanRequest();
   /**
-   * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
+   * <code>.scalardb.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
    */
   com.scalar.db.rpc.TransactionRequest.ScanRequestOrBuilder getScanRequestOrBuilder();
 
   /**
-   * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
+   * <code>.scalardb.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
    * @return Whether the mutateRequest field is set.
    */
   boolean hasMutateRequest();
   /**
-   * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
+   * <code>.scalardb.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
    * @return The mutateRequest.
    */
   com.scalar.db.rpc.TransactionRequest.MutateRequest getMutateRequest();
   /**
-   * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
+   * <code>.scalardb.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
    */
   com.scalar.db.rpc.TransactionRequest.MutateRequestOrBuilder getMutateRequestOrBuilder();
 
   /**
-   * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
+   * <code>.scalardb.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
    * @return Whether the commitRequest field is set.
    */
   boolean hasCommitRequest();
   /**
-   * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
+   * <code>.scalardb.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
    * @return The commitRequest.
    */
   com.scalar.db.rpc.TransactionRequest.CommitRequest getCommitRequest();
   /**
-   * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
+   * <code>.scalardb.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
    */
   com.scalar.db.rpc.TransactionRequest.CommitRequestOrBuilder getCommitRequestOrBuilder();
 
   /**
-   * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
+   * <code>.scalardb.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
    * @return Whether the abortRequest field is set.
    */
   boolean hasAbortRequest();
   /**
-   * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
+   * <code>.scalardb.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
    * @return The abortRequest.
    */
   com.scalar.db.rpc.TransactionRequest.AbortRequest getAbortRequest();
   /**
-   * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
+   * <code>.scalardb.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
    */
   com.scalar.db.rpc.TransactionRequest.AbortRequestOrBuilder getAbortRequestOrBuilder();
 
