@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code rpc.DropCoordinatorTablesRequest}
+ * Protobuf type {@code scalardb.rpc.DropCoordinatorTablesRequest}
  */
 public final class DropCoordinatorTablesRequest extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:rpc.DropCoordinatorTablesRequest)
+    // @@protoc_insertion_point(message_implements:scalardb.rpc.DropCoordinatorTablesRequest)
     DropCoordinatorTablesRequestOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use DropCoordinatorTablesRequest.newBuilder() to construct.
@@ -76,13 +76,13 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_DropCoordinatorTablesRequest_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_DropCoordinatorTablesRequest_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_DropCoordinatorTablesRequest_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_DropCoordinatorTablesRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.DropCoordinatorTablesRequest.class, com.scalar.db.rpc.DropCoordinatorTablesRequest.Builder.class);
   }
@@ -255,21 +255,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code rpc.DropCoordinatorTablesRequest}
+   * Protobuf type {@code scalardb.rpc.DropCoordinatorTablesRequest}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:rpc.DropCoordinatorTablesRequest)
+      // @@protoc_insertion_point(builder_implements:scalardb.rpc.DropCoordinatorTablesRequest)
       com.scalar.db.rpc.DropCoordinatorTablesRequestOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_DropCoordinatorTablesRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_DropCoordinatorTablesRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_DropCoordinatorTablesRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_DropCoordinatorTablesRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.DropCoordinatorTablesRequest.class, com.scalar.db.rpc.DropCoordinatorTablesRequest.Builder.class);
     }
@@ -300,7 +300,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_DropCoordinatorTablesRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_DropCoordinatorTablesRequest_descriptor;
     }
 
     @java.lang.Override
@@ -444,10 +444,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:rpc.DropCoordinatorTablesRequest)
+    // @@protoc_insertion_point(builder_scope:scalardb.rpc.DropCoordinatorTablesRequest)
   }
 
-  // @@protoc_insertion_point(class_scope:rpc.DropCoordinatorTablesRequest)
+  // @@protoc_insertion_point(class_scope:scalardb.rpc.DropCoordinatorTablesRequest)
   private static final com.scalar.db.rpc.DropCoordinatorTablesRequest DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.DropCoordinatorTablesRequest();

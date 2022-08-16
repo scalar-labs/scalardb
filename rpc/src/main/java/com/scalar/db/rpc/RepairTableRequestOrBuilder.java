@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 public interface RepairTableRequestOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.RepairTableRequest)
+    // @@protoc_insertion_point(interface_extends:scalardb.rpc.RepairTableRequest)
     com.google.protobuf.MessageOrBuilder {
 
   /**
@@ -32,17 +32,17 @@ public interface RepairTableRequestOrBuilder extends
       getTableBytes();
 
   /**
-   * <code>.rpc.TableMetadata table_metadata = 3;</code>
+   * <code>.scalardb.rpc.TableMetadata table_metadata = 3;</code>
    * @return Whether the tableMetadata field is set.
    */
   boolean hasTableMetadata();
   /**
-   * <code>.rpc.TableMetadata table_metadata = 3;</code>
+   * <code>.scalardb.rpc.TableMetadata table_metadata = 3;</code>
    * @return The tableMetadata.
    */
   com.scalar.db.rpc.TableMetadata getTableMetadata();
   /**
-   * <code>.rpc.TableMetadata table_metadata = 3;</code>
+   * <code>.scalardb.rpc.TableMetadata table_metadata = 3;</code>
    */
   com.scalar.db.rpc.TableMetadataOrBuilder getTableMetadataOrBuilder();
 

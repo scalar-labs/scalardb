@@ -4,197 +4,197 @@
 package com.scalar.db.rpc;
 
 public interface TableMetadataOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.TableMetadata)
+    // @@protoc_insertion_point(interface_extends:scalardb.rpc.TableMetadata)
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
    */
-  int getColumnCount();
+  int getColumnsCount();
   /**
-   * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
    */
-  boolean containsColumn(
+  boolean containsColumns(
       java.lang.String key);
   /**
-   * Use {@link #getColumnMap()} instead.
+   * Use {@link #getColumnsMap()} instead.
    */
   @java.lang.Deprecated
   java.util.Map<java.lang.String, com.scalar.db.rpc.DataType>
-  getColumn();
+  getColumns();
   /**
-   * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
    */
   java.util.Map<java.lang.String, com.scalar.db.rpc.DataType>
-  getColumnMap();
+  getColumnsMap();
   /**
-   * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
    */
   /* nullable */
-com.scalar.db.rpc.DataType getColumnOrDefault(
+com.scalar.db.rpc.DataType getColumnsOrDefault(
       java.lang.String key,
       /* nullable */
 com.scalar.db.rpc.DataType         defaultValue);
   /**
-   * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
    */
-  com.scalar.db.rpc.DataType getColumnOrThrow(
+  com.scalar.db.rpc.DataType getColumnsOrThrow(
       java.lang.String key);
   /**
-   * Use {@link #getColumnValueMap()} instead.
+   * Use {@link #getColumnsValueMap()} instead.
    */
   @java.lang.Deprecated
   java.util.Map<java.lang.String, java.lang.Integer>
-  getColumnValue();
+  getColumnsValue();
   /**
-   * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
    */
   java.util.Map<java.lang.String, java.lang.Integer>
-  getColumnValueMap();
+  getColumnsValueMap();
   /**
-   * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
    */
 
-  int getColumnValueOrDefault(
+  int getColumnsValueOrDefault(
       java.lang.String key,
       int defaultValue);
   /**
-   * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
    */
 
-  int getColumnValueOrThrow(
+  int getColumnsValueOrThrow(
       java.lang.String key);
 
   /**
-   * <code>repeated string partition_key_name = 2;</code>
-   * @return A list containing the partitionKeyName.
+   * <code>repeated string partition_key_names = 2;</code>
+   * @return A list containing the partitionKeyNames.
    */
   java.util.List<java.lang.String>
-      getPartitionKeyNameList();
+      getPartitionKeyNamesList();
   /**
-   * <code>repeated string partition_key_name = 2;</code>
-   * @return The count of partitionKeyName.
+   * <code>repeated string partition_key_names = 2;</code>
+   * @return The count of partitionKeyNames.
    */
-  int getPartitionKeyNameCount();
+  int getPartitionKeyNamesCount();
   /**
-   * <code>repeated string partition_key_name = 2;</code>
+   * <code>repeated string partition_key_names = 2;</code>
    * @param index The index of the element to return.
-   * @return The partitionKeyName at the given index.
+   * @return The partitionKeyNames at the given index.
    */
-  java.lang.String getPartitionKeyName(int index);
+  java.lang.String getPartitionKeyNames(int index);
   /**
-   * <code>repeated string partition_key_name = 2;</code>
+   * <code>repeated string partition_key_names = 2;</code>
    * @param index The index of the value to return.
-   * @return The bytes of the partitionKeyName at the given index.
+   * @return The bytes of the partitionKeyNames at the given index.
    */
   com.google.protobuf.ByteString
-      getPartitionKeyNameBytes(int index);
+      getPartitionKeyNamesBytes(int index);
 
   /**
-   * <code>repeated string clustering_key_name = 3;</code>
-   * @return A list containing the clusteringKeyName.
+   * <code>repeated string clustering_key_names = 3;</code>
+   * @return A list containing the clusteringKeyNames.
    */
   java.util.List<java.lang.String>
-      getClusteringKeyNameList();
+      getClusteringKeyNamesList();
   /**
-   * <code>repeated string clustering_key_name = 3;</code>
-   * @return The count of clusteringKeyName.
+   * <code>repeated string clustering_key_names = 3;</code>
+   * @return The count of clusteringKeyNames.
    */
-  int getClusteringKeyNameCount();
+  int getClusteringKeyNamesCount();
   /**
-   * <code>repeated string clustering_key_name = 3;</code>
+   * <code>repeated string clustering_key_names = 3;</code>
    * @param index The index of the element to return.
-   * @return The clusteringKeyName at the given index.
+   * @return The clusteringKeyNames at the given index.
    */
-  java.lang.String getClusteringKeyName(int index);
+  java.lang.String getClusteringKeyNames(int index);
   /**
-   * <code>repeated string clustering_key_name = 3;</code>
+   * <code>repeated string clustering_key_names = 3;</code>
    * @param index The index of the value to return.
-   * @return The bytes of the clusteringKeyName at the given index.
+   * @return The bytes of the clusteringKeyNames at the given index.
    */
   com.google.protobuf.ByteString
-      getClusteringKeyNameBytes(int index);
+      getClusteringKeyNamesBytes(int index);
 
   /**
-   * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
    */
-  int getClusteringOrderCount();
+  int getClusteringOrdersCount();
   /**
-   * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
    */
-  boolean containsClusteringOrder(
+  boolean containsClusteringOrders(
       java.lang.String key);
   /**
-   * Use {@link #getClusteringOrderMap()} instead.
+   * Use {@link #getClusteringOrdersMap()} instead.
    */
   @java.lang.Deprecated
   java.util.Map<java.lang.String, com.scalar.db.rpc.Order>
-  getClusteringOrder();
+  getClusteringOrders();
   /**
-   * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
    */
   java.util.Map<java.lang.String, com.scalar.db.rpc.Order>
-  getClusteringOrderMap();
+  getClusteringOrdersMap();
   /**
-   * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
    */
   /* nullable */
-com.scalar.db.rpc.Order getClusteringOrderOrDefault(
+com.scalar.db.rpc.Order getClusteringOrdersOrDefault(
       java.lang.String key,
       /* nullable */
 com.scalar.db.rpc.Order         defaultValue);
   /**
-   * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
    */
-  com.scalar.db.rpc.Order getClusteringOrderOrThrow(
+  com.scalar.db.rpc.Order getClusteringOrdersOrThrow(
       java.lang.String key);
   /**
-   * Use {@link #getClusteringOrderValueMap()} instead.
+   * Use {@link #getClusteringOrdersValueMap()} instead.
    */
   @java.lang.Deprecated
   java.util.Map<java.lang.String, java.lang.Integer>
-  getClusteringOrderValue();
+  getClusteringOrdersValue();
   /**
-   * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
    */
   java.util.Map<java.lang.String, java.lang.Integer>
-  getClusteringOrderValueMap();
+  getClusteringOrdersValueMap();
   /**
-   * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
    */
 
-  int getClusteringOrderValueOrDefault(
+  int getClusteringOrdersValueOrDefault(
       java.lang.String key,
       int defaultValue);
   /**
-   * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
    */
 
-  int getClusteringOrderValueOrThrow(
+  int getClusteringOrdersValueOrThrow(
       java.lang.String key);
 
   /**
-   * <code>repeated string secondary_index_name = 5;</code>
-   * @return A list containing the secondaryIndexName.
+   * <code>repeated string secondary_index_names = 5;</code>
+   * @return A list containing the secondaryIndexNames.
    */
   java.util.List<java.lang.String>
-      getSecondaryIndexNameList();
+      getSecondaryIndexNamesList();
   /**
-   * <code>repeated string secondary_index_name = 5;</code>
-   * @return The count of secondaryIndexName.
+   * <code>repeated string secondary_index_names = 5;</code>
+   * @return The count of secondaryIndexNames.
    */
-  int getSecondaryIndexNameCount();
+  int getSecondaryIndexNamesCount();
   /**
-   * <code>repeated string secondary_index_name = 5;</code>
+   * <code>repeated string secondary_index_names = 5;</code>
    * @param index The index of the element to return.
-   * @return The secondaryIndexName at the given index.
+   * @return The secondaryIndexNames at the given index.
    */
-  java.lang.String getSecondaryIndexName(int index);
+  java.lang.String getSecondaryIndexNames(int index);
   /**
-   * <code>repeated string secondary_index_name = 5;</code>
+   * <code>repeated string secondary_index_names = 5;</code>
    * @param index The index of the value to return.
-   * @return The bytes of the secondaryIndexName at the given index.
+   * @return The bytes of the secondaryIndexNames at the given index.
    */
   com.google.protobuf.ByteString
-      getSecondaryIndexNameBytes(int index);
+      getSecondaryIndexNamesBytes(int index);
 }

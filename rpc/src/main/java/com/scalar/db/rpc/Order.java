@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf enum {@code rpc.Order}
+ * Protobuf enum {@code scalardb.rpc.Order}
  */
 public enum Order
     implements com.google.protobuf.ProtocolMessageEnum {
@@ -108,6 +108,6 @@ public enum Order
     this.value = value;
   }
 
-  // @@protoc_insertion_point(enum_scope:rpc.Order)
+  // @@protoc_insertion_point(enum_scope:scalardb.rpc.Order)
 }
 

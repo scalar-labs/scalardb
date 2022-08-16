@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code rpc.MutateCondition}
+ * Protobuf type {@code scalardb.rpc.MutateCondition}
  */
 public final class MutateCondition extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:rpc.MutateCondition)
+    // @@protoc_insertion_point(message_implements:scalardb.rpc.MutateCondition)
     MutateConditionOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use MutateCondition.newBuilder() to construct.
@@ -17,7 +17,7 @@ private static final long serialVersionUID = 0L;
   }
   private MutateCondition() {
     type_ = 0;
-    expression_ = java.util.Collections.emptyList();
+    expressions_ = java.util.Collections.emptyList();
   }
 
   @java.lang.Override
@@ -59,10 +59,10 @@ private static final long serialVersionUID = 0L;
           }
           case 18: {
             if (!((mutable_bitField0_ & 0x00000001) != 0)) {
-              expression_ = new java.util.ArrayList<com.scalar.db.rpc.ConditionalExpression>();
+              expressions_ = new java.util.ArrayList<com.scalar.db.rpc.ConditionalExpression>();
               mutable_bitField0_ |= 0x00000001;
             }
-            expression_.add(
+            expressions_.add(
                 input.readMessage(com.scalar.db.rpc.ConditionalExpression.parser(), extensionRegistry));
             break;
           }
@@ -84,7 +84,7 @@ private static final long serialVersionUID = 0L;
           e).setUnfinishedMessage(this);
     } finally {
       if (((mutable_bitField0_ & 0x00000001) != 0)) {
-        expression_ = java.util.Collections.unmodifiableList(expression_);
+        expressions_ = java.util.Collections.unmodifiableList(expressions_);
       }
       this.unknownFields = unknownFields.build();
       makeExtensionsImmutable();
@@ -92,19 +92,19 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateCondition_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateCondition_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateCondition_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateCondition_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.MutateCondition.class, com.scalar.db.rpc.MutateCondition.Builder.class);
   }
 
   /**
-   * Protobuf enum {@code rpc.MutateCondition.Type}
+   * Protobuf enum {@code scalardb.rpc.MutateCondition.Type}
    */
   public enum Type
       implements com.google.protobuf.ProtocolMessageEnum {
@@ -235,20 +235,20 @@ private static final long serialVersionUID = 0L;
       this.value = value;
     }
 
-    // @@protoc_insertion_point(enum_scope:rpc.MutateCondition.Type)
+    // @@protoc_insertion_point(enum_scope:scalardb.rpc.MutateCondition.Type)
   }
 
   public static final int TYPE_FIELD_NUMBER = 1;
   private int type_;
   /**
-   * <code>.rpc.MutateCondition.Type type = 1;</code>
+   * <code>.scalardb.rpc.MutateCondition.Type type = 1;</code>
    * @return The enum numeric value on the wire for type.
    */
   @java.lang.Override public int getTypeValue() {
     return type_;
   }
   /**
-   * <code>.rpc.MutateCondition.Type type = 1;</code>
+   * <code>.scalardb.rpc.MutateCondition.Type type = 1;</code>
    * @return The type.
    */
   @java.lang.Override public com.scalar.db.rpc.MutateCondition.Type getType() {
@@ -257,44 +257,44 @@ private static final long serialVersionUID = 0L;
     return result == null ? com.scalar.db.rpc.MutateCondition.Type.UNRECOGNIZED : result;
   }
 
-  public static final int EXPRESSION_FIELD_NUMBER = 2;
-  private java.util.List<com.scalar.db.rpc.ConditionalExpression> expression_;
+  public static final int EXPRESSIONS_FIELD_NUMBER = 2;
+  private java.util.List<com.scalar.db.rpc.ConditionalExpression> expressions_;
   /**
-   * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+   * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
    */
   @java.lang.Override
-  public java.util.List<com.scalar.db.rpc.ConditionalExpression> getExpressionList() {
-    return expression_;
+  public java.util.List<com.scalar.db.rpc.ConditionalExpression> getExpressionsList() {
+    return expressions_;
   }
   /**
-   * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+   * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
    */
   @java.lang.Override
   public java.util.List<? extends com.scalar.db.rpc.ConditionalExpressionOrBuilder> 
-      getExpressionOrBuilderList() {
-    return expression_;
+      getExpressionsOrBuilderList() {
+    return expressions_;
   }
   /**
-   * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+   * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
    */
   @java.lang.Override
-  public int getExpressionCount() {
-    return expression_.size();
+  public int getExpressionsCount() {
+    return expressions_.size();
   }
   /**
-   * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+   * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
    */
   @java.lang.Override
-  public com.scalar.db.rpc.ConditionalExpression getExpression(int index) {
-    return expression_.get(index);
+  public com.scalar.db.rpc.ConditionalExpression getExpressions(int index) {
+    return expressions_.get(index);
   }
   /**
-   * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+   * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
    */
   @java.lang.Override
-  public com.scalar.db.rpc.ConditionalExpressionOrBuilder getExpressionOrBuilder(
+  public com.scalar.db.rpc.ConditionalExpressionOrBuilder getExpressionsOrBuilder(
       int index) {
-    return expression_.get(index);
+    return expressions_.get(index);
   }
 
   private byte memoizedIsInitialized = -1;
@@ -314,8 +314,8 @@ private static final long serialVersionUID = 0L;
     if (type_ != com.scalar.db.rpc.MutateCondition.Type.PUT_IF.getNumber()) {
       output.writeEnum(1, type_);
     }
-    for (int i = 0; i < expression_.size(); i++) {
-      output.writeMessage(2, expression_.get(i));
+    for (int i = 0; i < expressions_.size(); i++) {
+      output.writeMessage(2, expressions_.get(i));
     }
     unknownFields.writeTo(output);
   }
@@ -330,9 +330,9 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeEnumSize(1, type_);
     }
-    for (int i = 0; i < expression_.size(); i++) {
+    for (int i = 0; i < expressions_.size(); i++) {
       size += com.google.protobuf.CodedOutputStream
-        .computeMessageSize(2, expression_.get(i));
+        .computeMessageSize(2, expressions_.get(i));
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -350,8 +350,8 @@ private static final long serialVersionUID = 0L;
     com.scalar.db.rpc.MutateCondition other = (com.scalar.db.rpc.MutateCondition) obj;
 
     if (type_ != other.type_) return false;
-    if (!getExpressionList()
-        .equals(other.getExpressionList())) return false;
+    if (!getExpressionsList()
+        .equals(other.getExpressionsList())) return false;
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -365,9 +365,9 @@ private static final long serialVersionUID = 0L;
     hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + TYPE_FIELD_NUMBER;
     hash = (53 * hash) + type_;
-    if (getExpressionCount() > 0) {
-      hash = (37 * hash) + EXPRESSION_FIELD_NUMBER;
-      hash = (53 * hash) + getExpressionList().hashCode();
+    if (getExpressionsCount() > 0) {
+      hash = (37 * hash) + EXPRESSIONS_FIELD_NUMBER;
+      hash = (53 * hash) + getExpressionsList().hashCode();
     }
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
@@ -465,21 +465,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code rpc.MutateCondition}
+   * Protobuf type {@code scalardb.rpc.MutateCondition}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:rpc.MutateCondition)
+      // @@protoc_insertion_point(builder_implements:scalardb.rpc.MutateCondition)
       com.scalar.db.rpc.MutateConditionOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateCondition_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateCondition_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateCondition_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateCondition_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.MutateCondition.class, com.scalar.db.rpc.MutateCondition.Builder.class);
     }
@@ -497,7 +497,7 @@ private static final long serialVersionUID = 0L;
     private void maybeForceBuilderInitialization() {
       if (com.google.protobuf.GeneratedMessageV3
               .alwaysUseFieldBuilders) {
-        getExpressionFieldBuilder();
+        getExpressionsFieldBuilder();
       }
     }
     @java.lang.Override
@@ -505,11 +505,11 @@ private static final long serialVersionUID = 0L;
       super.clear();
       type_ = 0;
 
-      if (expressionBuilder_ == null) {
-        expression_ = java.util.Collections.emptyList();
+      if (expressionsBuilder_ == null) {
+        expressions_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000001);
       } else {
-        expressionBuilder_.clear();
+        expressionsBuilder_.clear();
       }
       return this;
     }
@@ -517,7 +517,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateCondition_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateCondition_descriptor;
     }
 
     @java.lang.Override
@@ -539,14 +539,14 @@ private static final long serialVersionUID = 0L;
       com.scalar.db.rpc.MutateCondition result = new com.scalar.db.rpc.MutateCondition(this);
       int from_bitField0_ = bitField0_;
       result.type_ = type_;
-      if (expressionBuilder_ == null) {
+      if (expressionsBuilder_ == null) {
         if (((bitField0_ & 0x00000001) != 0)) {
-          expression_ = java.util.Collections.unmodifiableList(expression_);
+          expressions_ = java.util.Collections.unmodifiableList(expressions_);
           bitField0_ = (bitField0_ & ~0x00000001);
         }
-        result.expression_ = expression_;
+        result.expressions_ = expressions_;
       } else {
-        result.expression_ = expressionBuilder_.build();
+        result.expressions_ = expressionsBuilder_.build();
       }
       onBuilt();
       return result;
@@ -599,29 +599,29 @@ private static final long serialVersionUID = 0L;
       if (other.type_ != 0) {
         setTypeValue(other.getTypeValue());
       }
-      if (expressionBuilder_ == null) {
-        if (!other.expression_.isEmpty()) {
-          if (expression_.isEmpty()) {
-            expression_ = other.expression_;
+      if (expressionsBuilder_ == null) {
+        if (!other.expressions_.isEmpty()) {
+          if (expressions_.isEmpty()) {
+            expressions_ = other.expressions_;
             bitField0_ = (bitField0_ & ~0x00000001);
           } else {
-            ensureExpressionIsMutable();
-            expression_.addAll(other.expression_);
+            ensureExpressionsIsMutable();
+            expressions_.addAll(other.expressions_);
           }
           onChanged();
         }
       } else {
-        if (!other.expression_.isEmpty()) {
-          if (expressionBuilder_.isEmpty()) {
-            expressionBuilder_.dispose();
-            expressionBuilder_ = null;
-            expression_ = other.expression_;
+        if (!other.expressions_.isEmpty()) {
+          if (expressionsBuilder_.isEmpty()) {
+            expressionsBuilder_.dispose();
+            expressionsBuilder_ = null;
+            expressions_ = other.expressions_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            expressionBuilder_ = 
+            expressionsBuilder_ = 
               com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
-                 getExpressionFieldBuilder() : null;
+                 getExpressionsFieldBuilder() : null;
           } else {
-            expressionBuilder_.addAllMessages(other.expression_);
+            expressionsBuilder_.addAllMessages(other.expressions_);
           }
         }
       }
@@ -657,14 +657,14 @@ private static final long serialVersionUID = 0L;
 
     private int type_ = 0;
     /**
-     * <code>.rpc.MutateCondition.Type type = 1;</code>
+     * <code>.scalardb.rpc.MutateCondition.Type type = 1;</code>
      * @return The enum numeric value on the wire for type.
      */
     @java.lang.Override public int getTypeValue() {
       return type_;
     }
     /**
-     * <code>.rpc.MutateCondition.Type type = 1;</code>
+     * <code>.scalardb.rpc.MutateCondition.Type type = 1;</code>
      * @param value The enum numeric value on the wire for type to set.
      * @return This builder for chaining.
      */
@@ -675,7 +675,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.MutateCondition.Type type = 1;</code>
+     * <code>.scalardb.rpc.MutateCondition.Type type = 1;</code>
      * @return The type.
      */
     @java.lang.Override
@@ -685,7 +685,7 @@ private static final long serialVersionUID = 0L;
       return result == null ? com.scalar.db.rpc.MutateCondition.Type.UNRECOGNIZED : result;
     }
     /**
-     * <code>.rpc.MutateCondition.Type type = 1;</code>
+     * <code>.scalardb.rpc.MutateCondition.Type type = 1;</code>
      * @param value The type to set.
      * @return This builder for chaining.
      */
@@ -699,7 +699,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.rpc.MutateCondition.Type type = 1;</code>
+     * <code>.scalardb.rpc.MutateCondition.Type type = 1;</code>
      * @return This builder for chaining.
      */
     public Builder clearType() {
@@ -709,244 +709,244 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private java.util.List<com.scalar.db.rpc.ConditionalExpression> expression_ =
+    private java.util.List<com.scalar.db.rpc.ConditionalExpression> expressions_ =
       java.util.Collections.emptyList();
-    private void ensureExpressionIsMutable() {
+    private void ensureExpressionsIsMutable() {
       if (!((bitField0_ & 0x00000001) != 0)) {
-        expression_ = new java.util.ArrayList<com.scalar.db.rpc.ConditionalExpression>(expression_);
+        expressions_ = new java.util.ArrayList<com.scalar.db.rpc.ConditionalExpression>(expressions_);
         bitField0_ |= 0x00000001;
        }
     }
 
     private com.google.protobuf.RepeatedFieldBuilderV3<
-        com.scalar.db.rpc.ConditionalExpression, com.scalar.db.rpc.ConditionalExpression.Builder, com.scalar.db.rpc.ConditionalExpressionOrBuilder> expressionBuilder_;
+        com.scalar.db.rpc.ConditionalExpression, com.scalar.db.rpc.ConditionalExpression.Builder, com.scalar.db.rpc.ConditionalExpressionOrBuilder> expressionsBuilder_;
 
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
-    public java.util.List<com.scalar.db.rpc.ConditionalExpression> getExpressionList() {
-      if (expressionBuilder_ == null) {
-        return java.util.Collections.unmodifiableList(expression_);
+    public java.util.List<com.scalar.db.rpc.ConditionalExpression> getExpressionsList() {
+      if (expressionsBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(expressions_);
       } else {
-        return expressionBuilder_.getMessageList();
+        return expressionsBuilder_.getMessageList();
       }
     }
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
-    public int getExpressionCount() {
-      if (expressionBuilder_ == null) {
-        return expression_.size();
+    public int getExpressionsCount() {
+      if (expressionsBuilder_ == null) {
+        return expressions_.size();
       } else {
-        return expressionBuilder_.getCount();
+        return expressionsBuilder_.getCount();
       }
     }
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
-    public com.scalar.db.rpc.ConditionalExpression getExpression(int index) {
-      if (expressionBuilder_ == null) {
-        return expression_.get(index);
+    public com.scalar.db.rpc.ConditionalExpression getExpressions(int index) {
+      if (expressionsBuilder_ == null) {
+        return expressions_.get(index);
       } else {
-        return expressionBuilder_.getMessage(index);
+        return expressionsBuilder_.getMessage(index);
       }
     }
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
-    public Builder setExpression(
+    public Builder setExpressions(
         int index, com.scalar.db.rpc.ConditionalExpression value) {
-      if (expressionBuilder_ == null) {
+      if (expressionsBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
         }
-        ensureExpressionIsMutable();
-        expression_.set(index, value);
+        ensureExpressionsIsMutable();
+        expressions_.set(index, value);
         onChanged();
       } else {
-        expressionBuilder_.setMessage(index, value);
+        expressionsBuilder_.setMessage(index, value);
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
-    public Builder setExpression(
+    public Builder setExpressions(
         int index, com.scalar.db.rpc.ConditionalExpression.Builder builderForValue) {
-      if (expressionBuilder_ == null) {
-        ensureExpressionIsMutable();
-        expression_.set(index, builderForValue.build());
+      if (expressionsBuilder_ == null) {
+        ensureExpressionsIsMutable();
+        expressions_.set(index, builderForValue.build());
         onChanged();
       } else {
-        expressionBuilder_.setMessage(index, builderForValue.build());
+        expressionsBuilder_.setMessage(index, builderForValue.build());
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
-    public Builder addExpression(com.scalar.db.rpc.ConditionalExpression value) {
-      if (expressionBuilder_ == null) {
+    public Builder addExpressions(com.scalar.db.rpc.ConditionalExpression value) {
+      if (expressionsBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
         }
-        ensureExpressionIsMutable();
-        expression_.add(value);
+        ensureExpressionsIsMutable();
+        expressions_.add(value);
         onChanged();
       } else {
-        expressionBuilder_.addMessage(value);
+        expressionsBuilder_.addMessage(value);
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
-    public Builder addExpression(
+    public Builder addExpressions(
         int index, com.scalar.db.rpc.ConditionalExpression value) {
-      if (expressionBuilder_ == null) {
+      if (expressionsBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
         }
-        ensureExpressionIsMutable();
-        expression_.add(index, value);
+        ensureExpressionsIsMutable();
+        expressions_.add(index, value);
         onChanged();
       } else {
-        expressionBuilder_.addMessage(index, value);
+        expressionsBuilder_.addMessage(index, value);
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
-    public Builder addExpression(
+    public Builder addExpressions(
         com.scalar.db.rpc.ConditionalExpression.Builder builderForValue) {
-      if (expressionBuilder_ == null) {
-        ensureExpressionIsMutable();
-        expression_.add(builderForValue.build());
+      if (expressionsBuilder_ == null) {
+        ensureExpressionsIsMutable();
+        expressions_.add(builderForValue.build());
         onChanged();
       } else {
-        expressionBuilder_.addMessage(builderForValue.build());
+        expressionsBuilder_.addMessage(builderForValue.build());
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
-    public Builder addExpression(
+    public Builder addExpressions(
         int index, com.scalar.db.rpc.ConditionalExpression.Builder builderForValue) {
-      if (expressionBuilder_ == null) {
-        ensureExpressionIsMutable();
-        expression_.add(index, builderForValue.build());
+      if (expressionsBuilder_ == null) {
+        ensureExpressionsIsMutable();
+        expressions_.add(index, builderForValue.build());
         onChanged();
       } else {
-        expressionBuilder_.addMessage(index, builderForValue.build());
+        expressionsBuilder_.addMessage(index, builderForValue.build());
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
-    public Builder addAllExpression(
+    public Builder addAllExpressions(
         java.lang.Iterable<? extends com.scalar.db.rpc.ConditionalExpression> values) {
-      if (expressionBuilder_ == null) {
-        ensureExpressionIsMutable();
+      if (expressionsBuilder_ == null) {
+        ensureExpressionsIsMutable();
         com.google.protobuf.AbstractMessageLite.Builder.addAll(
-            values, expression_);
+            values, expressions_);
         onChanged();
       } else {
-        expressionBuilder_.addAllMessages(values);
+        expressionsBuilder_.addAllMessages(values);
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
-    public Builder clearExpression() {
-      if (expressionBuilder_ == null) {
-        expression_ = java.util.Collections.emptyList();
+    public Builder clearExpressions() {
+      if (expressionsBuilder_ == null) {
+        expressions_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000001);
         onChanged();
       } else {
-        expressionBuilder_.clear();
+        expressionsBuilder_.clear();
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
-    public Builder removeExpression(int index) {
-      if (expressionBuilder_ == null) {
-        ensureExpressionIsMutable();
-        expression_.remove(index);
+    public Builder removeExpressions(int index) {
+      if (expressionsBuilder_ == null) {
+        ensureExpressionsIsMutable();
+        expressions_.remove(index);
         onChanged();
       } else {
-        expressionBuilder_.remove(index);
+        expressionsBuilder_.remove(index);
       }
       return this;
     }
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
-    public com.scalar.db.rpc.ConditionalExpression.Builder getExpressionBuilder(
+    public com.scalar.db.rpc.ConditionalExpression.Builder getExpressionsBuilder(
         int index) {
-      return getExpressionFieldBuilder().getBuilder(index);
+      return getExpressionsFieldBuilder().getBuilder(index);
     }
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
-    public com.scalar.db.rpc.ConditionalExpressionOrBuilder getExpressionOrBuilder(
+    public com.scalar.db.rpc.ConditionalExpressionOrBuilder getExpressionsOrBuilder(
         int index) {
-      if (expressionBuilder_ == null) {
-        return expression_.get(index);  } else {
-        return expressionBuilder_.getMessageOrBuilder(index);
+      if (expressionsBuilder_ == null) {
+        return expressions_.get(index);  } else {
+        return expressionsBuilder_.getMessageOrBuilder(index);
       }
     }
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
     public java.util.List<? extends com.scalar.db.rpc.ConditionalExpressionOrBuilder> 
-         getExpressionOrBuilderList() {
-      if (expressionBuilder_ != null) {
-        return expressionBuilder_.getMessageOrBuilderList();
+         getExpressionsOrBuilderList() {
+      if (expressionsBuilder_ != null) {
+        return expressionsBuilder_.getMessageOrBuilderList();
       } else {
-        return java.util.Collections.unmodifiableList(expression_);
+        return java.util.Collections.unmodifiableList(expressions_);
       }
     }
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
-    public com.scalar.db.rpc.ConditionalExpression.Builder addExpressionBuilder() {
-      return getExpressionFieldBuilder().addBuilder(
+    public com.scalar.db.rpc.ConditionalExpression.Builder addExpressionsBuilder() {
+      return getExpressionsFieldBuilder().addBuilder(
           com.scalar.db.rpc.ConditionalExpression.getDefaultInstance());
     }
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
-    public com.scalar.db.rpc.ConditionalExpression.Builder addExpressionBuilder(
+    public com.scalar.db.rpc.ConditionalExpression.Builder addExpressionsBuilder(
         int index) {
-      return getExpressionFieldBuilder().addBuilder(
+      return getExpressionsFieldBuilder().addBuilder(
           index, com.scalar.db.rpc.ConditionalExpression.getDefaultInstance());
     }
     /**
-     * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
+     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
      */
     public java.util.List<com.scalar.db.rpc.ConditionalExpression.Builder> 
-         getExpressionBuilderList() {
-      return getExpressionFieldBuilder().getBuilderList();
+         getExpressionsBuilderList() {
+      return getExpressionsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilderV3<
         com.scalar.db.rpc.ConditionalExpression, com.scalar.db.rpc.ConditionalExpression.Builder, com.scalar.db.rpc.ConditionalExpressionOrBuilder> 
-        getExpressionFieldBuilder() {
-      if (expressionBuilder_ == null) {
-        expressionBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
+        getExpressionsFieldBuilder() {
+      if (expressionsBuilder_ == null) {
+        expressionsBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
             com.scalar.db.rpc.ConditionalExpression, com.scalar.db.rpc.ConditionalExpression.Builder, com.scalar.db.rpc.ConditionalExpressionOrBuilder>(
-                expression_,
+                expressions_,
                 ((bitField0_ & 0x00000001) != 0),
                 getParentForChildren(),
                 isClean());
-        expression_ = null;
+        expressions_ = null;
       }
-      return expressionBuilder_;
+      return expressionsBuilder_;
     }
     @java.lang.Override
     public final Builder setUnknownFields(
@@ -961,10 +961,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:rpc.MutateCondition)
+    // @@protoc_insertion_point(builder_scope:scalardb.rpc.MutateCondition)
   }
 
-  // @@protoc_insertion_point(class_scope:rpc.MutateCondition)
+  // @@protoc_insertion_point(class_scope:scalardb.rpc.MutateCondition)
   private static final com.scalar.db.rpc.MutateCondition DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.MutateCondition();

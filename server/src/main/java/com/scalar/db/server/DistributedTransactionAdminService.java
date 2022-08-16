@@ -176,7 +176,7 @@ public class DistributedTransactionAdminService
           Set<String> tableNames = admin.getNamespaceTableNames(request.getNamespace());
           GetNamespaceTableNamesResponse.Builder builder =
               GetNamespaceTableNamesResponse.newBuilder();
-          tableNames.forEach(builder::addTableName);
+          tableNames.forEach(builder::addTableNames);
           responseObserver.onNext(builder.build());
           responseObserver.onCompleted();
         },

@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 public interface GetTableMetadataRequestOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.GetTableMetadataRequest)
+    // @@protoc_insertion_point(interface_extends:scalardb.rpc.GetTableMetadataRequest)
     com.google.protobuf.MessageOrBuilder {
 
   /**

@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 public interface DropNamespaceRequestOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.DropNamespaceRequest)
+    // @@protoc_insertion_point(interface_extends:scalardb.rpc.DropNamespaceRequest)
     com.google.protobuf.MessageOrBuilder {
 
   /**

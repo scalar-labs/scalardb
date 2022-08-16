@@ -4,31 +4,31 @@
 package com.scalar.db.rpc;
 
 public interface GetNamespaceTableNamesResponseOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.GetNamespaceTableNamesResponse)
+    // @@protoc_insertion_point(interface_extends:scalardb.rpc.GetNamespaceTableNamesResponse)
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>repeated string table_name = 1;</code>
-   * @return A list containing the tableName.
+   * <code>repeated string table_names = 1;</code>
+   * @return A list containing the tableNames.
    */
   java.util.List<java.lang.String>
-      getTableNameList();
+      getTableNamesList();
   /**
-   * <code>repeated string table_name = 1;</code>
-   * @return The count of tableName.
+   * <code>repeated string table_names = 1;</code>
+   * @return The count of tableNames.
    */
-  int getTableNameCount();
+  int getTableNamesCount();
   /**
-   * <code>repeated string table_name = 1;</code>
+   * <code>repeated string table_names = 1;</code>
    * @param index The index of the element to return.
-   * @return The tableName at the given index.
+   * @return The tableNames at the given index.
    */
-  java.lang.String getTableName(int index);
+  java.lang.String getTableNames(int index);
   /**
-   * <code>repeated string table_name = 1;</code>
+   * <code>repeated string table_names = 1;</code>
    * @param index The index of the value to return.
-   * @return The bytes of the tableName at the given index.
+   * @return The bytes of the tableNames at the given index.
    */
   com.google.protobuf.ByteString
-      getTableNameBytes(int index);
+      getTableNamesBytes(int index);
 }

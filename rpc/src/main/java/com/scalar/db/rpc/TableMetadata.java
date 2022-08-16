@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code rpc.TableMetadata}
+ * Protobuf type {@code scalardb.rpc.TableMetadata}
  */
 public final class TableMetadata extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:rpc.TableMetadata)
+    // @@protoc_insertion_point(message_implements:scalardb.rpc.TableMetadata)
     TableMetadataOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use TableMetadata.newBuilder() to construct.
@@ -16,9 +16,9 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private TableMetadata() {
-    partitionKeyName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-    clusteringKeyName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-    secondaryIndexName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    partitionKeyNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    clusteringKeyNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    secondaryIndexNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
   }
 
   @java.lang.Override
@@ -54,55 +54,55 @@ private static final long serialVersionUID = 0L;
             break;
           case 10: {
             if (!((mutable_bitField0_ & 0x00000001) != 0)) {
-              column_ = com.google.protobuf.MapField.newMapField(
-                  ColumnDefaultEntryHolder.defaultEntry);
+              columns_ = com.google.protobuf.MapField.newMapField(
+                  ColumnsDefaultEntryHolder.defaultEntry);
               mutable_bitField0_ |= 0x00000001;
             }
             com.google.protobuf.MapEntry<java.lang.String, java.lang.Integer>
-            column__ = input.readMessage(
-                ColumnDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
-            column_.getMutableMap().put(
-                column__.getKey(), column__.getValue());
+            columns__ = input.readMessage(
+                ColumnsDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
+            columns_.getMutableMap().put(
+                columns__.getKey(), columns__.getValue());
             break;
           }
           case 18: {
             java.lang.String s = input.readStringRequireUtf8();
             if (!((mutable_bitField0_ & 0x00000002) != 0)) {
-              partitionKeyName_ = new com.google.protobuf.LazyStringArrayList();
+              partitionKeyNames_ = new com.google.protobuf.LazyStringArrayList();
               mutable_bitField0_ |= 0x00000002;
             }
-            partitionKeyName_.add(s);
+            partitionKeyNames_.add(s);
             break;
           }
           case 26: {
             java.lang.String s = input.readStringRequireUtf8();
             if (!((mutable_bitField0_ & 0x00000004) != 0)) {
-              clusteringKeyName_ = new com.google.protobuf.LazyStringArrayList();
+              clusteringKeyNames_ = new com.google.protobuf.LazyStringArrayList();
               mutable_bitField0_ |= 0x00000004;
             }
-            clusteringKeyName_.add(s);
+            clusteringKeyNames_.add(s);
             break;
           }
           case 34: {
             if (!((mutable_bitField0_ & 0x00000008) != 0)) {
-              clusteringOrder_ = com.google.protobuf.MapField.newMapField(
-                  ClusteringOrderDefaultEntryHolder.defaultEntry);
+              clusteringOrders_ = com.google.protobuf.MapField.newMapField(
+                  ClusteringOrdersDefaultEntryHolder.defaultEntry);
               mutable_bitField0_ |= 0x00000008;
             }
             com.google.protobuf.MapEntry<java.lang.String, java.lang.Integer>
-            clusteringOrder__ = input.readMessage(
-                ClusteringOrderDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
-            clusteringOrder_.getMutableMap().put(
-                clusteringOrder__.getKey(), clusteringOrder__.getValue());
+            clusteringOrders__ = input.readMessage(
+                ClusteringOrdersDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
+            clusteringOrders_.getMutableMap().put(
+                clusteringOrders__.getKey(), clusteringOrders__.getValue());
             break;
           }
           case 42: {
             java.lang.String s = input.readStringRequireUtf8();
             if (!((mutable_bitField0_ & 0x00000010) != 0)) {
-              secondaryIndexName_ = new com.google.protobuf.LazyStringArrayList();
+              secondaryIndexNames_ = new com.google.protobuf.LazyStringArrayList();
               mutable_bitField0_ |= 0x00000010;
             }
-            secondaryIndexName_.add(s);
+            secondaryIndexNames_.add(s);
             break;
           }
           default: {
@@ -123,13 +123,13 @@ private static final long serialVersionUID = 0L;
           e).setUnfinishedMessage(this);
     } finally {
       if (((mutable_bitField0_ & 0x00000002) != 0)) {
-        partitionKeyName_ = partitionKeyName_.getUnmodifiableView();
+        partitionKeyNames_ = partitionKeyNames_.getUnmodifiableView();
       }
       if (((mutable_bitField0_ & 0x00000004) != 0)) {
-        clusteringKeyName_ = clusteringKeyName_.getUnmodifiableView();
+        clusteringKeyNames_ = clusteringKeyNames_.getUnmodifiableView();
       }
       if (((mutable_bitField0_ & 0x00000010) != 0)) {
-        secondaryIndexName_ = secondaryIndexName_.getUnmodifiableView();
+        secondaryIndexNames_ = secondaryIndexNames_.getUnmodifiableView();
       }
       this.unknownFields = unknownFields.build();
       makeExtensionsImmutable();
@@ -137,7 +137,7 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TableMetadata_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TableMetadata_descriptor;
   }
 
   @SuppressWarnings({"rawtypes"})
@@ -146,9 +146,9 @@ private static final long serialVersionUID = 0L;
       int number) {
     switch (number) {
       case 1:
-        return internalGetColumn();
+        return internalGetColumns();
       case 4:
-        return internalGetClusteringOrder();
+        return internalGetClusteringOrders();
       default:
         throw new RuntimeException(
             "Invalid map field number: " + number);
@@ -157,406 +157,406 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TableMetadata_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TableMetadata_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.TableMetadata.class, com.scalar.db.rpc.TableMetadata.Builder.class);
   }
 
-  public static final int COLUMN_FIELD_NUMBER = 1;
-  private static final class ColumnDefaultEntryHolder {
+  public static final int COLUMNS_FIELD_NUMBER = 1;
+  private static final class ColumnsDefaultEntryHolder {
     static final com.google.protobuf.MapEntry<
         java.lang.String, java.lang.Integer> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.Integer>newDefaultInstance(
-                com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TableMetadata_ColumnEntry_descriptor, 
+                com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TableMetadata_ColumnsEntry_descriptor, 
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.ENUM,
                 com.scalar.db.rpc.DataType.DATA_TYPE_BOOLEAN.getNumber());
   }
   private com.google.protobuf.MapField<
-      java.lang.String, java.lang.Integer> column_;
+      java.lang.String, java.lang.Integer> columns_;
   private com.google.protobuf.MapField<java.lang.String, java.lang.Integer>
-  internalGetColumn() {
-    if (column_ == null) {
+  internalGetColumns() {
+    if (columns_ == null) {
       return com.google.protobuf.MapField.emptyMapField(
-          ColumnDefaultEntryHolder.defaultEntry);
+          ColumnsDefaultEntryHolder.defaultEntry);
     }
-    return column_;
+    return columns_;
   }
   private static final
   com.google.protobuf.Internal.MapAdapter.Converter<
-      java.lang.Integer, com.scalar.db.rpc.DataType> columnValueConverter =
+      java.lang.Integer, com.scalar.db.rpc.DataType> columnsValueConverter =
           com.google.protobuf.Internal.MapAdapter.newEnumConverter(
               com.scalar.db.rpc.DataType.internalGetValueMap(),
               com.scalar.db.rpc.DataType.UNRECOGNIZED);
   private static final java.util.Map<java.lang.String, com.scalar.db.rpc.DataType>
-  internalGetAdaptedColumnMap(
+  internalGetAdaptedColumnsMap(
       java.util.Map<java.lang.String, java.lang.Integer> map) {
     return new com.google.protobuf.Internal.MapAdapter<
         java.lang.String, com.scalar.db.rpc.DataType, java.lang.Integer>(
-            map, columnValueConverter);
+            map, columnsValueConverter);
   }
 
-  public int getColumnCount() {
-    return internalGetColumn().getMap().size();
+  public int getColumnsCount() {
+    return internalGetColumns().getMap().size();
   }
   /**
-   * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
    */
 
   @java.lang.Override
-  public boolean containsColumn(
+  public boolean containsColumns(
       java.lang.String key) {
     if (key == null) { throw new NullPointerException("map key"); }
-    return internalGetColumn().getMap().containsKey(key);
+    return internalGetColumns().getMap().containsKey(key);
   }
   /**
-   * Use {@link #getColumnMap()} instead.
+   * Use {@link #getColumnsMap()} instead.
    */
   @java.lang.Override
   @java.lang.Deprecated
   public java.util.Map<java.lang.String, com.scalar.db.rpc.DataType>
-  getColumn() {
-    return getColumnMap();
+  getColumns() {
+    return getColumnsMap();
   }
   /**
-   * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
 
   public java.util.Map<java.lang.String, com.scalar.db.rpc.DataType>
-  getColumnMap() {
-    return internalGetAdaptedColumnMap(
-        internalGetColumn().getMap());}
+  getColumnsMap() {
+    return internalGetAdaptedColumnsMap(
+        internalGetColumns().getMap());}
   /**
-   * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
 
   public /* nullable */
-com.scalar.db.rpc.DataType getColumnOrDefault(
+com.scalar.db.rpc.DataType getColumnsOrDefault(
       java.lang.String key,
       /* nullable */
 com.scalar.db.rpc.DataType defaultValue) {
     if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.Integer> map =
-        internalGetColumn().getMap();
+        internalGetColumns().getMap();
     return map.containsKey(key)
-           ? columnValueConverter.doForward(map.get(key))
+           ? columnsValueConverter.doForward(map.get(key))
            : defaultValue;
   }
   /**
-   * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
 
-  public com.scalar.db.rpc.DataType getColumnOrThrow(
+  public com.scalar.db.rpc.DataType getColumnsOrThrow(
       java.lang.String key) {
     if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.Integer> map =
-        internalGetColumn().getMap();
+        internalGetColumns().getMap();
     if (!map.containsKey(key)) {
       throw new java.lang.IllegalArgumentException();
     }
-    return columnValueConverter.doForward(map.get(key));
+    return columnsValueConverter.doForward(map.get(key));
   }
   /**
-   * Use {@link #getColumnValueMap()} instead.
+   * Use {@link #getColumnsValueMap()} instead.
    */
   @java.lang.Override
   @java.lang.Deprecated
   public java.util.Map<java.lang.String, java.lang.Integer>
-  getColumnValue() {
-    return getColumnValueMap();
+  getColumnsValue() {
+    return getColumnsValueMap();
   }
   /**
-   * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
 
   public java.util.Map<java.lang.String, java.lang.Integer>
-  getColumnValueMap() {
-    return internalGetColumn().getMap();
+  getColumnsValueMap() {
+    return internalGetColumns().getMap();
   }
   /**
-   * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
 
-  public int getColumnValueOrDefault(
+  public int getColumnsValueOrDefault(
       java.lang.String key,
       int defaultValue) {
     if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.Integer> map =
-        internalGetColumn().getMap();
+        internalGetColumns().getMap();
     return map.containsKey(key) ? map.get(key) : defaultValue;
   }
   /**
-   * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
 
-  public int getColumnValueOrThrow(
+  public int getColumnsValueOrThrow(
       java.lang.String key) {
     if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.Integer> map =
-        internalGetColumn().getMap();
+        internalGetColumns().getMap();
     if (!map.containsKey(key)) {
       throw new java.lang.IllegalArgumentException();
     }
     return map.get(key);
   }
 
-  public static final int PARTITION_KEY_NAME_FIELD_NUMBER = 2;
-  private com.google.protobuf.LazyStringList partitionKeyName_;
+  public static final int PARTITION_KEY_NAMES_FIELD_NUMBER = 2;
+  private com.google.protobuf.LazyStringList partitionKeyNames_;
   /**
-   * <code>repeated string partition_key_name = 2;</code>
-   * @return A list containing the partitionKeyName.
+   * <code>repeated string partition_key_names = 2;</code>
+   * @return A list containing the partitionKeyNames.
    */
   public com.google.protobuf.ProtocolStringList
-      getPartitionKeyNameList() {
-    return partitionKeyName_;
+      getPartitionKeyNamesList() {
+    return partitionKeyNames_;
   }
   /**
-   * <code>repeated string partition_key_name = 2;</code>
-   * @return The count of partitionKeyName.
+   * <code>repeated string partition_key_names = 2;</code>
+   * @return The count of partitionKeyNames.
    */
-  public int getPartitionKeyNameCount() {
-    return partitionKeyName_.size();
+  public int getPartitionKeyNamesCount() {
+    return partitionKeyNames_.size();
   }
   /**
-   * <code>repeated string partition_key_name = 2;</code>
+   * <code>repeated string partition_key_names = 2;</code>
    * @param index The index of the element to return.
-   * @return The partitionKeyName at the given index.
+   * @return The partitionKeyNames at the given index.
    */
-  public java.lang.String getPartitionKeyName(int index) {
-    return partitionKeyName_.get(index);
+  public java.lang.String getPartitionKeyNames(int index) {
+    return partitionKeyNames_.get(index);
   }
   /**
-   * <code>repeated string partition_key_name = 2;</code>
+   * <code>repeated string partition_key_names = 2;</code>
    * @param index The index of the value to return.
-   * @return The bytes of the partitionKeyName at the given index.
+   * @return The bytes of the partitionKeyNames at the given index.
    */
   public com.google.protobuf.ByteString
-      getPartitionKeyNameBytes(int index) {
-    return partitionKeyName_.getByteString(index);
+      getPartitionKeyNamesBytes(int index) {
+    return partitionKeyNames_.getByteString(index);
   }
 
-  public static final int CLUSTERING_KEY_NAME_FIELD_NUMBER = 3;
-  private com.google.protobuf.LazyStringList clusteringKeyName_;
+  public static final int CLUSTERING_KEY_NAMES_FIELD_NUMBER = 3;
+  private com.google.protobuf.LazyStringList clusteringKeyNames_;
   /**
-   * <code>repeated string clustering_key_name = 3;</code>
-   * @return A list containing the clusteringKeyName.
+   * <code>repeated string clustering_key_names = 3;</code>
+   * @return A list containing the clusteringKeyNames.
    */
   public com.google.protobuf.ProtocolStringList
-      getClusteringKeyNameList() {
-    return clusteringKeyName_;
+      getClusteringKeyNamesList() {
+    return clusteringKeyNames_;
   }
   /**
-   * <code>repeated string clustering_key_name = 3;</code>
-   * @return The count of clusteringKeyName.
+   * <code>repeated string clustering_key_names = 3;</code>
+   * @return The count of clusteringKeyNames.
    */
-  public int getClusteringKeyNameCount() {
-    return clusteringKeyName_.size();
+  public int getClusteringKeyNamesCount() {
+    return clusteringKeyNames_.size();
   }
   /**
-   * <code>repeated string clustering_key_name = 3;</code>
+   * <code>repeated string clustering_key_names = 3;</code>
    * @param index The index of the element to return.
-   * @return The clusteringKeyName at the given index.
+   * @return The clusteringKeyNames at the given index.
    */
-  public java.lang.String getClusteringKeyName(int index) {
-    return clusteringKeyName_.get(index);
+  public java.lang.String getClusteringKeyNames(int index) {
+    return clusteringKeyNames_.get(index);
   }
   /**
-   * <code>repeated string clustering_key_name = 3;</code>
+   * <code>repeated string clustering_key_names = 3;</code>
    * @param index The index of the value to return.
-   * @return The bytes of the clusteringKeyName at the given index.
+   * @return The bytes of the clusteringKeyNames at the given index.
    */
   public com.google.protobuf.ByteString
-      getClusteringKeyNameBytes(int index) {
-    return clusteringKeyName_.getByteString(index);
+      getClusteringKeyNamesBytes(int index) {
+    return clusteringKeyNames_.getByteString(index);
   }
 
-  public static final int CLUSTERING_ORDER_FIELD_NUMBER = 4;
-  private static final class ClusteringOrderDefaultEntryHolder {
+  public static final int CLUSTERING_ORDERS_FIELD_NUMBER = 4;
+  private static final class ClusteringOrdersDefaultEntryHolder {
     static final com.google.protobuf.MapEntry<
         java.lang.String, java.lang.Integer> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.Integer>newDefaultInstance(
-                com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TableMetadata_ClusteringOrderEntry_descriptor, 
+                com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TableMetadata_ClusteringOrdersEntry_descriptor, 
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.ENUM,
                 com.scalar.db.rpc.Order.ORDER_ASC.getNumber());
   }
   private com.google.protobuf.MapField<
-      java.lang.String, java.lang.Integer> clusteringOrder_;
+      java.lang.String, java.lang.Integer> clusteringOrders_;
   private com.google.protobuf.MapField<java.lang.String, java.lang.Integer>
-  internalGetClusteringOrder() {
-    if (clusteringOrder_ == null) {
+  internalGetClusteringOrders() {
+    if (clusteringOrders_ == null) {
       return com.google.protobuf.MapField.emptyMapField(
-          ClusteringOrderDefaultEntryHolder.defaultEntry);
+          ClusteringOrdersDefaultEntryHolder.defaultEntry);
     }
-    return clusteringOrder_;
+    return clusteringOrders_;
   }
   private static final
   com.google.protobuf.Internal.MapAdapter.Converter<
-      java.lang.Integer, com.scalar.db.rpc.Order> clusteringOrderValueConverter =
+      java.lang.Integer, com.scalar.db.rpc.Order> clusteringOrdersValueConverter =
           com.google.protobuf.Internal.MapAdapter.newEnumConverter(
               com.scalar.db.rpc.Order.internalGetValueMap(),
               com.scalar.db.rpc.Order.UNRECOGNIZED);
   private static final java.util.Map<java.lang.String, com.scalar.db.rpc.Order>
-  internalGetAdaptedClusteringOrderMap(
+  internalGetAdaptedClusteringOrdersMap(
       java.util.Map<java.lang.String, java.lang.Integer> map) {
     return new com.google.protobuf.Internal.MapAdapter<
         java.lang.String, com.scalar.db.rpc.Order, java.lang.Integer>(
-            map, clusteringOrderValueConverter);
+            map, clusteringOrdersValueConverter);
   }
 
-  public int getClusteringOrderCount() {
-    return internalGetClusteringOrder().getMap().size();
+  public int getClusteringOrdersCount() {
+    return internalGetClusteringOrders().getMap().size();
   }
   /**
-   * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
    */
 
   @java.lang.Override
-  public boolean containsClusteringOrder(
+  public boolean containsClusteringOrders(
       java.lang.String key) {
     if (key == null) { throw new NullPointerException("map key"); }
-    return internalGetClusteringOrder().getMap().containsKey(key);
+    return internalGetClusteringOrders().getMap().containsKey(key);
   }
   /**
-   * Use {@link #getClusteringOrderMap()} instead.
+   * Use {@link #getClusteringOrdersMap()} instead.
    */
   @java.lang.Override
   @java.lang.Deprecated
   public java.util.Map<java.lang.String, com.scalar.db.rpc.Order>
-  getClusteringOrder() {
-    return getClusteringOrderMap();
+  getClusteringOrders() {
+    return getClusteringOrdersMap();
   }
   /**
-   * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
 
   public java.util.Map<java.lang.String, com.scalar.db.rpc.Order>
-  getClusteringOrderMap() {
-    return internalGetAdaptedClusteringOrderMap(
-        internalGetClusteringOrder().getMap());}
+  getClusteringOrdersMap() {
+    return internalGetAdaptedClusteringOrdersMap(
+        internalGetClusteringOrders().getMap());}
   /**
-   * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
 
   public /* nullable */
-com.scalar.db.rpc.Order getClusteringOrderOrDefault(
+com.scalar.db.rpc.Order getClusteringOrdersOrDefault(
       java.lang.String key,
       /* nullable */
 com.scalar.db.rpc.Order defaultValue) {
     if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.Integer> map =
-        internalGetClusteringOrder().getMap();
+        internalGetClusteringOrders().getMap();
     return map.containsKey(key)
-           ? clusteringOrderValueConverter.doForward(map.get(key))
+           ? clusteringOrdersValueConverter.doForward(map.get(key))
            : defaultValue;
   }
   /**
-   * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
 
-  public com.scalar.db.rpc.Order getClusteringOrderOrThrow(
+  public com.scalar.db.rpc.Order getClusteringOrdersOrThrow(
       java.lang.String key) {
     if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.Integer> map =
-        internalGetClusteringOrder().getMap();
+        internalGetClusteringOrders().getMap();
     if (!map.containsKey(key)) {
       throw new java.lang.IllegalArgumentException();
     }
-    return clusteringOrderValueConverter.doForward(map.get(key));
+    return clusteringOrdersValueConverter.doForward(map.get(key));
   }
   /**
-   * Use {@link #getClusteringOrderValueMap()} instead.
+   * Use {@link #getClusteringOrdersValueMap()} instead.
    */
   @java.lang.Override
   @java.lang.Deprecated
   public java.util.Map<java.lang.String, java.lang.Integer>
-  getClusteringOrderValue() {
-    return getClusteringOrderValueMap();
+  getClusteringOrdersValue() {
+    return getClusteringOrdersValueMap();
   }
   /**
-   * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
 
   public java.util.Map<java.lang.String, java.lang.Integer>
-  getClusteringOrderValueMap() {
-    return internalGetClusteringOrder().getMap();
+  getClusteringOrdersValueMap() {
+    return internalGetClusteringOrders().getMap();
   }
   /**
-   * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
 
-  public int getClusteringOrderValueOrDefault(
+  public int getClusteringOrdersValueOrDefault(
       java.lang.String key,
       int defaultValue) {
     if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.Integer> map =
-        internalGetClusteringOrder().getMap();
+        internalGetClusteringOrders().getMap();
     return map.containsKey(key) ? map.get(key) : defaultValue;
   }
   /**
-   * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
 
-  public int getClusteringOrderValueOrThrow(
+  public int getClusteringOrdersValueOrThrow(
       java.lang.String key) {
     if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.Integer> map =
-        internalGetClusteringOrder().getMap();
+        internalGetClusteringOrders().getMap();
     if (!map.containsKey(key)) {
       throw new java.lang.IllegalArgumentException();
     }
     return map.get(key);
   }
 
-  public static final int SECONDARY_INDEX_NAME_FIELD_NUMBER = 5;
-  private com.google.protobuf.LazyStringList secondaryIndexName_;
+  public static final int SECONDARY_INDEX_NAMES_FIELD_NUMBER = 5;
+  private com.google.protobuf.LazyStringList secondaryIndexNames_;
   /**
-   * <code>repeated string secondary_index_name = 5;</code>
-   * @return A list containing the secondaryIndexName.
+   * <code>repeated string secondary_index_names = 5;</code>
+   * @return A list containing the secondaryIndexNames.
    */
   public com.google.protobuf.ProtocolStringList
-      getSecondaryIndexNameList() {
-    return secondaryIndexName_;
+      getSecondaryIndexNamesList() {
+    return secondaryIndexNames_;
   }
   /**
-   * <code>repeated string secondary_index_name = 5;</code>
-   * @return The count of secondaryIndexName.
+   * <code>repeated string secondary_index_names = 5;</code>
+   * @return The count of secondaryIndexNames.
    */
-  public int getSecondaryIndexNameCount() {
-    return secondaryIndexName_.size();
+  public int getSecondaryIndexNamesCount() {
+    return secondaryIndexNames_.size();
   }
   /**
-   * <code>repeated string secondary_index_name = 5;</code>
+   * <code>repeated string secondary_index_names = 5;</code>
    * @param index The index of the element to return.
-   * @return The secondaryIndexName at the given index.
+   * @return The secondaryIndexNames at the given index.
    */
-  public java.lang.String getSecondaryIndexName(int index) {
-    return secondaryIndexName_.get(index);
+  public java.lang.String getSecondaryIndexNames(int index) {
+    return secondaryIndexNames_.get(index);
   }
   /**
-   * <code>repeated string secondary_index_name = 5;</code>
+   * <code>repeated string secondary_index_names = 5;</code>
    * @param index The index of the value to return.
-   * @return The bytes of the secondaryIndexName at the given index.
+   * @return The bytes of the secondaryIndexNames at the given index.
    */
   public com.google.protobuf.ByteString
-      getSecondaryIndexNameBytes(int index) {
-    return secondaryIndexName_.getByteString(index);
+      getSecondaryIndexNamesBytes(int index) {
+    return secondaryIndexNames_.getByteString(index);
   }
 
   private byte memoizedIsInitialized = -1;
@@ -576,23 +576,23 @@ com.scalar.db.rpc.Order defaultValue) {
     com.google.protobuf.GeneratedMessageV3
       .serializeStringMapTo(
         output,
-        internalGetColumn(),
-        ColumnDefaultEntryHolder.defaultEntry,
+        internalGetColumns(),
+        ColumnsDefaultEntryHolder.defaultEntry,
         1);
-    for (int i = 0; i < partitionKeyName_.size(); i++) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 2, partitionKeyName_.getRaw(i));
+    for (int i = 0; i < partitionKeyNames_.size(); i++) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 2, partitionKeyNames_.getRaw(i));
     }
-    for (int i = 0; i < clusteringKeyName_.size(); i++) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 3, clusteringKeyName_.getRaw(i));
+    for (int i = 0; i < clusteringKeyNames_.size(); i++) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 3, clusteringKeyNames_.getRaw(i));
     }
     com.google.protobuf.GeneratedMessageV3
       .serializeStringMapTo(
         output,
-        internalGetClusteringOrder(),
-        ClusteringOrderDefaultEntryHolder.defaultEntry,
+        internalGetClusteringOrders(),
+        ClusteringOrdersDefaultEntryHolder.defaultEntry,
         4);
-    for (int i = 0; i < secondaryIndexName_.size(); i++) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 5, secondaryIndexName_.getRaw(i));
+    for (int i = 0; i < secondaryIndexNames_.size(); i++) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 5, secondaryIndexNames_.getRaw(i));
     }
     unknownFields.writeTo(output);
   }
@@ -604,48 +604,48 @@ com.scalar.db.rpc.Order defaultValue) {
 
     size = 0;
     for (java.util.Map.Entry<java.lang.String, java.lang.Integer> entry
-         : internalGetColumn().getMap().entrySet()) {
+         : internalGetColumns().getMap().entrySet()) {
       com.google.protobuf.MapEntry<java.lang.String, java.lang.Integer>
-      column__ = ColumnDefaultEntryHolder.defaultEntry.newBuilderForType()
+      columns__ = ColumnsDefaultEntryHolder.defaultEntry.newBuilderForType()
           .setKey(entry.getKey())
           .setValue(entry.getValue())
           .build();
       size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, column__);
+          .computeMessageSize(1, columns__);
     }
     {
       int dataSize = 0;
-      for (int i = 0; i < partitionKeyName_.size(); i++) {
-        dataSize += computeStringSizeNoTag(partitionKeyName_.getRaw(i));
+      for (int i = 0; i < partitionKeyNames_.size(); i++) {
+        dataSize += computeStringSizeNoTag(partitionKeyNames_.getRaw(i));
       }
       size += dataSize;
-      size += 1 * getPartitionKeyNameList().size();
+      size += 1 * getPartitionKeyNamesList().size();
     }
     {
       int dataSize = 0;
-      for (int i = 0; i < clusteringKeyName_.size(); i++) {
-        dataSize += computeStringSizeNoTag(clusteringKeyName_.getRaw(i));
+      for (int i = 0; i < clusteringKeyNames_.size(); i++) {
+        dataSize += computeStringSizeNoTag(clusteringKeyNames_.getRaw(i));
       }
       size += dataSize;
-      size += 1 * getClusteringKeyNameList().size();
+      size += 1 * getClusteringKeyNamesList().size();
     }
     for (java.util.Map.Entry<java.lang.String, java.lang.Integer> entry
-         : internalGetClusteringOrder().getMap().entrySet()) {
+         : internalGetClusteringOrders().getMap().entrySet()) {
       com.google.protobuf.MapEntry<java.lang.String, java.lang.Integer>
-      clusteringOrder__ = ClusteringOrderDefaultEntryHolder.defaultEntry.newBuilderForType()
+      clusteringOrders__ = ClusteringOrdersDefaultEntryHolder.defaultEntry.newBuilderForType()
           .setKey(entry.getKey())
           .setValue(entry.getValue())
           .build();
       size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(4, clusteringOrder__);
+          .computeMessageSize(4, clusteringOrders__);
     }
     {
       int dataSize = 0;
-      for (int i = 0; i < secondaryIndexName_.size(); i++) {
-        dataSize += computeStringSizeNoTag(secondaryIndexName_.getRaw(i));
+      for (int i = 0; i < secondaryIndexNames_.size(); i++) {
+        dataSize += computeStringSizeNoTag(secondaryIndexNames_.getRaw(i));
       }
       size += dataSize;
-      size += 1 * getSecondaryIndexNameList().size();
+      size += 1 * getSecondaryIndexNamesList().size();
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -662,16 +662,16 @@ com.scalar.db.rpc.Order defaultValue) {
     }
     com.scalar.db.rpc.TableMetadata other = (com.scalar.db.rpc.TableMetadata) obj;
 
-    if (!internalGetColumn().equals(
-        other.internalGetColumn())) return false;
-    if (!getPartitionKeyNameList()
-        .equals(other.getPartitionKeyNameList())) return false;
-    if (!getClusteringKeyNameList()
-        .equals(other.getClusteringKeyNameList())) return false;
-    if (!internalGetClusteringOrder().equals(
-        other.internalGetClusteringOrder())) return false;
-    if (!getSecondaryIndexNameList()
-        .equals(other.getSecondaryIndexNameList())) return false;
+    if (!internalGetColumns().equals(
+        other.internalGetColumns())) return false;
+    if (!getPartitionKeyNamesList()
+        .equals(other.getPartitionKeyNamesList())) return false;
+    if (!getClusteringKeyNamesList()
+        .equals(other.getClusteringKeyNamesList())) return false;
+    if (!internalGetClusteringOrders().equals(
+        other.internalGetClusteringOrders())) return false;
+    if (!getSecondaryIndexNamesList()
+        .equals(other.getSecondaryIndexNamesList())) return false;
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -683,25 +683,25 @@ com.scalar.db.rpc.Order defaultValue) {
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    if (!internalGetColumn().getMap().isEmpty()) {
-      hash = (37 * hash) + COLUMN_FIELD_NUMBER;
-      hash = (53 * hash) + internalGetColumn().hashCode();
+    if (!internalGetColumns().getMap().isEmpty()) {
+      hash = (37 * hash) + COLUMNS_FIELD_NUMBER;
+      hash = (53 * hash) + internalGetColumns().hashCode();
     }
-    if (getPartitionKeyNameCount() > 0) {
-      hash = (37 * hash) + PARTITION_KEY_NAME_FIELD_NUMBER;
-      hash = (53 * hash) + getPartitionKeyNameList().hashCode();
+    if (getPartitionKeyNamesCount() > 0) {
+      hash = (37 * hash) + PARTITION_KEY_NAMES_FIELD_NUMBER;
+      hash = (53 * hash) + getPartitionKeyNamesList().hashCode();
     }
-    if (getClusteringKeyNameCount() > 0) {
-      hash = (37 * hash) + CLUSTERING_KEY_NAME_FIELD_NUMBER;
-      hash = (53 * hash) + getClusteringKeyNameList().hashCode();
+    if (getClusteringKeyNamesCount() > 0) {
+      hash = (37 * hash) + CLUSTERING_KEY_NAMES_FIELD_NUMBER;
+      hash = (53 * hash) + getClusteringKeyNamesList().hashCode();
     }
-    if (!internalGetClusteringOrder().getMap().isEmpty()) {
-      hash = (37 * hash) + CLUSTERING_ORDER_FIELD_NUMBER;
-      hash = (53 * hash) + internalGetClusteringOrder().hashCode();
+    if (!internalGetClusteringOrders().getMap().isEmpty()) {
+      hash = (37 * hash) + CLUSTERING_ORDERS_FIELD_NUMBER;
+      hash = (53 * hash) + internalGetClusteringOrders().hashCode();
     }
-    if (getSecondaryIndexNameCount() > 0) {
-      hash = (37 * hash) + SECONDARY_INDEX_NAME_FIELD_NUMBER;
-      hash = (53 * hash) + getSecondaryIndexNameList().hashCode();
+    if (getSecondaryIndexNamesCount() > 0) {
+      hash = (37 * hash) + SECONDARY_INDEX_NAMES_FIELD_NUMBER;
+      hash = (53 * hash) + getSecondaryIndexNamesList().hashCode();
     }
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
@@ -799,15 +799,15 @@ com.scalar.db.rpc.Order defaultValue) {
     return builder;
   }
   /**
-   * Protobuf type {@code rpc.TableMetadata}
+   * Protobuf type {@code scalardb.rpc.TableMetadata}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:rpc.TableMetadata)
+      // @@protoc_insertion_point(builder_implements:scalardb.rpc.TableMetadata)
       com.scalar.db.rpc.TableMetadataOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TableMetadata_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TableMetadata_descriptor;
     }
 
     @SuppressWarnings({"rawtypes"})
@@ -815,9 +815,9 @@ com.scalar.db.rpc.Order defaultValue) {
         int number) {
       switch (number) {
         case 1:
-          return internalGetColumn();
+          return internalGetColumns();
         case 4:
-          return internalGetClusteringOrder();
+          return internalGetClusteringOrders();
         default:
           throw new RuntimeException(
               "Invalid map field number: " + number);
@@ -828,9 +828,9 @@ com.scalar.db.rpc.Order defaultValue) {
         int number) {
       switch (number) {
         case 1:
-          return internalGetMutableColumn();
+          return internalGetMutableColumns();
         case 4:
-          return internalGetMutableClusteringOrder();
+          return internalGetMutableClusteringOrders();
         default:
           throw new RuntimeException(
               "Invalid map field number: " + number);
@@ -839,7 +839,7 @@ com.scalar.db.rpc.Order defaultValue) {
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TableMetadata_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TableMetadata_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TableMetadata.class, com.scalar.db.rpc.TableMetadata.Builder.class);
     }
@@ -862,13 +862,13 @@ com.scalar.db.rpc.Order defaultValue) {
     @java.lang.Override
     public Builder clear() {
       super.clear();
-      internalGetMutableColumn().clear();
-      partitionKeyName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      internalGetMutableColumns().clear();
+      partitionKeyNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       bitField0_ = (bitField0_ & ~0x00000002);
-      clusteringKeyName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      clusteringKeyNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       bitField0_ = (bitField0_ & ~0x00000004);
-      internalGetMutableClusteringOrder().clear();
-      secondaryIndexName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      internalGetMutableClusteringOrders().clear();
+      secondaryIndexNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       bitField0_ = (bitField0_ & ~0x00000010);
       return this;
     }
@@ -876,7 +876,7 @@ com.scalar.db.rpc.Order defaultValue) {
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TableMetadata_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TableMetadata_descriptor;
     }
 
     @java.lang.Override
@@ -897,25 +897,25 @@ com.scalar.db.rpc.Order defaultValue) {
     public com.scalar.db.rpc.TableMetadata buildPartial() {
       com.scalar.db.rpc.TableMetadata result = new com.scalar.db.rpc.TableMetadata(this);
       int from_bitField0_ = bitField0_;
-      result.column_ = internalGetColumn();
-      result.column_.makeImmutable();
+      result.columns_ = internalGetColumns();
+      result.columns_.makeImmutable();
       if (((bitField0_ & 0x00000002) != 0)) {
-        partitionKeyName_ = partitionKeyName_.getUnmodifiableView();
+        partitionKeyNames_ = partitionKeyNames_.getUnmodifiableView();
         bitField0_ = (bitField0_ & ~0x00000002);
       }
-      result.partitionKeyName_ = partitionKeyName_;
+      result.partitionKeyNames_ = partitionKeyNames_;
       if (((bitField0_ & 0x00000004) != 0)) {
-        clusteringKeyName_ = clusteringKeyName_.getUnmodifiableView();
+        clusteringKeyNames_ = clusteringKeyNames_.getUnmodifiableView();
         bitField0_ = (bitField0_ & ~0x00000004);
       }
-      result.clusteringKeyName_ = clusteringKeyName_;
-      result.clusteringOrder_ = internalGetClusteringOrder();
-      result.clusteringOrder_.makeImmutable();
+      result.clusteringKeyNames_ = clusteringKeyNames_;
+      result.clusteringOrders_ = internalGetClusteringOrders();
+      result.clusteringOrders_.makeImmutable();
       if (((bitField0_ & 0x00000010) != 0)) {
-        secondaryIndexName_ = secondaryIndexName_.getUnmodifiableView();
+        secondaryIndexNames_ = secondaryIndexNames_.getUnmodifiableView();
         bitField0_ = (bitField0_ & ~0x00000010);
       }
-      result.secondaryIndexName_ = secondaryIndexName_;
+      result.secondaryIndexNames_ = secondaryIndexNames_;
       onBuilt();
       return result;
     }
@@ -964,37 +964,37 @@ com.scalar.db.rpc.Order defaultValue) {
 
     public Builder mergeFrom(com.scalar.db.rpc.TableMetadata other) {
       if (other == com.scalar.db.rpc.TableMetadata.getDefaultInstance()) return this;
-      internalGetMutableColumn().mergeFrom(
-          other.internalGetColumn());
-      if (!other.partitionKeyName_.isEmpty()) {
-        if (partitionKeyName_.isEmpty()) {
-          partitionKeyName_ = other.partitionKeyName_;
+      internalGetMutableColumns().mergeFrom(
+          other.internalGetColumns());
+      if (!other.partitionKeyNames_.isEmpty()) {
+        if (partitionKeyNames_.isEmpty()) {
+          partitionKeyNames_ = other.partitionKeyNames_;
           bitField0_ = (bitField0_ & ~0x00000002);
         } else {
-          ensurePartitionKeyNameIsMutable();
-          partitionKeyName_.addAll(other.partitionKeyName_);
+          ensurePartitionKeyNamesIsMutable();
+          partitionKeyNames_.addAll(other.partitionKeyNames_);
         }
         onChanged();
       }
-      if (!other.clusteringKeyName_.isEmpty()) {
-        if (clusteringKeyName_.isEmpty()) {
-          clusteringKeyName_ = other.clusteringKeyName_;
+      if (!other.clusteringKeyNames_.isEmpty()) {
+        if (clusteringKeyNames_.isEmpty()) {
+          clusteringKeyNames_ = other.clusteringKeyNames_;
           bitField0_ = (bitField0_ & ~0x00000004);
         } else {
-          ensureClusteringKeyNameIsMutable();
-          clusteringKeyName_.addAll(other.clusteringKeyName_);
+          ensureClusteringKeyNamesIsMutable();
+          clusteringKeyNames_.addAll(other.clusteringKeyNames_);
         }
         onChanged();
       }
-      internalGetMutableClusteringOrder().mergeFrom(
-          other.internalGetClusteringOrder());
-      if (!other.secondaryIndexName_.isEmpty()) {
-        if (secondaryIndexName_.isEmpty()) {
-          secondaryIndexName_ = other.secondaryIndexName_;
+      internalGetMutableClusteringOrders().mergeFrom(
+          other.internalGetClusteringOrders());
+      if (!other.secondaryIndexNames_.isEmpty()) {
+        if (secondaryIndexNames_.isEmpty()) {
+          secondaryIndexNames_ = other.secondaryIndexNames_;
           bitField0_ = (bitField0_ & ~0x00000010);
         } else {
-          ensureSecondaryIndexNameIsMutable();
-          secondaryIndexName_.addAll(other.secondaryIndexName_);
+          ensureSecondaryIndexNamesIsMutable();
+          secondaryIndexNames_.addAll(other.secondaryIndexNames_);
         }
         onChanged();
       }
@@ -1029,151 +1029,151 @@ com.scalar.db.rpc.Order defaultValue) {
     private int bitField0_;
 
     private com.google.protobuf.MapField<
-        java.lang.String, java.lang.Integer> column_;
+        java.lang.String, java.lang.Integer> columns_;
     private com.google.protobuf.MapField<java.lang.String, java.lang.Integer>
-    internalGetColumn() {
-      if (column_ == null) {
+    internalGetColumns() {
+      if (columns_ == null) {
         return com.google.protobuf.MapField.emptyMapField(
-            ColumnDefaultEntryHolder.defaultEntry);
+            ColumnsDefaultEntryHolder.defaultEntry);
       }
-      return column_;
+      return columns_;
     }
     private com.google.protobuf.MapField<java.lang.String, java.lang.Integer>
-    internalGetMutableColumn() {
+    internalGetMutableColumns() {
       onChanged();;
-      if (column_ == null) {
-        column_ = com.google.protobuf.MapField.newMapField(
-            ColumnDefaultEntryHolder.defaultEntry);
+      if (columns_ == null) {
+        columns_ = com.google.protobuf.MapField.newMapField(
+            ColumnsDefaultEntryHolder.defaultEntry);
       }
-      if (!column_.isMutable()) {
-        column_ = column_.copy();
+      if (!columns_.isMutable()) {
+        columns_ = columns_.copy();
       }
-      return column_;
+      return columns_;
     }
 
-    public int getColumnCount() {
-      return internalGetColumn().getMap().size();
+    public int getColumnsCount() {
+      return internalGetColumns().getMap().size();
     }
     /**
-     * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
      */
 
     @java.lang.Override
-    public boolean containsColumn(
+    public boolean containsColumns(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
-      return internalGetColumn().getMap().containsKey(key);
+      return internalGetColumns().getMap().containsKey(key);
     }
     /**
-     * Use {@link #getColumnMap()} instead.
+     * Use {@link #getColumnsMap()} instead.
      */
     @java.lang.Override
     @java.lang.Deprecated
     public java.util.Map<java.lang.String, com.scalar.db.rpc.DataType>
-    getColumn() {
-      return getColumnMap();
+    getColumns() {
+      return getColumnsMap();
     }
     /**
-     * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
 
     public java.util.Map<java.lang.String, com.scalar.db.rpc.DataType>
-    getColumnMap() {
-      return internalGetAdaptedColumnMap(
-          internalGetColumn().getMap());}
+    getColumnsMap() {
+      return internalGetAdaptedColumnsMap(
+          internalGetColumns().getMap());}
     /**
-     * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
 
     public /* nullable */
-com.scalar.db.rpc.DataType getColumnOrDefault(
+com.scalar.db.rpc.DataType getColumnsOrDefault(
         java.lang.String key,
         /* nullable */
 com.scalar.db.rpc.DataType defaultValue) {
       if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.Integer> map =
-          internalGetColumn().getMap();
+          internalGetColumns().getMap();
       return map.containsKey(key)
-             ? columnValueConverter.doForward(map.get(key))
+             ? columnsValueConverter.doForward(map.get(key))
              : defaultValue;
     }
     /**
-     * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
 
-    public com.scalar.db.rpc.DataType getColumnOrThrow(
+    public com.scalar.db.rpc.DataType getColumnsOrThrow(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.Integer> map =
-          internalGetColumn().getMap();
+          internalGetColumns().getMap();
       if (!map.containsKey(key)) {
         throw new java.lang.IllegalArgumentException();
       }
-      return columnValueConverter.doForward(map.get(key));
+      return columnsValueConverter.doForward(map.get(key));
     }
     /**
-     * Use {@link #getColumnValueMap()} instead.
+     * Use {@link #getColumnsValueMap()} instead.
      */
     @java.lang.Override
     @java.lang.Deprecated
     public java.util.Map<java.lang.String, java.lang.Integer>
-    getColumnValue() {
-      return getColumnValueMap();
+    getColumnsValue() {
+      return getColumnsValueMap();
     }
     /**
-     * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
 
     public java.util.Map<java.lang.String, java.lang.Integer>
-    getColumnValueMap() {
-      return internalGetColumn().getMap();
+    getColumnsValueMap() {
+      return internalGetColumns().getMap();
     }
     /**
-     * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
 
-    public int getColumnValueOrDefault(
+    public int getColumnsValueOrDefault(
         java.lang.String key,
         int defaultValue) {
       if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.Integer> map =
-          internalGetColumn().getMap();
+          internalGetColumns().getMap();
       return map.containsKey(key) ? map.get(key) : defaultValue;
     }
     /**
-     * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
 
-    public int getColumnValueOrThrow(
+    public int getColumnsValueOrThrow(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.Integer> map =
-          internalGetColumn().getMap();
+          internalGetColumns().getMap();
       if (!map.containsKey(key)) {
         throw new java.lang.IllegalArgumentException();
       }
       return map.get(key);
     }
 
-    public Builder clearColumn() {
-      internalGetMutableColumn().getMutableMap()
+    public Builder clearColumns() {
+      internalGetMutableColumns().getMutableMap()
           .clear();
       return this;
     }
     /**
-     * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
      */
 
-    public Builder removeColumn(
+    public Builder removeColumns(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
-      internalGetMutableColumn().getMutableMap()
+      internalGetMutableColumns().getMutableMap()
           .remove(key);
       return this;
     }
@@ -1182,29 +1182,29 @@ com.scalar.db.rpc.DataType defaultValue) {
      */
     @java.lang.Deprecated
     public java.util.Map<java.lang.String, com.scalar.db.rpc.DataType>
-    getMutableColumn() {
-      return internalGetAdaptedColumnMap(
-           internalGetMutableColumn().getMutableMap());
+    getMutableColumns() {
+      return internalGetAdaptedColumnsMap(
+           internalGetMutableColumns().getMutableMap());
     }
     /**
-     * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
      */
-    public Builder putColumn(
+    public Builder putColumns(
         java.lang.String key,
         com.scalar.db.rpc.DataType value) {
       if (key == null) { throw new NullPointerException("map key"); }
       
-      internalGetMutableColumn().getMutableMap()
-          .put(key, columnValueConverter.doBackward(value));
+      internalGetMutableColumns().getMutableMap()
+          .put(key, columnsValueConverter.doBackward(value));
       return this;
     }
     /**
-     * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
      */
-    public Builder putAllColumn(
+    public Builder putAllColumns(
         java.util.Map<java.lang.String, com.scalar.db.rpc.DataType> values) {
-      internalGetAdaptedColumnMap(
-          internalGetMutableColumn().getMutableMap())
+      internalGetAdaptedColumnsMap(
+          internalGetMutableColumns().getMutableMap())
               .putAll(values);
       return this;
     }
@@ -1213,397 +1213,397 @@ com.scalar.db.rpc.DataType defaultValue) {
      */
     @java.lang.Deprecated
     public java.util.Map<java.lang.String, java.lang.Integer>
-    getMutableColumnValue() {
-      return internalGetMutableColumn().getMutableMap();
+    getMutableColumnsValue() {
+      return internalGetMutableColumns().getMutableMap();
     }
     /**
-     * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
      */
-    public Builder putColumnValue(
+    public Builder putColumnsValue(
         java.lang.String key,
         int value) {
       if (key == null) { throw new NullPointerException("map key"); }
       
-      internalGetMutableColumn().getMutableMap()
+      internalGetMutableColumns().getMutableMap()
           .put(key, value);
       return this;
     }
     /**
-     * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
+     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
      */
-    public Builder putAllColumnValue(
+    public Builder putAllColumnsValue(
         java.util.Map<java.lang.String, java.lang.Integer> values) {
-      internalGetMutableColumn().getMutableMap()
+      internalGetMutableColumns().getMutableMap()
           .putAll(values);
       return this;
     }
 
-    private com.google.protobuf.LazyStringList partitionKeyName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-    private void ensurePartitionKeyNameIsMutable() {
+    private com.google.protobuf.LazyStringList partitionKeyNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    private void ensurePartitionKeyNamesIsMutable() {
       if (!((bitField0_ & 0x00000002) != 0)) {
-        partitionKeyName_ = new com.google.protobuf.LazyStringArrayList(partitionKeyName_);
+        partitionKeyNames_ = new com.google.protobuf.LazyStringArrayList(partitionKeyNames_);
         bitField0_ |= 0x00000002;
        }
     }
     /**
-     * <code>repeated string partition_key_name = 2;</code>
-     * @return A list containing the partitionKeyName.
+     * <code>repeated string partition_key_names = 2;</code>
+     * @return A list containing the partitionKeyNames.
      */
     public com.google.protobuf.ProtocolStringList
-        getPartitionKeyNameList() {
-      return partitionKeyName_.getUnmodifiableView();
+        getPartitionKeyNamesList() {
+      return partitionKeyNames_.getUnmodifiableView();
     }
     /**
-     * <code>repeated string partition_key_name = 2;</code>
-     * @return The count of partitionKeyName.
+     * <code>repeated string partition_key_names = 2;</code>
+     * @return The count of partitionKeyNames.
      */
-    public int getPartitionKeyNameCount() {
-      return partitionKeyName_.size();
+    public int getPartitionKeyNamesCount() {
+      return partitionKeyNames_.size();
     }
     /**
-     * <code>repeated string partition_key_name = 2;</code>
+     * <code>repeated string partition_key_names = 2;</code>
      * @param index The index of the element to return.
-     * @return The partitionKeyName at the given index.
+     * @return The partitionKeyNames at the given index.
      */
-    public java.lang.String getPartitionKeyName(int index) {
-      return partitionKeyName_.get(index);
+    public java.lang.String getPartitionKeyNames(int index) {
+      return partitionKeyNames_.get(index);
     }
     /**
-     * <code>repeated string partition_key_name = 2;</code>
+     * <code>repeated string partition_key_names = 2;</code>
      * @param index The index of the value to return.
-     * @return The bytes of the partitionKeyName at the given index.
+     * @return The bytes of the partitionKeyNames at the given index.
      */
     public com.google.protobuf.ByteString
-        getPartitionKeyNameBytes(int index) {
-      return partitionKeyName_.getByteString(index);
+        getPartitionKeyNamesBytes(int index) {
+      return partitionKeyNames_.getByteString(index);
     }
     /**
-     * <code>repeated string partition_key_name = 2;</code>
+     * <code>repeated string partition_key_names = 2;</code>
      * @param index The index to set the value at.
-     * @param value The partitionKeyName to set.
+     * @param value The partitionKeyNames to set.
      * @return This builder for chaining.
      */
-    public Builder setPartitionKeyName(
+    public Builder setPartitionKeyNames(
         int index, java.lang.String value) {
       if (value == null) {
     throw new NullPointerException();
   }
-  ensurePartitionKeyNameIsMutable();
-      partitionKeyName_.set(index, value);
+  ensurePartitionKeyNamesIsMutable();
+      partitionKeyNames_.set(index, value);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string partition_key_name = 2;</code>
-     * @param value The partitionKeyName to add.
+     * <code>repeated string partition_key_names = 2;</code>
+     * @param value The partitionKeyNames to add.
      * @return This builder for chaining.
      */
-    public Builder addPartitionKeyName(
+    public Builder addPartitionKeyNames(
         java.lang.String value) {
       if (value == null) {
     throw new NullPointerException();
   }
-  ensurePartitionKeyNameIsMutable();
-      partitionKeyName_.add(value);
+  ensurePartitionKeyNamesIsMutable();
+      partitionKeyNames_.add(value);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string partition_key_name = 2;</code>
-     * @param values The partitionKeyName to add.
+     * <code>repeated string partition_key_names = 2;</code>
+     * @param values The partitionKeyNames to add.
      * @return This builder for chaining.
      */
-    public Builder addAllPartitionKeyName(
+    public Builder addAllPartitionKeyNames(
         java.lang.Iterable<java.lang.String> values) {
-      ensurePartitionKeyNameIsMutable();
+      ensurePartitionKeyNamesIsMutable();
       com.google.protobuf.AbstractMessageLite.Builder.addAll(
-          values, partitionKeyName_);
+          values, partitionKeyNames_);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string partition_key_name = 2;</code>
+     * <code>repeated string partition_key_names = 2;</code>
      * @return This builder for chaining.
      */
-    public Builder clearPartitionKeyName() {
-      partitionKeyName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    public Builder clearPartitionKeyNames() {
+      partitionKeyNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       bitField0_ = (bitField0_ & ~0x00000002);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string partition_key_name = 2;</code>
-     * @param value The bytes of the partitionKeyName to add.
+     * <code>repeated string partition_key_names = 2;</code>
+     * @param value The bytes of the partitionKeyNames to add.
      * @return This builder for chaining.
      */
-    public Builder addPartitionKeyNameBytes(
+    public Builder addPartitionKeyNamesBytes(
         com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
   checkByteStringIsUtf8(value);
-      ensurePartitionKeyNameIsMutable();
-      partitionKeyName_.add(value);
+      ensurePartitionKeyNamesIsMutable();
+      partitionKeyNames_.add(value);
       onChanged();
       return this;
     }
 
-    private com.google.protobuf.LazyStringList clusteringKeyName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-    private void ensureClusteringKeyNameIsMutable() {
+    private com.google.protobuf.LazyStringList clusteringKeyNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    private void ensureClusteringKeyNamesIsMutable() {
       if (!((bitField0_ & 0x00000004) != 0)) {
-        clusteringKeyName_ = new com.google.protobuf.LazyStringArrayList(clusteringKeyName_);
+        clusteringKeyNames_ = new com.google.protobuf.LazyStringArrayList(clusteringKeyNames_);
         bitField0_ |= 0x00000004;
        }
     }
     /**
-     * <code>repeated string clustering_key_name = 3;</code>
-     * @return A list containing the clusteringKeyName.
+     * <code>repeated string clustering_key_names = 3;</code>
+     * @return A list containing the clusteringKeyNames.
      */
     public com.google.protobuf.ProtocolStringList
-        getClusteringKeyNameList() {
-      return clusteringKeyName_.getUnmodifiableView();
+        getClusteringKeyNamesList() {
+      return clusteringKeyNames_.getUnmodifiableView();
     }
     /**
-     * <code>repeated string clustering_key_name = 3;</code>
-     * @return The count of clusteringKeyName.
+     * <code>repeated string clustering_key_names = 3;</code>
+     * @return The count of clusteringKeyNames.
      */
-    public int getClusteringKeyNameCount() {
-      return clusteringKeyName_.size();
+    public int getClusteringKeyNamesCount() {
+      return clusteringKeyNames_.size();
     }
     /**
-     * <code>repeated string clustering_key_name = 3;</code>
+     * <code>repeated string clustering_key_names = 3;</code>
      * @param index The index of the element to return.
-     * @return The clusteringKeyName at the given index.
+     * @return The clusteringKeyNames at the given index.
      */
-    public java.lang.String getClusteringKeyName(int index) {
-      return clusteringKeyName_.get(index);
+    public java.lang.String getClusteringKeyNames(int index) {
+      return clusteringKeyNames_.get(index);
     }
     /**
-     * <code>repeated string clustering_key_name = 3;</code>
+     * <code>repeated string clustering_key_names = 3;</code>
      * @param index The index of the value to return.
-     * @return The bytes of the clusteringKeyName at the given index.
+     * @return The bytes of the clusteringKeyNames at the given index.
      */
     public com.google.protobuf.ByteString
-        getClusteringKeyNameBytes(int index) {
-      return clusteringKeyName_.getByteString(index);
+        getClusteringKeyNamesBytes(int index) {
+      return clusteringKeyNames_.getByteString(index);
     }
     /**
-     * <code>repeated string clustering_key_name = 3;</code>
+     * <code>repeated string clustering_key_names = 3;</code>
      * @param index The index to set the value at.
-     * @param value The clusteringKeyName to set.
+     * @param value The clusteringKeyNames to set.
      * @return This builder for chaining.
      */
-    public Builder setClusteringKeyName(
+    public Builder setClusteringKeyNames(
         int index, java.lang.String value) {
       if (value == null) {
     throw new NullPointerException();
   }
-  ensureClusteringKeyNameIsMutable();
-      clusteringKeyName_.set(index, value);
+  ensureClusteringKeyNamesIsMutable();
+      clusteringKeyNames_.set(index, value);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string clustering_key_name = 3;</code>
-     * @param value The clusteringKeyName to add.
+     * <code>repeated string clustering_key_names = 3;</code>
+     * @param value The clusteringKeyNames to add.
      * @return This builder for chaining.
      */
-    public Builder addClusteringKeyName(
+    public Builder addClusteringKeyNames(
         java.lang.String value) {
       if (value == null) {
     throw new NullPointerException();
   }
-  ensureClusteringKeyNameIsMutable();
-      clusteringKeyName_.add(value);
+  ensureClusteringKeyNamesIsMutable();
+      clusteringKeyNames_.add(value);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string clustering_key_name = 3;</code>
-     * @param values The clusteringKeyName to add.
+     * <code>repeated string clustering_key_names = 3;</code>
+     * @param values The clusteringKeyNames to add.
      * @return This builder for chaining.
      */
-    public Builder addAllClusteringKeyName(
+    public Builder addAllClusteringKeyNames(
         java.lang.Iterable<java.lang.String> values) {
-      ensureClusteringKeyNameIsMutable();
+      ensureClusteringKeyNamesIsMutable();
       com.google.protobuf.AbstractMessageLite.Builder.addAll(
-          values, clusteringKeyName_);
+          values, clusteringKeyNames_);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string clustering_key_name = 3;</code>
+     * <code>repeated string clustering_key_names = 3;</code>
      * @return This builder for chaining.
      */
-    public Builder clearClusteringKeyName() {
-      clusteringKeyName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    public Builder clearClusteringKeyNames() {
+      clusteringKeyNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       bitField0_ = (bitField0_ & ~0x00000004);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string clustering_key_name = 3;</code>
-     * @param value The bytes of the clusteringKeyName to add.
+     * <code>repeated string clustering_key_names = 3;</code>
+     * @param value The bytes of the clusteringKeyNames to add.
      * @return This builder for chaining.
      */
-    public Builder addClusteringKeyNameBytes(
+    public Builder addClusteringKeyNamesBytes(
         com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
   checkByteStringIsUtf8(value);
-      ensureClusteringKeyNameIsMutable();
-      clusteringKeyName_.add(value);
+      ensureClusteringKeyNamesIsMutable();
+      clusteringKeyNames_.add(value);
       onChanged();
       return this;
     }
 
     private com.google.protobuf.MapField<
-        java.lang.String, java.lang.Integer> clusteringOrder_;
+        java.lang.String, java.lang.Integer> clusteringOrders_;
     private com.google.protobuf.MapField<java.lang.String, java.lang.Integer>
-    internalGetClusteringOrder() {
-      if (clusteringOrder_ == null) {
+    internalGetClusteringOrders() {
+      if (clusteringOrders_ == null) {
         return com.google.protobuf.MapField.emptyMapField(
-            ClusteringOrderDefaultEntryHolder.defaultEntry);
+            ClusteringOrdersDefaultEntryHolder.defaultEntry);
       }
-      return clusteringOrder_;
+      return clusteringOrders_;
     }
     private com.google.protobuf.MapField<java.lang.String, java.lang.Integer>
-    internalGetMutableClusteringOrder() {
+    internalGetMutableClusteringOrders() {
       onChanged();;
-      if (clusteringOrder_ == null) {
-        clusteringOrder_ = com.google.protobuf.MapField.newMapField(
-            ClusteringOrderDefaultEntryHolder.defaultEntry);
+      if (clusteringOrders_ == null) {
+        clusteringOrders_ = com.google.protobuf.MapField.newMapField(
+            ClusteringOrdersDefaultEntryHolder.defaultEntry);
       }
-      if (!clusteringOrder_.isMutable()) {
-        clusteringOrder_ = clusteringOrder_.copy();
+      if (!clusteringOrders_.isMutable()) {
+        clusteringOrders_ = clusteringOrders_.copy();
       }
-      return clusteringOrder_;
+      return clusteringOrders_;
     }
 
-    public int getClusteringOrderCount() {
-      return internalGetClusteringOrder().getMap().size();
+    public int getClusteringOrdersCount() {
+      return internalGetClusteringOrders().getMap().size();
     }
     /**
-     * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
      */
 
     @java.lang.Override
-    public boolean containsClusteringOrder(
+    public boolean containsClusteringOrders(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
-      return internalGetClusteringOrder().getMap().containsKey(key);
+      return internalGetClusteringOrders().getMap().containsKey(key);
     }
     /**
-     * Use {@link #getClusteringOrderMap()} instead.
+     * Use {@link #getClusteringOrdersMap()} instead.
      */
     @java.lang.Override
     @java.lang.Deprecated
     public java.util.Map<java.lang.String, com.scalar.db.rpc.Order>
-    getClusteringOrder() {
-      return getClusteringOrderMap();
+    getClusteringOrders() {
+      return getClusteringOrdersMap();
     }
     /**
-     * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
 
     public java.util.Map<java.lang.String, com.scalar.db.rpc.Order>
-    getClusteringOrderMap() {
-      return internalGetAdaptedClusteringOrderMap(
-          internalGetClusteringOrder().getMap());}
+    getClusteringOrdersMap() {
+      return internalGetAdaptedClusteringOrdersMap(
+          internalGetClusteringOrders().getMap());}
     /**
-     * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
 
     public /* nullable */
-com.scalar.db.rpc.Order getClusteringOrderOrDefault(
+com.scalar.db.rpc.Order getClusteringOrdersOrDefault(
         java.lang.String key,
         /* nullable */
 com.scalar.db.rpc.Order defaultValue) {
       if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.Integer> map =
-          internalGetClusteringOrder().getMap();
+          internalGetClusteringOrders().getMap();
       return map.containsKey(key)
-             ? clusteringOrderValueConverter.doForward(map.get(key))
+             ? clusteringOrdersValueConverter.doForward(map.get(key))
              : defaultValue;
     }
     /**
-     * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
 
-    public com.scalar.db.rpc.Order getClusteringOrderOrThrow(
+    public com.scalar.db.rpc.Order getClusteringOrdersOrThrow(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.Integer> map =
-          internalGetClusteringOrder().getMap();
+          internalGetClusteringOrders().getMap();
       if (!map.containsKey(key)) {
         throw new java.lang.IllegalArgumentException();
       }
-      return clusteringOrderValueConverter.doForward(map.get(key));
+      return clusteringOrdersValueConverter.doForward(map.get(key));
     }
     /**
-     * Use {@link #getClusteringOrderValueMap()} instead.
+     * Use {@link #getClusteringOrdersValueMap()} instead.
      */
     @java.lang.Override
     @java.lang.Deprecated
     public java.util.Map<java.lang.String, java.lang.Integer>
-    getClusteringOrderValue() {
-      return getClusteringOrderValueMap();
+    getClusteringOrdersValue() {
+      return getClusteringOrdersValueMap();
     }
     /**
-     * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
 
     public java.util.Map<java.lang.String, java.lang.Integer>
-    getClusteringOrderValueMap() {
-      return internalGetClusteringOrder().getMap();
+    getClusteringOrdersValueMap() {
+      return internalGetClusteringOrders().getMap();
     }
     /**
-     * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
 
-    public int getClusteringOrderValueOrDefault(
+    public int getClusteringOrdersValueOrDefault(
         java.lang.String key,
         int defaultValue) {
       if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.Integer> map =
-          internalGetClusteringOrder().getMap();
+          internalGetClusteringOrders().getMap();
       return map.containsKey(key) ? map.get(key) : defaultValue;
     }
     /**
-     * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
 
-    public int getClusteringOrderValueOrThrow(
+    public int getClusteringOrdersValueOrThrow(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.Integer> map =
-          internalGetClusteringOrder().getMap();
+          internalGetClusteringOrders().getMap();
       if (!map.containsKey(key)) {
         throw new java.lang.IllegalArgumentException();
       }
       return map.get(key);
     }
 
-    public Builder clearClusteringOrder() {
-      internalGetMutableClusteringOrder().getMutableMap()
+    public Builder clearClusteringOrders() {
+      internalGetMutableClusteringOrders().getMutableMap()
           .clear();
       return this;
     }
     /**
-     * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
      */
 
-    public Builder removeClusteringOrder(
+    public Builder removeClusteringOrders(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
-      internalGetMutableClusteringOrder().getMutableMap()
+      internalGetMutableClusteringOrders().getMutableMap()
           .remove(key);
       return this;
     }
@@ -1612,29 +1612,29 @@ com.scalar.db.rpc.Order defaultValue) {
      */
     @java.lang.Deprecated
     public java.util.Map<java.lang.String, com.scalar.db.rpc.Order>
-    getMutableClusteringOrder() {
-      return internalGetAdaptedClusteringOrderMap(
-           internalGetMutableClusteringOrder().getMutableMap());
+    getMutableClusteringOrders() {
+      return internalGetAdaptedClusteringOrdersMap(
+           internalGetMutableClusteringOrders().getMutableMap());
     }
     /**
-     * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
      */
-    public Builder putClusteringOrder(
+    public Builder putClusteringOrders(
         java.lang.String key,
         com.scalar.db.rpc.Order value) {
       if (key == null) { throw new NullPointerException("map key"); }
       
-      internalGetMutableClusteringOrder().getMutableMap()
-          .put(key, clusteringOrderValueConverter.doBackward(value));
+      internalGetMutableClusteringOrders().getMutableMap()
+          .put(key, clusteringOrdersValueConverter.doBackward(value));
       return this;
     }
     /**
-     * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
      */
-    public Builder putAllClusteringOrder(
+    public Builder putAllClusteringOrders(
         java.util.Map<java.lang.String, com.scalar.db.rpc.Order> values) {
-      internalGetAdaptedClusteringOrderMap(
-          internalGetMutableClusteringOrder().getMutableMap())
+      internalGetAdaptedClusteringOrdersMap(
+          internalGetMutableClusteringOrders().getMutableMap())
               .putAll(values);
       return this;
     }
@@ -1643,137 +1643,137 @@ com.scalar.db.rpc.Order defaultValue) {
      */
     @java.lang.Deprecated
     public java.util.Map<java.lang.String, java.lang.Integer>
-    getMutableClusteringOrderValue() {
-      return internalGetMutableClusteringOrder().getMutableMap();
+    getMutableClusteringOrdersValue() {
+      return internalGetMutableClusteringOrders().getMutableMap();
     }
     /**
-     * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
      */
-    public Builder putClusteringOrderValue(
+    public Builder putClusteringOrdersValue(
         java.lang.String key,
         int value) {
       if (key == null) { throw new NullPointerException("map key"); }
       
-      internalGetMutableClusteringOrder().getMutableMap()
+      internalGetMutableClusteringOrders().getMutableMap()
           .put(key, value);
       return this;
     }
     /**
-     * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
+     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
      */
-    public Builder putAllClusteringOrderValue(
+    public Builder putAllClusteringOrdersValue(
         java.util.Map<java.lang.String, java.lang.Integer> values) {
-      internalGetMutableClusteringOrder().getMutableMap()
+      internalGetMutableClusteringOrders().getMutableMap()
           .putAll(values);
       return this;
     }
 
-    private com.google.protobuf.LazyStringList secondaryIndexName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-    private void ensureSecondaryIndexNameIsMutable() {
+    private com.google.protobuf.LazyStringList secondaryIndexNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    private void ensureSecondaryIndexNamesIsMutable() {
       if (!((bitField0_ & 0x00000010) != 0)) {
-        secondaryIndexName_ = new com.google.protobuf.LazyStringArrayList(secondaryIndexName_);
+        secondaryIndexNames_ = new com.google.protobuf.LazyStringArrayList(secondaryIndexNames_);
         bitField0_ |= 0x00000010;
        }
     }
     /**
-     * <code>repeated string secondary_index_name = 5;</code>
-     * @return A list containing the secondaryIndexName.
+     * <code>repeated string secondary_index_names = 5;</code>
+     * @return A list containing the secondaryIndexNames.
      */
     public com.google.protobuf.ProtocolStringList
-        getSecondaryIndexNameList() {
-      return secondaryIndexName_.getUnmodifiableView();
+        getSecondaryIndexNamesList() {
+      return secondaryIndexNames_.getUnmodifiableView();
     }
     /**
-     * <code>repeated string secondary_index_name = 5;</code>
-     * @return The count of secondaryIndexName.
+     * <code>repeated string secondary_index_names = 5;</code>
+     * @return The count of secondaryIndexNames.
      */
-    public int getSecondaryIndexNameCount() {
-      return secondaryIndexName_.size();
+    public int getSecondaryIndexNamesCount() {
+      return secondaryIndexNames_.size();
     }
     /**
-     * <code>repeated string secondary_index_name = 5;</code>
+     * <code>repeated string secondary_index_names = 5;</code>
      * @param index The index of the element to return.
-     * @return The secondaryIndexName at the given index.
+     * @return The secondaryIndexNames at the given index.
      */
-    public java.lang.String getSecondaryIndexName(int index) {
-      return secondaryIndexName_.get(index);
+    public java.lang.String getSecondaryIndexNames(int index) {
+      return secondaryIndexNames_.get(index);
     }
     /**
-     * <code>repeated string secondary_index_name = 5;</code>
+     * <code>repeated string secondary_index_names = 5;</code>
      * @param index The index of the value to return.
-     * @return The bytes of the secondaryIndexName at the given index.
+     * @return The bytes of the secondaryIndexNames at the given index.
      */
     public com.google.protobuf.ByteString
-        getSecondaryIndexNameBytes(int index) {
-      return secondaryIndexName_.getByteString(index);
+        getSecondaryIndexNamesBytes(int index) {
+      return secondaryIndexNames_.getByteString(index);
     }
     /**
-     * <code>repeated string secondary_index_name = 5;</code>
+     * <code>repeated string secondary_index_names = 5;</code>
      * @param index The index to set the value at.
-     * @param value The secondaryIndexName to set.
+     * @param value The secondaryIndexNames to set.
      * @return This builder for chaining.
      */
-    public Builder setSecondaryIndexName(
+    public Builder setSecondaryIndexNames(
         int index, java.lang.String value) {
       if (value == null) {
     throw new NullPointerException();
   }
-  ensureSecondaryIndexNameIsMutable();
-      secondaryIndexName_.set(index, value);
+  ensureSecondaryIndexNamesIsMutable();
+      secondaryIndexNames_.set(index, value);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string secondary_index_name = 5;</code>
-     * @param value The secondaryIndexName to add.
+     * <code>repeated string secondary_index_names = 5;</code>
+     * @param value The secondaryIndexNames to add.
      * @return This builder for chaining.
      */
-    public Builder addSecondaryIndexName(
+    public Builder addSecondaryIndexNames(
         java.lang.String value) {
       if (value == null) {
     throw new NullPointerException();
   }
-  ensureSecondaryIndexNameIsMutable();
-      secondaryIndexName_.add(value);
+  ensureSecondaryIndexNamesIsMutable();
+      secondaryIndexNames_.add(value);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string secondary_index_name = 5;</code>
-     * @param values The secondaryIndexName to add.
+     * <code>repeated string secondary_index_names = 5;</code>
+     * @param values The secondaryIndexNames to add.
      * @return This builder for chaining.
      */
-    public Builder addAllSecondaryIndexName(
+    public Builder addAllSecondaryIndexNames(
         java.lang.Iterable<java.lang.String> values) {
-      ensureSecondaryIndexNameIsMutable();
+      ensureSecondaryIndexNamesIsMutable();
       com.google.protobuf.AbstractMessageLite.Builder.addAll(
-          values, secondaryIndexName_);
+          values, secondaryIndexNames_);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string secondary_index_name = 5;</code>
+     * <code>repeated string secondary_index_names = 5;</code>
      * @return This builder for chaining.
      */
-    public Builder clearSecondaryIndexName() {
-      secondaryIndexName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    public Builder clearSecondaryIndexNames() {
+      secondaryIndexNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       bitField0_ = (bitField0_ & ~0x00000010);
       onChanged();
       return this;
     }
     /**
-     * <code>repeated string secondary_index_name = 5;</code>
-     * @param value The bytes of the secondaryIndexName to add.
+     * <code>repeated string secondary_index_names = 5;</code>
+     * @param value The bytes of the secondaryIndexNames to add.
      * @return This builder for chaining.
      */
-    public Builder addSecondaryIndexNameBytes(
+    public Builder addSecondaryIndexNamesBytes(
         com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
   checkByteStringIsUtf8(value);
-      ensureSecondaryIndexNameIsMutable();
-      secondaryIndexName_.add(value);
+      ensureSecondaryIndexNamesIsMutable();
+      secondaryIndexNames_.add(value);
       onChanged();
       return this;
     }
@@ -1790,10 +1790,10 @@ com.scalar.db.rpc.Order defaultValue) {
     }
 
 
-    // @@protoc_insertion_point(builder_scope:rpc.TableMetadata)
+    // @@protoc_insertion_point(builder_scope:scalardb.rpc.TableMetadata)
   }
 
-  // @@protoc_insertion_point(class_scope:rpc.TableMetadata)
+  // @@protoc_insertion_point(class_scope:scalardb.rpc.TableMetadata)
   private static final com.scalar.db.rpc.TableMetadata DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.TableMetadata();

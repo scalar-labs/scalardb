@@ -151,57 +151,57 @@ public class DistributedTransactionServiceTest {
                     GetResponse.newBuilder()
                         .setResult(
                             com.scalar.db.rpc.Result.newBuilder()
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("p1")
                                         .setIntValue(10)
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("p2")
                                         .setTextValue("text1")
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("c1")
                                         .setTextValue("text2")
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("c2")
                                         .setIntValue(20)
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("col1")
                                         .setBooleanValue(true)
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("col2")
                                         .setIntValue(10)
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("col3")
                                         .setBigintValue(100L)
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("col4")
                                         .setFloatValue(1.23F)
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("col5")
                                         .setDoubleValue(4.56)
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("col6")
                                         .setTextValue("text")
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("col7")
                                         .setBlobValue(
@@ -382,59 +382,59 @@ public class DistributedTransactionServiceTest {
             TransactionResponse.newBuilder()
                 .setScanResponse(
                     ScanResponse.newBuilder()
-                        .addResult(
+                        .addResults(
                             com.scalar.db.rpc.Result.newBuilder()
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("p1")
                                         .setIntValue(10)
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("p2")
                                         .setTextValue("text1")
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("c1")
                                         .setTextValue("text2")
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("c2")
                                         .setIntValue(20)
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("col1")
                                         .setBooleanValue(true)
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("col2")
                                         .setIntValue(10)
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("col3")
                                         .setBigintValue(100L)
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("col4")
                                         .setFloatValue(1.23F)
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("col5")
                                         .setDoubleValue(4.56)
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("col6")
                                         .setTextValue("text")
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("col7")
                                         .setBlobValue(
@@ -442,41 +442,41 @@ public class DistributedTransactionServiceTest {
                                                 "blob".getBytes(StandardCharsets.UTF_8)))
                                         .build())
                                 .build())
-                        .addResult(
+                        .addResults(
                             com.scalar.db.rpc.Result.newBuilder()
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("p1")
                                         .setIntValue(10)
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("p2")
                                         .setTextValue("text1")
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("c1")
                                         .setTextValue("text2")
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder()
                                         .setName("c2")
                                         .setIntValue(20)
                                         .build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder().setName("col1").build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder().setName("col2").build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder().setName("col3").build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder().setName("col4").build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder().setName("col5").build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder().setName("col6").build())
-                                .addColumn(
+                                .addColumns(
                                     com.scalar.db.rpc.Column.newBuilder().setName("col7").build())
                                 .build()))
                 .build());
@@ -554,7 +554,7 @@ public class DistributedTransactionServiceTest {
             TransactionResponse.newBuilder()
                 .setScanResponse(
                     ScanResponse.newBuilder()
-                        .addResult(
+                        .addResults(
                             com.scalar.db.rpc.Result.newBuilder()
                                 .addValue(Value.newBuilder().setName("p1").setIntValue(10).build())
                                 .addValue(
@@ -600,7 +600,7 @@ public class DistributedTransactionServiceTest {
                                                 .build())
                                         .build())
                                 .build())
-                        .addResult(
+                        .addResults(
                             com.scalar.db.rpc.Result.newBuilder()
                                 .addValue(Value.newBuilder().setName("p1").setIntValue(10).build())
                                 .addValue(

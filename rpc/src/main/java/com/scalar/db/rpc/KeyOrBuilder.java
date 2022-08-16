@@ -4,54 +4,54 @@
 package com.scalar.db.rpc;
 
 public interface KeyOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.Key)
+    // @@protoc_insertion_point(interface_extends:scalardb.rpc.Key)
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+   * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
    */
   @java.lang.Deprecated java.util.List<com.scalar.db.rpc.Value> 
       getValueList();
   /**
-   * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+   * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
    */
   @java.lang.Deprecated com.scalar.db.rpc.Value getValue(int index);
   /**
-   * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+   * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
    */
   @java.lang.Deprecated int getValueCount();
   /**
-   * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+   * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
    */
   @java.lang.Deprecated java.util.List<? extends com.scalar.db.rpc.ValueOrBuilder> 
       getValueOrBuilderList();
   /**
-   * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
+   * <code>repeated .scalardb.rpc.Value value = 1 [deprecated = true];</code>
    */
   @java.lang.Deprecated com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder(
       int index);
 
   /**
-   * <code>repeated .rpc.Column column = 2;</code>
+   * <code>repeated .scalardb.rpc.Column columns = 2;</code>
    */
   java.util.List<com.scalar.db.rpc.Column> 
-      getColumnList();
+      getColumnsList();
   /**
-   * <code>repeated .rpc.Column column = 2;</code>
+   * <code>repeated .scalardb.rpc.Column columns = 2;</code>
    */
-  com.scalar.db.rpc.Column getColumn(int index);
+  com.scalar.db.rpc.Column getColumns(int index);
   /**
-   * <code>repeated .rpc.Column column = 2;</code>
+   * <code>repeated .scalardb.rpc.Column columns = 2;</code>
    */
-  int getColumnCount();
+  int getColumnsCount();
   /**
-   * <code>repeated .rpc.Column column = 2;</code>
+   * <code>repeated .scalardb.rpc.Column columns = 2;</code>
    */
   java.util.List<? extends com.scalar.db.rpc.ColumnOrBuilder> 
-      getColumnOrBuilderList();
+      getColumnsOrBuilderList();
   /**
-   * <code>repeated .rpc.Column column = 2;</code>
+   * <code>repeated .scalardb.rpc.Column columns = 2;</code>
    */
-  com.scalar.db.rpc.ColumnOrBuilder getColumnOrBuilder(
+  com.scalar.db.rpc.ColumnOrBuilder getColumnsOrBuilder(
       int index);
 }

@@ -87,7 +87,7 @@ public class GrpcScanOnBidirectionalStream
       // We can early close the scanner as it has no more results
       closeScanner();
     }
-    return response.getResultList().stream()
+    return response.getResultsList().stream()
         .map(r -> ProtoUtils.toResult(r, metadata))
         .collect(Collectors.toList());
   }
