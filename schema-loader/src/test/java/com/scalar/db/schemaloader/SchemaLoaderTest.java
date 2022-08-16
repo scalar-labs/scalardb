@@ -653,4 +653,58 @@ public class SchemaLoaderTest {
     verify(operator).repairTables(anyList());
     verify(operator, never()).repairCoordinatorTables(anyMap());
   }
+
+  @Test
+  public void
+      alterTables_WithConfigFilePathAndSerializedSchema_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.alterTables(configFilePath, SERIALIZED_SCHEMA_JSON, options);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).alterTables(anyList(), anyMap());
+  }
+
+  @Test
+  public void
+      alterTable_WithConfigPropertiesAndSerializedSchema_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.alterTables(configProperties, SERIALIZED_SCHEMA_JSON, options);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).alterTables(anyList(), anyMap());
+  }
+
+  @Test
+  public void alterTables_WithConfigFilePathAndSchemaFilePath_ShouldCallParserAndOperatorProperly()
+      throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.alterTables(configFilePath, schemaFilePath, options);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).alterTables(anyList(), anyMap());
+  }
+
+  @Test
+  public void alterTable_WithConfigPropertiesAndSchemaFilePath_ShouldCallParserAndOperatorProperly()
+      throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.alterTables(configProperties, schemaFilePath, options);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).alterTables(anyList(), anyMap());
+  }
 }

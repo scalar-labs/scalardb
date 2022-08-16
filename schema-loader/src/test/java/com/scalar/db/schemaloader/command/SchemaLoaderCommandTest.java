@@ -10,6 +10,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
@@ -303,5 +304,49 @@ public class SchemaLoaderCommandTest {
     Assertions.assertThat(exitCode).isEqualTo(ExitCode.USAGE);
     Assertions.assertThat(stringWriter.toString())
         .contains("Invalid value for option '--compaction-strategy'");
+  }
+
+  @Test
+  public void call_WithProperArgumentsForAlteringTablesWithOptions_ShouldAlterTablesProperly() {
+    // Arrange
+    String schemaFile = "path_to_file";
+    String configFile = "path_to_config_file";
+    Map<String, String> options = ImmutableMap.of(DynamoAdmin.NO_SCALING, "true");
+
+    // Act
+    commandLine.execute("-f", schemaFile, "--config", configFile, "--no-scaling", "--alter");
+
+    // Assert
+    schemaLoaderMockedStatic.verify(
+        () -> SchemaLoader.alterTables(Paths.get(configFile), Paths.get(schemaFile), options));
+  }
+
+  @Test
+  public void call_WithProperArgumentsForAlteringTables_ShouldAlterTablesProperly() {
+    // Arrange
+    String schemaFile = "path_to_file";
+    String configFile = "path_to_config_file";
+
+    // Act
+    commandLine.execute("-f", schemaFile, "--config", configFile, "--alter");
+
+    // Assert
+    schemaLoaderMockedStatic.verify(
+        () ->
+            SchemaLoader.alterTables(
+                Paths.get(configFile), Paths.get(schemaFile), Collections.emptyMap()));
+  }
+
+  @Test
+  public void call_forAlteringTablesWithoutSchemaFile_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    String configFile = "path_to_config_file";
+
+    // Act
+    int exitCode = commandLine.execute("--alter", "--config", configFile);
+
+    // Assert
+    Assertions.assertThat(exitCode).isEqualTo(1);
+    schemaLoaderMockedStatic.verifyNoInteractions();
   }
 }

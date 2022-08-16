@@ -239,6 +239,32 @@ public class CassandraCommandTest extends StorageSpecificCommandTestBase {
   }
 
   @Test
+  public void call_ProperArgumentsForAlteringTables_ShouldCallAlterTablesProperly()
+      throws SchemaLoaderException {
+    // Arrange
+    Map<String, String> options = ImmutableMap.of();
+    TableSchema tableSchema = mock(TableSchema.class);
+    when(parser.parse()).thenReturn(Collections.singletonList(tableSchema));
+
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, host);
+    properties.setProperty(DatabaseConfig.CONTACT_PORT, port);
+    properties.setProperty(DatabaseConfig.USERNAME, user);
+    properties.setProperty(DatabaseConfig.PASSWORD, password);
+    properties.setProperty(DatabaseConfig.STORAGE, "cassandra");
+
+    // Act
+    commandLine.execute(
+        "-h", host, "-P", port, "-u", user, "-p", password, "-f", schemaFile, "--alter");
+
+    // Assert
+    verify(command).getSchemaParser(options);
+    verify(parser).parse();
+    verify(command).getSchemaOperator(properties);
+    verify(operator).alterTables(Collections.singletonList(tableSchema), options);
+  }
+
+  @Test
   public void call_WithInvalidReplicationStrategy_ShouldExitWithErrorCode() {
     // Arrange
     String replicationStrategy = "InvalidStrategy";

@@ -61,16 +61,14 @@ public class CosmosCommand extends StorageSpecificCommand implements Callable<In
       hidden = true)
   private String coordinatorNamespacePrefix;
 
-  @ArgGroup private DeleteOrRepairCosmosTables deleteOrRepairCosmosTables;
+  @ArgGroup private CosmosMode cosmosMode;
 
   /**
    * To be able to have a "--repair-all" option description that is different only for the
-   * CosmosCommand, a cosmos specific version of {@link StorageSpecificCommand.DeleteOrRepairTables}
-   * had to be created. Eventually, the only difference with {@link
-   * StorageSpecificCommand.DeleteOrRepairTables} is the {@link
-   * DeleteOrRepairCosmosTables#repairTables} description value
+   * CosmosCommand, a cosmos specific version of {@link Mode} had to be created. Eventually, the
+   * only difference with {@link Mode} is the {@link CosmosMode#repairTables} description value
    */
-  private static class DeleteOrRepairCosmosTables {
+  private static class CosmosMode {
 
     @Option(
         names = {"-D", "--delete-all"},
@@ -84,6 +82,14 @@ public class CosmosCommand extends StorageSpecificCommand implements Callable<In
             "Repair tables : it repairs the table metadata of existing tables and repairs stored procedure attached to each table",
         defaultValue = "false")
     boolean repairTables;
+
+    @Option(
+        names = {"-A", "--alter"},
+        description =
+            "Alter tables : it will add new columns and create/delete secondary index for existing tables. "
+                + "It compares the provided table schema to the existing schema to decide which columns need to be added and which indexes need to be created or deleted",
+        defaultValue = "false")
+    boolean alterTables;
   }
 
   @Override
@@ -118,17 +124,19 @@ public class CosmosCommand extends StorageSpecificCommand implements Callable<In
   }
 
   @Override
-  DeleteOrRepairTables getDeleteOrRepairTables() {
-    if (deleteOrRepairCosmosTables == null) {
+  Mode getMode() {
+    if (cosmosMode == null) {
       return null;
     }
 
-    DeleteOrRepairTables deleteOrRepairTables = new DeleteOrRepairTables();
-    if (deleteOrRepairCosmosTables.deleteTables) {
-      deleteOrRepairTables.deleteTables = true;
-    } else {
-      deleteOrRepairTables.repairTables = true;
+    Mode mode = new Mode();
+    if (cosmosMode.deleteTables) {
+      mode.deleteTables = true;
+    } else if (cosmosMode.repairTables) {
+      mode.repairTables = true;
+    } else if (cosmosMode.alterTables) {
+      mode.alterTables = true;
     }
-    return deleteOrRepairTables;
+    return mode;
   }
 }

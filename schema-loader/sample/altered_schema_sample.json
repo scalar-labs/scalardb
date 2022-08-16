@@ -1,0 +1,61 @@
+{
+  "sample_db.sample_table": {
+    "transaction": false,
+    "partition-key": [
+      "c1"
+    ],
+    "clustering-key": [
+      "c4 ASC",
+      "c6 DESC"
+    ],
+    "columns": {
+      "c1": "INT",
+      "c2": "TEXT",
+      "c3": "BLOB",
+      "c4": "INT",
+      "c5": "BOOLEAN",
+      "c6": "INT",
+      "c7": "BIGINT"
+    },
+    "secondary-index": [
+      "c2",
+      "c7"
+    ],
+    "ru": 5000,
+    "compaction-strategy": "LCS"
+  },
+  "sample_db.sample_table1": {
+    "transaction": true,
+    "partition-key": [
+      "c1"
+    ],
+    "clustering-key": [
+      "c4"
+    ],
+    "columns": {
+      "c1": "INT",
+      "c2": "TEXT",
+      "c3": "INT",
+      "c4": "INT",
+      "c5": "BOOLEAN",
+      "c6": "FLOAT"
+    }
+  },
+  "sample_db.sample_table2": {
+    "transaction": false,
+    "partition-key": [
+      "c1"
+    ],
+    "clustering-key": [
+      "c4",
+      "c3"
+    ],
+    "columns": {
+      "c1": "INT",
+      "c2": "TEXT",
+      "c3": "INT",
+      "c4": "INT",
+      "c5": "BOOLEAN"
+    }
+  }
+}

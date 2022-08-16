@@ -3,7 +3,11 @@ package com.scalar.db.schemaloader;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.DataType;
+import com.scalar.db.schemaloader.alteration.TableMetadataAlteration;
+import com.scalar.db.schemaloader.alteration.TableMetadataAlterationProcessor;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import java.io.IOException;
@@ -23,12 +27,14 @@ public class SchemaOperator {
 
   private final DistributedStorageAdmin storageAdmin;
   private final DistributedTransactionAdmin transactionAdmin;
+  private final TableMetadataAlterationProcessor alterationProcessor;
 
   public SchemaOperator(Path propertiesFilePath) throws IOException {
     StorageFactory storageFactory = StorageFactory.create(propertiesFilePath);
     storageAdmin = storageFactory.getStorageAdmin();
     TransactionFactory transactionFactory = TransactionFactory.create(propertiesFilePath);
     transactionAdmin = transactionFactory.getTransactionAdmin();
+    alterationProcessor = new TableMetadataAlterationProcessor();
   }
 
   public SchemaOperator(Properties properties) {
@@ -36,13 +42,17 @@ public class SchemaOperator {
     storageAdmin = storageFactory.getStorageAdmin();
     TransactionFactory transactionFactory = TransactionFactory.create(properties);
     transactionAdmin = transactionFactory.getTransactionAdmin();
+    alterationProcessor = new TableMetadataAlterationProcessor();
   }
 
   @VisibleForTesting
   SchemaOperator(
-      DistributedStorageAdmin storageAdmin, DistributedTransactionAdmin transactionAdmin) {
+      DistributedStorageAdmin storageAdmin,
+      DistributedTransactionAdmin transactionAdmin,
+      TableMetadataAlterationProcessor alterationProcessor) {
     this.storageAdmin = storageAdmin;
     this.transactionAdmin = transactionAdmin;
+    this.alterationProcessor = alterationProcessor;
   }
 
   public void createTables(List<TableSchema> tableSchemaList) throws SchemaLoaderException {
@@ -197,6 +207,117 @@ public class SchemaOperator {
       logger.info("Repairing the coordinator tables succeeded.");
     } catch (ExecutionException e) {
       throw new SchemaLoaderException("Repairing the coordinator tables failed.", e);
+    }
+  }
+
+  public void alterTables(List<TableSchema> tableSchemaList, Map<String, String> options)
+      throws SchemaLoaderException {
+    for (TableSchema tableSchema : tableSchemaList) {
+      String namespace = tableSchema.getNamespace();
+      String table = tableSchema.getTable();
+      boolean isTransactional = tableSchema.isTransactionTable();
+
+      try {
+        if (!tableExists(namespace, table)) {
+          throw new UnsupportedOperationException(
+              String.format(
+                  "Altering the table %s.%s is not possible as the table was not created beforehand.",
+                  namespace, table));
+        }
+        TableMetadata currentMetadata = getCurrentTableMetadata(namespace, table, isTransactional);
+        TableMetadataAlteration metadataAlteration =
+            alterationProcessor.computeAlteration(
+                namespace, table, currentMetadata, tableSchema.getTableMetadata());
+        if (metadataAlteration.hasAlterations()) {
+          alterTable(namespace, table, isTransactional, metadataAlteration, options);
+        } else {
+          logger.info(
+              String.format("No alterations were detected for the table %s.%s.", namespace, table));
+        }
+      } catch (ExecutionException e) {
+        throw new SchemaLoaderException(
+            String.format("Altering the table %s.%s failed.", namespace, table), e);
+      }
+    }
+  }
+
+  private TableMetadata getCurrentTableMetadata(
+      String namespace, String table, boolean isTransactional) throws ExecutionException {
+    if (isTransactional) {
+      return transactionAdmin.getTableMetadata(namespace, table);
+    } else {
+      return storageAdmin.getTableMetadata(namespace, table);
+    }
+  }
+
+  private void alterTable(
+      String namespace,
+      String table,
+      boolean isTransactional,
+      TableMetadataAlteration metadataAlteration,
+      Map<String, String> options)
+      throws ExecutionException {
+    addNewColumnsToTable(namespace, table, metadataAlteration, isTransactional);
+    addNewSecondaryIndexesToTable(namespace, table, metadataAlteration, isTransactional, options);
+    deleteSecondaryIndexesFromTable(namespace, table, metadataAlteration, isTransactional);
+  }
+
+  private void deleteSecondaryIndexesFromTable(
+      String namespace,
+      String table,
+      TableMetadataAlteration alteredMetadata,
+      boolean isTransactional)
+      throws ExecutionException {
+    for (String deletedIndex : alteredMetadata.getDeletedSecondaryIndexNames()) {
+      if (isTransactional) {
+        transactionAdmin.dropIndex(namespace, table, deletedIndex);
+      } else {
+        storageAdmin.dropIndex(namespace, table, deletedIndex);
+      }
+      logger.info(
+          String.format(
+              "Deleting the secondary index %s from the table %s.%s succeeded.",
+              deletedIndex, namespace, table));
+    }
+  }
+
+  private void addNewSecondaryIndexesToTable(
+      String namespace,
+      String table,
+      TableMetadataAlteration alteredMetadata,
+      boolean isTransactional,
+      Map<String, String> options)
+      throws ExecutionException {
+    for (String addedIndex : alteredMetadata.getAddedSecondaryIndexNames()) {
+      if (isTransactional) {
+        transactionAdmin.createIndex(namespace, table, addedIndex, options);
+      } else {
+        storageAdmin.createIndex(namespace, table, addedIndex, options);
+      }
+      logger.info(
+          String.format(
+              "Adding the secondary index %s to the table %s.%s succeeded.",
+              addedIndex, namespace, table));
+    }
+  }
+
+  private void addNewColumnsToTable(
+      String namespace,
+      String table,
+      TableMetadataAlteration alteredMetadata,
+      boolean isTransactional)
+      throws ExecutionException {
+    for (String addedColumn : alteredMetadata.getAddedColumnNames()) {
+      DataType addedColumnDataType = alteredMetadata.getAddedColumnDataTypes().get(addedColumn);
+      if (isTransactional) {
+        transactionAdmin.addNewColumnToTable(namespace, table, addedColumn, addedColumnDataType);
+      } else {
+        storageAdmin.addNewColumnToTable(namespace, table, addedColumn, addedColumnDataType);
+      }
+      logger.info(
+          String.format(
+              "Adding the column %s of type %s to the table %s.%s succeeded.",
+              addedColumn, addedColumnDataType, namespace, table));
     }
   }
 
