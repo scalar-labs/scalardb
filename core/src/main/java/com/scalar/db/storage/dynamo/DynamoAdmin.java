@@ -629,17 +629,17 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropTable(String nonPrefixedNamespace, String table) throws ExecutionException {
-    Namespace prefixedNamespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
-    disableAutoScaling(prefixedNamespace, table);
+    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
+    disableAutoScaling(namespace, table);
 
-    String fullTableName = getFullTableName(prefixedNamespace, table);
+    String fullTableName = getFullTableName(namespace, table);
     try {
       client.deleteTable(DeleteTableRequest.builder().tableName(fullTableName).build());
     } catch (Exception e) {
       throw new ExecutionException("deleting table " + fullTableName + " failed", e);
     }
-    waitForTableDeletion(prefixedNamespace, table);
-    deleteTableMetadata(prefixedNamespace, table);
+    waitForTableDeletion(namespace, table);
+    deleteTableMetadata(namespace, table);
   }
 
   private void disableAutoScaling(Namespace namespace, String table) throws ExecutionException {
