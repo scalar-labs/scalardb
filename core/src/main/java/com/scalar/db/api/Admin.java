@@ -5,6 +5,7 @@ import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.Nullable;
 
 /** An administrative interface. */
 public interface Admin {
@@ -291,7 +292,11 @@ public interface Admin {
    */
   default boolean indexExists(String namespace, String table, String columnName)
       throws ExecutionException {
-    return getTableMetadata(namespace, table).getSecondaryIndexNames().contains(columnName);
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      return false;
+    }
+    return tableMetadata.getSecondaryIndexNames().contains(columnName);
   }
 
   /**
@@ -302,6 +307,7 @@ public interface Admin {
    * @return the table metadata of the specified table. null if the table is not found.
    * @throws ExecutionException if the operation failed
    */
+  @Nullable
   TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException;
 
   /**
