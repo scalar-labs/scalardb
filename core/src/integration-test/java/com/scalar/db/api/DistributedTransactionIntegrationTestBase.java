@@ -577,7 +577,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
   public void putWithNullValueAndCommit_ShouldCreateRecordProperly() throws TransactionException {
     // Arrange
     Put put = preparePut(0, 0).withIntValue(BALANCE, null);
-    DistributedTransaction transaction = manager.start();
+    DistributedTransaction transaction = manager.begin();
 
     // Act
     transaction.put(put);
@@ -585,7 +585,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
     // Assert
     Get get = prepareGet(0, 0);
-    DistributedTransaction another = manager.start();
+    DistributedTransaction another = manager.begin();
     Optional<Result> result = another.get(get);
     another.commit();
     assertThat(result.isPresent()).isTrue();
@@ -602,7 +602,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     int toId = NUM_TYPES;
 
     // Act
-    DistributedTransaction transaction = manager.start();
+    DistributedTransaction transaction = manager.begin();
 
     Optional<Result> fromResult = transaction.get(gets.get(fromId));
     assertThat(fromResult.isPresent()).isTrue();
@@ -621,7 +621,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    DistributedTransaction another = manager.start();
+    DistributedTransaction another = manager.begin();
     fromResult = another.get(gets.get(fromId));
     assertThat(fromResult.isPresent()).isTrue();
     assertThat(getBalance(fromResult.get())).isEqualTo(INITIAL_BALANCE - amount);
@@ -636,7 +636,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
   public void putAndAbort_ShouldNotCreateRecord() throws TransactionException {
     // Arrange
     Put put = preparePut(0, 0).withValue(BALANCE, INITIAL_BALANCE);
-    DistributedTransaction transaction = manager.start();
+    DistributedTransaction transaction = manager.begin();
 
     // Act
     transaction.put(put);
@@ -644,7 +644,25 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
     // Assert
     Get get = prepareGet(0, 0);
-    DistributedTransaction another = manager.start();
+    DistributedTransaction another = manager.begin();
+    Optional<Result> result = another.get(get);
+    another.commit();
+    assertThat(result.isPresent()).isFalse();
+  }
+
+  @Test
+  public void putAndRollback_ShouldNotCreateRecord() throws TransactionException {
+    // Arrange
+    Put put = preparePut(0, 0).withValue(BALANCE, INITIAL_BALANCE);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    transaction.put(put);
+    transaction.rollback();
+
+    // Assert
+    Get get = prepareGet(0, 0);
+    DistributedTransaction another = manager.begin();
     Optional<Result> result = another.get(get);
     another.commit();
     assertThat(result.isPresent()).isFalse();
@@ -657,7 +675,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     populateRecords();
     Get get = prepareGet(0, 0);
     Delete delete = prepareDelete(0, 0);
-    DistributedTransaction transaction = manager.start();
+    DistributedTransaction transaction = manager.begin();
 
     // Act
     Optional<Result> result = transaction.get(get);
@@ -666,7 +684,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
     // Assert
     assertThat(result.isPresent()).isTrue();
-    DistributedTransaction another = manager.start();
+    DistributedTransaction another = manager.begin();
     Optional<Result> result1 = another.get(get);
     another.commit();
     assertThat(result1.isPresent()).isFalse();
@@ -678,7 +696,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     populateRecords();
     Get get = prepareGet(0, 0);
     Delete delete = prepareDelete(0, 0);
-    DistributedTransaction transaction = manager.start();
+    DistributedTransaction transaction = manager.begin();
 
     // Act
     Optional<Result> result = transaction.get(get);
@@ -687,7 +705,28 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
     // Assert
     assertThat(result).isPresent();
-    DistributedTransaction another = manager.start();
+    DistributedTransaction another = manager.begin();
+    Optional<Result> result1 = another.get(get);
+    another.commit();
+    assertThat(result1).isPresent();
+  }
+
+  @Test
+  public void deleteAndRollback_ShouldNotDeleteRecord() throws TransactionException {
+    // Arrange
+    populateRecords();
+    Get get = prepareGet(0, 0);
+    Delete delete = prepareDelete(0, 0);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Optional<Result> result = transaction.get(get);
+    transaction.delete(delete);
+    transaction.rollback();
+
+    // Assert
+    assertThat(result).isPresent();
+    DistributedTransaction another = manager.begin();
     Optional<Result> result1 = another.get(get);
     another.commit();
     assertThat(result1).isPresent();
@@ -702,7 +741,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     Put put = preparePut(0, 0).withIntValue(BALANCE, INITIAL_BALANCE - 100);
     Delete delete = prepareDelete(1, 0);
 
-    DistributedTransaction transaction = manager.start();
+    DistributedTransaction transaction = manager.begin();
 
     // Act
     transaction.get(get1);
@@ -711,7 +750,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    DistributedTransaction another = manager.start();
+    DistributedTransaction another = manager.begin();
     Optional<Result> result1 = another.get(get1);
     Optional<Result> result2 = another.get(get2);
     another.commit();
@@ -725,7 +764,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
   public void getState_forSuccessfulTransaction_ShouldReturnCommittedState()
       throws TransactionException {
     // Arrange
-    DistributedTransaction transaction = manager.start();
+    DistributedTransaction transaction = manager.begin();
     transaction.get(prepareGet(0, 0));
     transaction.put(preparePut(0, 0).withValue(BALANCE, 1));
     transaction.commit();
@@ -740,11 +779,11 @@ public abstract class DistributedTransactionIntegrationTestBase {
   @Test
   public void getState_forFailedTransaction_ShouldReturnAbortedState() throws TransactionException {
     // Arrange
-    DistributedTransaction transaction1 = manager.start();
+    DistributedTransaction transaction1 = manager.begin();
     transaction1.get(prepareGet(0, 0));
     transaction1.put(preparePut(0, 0).withValue(BALANCE, 1));
 
-    DistributedTransaction transaction2 = manager.start();
+    DistributedTransaction transaction2 = manager.begin();
     transaction2.get(prepareGet(0, 0));
     transaction2.put(preparePut(0, 0).withValue(BALANCE, 1));
     transaction2.commit();
@@ -761,7 +800,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
   @Test
   public void abort_forOngoingTransaction_ShouldAbortCorrectly() throws TransactionException {
     // Arrange
-    DistributedTransaction transaction = manager.start();
+    DistributedTransaction transaction = manager.begin();
     transaction.get(prepareGet(0, 0));
     transaction.put(preparePut(0, 0).withValue(BALANCE, 1));
 
@@ -776,12 +815,29 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
+  public void rollback_forOngoingTransaction_ShouldRollbackCorrectly() throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+    transaction.get(prepareGet(0, 0));
+    transaction.put(preparePut(0, 0).withValue(BALANCE, 1));
+
+    // Act
+    manager.rollback(transaction.getId());
+
+    assertThatCode(transaction::commit).isInstanceOf(CommitException.class);
+
+    // Assert
+    TransactionState state = manager.getState(transaction.getId());
+    assertThat(state).isEqualTo(TransactionState.ABORTED);
+  }
+
+  @Test
   public void
       get_GetWithProjectionOnNonPrimaryKeyColumnsForGivenForCommittedRecord_ShouldReturnOnlyProjectedColumns()
           throws TransactionException {
     // Arrange
     populateSingleRecord();
-    DistributedTransaction transaction = manager.start();
+    DistributedTransaction transaction = manager.begin();
     Get get = prepareGet(0, 0).withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
 
     // Act
@@ -800,7 +856,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
       scan_ScanWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns()
           throws TransactionException {
     // Arrange
-    DistributedTransaction transaction = manager.start();
+    DistributedTransaction transaction = manager.begin();
     populateSingleRecord();
     Scan scan = prepareScan(0, 0, 0).withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
 
@@ -823,7 +879,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
           throws TransactionException {
     // Arrange
     populateSingleRecord();
-    DistributedTransaction transaction = manager.start();
+    DistributedTransaction transaction = manager.begin();
     ScanAll scanAll = prepareScanAll().withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
 
     // Act

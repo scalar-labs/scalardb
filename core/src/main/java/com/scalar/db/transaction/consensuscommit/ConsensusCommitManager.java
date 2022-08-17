@@ -10,6 +10,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.common.AbstractDistributedTransactionManager;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
@@ -69,27 +70,37 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   }
 
   @Override
-  public ConsensusCommit start() {
-    return start(config.getIsolation(), config.getSerializableStrategy());
+  public ConsensusCommit begin() {
+    return begin(config.getIsolation(), config.getSerializableStrategy());
   }
 
   @Override
-  public ConsensusCommit start(String txId) {
-    return start(txId, config.getIsolation(), config.getSerializableStrategy());
+  public ConsensusCommit begin(String txId) {
+    return begin(txId, config.getIsolation(), config.getSerializableStrategy());
+  }
+
+  @Override
+  public ConsensusCommit start() throws TransactionException {
+    return (ConsensusCommit) super.start();
+  }
+
+  @Override
+  public ConsensusCommit start(String txId) throws TransactionException {
+    return (ConsensusCommit) super.start(txId);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public ConsensusCommit start(com.scalar.db.api.Isolation isolation) {
-    return start(Isolation.valueOf(isolation.name()), config.getSerializableStrategy());
+    return begin(Isolation.valueOf(isolation.name()), config.getSerializableStrategy());
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public ConsensusCommit start(String txId, com.scalar.db.api.Isolation isolation) {
-    return start(txId, Isolation.valueOf(isolation.name()), config.getSerializableStrategy());
+    return begin(txId, Isolation.valueOf(isolation.name()), config.getSerializableStrategy());
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -97,21 +108,21 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   @Override
   public ConsensusCommit start(
       com.scalar.db.api.Isolation isolation, com.scalar.db.api.SerializableStrategy strategy) {
-    return start(Isolation.valueOf(isolation.name()), (SerializableStrategy) strategy);
+    return begin(Isolation.valueOf(isolation.name()), (SerializableStrategy) strategy);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public ConsensusCommit start(com.scalar.db.api.SerializableStrategy strategy) {
-    return start(Isolation.SERIALIZABLE, (SerializableStrategy) strategy);
+    return begin(Isolation.SERIALIZABLE, (SerializableStrategy) strategy);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public ConsensusCommit start(String txId, com.scalar.db.api.SerializableStrategy strategy) {
-    return start(txId, Isolation.SERIALIZABLE, (SerializableStrategy) strategy);
+    return begin(txId, Isolation.SERIALIZABLE, (SerializableStrategy) strategy);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -121,17 +132,17 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       String txId,
       com.scalar.db.api.Isolation isolation,
       com.scalar.db.api.SerializableStrategy strategy) {
-    return start(txId, Isolation.valueOf(isolation.name()), (SerializableStrategy) strategy);
+    return begin(txId, Isolation.valueOf(isolation.name()), (SerializableStrategy) strategy);
   }
 
   @VisibleForTesting
-  ConsensusCommit start(Isolation isolation, SerializableStrategy strategy) {
+  ConsensusCommit begin(Isolation isolation, SerializableStrategy strategy) {
     String txId = UUID.randomUUID().toString();
-    return start(txId, isolation, strategy);
+    return begin(txId, isolation, strategy);
   }
 
   @VisibleForTesting
-  ConsensusCommit start(String txId, Isolation isolation, SerializableStrategy strategy) {
+  ConsensusCommit begin(String txId, Isolation isolation, SerializableStrategy strategy) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkNotNull(isolation);
     if (!config.getIsolation().equals(isolation)
@@ -165,7 +176,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   }
 
   @Override
-  public TransactionState abort(String txId) {
+  public TransactionState rollback(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     try {
       return commit.abort(txId);

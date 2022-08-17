@@ -9,6 +9,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Optional;
@@ -50,7 +51,54 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void start_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolation() {
+  public void begin_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolation() {
+    // Arrange
+
+    // Act
+    ConsensusCommit transaction = manager.begin();
+
+    // Assert
+    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
+    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
+        .isEqualTo(Isolation.SNAPSHOT);
+  }
+
+  @Test
+  public void begin_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation() {
+    // Arrange
+
+    // Act
+    ConsensusCommit transaction = manager.begin(ANY_TX_ID);
+
+    // Assert
+    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
+        .isEqualTo(Isolation.SNAPSHOT);
+  }
+
+  @Test
+  public void begin_CalledTwice_ReturnRespectiveConsensusCommitWithSharedCommitAndRecovery() {
+    // Arrange
+
+    // Act
+    ConsensusCommit transaction1 = manager.begin();
+    ConsensusCommit transaction2 = manager.begin();
+
+    // Assert
+    assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
+    assertThat(transaction1.getCrudHandler().getSnapshot().getId())
+        .isNotEqualTo(transaction2.getCrudHandler().getSnapshot().getId());
+    assertThat(transaction1.getCommitHandler())
+        .isEqualTo(transaction2.getCommitHandler())
+        .isEqualTo(commit);
+    assertThat(transaction1.getRecoveryHandler())
+        .isEqualTo(transaction2.getRecoveryHandler())
+        .isEqualTo(recovery);
+  }
+
+  @Test
+  public void start_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolation()
+      throws TransactionException {
     // Arrange
 
     // Act
@@ -58,6 +106,20 @@ public class ConsensusCommitManagerTest {
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
+    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
+        .isEqualTo(Isolation.SNAPSHOT);
+  }
+
+  @Test
+  public void start_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
+      throws TransactionException {
+    // Arrange
+
+    // Act
+    ConsensusCommit transaction = manager.start(ANY_TX_ID);
+
+    // Assert
+    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
     assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
         .isEqualTo(Isolation.SNAPSHOT);
   }
@@ -85,7 +147,8 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void start_CalledTwice_ReturnRespectiveConsensusCommitWithSharedCommitAndRecovery() {
+  public void start_CalledTwice_ReturnRespectiveConsensusCommitWithSharedCommitAndRecovery()
+      throws TransactionException {
     // Arrange
 
     // Act
@@ -143,8 +206,48 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void abort_CommitHandlerReturnsAborted_ShouldReturnTheState()
-      throws UnknownTransactionStatusException {
+  public void rollback_CommitHandlerReturnsAborted_ShouldReturnTheState()
+      throws TransactionException {
+    // Arrange
+    TransactionState expected = TransactionState.ABORTED;
+    when(commit.abort(ANY_TX_ID)).thenReturn(expected);
+
+    // Act
+    TransactionState actual = manager.rollback(ANY_TX_ID);
+
+    // Assert
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void rollback_CommitHandlerReturnsCommitted_ShouldReturnTheState()
+      throws TransactionException {
+    // Arrange
+    TransactionState expected = TransactionState.COMMITTED;
+    when(commit.abort(ANY_TX_ID)).thenReturn(expected);
+
+    // Act
+    TransactionState actual = manager.rollback(ANY_TX_ID);
+
+    // Assert
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void rollback_CommitHandlerThrowsUnknownTransactionStatusException_ShouldReturnUnknown()
+      throws TransactionException {
+    // Arrange
+    when(commit.abort(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
+
+    // Act
+    TransactionState actual = manager.rollback(ANY_TX_ID);
+
+    // Assert
+    assertThat(actual).isEqualTo(TransactionState.UNKNOWN);
+  }
+
+  @Test
+  public void abort_CommitHandlerReturnsAborted_ShouldReturnTheState() throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.ABORTED;
     when(commit.abort(ANY_TX_ID)).thenReturn(expected);
@@ -158,7 +261,7 @@ public class ConsensusCommitManagerTest {
 
   @Test
   public void abort_CommitHandlerReturnsCommitted_ShouldReturnTheState()
-      throws UnknownTransactionStatusException {
+      throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.COMMITTED;
     when(commit.abort(ANY_TX_ID)).thenReturn(expected);
@@ -172,7 +275,7 @@ public class ConsensusCommitManagerTest {
 
   @Test
   public void abort_CommitHandlerThrowsUnknownTransactionStatusException_ShouldReturnUnknown()
-      throws UnknownTransactionStatusException {
+      throws TransactionException {
     // Arrange
     when(commit.abort(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
 
