@@ -49,26 +49,40 @@ TransactionFactory factory = TransactionFactory.create("<configuration file path
 TwoPhaseCommitTransactionManager manager = factory.getTwoPhaseCommitTransactionManager();
 ```
 
-### Start a transaction (coordinator only)
+### Begin/Start a transaction (for coordinator)
 
-You can start a transaction as follows:
+You can begin/start a transaction as follows:
 ```java
+// Begin a transaction
+TwoPhaseCommitTransaction tx = manager.begin();
+
+Or
+
+// Start a transaction
 TwoPhaseCommitTransaction tx = manager.start();
 ```
 
 The process/application that starts the transaction acts as a coordinator, as mentioned.
 
-You can also start a transaction by specifying a transaction ID as follows:
+You can also begin/start a transaction by specifying a transaction ID as follows:
 ```java
+// Begin a transaction with specifying a transaction ID
+TwoPhaseCommitTransaction tx = manager.begin("<transaction ID>");
+
+Or
+
+// Start a transaction with specifying a transaction ID
 TwoPhaseCommitTransaction tx = manager.start("<transaction ID>");
 ```
+
+Note that you must guarantee uniqueness of the transaction ID in this case.
 
 And, you can get the transaction ID with `getId()` as follows:
 ```java
 tx.getId();
 ```
 
-### Join the transaction (participant only)
+### Join the transaction (for participants)
 
 If you are a participant, you can join the transaction that has been started by the coordinator as follows:
 ```java
@@ -146,7 +160,7 @@ try {
   ...
 
   // Commit phase: Commit the transaction in all the coordinator/participant processes
-  tx.commit()
+  tx.commit();
   ...
 } catch (TransactionException e) {
   // When an error happans, you need to rollback the transaction in all the coordinator/participant processes
@@ -155,7 +169,7 @@ try {
 }
 ```
 
-If an error happens, you need to call `rollback()` in all the coordinator/participant processes.
+If an error happens, you need to call `rollback()` (or `abort()`) in all the coordinator/participant processes.
 Note that you need to call it in the coordinator process first, and then call it in the participant processes in parallel.
 
 You can call `prepare()` in the coordinator/participant processes in parallel.
@@ -170,11 +184,11 @@ tx.prepare();
 ...
 
 // Prepare phase 2: Validate the transaction in all the coordinator/participant processes
-tx.validate()
+tx.validate();
 ...
 
 // Commit phase: Commit the transaction in all the coordinator/participant processes
-tx.commit()
+tx.commit();
 ...
 ```
 

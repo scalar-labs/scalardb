@@ -57,14 +57,14 @@ Currently, we can set the following options for the storage adapters:
 For Cosmos DB:
 
 | name       | value                              | default |
-| ---------- | ---------------------------------- | ------- |
+|------------|------------------------------------|---------|
 | ru         | Base resource unit                 | 400     |
 | no-scaling | Disable auto-scaling for Cosmos DB | false   |
 
 For DynamoDB:
 
 | name       | value                                  | default |
-| ---------- | -------------------------------------- | ------- |
+|------------|----------------------------------------|---------|
 | no-scaling | Disable auto-scaling for DynamoDB      | false   |
 | no-backup  | Disable continuous backup for DynamoDB | false   |
 | ru         | Base resource unit                     | 10      |
@@ -72,7 +72,7 @@ For DynamoDB:
 For Cassandra:
 
 | name                 | value                                                                                 | default          |
-| -------------------- | ------------------------------------------------------------------------------------- | ---------------- |
+|----------------------|---------------------------------------------------------------------------------------|------------------|
 | replication-strategy | Cassandra replication strategy, must be `SimpleStrategy` or `NetworkTopologyStrategy` | `SimpleStrategy` |
 | compaction-strategy  | Cassandra compaction strategy, must be `LCS`, `STCS` or `TWCS`                        | `STCS`           |
 | replication-factor   | Cassandra replication factor                                                          | 1                |
@@ -276,14 +276,34 @@ Once you have executed all transactional operations, you should close the `Distr
 manager.close();
 ```
 
-### Start transaction
+### Begin/Start a transaction
 
-You need to start a transaction before executing transactional CRUD operations.
-You can start a transaction as follows:
+You need to begin/start a transaction before executing transactional CRUD operations.
+You can begin/start a transaction as follows:
 
 ```java
+// Begin a transaction
+DistributedTransaction transaction = manager.begin();
+
+Or
+
+// Start a transaction
 DistributedTransaction transaction = manager.start();
 ```
+
+You can also begin/start a transaction with specifying a transaction ID as follows:
+
+```java
+// Begin a transaction with specifying a transaction ID
+DistributedTransaction transaction = manager.begin("<transaction ID>");
+
+Or
+
+// Start a transaction with specifying a transaction ID
+DistributedTransaction transaction = manager.start("<transaction ID>");
+```
+
+Note that you must guarantee uniqueness of the transaction ID in this case.
 
 ### CRUD operations
 
@@ -629,13 +649,18 @@ You can commit a transaction as follows;
 transaction.commit();
 ```
 
-### Abort a transaction
+### Rollback/Abort a transaction
 
-If you want to abort a transaction or an error happens during the execution, you can abort a transaction.
+If you want to rollback/abort a transaction or an error happens during the execution, you can rollback/abort a transaction.
 
-You can abort a transaction as follows;
+You can rollback/abort a transaction as follows;
 
 ```java
+// Rollback a transaction
+transaction.rollback();
+
+Or
+
 // Abort a transaction
 transaction.abort();
 ```
