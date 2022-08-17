@@ -2,7 +2,7 @@ package com.scalar.db.storage.dynamo;
 
 import java.util.Optional;
 
-public class DynamoAdminTestWithDefaultConfigTest extends DynamoAdminTestBase {
+public class DynamoAdminWithDefaultConfigTest extends DynamoAdminTestBase {
 
   @Override
   Optional<String> getTableMetadataNamespaceConfig() {
