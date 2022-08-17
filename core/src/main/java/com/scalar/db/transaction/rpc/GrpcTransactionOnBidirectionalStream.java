@@ -14,6 +14,7 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.rpc.DistributedTransactionGrpc.DistributedTransactionStub;
@@ -23,7 +24,6 @@ import com.scalar.db.rpc.TransactionRequest.CommitRequest;
 import com.scalar.db.rpc.TransactionRequest.GetRequest;
 import com.scalar.db.rpc.TransactionRequest.MutateRequest;
 import com.scalar.db.rpc.TransactionRequest.ScanRequest;
-import com.scalar.db.rpc.TransactionRequest.StartRequest;
 import com.scalar.db.rpc.TransactionResponse;
 import com.scalar.db.rpc.TransactionResponse.GetResponse;
 import com.scalar.db.storage.rpc.GrpcConfig;
@@ -103,22 +103,40 @@ public class GrpcTransactionOnBidirectionalStream
     }
   }
 
+  public String beginTransaction(@Nullable String transactionId) throws TransactionException {
+    throwIfTransactionFinished();
+
+    TransactionRequest.BeginRequest request;
+    if (transactionId == null) {
+      request = TransactionRequest.BeginRequest.getDefaultInstance();
+    } else {
+      request =
+          TransactionRequest.BeginRequest.newBuilder().setTransactionId(transactionId).build();
+    }
+    ResponseOrError responseOrError =
+        sendRequest(TransactionRequest.newBuilder().setBeginRequest(request).build());
+    throwIfErrorForBeginOrStart(responseOrError, "begin");
+    return responseOrError.getResponse().getBeginResponse().getTransactionId();
+  }
+
   public String startTransaction(@Nullable String transactionId) throws TransactionException {
     throwIfTransactionFinished();
 
-    StartRequest request;
+    TransactionRequest.StartRequest request;
     if (transactionId == null) {
-      request = StartRequest.getDefaultInstance();
+      request = TransactionRequest.StartRequest.getDefaultInstance();
     } else {
-      request = StartRequest.newBuilder().setTransactionId(transactionId).build();
+      request =
+          TransactionRequest.StartRequest.newBuilder().setTransactionId(transactionId).build();
     }
     ResponseOrError responseOrError =
         sendRequest(TransactionRequest.newBuilder().setStartRequest(request).build());
-    throwIfErrorForStart(responseOrError);
+    throwIfErrorForBeginOrStart(responseOrError, "start");
     return responseOrError.getResponse().getStartResponse().getTransactionId();
   }
 
-  private void throwIfErrorForStart(ResponseOrError responseOrError) throws TransactionException {
+  private void throwIfErrorForBeginOrStart(ResponseOrError responseOrError, String command)
+      throws TransactionException {
     if (responseOrError.isError()) {
       finished.set(true);
       Throwable error = responseOrError.getError();
@@ -134,7 +152,7 @@ public class GrpcTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new TransactionException("failed to start", error);
+      throw new TransactionException("failed to " + command, error);
     }
   }
 
@@ -260,6 +278,35 @@ public class GrpcTransactionOnBidirectionalStream
         default:
           throw new CommitException(error.getMessage());
       }
+    }
+  }
+
+  public void rollback() throws RollbackException {
+    if (finished.get()) {
+      return;
+    }
+
+    ResponseOrError responseOrError =
+        sendRequest(
+            TransactionRequest.newBuilder()
+                .setRollbackRequest(TransactionRequest.RollbackRequest.getDefaultInstance())
+                .build());
+    finished.set(true);
+    throwIfErrorForRollback(responseOrError);
+  }
+
+  private void throwIfErrorForRollback(ResponseOrError responseOrError) throws RollbackException {
+    if (responseOrError.isError()) {
+      Throwable error = responseOrError.getError();
+      if (error instanceof Error) {
+        throw (Error) error;
+      }
+      throw new RollbackException("failed to rollback", error);
+    }
+
+    TransactionResponse response = responseOrError.getResponse();
+    if (response.hasError()) {
+      throw new RollbackException(response.getError().getMessage());
     }
   }
 

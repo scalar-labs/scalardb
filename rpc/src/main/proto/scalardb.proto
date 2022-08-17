@@ -10,7 +10,7 @@ import "google/protobuf/empty.proto";
 
 // Common
 
-// Value is deprecated as of release 3.6.0. Will be removed in release 5.0.0
+// Value is deprecated as of release 3.6.0. Will be removed in release 5.0.0. Use Column, instead.
 message Value {
   option deprecated = true;
   string name = 1;
@@ -309,11 +309,17 @@ service DistributedTransaction {
   }
   rpc GetState(GetTransactionStateRequest) returns (GetTransactionStateResponse) {
   }
+  rpc Rollback(RollbackRequest) returns (RollbackResponse) {
+  }
   rpc Abort(AbortRequest) returns (AbortResponse) {
   }
 }
 
 message TransactionRequest {
+  message BeginRequest {
+    optional string transaction_id = 1;
+  }
+
   message StartRequest {
     optional string transaction_id = 1;
   }
@@ -333,6 +339,9 @@ message TransactionRequest {
   message CommitRequest {
   }
 
+  message RollbackRequest {
+  }
+
   message AbortRequest {
   }
 
@@ -343,10 +352,16 @@ message TransactionRequest {
     MutateRequest mutate_request = 4;
     CommitRequest commit_request = 5;
     AbortRequest abort_request = 6;
+    BeginRequest begin_request = 7;
+    RollbackRequest rollback_request = 8;
   }
 }
 
 message TransactionResponse {
+  message BeginResponse {
+    string transaction_id = 1;
+  }
+
   message StartResponse {
     string transaction_id = 1;
   }
@@ -375,6 +390,7 @@ message TransactionResponse {
     GetResponse get_response = 2;
     ScanResponse scan_response = 3;
     Error error = 4;
+    BeginResponse begin_response = 5;
   }
 }
 
@@ -389,6 +405,14 @@ message GetTransactionStateRequest {
 }
 
 message GetTransactionStateResponse {
+  TransactionState state = 1;
+}
+
+message RollbackRequest {
+  string transaction_id = 1;
+}
+
+message RollbackResponse {
   TransactionState state = 1;
 }
 

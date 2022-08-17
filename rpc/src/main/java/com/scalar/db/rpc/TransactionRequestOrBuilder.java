@@ -97,5 +97,35 @@ public interface TransactionRequestOrBuilder extends
    */
   com.scalar.db.rpc.TransactionRequest.AbortRequestOrBuilder getAbortRequestOrBuilder();
 
+  /**
+   * <code>.scalardb.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
+   * @return Whether the beginRequest field is set.
+   */
+  boolean hasBeginRequest();
+  /**
+   * <code>.scalardb.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
+   * @return The beginRequest.
+   */
+  com.scalar.db.rpc.TransactionRequest.BeginRequest getBeginRequest();
+  /**
+   * <code>.scalardb.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
+   */
+  com.scalar.db.rpc.TransactionRequest.BeginRequestOrBuilder getBeginRequestOrBuilder();
+
+  /**
+   * <code>.scalardb.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
+   * @return Whether the rollbackRequest field is set.
+   */
+  boolean hasRollbackRequest();
+  /**
+   * <code>.scalardb.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
+   * @return The rollbackRequest.
+   */
+  com.scalar.db.rpc.TransactionRequest.RollbackRequest getRollbackRequest();
+  /**
+   * <code>.scalardb.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
+   */
+  com.scalar.db.rpc.TransactionRequest.RollbackRequestOrBuilder getRollbackRequestOrBuilder();
+
   public com.scalar.db.rpc.TransactionRequest.RequestCase getRequestCase();
 }

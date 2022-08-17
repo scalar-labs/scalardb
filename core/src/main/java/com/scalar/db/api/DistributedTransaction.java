@@ -3,6 +3,7 @@ package com.scalar.db.api;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import java.util.Optional;
 
@@ -76,9 +77,22 @@ public interface DistributedTransaction extends TransactionCrudOperable {
   void commit() throws CommitConflictException, CommitException, UnknownTransactionStatusException;
 
   /**
-   * Aborts a transaction.
+   * Rolls back a transaction.
+   *
+   * @throws RollbackException if the operation fails
+   */
+  void rollback() throws RollbackException;
+
+  /**
+   * Aborts a transaction. This method is an alias of {@link #rollback()}.
    *
    * @throws AbortException if the operation fails
    */
-  void abort() throws AbortException;
+  default void abort() throws AbortException {
+    try {
+      rollback();
+    } catch (RollbackException e) {
+      throw new AbortException(e.getMessage(), e);
+    }
+  }
 }

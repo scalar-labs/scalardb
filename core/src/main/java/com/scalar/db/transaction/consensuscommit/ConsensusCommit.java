@@ -122,7 +122,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   }
 
   @Override
-  public void abort() {
+  public void rollback() {
     // do nothing for this implementation
   }
 

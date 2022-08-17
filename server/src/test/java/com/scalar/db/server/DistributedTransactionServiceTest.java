@@ -32,6 +32,8 @@ import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.Get;
 import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
+import com.scalar.db.rpc.RollbackRequest;
+import com.scalar.db.rpc.RollbackResponse;
 import com.scalar.db.rpc.TransactionRequest;
 import com.scalar.db.rpc.TransactionRequest.GetRequest;
 import com.scalar.db.rpc.TransactionRequest.ScanRequest;
@@ -708,6 +710,74 @@ public class DistributedTransactionServiceTest {
 
     // Act
     transactionService.getState(request, responseObserver);
+
+    // Assert
+    verify(responseObserver).onError(exceptionCaptor.capture());
+    assertThat(exceptionCaptor.getValue().getStatus().getCode()).isEqualTo(Code.UNAVAILABLE);
+  }
+
+  @Test
+  public void rollback_IsCalledWithProperArguments_ManagerShouldBeCalledProperly()
+      throws TransactionException {
+    // Arrange
+    RollbackRequest request = RollbackRequest.newBuilder().setTransactionId(ANY_ID).build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<RollbackResponse> responseObserver = mock(StreamObserver.class);
+    when(manager.rollback(anyString())).thenReturn(TransactionState.ABORTED);
+
+    // Act
+    transactionService.rollback(request, responseObserver);
+
+    // Assert
+    verify(manager).rollback(anyString());
+    verify(responseObserver).onNext(any());
+    verify(responseObserver).onCompleted();
+  }
+
+  @Test
+  public void rollback_ManagerThrowsIllegalArgumentException_ShouldThrowInvalidArgumentError()
+      throws TransactionException {
+    // Arrange
+    RollbackRequest request = RollbackRequest.newBuilder().setTransactionId(ANY_ID).build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<RollbackResponse> responseObserver = mock(StreamObserver.class);
+    when(manager.rollback(anyString())).thenThrow(IllegalArgumentException.class);
+
+    // Act
+    transactionService.rollback(request, responseObserver);
+
+    // Assert
+    verify(responseObserver).onError(exceptionCaptor.capture());
+    assertThat(exceptionCaptor.getValue().getStatus().getCode()).isEqualTo(Code.INVALID_ARGUMENT);
+  }
+
+  @Test
+  public void rollback_ManagerThrowsTransactionException_ShouldThrowInternalError()
+      throws TransactionException {
+    // Arrange
+    RollbackRequest request = RollbackRequest.newBuilder().setTransactionId(ANY_ID).build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<RollbackResponse> responseObserver = mock(StreamObserver.class);
+    when(manager.rollback(anyString())).thenThrow(TransactionException.class);
+
+    // Act
+    transactionService.rollback(request, responseObserver);
+
+    // Assert
+    verify(responseObserver).onError(exceptionCaptor.capture());
+    assertThat(exceptionCaptor.getValue().getStatus().getCode()).isEqualTo(Code.INTERNAL);
+  }
+
+  @Test
+  public void rollback_GateKeeperReturnsFalse_ShouldThrowUnavailableError() {
+    // Arrange
+    RollbackRequest request = RollbackRequest.newBuilder().setTransactionId(ANY_ID).build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<RollbackResponse> responseObserver = mock(StreamObserver.class);
+    when(gateKeeper.letIn()).thenReturn(false);
+
+    // Act
+    transactionService.rollback(request, responseObserver);
 
     // Assert
     verify(responseObserver).onError(exceptionCaptor.capture());

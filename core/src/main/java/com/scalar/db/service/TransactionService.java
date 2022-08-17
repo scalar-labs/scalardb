@@ -57,6 +57,16 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
+  public DistributedTransaction begin() throws TransactionException {
+    return manager.begin();
+  }
+
+  @Override
+  public DistributedTransaction begin(String txId) throws TransactionException {
+    return manager.begin(txId);
+  }
+
+  @Override
   public DistributedTransaction start() throws TransactionException {
     return manager.start();
   }
@@ -115,6 +125,11 @@ public class TransactionService implements DistributedTransactionManager {
   @Override
   public TransactionState getState(String txId) throws TransactionException {
     return manager.getState(txId);
+  }
+
+  @Override
+  public TransactionState rollback(String txId) throws TransactionException {
+    return manager.rollback(txId);
   }
 
   @Override

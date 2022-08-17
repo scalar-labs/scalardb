@@ -9,11 +9,11 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.JdbcUtils;
@@ -165,7 +165,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   }
 
   @Override
-  public void abort() throws AbortException {
+  public void rollback() throws RollbackException {
     try {
       if (connection.isClosed()) {
         // If the connection is already closed, do nothing here
@@ -174,7 +174,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
       connection.rollback();
     } catch (SQLException e) {
-      throw new AbortException("failed to rollback", e);
+      throw new RollbackException("failed to rollback", e);
     } finally {
       try {
         connection.close();

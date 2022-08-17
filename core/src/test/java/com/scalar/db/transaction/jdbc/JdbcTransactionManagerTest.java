@@ -16,6 +16,7 @@ import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.jdbc.JdbcService;
@@ -62,7 +63,7 @@ public class JdbcTransactionManagerTest {
     when(jdbcService.delete(any(), any())).thenReturn(true);
 
     // Act
-    JdbcTransaction transaction = manager.start();
+    JdbcTransaction transaction = manager.begin();
     Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
     transaction.get(get);
     Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
@@ -113,7 +114,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.start();
+              JdbcTransaction transaction = manager.begin();
               Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.get(get);
             })
@@ -146,7 +147,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.start();
+              JdbcTransaction transaction = manager.begin();
               Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.scan(scan);
             })
@@ -183,7 +184,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.start();
+              JdbcTransaction transaction = manager.begin();
               Put put =
                   new Put(new Key("p1", "val1"))
                       .withValue("v1", "val2")
@@ -222,7 +223,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.start();
+              JdbcTransaction transaction = manager.begin();
               Delete delete =
                   new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.delete(delete);
@@ -263,7 +264,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.start();
+              JdbcTransaction transaction = manager.begin();
               Put put =
                   new Put(new Key("p1", "val1"))
                       .withValue("v1", "val2")
@@ -308,7 +309,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.start();
+              JdbcTransaction transaction = manager.begin();
               Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.get(get);
               Put put =
@@ -320,6 +321,29 @@ public class JdbcTransactionManagerTest {
               transaction.abort();
             })
         .isInstanceOf(AbortException.class);
+    verify(connection).close();
+  }
+
+  @Test
+  public void whenRollbackFails_shouldThrowRollbackException() throws Exception {
+    // Arrange
+    doThrow(sqlException).when(connection).rollback();
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              JdbcTransaction transaction = manager.begin();
+              Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+              transaction.get(get);
+              Put put =
+                  new Put(new Key("p1", "val1"))
+                      .withValue("v1", "val2")
+                      .forNamespace(NAMESPACE)
+                      .forTable(TABLE);
+              transaction.put(put);
+              transaction.rollback();
+            })
+        .isInstanceOf(RollbackException.class);
     verify(connection).close();
   }
 

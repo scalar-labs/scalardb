@@ -21,17 +21,19 @@ public class JdbcTransactionIntegrationTest extends DistributedTransactionIntegr
     return properties;
   }
 
-  // JDBC transaction doesn't support getState() and abort()
-
-  @Disabled
+  @Disabled("JDBC transaction doesn't support getState()")
   @Override
   public void getState_forSuccessfulTransaction_ShouldReturnCommittedState() {}
 
-  @Disabled
+  @Disabled("JDBC transaction doesn't support getState()")
   @Override
   public void getState_forFailedTransaction_ShouldReturnAbortedState() {}
 
-  @Disabled
+  @Disabled("JDBC transaction doesn't support abort()")
   @Override
   public void abort_forOngoingTransaction_ShouldAbortCorrectly() {}
+
+  @Disabled("JDBC transaction doesn't support rollback()")
+  @Override
+  public void rollback_forOngoingTransaction_ShouldRollbackCorrectly() {}
 }
