@@ -30,17 +30,20 @@ import org.junit.jupiter.api.Test;
 
 public abstract class TwoPhaseConsensusCommitIntegrationTestBase
     extends TwoPhaseCommitTransactionIntegrationTestBase {
-  private TwoPhaseCommitTransactionManager managerWithDebug;
+  private TwoPhaseCommitTransactionManager managerWithWithIncludeMetadataEnabled;
 
   @BeforeAll
   @Override
   public void beforeAll() throws Exception {
     super.beforeAll();
 
-    Properties debugProperties = TestUtils.addSuffix(getProperties(), getTestName());
-    debugProperties.setProperty(ConsensusCommitConfig.DEBUG, "true");
-    managerWithDebug =
-        TransactionFactory.create(debugProperties).getTwoPhaseCommitTransactionManager();
+    Properties includeMetadataEnabledProperties =
+        TestUtils.addSuffix(getProperties(), getTestName());
+    includeMetadataEnabledProperties.setProperty(
+        ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
+    managerWithWithIncludeMetadataEnabled =
+        TransactionFactory.create(includeMetadataEnabledProperties)
+            .getTwoPhaseCommitTransactionManager();
   }
 
   @AfterAll
@@ -48,7 +51,7 @@ public abstract class TwoPhaseConsensusCommitIntegrationTestBase
   public void afterAll() throws ExecutionException {
     super.afterAll();
 
-    managerWithDebug.close();
+    managerWithWithIncludeMetadataEnabled.close();
   }
 
   @Override
@@ -67,25 +70,25 @@ public abstract class TwoPhaseConsensusCommitIntegrationTestBase
   protected abstract Properties getProps();
 
   @Test
-  public void scan_UsingDebugMode_ShouldReturnTransactionMetadataColumns()
+  public void scan_WithIncludeMetadataEnabled_ShouldReturnTransactionMetadataColumns()
       throws TransactionException {
     selection_UsingDebugMode_ShouldReturnCorrectColumns(true, false);
   }
 
   @Test
-  public void scan_UsingDebugModeWithProjections_ShouldReturnProjectedColumns()
+  public void scan_WithIncludeMetadataEnabledAndProjections_ShouldReturnProjectedColumns()
       throws TransactionException {
     selection_UsingDebugMode_ShouldReturnCorrectColumns(true, true);
   }
 
   @Test
-  public void get_UsingDebugMode_ShouldReturnTransactionMetadataColumns()
+  public void get_WithIncludeMetadataEnabled_ShouldReturnTransactionMetadataColumns()
       throws TransactionException {
     selection_UsingDebugMode_ShouldReturnCorrectColumns(false, false);
   }
 
   @Test
-  public void get_UsingDebugModeWithProjections_ShouldReturnProjectedColumns()
+  public void get_WithIncludeMetadataEnabledAndProjections_ShouldReturnProjectedColumns()
       throws TransactionException {
     selection_UsingDebugMode_ShouldReturnCorrectColumns(false, true);
   }
@@ -101,12 +104,12 @@ public abstract class TwoPhaseConsensusCommitIntegrationTestBase
             .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
             .intValue(BALANCE, INITIAL_BALANCE)
             .build();
-    TwoPhaseCommitTransaction transaction = managerWithDebug.start();
+    TwoPhaseCommitTransaction transaction = managerWithWithIncludeMetadataEnabled.start();
     transaction.put(put);
     transaction.prepare();
     transaction.validate();
     transaction.commit();
-    transaction = managerWithDebug.start();
+    transaction = managerWithWithIncludeMetadataEnabled.start();
     Set<String> projections =
         ImmutableSet.of(ACCOUNT_ID, Attribute.BEFORE_PREFIX + BALANCE, Attribute.STATE);
 

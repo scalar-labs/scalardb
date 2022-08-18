@@ -29,7 +29,7 @@ public class ConsensusCommitConfigTest {
     assertThat(config.isParallelRollbackEnabled()).isEqualTo(false);
     assertThat(config.isAsyncCommitEnabled()).isEqualTo(false);
     assertThat(config.isAsyncRollbackEnabled()).isEqualTo(false);
-    assertThat(config.isDebugging()).isFalse();
+    assertThat(config.isIncludeMetadataEnabled()).isFalse();
   }
 
   @Test
@@ -185,12 +185,12 @@ public class ConsensusCommitConfigTest {
   public void constructor_PropertiesWithDebugGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(ConsensusCommitConfig.DEBUG, "true");
+    props.setProperty(ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
 
     // Act
     ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.isDebugging()).isTrue();
+    assertThat(config.isIncludeMetadataEnabled()).isTrue();
   }
 }

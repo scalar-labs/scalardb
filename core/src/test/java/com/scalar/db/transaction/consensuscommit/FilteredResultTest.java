@@ -146,7 +146,7 @@ public class FilteredResultTest {
   }
 
   @Test
-  public void withoutProjectionsAndDebug_ShouldContainAllColumns() {
+  public void withoutProjectionsAndIncludeMetadataEnabled_ShouldContainAllColumns() {
     // Arrange
     FilteredResult filteredResult =
         new FilteredResult(result, Collections.emptyList(), TABLE_METADATA, true);
@@ -344,7 +344,7 @@ public class FilteredResultTest {
   }
 
   @Test
-  public void withProjectionsAndDebug_ShouldFilterOutUnprojectedColumns() {
+  public void withProjectionsAndIncludeMetadataEnabled_ShouldNotIncludeNonProjectedColumns() {
     // Arrange
     FilteredResult filteredResult =
         new FilteredResult(

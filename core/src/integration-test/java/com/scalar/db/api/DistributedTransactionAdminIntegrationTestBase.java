@@ -69,7 +69,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
           .build();
   private TransactionFactory transactionFactory;
   private DistributedTransactionAdmin admin;
-  protected DistributedTransactionAdmin adminWithDebug;
   private String namespace1;
   private String namespace2;
   private String namespace3;

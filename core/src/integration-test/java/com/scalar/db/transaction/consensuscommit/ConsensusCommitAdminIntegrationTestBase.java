@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionAdminIntegrationTestBase;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
@@ -15,14 +16,18 @@ import org.junit.jupiter.api.Test;
 
 public abstract class ConsensusCommitAdminIntegrationTestBase
     extends DistributedTransactionAdminIntegrationTestBase {
+  protected DistributedTransactionAdmin adminWithIncludeMetadataEnabled;
+
   @BeforeAll
   @Override
   public void beforeAll() throws Exception {
     super.beforeAll();
 
-    Properties debugProperties = TestUtils.addSuffix(getProperties(), TEST_NAME);
-    debugProperties.setProperty(ConsensusCommitConfig.DEBUG, "true");
-    adminWithDebug = TransactionFactory.create(debugProperties).getTransactionAdmin();
+    Properties includeMetadataEnabledProperties = TestUtils.addSuffix(getProperties(), TEST_NAME);
+    includeMetadataEnabledProperties.setProperty(
+        ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
+    adminWithIncludeMetadataEnabled =
+        TransactionFactory.create(includeMetadataEnabledProperties).getTransactionAdmin();
   }
 
   @AfterAll
@@ -30,7 +35,7 @@ public abstract class ConsensusCommitAdminIntegrationTestBase
   public void afterAll() throws ExecutionException {
     super.afterAll();
 
-    adminWithDebug.close();
+    adminWithIncludeMetadataEnabled.close();
   }
 
   @Override
@@ -45,14 +50,15 @@ public abstract class ConsensusCommitAdminIntegrationTestBase
 
   @Test
   public void
-      getTableMetadata_WhenDebugging_ShouldReturnCorrectMetadataWithTransactionMetadataColumns()
+      getTableMetadata_WhenIncludeMetadataIsEnabled_ShouldReturnCorrectMetadataWithTransactionMetadataColumns()
           throws ExecutionException {
     // Arrange
     TableMetadata transactionTableMetadata =
         ConsensusCommitUtils.buildTransactionTableMetadata(TABLE_METADATA);
 
     // Act
-    TableMetadata tableMetadata = adminWithDebug.getTableMetadata(getNamespace1(), TABLE1);
+    TableMetadata tableMetadata =
+        adminWithIncludeMetadataEnabled.getTableMetadata(getNamespace1(), TABLE1);
 
     // Assert
     assertThat(tableMetadata).isEqualTo(transactionTableMetadata);

@@ -29,17 +29,20 @@ import org.junit.jupiter.api.Test;
 
 public abstract class ConsensusCommitIntegrationTestBase
     extends DistributedTransactionIntegrationTestBase {
-  ConsensusCommitManager managerWithDebug;
+  ConsensusCommitManager managerWithIncludeMetadataEnabled;
 
   @BeforeAll
   @Override
   public void beforeAll() throws Exception {
     super.beforeAll();
 
-    Properties debugProperties = TestUtils.addSuffix(getProperties(), getTestName());
-    debugProperties.setProperty(ConsensusCommitConfig.DEBUG, "true");
-    managerWithDebug =
-        (ConsensusCommitManager) TransactionFactory.create(debugProperties).getTransactionManager();
+    Properties includeMetadataEnabledProperties =
+        TestUtils.addSuffix(getProperties(), getTestName());
+    includeMetadataEnabledProperties.setProperty(
+        ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
+    managerWithIncludeMetadataEnabled =
+        (ConsensusCommitManager)
+            TransactionFactory.create(includeMetadataEnabledProperties).getTransactionManager();
   }
 
   @AfterAll
@@ -47,7 +50,7 @@ public abstract class ConsensusCommitIntegrationTestBase
   public void afterAll() throws ExecutionException {
     super.afterAll();
 
-    managerWithDebug.close();
+    managerWithIncludeMetadataEnabled.close();
   }
 
   @Override
@@ -66,30 +69,30 @@ public abstract class ConsensusCommitIntegrationTestBase
   protected abstract Properties getProps();
 
   @Test
-  public void scan_UsingDebugMode_ShouldReturnTransactionMetadataColumns()
+  public void scan_WithIncludeMetadataEnabled_ShouldReturnTransactionMetadataColumns()
       throws TransactionException {
-    selection_UsingDebugMode_ShouldReturnCorrectColumns(true, false);
+    selection_WithIncludeMetadataEnabled_ShouldReturnCorrectColumns(true, false);
   }
 
   @Test
-  public void scan_UsingDebugModeWithProjections_ShouldReturnProjectedColumns()
+  public void scan_WithIncludeMetadataEnabledAndProjections_ShouldReturnProjectedColumns()
       throws TransactionException {
-    selection_UsingDebugMode_ShouldReturnCorrectColumns(true, true);
+    selection_WithIncludeMetadataEnabled_ShouldReturnCorrectColumns(true, true);
   }
 
   @Test
-  public void get_UsingDebugMode_ShouldReturnTransactionMetadataColumns()
+  public void get_WithIncludeMetadataEnabled_ShouldReturnTransactionMetadataColumns()
       throws TransactionException {
-    selection_UsingDebugMode_ShouldReturnCorrectColumns(false, false);
+    selection_WithIncludeMetadataEnabled_ShouldReturnCorrectColumns(false, false);
   }
 
   @Test
-  public void get_UsingDebugModeWithProjections_ShouldReturnProjectedColumns()
+  public void get_WithIncludeMetadataEnabledAndProjections_ShouldReturnProjectedColumns()
       throws TransactionException {
-    selection_UsingDebugMode_ShouldReturnCorrectColumns(false, true);
+    selection_WithIncludeMetadataEnabled_ShouldReturnCorrectColumns(false, true);
   }
 
-  private void selection_UsingDebugMode_ShouldReturnCorrectColumns(
+  private void selection_WithIncludeMetadataEnabled_ShouldReturnCorrectColumns(
       boolean isScan, boolean hasProjections) throws TransactionException {
     // Arrange
     Put put =
@@ -100,10 +103,10 @@ public abstract class ConsensusCommitIntegrationTestBase
             .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
             .intValue(BALANCE, INITIAL_BALANCE)
             .build();
-    DistributedTransaction transaction = managerWithDebug.start();
+    DistributedTransaction transaction = managerWithIncludeMetadataEnabled.start();
     transaction.put(put);
     transaction.commit();
-    transaction = managerWithDebug.start();
+    transaction = managerWithIncludeMetadataEnabled.start();
     Set<String> projections =
         ImmutableSet.of(ACCOUNT_ID, Attribute.BEFORE_PREFIX + BALANCE, Attribute.STATE);
 

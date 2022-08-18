@@ -31,7 +31,7 @@ public class ConsensusCommitConfig {
 
   public static final int DEFAULT_PARALLEL_EXECUTOR_COUNT = 30;
 
-  public static final String DEBUG = PREFIX + "debug";
+  public static final String INCLUDE_METADATA_ENABLED = PREFIX + "include_metadata.enabled";
 
   private final Isolation isolation;
   private final SerializableStrategy strategy;
@@ -45,7 +45,7 @@ public class ConsensusCommitConfig {
   private final boolean asyncCommitEnabled;
   private final boolean asyncRollbackEnabled;
 
-  private final boolean isDebugging;
+  private final boolean isIncludeMetadataEnabled;
 
   public ConsensusCommitConfig(DatabaseConfig databaseConfig) {
     if (databaseConfig.getProperties().containsValue("scalar.db.isolation_level")) {
@@ -97,7 +97,8 @@ public class ConsensusCommitConfig {
     asyncCommitEnabled = getBoolean(databaseConfig.getProperties(), ASYNC_COMMIT_ENABLED, false);
     asyncRollbackEnabled =
         getBoolean(databaseConfig.getProperties(), ASYNC_ROLLBACK_ENABLED, asyncCommitEnabled);
-    isDebugging = getBoolean(databaseConfig.getProperties(), DEBUG, false);
+    isIncludeMetadataEnabled =
+        getBoolean(databaseConfig.getProperties(), INCLUDE_METADATA_ENABLED, false);
   }
 
   public Isolation getIsolation() {
@@ -140,7 +141,7 @@ public class ConsensusCommitConfig {
     return asyncRollbackEnabled;
   }
 
-  public boolean isDebugging() {
-    return isDebugging;
+  public boolean isIncludeMetadataEnabled() {
+    return isIncludeMetadataEnabled;
   }
 }
