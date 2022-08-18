@@ -4,29 +4,29 @@
 package com.scalar.db.rpc;
 
 public interface ScanResponseOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:scalardb.rpc.ScanResponse)
+    // @@protoc_insertion_point(interface_extends:rpc.ScanResponse)
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>repeated .scalardb.rpc.Result results = 2;</code>
+   * <code>repeated .rpc.Result results = 2;</code>
    */
   java.util.List<com.scalar.db.rpc.Result> 
       getResultsList();
   /**
-   * <code>repeated .scalardb.rpc.Result results = 2;</code>
+   * <code>repeated .rpc.Result results = 2;</code>
    */
   com.scalar.db.rpc.Result getResults(int index);
   /**
-   * <code>repeated .scalardb.rpc.Result results = 2;</code>
+   * <code>repeated .rpc.Result results = 2;</code>
    */
   int getResultsCount();
   /**
-   * <code>repeated .scalardb.rpc.Result results = 2;</code>
+   * <code>repeated .rpc.Result results = 2;</code>
    */
   java.util.List<? extends com.scalar.db.rpc.ResultOrBuilder> 
       getResultsOrBuilderList();
   /**
-   * <code>repeated .scalardb.rpc.Result results = 2;</code>
+   * <code>repeated .rpc.Result results = 2;</code>
    */
   com.scalar.db.rpc.ResultOrBuilder getResultsOrBuilder(
       int index);

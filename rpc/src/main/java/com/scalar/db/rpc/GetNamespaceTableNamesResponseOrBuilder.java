@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 public interface GetNamespaceTableNamesResponseOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:scalardb.rpc.GetNamespaceTableNamesResponse)
+    // @@protoc_insertion_point(interface_extends:rpc.GetNamespaceTableNamesResponse)
     com.google.protobuf.MessageOrBuilder {
 
   /**

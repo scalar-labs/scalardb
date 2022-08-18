@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code scalardb.rpc.NamespaceExistsRequest}
+ * Protobuf type {@code rpc.NamespaceExistsRequest}
  */
 public final class NamespaceExistsRequest extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:scalardb.rpc.NamespaceExistsRequest)
+    // @@protoc_insertion_point(message_implements:rpc.NamespaceExistsRequest)
     NamespaceExistsRequestOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use NamespaceExistsRequest.newBuilder() to construct.
@@ -78,13 +78,13 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_NamespaceExistsRequest_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_NamespaceExistsRequest_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_NamespaceExistsRequest_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_NamespaceExistsRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.NamespaceExistsRequest.class, com.scalar.db.rpc.NamespaceExistsRequest.Builder.class);
   }
@@ -282,21 +282,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code scalardb.rpc.NamespaceExistsRequest}
+   * Protobuf type {@code rpc.NamespaceExistsRequest}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:scalardb.rpc.NamespaceExistsRequest)
+      // @@protoc_insertion_point(builder_implements:rpc.NamespaceExistsRequest)
       com.scalar.db.rpc.NamespaceExistsRequestOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_NamespaceExistsRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_NamespaceExistsRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_NamespaceExistsRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_NamespaceExistsRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.NamespaceExistsRequest.class, com.scalar.db.rpc.NamespaceExistsRequest.Builder.class);
     }
@@ -327,7 +327,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_NamespaceExistsRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_NamespaceExistsRequest_descriptor;
     }
 
     @java.lang.Override
@@ -517,10 +517,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:scalardb.rpc.NamespaceExistsRequest)
+    // @@protoc_insertion_point(builder_scope:rpc.NamespaceExistsRequest)
   }
 
-  // @@protoc_insertion_point(class_scope:scalardb.rpc.NamespaceExistsRequest)
+  // @@protoc_insertion_point(class_scope:rpc.NamespaceExistsRequest)
   private static final com.scalar.db.rpc.NamespaceExistsRequest DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.NamespaceExistsRequest();

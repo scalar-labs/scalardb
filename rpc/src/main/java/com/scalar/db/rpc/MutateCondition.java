@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code scalardb.rpc.MutateCondition}
+ * Protobuf type {@code rpc.MutateCondition}
  */
 public final class MutateCondition extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:scalardb.rpc.MutateCondition)
+    // @@protoc_insertion_point(message_implements:rpc.MutateCondition)
     MutateConditionOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use MutateCondition.newBuilder() to construct.
@@ -92,19 +92,19 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateCondition_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateCondition_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateCondition_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateCondition_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.MutateCondition.class, com.scalar.db.rpc.MutateCondition.Builder.class);
   }
 
   /**
-   * Protobuf enum {@code scalardb.rpc.MutateCondition.Type}
+   * Protobuf enum {@code rpc.MutateCondition.Type}
    */
   public enum Type
       implements com.google.protobuf.ProtocolMessageEnum {
@@ -235,20 +235,20 @@ private static final long serialVersionUID = 0L;
       this.value = value;
     }
 
-    // @@protoc_insertion_point(enum_scope:scalardb.rpc.MutateCondition.Type)
+    // @@protoc_insertion_point(enum_scope:rpc.MutateCondition.Type)
   }
 
   public static final int TYPE_FIELD_NUMBER = 1;
   private int type_;
   /**
-   * <code>.scalardb.rpc.MutateCondition.Type type = 1;</code>
+   * <code>.rpc.MutateCondition.Type type = 1;</code>
    * @return The enum numeric value on the wire for type.
    */
   @java.lang.Override public int getTypeValue() {
     return type_;
   }
   /**
-   * <code>.scalardb.rpc.MutateCondition.Type type = 1;</code>
+   * <code>.rpc.MutateCondition.Type type = 1;</code>
    * @return The type.
    */
   @java.lang.Override public com.scalar.db.rpc.MutateCondition.Type getType() {
@@ -260,14 +260,14 @@ private static final long serialVersionUID = 0L;
   public static final int EXPRESSIONS_FIELD_NUMBER = 2;
   private java.util.List<com.scalar.db.rpc.ConditionalExpression> expressions_;
   /**
-   * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+   * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
    */
   @java.lang.Override
   public java.util.List<com.scalar.db.rpc.ConditionalExpression> getExpressionsList() {
     return expressions_;
   }
   /**
-   * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+   * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
    */
   @java.lang.Override
   public java.util.List<? extends com.scalar.db.rpc.ConditionalExpressionOrBuilder> 
@@ -275,21 +275,21 @@ private static final long serialVersionUID = 0L;
     return expressions_;
   }
   /**
-   * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+   * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
    */
   @java.lang.Override
   public int getExpressionsCount() {
     return expressions_.size();
   }
   /**
-   * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+   * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.ConditionalExpression getExpressions(int index) {
     return expressions_.get(index);
   }
   /**
-   * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+   * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.ConditionalExpressionOrBuilder getExpressionsOrBuilder(
@@ -465,21 +465,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code scalardb.rpc.MutateCondition}
+   * Protobuf type {@code rpc.MutateCondition}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:scalardb.rpc.MutateCondition)
+      // @@protoc_insertion_point(builder_implements:rpc.MutateCondition)
       com.scalar.db.rpc.MutateConditionOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateCondition_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateCondition_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateCondition_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateCondition_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.MutateCondition.class, com.scalar.db.rpc.MutateCondition.Builder.class);
     }
@@ -517,7 +517,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateCondition_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateCondition_descriptor;
     }
 
     @java.lang.Override
@@ -657,14 +657,14 @@ private static final long serialVersionUID = 0L;
 
     private int type_ = 0;
     /**
-     * <code>.scalardb.rpc.MutateCondition.Type type = 1;</code>
+     * <code>.rpc.MutateCondition.Type type = 1;</code>
      * @return The enum numeric value on the wire for type.
      */
     @java.lang.Override public int getTypeValue() {
       return type_;
     }
     /**
-     * <code>.scalardb.rpc.MutateCondition.Type type = 1;</code>
+     * <code>.rpc.MutateCondition.Type type = 1;</code>
      * @param value The enum numeric value on the wire for type to set.
      * @return This builder for chaining.
      */
@@ -675,7 +675,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.MutateCondition.Type type = 1;</code>
+     * <code>.rpc.MutateCondition.Type type = 1;</code>
      * @return The type.
      */
     @java.lang.Override
@@ -685,7 +685,7 @@ private static final long serialVersionUID = 0L;
       return result == null ? com.scalar.db.rpc.MutateCondition.Type.UNRECOGNIZED : result;
     }
     /**
-     * <code>.scalardb.rpc.MutateCondition.Type type = 1;</code>
+     * <code>.rpc.MutateCondition.Type type = 1;</code>
      * @param value The type to set.
      * @return This builder for chaining.
      */
@@ -699,7 +699,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.MutateCondition.Type type = 1;</code>
+     * <code>.rpc.MutateCondition.Type type = 1;</code>
      * @return This builder for chaining.
      */
     public Builder clearType() {
@@ -722,7 +722,7 @@ private static final long serialVersionUID = 0L;
         com.scalar.db.rpc.ConditionalExpression, com.scalar.db.rpc.ConditionalExpression.Builder, com.scalar.db.rpc.ConditionalExpressionOrBuilder> expressionsBuilder_;
 
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public java.util.List<com.scalar.db.rpc.ConditionalExpression> getExpressionsList() {
       if (expressionsBuilder_ == null) {
@@ -732,7 +732,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public int getExpressionsCount() {
       if (expressionsBuilder_ == null) {
@@ -742,7 +742,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public com.scalar.db.rpc.ConditionalExpression getExpressions(int index) {
       if (expressionsBuilder_ == null) {
@@ -752,7 +752,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public Builder setExpressions(
         int index, com.scalar.db.rpc.ConditionalExpression value) {
@@ -769,7 +769,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public Builder setExpressions(
         int index, com.scalar.db.rpc.ConditionalExpression.Builder builderForValue) {
@@ -783,7 +783,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public Builder addExpressions(com.scalar.db.rpc.ConditionalExpression value) {
       if (expressionsBuilder_ == null) {
@@ -799,7 +799,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public Builder addExpressions(
         int index, com.scalar.db.rpc.ConditionalExpression value) {
@@ -816,7 +816,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public Builder addExpressions(
         com.scalar.db.rpc.ConditionalExpression.Builder builderForValue) {
@@ -830,7 +830,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public Builder addExpressions(
         int index, com.scalar.db.rpc.ConditionalExpression.Builder builderForValue) {
@@ -844,7 +844,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public Builder addAllExpressions(
         java.lang.Iterable<? extends com.scalar.db.rpc.ConditionalExpression> values) {
@@ -859,7 +859,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public Builder clearExpressions() {
       if (expressionsBuilder_ == null) {
@@ -872,7 +872,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public Builder removeExpressions(int index) {
       if (expressionsBuilder_ == null) {
@@ -885,14 +885,14 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public com.scalar.db.rpc.ConditionalExpression.Builder getExpressionsBuilder(
         int index) {
       return getExpressionsFieldBuilder().getBuilder(index);
     }
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public com.scalar.db.rpc.ConditionalExpressionOrBuilder getExpressionsOrBuilder(
         int index) {
@@ -902,7 +902,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public java.util.List<? extends com.scalar.db.rpc.ConditionalExpressionOrBuilder> 
          getExpressionsOrBuilderList() {
@@ -913,14 +913,14 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public com.scalar.db.rpc.ConditionalExpression.Builder addExpressionsBuilder() {
       return getExpressionsFieldBuilder().addBuilder(
           com.scalar.db.rpc.ConditionalExpression.getDefaultInstance());
     }
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public com.scalar.db.rpc.ConditionalExpression.Builder addExpressionsBuilder(
         int index) {
@@ -928,7 +928,7 @@ private static final long serialVersionUID = 0L;
           index, com.scalar.db.rpc.ConditionalExpression.getDefaultInstance());
     }
     /**
-     * <code>repeated .scalardb.rpc.ConditionalExpression expressions = 2;</code>
+     * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
      */
     public java.util.List<com.scalar.db.rpc.ConditionalExpression.Builder> 
          getExpressionsBuilderList() {
@@ -961,10 +961,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:scalardb.rpc.MutateCondition)
+    // @@protoc_insertion_point(builder_scope:rpc.MutateCondition)
   }
 
-  // @@protoc_insertion_point(class_scope:scalardb.rpc.MutateCondition)
+  // @@protoc_insertion_point(class_scope:rpc.MutateCondition)
   private static final com.scalar.db.rpc.MutateCondition DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.MutateCondition();

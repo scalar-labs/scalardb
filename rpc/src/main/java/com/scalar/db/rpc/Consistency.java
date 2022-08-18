@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf enum {@code scalardb.rpc.Consistency}
+ * Protobuf enum {@code rpc.Consistency}
  */
 public enum Consistency
     implements com.google.protobuf.ProtocolMessageEnum {
@@ -117,6 +117,6 @@ public enum Consistency
     this.value = value;
   }
 
-  // @@protoc_insertion_point(enum_scope:scalardb.rpc.Consistency)
+  // @@protoc_insertion_point(enum_scope:rpc.Consistency)
 }
 

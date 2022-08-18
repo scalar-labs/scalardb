@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code scalardb.rpc.TransactionRequest}
+ * Protobuf type {@code rpc.TransactionRequest}
  */
 public final class TransactionRequest extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:scalardb.rpc.TransactionRequest)
+    // @@protoc_insertion_point(message_implements:rpc.TransactionRequest)
     TransactionRequestOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use TransactionRequest.newBuilder() to construct.
@@ -183,19 +183,19 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.TransactionRequest.class, com.scalar.db.rpc.TransactionRequest.Builder.class);
   }
 
   public interface BeginRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TransactionRequest.BeginRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TransactionRequest.BeginRequest)
       com.google.protobuf.MessageOrBuilder {
 
     /**
@@ -216,11 +216,11 @@ private static final long serialVersionUID = 0L;
         getTransactionIdBytes();
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TransactionRequest.BeginRequest}
+   * Protobuf type {@code rpc.TransactionRequest.BeginRequest}
    */
   public static final class BeginRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TransactionRequest.BeginRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TransactionRequest.BeginRequest)
       BeginRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use BeginRequest.newBuilder() to construct.
@@ -291,13 +291,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_BeginRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_BeginRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_BeginRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_BeginRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TransactionRequest.BeginRequest.class, com.scalar.db.rpc.TransactionRequest.BeginRequest.Builder.class);
     }
@@ -509,21 +509,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TransactionRequest.BeginRequest}
+     * Protobuf type {@code rpc.TransactionRequest.BeginRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TransactionRequest.BeginRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TransactionRequest.BeginRequest)
         com.scalar.db.rpc.TransactionRequest.BeginRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_BeginRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_BeginRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_BeginRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_BeginRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TransactionRequest.BeginRequest.class, com.scalar.db.rpc.TransactionRequest.BeginRequest.Builder.class);
       }
@@ -554,7 +554,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_BeginRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_BeginRequest_descriptor;
       }
 
       @java.lang.Override
@@ -759,10 +759,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TransactionRequest.BeginRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TransactionRequest.BeginRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TransactionRequest.BeginRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TransactionRequest.BeginRequest)
     private static final com.scalar.db.rpc.TransactionRequest.BeginRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TransactionRequest.BeginRequest();
@@ -800,7 +800,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface StartRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TransactionRequest.StartRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TransactionRequest.StartRequest)
       com.google.protobuf.MessageOrBuilder {
 
     /**
@@ -821,11 +821,11 @@ private static final long serialVersionUID = 0L;
         getTransactionIdBytes();
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TransactionRequest.StartRequest}
+   * Protobuf type {@code rpc.TransactionRequest.StartRequest}
    */
   public static final class StartRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TransactionRequest.StartRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TransactionRequest.StartRequest)
       StartRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use StartRequest.newBuilder() to construct.
@@ -896,13 +896,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_StartRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_StartRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_StartRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_StartRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TransactionRequest.StartRequest.class, com.scalar.db.rpc.TransactionRequest.StartRequest.Builder.class);
     }
@@ -1114,21 +1114,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TransactionRequest.StartRequest}
+     * Protobuf type {@code rpc.TransactionRequest.StartRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TransactionRequest.StartRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TransactionRequest.StartRequest)
         com.scalar.db.rpc.TransactionRequest.StartRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_StartRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_StartRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_StartRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_StartRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TransactionRequest.StartRequest.class, com.scalar.db.rpc.TransactionRequest.StartRequest.Builder.class);
       }
@@ -1159,7 +1159,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_StartRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_StartRequest_descriptor;
       }
 
       @java.lang.Override
@@ -1364,10 +1364,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TransactionRequest.StartRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TransactionRequest.StartRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TransactionRequest.StartRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TransactionRequest.StartRequest)
     private static final com.scalar.db.rpc.TransactionRequest.StartRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TransactionRequest.StartRequest();
@@ -1405,30 +1405,30 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface GetRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TransactionRequest.GetRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TransactionRequest.GetRequest)
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>.scalardb.rpc.Get get = 2;</code>
+     * <code>.rpc.Get get = 2;</code>
      * @return Whether the get field is set.
      */
     boolean hasGet();
     /**
-     * <code>.scalardb.rpc.Get get = 2;</code>
+     * <code>.rpc.Get get = 2;</code>
      * @return The get.
      */
     com.scalar.db.rpc.Get getGet();
     /**
-     * <code>.scalardb.rpc.Get get = 2;</code>
+     * <code>.rpc.Get get = 2;</code>
      */
     com.scalar.db.rpc.GetOrBuilder getGetOrBuilder();
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TransactionRequest.GetRequest}
+   * Protobuf type {@code rpc.TransactionRequest.GetRequest}
    */
   public static final class GetRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TransactionRequest.GetRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TransactionRequest.GetRequest)
       GetRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use GetRequest.newBuilder() to construct.
@@ -1504,13 +1504,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_GetRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_GetRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_GetRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_GetRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TransactionRequest.GetRequest.class, com.scalar.db.rpc.TransactionRequest.GetRequest.Builder.class);
     }
@@ -1518,7 +1518,7 @@ private static final long serialVersionUID = 0L;
     public static final int GET_FIELD_NUMBER = 2;
     private com.scalar.db.rpc.Get get_;
     /**
-     * <code>.scalardb.rpc.Get get = 2;</code>
+     * <code>.rpc.Get get = 2;</code>
      * @return Whether the get field is set.
      */
     @java.lang.Override
@@ -1526,7 +1526,7 @@ private static final long serialVersionUID = 0L;
       return get_ != null;
     }
     /**
-     * <code>.scalardb.rpc.Get get = 2;</code>
+     * <code>.rpc.Get get = 2;</code>
      * @return The get.
      */
     @java.lang.Override
@@ -1534,7 +1534,7 @@ private static final long serialVersionUID = 0L;
       return get_ == null ? com.scalar.db.rpc.Get.getDefaultInstance() : get_;
     }
     /**
-     * <code>.scalardb.rpc.Get get = 2;</code>
+     * <code>.rpc.Get get = 2;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.GetOrBuilder getGetOrBuilder() {
@@ -1702,21 +1702,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TransactionRequest.GetRequest}
+     * Protobuf type {@code rpc.TransactionRequest.GetRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TransactionRequest.GetRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TransactionRequest.GetRequest)
         com.scalar.db.rpc.TransactionRequest.GetRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_GetRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_GetRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_GetRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_GetRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TransactionRequest.GetRequest.class, com.scalar.db.rpc.TransactionRequest.GetRequest.Builder.class);
       }
@@ -1751,7 +1751,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_GetRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_GetRequest_descriptor;
       }
 
       @java.lang.Override
@@ -1860,14 +1860,14 @@ private static final long serialVersionUID = 0L;
       private com.google.protobuf.SingleFieldBuilderV3<
           com.scalar.db.rpc.Get, com.scalar.db.rpc.Get.Builder, com.scalar.db.rpc.GetOrBuilder> getBuilder_;
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        * @return Whether the get field is set.
        */
       public boolean hasGet() {
         return getBuilder_ != null || get_ != null;
       }
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        * @return The get.
        */
       public com.scalar.db.rpc.Get getGet() {
@@ -1878,7 +1878,7 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        */
       public Builder setGet(com.scalar.db.rpc.Get value) {
         if (getBuilder_ == null) {
@@ -1894,7 +1894,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        */
       public Builder setGet(
           com.scalar.db.rpc.Get.Builder builderForValue) {
@@ -1908,7 +1908,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        */
       public Builder mergeGet(com.scalar.db.rpc.Get value) {
         if (getBuilder_ == null) {
@@ -1926,7 +1926,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        */
       public Builder clearGet() {
         if (getBuilder_ == null) {
@@ -1940,7 +1940,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        */
       public com.scalar.db.rpc.Get.Builder getGetBuilder() {
         
@@ -1948,7 +1948,7 @@ private static final long serialVersionUID = 0L;
         return getGetFieldBuilder().getBuilder();
       }
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        */
       public com.scalar.db.rpc.GetOrBuilder getGetOrBuilder() {
         if (getBuilder_ != null) {
@@ -1959,7 +1959,7 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.scalar.db.rpc.Get, com.scalar.db.rpc.Get.Builder, com.scalar.db.rpc.GetOrBuilder> 
@@ -1987,10 +1987,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TransactionRequest.GetRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TransactionRequest.GetRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TransactionRequest.GetRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TransactionRequest.GetRequest)
     private static final com.scalar.db.rpc.TransactionRequest.GetRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TransactionRequest.GetRequest();
@@ -2028,30 +2028,30 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface ScanRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TransactionRequest.ScanRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TransactionRequest.ScanRequest)
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>.scalardb.rpc.Scan scan = 2;</code>
+     * <code>.rpc.Scan scan = 2;</code>
      * @return Whether the scan field is set.
      */
     boolean hasScan();
     /**
-     * <code>.scalardb.rpc.Scan scan = 2;</code>
+     * <code>.rpc.Scan scan = 2;</code>
      * @return The scan.
      */
     com.scalar.db.rpc.Scan getScan();
     /**
-     * <code>.scalardb.rpc.Scan scan = 2;</code>
+     * <code>.rpc.Scan scan = 2;</code>
      */
     com.scalar.db.rpc.ScanOrBuilder getScanOrBuilder();
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TransactionRequest.ScanRequest}
+   * Protobuf type {@code rpc.TransactionRequest.ScanRequest}
    */
   public static final class ScanRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TransactionRequest.ScanRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TransactionRequest.ScanRequest)
       ScanRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use ScanRequest.newBuilder() to construct.
@@ -2127,13 +2127,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_ScanRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_ScanRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_ScanRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_ScanRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TransactionRequest.ScanRequest.class, com.scalar.db.rpc.TransactionRequest.ScanRequest.Builder.class);
     }
@@ -2141,7 +2141,7 @@ private static final long serialVersionUID = 0L;
     public static final int SCAN_FIELD_NUMBER = 2;
     private com.scalar.db.rpc.Scan scan_;
     /**
-     * <code>.scalardb.rpc.Scan scan = 2;</code>
+     * <code>.rpc.Scan scan = 2;</code>
      * @return Whether the scan field is set.
      */
     @java.lang.Override
@@ -2149,7 +2149,7 @@ private static final long serialVersionUID = 0L;
       return scan_ != null;
     }
     /**
-     * <code>.scalardb.rpc.Scan scan = 2;</code>
+     * <code>.rpc.Scan scan = 2;</code>
      * @return The scan.
      */
     @java.lang.Override
@@ -2157,7 +2157,7 @@ private static final long serialVersionUID = 0L;
       return scan_ == null ? com.scalar.db.rpc.Scan.getDefaultInstance() : scan_;
     }
     /**
-     * <code>.scalardb.rpc.Scan scan = 2;</code>
+     * <code>.rpc.Scan scan = 2;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.ScanOrBuilder getScanOrBuilder() {
@@ -2325,21 +2325,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TransactionRequest.ScanRequest}
+     * Protobuf type {@code rpc.TransactionRequest.ScanRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TransactionRequest.ScanRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TransactionRequest.ScanRequest)
         com.scalar.db.rpc.TransactionRequest.ScanRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_ScanRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_ScanRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_ScanRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_ScanRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TransactionRequest.ScanRequest.class, com.scalar.db.rpc.TransactionRequest.ScanRequest.Builder.class);
       }
@@ -2374,7 +2374,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_ScanRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_ScanRequest_descriptor;
       }
 
       @java.lang.Override
@@ -2483,14 +2483,14 @@ private static final long serialVersionUID = 0L;
       private com.google.protobuf.SingleFieldBuilderV3<
           com.scalar.db.rpc.Scan, com.scalar.db.rpc.Scan.Builder, com.scalar.db.rpc.ScanOrBuilder> scanBuilder_;
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        * @return Whether the scan field is set.
        */
       public boolean hasScan() {
         return scanBuilder_ != null || scan_ != null;
       }
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        * @return The scan.
        */
       public com.scalar.db.rpc.Scan getScan() {
@@ -2501,7 +2501,7 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        */
       public Builder setScan(com.scalar.db.rpc.Scan value) {
         if (scanBuilder_ == null) {
@@ -2517,7 +2517,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        */
       public Builder setScan(
           com.scalar.db.rpc.Scan.Builder builderForValue) {
@@ -2531,7 +2531,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        */
       public Builder mergeScan(com.scalar.db.rpc.Scan value) {
         if (scanBuilder_ == null) {
@@ -2549,7 +2549,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        */
       public Builder clearScan() {
         if (scanBuilder_ == null) {
@@ -2563,7 +2563,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        */
       public com.scalar.db.rpc.Scan.Builder getScanBuilder() {
         
@@ -2571,7 +2571,7 @@ private static final long serialVersionUID = 0L;
         return getScanFieldBuilder().getBuilder();
       }
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        */
       public com.scalar.db.rpc.ScanOrBuilder getScanOrBuilder() {
         if (scanBuilder_ != null) {
@@ -2582,7 +2582,7 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.scalar.db.rpc.Scan, com.scalar.db.rpc.Scan.Builder, com.scalar.db.rpc.ScanOrBuilder> 
@@ -2610,10 +2610,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TransactionRequest.ScanRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TransactionRequest.ScanRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TransactionRequest.ScanRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TransactionRequest.ScanRequest)
     private static final com.scalar.db.rpc.TransactionRequest.ScanRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TransactionRequest.ScanRequest();
@@ -2651,39 +2651,39 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface MutateRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TransactionRequest.MutateRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TransactionRequest.MutateRequest)
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     java.util.List<com.scalar.db.rpc.Mutation> 
         getMutationsList();
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     com.scalar.db.rpc.Mutation getMutations(int index);
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     int getMutationsCount();
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     java.util.List<? extends com.scalar.db.rpc.MutationOrBuilder> 
         getMutationsOrBuilderList();
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     com.scalar.db.rpc.MutationOrBuilder getMutationsOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TransactionRequest.MutateRequest}
+   * Protobuf type {@code rpc.TransactionRequest.MutateRequest}
    */
   public static final class MutateRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TransactionRequest.MutateRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TransactionRequest.MutateRequest)
       MutateRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use MutateRequest.newBuilder() to construct.
@@ -2760,13 +2760,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_MutateRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_MutateRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_MutateRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_MutateRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TransactionRequest.MutateRequest.class, com.scalar.db.rpc.TransactionRequest.MutateRequest.Builder.class);
     }
@@ -2774,14 +2774,14 @@ private static final long serialVersionUID = 0L;
     public static final int MUTATIONS_FIELD_NUMBER = 2;
     private java.util.List<com.scalar.db.rpc.Mutation> mutations_;
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     @java.lang.Override
     public java.util.List<com.scalar.db.rpc.Mutation> getMutationsList() {
       return mutations_;
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     @java.lang.Override
     public java.util.List<? extends com.scalar.db.rpc.MutationOrBuilder> 
@@ -2789,21 +2789,21 @@ private static final long serialVersionUID = 0L;
       return mutations_;
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     @java.lang.Override
     public int getMutationsCount() {
       return mutations_.size();
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.Mutation getMutations(int index) {
       return mutations_.get(index);
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.MutationOrBuilder getMutationsOrBuilder(
@@ -2969,21 +2969,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TransactionRequest.MutateRequest}
+     * Protobuf type {@code rpc.TransactionRequest.MutateRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TransactionRequest.MutateRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TransactionRequest.MutateRequest)
         com.scalar.db.rpc.TransactionRequest.MutateRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_MutateRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_MutateRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_MutateRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_MutateRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TransactionRequest.MutateRequest.class, com.scalar.db.rpc.TransactionRequest.MutateRequest.Builder.class);
       }
@@ -3019,7 +3019,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_MutateRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_MutateRequest_descriptor;
       }
 
       @java.lang.Override
@@ -3166,7 +3166,7 @@ private static final long serialVersionUID = 0L;
           com.scalar.db.rpc.Mutation, com.scalar.db.rpc.Mutation.Builder, com.scalar.db.rpc.MutationOrBuilder> mutationsBuilder_;
 
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public java.util.List<com.scalar.db.rpc.Mutation> getMutationsList() {
         if (mutationsBuilder_ == null) {
@@ -3176,7 +3176,7 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public int getMutationsCount() {
         if (mutationsBuilder_ == null) {
@@ -3186,7 +3186,7 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public com.scalar.db.rpc.Mutation getMutations(int index) {
         if (mutationsBuilder_ == null) {
@@ -3196,7 +3196,7 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder setMutations(
           int index, com.scalar.db.rpc.Mutation value) {
@@ -3213,7 +3213,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder setMutations(
           int index, com.scalar.db.rpc.Mutation.Builder builderForValue) {
@@ -3227,7 +3227,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder addMutations(com.scalar.db.rpc.Mutation value) {
         if (mutationsBuilder_ == null) {
@@ -3243,7 +3243,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder addMutations(
           int index, com.scalar.db.rpc.Mutation value) {
@@ -3260,7 +3260,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder addMutations(
           com.scalar.db.rpc.Mutation.Builder builderForValue) {
@@ -3274,7 +3274,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder addMutations(
           int index, com.scalar.db.rpc.Mutation.Builder builderForValue) {
@@ -3288,7 +3288,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder addAllMutations(
           java.lang.Iterable<? extends com.scalar.db.rpc.Mutation> values) {
@@ -3303,7 +3303,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder clearMutations() {
         if (mutationsBuilder_ == null) {
@@ -3316,7 +3316,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder removeMutations(int index) {
         if (mutationsBuilder_ == null) {
@@ -3329,14 +3329,14 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public com.scalar.db.rpc.Mutation.Builder getMutationsBuilder(
           int index) {
         return getMutationsFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public com.scalar.db.rpc.MutationOrBuilder getMutationsOrBuilder(
           int index) {
@@ -3346,7 +3346,7 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public java.util.List<? extends com.scalar.db.rpc.MutationOrBuilder> 
            getMutationsOrBuilderList() {
@@ -3357,14 +3357,14 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public com.scalar.db.rpc.Mutation.Builder addMutationsBuilder() {
         return getMutationsFieldBuilder().addBuilder(
             com.scalar.db.rpc.Mutation.getDefaultInstance());
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public com.scalar.db.rpc.Mutation.Builder addMutationsBuilder(
           int index) {
@@ -3372,7 +3372,7 @@ private static final long serialVersionUID = 0L;
             index, com.scalar.db.rpc.Mutation.getDefaultInstance());
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public java.util.List<com.scalar.db.rpc.Mutation.Builder> 
            getMutationsBuilderList() {
@@ -3405,10 +3405,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TransactionRequest.MutateRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TransactionRequest.MutateRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TransactionRequest.MutateRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TransactionRequest.MutateRequest)
     private static final com.scalar.db.rpc.TransactionRequest.MutateRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TransactionRequest.MutateRequest();
@@ -3446,15 +3446,15 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface CommitRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TransactionRequest.CommitRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TransactionRequest.CommitRequest)
       com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TransactionRequest.CommitRequest}
+   * Protobuf type {@code rpc.TransactionRequest.CommitRequest}
    */
   public static final class CommitRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TransactionRequest.CommitRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TransactionRequest.CommitRequest)
       CommitRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use CommitRequest.newBuilder() to construct.
@@ -3517,13 +3517,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_CommitRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_CommitRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_CommitRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_CommitRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TransactionRequest.CommitRequest.class, com.scalar.db.rpc.TransactionRequest.CommitRequest.Builder.class);
     }
@@ -3673,21 +3673,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TransactionRequest.CommitRequest}
+     * Protobuf type {@code rpc.TransactionRequest.CommitRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TransactionRequest.CommitRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TransactionRequest.CommitRequest)
         com.scalar.db.rpc.TransactionRequest.CommitRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_CommitRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_CommitRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_CommitRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_CommitRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TransactionRequest.CommitRequest.class, com.scalar.db.rpc.TransactionRequest.CommitRequest.Builder.class);
       }
@@ -3716,7 +3716,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_CommitRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_CommitRequest_descriptor;
       }
 
       @java.lang.Override
@@ -3825,10 +3825,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TransactionRequest.CommitRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TransactionRequest.CommitRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TransactionRequest.CommitRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TransactionRequest.CommitRequest)
     private static final com.scalar.db.rpc.TransactionRequest.CommitRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TransactionRequest.CommitRequest();
@@ -3866,15 +3866,15 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface RollbackRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TransactionRequest.RollbackRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TransactionRequest.RollbackRequest)
       com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TransactionRequest.RollbackRequest}
+   * Protobuf type {@code rpc.TransactionRequest.RollbackRequest}
    */
   public static final class RollbackRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TransactionRequest.RollbackRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TransactionRequest.RollbackRequest)
       RollbackRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use RollbackRequest.newBuilder() to construct.
@@ -3937,13 +3937,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_RollbackRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_RollbackRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_RollbackRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_RollbackRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TransactionRequest.RollbackRequest.class, com.scalar.db.rpc.TransactionRequest.RollbackRequest.Builder.class);
     }
@@ -4093,21 +4093,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TransactionRequest.RollbackRequest}
+     * Protobuf type {@code rpc.TransactionRequest.RollbackRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TransactionRequest.RollbackRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TransactionRequest.RollbackRequest)
         com.scalar.db.rpc.TransactionRequest.RollbackRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_RollbackRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_RollbackRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_RollbackRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_RollbackRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TransactionRequest.RollbackRequest.class, com.scalar.db.rpc.TransactionRequest.RollbackRequest.Builder.class);
       }
@@ -4136,7 +4136,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_RollbackRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_RollbackRequest_descriptor;
       }
 
       @java.lang.Override
@@ -4245,10 +4245,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TransactionRequest.RollbackRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TransactionRequest.RollbackRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TransactionRequest.RollbackRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TransactionRequest.RollbackRequest)
     private static final com.scalar.db.rpc.TransactionRequest.RollbackRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TransactionRequest.RollbackRequest();
@@ -4286,15 +4286,15 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface AbortRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TransactionRequest.AbortRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TransactionRequest.AbortRequest)
       com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TransactionRequest.AbortRequest}
+   * Protobuf type {@code rpc.TransactionRequest.AbortRequest}
    */
   public static final class AbortRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TransactionRequest.AbortRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TransactionRequest.AbortRequest)
       AbortRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use AbortRequest.newBuilder() to construct.
@@ -4357,13 +4357,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_AbortRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_AbortRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_AbortRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_AbortRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TransactionRequest.AbortRequest.class, com.scalar.db.rpc.TransactionRequest.AbortRequest.Builder.class);
     }
@@ -4513,21 +4513,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TransactionRequest.AbortRequest}
+     * Protobuf type {@code rpc.TransactionRequest.AbortRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TransactionRequest.AbortRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TransactionRequest.AbortRequest)
         com.scalar.db.rpc.TransactionRequest.AbortRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_AbortRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_AbortRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_AbortRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_AbortRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TransactionRequest.AbortRequest.class, com.scalar.db.rpc.TransactionRequest.AbortRequest.Builder.class);
       }
@@ -4556,7 +4556,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_AbortRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_AbortRequest_descriptor;
       }
 
       @java.lang.Override
@@ -4665,10 +4665,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TransactionRequest.AbortRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TransactionRequest.AbortRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TransactionRequest.AbortRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TransactionRequest.AbortRequest)
     private static final com.scalar.db.rpc.TransactionRequest.AbortRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TransactionRequest.AbortRequest();
@@ -4760,7 +4760,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int START_REQUEST_FIELD_NUMBER = 1;
   /**
-   * <code>.scalardb.rpc.TransactionRequest.StartRequest start_request = 1;</code>
+   * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
    * @return Whether the startRequest field is set.
    */
   @java.lang.Override
@@ -4768,7 +4768,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 1;
   }
   /**
-   * <code>.scalardb.rpc.TransactionRequest.StartRequest start_request = 1;</code>
+   * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
    * @return The startRequest.
    */
   @java.lang.Override
@@ -4779,7 +4779,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TransactionRequest.StartRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TransactionRequest.StartRequest start_request = 1;</code>
+   * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TransactionRequest.StartRequestOrBuilder getStartRequestOrBuilder() {
@@ -4791,7 +4791,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int GET_REQUEST_FIELD_NUMBER = 2;
   /**
-   * <code>.scalardb.rpc.TransactionRequest.GetRequest get_request = 2;</code>
+   * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
    * @return Whether the getRequest field is set.
    */
   @java.lang.Override
@@ -4799,7 +4799,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 2;
   }
   /**
-   * <code>.scalardb.rpc.TransactionRequest.GetRequest get_request = 2;</code>
+   * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
    * @return The getRequest.
    */
   @java.lang.Override
@@ -4810,7 +4810,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TransactionRequest.GetRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TransactionRequest.GetRequest get_request = 2;</code>
+   * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TransactionRequest.GetRequestOrBuilder getGetRequestOrBuilder() {
@@ -4822,7 +4822,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int SCAN_REQUEST_FIELD_NUMBER = 3;
   /**
-   * <code>.scalardb.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
+   * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
    * @return Whether the scanRequest field is set.
    */
   @java.lang.Override
@@ -4830,7 +4830,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 3;
   }
   /**
-   * <code>.scalardb.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
+   * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
    * @return The scanRequest.
    */
   @java.lang.Override
@@ -4841,7 +4841,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TransactionRequest.ScanRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
+   * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TransactionRequest.ScanRequestOrBuilder getScanRequestOrBuilder() {
@@ -4853,7 +4853,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int MUTATE_REQUEST_FIELD_NUMBER = 4;
   /**
-   * <code>.scalardb.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
+   * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
    * @return Whether the mutateRequest field is set.
    */
   @java.lang.Override
@@ -4861,7 +4861,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 4;
   }
   /**
-   * <code>.scalardb.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
+   * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
    * @return The mutateRequest.
    */
   @java.lang.Override
@@ -4872,7 +4872,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TransactionRequest.MutateRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
+   * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TransactionRequest.MutateRequestOrBuilder getMutateRequestOrBuilder() {
@@ -4884,7 +4884,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int COMMIT_REQUEST_FIELD_NUMBER = 5;
   /**
-   * <code>.scalardb.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
+   * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
    * @return Whether the commitRequest field is set.
    */
   @java.lang.Override
@@ -4892,7 +4892,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 5;
   }
   /**
-   * <code>.scalardb.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
+   * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
    * @return The commitRequest.
    */
   @java.lang.Override
@@ -4903,7 +4903,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TransactionRequest.CommitRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
+   * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TransactionRequest.CommitRequestOrBuilder getCommitRequestOrBuilder() {
@@ -4915,7 +4915,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int ABORT_REQUEST_FIELD_NUMBER = 6;
   /**
-   * <code>.scalardb.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
+   * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
    * @return Whether the abortRequest field is set.
    */
   @java.lang.Override
@@ -4923,7 +4923,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 6;
   }
   /**
-   * <code>.scalardb.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
+   * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
    * @return The abortRequest.
    */
   @java.lang.Override
@@ -4934,7 +4934,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TransactionRequest.AbortRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
+   * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TransactionRequest.AbortRequestOrBuilder getAbortRequestOrBuilder() {
@@ -4946,7 +4946,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int BEGIN_REQUEST_FIELD_NUMBER = 7;
   /**
-   * <code>.scalardb.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
+   * <code>.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
    * @return Whether the beginRequest field is set.
    */
   @java.lang.Override
@@ -4954,7 +4954,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 7;
   }
   /**
-   * <code>.scalardb.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
+   * <code>.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
    * @return The beginRequest.
    */
   @java.lang.Override
@@ -4965,7 +4965,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TransactionRequest.BeginRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
+   * <code>.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TransactionRequest.BeginRequestOrBuilder getBeginRequestOrBuilder() {
@@ -4977,7 +4977,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int ROLLBACK_REQUEST_FIELD_NUMBER = 8;
   /**
-   * <code>.scalardb.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
+   * <code>.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
    * @return Whether the rollbackRequest field is set.
    */
   @java.lang.Override
@@ -4985,7 +4985,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 8;
   }
   /**
-   * <code>.scalardb.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
+   * <code>.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
    * @return The rollbackRequest.
    */
   @java.lang.Override
@@ -4996,7 +4996,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TransactionRequest.RollbackRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
+   * <code>.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TransactionRequest.RollbackRequestOrBuilder getRollbackRequestOrBuilder() {
@@ -5280,21 +5280,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TransactionRequest}
+   * Protobuf type {@code rpc.TransactionRequest}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:scalardb.rpc.TransactionRequest)
+      // @@protoc_insertion_point(builder_implements:rpc.TransactionRequest)
       com.scalar.db.rpc.TransactionRequestOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TransactionRequest.class, com.scalar.db.rpc.TransactionRequest.Builder.class);
     }
@@ -5325,7 +5325,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TransactionRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TransactionRequest_descriptor;
     }
 
     @java.lang.Override
@@ -5534,7 +5534,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TransactionRequest.StartRequest, com.scalar.db.rpc.TransactionRequest.StartRequest.Builder, com.scalar.db.rpc.TransactionRequest.StartRequestOrBuilder> startRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
      * @return Whether the startRequest field is set.
      */
     @java.lang.Override
@@ -5542,7 +5542,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 1;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
      * @return The startRequest.
      */
     @java.lang.Override
@@ -5560,7 +5560,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
      */
     public Builder setStartRequest(com.scalar.db.rpc.TransactionRequest.StartRequest value) {
       if (startRequestBuilder_ == null) {
@@ -5576,7 +5576,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
      */
     public Builder setStartRequest(
         com.scalar.db.rpc.TransactionRequest.StartRequest.Builder builderForValue) {
@@ -5590,7 +5590,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
      */
     public Builder mergeStartRequest(com.scalar.db.rpc.TransactionRequest.StartRequest value) {
       if (startRequestBuilder_ == null) {
@@ -5613,7 +5613,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
      */
     public Builder clearStartRequest() {
       if (startRequestBuilder_ == null) {
@@ -5632,13 +5632,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
      */
     public com.scalar.db.rpc.TransactionRequest.StartRequest.Builder getStartRequestBuilder() {
       return getStartRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TransactionRequest.StartRequestOrBuilder getStartRequestOrBuilder() {
@@ -5652,7 +5652,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TransactionRequest.StartRequest, com.scalar.db.rpc.TransactionRequest.StartRequest.Builder, com.scalar.db.rpc.TransactionRequest.StartRequestOrBuilder> 
@@ -5676,7 +5676,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TransactionRequest.GetRequest, com.scalar.db.rpc.TransactionRequest.GetRequest.Builder, com.scalar.db.rpc.TransactionRequest.GetRequestOrBuilder> getRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TransactionRequest.GetRequest get_request = 2;</code>
+     * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
      * @return Whether the getRequest field is set.
      */
     @java.lang.Override
@@ -5684,7 +5684,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 2;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.GetRequest get_request = 2;</code>
+     * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
      * @return The getRequest.
      */
     @java.lang.Override
@@ -5702,7 +5702,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.GetRequest get_request = 2;</code>
+     * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
      */
     public Builder setGetRequest(com.scalar.db.rpc.TransactionRequest.GetRequest value) {
       if (getRequestBuilder_ == null) {
@@ -5718,7 +5718,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.GetRequest get_request = 2;</code>
+     * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
      */
     public Builder setGetRequest(
         com.scalar.db.rpc.TransactionRequest.GetRequest.Builder builderForValue) {
@@ -5732,7 +5732,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.GetRequest get_request = 2;</code>
+     * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
      */
     public Builder mergeGetRequest(com.scalar.db.rpc.TransactionRequest.GetRequest value) {
       if (getRequestBuilder_ == null) {
@@ -5755,7 +5755,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.GetRequest get_request = 2;</code>
+     * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
      */
     public Builder clearGetRequest() {
       if (getRequestBuilder_ == null) {
@@ -5774,13 +5774,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.GetRequest get_request = 2;</code>
+     * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
      */
     public com.scalar.db.rpc.TransactionRequest.GetRequest.Builder getGetRequestBuilder() {
       return getGetRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.GetRequest get_request = 2;</code>
+     * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TransactionRequest.GetRequestOrBuilder getGetRequestOrBuilder() {
@@ -5794,7 +5794,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.GetRequest get_request = 2;</code>
+     * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TransactionRequest.GetRequest, com.scalar.db.rpc.TransactionRequest.GetRequest.Builder, com.scalar.db.rpc.TransactionRequest.GetRequestOrBuilder> 
@@ -5818,7 +5818,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TransactionRequest.ScanRequest, com.scalar.db.rpc.TransactionRequest.ScanRequest.Builder, com.scalar.db.rpc.TransactionRequest.ScanRequestOrBuilder> scanRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
+     * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
      * @return Whether the scanRequest field is set.
      */
     @java.lang.Override
@@ -5826,7 +5826,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 3;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
+     * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
      * @return The scanRequest.
      */
     @java.lang.Override
@@ -5844,7 +5844,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
+     * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
      */
     public Builder setScanRequest(com.scalar.db.rpc.TransactionRequest.ScanRequest value) {
       if (scanRequestBuilder_ == null) {
@@ -5860,7 +5860,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
+     * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
      */
     public Builder setScanRequest(
         com.scalar.db.rpc.TransactionRequest.ScanRequest.Builder builderForValue) {
@@ -5874,7 +5874,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
+     * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
      */
     public Builder mergeScanRequest(com.scalar.db.rpc.TransactionRequest.ScanRequest value) {
       if (scanRequestBuilder_ == null) {
@@ -5897,7 +5897,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
+     * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
      */
     public Builder clearScanRequest() {
       if (scanRequestBuilder_ == null) {
@@ -5916,13 +5916,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
+     * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
      */
     public com.scalar.db.rpc.TransactionRequest.ScanRequest.Builder getScanRequestBuilder() {
       return getScanRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
+     * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TransactionRequest.ScanRequestOrBuilder getScanRequestOrBuilder() {
@@ -5936,7 +5936,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
+     * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TransactionRequest.ScanRequest, com.scalar.db.rpc.TransactionRequest.ScanRequest.Builder, com.scalar.db.rpc.TransactionRequest.ScanRequestOrBuilder> 
@@ -5960,7 +5960,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TransactionRequest.MutateRequest, com.scalar.db.rpc.TransactionRequest.MutateRequest.Builder, com.scalar.db.rpc.TransactionRequest.MutateRequestOrBuilder> mutateRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
+     * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
      * @return Whether the mutateRequest field is set.
      */
     @java.lang.Override
@@ -5968,7 +5968,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 4;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
+     * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
      * @return The mutateRequest.
      */
     @java.lang.Override
@@ -5986,7 +5986,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
+     * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
      */
     public Builder setMutateRequest(com.scalar.db.rpc.TransactionRequest.MutateRequest value) {
       if (mutateRequestBuilder_ == null) {
@@ -6002,7 +6002,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
+     * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
      */
     public Builder setMutateRequest(
         com.scalar.db.rpc.TransactionRequest.MutateRequest.Builder builderForValue) {
@@ -6016,7 +6016,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
+     * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
      */
     public Builder mergeMutateRequest(com.scalar.db.rpc.TransactionRequest.MutateRequest value) {
       if (mutateRequestBuilder_ == null) {
@@ -6039,7 +6039,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
+     * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
      */
     public Builder clearMutateRequest() {
       if (mutateRequestBuilder_ == null) {
@@ -6058,13 +6058,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
+     * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
      */
     public com.scalar.db.rpc.TransactionRequest.MutateRequest.Builder getMutateRequestBuilder() {
       return getMutateRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
+     * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TransactionRequest.MutateRequestOrBuilder getMutateRequestOrBuilder() {
@@ -6078,7 +6078,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
+     * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TransactionRequest.MutateRequest, com.scalar.db.rpc.TransactionRequest.MutateRequest.Builder, com.scalar.db.rpc.TransactionRequest.MutateRequestOrBuilder> 
@@ -6102,7 +6102,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TransactionRequest.CommitRequest, com.scalar.db.rpc.TransactionRequest.CommitRequest.Builder, com.scalar.db.rpc.TransactionRequest.CommitRequestOrBuilder> commitRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
+     * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
      * @return Whether the commitRequest field is set.
      */
     @java.lang.Override
@@ -6110,7 +6110,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 5;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
+     * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
      * @return The commitRequest.
      */
     @java.lang.Override
@@ -6128,7 +6128,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
+     * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
      */
     public Builder setCommitRequest(com.scalar.db.rpc.TransactionRequest.CommitRequest value) {
       if (commitRequestBuilder_ == null) {
@@ -6144,7 +6144,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
+     * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
      */
     public Builder setCommitRequest(
         com.scalar.db.rpc.TransactionRequest.CommitRequest.Builder builderForValue) {
@@ -6158,7 +6158,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
+     * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
      */
     public Builder mergeCommitRequest(com.scalar.db.rpc.TransactionRequest.CommitRequest value) {
       if (commitRequestBuilder_ == null) {
@@ -6181,7 +6181,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
+     * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
      */
     public Builder clearCommitRequest() {
       if (commitRequestBuilder_ == null) {
@@ -6200,13 +6200,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
+     * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
      */
     public com.scalar.db.rpc.TransactionRequest.CommitRequest.Builder getCommitRequestBuilder() {
       return getCommitRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
+     * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TransactionRequest.CommitRequestOrBuilder getCommitRequestOrBuilder() {
@@ -6220,7 +6220,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
+     * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TransactionRequest.CommitRequest, com.scalar.db.rpc.TransactionRequest.CommitRequest.Builder, com.scalar.db.rpc.TransactionRequest.CommitRequestOrBuilder> 
@@ -6244,7 +6244,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TransactionRequest.AbortRequest, com.scalar.db.rpc.TransactionRequest.AbortRequest.Builder, com.scalar.db.rpc.TransactionRequest.AbortRequestOrBuilder> abortRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
+     * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
      * @return Whether the abortRequest field is set.
      */
     @java.lang.Override
@@ -6252,7 +6252,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 6;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
+     * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
      * @return The abortRequest.
      */
     @java.lang.Override
@@ -6270,7 +6270,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
+     * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
      */
     public Builder setAbortRequest(com.scalar.db.rpc.TransactionRequest.AbortRequest value) {
       if (abortRequestBuilder_ == null) {
@@ -6286,7 +6286,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
+     * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
      */
     public Builder setAbortRequest(
         com.scalar.db.rpc.TransactionRequest.AbortRequest.Builder builderForValue) {
@@ -6300,7 +6300,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
+     * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
      */
     public Builder mergeAbortRequest(com.scalar.db.rpc.TransactionRequest.AbortRequest value) {
       if (abortRequestBuilder_ == null) {
@@ -6323,7 +6323,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
+     * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
      */
     public Builder clearAbortRequest() {
       if (abortRequestBuilder_ == null) {
@@ -6342,13 +6342,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
+     * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
      */
     public com.scalar.db.rpc.TransactionRequest.AbortRequest.Builder getAbortRequestBuilder() {
       return getAbortRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
+     * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TransactionRequest.AbortRequestOrBuilder getAbortRequestOrBuilder() {
@@ -6362,7 +6362,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
+     * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TransactionRequest.AbortRequest, com.scalar.db.rpc.TransactionRequest.AbortRequest.Builder, com.scalar.db.rpc.TransactionRequest.AbortRequestOrBuilder> 
@@ -6386,7 +6386,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TransactionRequest.BeginRequest, com.scalar.db.rpc.TransactionRequest.BeginRequest.Builder, com.scalar.db.rpc.TransactionRequest.BeginRequestOrBuilder> beginRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
+     * <code>.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
      * @return Whether the beginRequest field is set.
      */
     @java.lang.Override
@@ -6394,7 +6394,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 7;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
+     * <code>.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
      * @return The beginRequest.
      */
     @java.lang.Override
@@ -6412,7 +6412,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
+     * <code>.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
      */
     public Builder setBeginRequest(com.scalar.db.rpc.TransactionRequest.BeginRequest value) {
       if (beginRequestBuilder_ == null) {
@@ -6428,7 +6428,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
+     * <code>.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
      */
     public Builder setBeginRequest(
         com.scalar.db.rpc.TransactionRequest.BeginRequest.Builder builderForValue) {
@@ -6442,7 +6442,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
+     * <code>.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
      */
     public Builder mergeBeginRequest(com.scalar.db.rpc.TransactionRequest.BeginRequest value) {
       if (beginRequestBuilder_ == null) {
@@ -6465,7 +6465,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
+     * <code>.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
      */
     public Builder clearBeginRequest() {
       if (beginRequestBuilder_ == null) {
@@ -6484,13 +6484,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
+     * <code>.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
      */
     public com.scalar.db.rpc.TransactionRequest.BeginRequest.Builder getBeginRequestBuilder() {
       return getBeginRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
+     * <code>.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TransactionRequest.BeginRequestOrBuilder getBeginRequestOrBuilder() {
@@ -6504,7 +6504,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
+     * <code>.rpc.TransactionRequest.BeginRequest begin_request = 7;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TransactionRequest.BeginRequest, com.scalar.db.rpc.TransactionRequest.BeginRequest.Builder, com.scalar.db.rpc.TransactionRequest.BeginRequestOrBuilder> 
@@ -6528,7 +6528,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TransactionRequest.RollbackRequest, com.scalar.db.rpc.TransactionRequest.RollbackRequest.Builder, com.scalar.db.rpc.TransactionRequest.RollbackRequestOrBuilder> rollbackRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
+     * <code>.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
      * @return Whether the rollbackRequest field is set.
      */
     @java.lang.Override
@@ -6536,7 +6536,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 8;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
+     * <code>.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
      * @return The rollbackRequest.
      */
     @java.lang.Override
@@ -6554,7 +6554,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
+     * <code>.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
      */
     public Builder setRollbackRequest(com.scalar.db.rpc.TransactionRequest.RollbackRequest value) {
       if (rollbackRequestBuilder_ == null) {
@@ -6570,7 +6570,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
+     * <code>.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
      */
     public Builder setRollbackRequest(
         com.scalar.db.rpc.TransactionRequest.RollbackRequest.Builder builderForValue) {
@@ -6584,7 +6584,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
+     * <code>.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
      */
     public Builder mergeRollbackRequest(com.scalar.db.rpc.TransactionRequest.RollbackRequest value) {
       if (rollbackRequestBuilder_ == null) {
@@ -6607,7 +6607,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
+     * <code>.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
      */
     public Builder clearRollbackRequest() {
       if (rollbackRequestBuilder_ == null) {
@@ -6626,13 +6626,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
+     * <code>.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
      */
     public com.scalar.db.rpc.TransactionRequest.RollbackRequest.Builder getRollbackRequestBuilder() {
       return getRollbackRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
+     * <code>.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TransactionRequest.RollbackRequestOrBuilder getRollbackRequestOrBuilder() {
@@ -6646,7 +6646,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
+     * <code>.rpc.TransactionRequest.RollbackRequest rollback_request = 8;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TransactionRequest.RollbackRequest, com.scalar.db.rpc.TransactionRequest.RollbackRequest.Builder, com.scalar.db.rpc.TransactionRequest.RollbackRequestOrBuilder> 
@@ -6679,10 +6679,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:scalardb.rpc.TransactionRequest)
+    // @@protoc_insertion_point(builder_scope:rpc.TransactionRequest)
   }
 
-  // @@protoc_insertion_point(class_scope:scalardb.rpc.TransactionRequest)
+  // @@protoc_insertion_point(class_scope:rpc.TransactionRequest)
   private static final com.scalar.db.rpc.TransactionRequest DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.TransactionRequest();

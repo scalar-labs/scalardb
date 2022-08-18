@@ -8,11 +8,11 @@ package com.scalar.db.rpc;
  * Value is deprecated as of release 3.6.0. Will be removed in release 5.0.0. Use Column, instead.
  * </pre>
  *
- * Protobuf type {@code scalardb.rpc.Value}
+ * Protobuf type {@code rpc.Value}
  */
 @java.lang.Deprecated public final class Value extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:scalardb.rpc.Value)
+    // @@protoc_insertion_point(message_implements:rpc.Value)
     ValueOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use Value.newBuilder() to construct.
@@ -135,19 +135,19 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Value_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Value_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.Value.class, com.scalar.db.rpc.Value.Builder.class);
   }
 
   public interface TextValueOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.Value.TextValue)
+      // @@protoc_insertion_point(interface_extends:rpc.Value.TextValue)
       com.google.protobuf.MessageOrBuilder {
 
     /**
@@ -168,11 +168,11 @@ private static final long serialVersionUID = 0L;
         getValueBytes();
   }
   /**
-   * Protobuf type {@code scalardb.rpc.Value.TextValue}
+   * Protobuf type {@code rpc.Value.TextValue}
    */
   public static final class TextValue extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.Value.TextValue)
+      // @@protoc_insertion_point(message_implements:rpc.Value.TextValue)
       TextValueOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use TextValue.newBuilder() to construct.
@@ -243,13 +243,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Value_TextValue_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_TextValue_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Value_TextValue_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_TextValue_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.Value.TextValue.class, com.scalar.db.rpc.Value.TextValue.Builder.class);
     }
@@ -461,21 +461,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.Value.TextValue}
+     * Protobuf type {@code rpc.Value.TextValue}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.Value.TextValue)
+        // @@protoc_insertion_point(builder_implements:rpc.Value.TextValue)
         com.scalar.db.rpc.Value.TextValueOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Value_TextValue_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_TextValue_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Value_TextValue_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_TextValue_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.Value.TextValue.class, com.scalar.db.rpc.Value.TextValue.Builder.class);
       }
@@ -506,7 +506,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Value_TextValue_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_TextValue_descriptor;
       }
 
       @java.lang.Override
@@ -711,10 +711,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.Value.TextValue)
+      // @@protoc_insertion_point(builder_scope:rpc.Value.TextValue)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.Value.TextValue)
+    // @@protoc_insertion_point(class_scope:rpc.Value.TextValue)
     private static final com.scalar.db.rpc.Value.TextValue DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.Value.TextValue();
@@ -752,7 +752,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface BlobValueOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.Value.BlobValue)
+      // @@protoc_insertion_point(interface_extends:rpc.Value.BlobValue)
       com.google.protobuf.MessageOrBuilder {
 
     /**
@@ -767,11 +767,11 @@ private static final long serialVersionUID = 0L;
     com.google.protobuf.ByteString getValue();
   }
   /**
-   * Protobuf type {@code scalardb.rpc.Value.BlobValue}
+   * Protobuf type {@code rpc.Value.BlobValue}
    */
   public static final class BlobValue extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.Value.BlobValue)
+      // @@protoc_insertion_point(message_implements:rpc.Value.BlobValue)
       BlobValueOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use BlobValue.newBuilder() to construct.
@@ -841,13 +841,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Value_BlobValue_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_BlobValue_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Value_BlobValue_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_BlobValue_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.Value.BlobValue.class, com.scalar.db.rpc.Value.BlobValue.Builder.class);
     }
@@ -1033,21 +1033,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.Value.BlobValue}
+     * Protobuf type {@code rpc.Value.BlobValue}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.Value.BlobValue)
+        // @@protoc_insertion_point(builder_implements:rpc.Value.BlobValue)
         com.scalar.db.rpc.Value.BlobValueOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Value_BlobValue_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_BlobValue_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Value_BlobValue_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_BlobValue_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.Value.BlobValue.class, com.scalar.db.rpc.Value.BlobValue.Builder.class);
       }
@@ -1078,7 +1078,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Value_BlobValue_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_BlobValue_descriptor;
       }
 
       @java.lang.Override
@@ -1240,10 +1240,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.Value.BlobValue)
+      // @@protoc_insertion_point(builder_scope:rpc.Value.BlobValue)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.Value.BlobValue)
+    // @@protoc_insertion_point(class_scope:rpc.Value.BlobValue)
     private static final com.scalar.db.rpc.Value.BlobValue DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.Value.BlobValue();
@@ -1476,7 +1476,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int TEXT_VALUE_FIELD_NUMBER = 7;
   /**
-   * <code>.scalardb.rpc.Value.TextValue text_value = 7;</code>
+   * <code>.rpc.Value.TextValue text_value = 7;</code>
    * @return Whether the textValue field is set.
    */
   @java.lang.Override
@@ -1484,7 +1484,7 @@ private static final long serialVersionUID = 0L;
     return valueCase_ == 7;
   }
   /**
-   * <code>.scalardb.rpc.Value.TextValue text_value = 7;</code>
+   * <code>.rpc.Value.TextValue text_value = 7;</code>
    * @return The textValue.
    */
   @java.lang.Override
@@ -1495,7 +1495,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.Value.TextValue.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.Value.TextValue text_value = 7;</code>
+   * <code>.rpc.Value.TextValue text_value = 7;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.Value.TextValueOrBuilder getTextValueOrBuilder() {
@@ -1507,7 +1507,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int BLOB_VALUE_FIELD_NUMBER = 8;
   /**
-   * <code>.scalardb.rpc.Value.BlobValue blob_value = 8;</code>
+   * <code>.rpc.Value.BlobValue blob_value = 8;</code>
    * @return Whether the blobValue field is set.
    */
   @java.lang.Override
@@ -1515,7 +1515,7 @@ private static final long serialVersionUID = 0L;
     return valueCase_ == 8;
   }
   /**
-   * <code>.scalardb.rpc.Value.BlobValue blob_value = 8;</code>
+   * <code>.rpc.Value.BlobValue blob_value = 8;</code>
    * @return The blobValue.
    */
   @java.lang.Override
@@ -1526,7 +1526,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.Value.BlobValue.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.Value.BlobValue blob_value = 8;</code>
+   * <code>.rpc.Value.BlobValue blob_value = 8;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.Value.BlobValueOrBuilder getBlobValueOrBuilder() {
@@ -1825,21 +1825,21 @@ private static final long serialVersionUID = 0L;
    * Value is deprecated as of release 3.6.0. Will be removed in release 5.0.0. Use Column, instead.
    * </pre>
    *
-   * Protobuf type {@code scalardb.rpc.Value}
+   * Protobuf type {@code rpc.Value}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:scalardb.rpc.Value)
+      // @@protoc_insertion_point(builder_implements:rpc.Value)
       com.scalar.db.rpc.ValueOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Value_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Value_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.Value.class, com.scalar.db.rpc.Value.Builder.class);
     }
@@ -1872,7 +1872,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Value_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_descriptor;
     }
 
     @java.lang.Override
@@ -2336,7 +2336,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Value.TextValue, com.scalar.db.rpc.Value.TextValue.Builder, com.scalar.db.rpc.Value.TextValueOrBuilder> textValueBuilder_;
     /**
-     * <code>.scalardb.rpc.Value.TextValue text_value = 7;</code>
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
      * @return Whether the textValue field is set.
      */
     @java.lang.Override
@@ -2344,7 +2344,7 @@ private static final long serialVersionUID = 0L;
       return valueCase_ == 7;
     }
     /**
-     * <code>.scalardb.rpc.Value.TextValue text_value = 7;</code>
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
      * @return The textValue.
      */
     @java.lang.Override
@@ -2362,7 +2362,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Value.TextValue text_value = 7;</code>
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
      */
     public Builder setTextValue(com.scalar.db.rpc.Value.TextValue value) {
       if (textValueBuilder_ == null) {
@@ -2378,7 +2378,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Value.TextValue text_value = 7;</code>
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
      */
     public Builder setTextValue(
         com.scalar.db.rpc.Value.TextValue.Builder builderForValue) {
@@ -2392,7 +2392,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Value.TextValue text_value = 7;</code>
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
      */
     public Builder mergeTextValue(com.scalar.db.rpc.Value.TextValue value) {
       if (textValueBuilder_ == null) {
@@ -2415,7 +2415,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Value.TextValue text_value = 7;</code>
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
      */
     public Builder clearTextValue() {
       if (textValueBuilder_ == null) {
@@ -2434,13 +2434,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Value.TextValue text_value = 7;</code>
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
      */
     public com.scalar.db.rpc.Value.TextValue.Builder getTextValueBuilder() {
       return getTextValueFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.Value.TextValue text_value = 7;</code>
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.Value.TextValueOrBuilder getTextValueOrBuilder() {
@@ -2454,7 +2454,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Value.TextValue text_value = 7;</code>
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Value.TextValue, com.scalar.db.rpc.Value.TextValue.Builder, com.scalar.db.rpc.Value.TextValueOrBuilder> 
@@ -2478,7 +2478,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Value.BlobValue, com.scalar.db.rpc.Value.BlobValue.Builder, com.scalar.db.rpc.Value.BlobValueOrBuilder> blobValueBuilder_;
     /**
-     * <code>.scalardb.rpc.Value.BlobValue blob_value = 8;</code>
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
      * @return Whether the blobValue field is set.
      */
     @java.lang.Override
@@ -2486,7 +2486,7 @@ private static final long serialVersionUID = 0L;
       return valueCase_ == 8;
     }
     /**
-     * <code>.scalardb.rpc.Value.BlobValue blob_value = 8;</code>
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
      * @return The blobValue.
      */
     @java.lang.Override
@@ -2504,7 +2504,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Value.BlobValue blob_value = 8;</code>
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
      */
     public Builder setBlobValue(com.scalar.db.rpc.Value.BlobValue value) {
       if (blobValueBuilder_ == null) {
@@ -2520,7 +2520,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Value.BlobValue blob_value = 8;</code>
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
      */
     public Builder setBlobValue(
         com.scalar.db.rpc.Value.BlobValue.Builder builderForValue) {
@@ -2534,7 +2534,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Value.BlobValue blob_value = 8;</code>
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
      */
     public Builder mergeBlobValue(com.scalar.db.rpc.Value.BlobValue value) {
       if (blobValueBuilder_ == null) {
@@ -2557,7 +2557,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Value.BlobValue blob_value = 8;</code>
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
      */
     public Builder clearBlobValue() {
       if (blobValueBuilder_ == null) {
@@ -2576,13 +2576,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Value.BlobValue blob_value = 8;</code>
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
      */
     public com.scalar.db.rpc.Value.BlobValue.Builder getBlobValueBuilder() {
       return getBlobValueFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.Value.BlobValue blob_value = 8;</code>
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.Value.BlobValueOrBuilder getBlobValueOrBuilder() {
@@ -2596,7 +2596,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Value.BlobValue blob_value = 8;</code>
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Value.BlobValue, com.scalar.db.rpc.Value.BlobValue.Builder, com.scalar.db.rpc.Value.BlobValueOrBuilder> 
@@ -2629,10 +2629,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:scalardb.rpc.Value)
+    // @@protoc_insertion_point(builder_scope:rpc.Value)
   }
 
-  // @@protoc_insertion_point(class_scope:scalardb.rpc.Value)
+  // @@protoc_insertion_point(class_scope:rpc.Value)
   private static final com.scalar.db.rpc.Value DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.Value();

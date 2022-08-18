@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code scalardb.rpc.AddNewColumnToTableRequest}
+ * Protobuf type {@code rpc.AddNewColumnToTableRequest}
  */
 public final class AddNewColumnToTableRequest extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:scalardb.rpc.AddNewColumnToTableRequest)
+    // @@protoc_insertion_point(message_implements:rpc.AddNewColumnToTableRequest)
     AddNewColumnToTableRequestOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use AddNewColumnToTableRequest.newBuilder() to construct.
@@ -99,13 +99,13 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_AddNewColumnToTableRequest_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_AddNewColumnToTableRequest_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_AddNewColumnToTableRequest_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_AddNewColumnToTableRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.AddNewColumnToTableRequest.class, com.scalar.db.rpc.AddNewColumnToTableRequest.Builder.class);
   }
@@ -227,14 +227,14 @@ private static final long serialVersionUID = 0L;
   public static final int COLUMN_TYPE_FIELD_NUMBER = 4;
   private int columnType_;
   /**
-   * <code>.scalardb.rpc.DataType column_type = 4;</code>
+   * <code>.rpc.DataType column_type = 4;</code>
    * @return The enum numeric value on the wire for columnType.
    */
   @java.lang.Override public int getColumnTypeValue() {
     return columnType_;
   }
   /**
-   * <code>.scalardb.rpc.DataType column_type = 4;</code>
+   * <code>.rpc.DataType column_type = 4;</code>
    * @return The columnType.
    */
   @java.lang.Override public com.scalar.db.rpc.DataType getColumnType() {
@@ -428,21 +428,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code scalardb.rpc.AddNewColumnToTableRequest}
+   * Protobuf type {@code rpc.AddNewColumnToTableRequest}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:scalardb.rpc.AddNewColumnToTableRequest)
+      // @@protoc_insertion_point(builder_implements:rpc.AddNewColumnToTableRequest)
       com.scalar.db.rpc.AddNewColumnToTableRequestOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_AddNewColumnToTableRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_AddNewColumnToTableRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_AddNewColumnToTableRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_AddNewColumnToTableRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.AddNewColumnToTableRequest.class, com.scalar.db.rpc.AddNewColumnToTableRequest.Builder.class);
     }
@@ -479,7 +479,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_AddNewColumnToTableRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_AddNewColumnToTableRequest_descriptor;
     }
 
     @java.lang.Override
@@ -825,14 +825,14 @@ private static final long serialVersionUID = 0L;
 
     private int columnType_ = 0;
     /**
-     * <code>.scalardb.rpc.DataType column_type = 4;</code>
+     * <code>.rpc.DataType column_type = 4;</code>
      * @return The enum numeric value on the wire for columnType.
      */
     @java.lang.Override public int getColumnTypeValue() {
       return columnType_;
     }
     /**
-     * <code>.scalardb.rpc.DataType column_type = 4;</code>
+     * <code>.rpc.DataType column_type = 4;</code>
      * @param value The enum numeric value on the wire for columnType to set.
      * @return This builder for chaining.
      */
@@ -843,7 +843,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.DataType column_type = 4;</code>
+     * <code>.rpc.DataType column_type = 4;</code>
      * @return The columnType.
      */
     @java.lang.Override
@@ -853,7 +853,7 @@ private static final long serialVersionUID = 0L;
       return result == null ? com.scalar.db.rpc.DataType.UNRECOGNIZED : result;
     }
     /**
-     * <code>.scalardb.rpc.DataType column_type = 4;</code>
+     * <code>.rpc.DataType column_type = 4;</code>
      * @param value The columnType to set.
      * @return This builder for chaining.
      */
@@ -867,7 +867,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.DataType column_type = 4;</code>
+     * <code>.rpc.DataType column_type = 4;</code>
      * @return This builder for chaining.
      */
     public Builder clearColumnType() {
@@ -889,10 +889,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:scalardb.rpc.AddNewColumnToTableRequest)
+    // @@protoc_insertion_point(builder_scope:rpc.AddNewColumnToTableRequest)
   }
 
-  // @@protoc_insertion_point(class_scope:scalardb.rpc.AddNewColumnToTableRequest)
+  // @@protoc_insertion_point(class_scope:rpc.AddNewColumnToTableRequest)
   private static final com.scalar.db.rpc.AddNewColumnToTableRequest DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.AddNewColumnToTableRequest();
