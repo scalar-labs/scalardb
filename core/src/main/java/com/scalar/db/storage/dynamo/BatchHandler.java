@@ -36,6 +36,7 @@ public class BatchHandler {
   private final DynamoDbClient client;
   private final TableMetadataManager metadataManager;
   private final String namespacePrefix;
+
   /**
    * Constructs a {@code BatchHandler} with the specified {@link DynamoDbClient} and {@link
    * TableMetadataManager}

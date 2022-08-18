@@ -47,6 +47,7 @@ public class SelectStatementHandler {
   private final DynamoDbClient client;
   private final TableMetadataManager metadataManager;
   private final String namespacePrefix;
+
   /**
    * Constructs a {@code SelectStatementHandler} with the specified {@link DynamoDbClient} and a new
    * {@link TableMetadataManager}
