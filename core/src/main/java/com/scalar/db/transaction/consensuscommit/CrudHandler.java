@@ -135,8 +135,7 @@ public class CrudHandler {
     try {
       get.clearProjections();
       // Retrieve only the after images columns when including the metadata is disabled, otherwise
-      // retrieve all the
-      // columns
+      // retrieve all the columns
       if (!isIncludeMetadataEnabled) {
         LinkedHashSet<String> afterImageColumnNames =
             tableMetadataManager.getTransactionTableMetadata(get).getAfterImageColumnNames();
@@ -153,8 +152,7 @@ public class CrudHandler {
     try {
       scan.clearProjections();
       // Retrieve only the after images columns when including the metadata is disabled, otherwise
-      // retrieve all the
-      // columns
+      // retrieve all the columns
       if (!isIncludeMetadataEnabled) {
         LinkedHashSet<String> afterImageColumnNames =
             tableMetadataManager.getTransactionTableMetadata(scan).getAfterImageColumnNames();
