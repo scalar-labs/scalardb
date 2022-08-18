@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code scalardb.rpc.GetRequest}
+ * Protobuf type {@code rpc.GetRequest}
  */
 public final class GetRequest extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:scalardb.rpc.GetRequest)
+    // @@protoc_insertion_point(message_implements:rpc.GetRequest)
     GetRequestOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use GetRequest.newBuilder() to construct.
@@ -84,13 +84,13 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetRequest_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetRequest_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetRequest_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.GetRequest.class, com.scalar.db.rpc.GetRequest.Builder.class);
   }
@@ -98,7 +98,7 @@ private static final long serialVersionUID = 0L;
   public static final int GET_FIELD_NUMBER = 1;
   private com.scalar.db.rpc.Get get_;
   /**
-   * <code>.scalardb.rpc.Get get = 1;</code>
+   * <code>.rpc.Get get = 1;</code>
    * @return Whether the get field is set.
    */
   @java.lang.Override
@@ -106,7 +106,7 @@ private static final long serialVersionUID = 0L;
     return get_ != null;
   }
   /**
-   * <code>.scalardb.rpc.Get get = 1;</code>
+   * <code>.rpc.Get get = 1;</code>
    * @return The get.
    */
   @java.lang.Override
@@ -114,7 +114,7 @@ private static final long serialVersionUID = 0L;
     return get_ == null ? com.scalar.db.rpc.Get.getDefaultInstance() : get_;
   }
   /**
-   * <code>.scalardb.rpc.Get get = 1;</code>
+   * <code>.rpc.Get get = 1;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.GetOrBuilder getGetOrBuilder() {
@@ -282,21 +282,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code scalardb.rpc.GetRequest}
+   * Protobuf type {@code rpc.GetRequest}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:scalardb.rpc.GetRequest)
+      // @@protoc_insertion_point(builder_implements:rpc.GetRequest)
       com.scalar.db.rpc.GetRequestOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.GetRequest.class, com.scalar.db.rpc.GetRequest.Builder.class);
     }
@@ -331,7 +331,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetRequest_descriptor;
     }
 
     @java.lang.Override
@@ -440,14 +440,14 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Get, com.scalar.db.rpc.Get.Builder, com.scalar.db.rpc.GetOrBuilder> getBuilder_;
     /**
-     * <code>.scalardb.rpc.Get get = 1;</code>
+     * <code>.rpc.Get get = 1;</code>
      * @return Whether the get field is set.
      */
     public boolean hasGet() {
       return getBuilder_ != null || get_ != null;
     }
     /**
-     * <code>.scalardb.rpc.Get get = 1;</code>
+     * <code>.rpc.Get get = 1;</code>
      * @return The get.
      */
     public com.scalar.db.rpc.Get getGet() {
@@ -458,7 +458,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Get get = 1;</code>
+     * <code>.rpc.Get get = 1;</code>
      */
     public Builder setGet(com.scalar.db.rpc.Get value) {
       if (getBuilder_ == null) {
@@ -474,7 +474,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Get get = 1;</code>
+     * <code>.rpc.Get get = 1;</code>
      */
     public Builder setGet(
         com.scalar.db.rpc.Get.Builder builderForValue) {
@@ -488,7 +488,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Get get = 1;</code>
+     * <code>.rpc.Get get = 1;</code>
      */
     public Builder mergeGet(com.scalar.db.rpc.Get value) {
       if (getBuilder_ == null) {
@@ -506,7 +506,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Get get = 1;</code>
+     * <code>.rpc.Get get = 1;</code>
      */
     public Builder clearGet() {
       if (getBuilder_ == null) {
@@ -520,7 +520,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Get get = 1;</code>
+     * <code>.rpc.Get get = 1;</code>
      */
     public com.scalar.db.rpc.Get.Builder getGetBuilder() {
       
@@ -528,7 +528,7 @@ private static final long serialVersionUID = 0L;
       return getGetFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.Get get = 1;</code>
+     * <code>.rpc.Get get = 1;</code>
      */
     public com.scalar.db.rpc.GetOrBuilder getGetOrBuilder() {
       if (getBuilder_ != null) {
@@ -539,7 +539,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Get get = 1;</code>
+     * <code>.rpc.Get get = 1;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Get, com.scalar.db.rpc.Get.Builder, com.scalar.db.rpc.GetOrBuilder> 
@@ -567,10 +567,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:scalardb.rpc.GetRequest)
+    // @@protoc_insertion_point(builder_scope:rpc.GetRequest)
   }
 
-  // @@protoc_insertion_point(class_scope:scalardb.rpc.GetRequest)
+  // @@protoc_insertion_point(class_scope:rpc.GetRequest)
   private static final com.scalar.db.rpc.GetRequest DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.GetRequest();

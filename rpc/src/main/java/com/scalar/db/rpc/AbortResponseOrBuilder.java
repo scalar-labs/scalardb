@@ -4,16 +4,16 @@
 package com.scalar.db.rpc;
 
 public interface AbortResponseOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:scalardb.rpc.AbortResponse)
+    // @@protoc_insertion_point(interface_extends:rpc.AbortResponse)
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>.scalardb.rpc.TransactionState state = 1;</code>
+   * <code>.rpc.TransactionState state = 1;</code>
    * @return The enum numeric value on the wire for state.
    */
   int getStateValue();
   /**
-   * <code>.scalardb.rpc.TransactionState state = 1;</code>
+   * <code>.rpc.TransactionState state = 1;</code>
    * @return The state.
    */
   com.scalar.db.rpc.TransactionState getState();

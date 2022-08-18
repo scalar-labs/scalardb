@@ -12,7 +12,7 @@ public final class DistributedStorageAdminGrpc {
 
   private DistributedStorageAdminGrpc() {}
 
-  public static final String SERVICE_NAME = "scalardb.rpc.DistributedStorageAdmin";
+  public static final String SERVICE_NAME = "rpc.DistributedStorageAdmin";
 
   // Static method descriptors that strictly reflect the proto.
   private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.CreateNamespaceRequest,

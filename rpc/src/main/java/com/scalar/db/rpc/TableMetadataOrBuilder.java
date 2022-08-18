@@ -4,15 +4,15 @@
 package com.scalar.db.rpc;
 
 public interface TableMetadataOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:scalardb.rpc.TableMetadata)
+    // @@protoc_insertion_point(interface_extends:rpc.TableMetadata)
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+   * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   int getColumnsCount();
   /**
-   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+   * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   boolean containsColumns(
       java.lang.String key);
@@ -23,12 +23,12 @@ public interface TableMetadataOrBuilder extends
   java.util.Map<java.lang.String, com.scalar.db.rpc.DataType>
   getColumns();
   /**
-   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+   * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   java.util.Map<java.lang.String, com.scalar.db.rpc.DataType>
   getColumnsMap();
   /**
-   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+   * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   /* nullable */
 com.scalar.db.rpc.DataType getColumnsOrDefault(
@@ -36,7 +36,7 @@ com.scalar.db.rpc.DataType getColumnsOrDefault(
       /* nullable */
 com.scalar.db.rpc.DataType         defaultValue);
   /**
-   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+   * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   com.scalar.db.rpc.DataType getColumnsOrThrow(
       java.lang.String key);
@@ -47,19 +47,19 @@ com.scalar.db.rpc.DataType         defaultValue);
   java.util.Map<java.lang.String, java.lang.Integer>
   getColumnsValue();
   /**
-   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+   * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   java.util.Map<java.lang.String, java.lang.Integer>
   getColumnsValueMap();
   /**
-   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+   * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
 
   int getColumnsValueOrDefault(
       java.lang.String key,
       int defaultValue);
   /**
-   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+   * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
 
   int getColumnsValueOrThrow(
@@ -116,11 +116,11 @@ com.scalar.db.rpc.DataType         defaultValue);
       getClusteringKeyNamesBytes(int index);
 
   /**
-   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+   * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   int getClusteringOrdersCount();
   /**
-   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+   * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   boolean containsClusteringOrders(
       java.lang.String key);
@@ -131,12 +131,12 @@ com.scalar.db.rpc.DataType         defaultValue);
   java.util.Map<java.lang.String, com.scalar.db.rpc.Order>
   getClusteringOrders();
   /**
-   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+   * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   java.util.Map<java.lang.String, com.scalar.db.rpc.Order>
   getClusteringOrdersMap();
   /**
-   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+   * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   /* nullable */
 com.scalar.db.rpc.Order getClusteringOrdersOrDefault(
@@ -144,7 +144,7 @@ com.scalar.db.rpc.Order getClusteringOrdersOrDefault(
       /* nullable */
 com.scalar.db.rpc.Order         defaultValue);
   /**
-   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+   * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   com.scalar.db.rpc.Order getClusteringOrdersOrThrow(
       java.lang.String key);
@@ -155,19 +155,19 @@ com.scalar.db.rpc.Order         defaultValue);
   java.util.Map<java.lang.String, java.lang.Integer>
   getClusteringOrdersValue();
   /**
-   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+   * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   java.util.Map<java.lang.String, java.lang.Integer>
   getClusteringOrdersValueMap();
   /**
-   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+   * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
 
   int getClusteringOrdersValueOrDefault(
       java.lang.String key,
       int defaultValue);
   /**
-   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+   * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
 
   int getClusteringOrdersValueOrThrow(

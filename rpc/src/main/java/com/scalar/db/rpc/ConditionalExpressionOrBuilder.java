@@ -4,19 +4,19 @@
 package com.scalar.db.rpc;
 
 public interface ConditionalExpressionOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:scalardb.rpc.ConditionalExpression)
+    // @@protoc_insertion_point(interface_extends:rpc.ConditionalExpression)
     com.google.protobuf.MessageOrBuilder {
 
   /**
    * <code>string name = 1 [deprecated = true];</code>
-   * @deprecated scalardb.rpc.ConditionalExpression.name is deprecated.
+   * @deprecated rpc.ConditionalExpression.name is deprecated.
    *     See scalardb.proto;l=91
    * @return The name.
    */
   @java.lang.Deprecated java.lang.String getName();
   /**
    * <code>string name = 1 [deprecated = true];</code>
-   * @deprecated scalardb.rpc.ConditionalExpression.name is deprecated.
+   * @deprecated rpc.ConditionalExpression.name is deprecated.
    *     See scalardb.proto;l=91
    * @return The bytes for name.
    */
@@ -24,47 +24,47 @@ public interface ConditionalExpressionOrBuilder extends
       getNameBytes();
 
   /**
-   * <code>.scalardb.rpc.Value value = 2 [deprecated = true];</code>
-   * @deprecated scalardb.rpc.ConditionalExpression.value is deprecated.
+   * <code>.rpc.Value value = 2 [deprecated = true];</code>
+   * @deprecated rpc.ConditionalExpression.value is deprecated.
    *     See scalardb.proto;l=92
    * @return Whether the value field is set.
    */
   @java.lang.Deprecated boolean hasValue();
   /**
-   * <code>.scalardb.rpc.Value value = 2 [deprecated = true];</code>
-   * @deprecated scalardb.rpc.ConditionalExpression.value is deprecated.
+   * <code>.rpc.Value value = 2 [deprecated = true];</code>
+   * @deprecated rpc.ConditionalExpression.value is deprecated.
    *     See scalardb.proto;l=92
    * @return The value.
    */
   @java.lang.Deprecated com.scalar.db.rpc.Value getValue();
   /**
-   * <code>.scalardb.rpc.Value value = 2 [deprecated = true];</code>
+   * <code>.rpc.Value value = 2 [deprecated = true];</code>
    */
   @java.lang.Deprecated com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.ConditionalExpression.Operator operator = 3;</code>
+   * <code>.rpc.ConditionalExpression.Operator operator = 3;</code>
    * @return The enum numeric value on the wire for operator.
    */
   int getOperatorValue();
   /**
-   * <code>.scalardb.rpc.ConditionalExpression.Operator operator = 3;</code>
+   * <code>.rpc.ConditionalExpression.Operator operator = 3;</code>
    * @return The operator.
    */
   com.scalar.db.rpc.ConditionalExpression.Operator getOperator();
 
   /**
-   * <code>.scalardb.rpc.Column column = 4;</code>
+   * <code>.rpc.Column column = 4;</code>
    * @return Whether the column field is set.
    */
   boolean hasColumn();
   /**
-   * <code>.scalardb.rpc.Column column = 4;</code>
+   * <code>.rpc.Column column = 4;</code>
    * @return The column.
    */
   com.scalar.db.rpc.Column getColumn();
   /**
-   * <code>.scalardb.rpc.Column column = 4;</code>
+   * <code>.rpc.Column column = 4;</code>
    */
   com.scalar.db.rpc.ColumnOrBuilder getColumnOrBuilder();
 }

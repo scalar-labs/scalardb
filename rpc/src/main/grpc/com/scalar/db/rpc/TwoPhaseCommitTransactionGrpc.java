@@ -12,7 +12,7 @@ public final class TwoPhaseCommitTransactionGrpc {
 
   private TwoPhaseCommitTransactionGrpc() {}
 
-  public static final String SERVICE_NAME = "scalardb.rpc.TwoPhaseCommitTransaction";
+  public static final String SERVICE_NAME = "rpc.TwoPhaseCommitTransaction";
 
   // Static method descriptors that strictly reflect the proto.
   private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.TwoPhaseCommitTransactionRequest,

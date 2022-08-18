@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code scalardb.rpc.Mutation}
+ * Protobuf type {@code rpc.Mutation}
  */
 public final class Mutation extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:scalardb.rpc.Mutation)
+    // @@protoc_insertion_point(message_implements:rpc.Mutation)
     MutationOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use Mutation.newBuilder() to construct.
@@ -165,19 +165,19 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Mutation_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Mutation_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Mutation_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Mutation_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.Mutation.class, com.scalar.db.rpc.Mutation.Builder.class);
   }
 
   /**
-   * Protobuf enum {@code scalardb.rpc.Mutation.Type}
+   * Protobuf enum {@code rpc.Mutation.Type}
    */
   public enum Type
       implements com.google.protobuf.ProtocolMessageEnum {
@@ -281,7 +281,7 @@ private static final long serialVersionUID = 0L;
       this.value = value;
     }
 
-    // @@protoc_insertion_point(enum_scope:scalardb.rpc.Mutation.Type)
+    // @@protoc_insertion_point(enum_scope:rpc.Mutation.Type)
   }
 
   public static final int NAMESPACE_FIELD_NUMBER = 1;
@@ -363,7 +363,7 @@ private static final long serialVersionUID = 0L;
   public static final int PARTITION_KEY_FIELD_NUMBER = 3;
   private com.scalar.db.rpc.Key partitionKey_;
   /**
-   * <code>.scalardb.rpc.Key partition_key = 3;</code>
+   * <code>.rpc.Key partition_key = 3;</code>
    * @return Whether the partitionKey field is set.
    */
   @java.lang.Override
@@ -371,7 +371,7 @@ private static final long serialVersionUID = 0L;
     return partitionKey_ != null;
   }
   /**
-   * <code>.scalardb.rpc.Key partition_key = 3;</code>
+   * <code>.rpc.Key partition_key = 3;</code>
    * @return The partitionKey.
    */
   @java.lang.Override
@@ -379,7 +379,7 @@ private static final long serialVersionUID = 0L;
     return partitionKey_ == null ? com.scalar.db.rpc.Key.getDefaultInstance() : partitionKey_;
   }
   /**
-   * <code>.scalardb.rpc.Key partition_key = 3;</code>
+   * <code>.rpc.Key partition_key = 3;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.KeyOrBuilder getPartitionKeyOrBuilder() {
@@ -389,7 +389,7 @@ private static final long serialVersionUID = 0L;
   public static final int CLUSTERING_KEY_FIELD_NUMBER = 4;
   private com.scalar.db.rpc.Key clusteringKey_;
   /**
-   * <code>.scalardb.rpc.Key clustering_key = 4;</code>
+   * <code>.rpc.Key clustering_key = 4;</code>
    * @return Whether the clusteringKey field is set.
    */
   @java.lang.Override
@@ -397,7 +397,7 @@ private static final long serialVersionUID = 0L;
     return clusteringKey_ != null;
   }
   /**
-   * <code>.scalardb.rpc.Key clustering_key = 4;</code>
+   * <code>.rpc.Key clustering_key = 4;</code>
    * @return The clusteringKey.
    */
   @java.lang.Override
@@ -405,7 +405,7 @@ private static final long serialVersionUID = 0L;
     return clusteringKey_ == null ? com.scalar.db.rpc.Key.getDefaultInstance() : clusteringKey_;
   }
   /**
-   * <code>.scalardb.rpc.Key clustering_key = 4;</code>
+   * <code>.rpc.Key clustering_key = 4;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.KeyOrBuilder getClusteringKeyOrBuilder() {
@@ -415,14 +415,14 @@ private static final long serialVersionUID = 0L;
   public static final int CONSISTENCY_FIELD_NUMBER = 5;
   private int consistency_;
   /**
-   * <code>.scalardb.rpc.Consistency consistency = 5;</code>
+   * <code>.rpc.Consistency consistency = 5;</code>
    * @return The enum numeric value on the wire for consistency.
    */
   @java.lang.Override public int getConsistencyValue() {
     return consistency_;
   }
   /**
-   * <code>.scalardb.rpc.Consistency consistency = 5;</code>
+   * <code>.rpc.Consistency consistency = 5;</code>
    * @return The consistency.
    */
   @java.lang.Override public com.scalar.db.rpc.Consistency getConsistency() {
@@ -434,7 +434,7 @@ private static final long serialVersionUID = 0L;
   public static final int CONDITION_FIELD_NUMBER = 6;
   private com.scalar.db.rpc.MutateCondition condition_;
   /**
-   * <code>.scalardb.rpc.MutateCondition condition = 6;</code>
+   * <code>.rpc.MutateCondition condition = 6;</code>
    * @return Whether the condition field is set.
    */
   @java.lang.Override
@@ -442,7 +442,7 @@ private static final long serialVersionUID = 0L;
     return condition_ != null;
   }
   /**
-   * <code>.scalardb.rpc.MutateCondition condition = 6;</code>
+   * <code>.rpc.MutateCondition condition = 6;</code>
    * @return The condition.
    */
   @java.lang.Override
@@ -450,7 +450,7 @@ private static final long serialVersionUID = 0L;
     return condition_ == null ? com.scalar.db.rpc.MutateCondition.getDefaultInstance() : condition_;
   }
   /**
-   * <code>.scalardb.rpc.MutateCondition condition = 6;</code>
+   * <code>.rpc.MutateCondition condition = 6;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.MutateConditionOrBuilder getConditionOrBuilder() {
@@ -460,14 +460,14 @@ private static final long serialVersionUID = 0L;
   public static final int TYPE_FIELD_NUMBER = 7;
   private int type_;
   /**
-   * <code>.scalardb.rpc.Mutation.Type type = 7;</code>
+   * <code>.rpc.Mutation.Type type = 7;</code>
    * @return The enum numeric value on the wire for type.
    */
   @java.lang.Override public int getTypeValue() {
     return type_;
   }
   /**
-   * <code>.scalardb.rpc.Mutation.Type type = 7;</code>
+   * <code>.rpc.Mutation.Type type = 7;</code>
    * @return The type.
    */
   @java.lang.Override public com.scalar.db.rpc.Mutation.Type getType() {
@@ -483,7 +483,7 @@ private static final long serialVersionUID = 0L;
    * only for Put operations
    * </pre>
    *
-   * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+   * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
    */
   @java.lang.Override
   @java.lang.Deprecated public java.util.List<com.scalar.db.rpc.Value> getValueList() {
@@ -494,7 +494,7 @@ private static final long serialVersionUID = 0L;
    * only for Put operations
    * </pre>
    *
-   * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+   * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
    */
   @java.lang.Override
   @java.lang.Deprecated public java.util.List<? extends com.scalar.db.rpc.ValueOrBuilder> 
@@ -506,7 +506,7 @@ private static final long serialVersionUID = 0L;
    * only for Put operations
    * </pre>
    *
-   * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+   * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
    */
   @java.lang.Override
   @java.lang.Deprecated public int getValueCount() {
@@ -517,7 +517,7 @@ private static final long serialVersionUID = 0L;
    * only for Put operations
    * </pre>
    *
-   * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+   * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
    */
   @java.lang.Override
   @java.lang.Deprecated public com.scalar.db.rpc.Value getValue(int index) {
@@ -528,7 +528,7 @@ private static final long serialVersionUID = 0L;
    * only for Put operations
    * </pre>
    *
-   * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+   * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
    */
   @java.lang.Override
   @java.lang.Deprecated public com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder(
@@ -543,7 +543,7 @@ private static final long serialVersionUID = 0L;
    * only for Put operations
    * </pre>
    *
-   * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+   * <code>repeated .rpc.Column columns = 9;</code>
    */
   @java.lang.Override
   public java.util.List<com.scalar.db.rpc.Column> getColumnsList() {
@@ -554,7 +554,7 @@ private static final long serialVersionUID = 0L;
    * only for Put operations
    * </pre>
    *
-   * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+   * <code>repeated .rpc.Column columns = 9;</code>
    */
   @java.lang.Override
   public java.util.List<? extends com.scalar.db.rpc.ColumnOrBuilder> 
@@ -566,7 +566,7 @@ private static final long serialVersionUID = 0L;
    * only for Put operations
    * </pre>
    *
-   * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+   * <code>repeated .rpc.Column columns = 9;</code>
    */
   @java.lang.Override
   public int getColumnsCount() {
@@ -577,7 +577,7 @@ private static final long serialVersionUID = 0L;
    * only for Put operations
    * </pre>
    *
-   * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+   * <code>repeated .rpc.Column columns = 9;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.Column getColumns(int index) {
@@ -588,7 +588,7 @@ private static final long serialVersionUID = 0L;
    * only for Put operations
    * </pre>
    *
-   * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+   * <code>repeated .rpc.Column columns = 9;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.ColumnOrBuilder getColumnsOrBuilder(
@@ -855,21 +855,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code scalardb.rpc.Mutation}
+   * Protobuf type {@code rpc.Mutation}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:scalardb.rpc.Mutation)
+      // @@protoc_insertion_point(builder_implements:rpc.Mutation)
       com.scalar.db.rpc.MutationOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Mutation_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Mutation_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Mutation_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Mutation_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.Mutation.class, com.scalar.db.rpc.Mutation.Builder.class);
     }
@@ -938,7 +938,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Mutation_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Mutation_descriptor;
     }
 
     @java.lang.Override
@@ -1305,14 +1305,14 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Key, com.scalar.db.rpc.Key.Builder, com.scalar.db.rpc.KeyOrBuilder> partitionKeyBuilder_;
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      * @return Whether the partitionKey field is set.
      */
     public boolean hasPartitionKey() {
       return partitionKeyBuilder_ != null || partitionKey_ != null;
     }
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      * @return The partitionKey.
      */
     public com.scalar.db.rpc.Key getPartitionKey() {
@@ -1323,7 +1323,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      */
     public Builder setPartitionKey(com.scalar.db.rpc.Key value) {
       if (partitionKeyBuilder_ == null) {
@@ -1339,7 +1339,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      */
     public Builder setPartitionKey(
         com.scalar.db.rpc.Key.Builder builderForValue) {
@@ -1353,7 +1353,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      */
     public Builder mergePartitionKey(com.scalar.db.rpc.Key value) {
       if (partitionKeyBuilder_ == null) {
@@ -1371,7 +1371,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      */
     public Builder clearPartitionKey() {
       if (partitionKeyBuilder_ == null) {
@@ -1385,7 +1385,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      */
     public com.scalar.db.rpc.Key.Builder getPartitionKeyBuilder() {
       
@@ -1393,7 +1393,7 @@ private static final long serialVersionUID = 0L;
       return getPartitionKeyFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      */
     public com.scalar.db.rpc.KeyOrBuilder getPartitionKeyOrBuilder() {
       if (partitionKeyBuilder_ != null) {
@@ -1404,7 +1404,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Key, com.scalar.db.rpc.Key.Builder, com.scalar.db.rpc.KeyOrBuilder> 
@@ -1424,14 +1424,14 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Key, com.scalar.db.rpc.Key.Builder, com.scalar.db.rpc.KeyOrBuilder> clusteringKeyBuilder_;
     /**
-     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
+     * <code>.rpc.Key clustering_key = 4;</code>
      * @return Whether the clusteringKey field is set.
      */
     public boolean hasClusteringKey() {
       return clusteringKeyBuilder_ != null || clusteringKey_ != null;
     }
     /**
-     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
+     * <code>.rpc.Key clustering_key = 4;</code>
      * @return The clusteringKey.
      */
     public com.scalar.db.rpc.Key getClusteringKey() {
@@ -1442,7 +1442,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
+     * <code>.rpc.Key clustering_key = 4;</code>
      */
     public Builder setClusteringKey(com.scalar.db.rpc.Key value) {
       if (clusteringKeyBuilder_ == null) {
@@ -1458,7 +1458,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
+     * <code>.rpc.Key clustering_key = 4;</code>
      */
     public Builder setClusteringKey(
         com.scalar.db.rpc.Key.Builder builderForValue) {
@@ -1472,7 +1472,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
+     * <code>.rpc.Key clustering_key = 4;</code>
      */
     public Builder mergeClusteringKey(com.scalar.db.rpc.Key value) {
       if (clusteringKeyBuilder_ == null) {
@@ -1490,7 +1490,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
+     * <code>.rpc.Key clustering_key = 4;</code>
      */
     public Builder clearClusteringKey() {
       if (clusteringKeyBuilder_ == null) {
@@ -1504,7 +1504,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
+     * <code>.rpc.Key clustering_key = 4;</code>
      */
     public com.scalar.db.rpc.Key.Builder getClusteringKeyBuilder() {
       
@@ -1512,7 +1512,7 @@ private static final long serialVersionUID = 0L;
       return getClusteringKeyFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
+     * <code>.rpc.Key clustering_key = 4;</code>
      */
     public com.scalar.db.rpc.KeyOrBuilder getClusteringKeyOrBuilder() {
       if (clusteringKeyBuilder_ != null) {
@@ -1523,7 +1523,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Key clustering_key = 4;</code>
+     * <code>.rpc.Key clustering_key = 4;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Key, com.scalar.db.rpc.Key.Builder, com.scalar.db.rpc.KeyOrBuilder> 
@@ -1541,14 +1541,14 @@ private static final long serialVersionUID = 0L;
 
     private int consistency_ = 0;
     /**
-     * <code>.scalardb.rpc.Consistency consistency = 5;</code>
+     * <code>.rpc.Consistency consistency = 5;</code>
      * @return The enum numeric value on the wire for consistency.
      */
     @java.lang.Override public int getConsistencyValue() {
       return consistency_;
     }
     /**
-     * <code>.scalardb.rpc.Consistency consistency = 5;</code>
+     * <code>.rpc.Consistency consistency = 5;</code>
      * @param value The enum numeric value on the wire for consistency to set.
      * @return This builder for chaining.
      */
@@ -1559,7 +1559,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Consistency consistency = 5;</code>
+     * <code>.rpc.Consistency consistency = 5;</code>
      * @return The consistency.
      */
     @java.lang.Override
@@ -1569,7 +1569,7 @@ private static final long serialVersionUID = 0L;
       return result == null ? com.scalar.db.rpc.Consistency.UNRECOGNIZED : result;
     }
     /**
-     * <code>.scalardb.rpc.Consistency consistency = 5;</code>
+     * <code>.rpc.Consistency consistency = 5;</code>
      * @param value The consistency to set.
      * @return This builder for chaining.
      */
@@ -1583,7 +1583,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Consistency consistency = 5;</code>
+     * <code>.rpc.Consistency consistency = 5;</code>
      * @return This builder for chaining.
      */
     public Builder clearConsistency() {
@@ -1597,14 +1597,14 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.MutateCondition, com.scalar.db.rpc.MutateCondition.Builder, com.scalar.db.rpc.MutateConditionOrBuilder> conditionBuilder_;
     /**
-     * <code>.scalardb.rpc.MutateCondition condition = 6;</code>
+     * <code>.rpc.MutateCondition condition = 6;</code>
      * @return Whether the condition field is set.
      */
     public boolean hasCondition() {
       return conditionBuilder_ != null || condition_ != null;
     }
     /**
-     * <code>.scalardb.rpc.MutateCondition condition = 6;</code>
+     * <code>.rpc.MutateCondition condition = 6;</code>
      * @return The condition.
      */
     public com.scalar.db.rpc.MutateCondition getCondition() {
@@ -1615,7 +1615,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.MutateCondition condition = 6;</code>
+     * <code>.rpc.MutateCondition condition = 6;</code>
      */
     public Builder setCondition(com.scalar.db.rpc.MutateCondition value) {
       if (conditionBuilder_ == null) {
@@ -1631,7 +1631,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.MutateCondition condition = 6;</code>
+     * <code>.rpc.MutateCondition condition = 6;</code>
      */
     public Builder setCondition(
         com.scalar.db.rpc.MutateCondition.Builder builderForValue) {
@@ -1645,7 +1645,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.MutateCondition condition = 6;</code>
+     * <code>.rpc.MutateCondition condition = 6;</code>
      */
     public Builder mergeCondition(com.scalar.db.rpc.MutateCondition value) {
       if (conditionBuilder_ == null) {
@@ -1663,7 +1663,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.MutateCondition condition = 6;</code>
+     * <code>.rpc.MutateCondition condition = 6;</code>
      */
     public Builder clearCondition() {
       if (conditionBuilder_ == null) {
@@ -1677,7 +1677,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.MutateCondition condition = 6;</code>
+     * <code>.rpc.MutateCondition condition = 6;</code>
      */
     public com.scalar.db.rpc.MutateCondition.Builder getConditionBuilder() {
       
@@ -1685,7 +1685,7 @@ private static final long serialVersionUID = 0L;
       return getConditionFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.MutateCondition condition = 6;</code>
+     * <code>.rpc.MutateCondition condition = 6;</code>
      */
     public com.scalar.db.rpc.MutateConditionOrBuilder getConditionOrBuilder() {
       if (conditionBuilder_ != null) {
@@ -1696,7 +1696,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.MutateCondition condition = 6;</code>
+     * <code>.rpc.MutateCondition condition = 6;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.MutateCondition, com.scalar.db.rpc.MutateCondition.Builder, com.scalar.db.rpc.MutateConditionOrBuilder> 
@@ -1714,14 +1714,14 @@ private static final long serialVersionUID = 0L;
 
     private int type_ = 0;
     /**
-     * <code>.scalardb.rpc.Mutation.Type type = 7;</code>
+     * <code>.rpc.Mutation.Type type = 7;</code>
      * @return The enum numeric value on the wire for type.
      */
     @java.lang.Override public int getTypeValue() {
       return type_;
     }
     /**
-     * <code>.scalardb.rpc.Mutation.Type type = 7;</code>
+     * <code>.rpc.Mutation.Type type = 7;</code>
      * @param value The enum numeric value on the wire for type to set.
      * @return This builder for chaining.
      */
@@ -1732,7 +1732,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Mutation.Type type = 7;</code>
+     * <code>.rpc.Mutation.Type type = 7;</code>
      * @return The type.
      */
     @java.lang.Override
@@ -1742,7 +1742,7 @@ private static final long serialVersionUID = 0L;
       return result == null ? com.scalar.db.rpc.Mutation.Type.UNRECOGNIZED : result;
     }
     /**
-     * <code>.scalardb.rpc.Mutation.Type type = 7;</code>
+     * <code>.rpc.Mutation.Type type = 7;</code>
      * @param value The type to set.
      * @return This builder for chaining.
      */
@@ -1756,7 +1756,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Mutation.Type type = 7;</code>
+     * <code>.rpc.Mutation.Type type = 7;</code>
      * @return This builder for chaining.
      */
     public Builder clearType() {
@@ -1783,7 +1783,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public java.util.List<com.scalar.db.rpc.Value> getValueList() {
       if (valueBuilder_ == null) {
@@ -1797,7 +1797,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public int getValueCount() {
       if (valueBuilder_ == null) {
@@ -1811,7 +1811,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public com.scalar.db.rpc.Value getValue(int index) {
       if (valueBuilder_ == null) {
@@ -1825,7 +1825,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder setValue(
         int index, com.scalar.db.rpc.Value value) {
@@ -1846,7 +1846,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder setValue(
         int index, com.scalar.db.rpc.Value.Builder builderForValue) {
@@ -1864,7 +1864,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder addValue(com.scalar.db.rpc.Value value) {
       if (valueBuilder_ == null) {
@@ -1884,7 +1884,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder addValue(
         int index, com.scalar.db.rpc.Value value) {
@@ -1905,7 +1905,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder addValue(
         com.scalar.db.rpc.Value.Builder builderForValue) {
@@ -1923,7 +1923,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder addValue(
         int index, com.scalar.db.rpc.Value.Builder builderForValue) {
@@ -1941,7 +1941,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder addAllValue(
         java.lang.Iterable<? extends com.scalar.db.rpc.Value> values) {
@@ -1960,7 +1960,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder clearValue() {
       if (valueBuilder_ == null) {
@@ -1977,7 +1977,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder removeValue(int index) {
       if (valueBuilder_ == null) {
@@ -1994,7 +1994,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public com.scalar.db.rpc.Value.Builder getValueBuilder(
         int index) {
@@ -2005,7 +2005,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder(
         int index) {
@@ -2019,7 +2019,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public java.util.List<? extends com.scalar.db.rpc.ValueOrBuilder> 
          getValueOrBuilderList() {
@@ -2034,7 +2034,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public com.scalar.db.rpc.Value.Builder addValueBuilder() {
       return getValueFieldBuilder().addBuilder(
@@ -2045,7 +2045,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public com.scalar.db.rpc.Value.Builder addValueBuilder(
         int index) {
@@ -2057,7 +2057,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Value value = 8 [deprecated = true];</code>
+     * <code>repeated .rpc.Value value = 8 [deprecated = true];</code>
      */
     @java.lang.Deprecated public java.util.List<com.scalar.db.rpc.Value.Builder> 
          getValueBuilderList() {
@@ -2095,7 +2095,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public java.util.List<com.scalar.db.rpc.Column> getColumnsList() {
       if (columnsBuilder_ == null) {
@@ -2109,7 +2109,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public int getColumnsCount() {
       if (columnsBuilder_ == null) {
@@ -2123,7 +2123,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public com.scalar.db.rpc.Column getColumns(int index) {
       if (columnsBuilder_ == null) {
@@ -2137,7 +2137,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public Builder setColumns(
         int index, com.scalar.db.rpc.Column value) {
@@ -2158,7 +2158,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public Builder setColumns(
         int index, com.scalar.db.rpc.Column.Builder builderForValue) {
@@ -2176,7 +2176,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public Builder addColumns(com.scalar.db.rpc.Column value) {
       if (columnsBuilder_ == null) {
@@ -2196,7 +2196,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public Builder addColumns(
         int index, com.scalar.db.rpc.Column value) {
@@ -2217,7 +2217,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public Builder addColumns(
         com.scalar.db.rpc.Column.Builder builderForValue) {
@@ -2235,7 +2235,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public Builder addColumns(
         int index, com.scalar.db.rpc.Column.Builder builderForValue) {
@@ -2253,7 +2253,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public Builder addAllColumns(
         java.lang.Iterable<? extends com.scalar.db.rpc.Column> values) {
@@ -2272,7 +2272,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public Builder clearColumns() {
       if (columnsBuilder_ == null) {
@@ -2289,7 +2289,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public Builder removeColumns(int index) {
       if (columnsBuilder_ == null) {
@@ -2306,7 +2306,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public com.scalar.db.rpc.Column.Builder getColumnsBuilder(
         int index) {
@@ -2317,7 +2317,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public com.scalar.db.rpc.ColumnOrBuilder getColumnsOrBuilder(
         int index) {
@@ -2331,7 +2331,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public java.util.List<? extends com.scalar.db.rpc.ColumnOrBuilder> 
          getColumnsOrBuilderList() {
@@ -2346,7 +2346,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public com.scalar.db.rpc.Column.Builder addColumnsBuilder() {
       return getColumnsFieldBuilder().addBuilder(
@@ -2357,7 +2357,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public com.scalar.db.rpc.Column.Builder addColumnsBuilder(
         int index) {
@@ -2369,7 +2369,7 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>repeated .scalardb.rpc.Column columns = 9;</code>
+     * <code>repeated .rpc.Column columns = 9;</code>
      */
     public java.util.List<com.scalar.db.rpc.Column.Builder> 
          getColumnsBuilderList() {
@@ -2402,10 +2402,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:scalardb.rpc.Mutation)
+    // @@protoc_insertion_point(builder_scope:rpc.Mutation)
   }
 
-  // @@protoc_insertion_point(class_scope:scalardb.rpc.Mutation)
+  // @@protoc_insertion_point(class_scope:rpc.Mutation)
   private static final com.scalar.db.rpc.Mutation DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.Mutation();

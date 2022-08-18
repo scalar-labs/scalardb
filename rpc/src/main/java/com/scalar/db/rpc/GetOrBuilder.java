@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 public interface GetOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:scalardb.rpc.Get)
+    // @@protoc_insertion_point(interface_extends:rpc.Get)
     com.google.protobuf.MessageOrBuilder {
 
   /**
@@ -32,42 +32,42 @@ public interface GetOrBuilder extends
       getTableBytes();
 
   /**
-   * <code>.scalardb.rpc.Key partition_key = 3;</code>
+   * <code>.rpc.Key partition_key = 3;</code>
    * @return Whether the partitionKey field is set.
    */
   boolean hasPartitionKey();
   /**
-   * <code>.scalardb.rpc.Key partition_key = 3;</code>
+   * <code>.rpc.Key partition_key = 3;</code>
    * @return The partitionKey.
    */
   com.scalar.db.rpc.Key getPartitionKey();
   /**
-   * <code>.scalardb.rpc.Key partition_key = 3;</code>
+   * <code>.rpc.Key partition_key = 3;</code>
    */
   com.scalar.db.rpc.KeyOrBuilder getPartitionKeyOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.Key clustering_key = 4;</code>
+   * <code>.rpc.Key clustering_key = 4;</code>
    * @return Whether the clusteringKey field is set.
    */
   boolean hasClusteringKey();
   /**
-   * <code>.scalardb.rpc.Key clustering_key = 4;</code>
+   * <code>.rpc.Key clustering_key = 4;</code>
    * @return The clusteringKey.
    */
   com.scalar.db.rpc.Key getClusteringKey();
   /**
-   * <code>.scalardb.rpc.Key clustering_key = 4;</code>
+   * <code>.rpc.Key clustering_key = 4;</code>
    */
   com.scalar.db.rpc.KeyOrBuilder getClusteringKeyOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.Consistency consistency = 5;</code>
+   * <code>.rpc.Consistency consistency = 5;</code>
    * @return The enum numeric value on the wire for consistency.
    */
   int getConsistencyValue();
   /**
-   * <code>.scalardb.rpc.Consistency consistency = 5;</code>
+   * <code>.rpc.Consistency consistency = 5;</code>
    * @return The consistency.
    */
   com.scalar.db.rpc.Consistency getConsistency();

@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code scalardb.rpc.MutateRequest}
+ * Protobuf type {@code rpc.MutateRequest}
  */
 public final class MutateRequest extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:scalardb.rpc.MutateRequest)
+    // @@protoc_insertion_point(message_implements:rpc.MutateRequest)
     MutateRequestOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use MutateRequest.newBuilder() to construct.
@@ -85,13 +85,13 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateRequest_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateRequest_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateRequest_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.MutateRequest.class, com.scalar.db.rpc.MutateRequest.Builder.class);
   }
@@ -99,14 +99,14 @@ private static final long serialVersionUID = 0L;
   public static final int MUTATIONS_FIELD_NUMBER = 1;
   private java.util.List<com.scalar.db.rpc.Mutation> mutations_;
   /**
-   * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+   * <code>repeated .rpc.Mutation mutations = 1;</code>
    */
   @java.lang.Override
   public java.util.List<com.scalar.db.rpc.Mutation> getMutationsList() {
     return mutations_;
   }
   /**
-   * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+   * <code>repeated .rpc.Mutation mutations = 1;</code>
    */
   @java.lang.Override
   public java.util.List<? extends com.scalar.db.rpc.MutationOrBuilder> 
@@ -114,21 +114,21 @@ private static final long serialVersionUID = 0L;
     return mutations_;
   }
   /**
-   * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+   * <code>repeated .rpc.Mutation mutations = 1;</code>
    */
   @java.lang.Override
   public int getMutationsCount() {
     return mutations_.size();
   }
   /**
-   * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+   * <code>repeated .rpc.Mutation mutations = 1;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.Mutation getMutations(int index) {
     return mutations_.get(index);
   }
   /**
-   * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+   * <code>repeated .rpc.Mutation mutations = 1;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.MutationOrBuilder getMutationsOrBuilder(
@@ -294,21 +294,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code scalardb.rpc.MutateRequest}
+   * Protobuf type {@code rpc.MutateRequest}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:scalardb.rpc.MutateRequest)
+      // @@protoc_insertion_point(builder_implements:rpc.MutateRequest)
       com.scalar.db.rpc.MutateRequestOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.MutateRequest.class, com.scalar.db.rpc.MutateRequest.Builder.class);
     }
@@ -344,7 +344,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_MutateRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateRequest_descriptor;
     }
 
     @java.lang.Override
@@ -491,7 +491,7 @@ private static final long serialVersionUID = 0L;
         com.scalar.db.rpc.Mutation, com.scalar.db.rpc.Mutation.Builder, com.scalar.db.rpc.MutationOrBuilder> mutationsBuilder_;
 
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public java.util.List<com.scalar.db.rpc.Mutation> getMutationsList() {
       if (mutationsBuilder_ == null) {
@@ -501,7 +501,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public int getMutationsCount() {
       if (mutationsBuilder_ == null) {
@@ -511,7 +511,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public com.scalar.db.rpc.Mutation getMutations(int index) {
       if (mutationsBuilder_ == null) {
@@ -521,7 +521,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public Builder setMutations(
         int index, com.scalar.db.rpc.Mutation value) {
@@ -538,7 +538,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public Builder setMutations(
         int index, com.scalar.db.rpc.Mutation.Builder builderForValue) {
@@ -552,7 +552,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public Builder addMutations(com.scalar.db.rpc.Mutation value) {
       if (mutationsBuilder_ == null) {
@@ -568,7 +568,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public Builder addMutations(
         int index, com.scalar.db.rpc.Mutation value) {
@@ -585,7 +585,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public Builder addMutations(
         com.scalar.db.rpc.Mutation.Builder builderForValue) {
@@ -599,7 +599,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public Builder addMutations(
         int index, com.scalar.db.rpc.Mutation.Builder builderForValue) {
@@ -613,7 +613,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public Builder addAllMutations(
         java.lang.Iterable<? extends com.scalar.db.rpc.Mutation> values) {
@@ -628,7 +628,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public Builder clearMutations() {
       if (mutationsBuilder_ == null) {
@@ -641,7 +641,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public Builder removeMutations(int index) {
       if (mutationsBuilder_ == null) {
@@ -654,14 +654,14 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public com.scalar.db.rpc.Mutation.Builder getMutationsBuilder(
         int index) {
       return getMutationsFieldBuilder().getBuilder(index);
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public com.scalar.db.rpc.MutationOrBuilder getMutationsOrBuilder(
         int index) {
@@ -671,7 +671,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public java.util.List<? extends com.scalar.db.rpc.MutationOrBuilder> 
          getMutationsOrBuilderList() {
@@ -682,14 +682,14 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public com.scalar.db.rpc.Mutation.Builder addMutationsBuilder() {
       return getMutationsFieldBuilder().addBuilder(
           com.scalar.db.rpc.Mutation.getDefaultInstance());
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public com.scalar.db.rpc.Mutation.Builder addMutationsBuilder(
         int index) {
@@ -697,7 +697,7 @@ private static final long serialVersionUID = 0L;
           index, com.scalar.db.rpc.Mutation.getDefaultInstance());
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+     * <code>repeated .rpc.Mutation mutations = 1;</code>
      */
     public java.util.List<com.scalar.db.rpc.Mutation.Builder> 
          getMutationsBuilderList() {
@@ -730,10 +730,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:scalardb.rpc.MutateRequest)
+    // @@protoc_insertion_point(builder_scope:rpc.MutateRequest)
   }
 
-  // @@protoc_insertion_point(class_scope:scalardb.rpc.MutateRequest)
+  // @@protoc_insertion_point(class_scope:rpc.MutateRequest)
   private static final com.scalar.db.rpc.MutateRequest DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.MutateRequest();
