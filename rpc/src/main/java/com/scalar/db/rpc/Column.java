@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code scalardb.rpc.Column}
+ * Protobuf type {@code rpc.Column}
  */
 public final class Column extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:scalardb.rpc.Column)
+    // @@protoc_insertion_point(message_implements:rpc.Column)
     ColumnOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use Column.newBuilder() to construct.
@@ -114,13 +114,13 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Column_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Column_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Column_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Column_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.Column.class, com.scalar.db.rpc.Column.Builder.class);
   }
@@ -678,21 +678,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code scalardb.rpc.Column}
+   * Protobuf type {@code rpc.Column}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:scalardb.rpc.Column)
+      // @@protoc_insertion_point(builder_implements:rpc.Column)
       com.scalar.db.rpc.ColumnOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Column_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Column_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Column_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Column_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.Column.class, com.scalar.db.rpc.Column.Builder.class);
     }
@@ -725,7 +725,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Column_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Column_descriptor;
     }
 
     @java.lang.Override
@@ -1333,10 +1333,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:scalardb.rpc.Column)
+    // @@protoc_insertion_point(builder_scope:rpc.Column)
   }
 
-  // @@protoc_insertion_point(class_scope:scalardb.rpc.Column)
+  // @@protoc_insertion_point(class_scope:rpc.Column)
   private static final com.scalar.db.rpc.Column DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.Column();

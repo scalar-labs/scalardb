@@ -4,21 +4,21 @@
 package com.scalar.db.rpc;
 
 public interface GetRequestOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:scalardb.rpc.GetRequest)
+    // @@protoc_insertion_point(interface_extends:rpc.GetRequest)
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>.scalardb.rpc.Get get = 1;</code>
+   * <code>.rpc.Get get = 1;</code>
    * @return Whether the get field is set.
    */
   boolean hasGet();
   /**
-   * <code>.scalardb.rpc.Get get = 1;</code>
+   * <code>.rpc.Get get = 1;</code>
    * @return The get.
    */
   com.scalar.db.rpc.Get getGet();
   /**
-   * <code>.scalardb.rpc.Get get = 1;</code>
+   * <code>.rpc.Get get = 1;</code>
    */
   com.scalar.db.rpc.GetOrBuilder getGetOrBuilder();
 }

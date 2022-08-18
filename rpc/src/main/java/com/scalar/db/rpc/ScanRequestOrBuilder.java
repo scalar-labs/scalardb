@@ -4,21 +4,21 @@
 package com.scalar.db.rpc;
 
 public interface ScanRequestOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:scalardb.rpc.ScanRequest)
+    // @@protoc_insertion_point(interface_extends:rpc.ScanRequest)
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>.scalardb.rpc.Scan scan = 1;</code>
+   * <code>.rpc.Scan scan = 1;</code>
    * @return Whether the scan field is set.
    */
   boolean hasScan();
   /**
-   * <code>.scalardb.rpc.Scan scan = 1;</code>
+   * <code>.rpc.Scan scan = 1;</code>
    * @return The scan.
    */
   com.scalar.db.rpc.Scan getScan();
   /**
-   * <code>.scalardb.rpc.Scan scan = 1;</code>
+   * <code>.rpc.Scan scan = 1;</code>
    */
   com.scalar.db.rpc.ScanOrBuilder getScanOrBuilder();
 

@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code scalardb.rpc.Scan}
+ * Protobuf type {@code rpc.Scan}
  */
 public final class Scan extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:scalardb.rpc.Scan)
+    // @@protoc_insertion_point(message_implements:rpc.Scan)
     ScanOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use Scan.newBuilder() to construct.
@@ -173,13 +173,13 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Scan_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Scan_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Scan_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Scan_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.Scan.class, com.scalar.db.rpc.Scan.Builder.class);
   }
@@ -263,7 +263,7 @@ private static final long serialVersionUID = 0L;
   public static final int PARTITION_KEY_FIELD_NUMBER = 3;
   private com.scalar.db.rpc.Key partitionKey_;
   /**
-   * <code>.scalardb.rpc.Key partition_key = 3;</code>
+   * <code>.rpc.Key partition_key = 3;</code>
    * @return Whether the partitionKey field is set.
    */
   @java.lang.Override
@@ -271,7 +271,7 @@ private static final long serialVersionUID = 0L;
     return partitionKey_ != null;
   }
   /**
-   * <code>.scalardb.rpc.Key partition_key = 3;</code>
+   * <code>.rpc.Key partition_key = 3;</code>
    * @return The partitionKey.
    */
   @java.lang.Override
@@ -279,7 +279,7 @@ private static final long serialVersionUID = 0L;
     return partitionKey_ == null ? com.scalar.db.rpc.Key.getDefaultInstance() : partitionKey_;
   }
   /**
-   * <code>.scalardb.rpc.Key partition_key = 3;</code>
+   * <code>.rpc.Key partition_key = 3;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.KeyOrBuilder getPartitionKeyOrBuilder() {
@@ -289,14 +289,14 @@ private static final long serialVersionUID = 0L;
   public static final int CONSISTENCY_FIELD_NUMBER = 4;
   private int consistency_;
   /**
-   * <code>.scalardb.rpc.Consistency consistency = 4;</code>
+   * <code>.rpc.Consistency consistency = 4;</code>
    * @return The enum numeric value on the wire for consistency.
    */
   @java.lang.Override public int getConsistencyValue() {
     return consistency_;
   }
   /**
-   * <code>.scalardb.rpc.Consistency consistency = 4;</code>
+   * <code>.rpc.Consistency consistency = 4;</code>
    * @return The consistency.
    */
   @java.lang.Override public com.scalar.db.rpc.Consistency getConsistency() {
@@ -343,7 +343,7 @@ private static final long serialVersionUID = 0L;
   public static final int START_CLUSTERING_KEY_FIELD_NUMBER = 6;
   private com.scalar.db.rpc.Key startClusteringKey_;
   /**
-   * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
+   * <code>.rpc.Key start_clustering_key = 6;</code>
    * @return Whether the startClusteringKey field is set.
    */
   @java.lang.Override
@@ -351,7 +351,7 @@ private static final long serialVersionUID = 0L;
     return startClusteringKey_ != null;
   }
   /**
-   * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
+   * <code>.rpc.Key start_clustering_key = 6;</code>
    * @return The startClusteringKey.
    */
   @java.lang.Override
@@ -359,7 +359,7 @@ private static final long serialVersionUID = 0L;
     return startClusteringKey_ == null ? com.scalar.db.rpc.Key.getDefaultInstance() : startClusteringKey_;
   }
   /**
-   * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
+   * <code>.rpc.Key start_clustering_key = 6;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.KeyOrBuilder getStartClusteringKeyOrBuilder() {
@@ -380,7 +380,7 @@ private static final long serialVersionUID = 0L;
   public static final int END_CLUSTERING_KEY_FIELD_NUMBER = 8;
   private com.scalar.db.rpc.Key endClusteringKey_;
   /**
-   * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
+   * <code>.rpc.Key end_clustering_key = 8;</code>
    * @return Whether the endClusteringKey field is set.
    */
   @java.lang.Override
@@ -388,7 +388,7 @@ private static final long serialVersionUID = 0L;
     return endClusteringKey_ != null;
   }
   /**
-   * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
+   * <code>.rpc.Key end_clustering_key = 8;</code>
    * @return The endClusteringKey.
    */
   @java.lang.Override
@@ -396,7 +396,7 @@ private static final long serialVersionUID = 0L;
     return endClusteringKey_ == null ? com.scalar.db.rpc.Key.getDefaultInstance() : endClusteringKey_;
   }
   /**
-   * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
+   * <code>.rpc.Key end_clustering_key = 8;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.KeyOrBuilder getEndClusteringKeyOrBuilder() {
@@ -417,14 +417,14 @@ private static final long serialVersionUID = 0L;
   public static final int ORDERINGS_FIELD_NUMBER = 10;
   private java.util.List<com.scalar.db.rpc.Ordering> orderings_;
   /**
-   * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+   * <code>repeated .rpc.Ordering orderings = 10;</code>
    */
   @java.lang.Override
   public java.util.List<com.scalar.db.rpc.Ordering> getOrderingsList() {
     return orderings_;
   }
   /**
-   * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+   * <code>repeated .rpc.Ordering orderings = 10;</code>
    */
   @java.lang.Override
   public java.util.List<? extends com.scalar.db.rpc.OrderingOrBuilder> 
@@ -432,21 +432,21 @@ private static final long serialVersionUID = 0L;
     return orderings_;
   }
   /**
-   * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+   * <code>repeated .rpc.Ordering orderings = 10;</code>
    */
   @java.lang.Override
   public int getOrderingsCount() {
     return orderings_.size();
   }
   /**
-   * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+   * <code>repeated .rpc.Ordering orderings = 10;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.Ordering getOrderings(int index) {
     return orderings_.get(index);
   }
   /**
-   * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+   * <code>repeated .rpc.Ordering orderings = 10;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.OrderingOrBuilder getOrderingsOrBuilder(
@@ -753,21 +753,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code scalardb.rpc.Scan}
+   * Protobuf type {@code rpc.Scan}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:scalardb.rpc.Scan)
+      // @@protoc_insertion_point(builder_implements:rpc.Scan)
       com.scalar.db.rpc.ScanOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Scan_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Scan_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Scan_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Scan_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.Scan.class, com.scalar.db.rpc.Scan.Builder.class);
     }
@@ -835,7 +835,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_Scan_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Scan_descriptor;
     }
 
     @java.lang.Override
@@ -1190,14 +1190,14 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Key, com.scalar.db.rpc.Key.Builder, com.scalar.db.rpc.KeyOrBuilder> partitionKeyBuilder_;
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      * @return Whether the partitionKey field is set.
      */
     public boolean hasPartitionKey() {
       return partitionKeyBuilder_ != null || partitionKey_ != null;
     }
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      * @return The partitionKey.
      */
     public com.scalar.db.rpc.Key getPartitionKey() {
@@ -1208,7 +1208,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      */
     public Builder setPartitionKey(com.scalar.db.rpc.Key value) {
       if (partitionKeyBuilder_ == null) {
@@ -1224,7 +1224,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      */
     public Builder setPartitionKey(
         com.scalar.db.rpc.Key.Builder builderForValue) {
@@ -1238,7 +1238,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      */
     public Builder mergePartitionKey(com.scalar.db.rpc.Key value) {
       if (partitionKeyBuilder_ == null) {
@@ -1256,7 +1256,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      */
     public Builder clearPartitionKey() {
       if (partitionKeyBuilder_ == null) {
@@ -1270,7 +1270,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      */
     public com.scalar.db.rpc.Key.Builder getPartitionKeyBuilder() {
       
@@ -1278,7 +1278,7 @@ private static final long serialVersionUID = 0L;
       return getPartitionKeyFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      */
     public com.scalar.db.rpc.KeyOrBuilder getPartitionKeyOrBuilder() {
       if (partitionKeyBuilder_ != null) {
@@ -1289,7 +1289,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Key partition_key = 3;</code>
+     * <code>.rpc.Key partition_key = 3;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Key, com.scalar.db.rpc.Key.Builder, com.scalar.db.rpc.KeyOrBuilder> 
@@ -1307,14 +1307,14 @@ private static final long serialVersionUID = 0L;
 
     private int consistency_ = 0;
     /**
-     * <code>.scalardb.rpc.Consistency consistency = 4;</code>
+     * <code>.rpc.Consistency consistency = 4;</code>
      * @return The enum numeric value on the wire for consistency.
      */
     @java.lang.Override public int getConsistencyValue() {
       return consistency_;
     }
     /**
-     * <code>.scalardb.rpc.Consistency consistency = 4;</code>
+     * <code>.rpc.Consistency consistency = 4;</code>
      * @param value The enum numeric value on the wire for consistency to set.
      * @return This builder for chaining.
      */
@@ -1325,7 +1325,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Consistency consistency = 4;</code>
+     * <code>.rpc.Consistency consistency = 4;</code>
      * @return The consistency.
      */
     @java.lang.Override
@@ -1335,7 +1335,7 @@ private static final long serialVersionUID = 0L;
       return result == null ? com.scalar.db.rpc.Consistency.UNRECOGNIZED : result;
     }
     /**
-     * <code>.scalardb.rpc.Consistency consistency = 4;</code>
+     * <code>.rpc.Consistency consistency = 4;</code>
      * @param value The consistency to set.
      * @return This builder for chaining.
      */
@@ -1349,7 +1349,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Consistency consistency = 4;</code>
+     * <code>.rpc.Consistency consistency = 4;</code>
      * @return This builder for chaining.
      */
     public Builder clearConsistency() {
@@ -1473,14 +1473,14 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Key, com.scalar.db.rpc.Key.Builder, com.scalar.db.rpc.KeyOrBuilder> startClusteringKeyBuilder_;
     /**
-     * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
+     * <code>.rpc.Key start_clustering_key = 6;</code>
      * @return Whether the startClusteringKey field is set.
      */
     public boolean hasStartClusteringKey() {
       return startClusteringKeyBuilder_ != null || startClusteringKey_ != null;
     }
     /**
-     * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
+     * <code>.rpc.Key start_clustering_key = 6;</code>
      * @return The startClusteringKey.
      */
     public com.scalar.db.rpc.Key getStartClusteringKey() {
@@ -1491,7 +1491,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
+     * <code>.rpc.Key start_clustering_key = 6;</code>
      */
     public Builder setStartClusteringKey(com.scalar.db.rpc.Key value) {
       if (startClusteringKeyBuilder_ == null) {
@@ -1507,7 +1507,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
+     * <code>.rpc.Key start_clustering_key = 6;</code>
      */
     public Builder setStartClusteringKey(
         com.scalar.db.rpc.Key.Builder builderForValue) {
@@ -1521,7 +1521,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
+     * <code>.rpc.Key start_clustering_key = 6;</code>
      */
     public Builder mergeStartClusteringKey(com.scalar.db.rpc.Key value) {
       if (startClusteringKeyBuilder_ == null) {
@@ -1539,7 +1539,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
+     * <code>.rpc.Key start_clustering_key = 6;</code>
      */
     public Builder clearStartClusteringKey() {
       if (startClusteringKeyBuilder_ == null) {
@@ -1553,7 +1553,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
+     * <code>.rpc.Key start_clustering_key = 6;</code>
      */
     public com.scalar.db.rpc.Key.Builder getStartClusteringKeyBuilder() {
       
@@ -1561,7 +1561,7 @@ private static final long serialVersionUID = 0L;
       return getStartClusteringKeyFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
+     * <code>.rpc.Key start_clustering_key = 6;</code>
      */
     public com.scalar.db.rpc.KeyOrBuilder getStartClusteringKeyOrBuilder() {
       if (startClusteringKeyBuilder_ != null) {
@@ -1572,7 +1572,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
+     * <code>.rpc.Key start_clustering_key = 6;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Key, com.scalar.db.rpc.Key.Builder, com.scalar.db.rpc.KeyOrBuilder> 
@@ -1623,14 +1623,14 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Key, com.scalar.db.rpc.Key.Builder, com.scalar.db.rpc.KeyOrBuilder> endClusteringKeyBuilder_;
     /**
-     * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
+     * <code>.rpc.Key end_clustering_key = 8;</code>
      * @return Whether the endClusteringKey field is set.
      */
     public boolean hasEndClusteringKey() {
       return endClusteringKeyBuilder_ != null || endClusteringKey_ != null;
     }
     /**
-     * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
+     * <code>.rpc.Key end_clustering_key = 8;</code>
      * @return The endClusteringKey.
      */
     public com.scalar.db.rpc.Key getEndClusteringKey() {
@@ -1641,7 +1641,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
+     * <code>.rpc.Key end_clustering_key = 8;</code>
      */
     public Builder setEndClusteringKey(com.scalar.db.rpc.Key value) {
       if (endClusteringKeyBuilder_ == null) {
@@ -1657,7 +1657,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
+     * <code>.rpc.Key end_clustering_key = 8;</code>
      */
     public Builder setEndClusteringKey(
         com.scalar.db.rpc.Key.Builder builderForValue) {
@@ -1671,7 +1671,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
+     * <code>.rpc.Key end_clustering_key = 8;</code>
      */
     public Builder mergeEndClusteringKey(com.scalar.db.rpc.Key value) {
       if (endClusteringKeyBuilder_ == null) {
@@ -1689,7 +1689,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
+     * <code>.rpc.Key end_clustering_key = 8;</code>
      */
     public Builder clearEndClusteringKey() {
       if (endClusteringKeyBuilder_ == null) {
@@ -1703,7 +1703,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
+     * <code>.rpc.Key end_clustering_key = 8;</code>
      */
     public com.scalar.db.rpc.Key.Builder getEndClusteringKeyBuilder() {
       
@@ -1711,7 +1711,7 @@ private static final long serialVersionUID = 0L;
       return getEndClusteringKeyFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
+     * <code>.rpc.Key end_clustering_key = 8;</code>
      */
     public com.scalar.db.rpc.KeyOrBuilder getEndClusteringKeyOrBuilder() {
       if (endClusteringKeyBuilder_ != null) {
@@ -1722,7 +1722,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
+     * <code>.rpc.Key end_clustering_key = 8;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Key, com.scalar.db.rpc.Key.Builder, com.scalar.db.rpc.KeyOrBuilder> 
@@ -1782,7 +1782,7 @@ private static final long serialVersionUID = 0L;
         com.scalar.db.rpc.Ordering, com.scalar.db.rpc.Ordering.Builder, com.scalar.db.rpc.OrderingOrBuilder> orderingsBuilder_;
 
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public java.util.List<com.scalar.db.rpc.Ordering> getOrderingsList() {
       if (orderingsBuilder_ == null) {
@@ -1792,7 +1792,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public int getOrderingsCount() {
       if (orderingsBuilder_ == null) {
@@ -1802,7 +1802,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public com.scalar.db.rpc.Ordering getOrderings(int index) {
       if (orderingsBuilder_ == null) {
@@ -1812,7 +1812,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public Builder setOrderings(
         int index, com.scalar.db.rpc.Ordering value) {
@@ -1829,7 +1829,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public Builder setOrderings(
         int index, com.scalar.db.rpc.Ordering.Builder builderForValue) {
@@ -1843,7 +1843,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public Builder addOrderings(com.scalar.db.rpc.Ordering value) {
       if (orderingsBuilder_ == null) {
@@ -1859,7 +1859,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public Builder addOrderings(
         int index, com.scalar.db.rpc.Ordering value) {
@@ -1876,7 +1876,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public Builder addOrderings(
         com.scalar.db.rpc.Ordering.Builder builderForValue) {
@@ -1890,7 +1890,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public Builder addOrderings(
         int index, com.scalar.db.rpc.Ordering.Builder builderForValue) {
@@ -1904,7 +1904,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public Builder addAllOrderings(
         java.lang.Iterable<? extends com.scalar.db.rpc.Ordering> values) {
@@ -1919,7 +1919,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public Builder clearOrderings() {
       if (orderingsBuilder_ == null) {
@@ -1932,7 +1932,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public Builder removeOrderings(int index) {
       if (orderingsBuilder_ == null) {
@@ -1945,14 +1945,14 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public com.scalar.db.rpc.Ordering.Builder getOrderingsBuilder(
         int index) {
       return getOrderingsFieldBuilder().getBuilder(index);
     }
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public com.scalar.db.rpc.OrderingOrBuilder getOrderingsOrBuilder(
         int index) {
@@ -1962,7 +1962,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public java.util.List<? extends com.scalar.db.rpc.OrderingOrBuilder> 
          getOrderingsOrBuilderList() {
@@ -1973,14 +1973,14 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public com.scalar.db.rpc.Ordering.Builder addOrderingsBuilder() {
       return getOrderingsFieldBuilder().addBuilder(
           com.scalar.db.rpc.Ordering.getDefaultInstance());
     }
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public com.scalar.db.rpc.Ordering.Builder addOrderingsBuilder(
         int index) {
@@ -1988,7 +1988,7 @@ private static final long serialVersionUID = 0L;
           index, com.scalar.db.rpc.Ordering.getDefaultInstance());
     }
     /**
-     * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+     * <code>repeated .rpc.Ordering orderings = 10;</code>
      */
     public java.util.List<com.scalar.db.rpc.Ordering.Builder> 
          getOrderingsBuilderList() {
@@ -2052,10 +2052,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:scalardb.rpc.Scan)
+    // @@protoc_insertion_point(builder_scope:rpc.Scan)
   }
 
-  // @@protoc_insertion_point(class_scope:scalardb.rpc.Scan)
+  // @@protoc_insertion_point(class_scope:rpc.Scan)
   private static final com.scalar.db.rpc.Scan DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.Scan();

@@ -4,29 +4,29 @@
 package com.scalar.db.rpc;
 
 public interface MutateRequestOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:scalardb.rpc.MutateRequest)
+    // @@protoc_insertion_point(interface_extends:rpc.MutateRequest)
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+   * <code>repeated .rpc.Mutation mutations = 1;</code>
    */
   java.util.List<com.scalar.db.rpc.Mutation> 
       getMutationsList();
   /**
-   * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+   * <code>repeated .rpc.Mutation mutations = 1;</code>
    */
   com.scalar.db.rpc.Mutation getMutations(int index);
   /**
-   * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+   * <code>repeated .rpc.Mutation mutations = 1;</code>
    */
   int getMutationsCount();
   /**
-   * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+   * <code>repeated .rpc.Mutation mutations = 1;</code>
    */
   java.util.List<? extends com.scalar.db.rpc.MutationOrBuilder> 
       getMutationsOrBuilderList();
   /**
-   * <code>repeated .scalardb.rpc.Mutation mutations = 1;</code>
+   * <code>repeated .rpc.Mutation mutations = 1;</code>
    */
   com.scalar.db.rpc.MutationOrBuilder getMutationsOrBuilder(
       int index);

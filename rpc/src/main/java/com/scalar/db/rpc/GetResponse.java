@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code scalardb.rpc.GetResponse}
+ * Protobuf type {@code rpc.GetResponse}
  */
 public final class GetResponse extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:scalardb.rpc.GetResponse)
+    // @@protoc_insertion_point(message_implements:rpc.GetResponse)
     GetResponseOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use GetResponse.newBuilder() to construct.
@@ -84,13 +84,13 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetResponse_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetResponse_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetResponse_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetResponse_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.GetResponse.class, com.scalar.db.rpc.GetResponse.Builder.class);
   }
@@ -98,7 +98,7 @@ private static final long serialVersionUID = 0L;
   public static final int RESULT_FIELD_NUMBER = 1;
   private com.scalar.db.rpc.Result result_;
   /**
-   * <code>.scalardb.rpc.Result result = 1;</code>
+   * <code>.rpc.Result result = 1;</code>
    * @return Whether the result field is set.
    */
   @java.lang.Override
@@ -106,7 +106,7 @@ private static final long serialVersionUID = 0L;
     return result_ != null;
   }
   /**
-   * <code>.scalardb.rpc.Result result = 1;</code>
+   * <code>.rpc.Result result = 1;</code>
    * @return The result.
    */
   @java.lang.Override
@@ -114,7 +114,7 @@ private static final long serialVersionUID = 0L;
     return result_ == null ? com.scalar.db.rpc.Result.getDefaultInstance() : result_;
   }
   /**
-   * <code>.scalardb.rpc.Result result = 1;</code>
+   * <code>.rpc.Result result = 1;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.ResultOrBuilder getResultOrBuilder() {
@@ -282,21 +282,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code scalardb.rpc.GetResponse}
+   * Protobuf type {@code rpc.GetResponse}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:scalardb.rpc.GetResponse)
+      // @@protoc_insertion_point(builder_implements:rpc.GetResponse)
       com.scalar.db.rpc.GetResponseOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetResponse_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetResponse_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetResponse_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.GetResponse.class, com.scalar.db.rpc.GetResponse.Builder.class);
     }
@@ -331,7 +331,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetResponse_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetResponse_descriptor;
     }
 
     @java.lang.Override
@@ -440,14 +440,14 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Result, com.scalar.db.rpc.Result.Builder, com.scalar.db.rpc.ResultOrBuilder> resultBuilder_;
     /**
-     * <code>.scalardb.rpc.Result result = 1;</code>
+     * <code>.rpc.Result result = 1;</code>
      * @return Whether the result field is set.
      */
     public boolean hasResult() {
       return resultBuilder_ != null || result_ != null;
     }
     /**
-     * <code>.scalardb.rpc.Result result = 1;</code>
+     * <code>.rpc.Result result = 1;</code>
      * @return The result.
      */
     public com.scalar.db.rpc.Result getResult() {
@@ -458,7 +458,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Result result = 1;</code>
+     * <code>.rpc.Result result = 1;</code>
      */
     public Builder setResult(com.scalar.db.rpc.Result value) {
       if (resultBuilder_ == null) {
@@ -474,7 +474,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Result result = 1;</code>
+     * <code>.rpc.Result result = 1;</code>
      */
     public Builder setResult(
         com.scalar.db.rpc.Result.Builder builderForValue) {
@@ -488,7 +488,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Result result = 1;</code>
+     * <code>.rpc.Result result = 1;</code>
      */
     public Builder mergeResult(com.scalar.db.rpc.Result value) {
       if (resultBuilder_ == null) {
@@ -506,7 +506,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Result result = 1;</code>
+     * <code>.rpc.Result result = 1;</code>
      */
     public Builder clearResult() {
       if (resultBuilder_ == null) {
@@ -520,7 +520,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.Result result = 1;</code>
+     * <code>.rpc.Result result = 1;</code>
      */
     public com.scalar.db.rpc.Result.Builder getResultBuilder() {
       
@@ -528,7 +528,7 @@ private static final long serialVersionUID = 0L;
       return getResultFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.Result result = 1;</code>
+     * <code>.rpc.Result result = 1;</code>
      */
     public com.scalar.db.rpc.ResultOrBuilder getResultOrBuilder() {
       if (resultBuilder_ != null) {
@@ -539,7 +539,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.Result result = 1;</code>
+     * <code>.rpc.Result result = 1;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.Result, com.scalar.db.rpc.Result.Builder, com.scalar.db.rpc.ResultOrBuilder> 
@@ -567,10 +567,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:scalardb.rpc.GetResponse)
+    // @@protoc_insertion_point(builder_scope:rpc.GetResponse)
   }
 
-  // @@protoc_insertion_point(class_scope:scalardb.rpc.GetResponse)
+  // @@protoc_insertion_point(class_scope:rpc.GetResponse)
   private static final com.scalar.db.rpc.GetResponse DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.GetResponse();

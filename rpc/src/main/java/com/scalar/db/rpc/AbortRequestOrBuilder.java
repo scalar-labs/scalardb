@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 public interface AbortRequestOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:scalardb.rpc.AbortRequest)
+    // @@protoc_insertion_point(interface_extends:rpc.AbortRequest)
     com.google.protobuf.MessageOrBuilder {
 
   /**
