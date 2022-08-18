@@ -72,28 +72,28 @@ public abstract class TwoPhaseConsensusCommitIntegrationTestBase
   @Test
   public void scan_WithIncludeMetadataEnabled_ShouldReturnTransactionMetadataColumns()
       throws TransactionException {
-    selection_UsingDebugMode_ShouldReturnCorrectColumns(true, false);
+    selection_WithIncludeMetadataEnabled_ShouldReturnCorrectColumns(true, false);
   }
 
   @Test
   public void scan_WithIncludeMetadataEnabledAndProjections_ShouldReturnProjectedColumns()
       throws TransactionException {
-    selection_UsingDebugMode_ShouldReturnCorrectColumns(true, true);
+    selection_WithIncludeMetadataEnabled_ShouldReturnCorrectColumns(true, true);
   }
 
   @Test
   public void get_WithIncludeMetadataEnabled_ShouldReturnTransactionMetadataColumns()
       throws TransactionException {
-    selection_UsingDebugMode_ShouldReturnCorrectColumns(false, false);
+    selection_WithIncludeMetadataEnabled_ShouldReturnCorrectColumns(false, false);
   }
 
   @Test
   public void get_WithIncludeMetadataEnabledAndProjections_ShouldReturnProjectedColumns()
       throws TransactionException {
-    selection_UsingDebugMode_ShouldReturnCorrectColumns(false, true);
+    selection_WithIncludeMetadataEnabled_ShouldReturnCorrectColumns(false, true);
   }
 
-  private void selection_UsingDebugMode_ShouldReturnCorrectColumns(
+  private void selection_WithIncludeMetadataEnabled_ShouldReturnCorrectColumns(
       boolean isScan, boolean hasProjections) throws TransactionException {
     // Arrange
     Put put =

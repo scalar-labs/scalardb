@@ -396,7 +396,8 @@ public class ConsensusCommitAdminTest {
   }
 
   @Test
-  public void getTableMetadata_WithDebug_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void getTableMetadata_WithIncludeMetadataEnabled_ShouldCallJdbcAdminProperly()
+      throws ExecutionException {
     // Arrange
     final String ACCOUNT_ID = "account_id";
     final String ACCOUNT_TYPE = "account_type";
@@ -423,11 +424,11 @@ public class ConsensusCommitAdminTest {
             .build();
 
     when(distributedStorageAdmin.getTableMetadata(any(), any())).thenReturn(tableMetadata);
-    ConsensusCommitAdmin adminWithDebug =
+    ConsensusCommitAdmin adminWithIncludeMetadataEnabled =
         new ConsensusCommitAdmin(distributedStorageAdmin, config, true);
 
     // Act
-    TableMetadata actual = adminWithDebug.getTableMetadata("ns", "tbl");
+    TableMetadata actual = adminWithIncludeMetadataEnabled.getTableMetadata("ns", "tbl");
 
     // Assert
     verify(distributedStorageAdmin).getTableMetadata("ns", "tbl");

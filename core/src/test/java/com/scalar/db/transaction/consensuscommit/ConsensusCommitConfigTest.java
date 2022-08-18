@@ -182,7 +182,7 @@ public class ConsensusCommitConfigTest {
   }
 
   @Test
-  public void constructor_PropertiesWithDebugGiven_ShouldLoadProperly() {
+  public void constructor_PropertiesWithIncludeMetadataEnabledGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
