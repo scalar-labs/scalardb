@@ -6,7 +6,6 @@ import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
 import com.azure.cosmos.CosmosContainer;
-import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.CosmosStoredProcedure;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
@@ -36,21 +35,14 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
             .buildClient();
     metadataNamespace =
         new CosmosConfig(new DatabaseConfig(properties))
-            .getTableMetadataDatabase()
+            .getMetadataDatabase()
             .orElse(CosmosAdmin.METADATA_DATABASE);
-    metadataTable = CosmosAdmin.METADATA_CONTAINER;
+    metadataTable = CosmosAdmin.TABLE_METADATA_CONTAINER;
   }
 
   @Override
   public void dropMetadataTable() {
-    client.getDatabase(metadataNamespace).delete();
-    try {
-      client.getDatabase(metadataNamespace).read();
-    } catch (CosmosException e) {
-      if (e.getStatusCode() != 404) {
-        throw new RuntimeException("Dropping the metadata table failed", e);
-      }
-    }
+    client.getDatabase(metadataNamespace).getContainer(metadataTable).delete();
   }
 
   @Override
