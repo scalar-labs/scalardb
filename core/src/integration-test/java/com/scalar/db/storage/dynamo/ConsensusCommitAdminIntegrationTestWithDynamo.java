@@ -19,26 +19,33 @@ public class ConsensusCommitAdminIntegrationTestWithDynamo
     return DynamoEnv.getCreationOptions();
   }
 
-  // Since DynamoDB doesn't have the namespace concept, some behaviors around the namespace are
-  // different from the other adapters. So disable several tests that check such behaviors
-
   @Override
   protected boolean isIndexOnBooleanColumnSupported() {
     return false;
   }
 
-  @Disabled
+  @Disabled("Temporarily until admin.getNamespacesNames() is implemented")
   @Test
   @Override
   public void createNamespace_ForNonExistingNamespace_ShouldCreateNamespaceProperly() {}
 
-  @Disabled
+  @Disabled("Temporarily until admin.getNamespacesNames() is implemented")
   @Test
   @Override
   public void createNamespace_ForExistingNamespace_ShouldExecutionException() {}
 
-  @Disabled
+  @Disabled("Temporarily until admin.getNamespacesNames() is implemented")
   @Test
   @Override
   public void dropNamespace_ForNonExistingNamespace_ShouldExecutionException() {}
+
+  @Disabled("Temporarily until admin.getNamespacesNames() is implemented")
+  @Test
+  @Override
+  public void dropNamespace_ForNonExistingNamespace_ShouldDropNamespaceProperly() {}
+
+  @Disabled("Temporarily until admin.getNamespacesNames() is implemented")
+  @Test
+  @Override
+  public void getNamespaceNames_ShouldReturnCreatedNamespaces() {}
 }

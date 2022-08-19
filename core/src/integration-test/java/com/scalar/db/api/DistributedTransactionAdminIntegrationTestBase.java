@@ -88,6 +88,10 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
   protected abstract Properties getProperties();
 
+  protected Properties getStorageProperties() {
+    return TestUtils.addSuffix(getProperties(), TEST_NAME);
+  }
+
   protected String getNamespace1() {
     return NAMESPACE1;
   }
@@ -99,6 +103,8 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   protected String getNamespace3() {
     return NAMESPACE3;
   }
+
+  protected abstract String getCoordinatorNamespace();
 
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
@@ -216,6 +222,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
       // Assert
       assertThat(admin.namespaceExists(namespace3)).isTrue();
+      assertThat(admin.getNamespaceNames()).contains(namespace3);
     } finally {
       admin.dropNamespace(namespace3, true);
     }
@@ -250,6 +257,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
       // Assert
       assertThat(admin.namespaceExists(namespace3)).isFalse();
+      assertThat(admin.getNamespaceNames()).doesNotContain(namespace3);
     } finally {
       admin.dropNamespace(namespace3, true);
     }
@@ -611,7 +619,26 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     }
   }
 
+  @Test
+  public void getNamespaceNames_ShouldReturnCreatedNamespaces() throws ExecutionException {
+    // Arrange
+
+    // Act
+    Set<String> namespaces = admin.getNamespaceNames();
+
+    // Assert
+    if (hasCoordinatorTables()) {
+      assertThat(namespaces).containsOnly(namespace1, namespace2, getCoordinatorNamespace());
+    } else {
+      assertThat(namespaces).containsOnly(namespace1, namespace2);
+    }
+  }
+
   protected boolean isIndexOnBooleanColumnSupported() {
+    return true;
+  }
+
+  protected boolean hasCoordinatorTables() {
     return true;
   }
 }

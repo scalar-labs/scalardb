@@ -213,13 +213,14 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
       // Assert
       assertThat(admin.namespaceExists(namespace3)).isTrue();
+      assertThat(admin.getNamespaceNames()).contains(namespace3);
     } finally {
       admin.dropNamespace(namespace3, true);
     }
   }
 
   @Test
-  public void createNamespace_ForExistingNamespace_ShouldExecutionException() {
+  public void createNamespace_ForExistingNamespace_ShouldThrowExecutionException() {
     // Arrange
 
     // Act Assert
@@ -247,6 +248,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
       // Assert
       assertThat(admin.namespaceExists(namespace3)).isFalse();
+      assertThat(admin.getNamespaceNames()).doesNotContain(namespace3);
     } finally {
       admin.dropNamespace(namespace3, true);
     }
@@ -596,6 +598,17 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
     }
+  }
+
+  @Test
+  public void getNamespaceNames_ShouldReturnCreatedNamespaces() throws ExecutionException {
+    // Arrange
+
+    // Act
+    Set<String> namespaces = admin.getNamespaceNames();
+
+    // Assert
+    assertThat(namespaces).containsOnly(namespace1, namespace2);
   }
 
   protected boolean isIndexOnBooleanColumnSupported() {

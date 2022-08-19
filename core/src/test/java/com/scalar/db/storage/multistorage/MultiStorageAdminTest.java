@@ -1,14 +1,20 @@
 package com.scalar.db.storage.multistorage;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -41,7 +47,9 @@ public class MultiStorageAdminTest {
     Map<String, DistributedStorageAdmin> namespaceAdminMap = new HashMap<>();
     namespaceAdminMap.put(NAMESPACE2, admin2);
     DistributedStorageAdmin defaultAdmin = admin3;
-    multiStorageAdmin = new MultiStorageAdmin(tableAdminMap, namespaceAdminMap, defaultAdmin);
+    List<DistributedStorageAdmin> admins = ImmutableList.of(admin1, admin2, admin3);
+    multiStorageAdmin =
+        new MultiStorageAdmin(tableAdminMap, namespaceAdminMap, defaultAdmin, admins);
   }
 
   @Test
@@ -487,5 +495,22 @@ public class MultiStorageAdminTest {
 
     // Assert
     verify(admin2).addNewColumnToTable(namespace, table, column, dataType);
+  }
+
+  @Test
+  public void getNamespaceNames_ShouldReturnNamespacesOfAllAdmins() throws ExecutionException {
+    // Arrange
+    when(admin1.getNamespaceNames()).thenReturn(ImmutableSet.of("n1", "n2"));
+    when(admin2.getNamespaceNames()).thenReturn(ImmutableSet.of("n2", "n3"));
+    when(admin3.getNamespaceNames()).thenReturn(ImmutableSet.of("n4", "n5"));
+
+    // Act
+    Set<String> actualNamespaces = multiStorageAdmin.getNamespaceNames();
+
+    // Assert
+    verify(admin1).getNamespaceNames();
+    verify(admin2).getNamespaceNames();
+    verify(admin3).getNamespaceNames();
+    assertThat(actualNamespaces).containsOnly("n1", "n2", "n3", "n4", "n5");
   }
 }
