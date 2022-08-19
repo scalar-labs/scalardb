@@ -15,6 +15,7 @@ import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -48,6 +49,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.ContinuousBackupsStatus;
 import software.amazon.awssdk.services.dynamodb.model.CreateGlobalSecondaryIndexAction;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
@@ -58,8 +60,8 @@ import software.amazon.awssdk.services.dynamodb.model.DescribeContinuousBackupsR
 import software.amazon.awssdk.services.dynamodb.model.DescribeContinuousBackupsResponse;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndex;
 import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndexDescription;
 import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndexUpdate;
@@ -117,7 +119,10 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String METADATA_ATTR_SECONDARY_INDEX = "secondaryIndex";
   @VisibleForTesting static final String METADATA_ATTR_COLUMNS = "columns";
   @VisibleForTesting static final String METADATA_ATTR_TABLE = "table";
-  private static final long METADATA_TABLE_REQUEST_UNIT = 1;
+  @VisibleForTesting static final long METADATA_TABLES_REQUEST_UNIT = 1;
+  public static final String NAMESPACES_TABLE = "namespaces";
+
+  @VisibleForTesting static final String NAMESPACES_ATTR_NAME = "namespace_name";
 
   private static final ImmutableMap<DataType, ScalarAttributeType> SECONDARY_INDEX_DATATYPE_MAP =
       ImmutableMap.<DataType, ScalarAttributeType>builder()
@@ -172,7 +177,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
     metadataNamespace =
         config.getNamespacePrefix().orElse("")
-            + config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
+            + config.getMetadataNamespace().orElse(METADATA_NAMESPACE);
     namespacePrefix = config.getNamespacePrefix().orElse("");
     waitingDurationSecs = DEFAULT_WAITING_DURATION_SECS;
   }
@@ -183,7 +188,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
     metadataNamespace =
         config.getNamespacePrefix().orElse("")
-            + config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
+            + config.getMetadataNamespace().orElse(METADATA_NAMESPACE);
     namespacePrefix = config.getNamespacePrefix().orElse("");
     waitingDurationSecs = DEFAULT_WAITING_DURATION_SECS;
   }
@@ -197,7 +202,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     this.applicationAutoScalingClient = applicationAutoScalingClient;
     metadataNamespace =
         config.getNamespacePrefix().orElse("")
-            + config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
+            + config.getMetadataNamespace().orElse(METADATA_NAMESPACE);
     namespacePrefix = config.getNamespacePrefix().orElse("");
     waitingDurationSecs = 0;
   }
@@ -217,9 +222,34 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void createNamespace(String nonPrefixedNamespace, Map<String, String> options) {
-    // In Dynamo DB storage, namespace will be added to table name as prefix along with dot
-    // separator.
+  public void createNamespace(String nonPrefixedNamespace, Map<String, String> options)
+      throws ExecutionException {
+    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
+    try {
+      boolean noBackup = Boolean.parseBoolean(options.getOrDefault(NO_BACKUP, DEFAULT_NO_BACKUP));
+      createNamespacesTableIfNotExists(noBackup);
+      insertIntoNamespaceTable(namespace);
+    } catch (ExecutionException e) {
+      throw new ExecutionException("creating the namespace " + namespace + " failed", e);
+    }
+  }
+
+  private void insertIntoNamespaceTable(Namespace namespace) throws ExecutionException {
+    Map<String, AttributeValue> itemValues = new HashMap<>();
+    itemValues.put(NAMESPACES_ATTR_NAME, AttributeValue.builder().s(namespace.prefixed()).build());
+    try {
+      client.putItem(
+          PutItemRequest.builder()
+              .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, NAMESPACES_TABLE))
+              .item(itemValues)
+              // Will cause to throw a ConditionalCheckFailedException if the namespace already
+              // exists
+              .conditionExpression("attribute_not_exists(" + NAMESPACES_ATTR_NAME + ")")
+              .build());
+    } catch (ConditionalCheckFailedException e) {
+      throw new ExecutionException(
+          "the namespace " + namespace + " cannot be created as it already exists");
+    }
   }
 
   @Override
@@ -453,8 +483,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
                       .build())
               .provisionedThroughput(
                   ProvisionedThroughput.builder()
-                      .readCapacityUnits(METADATA_TABLE_REQUEST_UNIT)
-                      .writeCapacityUnits(METADATA_TABLE_REQUEST_UNIT)
+                      .readCapacityUnits(METADATA_TABLES_REQUEST_UNIT)
+                      .writeCapacityUnits(METADATA_TABLES_REQUEST_UNIT)
                       .build())
               .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, METADATA_TABLE))
               .build());
@@ -469,18 +499,23 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   private boolean metadataTableExists() throws ExecutionException {
+    return tableExistsInternal(Namespace.of(metadataNamespace), METADATA_TABLE);
+  }
+
+  private boolean namespacesTableExists() throws ExecutionException {
+    return tableExistsInternal(Namespace.of(metadataNamespace), NAMESPACES_TABLE);
+  }
+
+  private boolean tableExistsInternal(Namespace namespace, String table) throws ExecutionException {
     try {
       client.describeTable(
-          DescribeTableRequest.builder()
-              .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, METADATA_TABLE))
-              .build());
+          DescribeTableRequest.builder().tableName(getFullTableName(namespace, table)).build());
       return true;
+    } catch (ResourceNotFoundException e) {
+      return false;
     } catch (Exception e) {
-      if (e instanceof ResourceNotFoundException) {
-        return false;
-      } else {
-        throw new ExecutionException("checking the metadata table existence failed", e);
-      }
+      throw new ExecutionException(
+          "checking the table " + getFullTableName(namespace, table) + " existence failed", e);
     }
   }
 
@@ -743,9 +778,55 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropNamespace(String nonPrefixedNamespace) throws ExecutionException {
-    Set<String> tables = getNamespaceTableNames(nonPrefixedNamespace);
+    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
+    try {
+      deleteFromNamespaceTable(namespace);
+      dropAllTableOfNamespace(namespace);
+      dropNamespaceTableIfEmpty();
+    } catch (Exception e) {
+      throw new ExecutionException(
+          "dropping the namespace "
+              + Namespace.of(namespacePrefix, nonPrefixedNamespace)
+              + " failed",
+          e);
+    }
+  }
+
+  private void dropAllTableOfNamespace(Namespace namespace) throws ExecutionException {
+    Set<String> tables = getNamespaceTableNames(namespace.nonPrefixed());
     for (String table : tables) {
-      dropTable(nonPrefixedNamespace, table);
+      dropTable(namespace.nonPrefixed(), table);
+    }
+  }
+
+  private void dropNamespaceTableIfEmpty() throws ExecutionException {
+    String NamespaceTableFullName =
+        ScalarDbUtils.getFullTableName(metadataNamespace, NAMESPACES_TABLE);
+    ScanResponse scanResponse =
+        client.scan(ScanRequest.builder().tableName(NamespaceTableFullName).limit(1).build());
+    if (scanResponse.count() == 0) {
+      client.deleteTable(DeleteTableRequest.builder().tableName(NamespaceTableFullName).build());
+      waitForTableDeletion(Namespace.of(metadataNamespace), NAMESPACES_TABLE);
+    }
+  }
+
+  private void deleteFromNamespaceTable(Namespace namespace) throws ExecutionException {
+    Map<String, AttributeValue> keyToDelete = new HashMap<>();
+    keyToDelete.put(NAMESPACES_ATTR_NAME, AttributeValue.builder().s(namespace.prefixed()).build());
+    String namespacesTableFullName =
+        ScalarDbUtils.getFullTableName(metadataNamespace, NAMESPACES_TABLE);
+    try {
+      client.deleteItem(
+          DeleteItemRequest.builder()
+              .tableName(namespacesTableFullName)
+              .key(keyToDelete)
+              // Will cause to throw a ConditionalCheckFailedException if the namespace does not
+              // exist
+              .conditionExpression("attribute_exists(" + NAMESPACES_ATTR_NAME + ")")
+              .build());
+    } catch (ConditionalCheckFailedException e) {
+      throw new ExecutionException(
+          "the namespace " + namespace + " cannot be dropped as it does not exist", e);
     }
   }
 
@@ -1129,26 +1210,28 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   @Override
   public boolean namespaceExists(String nonPrefixedNamespace) throws ExecutionException {
     try {
-      boolean namespaceExists = false;
-      String lastEvaluatedTableName = null;
-      do {
-        ListTablesRequest listTablesRequest =
-            ListTablesRequest.builder().exclusiveStartTableName(lastEvaluatedTableName).build();
-        ListTablesResponse listTablesResponse = client.listTables(listTablesRequest);
-        lastEvaluatedTableName = listTablesResponse.lastEvaluatedTableName();
-        List<String> tableNames = listTablesResponse.tableNames();
-        Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
-        for (String tableName : tableNames) {
-          if (tableName.startsWith(namespace.prefixed())) {
-            namespaceExists = true;
-            break;
-          }
-        }
-      } while (lastEvaluatedTableName != null);
+      Map<String, AttributeValue> key =
+          ImmutableMap.of(
+              NAMESPACES_ATTR_NAME,
+              AttributeValue.builder()
+                  .s(Namespace.of(namespacePrefix, nonPrefixedNamespace).prefixed())
+                  .build());
+      GetItemResponse response =
+          client.getItem(
+              GetItemRequest.builder()
+                  .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, NAMESPACES_TABLE))
+                  .key(key)
+                  .build());
 
-      return namespaceExists;
-    } catch (DynamoDbException e) {
-      throw new ExecutionException("checking the namespace existence failed", e);
+      return response.hasItem();
+    } catch (ResourceNotFoundException e) {
+      return false;
+    } catch (Exception e) {
+      throw new ExecutionException(
+          "checking the namespace"
+              + Namespace.of(namespacePrefix, nonPrefixedNamespace)
+              + " existence failed",
+          e);
     }
   }
 
@@ -1200,6 +1283,73 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
   }
 
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    try {
+      Set<String> namespaceNames = new HashSet<>();
+      Map<String, AttributeValue> lastEvaluatedKey = null;
+      do {
+        ScanResponse scanResponse =
+            client.scan(
+                ScanRequest.builder()
+                    .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, NAMESPACES_TABLE))
+                    .exclusiveStartKey(lastEvaluatedKey)
+                    .build());
+        lastEvaluatedKey = scanResponse.lastEvaluatedKey();
+
+        for (Map<String, AttributeValue> namespace : scanResponse.items()) {
+          String prefixedNamespaceName = namespace.get(NAMESPACES_ATTR_NAME).s();
+          String nonPrefixedNamespaceName =
+              prefixedNamespaceName.substring(namespacePrefix.length());
+          namespaceNames.add(nonPrefixedNamespaceName);
+        }
+      } while (!lastEvaluatedKey.isEmpty());
+
+      return namespaceNames;
+    } catch (ResourceNotFoundException e) {
+      return Collections.emptySet();
+    } catch (Exception e) {
+      throw new ExecutionException("retrieving the existing namespace names failed", e);
+    }
+  }
+
+  private void createNamespacesTableIfNotExists(boolean noBackup) throws ExecutionException {
+    if (namespacesTableExists()) {
+      return;
+    }
+
+    List<AttributeDefinition> columnsToAttributeDefinitions = new ArrayList<>();
+    columnsToAttributeDefinitions.add(
+        AttributeDefinition.builder()
+            .attributeName(NAMESPACES_ATTR_NAME)
+            .attributeType(ScalarAttributeType.S)
+            .build());
+    try {
+      client.createTable(
+          CreateTableRequest.builder()
+              .attributeDefinitions(columnsToAttributeDefinitions)
+              .keySchema(
+                  KeySchemaElement.builder()
+                      .attributeName(NAMESPACES_ATTR_NAME)
+                      .keyType(KeyType.HASH)
+                      .build())
+              .provisionedThroughput(
+                  ProvisionedThroughput.builder()
+                      .readCapacityUnits(METADATA_TABLES_REQUEST_UNIT)
+                      .writeCapacityUnits(METADATA_TABLES_REQUEST_UNIT)
+                      .build())
+              .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, NAMESPACES_TABLE))
+              .build());
+    } catch (Exception e) {
+      throw new ExecutionException("creating the namespaces table failed", e);
+    }
+    waitForTableCreation(Namespace.of(metadataNamespace), NAMESPACES_TABLE);
+
+    if (!noBackup) {
+      enableContinuousBackup(Namespace.of(metadataNamespace), NAMESPACES_TABLE);
+    }
+  }
+
   private String getFullTableName(Namespace namespace, String table) {
     return ScalarDbUtils.getFullTableName(namespace.prefixed(), table);
   }
@@ -1208,10 +1358,5 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public void close() {
     client.close();
     applicationAutoScalingClient.close();
-  }
-
-  @Override
-  public Set<String> getNamespaceNames() throws ExecutionException {
-    throw new UnsupportedOperationException("Not yet implemented");
   }
 }

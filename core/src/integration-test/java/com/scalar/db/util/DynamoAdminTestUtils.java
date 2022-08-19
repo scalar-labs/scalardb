@@ -49,7 +49,7 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
             .build();
     metadataNamespace =
         config.getNamespacePrefix().orElse("")
-            + config.getTableMetadataNamespace().orElse(DynamoAdmin.METADATA_NAMESPACE);
+            + config.getMetadataNamespace().orElse(DynamoAdmin.METADATA_NAMESPACE);
     metadataTable = DynamoAdmin.METADATA_TABLE;
     namespacePrefix = config.getNamespacePrefix().orElse("");
   }
