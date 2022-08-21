@@ -12,6 +12,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.common.AbstractTwoPhaseCommitTransactionManager;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.util.ActiveExpiringMap;
@@ -46,6 +47,34 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
       DistributedStorage storage, DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
     this.storage = storage;
     this.admin = admin;
+    config = new ConsensusCommitConfig(databaseConfig);
+    tableMetadataManager =
+        new TransactionTableMetadataManager(
+            admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
+    coordinator = new Coordinator(storage, config);
+    parallelExecutor = new ParallelExecutor(config);
+    recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
+    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+
+    activeTransactions =
+        new ActiveExpiringMap<>(
+            TRANSACTION_LIFETIME_MILLIS,
+            TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
+            t -> {
+              logger.warn("the transaction is expired. transactionId: {}", t.getId());
+              try {
+                t.rollback();
+              } catch (RollbackException e) {
+                logger.warn("rollback failed", e);
+              }
+            });
+  }
+
+  public TwoPhaseConsensusCommitManager(DatabaseConfig databaseConfig) {
+    StorageFactory storageFactory = StorageFactory.create(databaseConfig.getProperties());
+    storage = storageFactory.getStorage();
+    admin = storageFactory.getStorageAdmin();
+
     config = new ConsensusCommitConfig(databaseConfig);
     tableMetadataManager =
         new TransactionTableMetadataManager(

@@ -20,9 +20,14 @@ public class GrpcConfig {
   private final long deadlineDurationMillis;
 
   public GrpcConfig(DatabaseConfig databaseConfig) {
-    String storage = databaseConfig.getProperties().getProperty(DatabaseConfig.STORAGE);
-    if (storage == null || !storage.equals("grpc")) {
-      throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be 'grpc'");
+    String storage = databaseConfig.getStorage();
+    String transactionManager = databaseConfig.getTransactionManager();
+    if (!storage.equals("grpc") && !transactionManager.equals("jdbc")) {
+      throw new IllegalArgumentException(
+          DatabaseConfig.STORAGE
+              + " or "
+              + DatabaseConfig.TRANSACTION_MANAGER
+              + " should be 'grpc'");
     }
 
     host = databaseConfig.getContactPoints().get(0);

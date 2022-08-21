@@ -73,9 +73,14 @@ public class JdbcConfig {
   private final int adminConnectionPoolMaxTotal;
 
   public JdbcConfig(DatabaseConfig databaseConfig) {
-    String storage = databaseConfig.getProperties().getProperty(DatabaseConfig.STORAGE);
-    if (storage == null || !storage.equals("jdbc")) {
-      throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be 'jdbc'");
+    String storage = databaseConfig.getStorage();
+    String transactionManager = databaseConfig.getTransactionManager();
+    if (!storage.equals("jdbc") && !transactionManager.equals("jdbc")) {
+      throw new IllegalArgumentException(
+          DatabaseConfig.STORAGE
+              + " or "
+              + DatabaseConfig.TRANSACTION_MANAGER
+              + " should be 'jdbc'");
     }
 
     jdbcUrl = databaseConfig.getContactPoints().get(0);

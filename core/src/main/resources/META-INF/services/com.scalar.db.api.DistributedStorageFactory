@@ -1,0 +1,6 @@
+com.scalar.db.storage.cassandra.CassandraFactory
+com.scalar.db.storage.cosmos.CosmosFactory
+com.scalar.db.storage.dynamo.DynamoFactory
+com.scalar.db.storage.jdbc.JdbcFactory
+com.scalar.db.storage.multistorage.MultiStorageFactory
+com.scalar.db.storage.rpc.GrpcFactory

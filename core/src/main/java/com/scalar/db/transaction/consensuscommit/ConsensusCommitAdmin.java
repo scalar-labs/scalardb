@@ -12,6 +12,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.service.StorageFactory;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
@@ -25,6 +26,14 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Inject
   public ConsensusCommitAdmin(DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
     this.admin = admin;
+    ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
+    coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
+  }
+
+  public ConsensusCommitAdmin(DatabaseConfig databaseConfig) {
+    StorageFactory storageFactory = StorageFactory.create(databaseConfig.getProperties());
+    admin = storageFactory.getStorageAdmin();
+
     ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
   }

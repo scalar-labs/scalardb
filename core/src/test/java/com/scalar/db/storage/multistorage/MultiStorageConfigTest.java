@@ -4,8 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.cassandra.Cassandra;
-import com.scalar.db.storage.jdbc.JdbcDatabase;
 import java.util.Collections;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
@@ -47,7 +45,7 @@ public class MultiStorageConfigTest {
 
     assertThat(config.getDatabasePropertiesMap().containsKey("cassandra")).isTrue();
     DatabaseConfig c = new DatabaseConfig(config.getDatabasePropertiesMap().get("cassandra"));
-    assertThat(c.getStorageClass()).isEqualTo(Cassandra.class);
+    assertThat(c.getStorage()).isEqualTo("cassandra");
     assertThat(c.getContactPoints()).isEqualTo(Collections.singletonList("localhost"));
     assertThat(c.getContactPort()).isEqualTo(7000);
     assertThat(c.getUsername().isPresent()).isTrue();
@@ -57,7 +55,7 @@ public class MultiStorageConfigTest {
 
     assertThat(config.getDatabasePropertiesMap().containsKey("mysql")).isTrue();
     c = new DatabaseConfig(config.getDatabasePropertiesMap().get("mysql"));
-    assertThat(c.getStorageClass()).isEqualTo(JdbcDatabase.class);
+    assertThat(c.getStorage()).isEqualTo("jdbc");
     assertThat(c.getContactPoints())
         .isEqualTo(Collections.singletonList("jdbc:mysql://localhost:3306/"));
     assertThat(c.getUsername().isPresent()).isTrue();

@@ -30,8 +30,8 @@ public class MultiStorageConfig {
   private final String defaultStorage;
 
   public MultiStorageConfig(DatabaseConfig databaseConfig) {
-    String storage = getString(databaseConfig.getProperties(), DatabaseConfig.STORAGE, null);
-    if (storage == null || !storage.equals(MULTI_STORAGE)) {
+    String storage = databaseConfig.getStorage();
+    if (!storage.equals(MULTI_STORAGE)) {
       throw new IllegalArgumentException(
           DatabaseConfig.STORAGE + " should be '" + MULTI_STORAGE + "'");
     }

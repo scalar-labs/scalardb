@@ -21,8 +21,8 @@ public class DynamoConfig {
   @Nullable private final String tableMetadataNamespace;
 
   public DynamoConfig(DatabaseConfig databaseConfig) {
-    String storage = databaseConfig.getProperties().getProperty(DatabaseConfig.STORAGE);
-    if (storage == null || !storage.equals("dynamo")) {
+    String storage = databaseConfig.getStorage();
+    if (!storage.equals("dynamo")) {
       throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be 'dynamo'");
     }
 

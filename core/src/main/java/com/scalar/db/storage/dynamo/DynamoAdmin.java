@@ -171,7 +171,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     metadataNamespace = config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
   }
 
-  public DynamoAdmin(DynamoDbClient client, DynamoConfig config) {
+  DynamoAdmin(DynamoDbClient client, DynamoConfig config) {
     this.client = client;
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
     metadataNamespace = config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
