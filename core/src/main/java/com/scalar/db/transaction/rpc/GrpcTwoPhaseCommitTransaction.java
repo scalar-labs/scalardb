@@ -6,6 +6,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationException;
@@ -92,5 +93,10 @@ public class GrpcTwoPhaseCommitTransaction extends AbstractTwoPhaseCommitTransac
   @Override
   public void rollback() throws RollbackException {
     stream.rollback();
+  }
+
+  @Override
+  public void abort() throws AbortException {
+    stream.abort();
   }
 }

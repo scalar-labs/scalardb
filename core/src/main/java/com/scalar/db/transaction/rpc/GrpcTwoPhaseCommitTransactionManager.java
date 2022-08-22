@@ -16,6 +16,8 @@ import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
+import com.scalar.db.rpc.RollbackRequest;
+import com.scalar.db.rpc.RollbackResponse;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionGrpc;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
@@ -83,6 +85,32 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
     this.blockingStub = blockingStub;
     this.metadataManager = metadataManager;
     activeTransactions = new ActiveExpiringMap<>(Long.MAX_VALUE, Long.MAX_VALUE, t -> {});
+  }
+
+  @Override
+  public GrpcTwoPhaseCommitTransaction begin() throws TransactionException {
+    return beginInternal(null);
+  }
+
+  @Override
+  public GrpcTwoPhaseCommitTransaction begin(String txId) throws TransactionException {
+    return beginInternal(txId);
+  }
+
+  private GrpcTwoPhaseCommitTransaction beginInternal(@Nullable String txId)
+      throws TransactionException {
+    return executeWithRetries(
+        () -> {
+          GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream =
+              new GrpcTwoPhaseCommitTransactionOnBidirectionalStream(config, stub, metadataManager);
+          String transactionId = stream.beginTransaction(txId);
+          GrpcTwoPhaseCommitTransaction transaction =
+              new GrpcTwoPhaseCommitTransaction(transactionId, stream);
+          getNamespace().ifPresent(transaction::withNamespace);
+          getTable().ifPresent(transaction::withTable);
+          return transaction;
+        },
+        EXCEPTION_FACTORY);
   }
 
   @Override
@@ -156,6 +184,18 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
               blockingStub
                   .withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
                   .getState(GetTransactionStateRequest.newBuilder().setTransactionId(txId).build());
+          return ProtoUtils.toTransactionState(response.getState());
+        });
+  }
+
+  @Override
+  public TransactionState rollback(String txId) throws TransactionException {
+    return execute(
+        () -> {
+          RollbackResponse response =
+              blockingStub
+                  .withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                  .rollback(RollbackRequest.newBuilder().setTransactionId(txId).build());
           return ProtoUtils.toTransactionState(response.getState());
         });
   }

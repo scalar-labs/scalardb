@@ -53,7 +53,54 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
-  public void start_NoArgumentGiven_ReturnWithSomeTxIdAndSnapshotIsolation() {
+  public void begin_NoArgumentGiven_ReturnWithSomeTxIdAndSnapshotIsolation() {
+    // Arrange
+
+    // Act
+    TwoPhaseConsensusCommit transaction = manager.begin();
+
+    // Assert
+    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
+    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
+        .isEqualTo(Isolation.SNAPSHOT);
+  }
+
+  @Test
+  public void begin_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation() {
+    // Arrange
+
+    // Act
+    TwoPhaseConsensusCommit transaction = manager.begin(ANY_TX_ID);
+
+    // Assert
+    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
+        .isEqualTo(Isolation.SNAPSHOT);
+  }
+
+  @Test
+  public void begin_CalledTwice_ReturnRespectiveConsensusCommitWithSharedObjects() {
+    // Arrange
+
+    // Act
+    TwoPhaseConsensusCommit transaction1 = manager.begin();
+    TwoPhaseConsensusCommit transaction2 = manager.begin();
+
+    // Assert
+    assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
+    assertThat(transaction1.getCrudHandler().getSnapshot().getId())
+        .isNotEqualTo(transaction2.getCrudHandler().getSnapshot().getId());
+    assertThat(transaction1.getCommitHandler())
+        .isEqualTo(transaction2.getCommitHandler())
+        .isEqualTo(commit);
+    assertThat(transaction1.getRecoveryHandler())
+        .isEqualTo(transaction2.getRecoveryHandler())
+        .isEqualTo(recovery);
+  }
+
+  @Test
+  public void start_NoArgumentGiven_ReturnWithSomeTxIdAndSnapshotIsolation()
+      throws TransactionException {
     // Arrange
 
     // Act
@@ -66,7 +113,8 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
-  public void start_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation() {
+  public void start_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
+      throws TransactionException {
     // Arrange
 
     // Act
@@ -79,7 +127,8 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
-  public void start_CalledTwice_ReturnRespectiveConsensusCommitWithSharedObjects() {
+  public void start_CalledTwice_ReturnRespectiveConsensusCommitWithSharedObjects()
+      throws TransactionException {
     // Arrange
 
     // Act
@@ -171,8 +220,48 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
-  public void abort_CommitHandlerReturnsAborted_ShouldReturnTheState()
+  public void rollback_CommitHandlerReturnsAborted_ShouldReturnTheState()
       throws UnknownTransactionStatusException {
+    // Arrange
+    TransactionState expected = TransactionState.ABORTED;
+    when(commit.abort(ANY_TX_ID)).thenReturn(expected);
+
+    // Act
+    TransactionState actual = manager.rollback(ANY_TX_ID);
+
+    // Assert
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void rollback_CommitHandlerReturnsCommitted_ShouldReturnTheState()
+      throws UnknownTransactionStatusException {
+    // Arrange
+    TransactionState expected = TransactionState.COMMITTED;
+    when(commit.abort(ANY_TX_ID)).thenReturn(expected);
+
+    // Act
+    TransactionState actual = manager.rollback(ANY_TX_ID);
+
+    // Assert
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void rollback_CommitHandlerThrowsUnknownTransactionStatusException_ShouldReturnUnknown()
+      throws UnknownTransactionStatusException {
+    // Arrange
+    when(commit.abort(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
+
+    // Act
+    TransactionState actual = manager.rollback(ANY_TX_ID);
+
+    // Assert
+    assertThat(actual).isEqualTo(TransactionState.UNKNOWN);
+  }
+
+  @Test
+  public void abort_CommitHandlerReturnsAborted_ShouldReturnTheState() throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.ABORTED;
     when(commit.abort(ANY_TX_ID)).thenReturn(expected);
@@ -186,7 +275,7 @@ public class TwoPhaseConsensusCommitManagerTest {
 
   @Test
   public void abort_CommitHandlerReturnsCommitted_ShouldReturnTheState()
-      throws UnknownTransactionStatusException {
+      throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.COMMITTED;
     when(commit.abort(ANY_TX_ID)).thenReturn(expected);
@@ -200,7 +289,7 @@ public class TwoPhaseConsensusCommitManagerTest {
 
   @Test
   public void abort_CommitHandlerThrowsUnknownTransactionStatusException_ShouldReturnUnknown()
-      throws UnknownTransactionStatusException {
+      throws TransactionException {
     // Arrange
     when(commit.abort(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
 
