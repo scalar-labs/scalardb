@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code scalardb.rpc.TableMetadata}
+ * Protobuf type {@code rpc.TableMetadata}
  */
 public final class TableMetadata extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:scalardb.rpc.TableMetadata)
+    // @@protoc_insertion_point(message_implements:rpc.TableMetadata)
     TableMetadataOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use TableMetadata.newBuilder() to construct.
@@ -137,7 +137,7 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TableMetadata_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TableMetadata_descriptor;
   }
 
   @SuppressWarnings({"rawtypes"})
@@ -157,7 +157,7 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TableMetadata_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TableMetadata_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.TableMetadata.class, com.scalar.db.rpc.TableMetadata.Builder.class);
   }
@@ -168,7 +168,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String, java.lang.Integer> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.Integer>newDefaultInstance(
-                com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TableMetadata_ColumnsEntry_descriptor, 
+                com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TableMetadata_ColumnsEntry_descriptor, 
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.ENUM,
@@ -202,7 +202,7 @@ private static final long serialVersionUID = 0L;
     return internalGetColumns().getMap().size();
   }
   /**
-   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+   * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
 
   @java.lang.Override
@@ -221,7 +221,7 @@ private static final long serialVersionUID = 0L;
     return getColumnsMap();
   }
   /**
-   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+   * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
 
@@ -230,7 +230,7 @@ private static final long serialVersionUID = 0L;
     return internalGetAdaptedColumnsMap(
         internalGetColumns().getMap());}
   /**
-   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+   * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
 
@@ -247,7 +247,7 @@ com.scalar.db.rpc.DataType defaultValue) {
            : defaultValue;
   }
   /**
-   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+   * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
 
@@ -271,7 +271,7 @@ com.scalar.db.rpc.DataType defaultValue) {
     return getColumnsValueMap();
   }
   /**
-   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+   * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
 
@@ -280,7 +280,7 @@ com.scalar.db.rpc.DataType defaultValue) {
     return internalGetColumns().getMap();
   }
   /**
-   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+   * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
 
@@ -293,7 +293,7 @@ com.scalar.db.rpc.DataType defaultValue) {
     return map.containsKey(key) ? map.get(key) : defaultValue;
   }
   /**
-   * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+   * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
 
@@ -384,7 +384,7 @@ com.scalar.db.rpc.DataType defaultValue) {
         java.lang.String, java.lang.Integer> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.Integer>newDefaultInstance(
-                com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TableMetadata_ClusteringOrdersEntry_descriptor, 
+                com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TableMetadata_ClusteringOrdersEntry_descriptor, 
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.ENUM,
@@ -418,7 +418,7 @@ com.scalar.db.rpc.DataType defaultValue) {
     return internalGetClusteringOrders().getMap().size();
   }
   /**
-   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+   * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
 
   @java.lang.Override
@@ -437,7 +437,7 @@ com.scalar.db.rpc.DataType defaultValue) {
     return getClusteringOrdersMap();
   }
   /**
-   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+   * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
 
@@ -446,7 +446,7 @@ com.scalar.db.rpc.DataType defaultValue) {
     return internalGetAdaptedClusteringOrdersMap(
         internalGetClusteringOrders().getMap());}
   /**
-   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+   * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
 
@@ -463,7 +463,7 @@ com.scalar.db.rpc.Order defaultValue) {
            : defaultValue;
   }
   /**
-   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+   * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
 
@@ -487,7 +487,7 @@ com.scalar.db.rpc.Order defaultValue) {
     return getClusteringOrdersValueMap();
   }
   /**
-   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+   * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
 
@@ -496,7 +496,7 @@ com.scalar.db.rpc.Order defaultValue) {
     return internalGetClusteringOrders().getMap();
   }
   /**
-   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+   * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
 
@@ -509,7 +509,7 @@ com.scalar.db.rpc.Order defaultValue) {
     return map.containsKey(key) ? map.get(key) : defaultValue;
   }
   /**
-   * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+   * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
 
@@ -799,15 +799,15 @@ com.scalar.db.rpc.Order defaultValue) {
     return builder;
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TableMetadata}
+   * Protobuf type {@code rpc.TableMetadata}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:scalardb.rpc.TableMetadata)
+      // @@protoc_insertion_point(builder_implements:rpc.TableMetadata)
       com.scalar.db.rpc.TableMetadataOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TableMetadata_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TableMetadata_descriptor;
     }
 
     @SuppressWarnings({"rawtypes"})
@@ -839,7 +839,7 @@ com.scalar.db.rpc.Order defaultValue) {
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TableMetadata_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TableMetadata_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TableMetadata.class, com.scalar.db.rpc.TableMetadata.Builder.class);
     }
@@ -876,7 +876,7 @@ com.scalar.db.rpc.Order defaultValue) {
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TableMetadata_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TableMetadata_descriptor;
     }
 
     @java.lang.Override
@@ -1055,7 +1055,7 @@ com.scalar.db.rpc.Order defaultValue) {
       return internalGetColumns().getMap().size();
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+     * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
 
     @java.lang.Override
@@ -1074,7 +1074,7 @@ com.scalar.db.rpc.Order defaultValue) {
       return getColumnsMap();
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+     * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
 
@@ -1083,7 +1083,7 @@ com.scalar.db.rpc.Order defaultValue) {
       return internalGetAdaptedColumnsMap(
           internalGetColumns().getMap());}
     /**
-     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+     * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
 
@@ -1100,7 +1100,7 @@ com.scalar.db.rpc.DataType defaultValue) {
              : defaultValue;
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+     * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
 
@@ -1124,7 +1124,7 @@ com.scalar.db.rpc.DataType defaultValue) {
       return getColumnsValueMap();
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+     * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
 
@@ -1133,7 +1133,7 @@ com.scalar.db.rpc.DataType defaultValue) {
       return internalGetColumns().getMap();
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+     * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
 
@@ -1146,7 +1146,7 @@ com.scalar.db.rpc.DataType defaultValue) {
       return map.containsKey(key) ? map.get(key) : defaultValue;
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+     * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
 
@@ -1167,7 +1167,7 @@ com.scalar.db.rpc.DataType defaultValue) {
       return this;
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+     * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
 
     public Builder removeColumns(
@@ -1187,7 +1187,7 @@ com.scalar.db.rpc.DataType defaultValue) {
            internalGetMutableColumns().getMutableMap());
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+     * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
     public Builder putColumns(
         java.lang.String key,
@@ -1199,7 +1199,7 @@ com.scalar.db.rpc.DataType defaultValue) {
       return this;
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+     * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
     public Builder putAllColumns(
         java.util.Map<java.lang.String, com.scalar.db.rpc.DataType> values) {
@@ -1217,7 +1217,7 @@ com.scalar.db.rpc.DataType defaultValue) {
       return internalGetMutableColumns().getMutableMap();
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+     * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
     public Builder putColumnsValue(
         java.lang.String key,
@@ -1229,7 +1229,7 @@ com.scalar.db.rpc.DataType defaultValue) {
       return this;
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.DataType&gt; columns = 1;</code>
+     * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
     public Builder putAllColumnsValue(
         java.util.Map<java.lang.String, java.lang.Integer> values) {
@@ -1485,7 +1485,7 @@ com.scalar.db.rpc.DataType defaultValue) {
       return internalGetClusteringOrders().getMap().size();
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+     * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
 
     @java.lang.Override
@@ -1504,7 +1504,7 @@ com.scalar.db.rpc.DataType defaultValue) {
       return getClusteringOrdersMap();
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+     * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
 
@@ -1513,7 +1513,7 @@ com.scalar.db.rpc.DataType defaultValue) {
       return internalGetAdaptedClusteringOrdersMap(
           internalGetClusteringOrders().getMap());}
     /**
-     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+     * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
 
@@ -1530,7 +1530,7 @@ com.scalar.db.rpc.Order defaultValue) {
              : defaultValue;
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+     * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
 
@@ -1554,7 +1554,7 @@ com.scalar.db.rpc.Order defaultValue) {
       return getClusteringOrdersValueMap();
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+     * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
 
@@ -1563,7 +1563,7 @@ com.scalar.db.rpc.Order defaultValue) {
       return internalGetClusteringOrders().getMap();
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+     * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
 
@@ -1576,7 +1576,7 @@ com.scalar.db.rpc.Order defaultValue) {
       return map.containsKey(key) ? map.get(key) : defaultValue;
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+     * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
 
@@ -1597,7 +1597,7 @@ com.scalar.db.rpc.Order defaultValue) {
       return this;
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+     * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
 
     public Builder removeClusteringOrders(
@@ -1617,7 +1617,7 @@ com.scalar.db.rpc.Order defaultValue) {
            internalGetMutableClusteringOrders().getMutableMap());
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+     * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
     public Builder putClusteringOrders(
         java.lang.String key,
@@ -1629,7 +1629,7 @@ com.scalar.db.rpc.Order defaultValue) {
       return this;
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+     * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
     public Builder putAllClusteringOrders(
         java.util.Map<java.lang.String, com.scalar.db.rpc.Order> values) {
@@ -1647,7 +1647,7 @@ com.scalar.db.rpc.Order defaultValue) {
       return internalGetMutableClusteringOrders().getMutableMap();
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+     * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
     public Builder putClusteringOrdersValue(
         java.lang.String key,
@@ -1659,7 +1659,7 @@ com.scalar.db.rpc.Order defaultValue) {
       return this;
     }
     /**
-     * <code>map&lt;string, .scalardb.rpc.Order&gt; clustering_orders = 4;</code>
+     * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
     public Builder putAllClusteringOrdersValue(
         java.util.Map<java.lang.String, java.lang.Integer> values) {
@@ -1790,10 +1790,10 @@ com.scalar.db.rpc.Order defaultValue) {
     }
 
 
-    // @@protoc_insertion_point(builder_scope:scalardb.rpc.TableMetadata)
+    // @@protoc_insertion_point(builder_scope:rpc.TableMetadata)
   }
 
-  // @@protoc_insertion_point(class_scope:scalardb.rpc.TableMetadata)
+  // @@protoc_insertion_point(class_scope:rpc.TableMetadata)
   private static final com.scalar.db.rpc.TableMetadata DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.TableMetadata();

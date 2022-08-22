@@ -4,6 +4,6 @@
 package com.scalar.db.rpc;
 
 public interface TruncateCoordinatorTablesRequestOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:scalardb.rpc.TruncateCoordinatorTablesRequest)
+    // @@protoc_insertion_point(interface_extends:rpc.TruncateCoordinatorTablesRequest)
     com.google.protobuf.MessageOrBuilder {
 }

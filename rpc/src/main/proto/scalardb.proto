@@ -4,7 +4,7 @@ option java_multiple_files = true;
 option java_package = "com.scalar.db.rpc";
 option java_outer_classname = "ScalarDbProto";
 
-package scalardb.rpc;
+package rpc;
 
 import "google/protobuf/empty.proto";
 

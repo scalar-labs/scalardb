@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf enum {@code scalardb.rpc.TransactionState}
+ * Protobuf enum {@code rpc.TransactionState}
  */
 public enum TransactionState
     implements com.google.protobuf.ProtocolMessageEnum {
@@ -117,6 +117,6 @@ public enum TransactionState
     this.value = value;
   }
 
-  // @@protoc_insertion_point(enum_scope:scalardb.rpc.TransactionState)
+  // @@protoc_insertion_point(enum_scope:rpc.TransactionState)
 }
 

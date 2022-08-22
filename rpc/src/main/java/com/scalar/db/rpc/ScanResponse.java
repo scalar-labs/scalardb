@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code scalardb.rpc.ScanResponse}
+ * Protobuf type {@code rpc.ScanResponse}
  */
 public final class ScanResponse extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:scalardb.rpc.ScanResponse)
+    // @@protoc_insertion_point(message_implements:rpc.ScanResponse)
     ScanResponseOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use ScanResponse.newBuilder() to construct.
@@ -90,13 +90,13 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_ScanResponse_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ScanResponse_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_ScanResponse_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ScanResponse_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.ScanResponse.class, com.scalar.db.rpc.ScanResponse.Builder.class);
   }
@@ -104,14 +104,14 @@ private static final long serialVersionUID = 0L;
   public static final int RESULTS_FIELD_NUMBER = 2;
   private java.util.List<com.scalar.db.rpc.Result> results_;
   /**
-   * <code>repeated .scalardb.rpc.Result results = 2;</code>
+   * <code>repeated .rpc.Result results = 2;</code>
    */
   @java.lang.Override
   public java.util.List<com.scalar.db.rpc.Result> getResultsList() {
     return results_;
   }
   /**
-   * <code>repeated .scalardb.rpc.Result results = 2;</code>
+   * <code>repeated .rpc.Result results = 2;</code>
    */
   @java.lang.Override
   public java.util.List<? extends com.scalar.db.rpc.ResultOrBuilder> 
@@ -119,21 +119,21 @@ private static final long serialVersionUID = 0L;
     return results_;
   }
   /**
-   * <code>repeated .scalardb.rpc.Result results = 2;</code>
+   * <code>repeated .rpc.Result results = 2;</code>
    */
   @java.lang.Override
   public int getResultsCount() {
     return results_.size();
   }
   /**
-   * <code>repeated .scalardb.rpc.Result results = 2;</code>
+   * <code>repeated .rpc.Result results = 2;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.Result getResults(int index) {
     return results_.get(index);
   }
   /**
-   * <code>repeated .scalardb.rpc.Result results = 2;</code>
+   * <code>repeated .rpc.Result results = 2;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.ResultOrBuilder getResultsOrBuilder(
@@ -322,21 +322,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code scalardb.rpc.ScanResponse}
+   * Protobuf type {@code rpc.ScanResponse}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:scalardb.rpc.ScanResponse)
+      // @@protoc_insertion_point(builder_implements:rpc.ScanResponse)
       com.scalar.db.rpc.ScanResponseOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_ScanResponse_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ScanResponse_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_ScanResponse_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ScanResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.ScanResponse.class, com.scalar.db.rpc.ScanResponse.Builder.class);
     }
@@ -374,7 +374,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_ScanResponse_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ScanResponse_descriptor;
     }
 
     @java.lang.Override
@@ -525,7 +525,7 @@ private static final long serialVersionUID = 0L;
         com.scalar.db.rpc.Result, com.scalar.db.rpc.Result.Builder, com.scalar.db.rpc.ResultOrBuilder> resultsBuilder_;
 
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public java.util.List<com.scalar.db.rpc.Result> getResultsList() {
       if (resultsBuilder_ == null) {
@@ -535,7 +535,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public int getResultsCount() {
       if (resultsBuilder_ == null) {
@@ -545,7 +545,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public com.scalar.db.rpc.Result getResults(int index) {
       if (resultsBuilder_ == null) {
@@ -555,7 +555,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public Builder setResults(
         int index, com.scalar.db.rpc.Result value) {
@@ -572,7 +572,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public Builder setResults(
         int index, com.scalar.db.rpc.Result.Builder builderForValue) {
@@ -586,7 +586,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public Builder addResults(com.scalar.db.rpc.Result value) {
       if (resultsBuilder_ == null) {
@@ -602,7 +602,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public Builder addResults(
         int index, com.scalar.db.rpc.Result value) {
@@ -619,7 +619,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public Builder addResults(
         com.scalar.db.rpc.Result.Builder builderForValue) {
@@ -633,7 +633,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public Builder addResults(
         int index, com.scalar.db.rpc.Result.Builder builderForValue) {
@@ -647,7 +647,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public Builder addAllResults(
         java.lang.Iterable<? extends com.scalar.db.rpc.Result> values) {
@@ -662,7 +662,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public Builder clearResults() {
       if (resultsBuilder_ == null) {
@@ -675,7 +675,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public Builder removeResults(int index) {
       if (resultsBuilder_ == null) {
@@ -688,14 +688,14 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public com.scalar.db.rpc.Result.Builder getResultsBuilder(
         int index) {
       return getResultsFieldBuilder().getBuilder(index);
     }
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public com.scalar.db.rpc.ResultOrBuilder getResultsOrBuilder(
         int index) {
@@ -705,7 +705,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public java.util.List<? extends com.scalar.db.rpc.ResultOrBuilder> 
          getResultsOrBuilderList() {
@@ -716,14 +716,14 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public com.scalar.db.rpc.Result.Builder addResultsBuilder() {
       return getResultsFieldBuilder().addBuilder(
           com.scalar.db.rpc.Result.getDefaultInstance());
     }
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public com.scalar.db.rpc.Result.Builder addResultsBuilder(
         int index) {
@@ -731,7 +731,7 @@ private static final long serialVersionUID = 0L;
           index, com.scalar.db.rpc.Result.getDefaultInstance());
     }
     /**
-     * <code>repeated .scalardb.rpc.Result results = 2;</code>
+     * <code>repeated .rpc.Result results = 2;</code>
      */
     public java.util.List<com.scalar.db.rpc.Result.Builder> 
          getResultsBuilderList() {
@@ -795,10 +795,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:scalardb.rpc.ScanResponse)
+    // @@protoc_insertion_point(builder_scope:rpc.ScanResponse)
   }
 
-  // @@protoc_insertion_point(class_scope:scalardb.rpc.ScanResponse)
+  // @@protoc_insertion_point(class_scope:rpc.ScanResponse)
   private static final com.scalar.db.rpc.ScanResponse DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.ScanResponse();

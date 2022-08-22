@@ -4,171 +4,171 @@
 package com.scalar.db.rpc;
 
 public interface TwoPhaseCommitTransactionRequestOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:scalardb.rpc.TwoPhaseCommitTransactionRequest)
+    // @@protoc_insertion_point(interface_extends:rpc.TwoPhaseCommitTransactionRequest)
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
    * @return Whether the startRequest field is set.
    */
   boolean hasStartRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
    * @return The startRequest.
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest getStartRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequestOrBuilder getStartRequestOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
    * @return Whether the joinRequest field is set.
    */
   boolean hasJoinRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
    * @return The joinRequest.
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest getJoinRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequestOrBuilder getJoinRequestOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
    * @return Whether the getRequest field is set.
    */
   boolean hasGetRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
    * @return The getRequest.
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest getGetRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequestOrBuilder getGetRequestOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
    * @return Whether the scanRequest field is set.
    */
   boolean hasScanRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
    * @return The scanRequest.
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest getScanRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequestOrBuilder getScanRequestOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
    * @return Whether the mutateRequest field is set.
    */
   boolean hasMutateRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
    * @return The mutateRequest.
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest getMutateRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequestOrBuilder getMutateRequestOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
    * @return Whether the prepareRequest field is set.
    */
   boolean hasPrepareRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
    * @return The prepareRequest.
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest getPrepareRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequestOrBuilder getPrepareRequestOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
    * @return Whether the validateRequest field is set.
    */
   boolean hasValidateRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
    * @return The validateRequest.
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest getValidateRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequestOrBuilder getValidateRequestOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
    * @return Whether the commitRequest field is set.
    */
   boolean hasCommitRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
    * @return The commitRequest.
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest getCommitRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequestOrBuilder getCommitRequestOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
    * @return Whether the rollbackRequest field is set.
    */
   boolean hasRollbackRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
    * @return The rollbackRequest.
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest getRollbackRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequestOrBuilder getRollbackRequestOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
    * @return Whether the beginRequest field is set.
    */
   boolean hasBeginRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
    * @return The beginRequest.
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest getBeginRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequestOrBuilder getBeginRequestOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
    * @return Whether the abortRequest field is set.
    */
   boolean hasAbortRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
    * @return The abortRequest.
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest getAbortRequest();
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
    */
   com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequestOrBuilder getAbortRequestOrBuilder();
 

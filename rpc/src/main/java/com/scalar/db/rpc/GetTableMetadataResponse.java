@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code scalardb.rpc.GetTableMetadataResponse}
+ * Protobuf type {@code rpc.GetTableMetadataResponse}
  */
 public final class GetTableMetadataResponse extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:scalardb.rpc.GetTableMetadataResponse)
+    // @@protoc_insertion_point(message_implements:rpc.GetTableMetadataResponse)
     GetTableMetadataResponseOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use GetTableMetadataResponse.newBuilder() to construct.
@@ -84,13 +84,13 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetTableMetadataResponse_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetTableMetadataResponse_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetTableMetadataResponse_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetTableMetadataResponse_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.GetTableMetadataResponse.class, com.scalar.db.rpc.GetTableMetadataResponse.Builder.class);
   }
@@ -98,7 +98,7 @@ private static final long serialVersionUID = 0L;
   public static final int TABLE_METADATA_FIELD_NUMBER = 1;
   private com.scalar.db.rpc.TableMetadata tableMetadata_;
   /**
-   * <code>.scalardb.rpc.TableMetadata table_metadata = 1;</code>
+   * <code>.rpc.TableMetadata table_metadata = 1;</code>
    * @return Whether the tableMetadata field is set.
    */
   @java.lang.Override
@@ -106,7 +106,7 @@ private static final long serialVersionUID = 0L;
     return tableMetadata_ != null;
   }
   /**
-   * <code>.scalardb.rpc.TableMetadata table_metadata = 1;</code>
+   * <code>.rpc.TableMetadata table_metadata = 1;</code>
    * @return The tableMetadata.
    */
   @java.lang.Override
@@ -114,7 +114,7 @@ private static final long serialVersionUID = 0L;
     return tableMetadata_ == null ? com.scalar.db.rpc.TableMetadata.getDefaultInstance() : tableMetadata_;
   }
   /**
-   * <code>.scalardb.rpc.TableMetadata table_metadata = 1;</code>
+   * <code>.rpc.TableMetadata table_metadata = 1;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TableMetadataOrBuilder getTableMetadataOrBuilder() {
@@ -282,21 +282,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code scalardb.rpc.GetTableMetadataResponse}
+   * Protobuf type {@code rpc.GetTableMetadataResponse}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:scalardb.rpc.GetTableMetadataResponse)
+      // @@protoc_insertion_point(builder_implements:rpc.GetTableMetadataResponse)
       com.scalar.db.rpc.GetTableMetadataResponseOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetTableMetadataResponse_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetTableMetadataResponse_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetTableMetadataResponse_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetTableMetadataResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.GetTableMetadataResponse.class, com.scalar.db.rpc.GetTableMetadataResponse.Builder.class);
     }
@@ -331,7 +331,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetTableMetadataResponse_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetTableMetadataResponse_descriptor;
     }
 
     @java.lang.Override
@@ -440,14 +440,14 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TableMetadata, com.scalar.db.rpc.TableMetadata.Builder, com.scalar.db.rpc.TableMetadataOrBuilder> tableMetadataBuilder_;
     /**
-     * <code>.scalardb.rpc.TableMetadata table_metadata = 1;</code>
+     * <code>.rpc.TableMetadata table_metadata = 1;</code>
      * @return Whether the tableMetadata field is set.
      */
     public boolean hasTableMetadata() {
       return tableMetadataBuilder_ != null || tableMetadata_ != null;
     }
     /**
-     * <code>.scalardb.rpc.TableMetadata table_metadata = 1;</code>
+     * <code>.rpc.TableMetadata table_metadata = 1;</code>
      * @return The tableMetadata.
      */
     public com.scalar.db.rpc.TableMetadata getTableMetadata() {
@@ -458,7 +458,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TableMetadata table_metadata = 1;</code>
+     * <code>.rpc.TableMetadata table_metadata = 1;</code>
      */
     public Builder setTableMetadata(com.scalar.db.rpc.TableMetadata value) {
       if (tableMetadataBuilder_ == null) {
@@ -474,7 +474,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TableMetadata table_metadata = 1;</code>
+     * <code>.rpc.TableMetadata table_metadata = 1;</code>
      */
     public Builder setTableMetadata(
         com.scalar.db.rpc.TableMetadata.Builder builderForValue) {
@@ -488,7 +488,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TableMetadata table_metadata = 1;</code>
+     * <code>.rpc.TableMetadata table_metadata = 1;</code>
      */
     public Builder mergeTableMetadata(com.scalar.db.rpc.TableMetadata value) {
       if (tableMetadataBuilder_ == null) {
@@ -506,7 +506,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TableMetadata table_metadata = 1;</code>
+     * <code>.rpc.TableMetadata table_metadata = 1;</code>
      */
     public Builder clearTableMetadata() {
       if (tableMetadataBuilder_ == null) {
@@ -520,7 +520,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TableMetadata table_metadata = 1;</code>
+     * <code>.rpc.TableMetadata table_metadata = 1;</code>
      */
     public com.scalar.db.rpc.TableMetadata.Builder getTableMetadataBuilder() {
       
@@ -528,7 +528,7 @@ private static final long serialVersionUID = 0L;
       return getTableMetadataFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TableMetadata table_metadata = 1;</code>
+     * <code>.rpc.TableMetadata table_metadata = 1;</code>
      */
     public com.scalar.db.rpc.TableMetadataOrBuilder getTableMetadataOrBuilder() {
       if (tableMetadataBuilder_ != null) {
@@ -539,7 +539,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TableMetadata table_metadata = 1;</code>
+     * <code>.rpc.TableMetadata table_metadata = 1;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TableMetadata, com.scalar.db.rpc.TableMetadata.Builder, com.scalar.db.rpc.TableMetadataOrBuilder> 
@@ -567,10 +567,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:scalardb.rpc.GetTableMetadataResponse)
+    // @@protoc_insertion_point(builder_scope:rpc.GetTableMetadataResponse)
   }
 
-  // @@protoc_insertion_point(class_scope:scalardb.rpc.GetTableMetadataResponse)
+  // @@protoc_insertion_point(class_scope:rpc.GetTableMetadataResponse)
   private static final com.scalar.db.rpc.GetTableMetadataResponse DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.GetTableMetadataResponse();

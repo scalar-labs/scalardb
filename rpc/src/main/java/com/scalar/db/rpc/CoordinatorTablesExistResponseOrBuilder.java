@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 public interface CoordinatorTablesExistResponseOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:scalardb.rpc.CoordinatorTablesExistResponse)
+    // @@protoc_insertion_point(interface_extends:rpc.CoordinatorTablesExistResponse)
     com.google.protobuf.MessageOrBuilder {
 
   /**

@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 public interface RollbackRequestOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:scalardb.rpc.RollbackRequest)
+    // @@protoc_insertion_point(interface_extends:rpc.RollbackRequest)
     com.google.protobuf.MessageOrBuilder {
 
   /**

@@ -4,81 +4,81 @@
 package com.scalar.db.rpc;
 
 public interface TransactionResponseOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:scalardb.rpc.TransactionResponse)
+    // @@protoc_insertion_point(interface_extends:rpc.TransactionResponse)
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>.scalardb.rpc.TransactionResponse.StartResponse start_response = 1;</code>
+   * <code>.rpc.TransactionResponse.StartResponse start_response = 1;</code>
    * @return Whether the startResponse field is set.
    */
   boolean hasStartResponse();
   /**
-   * <code>.scalardb.rpc.TransactionResponse.StartResponse start_response = 1;</code>
+   * <code>.rpc.TransactionResponse.StartResponse start_response = 1;</code>
    * @return The startResponse.
    */
   com.scalar.db.rpc.TransactionResponse.StartResponse getStartResponse();
   /**
-   * <code>.scalardb.rpc.TransactionResponse.StartResponse start_response = 1;</code>
+   * <code>.rpc.TransactionResponse.StartResponse start_response = 1;</code>
    */
   com.scalar.db.rpc.TransactionResponse.StartResponseOrBuilder getStartResponseOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.TransactionResponse.GetResponse get_response = 2;</code>
+   * <code>.rpc.TransactionResponse.GetResponse get_response = 2;</code>
    * @return Whether the getResponse field is set.
    */
   boolean hasGetResponse();
   /**
-   * <code>.scalardb.rpc.TransactionResponse.GetResponse get_response = 2;</code>
+   * <code>.rpc.TransactionResponse.GetResponse get_response = 2;</code>
    * @return The getResponse.
    */
   com.scalar.db.rpc.TransactionResponse.GetResponse getGetResponse();
   /**
-   * <code>.scalardb.rpc.TransactionResponse.GetResponse get_response = 2;</code>
+   * <code>.rpc.TransactionResponse.GetResponse get_response = 2;</code>
    */
   com.scalar.db.rpc.TransactionResponse.GetResponseOrBuilder getGetResponseOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.TransactionResponse.ScanResponse scan_response = 3;</code>
+   * <code>.rpc.TransactionResponse.ScanResponse scan_response = 3;</code>
    * @return Whether the scanResponse field is set.
    */
   boolean hasScanResponse();
   /**
-   * <code>.scalardb.rpc.TransactionResponse.ScanResponse scan_response = 3;</code>
+   * <code>.rpc.TransactionResponse.ScanResponse scan_response = 3;</code>
    * @return The scanResponse.
    */
   com.scalar.db.rpc.TransactionResponse.ScanResponse getScanResponse();
   /**
-   * <code>.scalardb.rpc.TransactionResponse.ScanResponse scan_response = 3;</code>
+   * <code>.rpc.TransactionResponse.ScanResponse scan_response = 3;</code>
    */
   com.scalar.db.rpc.TransactionResponse.ScanResponseOrBuilder getScanResponseOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.TransactionResponse.Error error = 4;</code>
+   * <code>.rpc.TransactionResponse.Error error = 4;</code>
    * @return Whether the error field is set.
    */
   boolean hasError();
   /**
-   * <code>.scalardb.rpc.TransactionResponse.Error error = 4;</code>
+   * <code>.rpc.TransactionResponse.Error error = 4;</code>
    * @return The error.
    */
   com.scalar.db.rpc.TransactionResponse.Error getError();
   /**
-   * <code>.scalardb.rpc.TransactionResponse.Error error = 4;</code>
+   * <code>.rpc.TransactionResponse.Error error = 4;</code>
    */
   com.scalar.db.rpc.TransactionResponse.ErrorOrBuilder getErrorOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+   * <code>.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
    * @return Whether the beginResponse field is set.
    */
   boolean hasBeginResponse();
   /**
-   * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+   * <code>.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
    * @return The beginResponse.
    */
   com.scalar.db.rpc.TransactionResponse.BeginResponse getBeginResponse();
   /**
-   * <code>.scalardb.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
+   * <code>.rpc.TransactionResponse.BeginResponse begin_response = 5;</code>
    */
   com.scalar.db.rpc.TransactionResponse.BeginResponseOrBuilder getBeginResponseOrBuilder();
 

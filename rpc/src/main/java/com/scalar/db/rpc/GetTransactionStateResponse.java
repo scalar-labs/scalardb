@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code scalardb.rpc.GetTransactionStateResponse}
+ * Protobuf type {@code rpc.GetTransactionStateResponse}
  */
 public final class GetTransactionStateResponse extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:scalardb.rpc.GetTransactionStateResponse)
+    // @@protoc_insertion_point(message_implements:rpc.GetTransactionStateResponse)
     GetTransactionStateResponseOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use GetTransactionStateResponse.newBuilder() to construct.
@@ -78,13 +78,13 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetTransactionStateResponse_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetTransactionStateResponse_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetTransactionStateResponse_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetTransactionStateResponse_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.GetTransactionStateResponse.class, com.scalar.db.rpc.GetTransactionStateResponse.Builder.class);
   }
@@ -92,14 +92,14 @@ private static final long serialVersionUID = 0L;
   public static final int STATE_FIELD_NUMBER = 1;
   private int state_;
   /**
-   * <code>.scalardb.rpc.TransactionState state = 1;</code>
+   * <code>.rpc.TransactionState state = 1;</code>
    * @return The enum numeric value on the wire for state.
    */
   @java.lang.Override public int getStateValue() {
     return state_;
   }
   /**
-   * <code>.scalardb.rpc.TransactionState state = 1;</code>
+   * <code>.rpc.TransactionState state = 1;</code>
    * @return The state.
    */
   @java.lang.Override public com.scalar.db.rpc.TransactionState getState() {
@@ -263,21 +263,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code scalardb.rpc.GetTransactionStateResponse}
+   * Protobuf type {@code rpc.GetTransactionStateResponse}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:scalardb.rpc.GetTransactionStateResponse)
+      // @@protoc_insertion_point(builder_implements:rpc.GetTransactionStateResponse)
       com.scalar.db.rpc.GetTransactionStateResponseOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetTransactionStateResponse_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetTransactionStateResponse_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetTransactionStateResponse_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetTransactionStateResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.GetTransactionStateResponse.class, com.scalar.db.rpc.GetTransactionStateResponse.Builder.class);
     }
@@ -308,7 +308,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_GetTransactionStateResponse_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_GetTransactionStateResponse_descriptor;
     }
 
     @java.lang.Override
@@ -411,14 +411,14 @@ private static final long serialVersionUID = 0L;
 
     private int state_ = 0;
     /**
-     * <code>.scalardb.rpc.TransactionState state = 1;</code>
+     * <code>.rpc.TransactionState state = 1;</code>
      * @return The enum numeric value on the wire for state.
      */
     @java.lang.Override public int getStateValue() {
       return state_;
     }
     /**
-     * <code>.scalardb.rpc.TransactionState state = 1;</code>
+     * <code>.rpc.TransactionState state = 1;</code>
      * @param value The enum numeric value on the wire for state to set.
      * @return This builder for chaining.
      */
@@ -429,7 +429,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionState state = 1;</code>
+     * <code>.rpc.TransactionState state = 1;</code>
      * @return The state.
      */
     @java.lang.Override
@@ -439,7 +439,7 @@ private static final long serialVersionUID = 0L;
       return result == null ? com.scalar.db.rpc.TransactionState.UNRECOGNIZED : result;
     }
     /**
-     * <code>.scalardb.rpc.TransactionState state = 1;</code>
+     * <code>.rpc.TransactionState state = 1;</code>
      * @param value The state to set.
      * @return This builder for chaining.
      */
@@ -453,7 +453,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TransactionState state = 1;</code>
+     * <code>.rpc.TransactionState state = 1;</code>
      * @return This builder for chaining.
      */
     public Builder clearState() {
@@ -475,10 +475,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:scalardb.rpc.GetTransactionStateResponse)
+    // @@protoc_insertion_point(builder_scope:rpc.GetTransactionStateResponse)
   }
 
-  // @@protoc_insertion_point(class_scope:scalardb.rpc.GetTransactionStateResponse)
+  // @@protoc_insertion_point(class_scope:rpc.GetTransactionStateResponse)
   private static final com.scalar.db.rpc.GetTransactionStateResponse DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.GetTransactionStateResponse();

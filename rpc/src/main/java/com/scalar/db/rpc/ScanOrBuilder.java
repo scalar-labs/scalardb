@@ -4,7 +4,7 @@
 package com.scalar.db.rpc;
 
 public interface ScanOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:scalardb.rpc.Scan)
+    // @@protoc_insertion_point(interface_extends:rpc.Scan)
     com.google.protobuf.MessageOrBuilder {
 
   /**
@@ -32,27 +32,27 @@ public interface ScanOrBuilder extends
       getTableBytes();
 
   /**
-   * <code>.scalardb.rpc.Key partition_key = 3;</code>
+   * <code>.rpc.Key partition_key = 3;</code>
    * @return Whether the partitionKey field is set.
    */
   boolean hasPartitionKey();
   /**
-   * <code>.scalardb.rpc.Key partition_key = 3;</code>
+   * <code>.rpc.Key partition_key = 3;</code>
    * @return The partitionKey.
    */
   com.scalar.db.rpc.Key getPartitionKey();
   /**
-   * <code>.scalardb.rpc.Key partition_key = 3;</code>
+   * <code>.rpc.Key partition_key = 3;</code>
    */
   com.scalar.db.rpc.KeyOrBuilder getPartitionKeyOrBuilder();
 
   /**
-   * <code>.scalardb.rpc.Consistency consistency = 4;</code>
+   * <code>.rpc.Consistency consistency = 4;</code>
    * @return The enum numeric value on the wire for consistency.
    */
   int getConsistencyValue();
   /**
-   * <code>.scalardb.rpc.Consistency consistency = 4;</code>
+   * <code>.rpc.Consistency consistency = 4;</code>
    * @return The consistency.
    */
   com.scalar.db.rpc.Consistency getConsistency();
@@ -83,17 +83,17 @@ public interface ScanOrBuilder extends
       getProjectionsBytes(int index);
 
   /**
-   * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
+   * <code>.rpc.Key start_clustering_key = 6;</code>
    * @return Whether the startClusteringKey field is set.
    */
   boolean hasStartClusteringKey();
   /**
-   * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
+   * <code>.rpc.Key start_clustering_key = 6;</code>
    * @return The startClusteringKey.
    */
   com.scalar.db.rpc.Key getStartClusteringKey();
   /**
-   * <code>.scalardb.rpc.Key start_clustering_key = 6;</code>
+   * <code>.rpc.Key start_clustering_key = 6;</code>
    */
   com.scalar.db.rpc.KeyOrBuilder getStartClusteringKeyOrBuilder();
 
@@ -104,17 +104,17 @@ public interface ScanOrBuilder extends
   boolean getStartInclusive();
 
   /**
-   * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
+   * <code>.rpc.Key end_clustering_key = 8;</code>
    * @return Whether the endClusteringKey field is set.
    */
   boolean hasEndClusteringKey();
   /**
-   * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
+   * <code>.rpc.Key end_clustering_key = 8;</code>
    * @return The endClusteringKey.
    */
   com.scalar.db.rpc.Key getEndClusteringKey();
   /**
-   * <code>.scalardb.rpc.Key end_clustering_key = 8;</code>
+   * <code>.rpc.Key end_clustering_key = 8;</code>
    */
   com.scalar.db.rpc.KeyOrBuilder getEndClusteringKeyOrBuilder();
 
@@ -125,25 +125,25 @@ public interface ScanOrBuilder extends
   boolean getEndInclusive();
 
   /**
-   * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+   * <code>repeated .rpc.Ordering orderings = 10;</code>
    */
   java.util.List<com.scalar.db.rpc.Ordering> 
       getOrderingsList();
   /**
-   * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+   * <code>repeated .rpc.Ordering orderings = 10;</code>
    */
   com.scalar.db.rpc.Ordering getOrderings(int index);
   /**
-   * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+   * <code>repeated .rpc.Ordering orderings = 10;</code>
    */
   int getOrderingsCount();
   /**
-   * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+   * <code>repeated .rpc.Ordering orderings = 10;</code>
    */
   java.util.List<? extends com.scalar.db.rpc.OrderingOrBuilder> 
       getOrderingsOrBuilderList();
   /**
-   * <code>repeated .scalardb.rpc.Ordering orderings = 10;</code>
+   * <code>repeated .rpc.Ordering orderings = 10;</code>
    */
   com.scalar.db.rpc.OrderingOrBuilder getOrderingsOrBuilder(
       int index);

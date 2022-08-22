@@ -4,11 +4,11 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest}
+ * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest}
  */
 public final class TwoPhaseCommitTransactionRequest extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest)
+    // @@protoc_insertion_point(message_implements:rpc.TwoPhaseCommitTransactionRequest)
     TwoPhaseCommitTransactionRequestOrBuilder {
 private static final long serialVersionUID = 0L;
   // Use TwoPhaseCommitTransactionRequest.newBuilder() to construct.
@@ -225,19 +225,19 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.Builder.class);
   }
 
   public interface BeginRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TwoPhaseCommitTransactionRequest.BeginRequest)
       com.google.protobuf.MessageOrBuilder {
 
     /**
@@ -258,11 +258,11 @@ private static final long serialVersionUID = 0L;
         getTransactionIdBytes();
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest}
+   * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.BeginRequest}
    */
   public static final class BeginRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TwoPhaseCommitTransactionRequest.BeginRequest)
       BeginRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use BeginRequest.newBuilder() to construct.
@@ -333,13 +333,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_BeginRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_BeginRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_BeginRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_BeginRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.Builder.class);
     }
@@ -551,21 +551,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest}
+     * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.BeginRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TwoPhaseCommitTransactionRequest.BeginRequest)
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_BeginRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_BeginRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_BeginRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_BeginRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.Builder.class);
       }
@@ -596,7 +596,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_BeginRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_BeginRequest_descriptor;
       }
 
       @java.lang.Override
@@ -801,10 +801,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TwoPhaseCommitTransactionRequest.BeginRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TwoPhaseCommitTransactionRequest.BeginRequest)
     private static final com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest();
@@ -842,7 +842,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface StartRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TwoPhaseCommitTransactionRequest.StartRequest)
       com.google.protobuf.MessageOrBuilder {
 
     /**
@@ -863,11 +863,11 @@ private static final long serialVersionUID = 0L;
         getTransactionIdBytes();
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest}
+   * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.StartRequest}
    */
   public static final class StartRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TwoPhaseCommitTransactionRequest.StartRequest)
       StartRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use StartRequest.newBuilder() to construct.
@@ -938,13 +938,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_StartRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_StartRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_StartRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_StartRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest.Builder.class);
     }
@@ -1156,21 +1156,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest}
+     * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.StartRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TwoPhaseCommitTransactionRequest.StartRequest)
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_StartRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_StartRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_StartRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_StartRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest.Builder.class);
       }
@@ -1201,7 +1201,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_StartRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_StartRequest_descriptor;
       }
 
       @java.lang.Override
@@ -1406,10 +1406,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TwoPhaseCommitTransactionRequest.StartRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TwoPhaseCommitTransactionRequest.StartRequest)
     private static final com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest();
@@ -1447,7 +1447,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface JoinRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TwoPhaseCommitTransactionRequest.JoinRequest)
       com.google.protobuf.MessageOrBuilder {
 
     /**
@@ -1463,11 +1463,11 @@ private static final long serialVersionUID = 0L;
         getTransactionIdBytes();
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest}
+   * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.JoinRequest}
    */
   public static final class JoinRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TwoPhaseCommitTransactionRequest.JoinRequest)
       JoinRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use JoinRequest.newBuilder() to construct.
@@ -1537,13 +1537,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest.Builder.class);
     }
@@ -1741,21 +1741,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest}
+     * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.JoinRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TwoPhaseCommitTransactionRequest.JoinRequest)
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest.Builder.class);
       }
@@ -1786,7 +1786,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_JoinRequest_descriptor;
       }
 
       @java.lang.Override
@@ -1976,10 +1976,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TwoPhaseCommitTransactionRequest.JoinRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TwoPhaseCommitTransactionRequest.JoinRequest)
     private static final com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest();
@@ -2017,30 +2017,30 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface GetRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TwoPhaseCommitTransactionRequest.GetRequest)
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>.scalardb.rpc.Get get = 2;</code>
+     * <code>.rpc.Get get = 2;</code>
      * @return Whether the get field is set.
      */
     boolean hasGet();
     /**
-     * <code>.scalardb.rpc.Get get = 2;</code>
+     * <code>.rpc.Get get = 2;</code>
      * @return The get.
      */
     com.scalar.db.rpc.Get getGet();
     /**
-     * <code>.scalardb.rpc.Get get = 2;</code>
+     * <code>.rpc.Get get = 2;</code>
      */
     com.scalar.db.rpc.GetOrBuilder getGetOrBuilder();
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest}
+   * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.GetRequest}
    */
   public static final class GetRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TwoPhaseCommitTransactionRequest.GetRequest)
       GetRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use GetRequest.newBuilder() to construct.
@@ -2116,13 +2116,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_GetRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_GetRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_GetRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_GetRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest.Builder.class);
     }
@@ -2130,7 +2130,7 @@ private static final long serialVersionUID = 0L;
     public static final int GET_FIELD_NUMBER = 2;
     private com.scalar.db.rpc.Get get_;
     /**
-     * <code>.scalardb.rpc.Get get = 2;</code>
+     * <code>.rpc.Get get = 2;</code>
      * @return Whether the get field is set.
      */
     @java.lang.Override
@@ -2138,7 +2138,7 @@ private static final long serialVersionUID = 0L;
       return get_ != null;
     }
     /**
-     * <code>.scalardb.rpc.Get get = 2;</code>
+     * <code>.rpc.Get get = 2;</code>
      * @return The get.
      */
     @java.lang.Override
@@ -2146,7 +2146,7 @@ private static final long serialVersionUID = 0L;
       return get_ == null ? com.scalar.db.rpc.Get.getDefaultInstance() : get_;
     }
     /**
-     * <code>.scalardb.rpc.Get get = 2;</code>
+     * <code>.rpc.Get get = 2;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.GetOrBuilder getGetOrBuilder() {
@@ -2314,21 +2314,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest}
+     * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.GetRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TwoPhaseCommitTransactionRequest.GetRequest)
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_GetRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_GetRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_GetRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_GetRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest.Builder.class);
       }
@@ -2363,7 +2363,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_GetRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_GetRequest_descriptor;
       }
 
       @java.lang.Override
@@ -2472,14 +2472,14 @@ private static final long serialVersionUID = 0L;
       private com.google.protobuf.SingleFieldBuilderV3<
           com.scalar.db.rpc.Get, com.scalar.db.rpc.Get.Builder, com.scalar.db.rpc.GetOrBuilder> getBuilder_;
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        * @return Whether the get field is set.
        */
       public boolean hasGet() {
         return getBuilder_ != null || get_ != null;
       }
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        * @return The get.
        */
       public com.scalar.db.rpc.Get getGet() {
@@ -2490,7 +2490,7 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        */
       public Builder setGet(com.scalar.db.rpc.Get value) {
         if (getBuilder_ == null) {
@@ -2506,7 +2506,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        */
       public Builder setGet(
           com.scalar.db.rpc.Get.Builder builderForValue) {
@@ -2520,7 +2520,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        */
       public Builder mergeGet(com.scalar.db.rpc.Get value) {
         if (getBuilder_ == null) {
@@ -2538,7 +2538,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        */
       public Builder clearGet() {
         if (getBuilder_ == null) {
@@ -2552,7 +2552,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        */
       public com.scalar.db.rpc.Get.Builder getGetBuilder() {
         
@@ -2560,7 +2560,7 @@ private static final long serialVersionUID = 0L;
         return getGetFieldBuilder().getBuilder();
       }
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        */
       public com.scalar.db.rpc.GetOrBuilder getGetOrBuilder() {
         if (getBuilder_ != null) {
@@ -2571,7 +2571,7 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>.scalardb.rpc.Get get = 2;</code>
+       * <code>.rpc.Get get = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.scalar.db.rpc.Get, com.scalar.db.rpc.Get.Builder, com.scalar.db.rpc.GetOrBuilder> 
@@ -2599,10 +2599,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TwoPhaseCommitTransactionRequest.GetRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TwoPhaseCommitTransactionRequest.GetRequest)
     private static final com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest();
@@ -2640,30 +2640,30 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface ScanRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TwoPhaseCommitTransactionRequest.ScanRequest)
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>.scalardb.rpc.Scan scan = 2;</code>
+     * <code>.rpc.Scan scan = 2;</code>
      * @return Whether the scan field is set.
      */
     boolean hasScan();
     /**
-     * <code>.scalardb.rpc.Scan scan = 2;</code>
+     * <code>.rpc.Scan scan = 2;</code>
      * @return The scan.
      */
     com.scalar.db.rpc.Scan getScan();
     /**
-     * <code>.scalardb.rpc.Scan scan = 2;</code>
+     * <code>.rpc.Scan scan = 2;</code>
      */
     com.scalar.db.rpc.ScanOrBuilder getScanOrBuilder();
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest}
+   * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.ScanRequest}
    */
   public static final class ScanRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TwoPhaseCommitTransactionRequest.ScanRequest)
       ScanRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use ScanRequest.newBuilder() to construct.
@@ -2739,13 +2739,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest.Builder.class);
     }
@@ -2753,7 +2753,7 @@ private static final long serialVersionUID = 0L;
     public static final int SCAN_FIELD_NUMBER = 2;
     private com.scalar.db.rpc.Scan scan_;
     /**
-     * <code>.scalardb.rpc.Scan scan = 2;</code>
+     * <code>.rpc.Scan scan = 2;</code>
      * @return Whether the scan field is set.
      */
     @java.lang.Override
@@ -2761,7 +2761,7 @@ private static final long serialVersionUID = 0L;
       return scan_ != null;
     }
     /**
-     * <code>.scalardb.rpc.Scan scan = 2;</code>
+     * <code>.rpc.Scan scan = 2;</code>
      * @return The scan.
      */
     @java.lang.Override
@@ -2769,7 +2769,7 @@ private static final long serialVersionUID = 0L;
       return scan_ == null ? com.scalar.db.rpc.Scan.getDefaultInstance() : scan_;
     }
     /**
-     * <code>.scalardb.rpc.Scan scan = 2;</code>
+     * <code>.rpc.Scan scan = 2;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.ScanOrBuilder getScanOrBuilder() {
@@ -2937,21 +2937,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest}
+     * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.ScanRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TwoPhaseCommitTransactionRequest.ScanRequest)
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest.Builder.class);
       }
@@ -2986,7 +2986,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_ScanRequest_descriptor;
       }
 
       @java.lang.Override
@@ -3095,14 +3095,14 @@ private static final long serialVersionUID = 0L;
       private com.google.protobuf.SingleFieldBuilderV3<
           com.scalar.db.rpc.Scan, com.scalar.db.rpc.Scan.Builder, com.scalar.db.rpc.ScanOrBuilder> scanBuilder_;
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        * @return Whether the scan field is set.
        */
       public boolean hasScan() {
         return scanBuilder_ != null || scan_ != null;
       }
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        * @return The scan.
        */
       public com.scalar.db.rpc.Scan getScan() {
@@ -3113,7 +3113,7 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        */
       public Builder setScan(com.scalar.db.rpc.Scan value) {
         if (scanBuilder_ == null) {
@@ -3129,7 +3129,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        */
       public Builder setScan(
           com.scalar.db.rpc.Scan.Builder builderForValue) {
@@ -3143,7 +3143,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        */
       public Builder mergeScan(com.scalar.db.rpc.Scan value) {
         if (scanBuilder_ == null) {
@@ -3161,7 +3161,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        */
       public Builder clearScan() {
         if (scanBuilder_ == null) {
@@ -3175,7 +3175,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        */
       public com.scalar.db.rpc.Scan.Builder getScanBuilder() {
         
@@ -3183,7 +3183,7 @@ private static final long serialVersionUID = 0L;
         return getScanFieldBuilder().getBuilder();
       }
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        */
       public com.scalar.db.rpc.ScanOrBuilder getScanOrBuilder() {
         if (scanBuilder_ != null) {
@@ -3194,7 +3194,7 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>.scalardb.rpc.Scan scan = 2;</code>
+       * <code>.rpc.Scan scan = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.scalar.db.rpc.Scan, com.scalar.db.rpc.Scan.Builder, com.scalar.db.rpc.ScanOrBuilder> 
@@ -3222,10 +3222,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TwoPhaseCommitTransactionRequest.ScanRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TwoPhaseCommitTransactionRequest.ScanRequest)
     private static final com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest();
@@ -3263,39 +3263,39 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface MutateRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TwoPhaseCommitTransactionRequest.MutateRequest)
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     java.util.List<com.scalar.db.rpc.Mutation> 
         getMutationsList();
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     com.scalar.db.rpc.Mutation getMutations(int index);
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     int getMutationsCount();
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     java.util.List<? extends com.scalar.db.rpc.MutationOrBuilder> 
         getMutationsOrBuilderList();
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     com.scalar.db.rpc.MutationOrBuilder getMutationsOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest}
+   * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.MutateRequest}
    */
   public static final class MutateRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TwoPhaseCommitTransactionRequest.MutateRequest)
       MutateRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use MutateRequest.newBuilder() to construct.
@@ -3372,13 +3372,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest.Builder.class);
     }
@@ -3386,14 +3386,14 @@ private static final long serialVersionUID = 0L;
     public static final int MUTATIONS_FIELD_NUMBER = 2;
     private java.util.List<com.scalar.db.rpc.Mutation> mutations_;
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     @java.lang.Override
     public java.util.List<com.scalar.db.rpc.Mutation> getMutationsList() {
       return mutations_;
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     @java.lang.Override
     public java.util.List<? extends com.scalar.db.rpc.MutationOrBuilder> 
@@ -3401,21 +3401,21 @@ private static final long serialVersionUID = 0L;
       return mutations_;
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     @java.lang.Override
     public int getMutationsCount() {
       return mutations_.size();
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.Mutation getMutations(int index) {
       return mutations_.get(index);
     }
     /**
-     * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+     * <code>repeated .rpc.Mutation mutations = 2;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.MutationOrBuilder getMutationsOrBuilder(
@@ -3581,21 +3581,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest}
+     * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.MutateRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TwoPhaseCommitTransactionRequest.MutateRequest)
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest.Builder.class);
       }
@@ -3631,7 +3631,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_MutateRequest_descriptor;
       }
 
       @java.lang.Override
@@ -3778,7 +3778,7 @@ private static final long serialVersionUID = 0L;
           com.scalar.db.rpc.Mutation, com.scalar.db.rpc.Mutation.Builder, com.scalar.db.rpc.MutationOrBuilder> mutationsBuilder_;
 
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public java.util.List<com.scalar.db.rpc.Mutation> getMutationsList() {
         if (mutationsBuilder_ == null) {
@@ -3788,7 +3788,7 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public int getMutationsCount() {
         if (mutationsBuilder_ == null) {
@@ -3798,7 +3798,7 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public com.scalar.db.rpc.Mutation getMutations(int index) {
         if (mutationsBuilder_ == null) {
@@ -3808,7 +3808,7 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder setMutations(
           int index, com.scalar.db.rpc.Mutation value) {
@@ -3825,7 +3825,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder setMutations(
           int index, com.scalar.db.rpc.Mutation.Builder builderForValue) {
@@ -3839,7 +3839,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder addMutations(com.scalar.db.rpc.Mutation value) {
         if (mutationsBuilder_ == null) {
@@ -3855,7 +3855,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder addMutations(
           int index, com.scalar.db.rpc.Mutation value) {
@@ -3872,7 +3872,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder addMutations(
           com.scalar.db.rpc.Mutation.Builder builderForValue) {
@@ -3886,7 +3886,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder addMutations(
           int index, com.scalar.db.rpc.Mutation.Builder builderForValue) {
@@ -3900,7 +3900,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder addAllMutations(
           java.lang.Iterable<? extends com.scalar.db.rpc.Mutation> values) {
@@ -3915,7 +3915,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder clearMutations() {
         if (mutationsBuilder_ == null) {
@@ -3928,7 +3928,7 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public Builder removeMutations(int index) {
         if (mutationsBuilder_ == null) {
@@ -3941,14 +3941,14 @@ private static final long serialVersionUID = 0L;
         return this;
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public com.scalar.db.rpc.Mutation.Builder getMutationsBuilder(
           int index) {
         return getMutationsFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public com.scalar.db.rpc.MutationOrBuilder getMutationsOrBuilder(
           int index) {
@@ -3958,7 +3958,7 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public java.util.List<? extends com.scalar.db.rpc.MutationOrBuilder> 
            getMutationsOrBuilderList() {
@@ -3969,14 +3969,14 @@ private static final long serialVersionUID = 0L;
         }
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public com.scalar.db.rpc.Mutation.Builder addMutationsBuilder() {
         return getMutationsFieldBuilder().addBuilder(
             com.scalar.db.rpc.Mutation.getDefaultInstance());
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public com.scalar.db.rpc.Mutation.Builder addMutationsBuilder(
           int index) {
@@ -3984,7 +3984,7 @@ private static final long serialVersionUID = 0L;
             index, com.scalar.db.rpc.Mutation.getDefaultInstance());
       }
       /**
-       * <code>repeated .scalardb.rpc.Mutation mutations = 2;</code>
+       * <code>repeated .rpc.Mutation mutations = 2;</code>
        */
       public java.util.List<com.scalar.db.rpc.Mutation.Builder> 
            getMutationsBuilderList() {
@@ -4017,10 +4017,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TwoPhaseCommitTransactionRequest.MutateRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TwoPhaseCommitTransactionRequest.MutateRequest)
     private static final com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest();
@@ -4058,15 +4058,15 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface PrepareRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TwoPhaseCommitTransactionRequest.PrepareRequest)
       com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest}
+   * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.PrepareRequest}
    */
   public static final class PrepareRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TwoPhaseCommitTransactionRequest.PrepareRequest)
       PrepareRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use PrepareRequest.newBuilder() to construct.
@@ -4129,13 +4129,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest.Builder.class);
     }
@@ -4285,21 +4285,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest}
+     * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.PrepareRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TwoPhaseCommitTransactionRequest.PrepareRequest)
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest.Builder.class);
       }
@@ -4328,7 +4328,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_PrepareRequest_descriptor;
       }
 
       @java.lang.Override
@@ -4437,10 +4437,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TwoPhaseCommitTransactionRequest.PrepareRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TwoPhaseCommitTransactionRequest.PrepareRequest)
     private static final com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest();
@@ -4478,15 +4478,15 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface ValidateRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TwoPhaseCommitTransactionRequest.ValidateRequest)
       com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest}
+   * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.ValidateRequest}
    */
   public static final class ValidateRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TwoPhaseCommitTransactionRequest.ValidateRequest)
       ValidateRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use ValidateRequest.newBuilder() to construct.
@@ -4549,13 +4549,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest.Builder.class);
     }
@@ -4705,21 +4705,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest}
+     * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.ValidateRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TwoPhaseCommitTransactionRequest.ValidateRequest)
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest.Builder.class);
       }
@@ -4748,7 +4748,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_ValidateRequest_descriptor;
       }
 
       @java.lang.Override
@@ -4857,10 +4857,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TwoPhaseCommitTransactionRequest.ValidateRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TwoPhaseCommitTransactionRequest.ValidateRequest)
     private static final com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest();
@@ -4898,15 +4898,15 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface CommitRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TwoPhaseCommitTransactionRequest.CommitRequest)
       com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest}
+   * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.CommitRequest}
    */
   public static final class CommitRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TwoPhaseCommitTransactionRequest.CommitRequest)
       CommitRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use CommitRequest.newBuilder() to construct.
@@ -4969,13 +4969,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest.Builder.class);
     }
@@ -5125,21 +5125,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest}
+     * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.CommitRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TwoPhaseCommitTransactionRequest.CommitRequest)
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest.Builder.class);
       }
@@ -5168,7 +5168,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_CommitRequest_descriptor;
       }
 
       @java.lang.Override
@@ -5277,10 +5277,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TwoPhaseCommitTransactionRequest.CommitRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TwoPhaseCommitTransactionRequest.CommitRequest)
     private static final com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest();
@@ -5318,15 +5318,15 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface RollbackRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TwoPhaseCommitTransactionRequest.RollbackRequest)
       com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest}
+   * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.RollbackRequest}
    */
   public static final class RollbackRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TwoPhaseCommitTransactionRequest.RollbackRequest)
       RollbackRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use RollbackRequest.newBuilder() to construct.
@@ -5389,13 +5389,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest.Builder.class);
     }
@@ -5545,21 +5545,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest}
+     * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.RollbackRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TwoPhaseCommitTransactionRequest.RollbackRequest)
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest.Builder.class);
       }
@@ -5588,7 +5588,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_RollbackRequest_descriptor;
       }
 
       @java.lang.Override
@@ -5697,10 +5697,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TwoPhaseCommitTransactionRequest.RollbackRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TwoPhaseCommitTransactionRequest.RollbackRequest)
     private static final com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest();
@@ -5738,15 +5738,15 @@ private static final long serialVersionUID = 0L;
   }
 
   public interface AbortRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest)
+      // @@protoc_insertion_point(interface_extends:rpc.TwoPhaseCommitTransactionRequest.AbortRequest)
       com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest}
+   * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.AbortRequest}
    */
   public static final class AbortRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest)
+      // @@protoc_insertion_point(message_implements:rpc.TwoPhaseCommitTransactionRequest.AbortRequest)
       AbortRequestOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use AbortRequest.newBuilder() to construct.
@@ -5809,13 +5809,13 @@ private static final long serialVersionUID = 0L;
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_AbortRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_AbortRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_AbortRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_AbortRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.Builder.class);
     }
@@ -5965,21 +5965,21 @@ private static final long serialVersionUID = 0L;
       return builder;
     }
     /**
-     * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest}
+     * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.AbortRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest)
+        // @@protoc_insertion_point(builder_implements:rpc.TwoPhaseCommitTransactionRequest.AbortRequest)
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_AbortRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_AbortRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_AbortRequest_fieldAccessorTable
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_AbortRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.Builder.class);
       }
@@ -6008,7 +6008,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_AbortRequest_descriptor;
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_AbortRequest_descriptor;
       }
 
       @java.lang.Override
@@ -6117,10 +6117,10 @@ private static final long serialVersionUID = 0L;
       }
 
 
-      // @@protoc_insertion_point(builder_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest)
+      // @@protoc_insertion_point(builder_scope:rpc.TwoPhaseCommitTransactionRequest.AbortRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest)
+    // @@protoc_insertion_point(class_scope:rpc.TwoPhaseCommitTransactionRequest.AbortRequest)
     private static final com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest();
@@ -6218,7 +6218,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int START_REQUEST_FIELD_NUMBER = 1;
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
    * @return Whether the startRequest field is set.
    */
   @java.lang.Override
@@ -6226,7 +6226,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 1;
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
    * @return The startRequest.
    */
   @java.lang.Override
@@ -6237,7 +6237,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequestOrBuilder getStartRequestOrBuilder() {
@@ -6249,7 +6249,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int JOIN_REQUEST_FIELD_NUMBER = 2;
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
    * @return Whether the joinRequest field is set.
    */
   @java.lang.Override
@@ -6257,7 +6257,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 2;
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
    * @return The joinRequest.
    */
   @java.lang.Override
@@ -6268,7 +6268,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequestOrBuilder getJoinRequestOrBuilder() {
@@ -6280,7 +6280,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int GET_REQUEST_FIELD_NUMBER = 3;
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
    * @return Whether the getRequest field is set.
    */
   @java.lang.Override
@@ -6288,7 +6288,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 3;
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
    * @return The getRequest.
    */
   @java.lang.Override
@@ -6299,7 +6299,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequestOrBuilder getGetRequestOrBuilder() {
@@ -6311,7 +6311,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int SCAN_REQUEST_FIELD_NUMBER = 4;
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
    * @return Whether the scanRequest field is set.
    */
   @java.lang.Override
@@ -6319,7 +6319,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 4;
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
    * @return The scanRequest.
    */
   @java.lang.Override
@@ -6330,7 +6330,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequestOrBuilder getScanRequestOrBuilder() {
@@ -6342,7 +6342,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int MUTATE_REQUEST_FIELD_NUMBER = 5;
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
    * @return Whether the mutateRequest field is set.
    */
   @java.lang.Override
@@ -6350,7 +6350,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 5;
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
    * @return The mutateRequest.
    */
   @java.lang.Override
@@ -6361,7 +6361,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequestOrBuilder getMutateRequestOrBuilder() {
@@ -6373,7 +6373,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int PREPARE_REQUEST_FIELD_NUMBER = 6;
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
    * @return Whether the prepareRequest field is set.
    */
   @java.lang.Override
@@ -6381,7 +6381,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 6;
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
    * @return The prepareRequest.
    */
   @java.lang.Override
@@ -6392,7 +6392,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequestOrBuilder getPrepareRequestOrBuilder() {
@@ -6404,7 +6404,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int VALIDATE_REQUEST_FIELD_NUMBER = 7;
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
    * @return Whether the validateRequest field is set.
    */
   @java.lang.Override
@@ -6412,7 +6412,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 7;
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
    * @return The validateRequest.
    */
   @java.lang.Override
@@ -6423,7 +6423,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequestOrBuilder getValidateRequestOrBuilder() {
@@ -6435,7 +6435,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int COMMIT_REQUEST_FIELD_NUMBER = 8;
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
    * @return Whether the commitRequest field is set.
    */
   @java.lang.Override
@@ -6443,7 +6443,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 8;
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
    * @return The commitRequest.
    */
   @java.lang.Override
@@ -6454,7 +6454,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequestOrBuilder getCommitRequestOrBuilder() {
@@ -6466,7 +6466,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int ROLLBACK_REQUEST_FIELD_NUMBER = 9;
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
    * @return Whether the rollbackRequest field is set.
    */
   @java.lang.Override
@@ -6474,7 +6474,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 9;
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
    * @return The rollbackRequest.
    */
   @java.lang.Override
@@ -6485,7 +6485,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequestOrBuilder getRollbackRequestOrBuilder() {
@@ -6497,7 +6497,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int BEGIN_REQUEST_FIELD_NUMBER = 10;
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
    * @return Whether the beginRequest field is set.
    */
   @java.lang.Override
@@ -6505,7 +6505,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 10;
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
    * @return The beginRequest.
    */
   @java.lang.Override
@@ -6516,7 +6516,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequestOrBuilder getBeginRequestOrBuilder() {
@@ -6528,7 +6528,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int ABORT_REQUEST_FIELD_NUMBER = 11;
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
    * @return Whether the abortRequest field is set.
    */
   @java.lang.Override
@@ -6536,7 +6536,7 @@ private static final long serialVersionUID = 0L;
     return requestCase_ == 11;
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
    * @return The abortRequest.
    */
   @java.lang.Override
@@ -6547,7 +6547,7 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.getDefaultInstance();
   }
   /**
-   * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
    */
   @java.lang.Override
   public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequestOrBuilder getAbortRequestOrBuilder() {
@@ -6876,21 +6876,21 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code scalardb.rpc.TwoPhaseCommitTransactionRequest}
+   * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:scalardb.rpc.TwoPhaseCommitTransactionRequest)
+      // @@protoc_insertion_point(builder_implements:rpc.TwoPhaseCommitTransactionRequest)
       com.scalar.db.rpc.TwoPhaseCommitTransactionRequestOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.Builder.class);
     }
@@ -6921,7 +6921,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_scalardb_rpc_TwoPhaseCommitTransactionRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_descriptor;
     }
 
     @java.lang.Override
@@ -7163,7 +7163,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequestOrBuilder> startRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
      * @return Whether the startRequest field is set.
      */
     @java.lang.Override
@@ -7171,7 +7171,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 1;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
      * @return The startRequest.
      */
     @java.lang.Override
@@ -7189,7 +7189,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
      */
     public Builder setStartRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest value) {
       if (startRequestBuilder_ == null) {
@@ -7205,7 +7205,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
      */
     public Builder setStartRequest(
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest.Builder builderForValue) {
@@ -7219,7 +7219,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
      */
     public Builder mergeStartRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest value) {
       if (startRequestBuilder_ == null) {
@@ -7242,7 +7242,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
      */
     public Builder clearStartRequest() {
       if (startRequestBuilder_ == null) {
@@ -7261,13 +7261,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
      */
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest.Builder getStartRequestBuilder() {
       return getStartRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequestOrBuilder getStartRequestOrBuilder() {
@@ -7281,7 +7281,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.StartRequest start_request = 1;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequestOrBuilder> 
@@ -7305,7 +7305,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequestOrBuilder> joinRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
      * @return Whether the joinRequest field is set.
      */
     @java.lang.Override
@@ -7313,7 +7313,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 2;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
      * @return The joinRequest.
      */
     @java.lang.Override
@@ -7331,7 +7331,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
      */
     public Builder setJoinRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest value) {
       if (joinRequestBuilder_ == null) {
@@ -7347,7 +7347,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
      */
     public Builder setJoinRequest(
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest.Builder builderForValue) {
@@ -7361,7 +7361,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
      */
     public Builder mergeJoinRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest value) {
       if (joinRequestBuilder_ == null) {
@@ -7384,7 +7384,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
      */
     public Builder clearJoinRequest() {
       if (joinRequestBuilder_ == null) {
@@ -7403,13 +7403,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
      */
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest.Builder getJoinRequestBuilder() {
       return getJoinRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequestOrBuilder getJoinRequestOrBuilder() {
@@ -7423,7 +7423,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.JoinRequest join_request = 2;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequestOrBuilder> 
@@ -7447,7 +7447,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequestOrBuilder> getRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
      * @return Whether the getRequest field is set.
      */
     @java.lang.Override
@@ -7455,7 +7455,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 3;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
      * @return The getRequest.
      */
     @java.lang.Override
@@ -7473,7 +7473,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
      */
     public Builder setGetRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest value) {
       if (getRequestBuilder_ == null) {
@@ -7489,7 +7489,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
      */
     public Builder setGetRequest(
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest.Builder builderForValue) {
@@ -7503,7 +7503,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
      */
     public Builder mergeGetRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest value) {
       if (getRequestBuilder_ == null) {
@@ -7526,7 +7526,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
      */
     public Builder clearGetRequest() {
       if (getRequestBuilder_ == null) {
@@ -7545,13 +7545,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
      */
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest.Builder getGetRequestBuilder() {
       return getGetRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequestOrBuilder getGetRequestOrBuilder() {
@@ -7565,7 +7565,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.GetRequest get_request = 3;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequestOrBuilder> 
@@ -7589,7 +7589,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequestOrBuilder> scanRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
      * @return Whether the scanRequest field is set.
      */
     @java.lang.Override
@@ -7597,7 +7597,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 4;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
      * @return The scanRequest.
      */
     @java.lang.Override
@@ -7615,7 +7615,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
      */
     public Builder setScanRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest value) {
       if (scanRequestBuilder_ == null) {
@@ -7631,7 +7631,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
      */
     public Builder setScanRequest(
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest.Builder builderForValue) {
@@ -7645,7 +7645,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
      */
     public Builder mergeScanRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest value) {
       if (scanRequestBuilder_ == null) {
@@ -7668,7 +7668,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
      */
     public Builder clearScanRequest() {
       if (scanRequestBuilder_ == null) {
@@ -7687,13 +7687,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
      */
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest.Builder getScanRequestBuilder() {
       return getScanRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequestOrBuilder getScanRequestOrBuilder() {
@@ -7707,7 +7707,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ScanRequest scan_request = 4;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequestOrBuilder> 
@@ -7731,7 +7731,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequestOrBuilder> mutateRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
      * @return Whether the mutateRequest field is set.
      */
     @java.lang.Override
@@ -7739,7 +7739,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 5;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
      * @return The mutateRequest.
      */
     @java.lang.Override
@@ -7757,7 +7757,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
      */
     public Builder setMutateRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest value) {
       if (mutateRequestBuilder_ == null) {
@@ -7773,7 +7773,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
      */
     public Builder setMutateRequest(
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest.Builder builderForValue) {
@@ -7787,7 +7787,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
      */
     public Builder mergeMutateRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest value) {
       if (mutateRequestBuilder_ == null) {
@@ -7810,7 +7810,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
      */
     public Builder clearMutateRequest() {
       if (mutateRequestBuilder_ == null) {
@@ -7829,13 +7829,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
      */
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest.Builder getMutateRequestBuilder() {
       return getMutateRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequestOrBuilder getMutateRequestOrBuilder() {
@@ -7849,7 +7849,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.MutateRequest mutate_request = 5;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequestOrBuilder> 
@@ -7873,7 +7873,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequestOrBuilder> prepareRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
      * @return Whether the prepareRequest field is set.
      */
     @java.lang.Override
@@ -7881,7 +7881,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 6;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
      * @return The prepareRequest.
      */
     @java.lang.Override
@@ -7899,7 +7899,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
      */
     public Builder setPrepareRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest value) {
       if (prepareRequestBuilder_ == null) {
@@ -7915,7 +7915,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
      */
     public Builder setPrepareRequest(
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest.Builder builderForValue) {
@@ -7929,7 +7929,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
      */
     public Builder mergePrepareRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest value) {
       if (prepareRequestBuilder_ == null) {
@@ -7952,7 +7952,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
      */
     public Builder clearPrepareRequest() {
       if (prepareRequestBuilder_ == null) {
@@ -7971,13 +7971,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
      */
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest.Builder getPrepareRequestBuilder() {
       return getPrepareRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequestOrBuilder getPrepareRequestOrBuilder() {
@@ -7991,7 +7991,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest prepare_request = 6;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequestOrBuilder> 
@@ -8015,7 +8015,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequestOrBuilder> validateRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
      * @return Whether the validateRequest field is set.
      */
     @java.lang.Override
@@ -8023,7 +8023,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 7;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
      * @return The validateRequest.
      */
     @java.lang.Override
@@ -8041,7 +8041,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
      */
     public Builder setValidateRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest value) {
       if (validateRequestBuilder_ == null) {
@@ -8057,7 +8057,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
      */
     public Builder setValidateRequest(
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest.Builder builderForValue) {
@@ -8071,7 +8071,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
      */
     public Builder mergeValidateRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest value) {
       if (validateRequestBuilder_ == null) {
@@ -8094,7 +8094,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
      */
     public Builder clearValidateRequest() {
       if (validateRequestBuilder_ == null) {
@@ -8113,13 +8113,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
      */
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest.Builder getValidateRequestBuilder() {
       return getValidateRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequestOrBuilder getValidateRequestOrBuilder() {
@@ -8133,7 +8133,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest validate_request = 7;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequestOrBuilder> 
@@ -8157,7 +8157,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequestOrBuilder> commitRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
      * @return Whether the commitRequest field is set.
      */
     @java.lang.Override
@@ -8165,7 +8165,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 8;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
      * @return The commitRequest.
      */
     @java.lang.Override
@@ -8183,7 +8183,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
      */
     public Builder setCommitRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest value) {
       if (commitRequestBuilder_ == null) {
@@ -8199,7 +8199,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
      */
     public Builder setCommitRequest(
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest.Builder builderForValue) {
@@ -8213,7 +8213,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
      */
     public Builder mergeCommitRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest value) {
       if (commitRequestBuilder_ == null) {
@@ -8236,7 +8236,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
      */
     public Builder clearCommitRequest() {
       if (commitRequestBuilder_ == null) {
@@ -8255,13 +8255,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
      */
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest.Builder getCommitRequestBuilder() {
       return getCommitRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequestOrBuilder getCommitRequestOrBuilder() {
@@ -8275,7 +8275,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.CommitRequest commit_request = 8;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequestOrBuilder> 
@@ -8299,7 +8299,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequestOrBuilder> rollbackRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
      * @return Whether the rollbackRequest field is set.
      */
     @java.lang.Override
@@ -8307,7 +8307,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 9;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
      * @return The rollbackRequest.
      */
     @java.lang.Override
@@ -8325,7 +8325,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
      */
     public Builder setRollbackRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest value) {
       if (rollbackRequestBuilder_ == null) {
@@ -8341,7 +8341,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
      */
     public Builder setRollbackRequest(
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest.Builder builderForValue) {
@@ -8355,7 +8355,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
      */
     public Builder mergeRollbackRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest value) {
       if (rollbackRequestBuilder_ == null) {
@@ -8378,7 +8378,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
      */
     public Builder clearRollbackRequest() {
       if (rollbackRequestBuilder_ == null) {
@@ -8397,13 +8397,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
      */
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest.Builder getRollbackRequestBuilder() {
       return getRollbackRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequestOrBuilder getRollbackRequestOrBuilder() {
@@ -8417,7 +8417,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest rollback_request = 9;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequestOrBuilder> 
@@ -8441,7 +8441,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequestOrBuilder> beginRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
      * @return Whether the beginRequest field is set.
      */
     @java.lang.Override
@@ -8449,7 +8449,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 10;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
      * @return The beginRequest.
      */
     @java.lang.Override
@@ -8467,7 +8467,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
      */
     public Builder setBeginRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest value) {
       if (beginRequestBuilder_ == null) {
@@ -8483,7 +8483,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
      */
     public Builder setBeginRequest(
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.Builder builderForValue) {
@@ -8497,7 +8497,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
      */
     public Builder mergeBeginRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest value) {
       if (beginRequestBuilder_ == null) {
@@ -8520,7 +8520,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
      */
     public Builder clearBeginRequest() {
       if (beginRequestBuilder_ == null) {
@@ -8539,13 +8539,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
      */
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.Builder getBeginRequestBuilder() {
       return getBeginRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequestOrBuilder getBeginRequestOrBuilder() {
@@ -8559,7 +8559,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequestOrBuilder> 
@@ -8583,7 +8583,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequestOrBuilder> abortRequestBuilder_;
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
      * @return Whether the abortRequest field is set.
      */
     @java.lang.Override
@@ -8591,7 +8591,7 @@ private static final long serialVersionUID = 0L;
       return requestCase_ == 11;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
      * @return The abortRequest.
      */
     @java.lang.Override
@@ -8609,7 +8609,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
      */
     public Builder setAbortRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest value) {
       if (abortRequestBuilder_ == null) {
@@ -8625,7 +8625,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
      */
     public Builder setAbortRequest(
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.Builder builderForValue) {
@@ -8639,7 +8639,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
      */
     public Builder mergeAbortRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest value) {
       if (abortRequestBuilder_ == null) {
@@ -8662,7 +8662,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
      */
     public Builder clearAbortRequest() {
       if (abortRequestBuilder_ == null) {
@@ -8681,13 +8681,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
      */
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.Builder getAbortRequestBuilder() {
       return getAbortRequestFieldBuilder().getBuilder();
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
      */
     @java.lang.Override
     public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequestOrBuilder getAbortRequestOrBuilder() {
@@ -8701,7 +8701,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.scalardb.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequestOrBuilder> 
@@ -8734,10 +8734,10 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest)
+    // @@protoc_insertion_point(builder_scope:rpc.TwoPhaseCommitTransactionRequest)
   }
 
-  // @@protoc_insertion_point(class_scope:scalardb.rpc.TwoPhaseCommitTransactionRequest)
+  // @@protoc_insertion_point(class_scope:rpc.TwoPhaseCommitTransactionRequest)
   private static final com.scalar.db.rpc.TwoPhaseCommitTransactionRequest DEFAULT_INSTANCE;
   static {
     DEFAULT_INSTANCE = new com.scalar.db.rpc.TwoPhaseCommitTransactionRequest();
