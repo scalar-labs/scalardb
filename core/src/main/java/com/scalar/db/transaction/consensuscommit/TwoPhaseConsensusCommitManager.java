@@ -93,25 +93,35 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   }
 
   @Override
-  public TwoPhaseConsensusCommit start() {
+  public TwoPhaseConsensusCommit begin() {
     String txId = UUID.randomUUID().toString();
-    return start(txId, config.getIsolation(), config.getSerializableStrategy());
+    return begin(txId, config.getIsolation(), config.getSerializableStrategy());
   }
 
   @Override
-  public TwoPhaseConsensusCommit start(String txId) {
+  public TwoPhaseConsensusCommit begin(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
-    return start(txId, config.getIsolation(), config.getSerializableStrategy());
+    return begin(txId, config.getIsolation(), config.getSerializableStrategy());
+  }
+
+  @Override
+  public TwoPhaseConsensusCommit start() throws TransactionException {
+    return (TwoPhaseConsensusCommit) super.start();
+  }
+
+  @Override
+  public TwoPhaseConsensusCommit start(String txId) throws TransactionException {
+    return (TwoPhaseConsensusCommit) super.start(txId);
   }
 
   @VisibleForTesting
-  TwoPhaseConsensusCommit start(Isolation isolation, SerializableStrategy strategy) {
+  TwoPhaseConsensusCommit begin(Isolation isolation, SerializableStrategy strategy) {
     String txId = UUID.randomUUID().toString();
-    return start(txId, isolation, strategy);
+    return begin(txId, isolation, strategy);
   }
 
   @VisibleForTesting
-  TwoPhaseConsensusCommit start(String txId, Isolation isolation, SerializableStrategy strategy) {
+  TwoPhaseConsensusCommit begin(String txId, Isolation isolation, SerializableStrategy strategy) {
     return createNewTransaction(txId, true, isolation, strategy);
   }
 
@@ -176,7 +186,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   }
 
   @Override
-  public TransactionState abort(String txId) {
+  public TransactionState rollback(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     try {
       return commit.abort(txId);
