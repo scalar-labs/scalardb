@@ -27,11 +27,11 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedTransactionAdminIntegrationTestBase {
 
-  private static final String TEST_NAME = "tx_admin";
+  protected static final String TEST_NAME = "tx_admin";
   private static final String NAMESPACE1 = "integration_testing_" + TEST_NAME + "1";
   private static final String NAMESPACE2 = "integration_testing_" + TEST_NAME + "2";
   private static final String NAMESPACE3 = "integration_testing_" + TEST_NAME + "3";
-  private static final String TABLE1 = "test_table1";
+  protected static final String TABLE1 = "test_table1";
   private static final String TABLE2 = "test_table2";
   private static final String TABLE3 = "test_table3";
   private static final String TABLE4 = "test_table4";
@@ -47,7 +47,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   private static final String COL_NAME10 = "c10";
   private static final String COL_NAME11 = "c11";
 
-  private static final TableMetadata TABLE_METADATA =
+  protected static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
           .addColumn(COL_NAME1, DataType.INT)
           .addColumn(COL_NAME2, DataType.TEXT)
@@ -76,7 +76,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize();
-    transactionFactory = TransactionFactory.create(TestUtils.addSuffix(gerProperties(), TEST_NAME));
+    transactionFactory = TransactionFactory.create(TestUtils.addSuffix(getProperties(), TEST_NAME));
     admin = transactionFactory.getTransactionAdmin();
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
@@ -86,7 +86,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
   protected void initialize() throws Exception {}
 
-  protected abstract Properties gerProperties();
+  protected abstract Properties getProperties();
 
   protected String getNamespace1() {
     return NAMESPACE1;

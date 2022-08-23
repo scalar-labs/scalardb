@@ -747,6 +747,17 @@ Also, the `validate()` API could throw `ValidationException` and `ValidationConf
 If you catch `ValidationException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure/error is fixed.
 If you catch `ValidationConflictException`, like the `CrudConflictException` case, you can retry the transaction.
 
+## Investigate Consensus Commit transactions errors
+
+This configuration is only available to troubleshoot Consensus Commit transactions. By adding the following configuration, `Get` and `Scan` operations results will contain [transaction metadata](https://github.com/scalar-labs/scalardb/blob/master/schema-loader/README.md#internal-metadata-for-consensus-commit).
+To see the transaction metadata columns details for a given table, you can use the `DistributedTransactionAdmin.getTableMetadata()` method which will return the table metadata augmented with the transaction metadata columns. 
+All in all, using this configuration can be useful to investigate transaction related issues.
+
+```properties
+# By default, it is set to "false".
+scalar.db.consensus_commit.include_metadata.enabled=true
+```
+
 ## References
 
 * [Design document](design.md)

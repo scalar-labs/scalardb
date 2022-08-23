@@ -91,7 +91,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     admin = factory.getAdmin();
     databaseConfig = new DatabaseConfig(properties);
     consensusCommitConfig = new ConsensusCommitConfig(databaseConfig);
-    consensusCommitAdmin = new ConsensusCommitAdmin(admin, consensusCommitConfig);
+    consensusCommitAdmin = new ConsensusCommitAdmin(admin, consensusCommitConfig, false);
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
     createTables();
