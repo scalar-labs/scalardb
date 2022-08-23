@@ -5,7 +5,7 @@ import com.scalar.db.config.DatabaseConfig;
 /**
  * A factory class that creates {@link DistributedTransactionManager}, {@link
  * DistributedTransactionAdmin}, and {@link TwoPhaseCommitTransactionManager} instances. Each
- * transaction manager should implement this class to instantiate its implementations of @{@link
+ * transaction manager should implement this class to instantiate its implementations of {@link
  * DistributedTransactionManager}, {@link DistributedTransactionAdmin}, and {@link
  * TwoPhaseCommitTransactionManager}. The implementations are assumed to be loaded by {@link
  * java.util.ServiceLoader}.
