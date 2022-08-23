@@ -32,6 +32,11 @@ scalar.db.dynamo.endpoint-override=
 
 # The namespace name for the table metadata (used as a table prefix of the table metadata)
 scalar.db.dynamo.table_metadata.namespace=
+
+# Set a prefix for the user namespaces and metadata namespace names. Since AWS requires to have unique 
+# tables names in a single AWS region, this is useful if you want to use multiple Scalar DB environments 
+# (development, production, etc.) in a single AWS region.
+scalar.db.dynamo.namespace.prefix=
 ```
 
 Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md) to run the application.

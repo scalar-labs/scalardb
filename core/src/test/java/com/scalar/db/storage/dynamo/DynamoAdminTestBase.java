@@ -1,6 +1,5 @@
 package com.scalar.db.storage.dynamo;
 
-import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -64,45 +63,66 @@ import software.amazon.awssdk.services.dynamodb.model.TableStatus;
 import software.amazon.awssdk.services.dynamodb.model.UpdateContinuousBackupsRequest;
 import software.amazon.awssdk.services.dynamodb.model.UpdateTableRequest;
 
-public class DynamoAdminTest {
+/**
+ * Abstraction that defines unit tests for the {@link DynamoAdmin}. The class purpose is to be able
+ * to run the {@link DynamoAdmin} unit tests with different values for the {@link DynamoConfig},
+ * notably {@link DynamoConfig#NAMESPACE_PREFIX} and {@link DynamoConfig#TABLE_METADATA_NAMESPACE}
+ */
+public abstract class DynamoAdminTestBase {
 
   private static final String NAMESPACE = "namespace";
   private static final String TABLE = "table";
-  private static final String FULL_TABLE_NAME = NAMESPACE + "." + TABLE;
 
+  @Mock private DynamoConfig config;
   @Mock private DynamoDbClient client;
   @Mock private ApplicationAutoScalingClient applicationAutoScalingClient;
-  @Mock private DynamoConfig config;
-
   private DynamoAdmin admin;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+    when(config.getNamespacePrefix()).thenReturn(getNamespacePrefixConfig());
+    when(config.getTableMetadataNamespace()).thenReturn(getTableMetadataNamespaceConfig());
+
     admin = new DynamoAdmin(client, applicationAutoScalingClient, config);
   }
 
-  @Test
-  public void
-      getTableMetadata_WithoutTableMetadataNamespaceChanged_ShouldReturnCorrectTableMetadata()
-          throws ExecutionException {
-    getTableMetadata_ShouldReturnCorrectTableMetadata(Optional.empty());
+  /**
+   * This sets the {@link DynamoConfig#TABLE_METADATA_NAMESPACE} value that will be used to run the
+   * tests
+   *
+   * @return {@link DynamoConfig#TABLE_METADATA_NAMESPACE} value
+   */
+  abstract Optional<String> getTableMetadataNamespaceConfig();
+
+  /**
+   * This sets the {@link DynamoConfig#NAMESPACE_PREFIX} value that will be used to run the tests
+   *
+   * @return {@link DynamoConfig#NAMESPACE_PREFIX} value
+   */
+  abstract Optional<String> getNamespacePrefixConfig();
+
+  private String getFullTableName() {
+    return getNamespacePrefixConfig().orElse("") + NAMESPACE + "." + TABLE;
+  }
+
+  private String getPrefixedNamespace() {
+    return getNamespacePrefixConfig().orElse("") + NAMESPACE;
+  }
+
+  private String getFullMetadataTableName() {
+    return getNamespacePrefixConfig().orElse("")
+        + getTableMetadataNamespaceConfig().orElse(DynamoAdmin.METADATA_NAMESPACE)
+        + "."
+        + DynamoAdmin.METADATA_TABLE;
   }
 
   @Test
-  public void getTableMetadata_WithTableMetadataNamespaceChanged_ShouldReturnCorrectTableMetadata()
-      throws ExecutionException {
-    getTableMetadata_ShouldReturnCorrectTableMetadata(Optional.of("changed"));
-  }
-
-  private void getTableMetadata_ShouldReturnCorrectTableMetadata(
-      Optional<String> tableMetadataNamespace) throws ExecutionException {
+  public void getTableMetadata_ShouldReturnCorrectTableMetadata() throws ExecutionException {
     // Arrange
-    String metadataNamespaceName = tableMetadataNamespace.orElse(DynamoAdmin.METADATA_NAMESPACE);
-
     Map<String, AttributeValue> expectedKey = new HashMap<>();
     expectedKey.put(
-        DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(FULL_TABLE_NAME).build());
+        DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(getFullTableName()).build());
 
     GetItemResponse response = mock(GetItemResponse.class);
     when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
@@ -111,7 +131,7 @@ public class DynamoAdminTest {
             ImmutableMap.<String, AttributeValue>builder()
                 .put(
                     DynamoAdmin.METADATA_ATTR_TABLE,
-                    AttributeValue.builder().s(FULL_TABLE_NAME).build())
+                    AttributeValue.builder().s(getFullTableName()).build())
                 .put(
                     DynamoAdmin.METADATA_ATTR_COLUMNS,
                     AttributeValue.builder()
@@ -150,11 +170,6 @@ public class DynamoAdminTest {
                     AttributeValue.builder().ss("c4").build())
                 .build());
 
-    if (tableMetadataNamespace.isPresent()) {
-      when(config.getTableMetadataNamespace()).thenReturn(tableMetadataNamespace);
-      admin = new DynamoAdmin(client, applicationAutoScalingClient, config);
-    }
-
     // Act
     TableMetadata actual = admin.getTableMetadata(NAMESPACE, TABLE);
 
@@ -178,8 +193,7 @@ public class DynamoAdminTest {
     ArgumentCaptor<GetItemRequest> captor = ArgumentCaptor.forClass(GetItemRequest.class);
     verify(client).getItem(captor.capture());
     GetItemRequest actualRequest = captor.getValue();
-    assertThat(actualRequest.tableName())
-        .isEqualTo(metadataNamespaceName + "." + DynamoAdmin.METADATA_TABLE);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullMetadataTableName());
     assertThat(actualRequest.key()).isEqualTo(expectedKey);
     assertThat(actualRequest.consistentRead()).isTrue();
   }
@@ -193,9 +207,9 @@ public class DynamoAdminTest {
     when(listTablesResponse.tableNames())
         .thenReturn(
             ImmutableList.<String>builder()
-                .add(NAMESPACE + ".tb1")
-                .add(NAMESPACE + ".tb2")
-                .add(NAMESPACE + ".tb3")
+                .add(getPrefixedNamespace() + ".tb1")
+                .add(getPrefixedNamespace() + ".tb2")
+                .add(getPrefixedNamespace() + ".tb3")
                 .build())
         .thenReturn(Collections.emptyList());
 
@@ -219,24 +233,9 @@ public class DynamoAdminTest {
   }
 
   @Test
-  public void
-      createTable_WithoutTableMetadataNamespaceChangedWhenMetadataTableNotExist_ShouldCreateTableAndMetadataTable()
-          throws ExecutionException {
-    createTable_WhenMetadataTableNotExist_ShouldCreateTableAndMetadataTable(Optional.empty());
-  }
-
-  @Test
-  public void
-      createTable_WithTableMetadataNamespaceChangedWhenMetadataTableNotExist_ShouldCreateTableAndMetadataTable()
-          throws ExecutionException {
-    createTable_WhenMetadataTableNotExist_ShouldCreateTableAndMetadataTable(Optional.of("changed"));
-  }
-
-  private void createTable_WhenMetadataTableNotExist_ShouldCreateTableAndMetadataTable(
-      Optional<String> tableMetadataNamespace) throws ExecutionException {
+  public void createTable_WhenMetadataTableNotExist_ShouldCreateTableAndMetadataTable()
+      throws ExecutionException {
     // Arrange
-    String metadataNamespaceName = tableMetadataNamespace.orElse(DynamoAdmin.METADATA_NAMESPACE);
-
     TableMetadata metadata =
         TableMetadata.newBuilder()
             .addPartitionKey("c1")
@@ -253,7 +252,7 @@ public class DynamoAdminTest {
             .build();
 
     DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
-    when(client.describeTable(DescribeTableRequest.builder().tableName(FULL_TABLE_NAME).build()))
+    when(client.describeTable(DescribeTableRequest.builder().tableName(getFullTableName()).build()))
         .thenReturn(describeTableResponse);
     TableDescription tableDescription = mock(TableDescription.class);
     when(describeTableResponse.table()).thenReturn(tableDescription);
@@ -276,16 +275,9 @@ public class DynamoAdminTest {
     when(describeTableResponse.table()).thenReturn(tableDescription);
     when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
     when(client.describeTable(
-            DescribeTableRequest.builder()
-                .tableName(metadataNamespaceName + "." + DynamoAdmin.METADATA_TABLE)
-                .build()))
+            DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build()))
         .thenThrow(ResourceNotFoundException.class)
         .thenReturn(describeTableResponse);
-
-    if (tableMetadataNamespace.isPresent()) {
-      when(config.getTableMetadataNamespace()).thenReturn(tableMetadataNamespace);
-      admin = new DynamoAdmin(client, applicationAutoScalingClient, config);
-    }
 
     // Act
     admin.createTable(NAMESPACE, TABLE, metadata);
@@ -318,7 +310,7 @@ public class DynamoAdminTest {
 
     assertThat(actualCreateTableRequests.get(0).globalSecondaryIndexes().size()).isEqualTo(1);
     assertThat(actualCreateTableRequests.get(0).globalSecondaryIndexes().get(0).indexName())
-        .isEqualTo(FULL_TABLE_NAME + ".global_index.c4");
+        .isEqualTo(getFullTableName() + ".global_index.c4");
     assertThat(actualCreateTableRequests.get(0).globalSecondaryIndexes().get(0).keySchema().size())
         .isEqualTo(1);
     assertThat(
@@ -369,7 +361,7 @@ public class DynamoAdminTest {
     assertThat(actualCreateTableRequests.get(0).provisionedThroughput().readCapacityUnits())
         .isEqualTo(10);
 
-    assertThat(actualCreateTableRequests.get(0).tableName()).isEqualTo(FULL_TABLE_NAME);
+    assertThat(actualCreateTableRequests.get(0).tableName()).isEqualTo(getFullTableName());
 
     // for the table metadata table
     attributeDefinitions = actualCreateTableRequests.get(1).attributeDefinitions();
@@ -389,19 +381,17 @@ public class DynamoAdminTest {
     assertThat(actualCreateTableRequests.get(1).provisionedThroughput().readCapacityUnits())
         .isEqualTo(1);
 
-    assertThat(actualCreateTableRequests.get(1).tableName())
-        .isEqualTo(metadataNamespaceName + "." + DynamoAdmin.METADATA_TABLE);
+    assertThat(actualCreateTableRequests.get(1).tableName()).isEqualTo(getFullMetadataTableName());
 
     ArgumentCaptor<PutItemRequest> putItemRequestCaptor =
         ArgumentCaptor.forClass(PutItemRequest.class);
     verify(client).putItem(putItemRequestCaptor.capture());
     PutItemRequest actualPutItemRequest = putItemRequestCaptor.getValue();
-    assertThat(actualPutItemRequest.tableName())
-        .isEqualTo(metadataNamespaceName + "." + DynamoAdmin.METADATA_TABLE);
+    assertThat(actualPutItemRequest.tableName()).isEqualTo(getFullMetadataTableName());
 
     Map<String, AttributeValue> itemValues = new HashMap<>();
     itemValues.put(
-        DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(FULL_TABLE_NAME).build());
+        DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(getFullTableName()).build());
     Map<String, AttributeValue> columns = new HashMap<>();
     columns.put("c1", AttributeValue.builder().s("text").build());
     columns.put("c2", AttributeValue.builder().s("bigint").build());
@@ -441,30 +431,15 @@ public class DynamoAdminTest {
     List<UpdateContinuousBackupsRequest> updateContinuousBackupsRequests =
         updateContinuousBackupsRequestCaptor.getAllValues();
     assertThat(updateContinuousBackupsRequests.size()).isEqualTo(2);
-    assertThat(updateContinuousBackupsRequests.get(0).tableName()).isEqualTo(FULL_TABLE_NAME);
+    assertThat(updateContinuousBackupsRequests.get(0).tableName()).isEqualTo(getFullTableName());
     assertThat(updateContinuousBackupsRequests.get(1).tableName())
-        .isEqualTo(metadataNamespaceName + "." + DynamoAdmin.METADATA_TABLE);
+        .isEqualTo(getFullMetadataTableName());
   }
 
   @Test
-  public void
-      createTable_WithoutTableMetadataNamespaceChangedWhenMetadataTableExists_ShouldCreateOnlyTable()
-          throws ExecutionException {
-    createTable_WhenMetadataTableExists_ShouldCreateOnlyTable(Optional.empty());
-  }
-
-  @Test
-  public void
-      createTable_WithTableMetadataNamespaceChangedWhenMetadataTableExists_ShouldCreateOnlyTable()
-          throws ExecutionException {
-    createTable_WhenMetadataTableExists_ShouldCreateOnlyTable(Optional.of("changed"));
-  }
-
-  private void createTable_WhenMetadataTableExists_ShouldCreateOnlyTable(
-      Optional<String> tableMetadataNamespace) throws ExecutionException {
+  public void createTable_WhenMetadataTableExists_ShouldCreateOnlyTable()
+      throws ExecutionException {
     // Arrange
-    String metadataNamespaceName = tableMetadataNamespace.orElse(DynamoAdmin.METADATA_NAMESPACE);
-
     TableMetadata metadata =
         TableMetadata.newBuilder()
             .addPartitionKey("c1")
@@ -496,11 +471,6 @@ public class DynamoAdminTest {
         .thenReturn(continuousBackupsDescription);
     when(continuousBackupsDescription.continuousBackupsStatus())
         .thenReturn(ContinuousBackupsStatus.ENABLED);
-
-    if (tableMetadataNamespace.isPresent()) {
-      when(config.getTableMetadataNamespace()).thenReturn(tableMetadataNamespace);
-      admin = new DynamoAdmin(client, applicationAutoScalingClient, config);
-    }
 
     Map<String, String> options = new HashMap<>();
     options.put(DynamoAdmin.REQUEST_UNIT, "100");
@@ -536,7 +506,7 @@ public class DynamoAdminTest {
 
     assertThat(actualCreateTableRequest.globalSecondaryIndexes().size()).isEqualTo(1);
     assertThat(actualCreateTableRequest.globalSecondaryIndexes().get(0).indexName())
-        .isEqualTo(FULL_TABLE_NAME + ".global_index.c4");
+        .isEqualTo(getFullTableName() + ".global_index.c4");
     assertThat(actualCreateTableRequest.globalSecondaryIndexes().get(0).keySchema().size())
         .isEqualTo(1);
     assertThat(
@@ -572,19 +542,18 @@ public class DynamoAdminTest {
         .isEqualTo(100);
     assertThat(actualCreateTableRequest.provisionedThroughput().readCapacityUnits()).isEqualTo(100);
 
-    assertThat(actualCreateTableRequest.tableName()).isEqualTo(FULL_TABLE_NAME);
+    assertThat(actualCreateTableRequest.tableName()).isEqualTo(getFullTableName());
 
     // for the table metadata table
     ArgumentCaptor<PutItemRequest> putItemRequestCaptor =
         ArgumentCaptor.forClass(PutItemRequest.class);
     verify(client).putItem(putItemRequestCaptor.capture());
     PutItemRequest actualPutItemRequest = putItemRequestCaptor.getValue();
-    assertThat(actualPutItemRequest.tableName())
-        .isEqualTo(metadataNamespaceName + "." + DynamoAdmin.METADATA_TABLE);
+    assertThat(actualPutItemRequest.tableName()).isEqualTo(getFullMetadataTableName());
 
     Map<String, AttributeValue> itemValues = new HashMap<>();
     itemValues.put(
-        DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(FULL_TABLE_NAME).build());
+        DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(getFullTableName()).build());
     Map<String, AttributeValue> columns = new HashMap<>();
     columns.put("c1", AttributeValue.builder().s("text").build());
     columns.put("c2", AttributeValue.builder().s("bigint").build());
@@ -675,24 +644,9 @@ public class DynamoAdminTest {
   }
 
   @Test
-  public void
-      dropTable_WithoutTableMetadataNamespaceChangedWithNoMetadataLeft_ShouldDropTableAndDeleteMetadata()
-          throws ExecutionException {
-    dropTable_WithNoMetadataLeft_ShouldDropTableAndDeleteMetadata(Optional.empty());
-  }
-
-  @Test
-  public void
-      dropTable_WithTableMetadataNamespaceChangedWithNoMetadataLeft_ShouldDropTableAndDeleteMetadata()
-          throws ExecutionException {
-    dropTable_WithNoMetadataLeft_ShouldDropTableAndDeleteMetadata(Optional.of("changed"));
-  }
-
-  private void dropTable_WithNoMetadataLeft_ShouldDropTableAndDeleteMetadata(
-      Optional<String> tableMetadataNamespace) throws ExecutionException {
+  public void dropTable_WithNoMetadataLeft_ShouldDropTableAndDeleteMetadata()
+      throws ExecutionException {
     // Arrange
-    String metadataNamespaceName = tableMetadataNamespace.orElse(DynamoAdmin.METADATA_NAMESPACE);
-
     GetItemResponse response = mock(GetItemResponse.class);
     when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
     when(response.item())
@@ -700,7 +654,7 @@ public class DynamoAdminTest {
             ImmutableMap.<String, AttributeValue>builder()
                 .put(
                     DynamoAdmin.METADATA_ATTR_TABLE,
-                    AttributeValue.builder().s(FULL_TABLE_NAME).build())
+                    AttributeValue.builder().s(getFullTableName()).build())
                 .put(
                     DynamoAdmin.METADATA_ATTR_COLUMNS,
                     AttributeValue.builder()
@@ -747,11 +701,6 @@ public class DynamoAdminTest {
     List<String> tableList = Collections.emptyList();
     when(listTablesResponse.tableNames()).thenReturn(tableList);
 
-    if (tableMetadataNamespace.isPresent()) {
-      when(config.getTableMetadataNamespace()).thenReturn(tableMetadataNamespace);
-      admin = new DynamoAdmin(client, applicationAutoScalingClient, config);
-    }
-
     // Act
     admin.dropTable(NAMESPACE, TABLE);
 
@@ -760,17 +709,16 @@ public class DynamoAdminTest {
         ArgumentCaptor.forClass(DeleteTableRequest.class);
     verify(client).deleteTable(deleteTableRequestCaptor.capture());
     DeleteTableRequest actualDeleteTableRequest = deleteTableRequestCaptor.getValue();
-    assertThat(actualDeleteTableRequest.tableName()).isEqualTo(FULL_TABLE_NAME);
+    assertThat(actualDeleteTableRequest.tableName()).isEqualTo(getFullTableName());
 
     // for the table metadata table
     ArgumentCaptor<DeleteItemRequest> deleteItemRequestCaptor =
         ArgumentCaptor.forClass(DeleteItemRequest.class);
     verify(client).deleteItem(deleteItemRequestCaptor.capture());
     DeleteItemRequest actualDeleteItemRequest = deleteItemRequestCaptor.getValue();
-    assertThat(actualDeleteItemRequest.tableName())
-        .isEqualTo(metadataNamespaceName + "." + DynamoAdmin.METADATA_TABLE);
+    assertThat(actualDeleteItemRequest.tableName()).isEqualTo(getFullMetadataTableName());
     assertThat(actualDeleteItemRequest.key().get(DynamoAdmin.METADATA_ATTR_TABLE).s())
-        .isEqualTo(FULL_TABLE_NAME);
+        .isEqualTo(getFullTableName());
 
     verify(applicationAutoScalingClient, times(4))
         .deleteScalingPolicy(any(DeleteScalingPolicyRequest.class));
@@ -779,24 +727,9 @@ public class DynamoAdminTest {
   }
 
   @Test
-  public void
-      dropTable_WithoutTableMetadataNamespaceChangedWithMetadataLeft_ShouldDropTableAndDropMetadataTable()
-          throws ExecutionException {
-    dropTable_WithMetadataLeft_ShouldDropTableAndDropMetadataTable(Optional.empty());
-  }
-
-  @Test
-  public void
-      dropTable_WithTableMetadataNamespaceChangedWithMetadataLeft_ShouldDropTableAndDropMetadataTable()
-          throws ExecutionException {
-    dropTable_WithMetadataLeft_ShouldDropTableAndDropMetadataTable(Optional.of("changed"));
-  }
-
-  private void dropTable_WithMetadataLeft_ShouldDropTableAndDropMetadataTable(
-      Optional<String> tableMetadataNamespace) throws ExecutionException {
+  public void dropTable_WithMetadataLeft_ShouldDropTableAndDropMetadataTable()
+      throws ExecutionException {
     // Arrange
-    String metadataNamespaceName = tableMetadataNamespace.orElse(DynamoAdmin.METADATA_NAMESPACE);
-
     GetItemResponse response = mock(GetItemResponse.class);
     when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
     when(response.item())
@@ -804,7 +737,7 @@ public class DynamoAdminTest {
             ImmutableMap.<String, AttributeValue>builder()
                 .put(
                     DynamoAdmin.METADATA_ATTR_TABLE,
-                    AttributeValue.builder().s(FULL_TABLE_NAME).build())
+                    AttributeValue.builder().s(getFullTableName()).build())
                 .put(
                     DynamoAdmin.METADATA_ATTR_COLUMNS,
                     AttributeValue.builder()
@@ -851,11 +784,6 @@ public class DynamoAdminTest {
     List<String> tableList = Collections.emptyList();
     when(listTablesResponse.tableNames()).thenReturn(tableList);
 
-    if (tableMetadataNamespace.isPresent()) {
-      when(config.getTableMetadataNamespace()).thenReturn(tableMetadataNamespace);
-      admin = new DynamoAdmin(client, applicationAutoScalingClient, config);
-    }
-
     // Act
     admin.dropTable(NAMESPACE, TABLE);
 
@@ -865,20 +793,18 @@ public class DynamoAdminTest {
     verify(client, times(2)).deleteTable(deleteTableRequestCaptor.capture());
     List<DeleteTableRequest> actualDeleteTableRequests = deleteTableRequestCaptor.getAllValues();
 
-    assertThat(actualDeleteTableRequests.get(0).tableName()).isEqualTo(FULL_TABLE_NAME);
+    assertThat(actualDeleteTableRequests.get(0).tableName()).isEqualTo(getFullTableName());
 
     // for the table metadata table
-    assertThat(actualDeleteTableRequests.get(1).tableName())
-        .isEqualTo(metadataNamespaceName + "." + DynamoAdmin.METADATA_TABLE);
+    assertThat(actualDeleteTableRequests.get(1).tableName()).isEqualTo(getFullMetadataTableName());
 
     ArgumentCaptor<DeleteItemRequest> deleteItemRequestCaptor =
         ArgumentCaptor.forClass(DeleteItemRequest.class);
     verify(client).deleteItem(deleteItemRequestCaptor.capture());
     DeleteItemRequest actualDeleteItemRequest = deleteItemRequestCaptor.getValue();
-    assertThat(actualDeleteItemRequest.tableName())
-        .isEqualTo(metadataNamespaceName + "." + DynamoAdmin.METADATA_TABLE);
+    assertThat(actualDeleteItemRequest.tableName()).isEqualTo(getFullMetadataTableName());
     assertThat(actualDeleteItemRequest.key().get(DynamoAdmin.METADATA_ATTR_TABLE).s())
-        .isEqualTo(FULL_TABLE_NAME);
+        .isEqualTo(getFullTableName());
 
     verify(applicationAutoScalingClient, times(4))
         .deleteScalingPolicy(any(DeleteScalingPolicyRequest.class));
@@ -925,7 +851,8 @@ public class DynamoAdminTest {
     when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
     when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
     when(listTablesResponse.tableNames())
-        .thenReturn(ImmutableList.of(NAMESPACE + ".t1", NAMESPACE + ".t2"));
+        .thenReturn(
+            ImmutableList.of(getPrefixedNamespace() + ".t1", getPrefixedNamespace() + ".t2"));
 
     // Act
     Set<String> actualNames = admin.getNamespaceTableNames(NAMESPACE);
@@ -944,7 +871,7 @@ public class DynamoAdminTest {
             ImmutableMap.<String, AttributeValue>builder()
                 .put(
                     DynamoAdmin.METADATA_ATTR_TABLE,
-                    AttributeValue.builder().s(FULL_TABLE_NAME).build())
+                    AttributeValue.builder().s(getFullTableName()).build())
                 .put(
                     DynamoAdmin.METADATA_ATTR_COLUMNS,
                     AttributeValue.builder()
@@ -985,7 +912,7 @@ public class DynamoAdminTest {
         mock(GlobalSecondaryIndexDescription.class);
     when(tableDescription.globalSecondaryIndexes())
         .thenReturn(Collections.singletonList(globalSecondaryIndexDescription));
-    String indexName = getFullTableName(NAMESPACE, TABLE) + ".global_index.c4";
+    String indexName = getFullTableName() + ".global_index.c4";
     when(globalSecondaryIndexDescription.indexName()).thenReturn(indexName);
     when(globalSecondaryIndexDescription.indexStatus()).thenReturn(IndexStatus.ACTIVE);
 
@@ -1010,7 +937,7 @@ public class DynamoAdminTest {
             ImmutableMap.<String, AttributeValue>builder()
                 .put(
                     DynamoAdmin.METADATA_ATTR_TABLE,
-                    AttributeValue.builder().s(FULL_TABLE_NAME).build())
+                    AttributeValue.builder().s(getFullTableName()).build())
                 .put(
                     DynamoAdmin.METADATA_ATTR_COLUMNS,
                     AttributeValue.builder()
@@ -1033,12 +960,11 @@ public class DynamoAdminTest {
     verify(client)
         .getItem(
             GetItemRequest.builder()
-                .tableName(
-                    getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE))
+                .tableName(getFullMetadataTableName())
                 .key(
                     ImmutableMap.of(
                         DynamoAdmin.METADATA_ATTR_TABLE,
-                        AttributeValue.builder().s(FULL_TABLE_NAME).build()))
+                        AttributeValue.builder().s(getFullTableName()).build()))
                 .consistentRead(true)
                 .build());
   }
@@ -1053,7 +979,7 @@ public class DynamoAdminTest {
             ImmutableMap.<String, AttributeValue>builder()
                 .put(
                     DynamoAdmin.METADATA_ATTR_TABLE,
-                    AttributeValue.builder().s(FULL_TABLE_NAME).build())
+                    AttributeValue.builder().s(getFullTableName()).build())
                 .put(
                     DynamoAdmin.METADATA_ATTR_COLUMNS,
                     AttributeValue.builder()
@@ -1122,7 +1048,8 @@ public class DynamoAdminTest {
   }
 
   @Test
-  public void repairTable_shouldUpsertMetadata() throws ExecutionException {
+  public void repairTable_WithNonExistingMetadataForTable_shouldAddMetadataForTable()
+      throws ExecutionException {
     // Arrange
     TableMetadata metadata =
         TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
@@ -1131,8 +1058,7 @@ public class DynamoAdminTest {
     ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
     when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
     when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
-    when(listTablesResponse.tableNames())
-        .thenReturn(ImmutableList.of(getFullTableName(NAMESPACE, TABLE)));
+    when(listTablesResponse.tableNames()).thenReturn(ImmutableList.of(getFullTableName()));
 
     // Wait for metadata table creation
     DescribeTableResponse describeTableResponseMetadataTableCreation =
@@ -1143,10 +1069,7 @@ public class DynamoAdminTest {
     when(tableDescriptionMetadataTableCreation.tableStatus()).thenReturn(TableStatus.ACTIVE);
 
     when(client.describeTable(
-            DescribeTableRequest.builder()
-                .tableName(
-                    getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE))
-                .build()))
+            DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build()))
         .thenThrow(ResourceNotFoundException.class)
         .thenReturn(describeTableResponseMetadataTableCreation);
 
@@ -1171,8 +1094,7 @@ public class DynamoAdminTest {
         ArgumentCaptor.forClass(CreateTableRequest.class);
     verify(client).createTable(createTableRequestArgumentCaptor.capture());
     CreateTableRequest actualCreateTableRequest = createTableRequestArgumentCaptor.getValue();
-    assertThat(actualCreateTableRequest.tableName())
-        .isEqualTo(getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE));
+    assertThat(actualCreateTableRequest.tableName()).isEqualTo(getFullMetadataTableName());
 
     // Check continuous backup
     ArgumentCaptor<UpdateContinuousBackupsRequest> updateContinuousBackupsRequestCaptor =
@@ -1180,14 +1102,12 @@ public class DynamoAdminTest {
     verify(client).updateContinuousBackups(updateContinuousBackupsRequestCaptor.capture());
     UpdateContinuousBackupsRequest updateContinuousBackupsRequest =
         updateContinuousBackupsRequestCaptor.getValue();
-    assertThat(updateContinuousBackupsRequest.tableName())
-        .isEqualTo(getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE));
+    assertThat(updateContinuousBackupsRequest.tableName()).isEqualTo(getFullMetadataTableName());
 
-    // Check upsert metadata
+    // Check added metadata
     Map<String, AttributeValue> itemValues = new HashMap<>();
     itemValues.put(
-        DynamoAdmin.METADATA_ATTR_TABLE,
-        AttributeValue.builder().s(getFullTableName(NAMESPACE, TABLE)).build());
+        DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(getFullTableName()).build());
     Map<String, AttributeValue> columns = new HashMap<>();
     columns.put("c1", AttributeValue.builder().s(DataType.TEXT.name().toLowerCase()).build());
     itemValues.put(DynamoAdmin.METADATA_ATTR_COLUMNS, AttributeValue.builder().m(columns).build());
@@ -1199,8 +1119,7 @@ public class DynamoAdminTest {
     verify(client)
         .putItem(
             PutItemRequest.builder()
-                .tableName(
-                    getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE))
+                .tableName(getFullMetadataTableName())
                 .item(itemValues)
                 .build());
   }
@@ -1217,7 +1136,7 @@ public class DynamoAdminTest {
             ImmutableMap.<String, AttributeValue>builder()
                 .put(
                     DynamoAdmin.METADATA_ATTR_TABLE,
-                    AttributeValue.builder().s(FULL_TABLE_NAME).build())
+                    AttributeValue.builder().s(getFullTableName()).build())
                 .put(
                     DynamoAdmin.METADATA_ATTR_COLUMNS,
                     AttributeValue.builder()
@@ -1236,12 +1155,12 @@ public class DynamoAdminTest {
         .isInstanceOf(IllegalArgumentException.class);
 
     Map<String, AttributeValue> key = new HashMap<>();
-    key.put(DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(FULL_TABLE_NAME).build());
+    key.put(
+        DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(getFullTableName()).build());
     verify(client)
         .getItem(
             GetItemRequest.builder()
-                .tableName(
-                    getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE))
+                .tableName(getFullMetadataTableName())
                 .key(key)
                 .consistentRead(true)
                 .build());
@@ -1260,7 +1179,7 @@ public class DynamoAdminTest {
             ImmutableMap.<String, AttributeValue>builder()
                 .put(
                     DynamoAdmin.METADATA_ATTR_TABLE,
-                    AttributeValue.builder().s(FULL_TABLE_NAME).build())
+                    AttributeValue.builder().s(getFullTableName()).build())
                 .put(
                     DynamoAdmin.METADATA_ATTR_COLUMNS,
                     AttributeValue.builder()
@@ -1282,12 +1201,12 @@ public class DynamoAdminTest {
     // Assert
     // Get metadata
     Map<String, AttributeValue> key = new HashMap<>();
-    key.put(DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(FULL_TABLE_NAME).build());
+    key.put(
+        DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(getFullTableName()).build());
     verify(client)
         .getItem(
             GetItemRequest.builder()
-                .tableName(
-                    getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE))
+                .tableName(getFullMetadataTableName())
                 .key(key)
                 .consistentRead(true)
                 .build());
@@ -1295,7 +1214,7 @@ public class DynamoAdminTest {
     // Put metadata
     Map<String, AttributeValue> itemValues = new HashMap<>();
     itemValues.put(
-        DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(FULL_TABLE_NAME).build());
+        DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(getFullTableName()).build());
     Map<String, AttributeValue> columns = new HashMap<>();
 
     columns.put(
@@ -1312,8 +1231,7 @@ public class DynamoAdminTest {
     verify(client)
         .putItem(
             PutItemRequest.builder()
-                .tableName(
-                    getFullTableName(DynamoAdmin.METADATA_NAMESPACE, DynamoAdmin.METADATA_TABLE))
+                .tableName(getFullMetadataTableName())
                 .item(itemValues)
                 .build());
   }

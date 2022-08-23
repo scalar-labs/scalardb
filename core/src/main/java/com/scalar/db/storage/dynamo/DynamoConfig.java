@@ -13,12 +13,14 @@ public class DynamoConfig {
   public static final String PREFIX = DatabaseConfig.PREFIX + "dynamo.";
   public static final String ENDPOINT_OVERRIDE = PREFIX + "endpoint-override";
   public static final String TABLE_METADATA_NAMESPACE = PREFIX + "table_metadata.namespace";
+  public static final String NAMESPACE_PREFIX = PREFIX + "namespace.prefix";
 
   private final String region;
   private final String accessKeyId;
   private final String secretAccessKey;
   @Nullable private final String endpointOverride;
   @Nullable private final String tableMetadataNamespace;
+  @Nullable private final String namespacePrefix;
 
   public DynamoConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getProperties().getProperty(DatabaseConfig.STORAGE);
@@ -32,6 +34,7 @@ public class DynamoConfig {
     endpointOverride = getString(databaseConfig.getProperties(), ENDPOINT_OVERRIDE, null);
     tableMetadataNamespace =
         getString(databaseConfig.getProperties(), TABLE_METADATA_NAMESPACE, null);
+    namespacePrefix = getString(databaseConfig.getProperties(), NAMESPACE_PREFIX, null);
   }
 
   public String getRegion() {
@@ -52,5 +55,9 @@ public class DynamoConfig {
 
   public Optional<String> getTableMetadataNamespace() {
     return Optional.ofNullable(tableMetadataNamespace);
+  }
+
+  public Optional<String> getNamespacePrefix() {
+    return Optional.ofNullable(namespacePrefix);
   }
 }

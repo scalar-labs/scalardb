@@ -7,6 +7,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
 import com.scalar.db.storage.dynamo.DynamoConfig;
+import com.scalar.db.storage.dynamo.Namespace;
 import java.net.URI;
 import java.time.Duration;
 import java.util.HashMap;
@@ -30,6 +31,7 @@ import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 public class DynamoAdminTestUtils extends AdminTestUtils {
 
   private final DynamoDbClient client;
+  private final String namespacePrefix;
 
   public DynamoAdminTestUtils(Properties properties) {
     super();
@@ -46,10 +48,10 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
             .region(Region.of(config.getRegion()))
             .build();
     metadataNamespace =
-        new DynamoConfig(new DatabaseConfig(properties))
-            .getTableMetadataNamespace()
-            .orElse(DynamoAdmin.METADATA_NAMESPACE);
+        config.getNamespacePrefix().orElse("")
+            + config.getTableMetadataNamespace().orElse(DynamoAdmin.METADATA_NAMESPACE);
     metadataTable = DynamoAdmin.METADATA_TABLE;
+    namespacePrefix = config.getNamespacePrefix().orElse("");
   }
 
   @Override
@@ -76,10 +78,14 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
     return false;
   }
 
-  private boolean tableExists(String namespace, String table) {
+  private boolean tableExists(String nonPrefixedNamespace, String table) {
     try {
       client.describeTable(
-          DescribeTableRequest.builder().tableName(getFullTableName(namespace, table)).build());
+          DescribeTableRequest.builder()
+              .tableName(
+                  getFullTableName(
+                      Namespace.of(namespacePrefix, nonPrefixedNamespace).prefixed(), table))
+              .build());
       return true;
     } catch (ResourceNotFoundException e) {
       return false;
@@ -114,7 +120,11 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
   @Override
   public void corruptMetadata(String namespace, String table) {
     Map<String, AttributeValue> itemValues = new HashMap<>();
-    itemValues.put("table", AttributeValue.builder().s(getFullTableName(namespace, table)).build());
+    itemValues.put(
+        "table",
+        AttributeValue.builder()
+            .s(getFullTableName(Namespace.of(namespacePrefix, namespace).prefixed(), table))
+            .build());
     itemValues.put(
         "partitionKey",
         AttributeValue.builder()
