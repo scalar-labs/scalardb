@@ -21,18 +21,24 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
   private final DistributedStorageAdmin admin;
   private final String coordinatorNamespace;
+  private final boolean isIncludeMetadataEnabled;
 
   @Inject
   public ConsensusCommitAdmin(DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
     this.admin = admin;
     ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
+    isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
   }
 
   @VisibleForTesting
-  ConsensusCommitAdmin(DistributedStorageAdmin admin, ConsensusCommitConfig config) {
+  ConsensusCommitAdmin(
+      DistributedStorageAdmin admin,
+      ConsensusCommitConfig config,
+      boolean isIncludeMetadataEnabled) {
     this.admin = admin;
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
+    this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
   }
 
   @Override
@@ -101,7 +107,13 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     TableMetadata metadata = admin.getTableMetadata(namespace, table);
-    return metadata == null ? null : removeTransactionMetaColumns(metadata);
+    if (metadata == null) {
+      return null;
+    } else if (isIncludeMetadataEnabled) {
+      return metadata;
+    } else {
+      return removeTransactionMetaColumns(metadata);
+    }
   }
 
   @Override

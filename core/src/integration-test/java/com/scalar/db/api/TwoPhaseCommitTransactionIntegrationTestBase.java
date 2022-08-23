@@ -39,25 +39,35 @@ import org.junit.jupiter.api.TestInstance;
 public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
   private static final String NAMESPACE_BASE_NAME = "integration_testing_";
-  private static final String TABLE = "test_table";
-  private static final String ACCOUNT_ID = "account_id";
-  private static final String ACCOUNT_TYPE = "account_type";
-  private static final String BALANCE = "balance";
+  protected static final String TABLE = "test_table";
+  protected static final String ACCOUNT_ID = "account_id";
+  protected static final String ACCOUNT_TYPE = "account_type";
+  protected static final String BALANCE = "balance";
   private static final String SOME_COLUMN = "some_column";
-  private static final int INITIAL_BALANCE = 1000;
+  protected static final int INITIAL_BALANCE = 1000;
   private static final int NUM_ACCOUNTS = 4;
   private static final int NUM_TYPES = 4;
-
+  protected static final TableMetadata TABLE_METADATA =
+      TableMetadata.newBuilder()
+          .addColumn(ACCOUNT_ID, DataType.INT)
+          .addColumn(ACCOUNT_TYPE, DataType.INT)
+          .addColumn(BALANCE, DataType.INT)
+          .addColumn(SOME_COLUMN, DataType.INT)
+          .addPartitionKey(ACCOUNT_ID)
+          .addClusteringKey(ACCOUNT_TYPE)
+          .addSecondaryIndex(SOME_COLUMN)
+          .build();
   private DistributedTransactionAdmin admin;
   private TwoPhaseCommitTransactionManager manager;
-  private String namespace;
+
+  protected String namespace;
 
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize();
     String testName = getTestName();
     TransactionFactory factory =
-        TransactionFactory.create(TestUtils.addSuffix(gerProperties(), testName));
+        TransactionFactory.create(TestUtils.addSuffix(getProperties(), testName));
     admin = factory.getTransactionAdmin();
     namespace = getNamespaceBaseName() + testName;
     createTables();
@@ -68,7 +78,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
   protected abstract String getTestName();
 
-  protected abstract Properties gerProperties();
+  protected abstract Properties getProperties();
 
   protected String getNamespaceBaseName() {
     return NAMESPACE_BASE_NAME;
@@ -77,20 +87,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
     admin.createNamespace(namespace, true, options);
-    admin.createTable(
-        namespace,
-        TABLE,
-        TableMetadata.newBuilder()
-            .addColumn(ACCOUNT_ID, DataType.INT)
-            .addColumn(ACCOUNT_TYPE, DataType.INT)
-            .addColumn(BALANCE, DataType.INT)
-            .addColumn(SOME_COLUMN, DataType.INT)
-            .addPartitionKey(ACCOUNT_ID)
-            .addClusteringKey(ACCOUNT_TYPE)
-            .addSecondaryIndex(SOME_COLUMN)
-            .build(),
-        true,
-        options);
+    admin.createTable(namespace, TABLE, TABLE_METADATA, true, options);
     admin.createCoordinatorTables(true, options);
   }
 
@@ -1138,7 +1135,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     transaction.commit();
   }
 
-  private Get prepareGet(int id, int type) {
+  protected Get prepareGet(int id, int type) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Get(partitionKey, clusteringKey)
@@ -1154,7 +1151,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     return gets;
   }
 
-  private Scan prepareScan(int id, int fromType, int toType) {
+  protected Scan prepareScan(int id, int fromType, int toType) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     return new Scan(partitionKey)
         .forNamespace(namespace)

@@ -35,7 +35,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -60,7 +59,7 @@ public class CrudHandlerTest {
               .addClusteringKey(ANY_NAME_2)
               .build());
 
-  @InjectMocks private CrudHandler handler;
+  private CrudHandler handler;
   @Mock private DistributedStorage storage;
   @Mock private Snapshot snapshot;
   @Mock private TransactionTableMetadataManager tableMetadataManager;
@@ -71,6 +70,7 @@ public class CrudHandlerTest {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+    handler = new CrudHandler(storage, snapshot, tableMetadataManager, false);
 
     // Arrange
     when(tableMetadataManager.getTransactionTableMetadata(any()))
@@ -125,7 +125,8 @@ public class CrudHandlerTest {
     assertThat(actual)
         .isEqualTo(
             Optional.of(
-                new FilteredResult(expected.get(), Collections.emptyList(), TABLE_METADATA)));
+                new FilteredResult(
+                    expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
   }
 
   @Test
@@ -150,7 +151,8 @@ public class CrudHandlerTest {
     assertThat(result)
         .isEqualTo(
             Optional.of(
-                new FilteredResult(expected.get(), Collections.emptyList(), TABLE_METADATA)));
+                new FilteredResult(
+                    expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
     verify(storage).get(get);
     verify(snapshot).put(key, Optional.of((TransactionResult) expected.get()));
   }
@@ -219,7 +221,7 @@ public class CrudHandlerTest {
     verify(snapshot).put(key, Optional.of(expected));
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
-        .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA));
+        .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
   }
 
   @Test
@@ -267,7 +269,7 @@ public class CrudHandlerTest {
     verify(snapshot).put(key, Optional.of(expected));
     assertThat(results1.size()).isEqualTo(1);
     assertThat(results1.get(0))
-        .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA));
+        .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
     assertThat(results1).isEqualTo(results2);
   }
 
@@ -279,7 +281,7 @@ public class CrudHandlerTest {
     result = prepareResult(TransactionState.COMMITTED);
     snapshot =
         new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, null, tableMetadataManager, parallelExecutor);
-    handler = new CrudHandler(storage, snapshot, tableMetadataManager);
+    handler = new CrudHandler(storage, snapshot, tableMetadataManager, false);
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
 
@@ -291,7 +293,7 @@ public class CrudHandlerTest {
     TransactionResult expected = new TransactionResult(result);
     assertThat(results1.size()).isEqualTo(1);
     assertThat(results1.get(0))
-        .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA));
+        .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
     assertThat(results1).isEqualTo(results2);
   }
 
@@ -328,7 +330,7 @@ public class CrudHandlerTest {
     result = prepareResult(TransactionState.COMMITTED);
     snapshot =
         new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, null, tableMetadataManager, parallelExecutor);
-    handler = new CrudHandler(storage, snapshot, tableMetadataManager);
+    handler = new CrudHandler(storage, snapshot, tableMetadataManager, false);
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
 
@@ -378,7 +380,7 @@ public class CrudHandlerTest {
             new HashMap<>(),
             new HashMap<>(),
             deleteSet);
-    handler = new CrudHandler(storage, snapshot, tableMetadataManager);
+    handler = new CrudHandler(storage, snapshot, tableMetadataManager, false);
     when(scanner.iterator()).thenReturn(Arrays.asList(result, result2).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
 
@@ -394,7 +396,7 @@ public class CrudHandlerTest {
     // Assert
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
-        .isEqualTo(new FilteredResult(result, Collections.emptyList(), TABLE_METADATA));
+        .isEqualTo(new FilteredResult(result, Collections.emptyList(), TABLE_METADATA, false));
 
     // check the delete set
     assertThat(deleteSet.size()).isEqualTo(1);

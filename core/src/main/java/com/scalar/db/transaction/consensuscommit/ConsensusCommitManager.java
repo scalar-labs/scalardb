@@ -31,6 +31,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final ParallelExecutor parallelExecutor;
   private final RecoveryHandler recovery;
   private final CommitHandler commit;
+  private final boolean isIncludeMetadataEnabled;
 
   @Inject
   public ConsensusCommitManager(
@@ -45,6 +46,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
   }
 
   @VisibleForTesting
@@ -67,6 +69,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     this.parallelExecutor = parallelExecutor;
     this.recovery = recovery;
     this.commit = commit;
+    this.isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
   }
 
   @Override
@@ -153,7 +156,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     }
     Snapshot snapshot =
         new Snapshot(txId, isolation, strategy, tableMetadataManager, parallelExecutor);
-    CrudHandler crud = new CrudHandler(storage, snapshot, tableMetadataManager);
+    CrudHandler crud =
+        new CrudHandler(storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled);
     ConsensusCommit consensus = new ConsensusCommit(crud, commit, recovery);
     getNamespace().ifPresent(consensus::withNamespace);
     getTable().ifPresent(consensus::withTable);
