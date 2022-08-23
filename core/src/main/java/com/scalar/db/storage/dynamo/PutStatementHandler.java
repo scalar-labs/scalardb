@@ -11,6 +11,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import java.util.Map;
+import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -28,14 +29,21 @@ import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 public class PutStatementHandler {
   private final DynamoDbClient client;
   private final TableMetadataManager metadataManager;
+  private final String namespacePrefix;
 
-  public PutStatementHandler(DynamoDbClient client, TableMetadataManager metadataManager) {
+  public PutStatementHandler(
+      DynamoDbClient client,
+      TableMetadataManager metadataManager,
+      Optional<String> namespacePrefix) {
     this.client = checkNotNull(client);
     this.metadataManager = checkNotNull(metadataManager);
+    this.namespacePrefix = namespacePrefix.orElse("");
   }
 
   public void handle(Put put) throws ExecutionException {
     TableMetadata tableMetadata = metadataManager.getTableMetadata(put);
+    put = copyAndAppendNamespacePrefix(put);
+
     try {
       execute(put, tableMetadata);
     } catch (ConditionalCheckFailedException e) {
@@ -86,5 +94,10 @@ public class PutStatementHandler {
             .expressionAttributeValues(bindMap)
             .expressionAttributeNames(expressionAttributeNameMap)
             .build());
+  }
+
+  private Put copyAndAppendNamespacePrefix(Put put) {
+    assert put.forNamespace().isPresent();
+    return Put.newBuilder(put).namespace(namespacePrefix + put.forNamespace().get()).build();
   }
 }
