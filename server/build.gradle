@@ -23,6 +23,7 @@ configurations {
 }
 
 evaluationDependsOn ':core'
+evaluationDependsOn ':schema-loader'
 
 dependencies {
     implementation project(':core')
@@ -48,8 +49,10 @@ dependencies {
     testImplementation "org.assertj:assertj-core:${assertjVersion}"
     testImplementation "org.mockito:mockito-core:${mockitoVersion}"
     testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
-    integrationTestScalarDbServerImplementation project(':core').sourceSets.integrationTestAll.output
     testImplementation "org.apache.commons:commons-lang3:${commonsLangVersion}"
+    integrationTestScalarDbServerImplementation project(':core').sourceSets.integrationTestAll.output
+    integrationTestScalarDbServerImplementation project(':schema-loader')
+    integrationTestScalarDbServerImplementation project(':schema-loader').sourceSets.integrationTestAll.output
 
     // for SpotBugs
     compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
