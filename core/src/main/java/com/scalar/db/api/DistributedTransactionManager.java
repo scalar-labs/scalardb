@@ -61,7 +61,7 @@ public interface DistributedTransactionManager {
 
   /**
    * Begins a new transaction with the specified transaction ID. It is users' responsibility to
-   * guarantee uniqueness of the ID so it is not recommended to use this method unless you know
+   * guarantee uniqueness of the ID, so it is not recommended to use this method unless you know
    * exactly what you are doing.
    *
    * @param txId an user-provided unique transaction ID
@@ -105,7 +105,7 @@ public interface DistributedTransactionManager {
 
   /**
    * Starts a new transaction with the specified transaction ID and {@link Isolation} level. It is
-   * users' responsibility to guarantee uniqueness of the ID so it is not recommended to use this
+   * users' responsibility to guarantee uniqueness of the ID, so it is not recommended to use this
    * method unless you know exactly what you are doing.
    *
    * @param txId an user-provided unique transaction ID
@@ -147,7 +147,7 @@ public interface DistributedTransactionManager {
   /**
    * Starts a new transaction with the specified transaction ID, Serializable isolation level and
    * the specified {@link SerializableStrategy}. It is users' responsibility to guarantee uniqueness
-   * of the ID so it is not recommended to use this method unless you know exactly what you are
+   * of the ID, so it is not recommended to use this method unless you know exactly what you are
    * doing.
    *
    * @param txId an user-provided unique transaction ID
@@ -162,7 +162,7 @@ public interface DistributedTransactionManager {
 
   /**
    * Starts a new transaction with the specified transaction ID, {@link Isolation} level and {@link
-   * SerializableStrategy}. It is users' responsibility to guarantee uniqueness of the ID so it is
+   * SerializableStrategy}. It is users' responsibility to guarantee uniqueness of the ID, so it is
    * not recommended to use this method unless you know exactly what you are doing. If the isolation
    * is not SERIALIZABLE, the serializable strategy is ignored.
    *
