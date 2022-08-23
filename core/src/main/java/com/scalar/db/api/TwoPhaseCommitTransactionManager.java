@@ -70,7 +70,7 @@ public interface TwoPhaseCommitTransactionManager {
 
   /**
    * Begins a new transaction with the specified transaction ID. It is users' responsibility to
-   * guarantee uniqueness of the ID so it is not recommended to use this method unless you know
+   * guarantee uniqueness of the ID, so it is not recommended to use this method unless you know
    * exactly what you are doing. This method is assumed to be called by a coordinator process.
    *
    * @param txId an user-provided unique transaction ID
