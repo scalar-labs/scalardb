@@ -16,6 +16,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -46,12 +47,14 @@ public class Coordinator {
    * @param storage a storage
    * @deprecated As of release 3.3.0. Will be removed in release 5.0.0
    */
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Deprecated
   public Coordinator(DistributedStorage storage) {
     this.storage = storage;
     coordinatorNamespace = NAMESPACE;
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public Coordinator(DistributedStorage storage, ConsensusCommitConfig config) {
     this.storage = storage;
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(NAMESPACE);

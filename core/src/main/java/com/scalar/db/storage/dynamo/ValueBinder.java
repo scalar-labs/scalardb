@@ -8,6 +8,7 @@ import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
@@ -32,6 +33,7 @@ public final class ValueBinder implements ColumnVisitor {
     this.i = 0;
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP")
   @Nonnull
   public Map<String, AttributeValue> build() {
     return values;

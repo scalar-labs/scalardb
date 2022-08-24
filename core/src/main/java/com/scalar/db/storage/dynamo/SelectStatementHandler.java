@@ -20,6 +20,7 @@ import com.scalar.db.storage.common.EmptyScanner;
 import com.scalar.db.storage.dynamo.bytes.BytesUtils;
 import com.scalar.db.storage.dynamo.bytes.KeyBytesEncoder;
 import com.scalar.db.util.ScalarDbUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -55,6 +56,7 @@ public class SelectStatementHandler {
    * @param client {@code DynamoDbClient}
    * @param metadataManager {@code TableMetadataManager}
    */
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public SelectStatementHandler(
       DynamoDbClient client,
       TableMetadataManager metadataManager,

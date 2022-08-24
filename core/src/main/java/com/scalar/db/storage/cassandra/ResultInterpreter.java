@@ -13,6 +13,7 @@ import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ public class ResultInterpreter {
   private final List<String> projections;
   private final TableMetadata metadata;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ResultInterpreter(List<String> projections, TableMetadata metadata) {
     this.projections = Objects.requireNonNull(projections);
     this.metadata = Objects.requireNonNull(metadata);

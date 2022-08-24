@@ -11,6 +11,7 @@ import com.scalar.db.rpc.ScanResponse;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.ClientCallStreamObserver;
@@ -43,6 +44,7 @@ public class GrpcScanOnBidirectionalStream
     stub.scan(this);
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Override
   public void beforeStart(ClientCallStreamObserver<ScanRequest> requestStream) {
     this.requestStream = requestStream;

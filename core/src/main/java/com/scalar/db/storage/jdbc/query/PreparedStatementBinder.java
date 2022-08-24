@@ -10,6 +10,7 @@ import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.storage.jdbc.RdbEngine;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -25,6 +26,7 @@ public class PreparedStatementBinder implements ColumnVisitor {
   private int index = 1;
   private SQLException sqlException;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public PreparedStatementBinder(
       PreparedStatement preparedStatement, TableMetadata tableMetadata, RdbEngine rdbEngine) {
     this.preparedStatement = preparedStatement;

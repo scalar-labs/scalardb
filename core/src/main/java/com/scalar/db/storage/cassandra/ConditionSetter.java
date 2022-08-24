@@ -21,6 +21,7 @@ import com.scalar.db.api.MutationConditionVisitor;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.stream.IntStream;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -39,6 +40,7 @@ public class ConditionSetter implements MutationConditionVisitor {
    *
    * @param statement {@code BuiltStatement} to set conditions
    */
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ConditionSetter(BuiltStatement statement) {
     this.statement = statement;
   }
