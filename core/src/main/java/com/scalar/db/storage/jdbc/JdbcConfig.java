@@ -5,6 +5,7 @@ import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.scalar.db.config.DatabaseConfig;
+import java.util.Locale;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
@@ -110,7 +111,7 @@ public class JdbcConfig {
 
     String isolationLevel = getString(databaseConfig.getProperties(), ISOLATION_LEVEL, null);
     if (isolationLevel != null) {
-      isolation = Isolation.valueOf(isolationLevel);
+      isolation = Isolation.valueOf(isolationLevel.toUpperCase(Locale.ROOT));
     } else {
       isolation = null;
     }
