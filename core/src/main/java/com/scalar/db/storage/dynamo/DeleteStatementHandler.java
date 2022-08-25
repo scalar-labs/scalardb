@@ -9,6 +9,7 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
@@ -30,6 +31,7 @@ public class DeleteStatementHandler {
   private final TableMetadataManager metadataManager;
   private final String namespacePrefix;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public DeleteStatementHandler(
       DynamoDbClient client,
       TableMetadataManager metadataManager,

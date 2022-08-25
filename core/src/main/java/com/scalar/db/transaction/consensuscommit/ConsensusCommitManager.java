@@ -14,6 +14,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.common.AbstractDistributedTransactionManager;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.concurrent.ThreadSafe;
@@ -33,6 +34,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final CommitHandler commit;
   private final boolean isIncludeMetadataEnabled;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
   public ConsensusCommitManager(
       DistributedStorage storage, DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
@@ -49,6 +51,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   @VisibleForTesting
   public ConsensusCommitManager(
       DistributedStorage storage,

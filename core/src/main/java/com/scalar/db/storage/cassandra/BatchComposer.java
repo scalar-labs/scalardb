@@ -12,6 +12,7 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.OperationVisitor;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -31,6 +32,7 @@ public class BatchComposer implements OperationVisitor {
    * @param batch {@code BatchStatement} for multiple statements
    * @param handlers {@code StatementHandlerManager}
    */
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public BatchComposer(BatchStatement batch, StatementHandlerManager handlers) {
     this.batch = checkNotNull(batch);
     this.handlers = checkNotNull(handlers);

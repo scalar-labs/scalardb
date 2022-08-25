@@ -10,6 +10,7 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,7 @@ public class BatchHandler {
    * @param client {@code DynamoDbClient} to create a statement with
    * @param metadataManager {@code TableMetadataManager}
    */
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public BatchHandler(
       DynamoDbClient client,
       TableMetadataManager metadataManager,

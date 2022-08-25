@@ -3,6 +3,7 @@ package com.scalar.db.storage.dynamo;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.storage.common.ScannerIterator;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -23,6 +24,7 @@ public final class GetItemScanner implements Scanner {
   private boolean hasNext;
   private ScannerIterator scannerIterator;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public GetItemScanner(
       DynamoDbClient client, GetItemRequest request, ResultInterpreter resultInterpreter) {
     GetItemResponse response = client.getItem(request);

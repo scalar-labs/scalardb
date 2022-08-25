@@ -42,6 +42,7 @@ public class JdbcService {
   private final OperationChecker operationChecker;
   private final QueryBuilder queryBuilder;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcService(
       TableMetadataManager tableMetadataManager,
       OperationChecker operationChecker,

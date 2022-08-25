@@ -10,6 +10,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
@@ -20,6 +21,7 @@ import javax.annotation.concurrent.ThreadSafe;
 public class StorageService implements DistributedStorage {
   private final DistributedStorage storage;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
   public StorageService(DistributedStorage storage) {
     this.storage = storage;

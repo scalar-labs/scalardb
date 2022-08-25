@@ -11,6 +11,7 @@ import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.ByteBuffer;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -29,6 +30,7 @@ public final class ValueBinder implements ColumnVisitor {
    *
    * @param bound a {@code BoundStatement} to be bound
    */
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ValueBinder(BoundStatement bound) {
     this.bound = checkNotNull(bound);
     i = 0;

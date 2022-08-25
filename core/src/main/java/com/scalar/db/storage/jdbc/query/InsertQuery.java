@@ -7,6 +7,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.jdbc.RdbEngine;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -96,6 +97,7 @@ public class InsertQuery implements Query {
       this.tableMetadata = tableMetadata;
     }
 
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
     public Builder values(
         Key partitionKey, Optional<Key> clusteringKey, Map<String, Column<?>> columns) {
       this.partitionKey = partitionKey;

@@ -1,9 +1,7 @@
 package com.scalar.db.storage.cosmos;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedSet;
-import com.scalar.db.util.ImmutableLinkedHashSet;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +14,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  *
  * @author Yuji Ito
  */
+@SuppressFBWarnings({"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
 @NotThreadSafe
 public class CosmosTableMetadata {
   private String id;
@@ -32,11 +31,11 @@ public class CosmosTableMetadata {
   }
 
   public void setPartitionKeyNames(List<String> partitionKeyNames) {
-    this.partitionKeyNames = new ImmutableLinkedHashSet<>(partitionKeyNames);
+    this.partitionKeyNames = new LinkedHashSet<>(partitionKeyNames);
   }
 
   public void setClusteringKeyNames(List<String> clusteringKeyNames) {
-    this.clusteringKeyNames = new ImmutableLinkedHashSet<>(clusteringKeyNames);
+    this.clusteringKeyNames = new LinkedHashSet<>(clusteringKeyNames);
   }
 
   public void setClusteringOrders(Map<String, String> clusteringOrders) {
@@ -44,11 +43,11 @@ public class CosmosTableMetadata {
   }
 
   public void setSecondaryIndexNames(Set<String> secondaryIndexNames) {
-    this.secondaryIndexNames = ImmutableSortedSet.copyOf(secondaryIndexNames);
+    this.secondaryIndexNames = secondaryIndexNames;
   }
 
   public void setColumns(Map<String, String> columns) {
-    this.columns = ImmutableMap.copyOf(columns);
+    this.columns = columns;
   }
 
   public String getId() {

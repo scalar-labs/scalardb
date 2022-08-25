@@ -13,6 +13,7 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
@@ -27,6 +28,7 @@ public class RecoveryHandler {
   private final Coordinator coordinator;
   private final TransactionTableMetadataManager tableMetadataManager;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public RecoveryHandler(
       DistributedStorage storage,
       Coordinator coordinator,

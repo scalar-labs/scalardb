@@ -15,6 +15,7 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.common.AbstractDistributedTransaction;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -43,6 +44,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   private Runnable beforeRecoveryHook;
   private Runnable beforeCommitHook;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ConsensusCommit(CrudHandler crud, CommitHandler commit, RecoveryHandler recovery) {
     this.crud = checkNotNull(crud);
     this.commit = checkNotNull(commit);
