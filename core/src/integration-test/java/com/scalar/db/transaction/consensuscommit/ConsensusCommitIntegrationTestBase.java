@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionIntegrationTestBase;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetBuilder.BuildableGet;
 import com.scalar.db.api.Put;
@@ -29,7 +30,7 @@ import org.junit.jupiter.api.Test;
 
 public abstract class ConsensusCommitIntegrationTestBase
     extends DistributedTransactionIntegrationTestBase {
-  ConsensusCommitManager managerWithIncludeMetadataEnabled;
+  private DistributedTransactionManager managerWithIncludeMetadataEnabled;
 
   @BeforeAll
   @Override
@@ -37,12 +38,9 @@ public abstract class ConsensusCommitIntegrationTestBase
     super.beforeAll();
 
     Properties includeMetadataEnabledProperties =
-        TestUtils.addSuffix(getProperties(), getTestName());
-    includeMetadataEnabledProperties.setProperty(
-        ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
+        TestUtils.addSuffix(getPropsWithIncludeMetadataEnabled(), getTestName());
     managerWithIncludeMetadataEnabled =
-        (ConsensusCommitManager)
-            TransactionFactory.create(includeMetadataEnabledProperties).getTransactionManager();
+        TransactionFactory.create(includeMetadataEnabledProperties).getTransactionManager();
   }
 
   @AfterAll
@@ -62,11 +60,20 @@ public abstract class ConsensusCommitIntegrationTestBase
   protected final Properties getProperties() {
     Properties properties = new Properties();
     properties.putAll(getProps());
-    properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "consensus-commit");
+    String transactionManager = properties.getProperty(DatabaseConfig.TRANSACTION_MANAGER, "");
+    if (!transactionManager.equals("grpc")) {
+      properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "consensus-commit");
+    }
     return properties;
   }
 
   protected abstract Properties getProps();
+
+  protected Properties getPropsWithIncludeMetadataEnabled() {
+    Properties properties = getProperties();
+    properties.setProperty(ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
+    return properties;
+  }
 
   @Test
   public void scan_WithIncludeMetadataEnabled_ShouldReturnTransactionMetadataColumns()

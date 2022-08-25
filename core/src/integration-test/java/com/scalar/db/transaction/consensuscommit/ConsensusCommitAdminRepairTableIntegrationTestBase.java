@@ -11,7 +11,10 @@ public abstract class ConsensusCommitAdminRepairTableIntegrationTestBase
   protected final Properties getProperties() {
     Properties properties = new Properties();
     properties.putAll(getProps());
-    properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "consensus-commit");
+    String transactionManager = properties.getProperty(DatabaseConfig.TRANSACTION_MANAGER, "");
+    if (!transactionManager.equals("grpc")) {
+      properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "consensus-commit");
+    }
     return properties;
   }
 

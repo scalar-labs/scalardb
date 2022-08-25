@@ -2,6 +2,7 @@ package com.scalar.db.server;
 
 import com.scalar.db.api.DistributedStorageSinglePartitionKeyIntegrationTestBase;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.util.TestUtils;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
@@ -13,9 +14,9 @@ public class DistributedStorageServiceSinglePartitionKeyIntegrationTest
 
   @Override
   protected void initialize() throws IOException {
-    ServerConfig config = ServerEnv.getServerConfig();
-    if (config != null) {
-      server = new ScalarDbServer(config);
+    Properties properties = ServerEnv.getServerProperties();
+    if (properties != null) {
+      server = new ScalarDbServer(TestUtils.addSuffix(properties, TEST_NAME));
       server.start();
     }
   }
