@@ -6,12 +6,15 @@ import com.scalar.db.config.DatabaseConfig;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Immutable
 public class DynamoConfig {
+  private static final Logger logger = LoggerFactory.getLogger(DynamoConfig.class);
 
   public static final String PREFIX = DatabaseConfig.PREFIX + "dynamo.";
-  public static final String ENDPOINT_OVERRIDE = PREFIX + "endpoint-override";
+  public static final String ENDPOINT_OVERRIDE = PREFIX + "endpoint_override";
   public static final String TABLE_METADATA_NAMESPACE = PREFIX + "table_metadata.namespace";
   public static final String NAMESPACE_PREFIX = PREFIX + "namespace.prefix";
 
@@ -31,7 +34,21 @@ public class DynamoConfig {
     region = databaseConfig.getContactPoints().get(0);
     accessKeyId = databaseConfig.getUsername().orElse(null);
     secretAccessKey = databaseConfig.getPassword().orElse(null);
-    endpointOverride = getString(databaseConfig.getProperties(), ENDPOINT_OVERRIDE, null);
+    if (databaseConfig.getProperties().containsKey("scalar.db.dynamo.endpoint-override")) {
+      logger.warn(
+          "The property \"scalar.db.dynamo.endpoint-override\" is deprecated and will be removed in 5.0.0. "
+              + "Please use \""
+              + ENDPOINT_OVERRIDE
+              + "\" instead.");
+    }
+    endpointOverride =
+        getString(
+            databaseConfig.getProperties(),
+            ENDPOINT_OVERRIDE,
+            getString(
+                databaseConfig.getProperties(),
+                "scalar.db.dynamo.endpoint-override", // for backward compatibility
+                null));
     tableMetadataNamespace =
         getString(databaseConfig.getProperties(), TABLE_METADATA_NAMESPACE, null);
     namespacePrefix = getString(databaseConfig.getProperties(), NAMESPACE_PREFIX, null);
