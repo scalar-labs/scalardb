@@ -1,7 +1,5 @@
 package com.scalar.db.service;
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
@@ -9,11 +7,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
 import java.util.Properties;
 
 /** A factory class to instantiate {@link DistributedStorage} and {@link DistributedStorageAdmin} */
 public class StorageFactory {
-  private final Injector injector;
+  private final DatabaseConfig config;
 
   /**
    * @param config a database config
@@ -23,7 +22,7 @@ public class StorageFactory {
    */
   @Deprecated
   public StorageFactory(DatabaseConfig config) {
-    injector = Guice.createInjector(new StorageModule(config));
+    this.config = Objects.requireNonNull(config);
   }
 
   /**
@@ -32,7 +31,7 @@ public class StorageFactory {
    * @return a {@link DistributedStorage} instance
    */
   public DistributedStorage getStorage() {
-    return injector.getInstance(DistributedStorage.class);
+    return FactoryManager.getDistributedStorage(config);
   }
 
   /**
@@ -42,9 +41,10 @@ public class StorageFactory {
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
    *     #getStorageAdmin()} instead
    */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public DistributedStorageAdmin getAdmin() {
-    return injector.getInstance(DistributedStorageAdmin.class);
+    return getStorageAdmin();
   }
 
   /**
@@ -53,7 +53,7 @@ public class StorageFactory {
    * @return a {@link DistributedStorageAdmin} instance
    */
   public DistributedStorageAdmin getStorageAdmin() {
-    return injector.getInstance(DistributedStorageAdmin.class);
+    return FactoryManager.getDistributedStorageAdmin(config);
   }
 
   /**

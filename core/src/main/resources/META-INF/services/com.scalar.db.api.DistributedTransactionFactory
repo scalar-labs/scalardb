@@ -1,0 +1,3 @@
+com.scalar.db.transaction.consensuscommit.ConsensusCommitFactory
+com.scalar.db.transaction.jdbc.JdbcTransactionFactory
+com.scalar.db.transaction.rpc.GrpcTransactionFactory

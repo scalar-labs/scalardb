@@ -1,7 +1,5 @@
 package com.scalar.db.service;
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
@@ -10,14 +8,15 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
 import java.util.Properties;
 
 /**
  * A factory class to instantiate {@link DistributedTransactionManager} and {@link
- * TwoPhaseCommitTransactionManager}
+ * DistributedTransactionAdmin} and {@link TwoPhaseCommitTransactionManager}
  */
 public class TransactionFactory {
-  private final Injector injector;
+  private final DatabaseConfig config;
 
   /**
    * @param config a database config
@@ -27,7 +26,7 @@ public class TransactionFactory {
    */
   @Deprecated
   public TransactionFactory(DatabaseConfig config) {
-    injector = Guice.createInjector(new TransactionModule(config));
+    this.config = Objects.requireNonNull(config);
   }
 
   /**
@@ -36,7 +35,7 @@ public class TransactionFactory {
    * @return a {@link DistributedTransactionManager} instance
    */
   public DistributedTransactionManager getTransactionManager() {
-    return injector.getInstance(DistributedTransactionManager.class);
+    return FactoryManager.getDistributedTransactionManager(config);
   }
 
   /**
@@ -45,7 +44,7 @@ public class TransactionFactory {
    * @return a {@link DistributedTransactionAdmin} instance
    */
   public DistributedTransactionAdmin getTransactionAdmin() {
-    return injector.getInstance(DistributedTransactionAdmin.class);
+    return FactoryManager.getDistributedTransactionAdmin(config);
   }
 
   /**
@@ -54,7 +53,7 @@ public class TransactionFactory {
    * @return a {@link TwoPhaseCommitTransactionManager} instance
    */
   public TwoPhaseCommitTransactionManager getTwoPhaseCommitTransactionManager() {
-    return injector.getInstance(TwoPhaseCommitTransactionManager.class);
+    return FactoryManager.getTwoPhaseCommitTransactionManager(config);
   }
 
   /**

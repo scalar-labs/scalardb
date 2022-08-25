@@ -178,7 +178,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public DynamoAdmin(DynamoDbClient client, DynamoConfig config) {
+  DynamoAdmin(DynamoDbClient client, DynamoConfig config) {
     this.client = client;
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
     metadataNamespace =
