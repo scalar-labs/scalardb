@@ -80,7 +80,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     metadataDatabase = config.getTableMetadataDatabase().orElse(METADATA_DATABASE);
   }
 
-  public CosmosAdmin(CosmosClient client, CosmosConfig config) {
+  CosmosAdmin(CosmosClient client, CosmosConfig config) {
     this.client = client;
     metadataDatabase = config.getTableMetadataDatabase().orElse(METADATA_DATABASE);
   }

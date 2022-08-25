@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
@@ -48,7 +47,6 @@ public class CassandraAdminTest {
 
   private CassandraAdmin cassandraAdmin;
   @Mock private ClusterManager clusterManager;
-  @Mock private DatabaseConfig config;
   @Mock private Session cassandraSession;
   @Mock private Cluster cluster;
   @Mock private Metadata metadata;
@@ -58,7 +56,7 @@ public class CassandraAdminTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
     when(clusterManager.getSession()).thenReturn(cassandraSession);
-    cassandraAdmin = new CassandraAdmin(clusterManager, config);
+    cassandraAdmin = new CassandraAdmin(clusterManager);
   }
 
   @Test
@@ -67,10 +65,8 @@ public class CassandraAdminTest {
     String namespace = "sample_ns";
     String table = "sample_table";
 
-    CassandraAdmin admin = new CassandraAdmin(clusterManager, config);
-
     // Act
-    admin.getTableMetadata(namespace, table);
+    cassandraAdmin.getTableMetadata(namespace, table);
 
     // Assert
     verify(clusterManager).getMetadata(namespace, table);

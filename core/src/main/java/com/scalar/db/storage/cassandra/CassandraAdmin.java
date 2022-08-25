@@ -45,7 +45,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     clusterManager = new ClusterManager(config);
   }
 
-  public CassandraAdmin(ClusterManager clusterManager, DatabaseConfig config) {
+  CassandraAdmin(ClusterManager clusterManager) {
     this.clusterManager = clusterManager;
   }
 
