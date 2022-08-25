@@ -15,7 +15,7 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.jdbc.JdbcAdminTest.GetColumnsResultSetMocker.Row;
+import com.scalar.db.storage.jdbc.JdbcAdminTestBase.GetColumnsResultSetMocker.Row;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -36,24 +36,45 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 
-public class JdbcAdminTest {
+/**
+ * Abstraction that defines unit tests for the {@link JdbcAdmin}. The class purpose is to be able to
+ * run the {@link JdbcAdmin} unit tests with different values for the {@link JdbcConfig}, notably
+ * {@link JdbcConfig#TABLE_METADATA_SCHEMA}.
+ */
+public abstract class JdbcAdminTestBase {
 
   @Mock private BasicDataSource dataSource;
   @Mock private Connection connection;
   @Mock private JdbcConfig config;
 
+  private String tableMetadataSchemaName;
+
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+
+    // Arrange
+    when(config.getTableMetadataSchema()).thenReturn(getTableMetadataSchemaConfig());
+
+    tableMetadataSchemaName = getTableMetadataSchemaConfig().orElse("scalardb");
   }
+
+  /**
+   * This sets the {@link JdbcConfig#TABLE_METADATA_SCHEMA} value that will be used to run the
+   * tests.
+   *
+   * @return {@link JdbcConfig#TABLE_METADATA_SCHEMA} value
+   */
+  abstract Optional<String> getTableMetadataSchemaConfig();
 
   @Test
   public void getTableMetadata_forMysql_ShouldReturnTableMetadata()
       throws SQLException, ExecutionException {
     getTableMetadata_forX_ShouldReturnTableMetadata(
         RdbEngine.MYSQL,
-        Optional.empty(),
-        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `scalardb`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC");
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
+            + tableMetadataSchemaName
+            + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC");
   }
 
   @Test
@@ -61,8 +82,9 @@ public class JdbcAdminTest {
       throws SQLException, ExecutionException {
     getTableMetadata_forX_ShouldReturnTableMetadata(
         RdbEngine.POSTGRESQL,
-        Optional.empty(),
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
   }
 
   @Test
@@ -70,8 +92,9 @@ public class JdbcAdminTest {
       throws SQLException, ExecutionException {
     getTableMetadata_forX_ShouldReturnTableMetadata(
         RdbEngine.SQL_SERVER,
-        Optional.empty(),
-        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM [scalardb].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC");
+        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
+            + tableMetadataSchemaName
+            + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC");
   }
 
   @Test
@@ -79,50 +102,13 @@ public class JdbcAdminTest {
       throws SQLException, ExecutionException {
     getTableMetadata_forX_ShouldReturnTableMetadata(
         RdbEngine.ORACLE,
-        Optional.empty(),
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
-  }
-
-  @Test
-  public void getTableMetadata_forMysqlWithTableMetadataSchemaChanged_ShouldReturnTableMetadata()
-      throws SQLException, ExecutionException {
-    getTableMetadata_forX_ShouldReturnTableMetadata(
-        RdbEngine.MYSQL,
-        Optional.of("changed"),
-        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `changed`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC");
-  }
-
-  @Test
-  public void
-      getTableMetadata_forPostgresqlWithTableMetadataSchemaChanged_ShouldReturnTableMetadata()
-          throws SQLException, ExecutionException {
-    getTableMetadata_forX_ShouldReturnTableMetadata(
-        RdbEngine.POSTGRESQL,
-        Optional.of("changed"),
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"changed\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
-  }
-
-  @Test
-  public void
-      getTableMetadata_forSqlServerWithTableMetadataSchemaChanged_ShouldReturnTableMetadata()
-          throws SQLException, ExecutionException {
-    getTableMetadata_forX_ShouldReturnTableMetadata(
-        RdbEngine.SQL_SERVER,
-        Optional.of("changed"),
-        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM [changed].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC");
-  }
-
-  @Test
-  public void getTableMetadata_forOracleWithTableMetadataSchemaChanged_ShouldReturnTableMetadata()
-      throws SQLException, ExecutionException {
-    getTableMetadata_forX_ShouldReturnTableMetadata(
-        RdbEngine.ORACLE,
-        Optional.of("changed"),
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"changed\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
   }
 
   private void getTableMetadata_forX_ShouldReturnTableMetadata(
-      RdbEngine rdbEngine, Optional<String> tableMetadataSchema, String expectedSelectStatements)
+      RdbEngine rdbEngine, String expectedSelectStatements)
       throws ExecutionException, SQLException {
     // Arrange
     String namespace = "ns";
@@ -149,9 +135,6 @@ public class JdbcAdminTest {
     when(connection.prepareStatement(any())).thenReturn(selectStatement);
     when(dataSource.getConnection()).thenReturn(connection);
 
-    if (tableMetadataSchema.isPresent()) {
-      when(config.getTableMetadataSchema()).thenReturn(tableMetadataSchema);
-    }
     JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
 
     // Act
@@ -248,8 +231,10 @@ public class JdbcAdminTest {
         "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3`,`c1`,`c4`))",
         "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
-        "CREATE SCHEMA IF NOT EXISTS `scalardb`",
-        "CREATE TABLE IF NOT EXISTS `scalardb`.`metadata`("
+        "CREATE SCHEMA IF NOT EXISTS `" + tableMetadataSchemaName + "`",
+        "CREATE TABLE IF NOT EXISTS `"
+            + tableMetadataSchemaName
+            + "`.`metadata`("
             + "`full_table_name` VARCHAR(128),"
             + "`column_name` VARCHAR(128),"
             + "`data_type` VARCHAR(20) NOT NULL,"
@@ -258,13 +243,27 @@ public class JdbcAdminTest {
             + "`indexed` BOOLEAN NOT NULL,"
             + "`ordinal_position` INTEGER NOT NULL,"
             + "PRIMARY KEY (`full_table_name`, `column_name`))",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',true,2)",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',true,2)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
   }
 
   @Test
@@ -275,8 +274,10 @@ public class JdbcAdminTest {
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
-        "CREATE SCHEMA IF NOT EXISTS \"scalardb\"",
-        "CREATE TABLE IF NOT EXISTS \"scalardb\".\"metadata\"("
+        "CREATE SCHEMA IF NOT EXISTS \"" + tableMetadataSchemaName + "\"",
+        "CREATE TABLE IF NOT EXISTS \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\"("
             + "\"full_table_name\" VARCHAR(128),"
             + "\"column_name\" VARCHAR(128),"
             + "\"data_type\" VARCHAR(20) NOT NULL,"
@@ -285,13 +286,27 @@ public class JdbcAdminTest {
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',true,2)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',true,2)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
   }
 
   @Test
@@ -303,8 +318,10 @@ public class JdbcAdminTest {
             + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3],[c1],[c4]))",
         "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])",
-        "CREATE SCHEMA [scalardb]",
-        "CREATE TABLE [scalardb].[metadata]("
+        "CREATE SCHEMA [" + tableMetadataSchemaName + "]",
+        "CREATE TABLE ["
+            + tableMetadataSchemaName
+            + "].[metadata]("
             + "[full_table_name] VARCHAR(128),"
             + "[column_name] VARCHAR(128),"
             + "[data_type] VARCHAR(20) NOT NULL,"
@@ -313,13 +330,27 @@ public class JdbcAdminTest {
             + "[indexed] BIT NOT NULL,"
             + "[ordinal_position] INTEGER NOT NULL,"
             + "PRIMARY KEY ([full_table_name], [column_name]))",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',1,2)",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',1,2)",
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
   }
 
   @Test
@@ -331,16 +362,32 @@ public class JdbcAdminTest {
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
-        "CREATE USER \"scalardb\" IDENTIFIED BY \"oracle\"",
-        "ALTER USER \"scalardb\" quota unlimited on USERS",
-        "CREATE TABLE \"scalardb\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',1,2)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
+        "CREATE USER \"" + tableMetadataSchemaName + "\" IDENTIFIED BY \"oracle\"",
+        "ALTER USER \"" + tableMetadataSchemaName + "\" quota unlimited on USERS",
+        "CREATE TABLE \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',1,2)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
   }
 
   private void createTable_forX_shouldExecuteCreateTableStatement(
@@ -391,12 +438,13 @@ public class JdbcAdminTest {
       throws ExecutionException, SQLException {
     createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
         RdbEngine.MYSQL,
-        Optional.empty(),
         "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
         "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
-        "CREATE SCHEMA IF NOT EXISTS `scalardb`",
-        "CREATE TABLE IF NOT EXISTS `scalardb`.`metadata`("
+        "CREATE SCHEMA IF NOT EXISTS `" + tableMetadataSchemaName + "`",
+        "CREATE TABLE IF NOT EXISTS `"
+            + tableMetadataSchemaName
+            + "`.`metadata`("
             + "`full_table_name` VARCHAR(128),"
             + "`column_name` VARCHAR(128),"
             + "`data_type` VARCHAR(20) NOT NULL,"
@@ -405,13 +453,27 @@ public class JdbcAdminTest {
             + "`indexed` BOOLEAN NOT NULL,"
             + "`ordinal_position` INTEGER NOT NULL,"
             + "PRIMARY KEY (`full_table_name`, `column_name`))",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',true,2)",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',true,2)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
   }
 
   @Test
@@ -419,13 +481,14 @@ public class JdbcAdminTest {
       throws ExecutionException, SQLException {
     createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
         RdbEngine.POSTGRESQL,
-        Optional.empty(),
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
-        "CREATE SCHEMA IF NOT EXISTS \"scalardb\"",
-        "CREATE TABLE IF NOT EXISTS \"scalardb\".\"metadata\"("
+        "CREATE SCHEMA IF NOT EXISTS \"" + tableMetadataSchemaName + "\"",
+        "CREATE TABLE IF NOT EXISTS \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\"("
             + "\"full_table_name\" VARCHAR(128),"
             + "\"column_name\" VARCHAR(128),"
             + "\"data_type\" VARCHAR(20) NOT NULL,"
@@ -434,13 +497,27 @@ public class JdbcAdminTest {
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',true,2)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',true,2)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
   }
 
   @Test
@@ -448,13 +525,14 @@ public class JdbcAdminTest {
       throws ExecutionException, SQLException {
     createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
         RdbEngine.SQL_SERVER,
-        Optional.empty(),
         "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_BIN,"
             + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
         "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])",
-        "CREATE SCHEMA [scalardb]",
-        "CREATE TABLE [scalardb].[metadata]("
+        "CREATE SCHEMA [" + tableMetadataSchemaName + "]",
+        "CREATE TABLE ["
+            + tableMetadataSchemaName
+            + "].[metadata]("
             + "[full_table_name] VARCHAR(128),"
             + "[column_name] VARCHAR(128),"
             + "[data_type] VARCHAR(20) NOT NULL,"
@@ -463,13 +541,27 @@ public class JdbcAdminTest {
             + "[indexed] BIT NOT NULL,"
             + "[ordinal_position] INTEGER NOT NULL,"
             + "PRIMARY KEY ([full_table_name], [column_name]))",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',1,2)",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',1,2)",
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
   }
 
   @Test
@@ -477,138 +569,41 @@ public class JdbcAdminTest {
       throws ExecutionException, SQLException {
     createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
         RdbEngine.ORACLE,
-        Optional.empty(),
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
-        "CREATE USER \"scalardb\" IDENTIFIED BY \"oracle\"",
-        "ALTER USER \"scalardb\" quota unlimited on USERS",
-        "CREATE TABLE \"scalardb\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',1,2)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
-  }
-
-  @Test
-  public void
-      createTable_WithClusteringOrderForMysqlWithTableMetadataSchemaChanged_shouldExecuteCreateTableStatement()
-          throws ExecutionException, SQLException {
-    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
-        RdbEngine.MYSQL,
-        Optional.of("changed"),
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
-        "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
-        "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
-        "CREATE SCHEMA IF NOT EXISTS `changed`",
-        "CREATE TABLE IF NOT EXISTS `changed`.`metadata`("
-            + "`full_table_name` VARCHAR(128),"
-            + "`column_name` VARCHAR(128),"
-            + "`data_type` VARCHAR(20) NOT NULL,"
-            + "`key_type` VARCHAR(20),"
-            + "`clustering_order` VARCHAR(10),"
-            + "`indexed` BOOLEAN NOT NULL,"
-            + "`ordinal_position` INTEGER NOT NULL,"
-            + "PRIMARY KEY (`full_table_name`, `column_name`))",
-        "INSERT INTO `changed`.`metadata` VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
-        "INSERT INTO `changed`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',true,2)",
-        "INSERT INTO `changed`.`metadata` VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
-        "INSERT INTO `changed`.`metadata` VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
-        "INSERT INTO `changed`.`metadata` VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
-        "INSERT INTO `changed`.`metadata` VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
-        "INSERT INTO `changed`.`metadata` VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
-  }
-
-  @Test
-  public void
-      createTable_WithClusteringOrderForPostgresqlWithTableMetadataSchemaChanged_shouldExecuteCreateTableStatement()
-          throws ExecutionException, SQLException {
-    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
-        RdbEngine.POSTGRESQL,
-        Optional.of("changed"),
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
-        "CREATE SCHEMA IF NOT EXISTS \"changed\"",
-        "CREATE TABLE IF NOT EXISTS \"changed\".\"metadata\"("
-            + "\"full_table_name\" VARCHAR(128),"
-            + "\"column_name\" VARCHAR(128),"
-            + "\"data_type\" VARCHAR(20) NOT NULL,"
-            + "\"key_type\" VARCHAR(20),"
-            + "\"clustering_order\" VARCHAR(10),"
-            + "\"indexed\" BOOLEAN NOT NULL,"
-            + "\"ordinal_position\" INTEGER NOT NULL,"
-            + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "INSERT INTO \"changed\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
-        "INSERT INTO \"changed\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',true,2)",
-        "INSERT INTO \"changed\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
-        "INSERT INTO \"changed\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
-        "INSERT INTO \"changed\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
-        "INSERT INTO \"changed\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
-        "INSERT INTO \"changed\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
-  }
-
-  @Test
-  public void
-      createTable_WithClusteringOrderForSqlServerWithTableMetadataSchemaChanged_shouldExecuteCreateTableStatement()
-          throws ExecutionException, SQLException {
-    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
-        RdbEngine.SQL_SERVER,
-        Optional.of("changed"),
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_BIN,[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
-        "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
-        "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])",
-        "CREATE SCHEMA [changed]",
-        "CREATE TABLE [changed].[metadata]("
-            + "[full_table_name] VARCHAR(128),"
-            + "[column_name] VARCHAR(128),"
-            + "[data_type] VARCHAR(20) NOT NULL,"
-            + "[key_type] VARCHAR(20),"
-            + "[clustering_order] VARCHAR(10),"
-            + "[indexed] BIT NOT NULL,"
-            + "[ordinal_position] INTEGER NOT NULL,"
-            + "PRIMARY KEY ([full_table_name], [column_name]))",
-        "INSERT INTO [changed].[metadata] VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
-        "INSERT INTO [changed].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',1,2)",
-        "INSERT INTO [changed].[metadata] VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
-        "INSERT INTO [changed].[metadata] VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
-        "INSERT INTO [changed].[metadata] VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
-        "INSERT INTO [changed].[metadata] VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
-        "INSERT INTO [changed].[metadata] VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
-  }
-
-  @Test
-  public void
-      createTable_WithClusteringOrderForOracleWithTableMetadataSchemaChanged_shouldExecuteCreateTableStatement()
-          throws ExecutionException, SQLException {
-    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
-        RdbEngine.ORACLE,
-        Optional.of("changed"),
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
-        "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
-        "CREATE USER \"changed\" IDENTIFIED BY \"oracle\"",
-        "ALTER USER \"changed\" quota unlimited on USERS",
-        "CREATE TABLE \"changed\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "INSERT INTO \"changed\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
-        "INSERT INTO \"changed\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',1,2)",
-        "INSERT INTO \"changed\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
-        "INSERT INTO \"changed\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
-        "INSERT INTO \"changed\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
-        "INSERT INTO \"changed\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
-        "INSERT INTO \"changed\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
+        "CREATE USER \"" + tableMetadataSchemaName + "\" IDENTIFIED BY \"oracle\"",
+        "ALTER USER \"" + tableMetadataSchemaName + "\" quota unlimited on USERS",
+        "CREATE TABLE \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',1,2)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
   }
 
   private void createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
-      RdbEngine rdbEngine, Optional<String> tableMetadataSchema, String... expectedSqlStatements)
+      RdbEngine rdbEngine, String... expectedSqlStatements)
       throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
@@ -639,9 +634,6 @@ public class JdbcAdminTest {
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
 
-    if (tableMetadataSchema.isPresent()) {
-      when(config.getTableMetadataSchema()).thenReturn(tableMetadataSchema);
-    }
     JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
 
     // Act
@@ -705,12 +697,13 @@ public class JdbcAdminTest {
       throws Exception {
     dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
         RdbEngine.MYSQL,
-        Optional.empty(),
         "DROP TABLE `my_ns`.`foo_table`",
-        "DELETE FROM `scalardb`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
-        "SELECT DISTINCT `full_table_name` FROM `scalardb`.`metadata`",
-        "DROP TABLE `scalardb`.`metadata`",
-        "DROP SCHEMA `scalardb`");
+        "DELETE FROM `"
+            + tableMetadataSchemaName
+            + "`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
+        "SELECT DISTINCT `full_table_name` FROM `" + tableMetadataSchemaName + "`.`metadata`",
+        "DROP TABLE `" + tableMetadataSchemaName + "`.`metadata`",
+        "DROP SCHEMA `" + tableMetadataSchemaName + "`");
   }
 
   @Test
@@ -719,12 +712,13 @@ public class JdbcAdminTest {
           throws Exception {
     dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
         RdbEngine.POSTGRESQL,
-        Optional.empty(),
         "DROP TABLE \"my_ns\".\"foo_table\"",
-        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"scalardb\".\"metadata\"",
-        "DROP TABLE \"scalardb\".\"metadata\"",
-        "DROP SCHEMA \"scalardb\"");
+        "DELETE FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + tableMetadataSchemaName + "\".\"metadata\"",
+        "DROP TABLE \"" + tableMetadataSchemaName + "\".\"metadata\"",
+        "DROP SCHEMA \"" + tableMetadataSchemaName + "\"");
   }
 
   @Test
@@ -733,12 +727,13 @@ public class JdbcAdminTest {
           throws Exception {
     dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
         RdbEngine.SQL_SERVER,
-        Optional.empty(),
         "DROP TABLE [my_ns].[foo_table]",
-        "DELETE FROM [scalardb].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
-        "SELECT DISTINCT [full_table_name] FROM [scalardb].[metadata]",
-        "DROP TABLE [scalardb].[metadata]",
-        "DROP SCHEMA [scalardb]");
+        "DELETE FROM ["
+            + tableMetadataSchemaName
+            + "].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
+        "SELECT DISTINCT [full_table_name] FROM [" + tableMetadataSchemaName + "].[metadata]",
+        "DROP TABLE [" + tableMetadataSchemaName + "].[metadata]",
+        "DROP SCHEMA [" + tableMetadataSchemaName + "]");
   }
 
   @Test
@@ -746,73 +741,17 @@ public class JdbcAdminTest {
       throws Exception {
     dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
         RdbEngine.ORACLE,
-        Optional.empty(),
         "DROP TABLE \"my_ns\".\"foo_table\"",
-        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"scalardb\".\"metadata\"",
-        "DROP TABLE \"scalardb\".\"metadata\"",
-        "DROP USER \"scalardb\"");
-  }
-
-  @Test
-  public void
-      dropTable_forMysqlWithNoMoreMetadataAfterDeletionWithTableMetadataSchemaChanged_shouldDropTableAndDeleteMetadata()
-          throws Exception {
-    dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
-        RdbEngine.MYSQL,
-        Optional.of("changed"),
-        "DROP TABLE `my_ns`.`foo_table`",
-        "DELETE FROM `changed`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
-        "SELECT DISTINCT `full_table_name` FROM `changed`.`metadata`",
-        "DROP TABLE `changed`.`metadata`",
-        "DROP SCHEMA `changed`");
-  }
-
-  @Test
-  public void
-      dropTable_forPostgresqlWithNoMoreMetadataAfterDeletionWithTableMetadataSchemaChanged_shouldDropTableAndDeleteMetadata()
-          throws Exception {
-    dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
-        RdbEngine.POSTGRESQL,
-        Optional.of("changed"),
-        "DROP TABLE \"my_ns\".\"foo_table\"",
-        "DELETE FROM \"changed\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"changed\".\"metadata\"",
-        "DROP TABLE \"changed\".\"metadata\"",
-        "DROP SCHEMA \"changed\"");
-  }
-
-  @Test
-  public void
-      dropTable_forSqlServerWithNoMoreMetadataAfterDeletionWithTableMetadataSchemaChanged_shouldDropTableAndDeleteMetadata()
-          throws Exception {
-    dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
-        RdbEngine.SQL_SERVER,
-        Optional.of("changed"),
-        "DROP TABLE [my_ns].[foo_table]",
-        "DELETE FROM [changed].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
-        "SELECT DISTINCT [full_table_name] FROM [changed].[metadata]",
-        "DROP TABLE [changed].[metadata]",
-        "DROP SCHEMA [changed]");
-  }
-
-  @Test
-  public void
-      dropTable_forOracleWithNoMoreMetadataAfterDeletionWithTableMetadataSchemaChanged_shouldDropTableAndDeleteMetadata()
-          throws Exception {
-    dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
-        RdbEngine.ORACLE,
-        Optional.of("changed"),
-        "DROP TABLE \"my_ns\".\"foo_table\"",
-        "DELETE FROM \"changed\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"changed\".\"metadata\"",
-        "DROP TABLE \"changed\".\"metadata\"",
-        "DROP USER \"changed\"");
+        "DELETE FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + tableMetadataSchemaName + "\".\"metadata\"",
+        "DROP TABLE \"" + tableMetadataSchemaName + "\".\"metadata\"",
+        "DROP USER \"" + tableMetadataSchemaName + "\"");
   }
 
   private void dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
-      RdbEngine rdbEngine, Optional<String> tableMetadataSchema, String... expectedSqlStatements)
-      throws Exception {
+      RdbEngine rdbEngine, String... expectedSqlStatements) throws Exception {
     // Arrange
     String namespace = "my_ns";
     String table = "foo_table";
@@ -835,9 +774,6 @@ public class JdbcAdminTest {
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
 
-    if (tableMetadataSchema.isPresent()) {
-      when(config.getTableMetadataSchema()).thenReturn(tableMetadataSchema);
-    }
     JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
 
     // Act
@@ -859,10 +795,11 @@ public class JdbcAdminTest {
           throws Exception {
     dropTable_forXWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable(
         RdbEngine.MYSQL,
-        Optional.empty(),
         "DROP TABLE `my_ns`.`foo_table`",
-        "DELETE FROM `scalardb`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
-        "SELECT DISTINCT `full_table_name` FROM `scalardb`.`metadata`");
+        "DELETE FROM `"
+            + tableMetadataSchemaName
+            + "`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
+        "SELECT DISTINCT `full_table_name` FROM `" + tableMetadataSchemaName + "`.`metadata`");
   }
 
   @Test
@@ -871,10 +808,13 @@ public class JdbcAdminTest {
           throws Exception {
     dropTable_forXWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable(
         RdbEngine.POSTGRESQL,
-        Optional.empty(),
         "DROP TABLE \"my_ns\".\"foo_table\"",
-        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"scalardb\".\"metadata\"");
+        "DELETE FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\"");
   }
 
   @Test
@@ -883,10 +823,11 @@ public class JdbcAdminTest {
           throws Exception {
     dropTable_forXWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable(
         RdbEngine.SQL_SERVER,
-        Optional.empty(),
         "DROP TABLE [my_ns].[foo_table]",
-        "DELETE FROM [scalardb].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
-        "SELECT DISTINCT [full_table_name] FROM [scalardb].[metadata]");
+        "DELETE FROM ["
+            + tableMetadataSchemaName
+            + "].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
+        "SELECT DISTINCT [full_table_name] FROM [" + tableMetadataSchemaName + "].[metadata]");
   }
 
   @Test
@@ -895,66 +836,18 @@ public class JdbcAdminTest {
           throws Exception {
     dropTable_forXWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable(
         RdbEngine.ORACLE,
-        Optional.empty(),
         "DROP TABLE \"my_ns\".\"foo_table\"",
-        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"scalardb\".\"metadata\"");
-  }
-
-  @Test
-  public void
-      dropTable_forMysqlWithOtherMetadataAfterDeletionWithTableMetadataSchemaChanged_ShouldDropTableAndDeleteMetadataButNotMetadataTable()
-          throws Exception {
-    dropTable_forXWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable(
-        RdbEngine.MYSQL,
-        Optional.of("changed"),
-        "DROP TABLE `my_ns`.`foo_table`",
-        "DELETE FROM `changed`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
-        "SELECT DISTINCT `full_table_name` FROM `changed`.`metadata`");
-  }
-
-  @Test
-  public void
-      dropTable_forPostgresqlWithOtherMetadataAfterDeletionWithTableMetadataSchemaChanged_ShouldDropTableAndDeleteMetadataButNotMetadataTable()
-          throws Exception {
-    dropTable_forXWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable(
-        RdbEngine.POSTGRESQL,
-        Optional.of("changed"),
-        "DROP TABLE \"my_ns\".\"foo_table\"",
-        "DELETE FROM \"changed\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"changed\".\"metadata\"");
-  }
-
-  @Test
-  public void
-      dropTable_forSqlServerWithOtherMetadataAfterDeletionWithTableMetadataSchemaChanged_ShouldDropTableAndDeleteMetadataButNotMetadataTable()
-          throws Exception {
-    dropTable_forXWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable(
-        RdbEngine.SQL_SERVER,
-        Optional.of("changed"),
-        "DROP TABLE [my_ns].[foo_table]",
-        "DELETE FROM [changed].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
-        "SELECT DISTINCT [full_table_name] FROM [changed].[metadata]");
-  }
-
-  @Test
-  public void
-      dropTable_forOracleWithOtherMetadataAfterDeletionWithTableMetadataSchemaChanged_ShouldDropTableAndDeleteMetadataButNotMetadataTable()
-          throws Exception {
-    dropTable_forXWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable(
-        RdbEngine.ORACLE,
-        Optional.of("changed"),
-        "DROP TABLE \"my_ns\".\"foo_table\"",
-        "DELETE FROM \"changed\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"changed\".\"metadata\"");
+        "DELETE FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\"");
   }
 
   private void
       dropTable_forXWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable(
-          RdbEngine rdbEngine,
-          Optional<String> tableMetadataSchema,
-          String... expectedSqlStatements)
-          throws Exception {
+          RdbEngine rdbEngine, String... expectedSqlStatements) throws Exception {
     // Arrange
     String namespace = "my_ns";
     String table = "foo_table";
@@ -977,9 +870,6 @@ public class JdbcAdminTest {
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
 
-    if (tableMetadataSchema.isPresent()) {
-      when(config.getTableMetadataSchema()).thenReturn(tableMetadataSchema);
-    }
     JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
 
     // Act
@@ -1038,74 +928,40 @@ public class JdbcAdminTest {
   public void getNamespaceTables_forMysql_ShouldReturnTableNames() throws Exception {
     getNamespaceTables_forX_ShouldReturnTableNames(
         RdbEngine.MYSQL,
-        Optional.empty(),
-        "SELECT DISTINCT `full_table_name` FROM `scalardb`.`metadata` WHERE `full_table_name` LIKE ?");
+        "SELECT DISTINCT `full_table_name` FROM `"
+            + tableMetadataSchemaName
+            + "`.`metadata` WHERE `full_table_name` LIKE ?");
   }
 
   @Test
   public void getNamespaceTables_forPostgresql_ShouldReturnTableNames() throws Exception {
     getNamespaceTables_forX_ShouldReturnTableNames(
         RdbEngine.POSTGRESQL,
-        Optional.empty(),
-        "SELECT DISTINCT \"full_table_name\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" LIKE ?");
+        "SELECT DISTINCT \"full_table_name\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\" LIKE ?");
   }
 
   @Test
   public void getNamespaceTables_forSqlServer_ShouldReturnTableNames() throws Exception {
     getNamespaceTables_forX_ShouldReturnTableNames(
         RdbEngine.SQL_SERVER,
-        Optional.empty(),
-        "SELECT DISTINCT [full_table_name] FROM [scalardb].[metadata] WHERE [full_table_name] LIKE ?");
+        "SELECT DISTINCT [full_table_name] FROM ["
+            + tableMetadataSchemaName
+            + "].[metadata] WHERE [full_table_name] LIKE ?");
   }
 
   @Test
   public void getNamespaceTables_forOracle_ShouldReturnTableNames() throws Exception {
     getNamespaceTables_forX_ShouldReturnTableNames(
         RdbEngine.ORACLE,
-        Optional.empty(),
-        "SELECT DISTINCT \"full_table_name\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" LIKE ?");
-  }
-
-  @Test
-  public void getNamespaceTables_forMysqlWithTableMetadataSchemaChanged_ShouldReturnTableNames()
-      throws Exception {
-    getNamespaceTables_forX_ShouldReturnTableNames(
-        RdbEngine.MYSQL,
-        Optional.of("changed"),
-        "SELECT DISTINCT `full_table_name` FROM `changed`.`metadata` WHERE `full_table_name` LIKE ?");
-  }
-
-  @Test
-  public void
-      getNamespaceTables_forPostgresqlWithTableMetadataSchemaChanged_ShouldReturnTableNames()
-          throws Exception {
-    getNamespaceTables_forX_ShouldReturnTableNames(
-        RdbEngine.POSTGRESQL,
-        Optional.of("changed"),
-        "SELECT DISTINCT \"full_table_name\" FROM \"changed\".\"metadata\" WHERE \"full_table_name\" LIKE ?");
-  }
-
-  @Test
-  public void getNamespaceTables_forSqlServerWithTableMetadataSchemaChanged_ShouldReturnTableNames()
-      throws Exception {
-    getNamespaceTables_forX_ShouldReturnTableNames(
-        RdbEngine.SQL_SERVER,
-        Optional.of("changed"),
-        "SELECT DISTINCT [full_table_name] FROM [changed].[metadata] WHERE [full_table_name] LIKE ?");
-  }
-
-  @Test
-  public void getNamespaceTables_forOracleWithTableMetadataSchemaChanged_ShouldReturnTableNames()
-      throws Exception {
-    getNamespaceTables_forX_ShouldReturnTableNames(
-        RdbEngine.ORACLE,
-        Optional.of("changed"),
-        "SELECT DISTINCT \"full_table_name\" FROM \"changed\".\"metadata\" WHERE \"full_table_name\" LIKE ?");
+        "SELECT DISTINCT \"full_table_name\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\" LIKE ?");
   }
 
   private void getNamespaceTables_forX_ShouldReturnTableNames(
-      RdbEngine rdbEngine, Optional<String> tableMetadataSchema, String expectedSelectStatement)
-      throws Exception {
+      RdbEngine rdbEngine, String expectedSelectStatement) throws Exception {
     // Arrange
     String namespace = "ns1";
     String table1 = "t1";
@@ -1126,9 +982,6 @@ public class JdbcAdminTest {
     when(connection.prepareStatement(any())).thenReturn(preparedStatement);
     when(dataSource.getConnection()).thenReturn(connection);
 
-    if (tableMetadataSchema.isPresent()) {
-      when(config.getTableMetadataSchema()).thenReturn(tableMetadataSchema);
-    }
     JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
 
     // Act
@@ -1196,9 +1049,13 @@ public class JdbcAdminTest {
       throws Exception {
     createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
         RdbEngine.MYSQL,
-        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `scalardb`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
+            + tableMetadataSchemaName
+            + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "CREATE INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl` (`my_column`)",
-        "UPDATE `scalardb`.`metadata` SET `indexed`=true WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
+        "UPDATE `"
+            + tableMetadataSchemaName
+            + "`.`metadata` SET `indexed`=true WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
   }
 
   @Test
@@ -1207,9 +1064,13 @@ public class JdbcAdminTest {
           throws Exception {
     createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
         RdbEngine.POSTGRESQL,
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
-        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=true WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+        "UPDATE \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" SET \"indexed\"=true WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
   @Test
@@ -1218,9 +1079,13 @@ public class JdbcAdminTest {
           throws Exception {
     createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
         RdbEngine.SQL_SERVER,
-        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM [scalardb].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
+        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
+            + tableMetadataSchemaName
+            + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
         "CREATE INDEX [index_my_ns_my_tbl_my_column] ON [my_ns].[my_tbl] ([my_column])",
-        "UPDATE [scalardb].[metadata] SET [indexed]=1 WHERE [full_table_name]='my_ns.my_tbl' AND [column_name]='my_column'");
+        "UPDATE ["
+            + tableMetadataSchemaName
+            + "].[metadata] SET [indexed]=1 WHERE [full_table_name]='my_ns.my_tbl' AND [column_name]='my_column'");
   }
 
   @Test
@@ -1229,9 +1094,13 @@ public class JdbcAdminTest {
           throws Exception {
     createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
         RdbEngine.ORACLE,
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
-        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=1 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+        "UPDATE \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" SET \"indexed\"=1 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
   private void createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
@@ -1281,10 +1150,14 @@ public class JdbcAdminTest {
           throws Exception {
     createIndex_forColumnTypeWithRequiredAlterationForX_ShouldAlterColumnAndCreateIndexProperly(
         RdbEngine.MYSQL,
-        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `scalardb`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
+            + tableMetadataSchemaName
+            + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "ALTER TABLE `my_ns`.`my_tbl` MODIFY`my_column` VARCHAR(64)",
         "CREATE INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl` (`my_column`)",
-        "UPDATE `scalardb`.`metadata` SET `indexed`=true WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
+        "UPDATE `"
+            + tableMetadataSchemaName
+            + "`.`metadata` SET `indexed`=true WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
   }
 
   @Test
@@ -1293,10 +1166,14 @@ public class JdbcAdminTest {
           throws Exception {
     createIndex_forColumnTypeWithRequiredAlterationForX_ShouldAlterColumnAndCreateIndexProperly(
         RdbEngine.POSTGRESQL,
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN\"my_column\" TYPE VARCHAR(10485760)",
         "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
-        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=true WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+        "UPDATE \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" SET \"indexed\"=true WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
   @Test
@@ -1305,10 +1182,14 @@ public class JdbcAdminTest {
           throws Exception {
     createIndex_forColumnTypeWithRequiredAlterationForX_ShouldAlterColumnAndCreateIndexProperly(
         RdbEngine.ORACLE,
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "ALTER TABLE \"my_ns\".\"my_tbl\" MODIFY ( \"my_column\" VARCHAR2(64) )",
         "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
-        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=1 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+        "UPDATE \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" SET \"indexed\"=1 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
   private void
@@ -1361,9 +1242,13 @@ public class JdbcAdminTest {
       throws Exception {
     dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
         RdbEngine.MYSQL,
-        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `scalardb`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
+            + tableMetadataSchemaName
+            + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "DROP INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl`",
-        "UPDATE `scalardb`.`metadata` SET `indexed`=false WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
+        "UPDATE `"
+            + tableMetadataSchemaName
+            + "`.`metadata` SET `indexed`=false WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
   }
 
   @Test
@@ -1372,9 +1257,13 @@ public class JdbcAdminTest {
           throws Exception {
     dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
         RdbEngine.POSTGRESQL,
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
-        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+        "UPDATE \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
   @Test
@@ -1382,9 +1271,13 @@ public class JdbcAdminTest {
       throws Exception {
     dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
         RdbEngine.SQL_SERVER,
-        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM [scalardb].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
+        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
+            + tableMetadataSchemaName
+            + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
         "DROP INDEX [index_my_ns_my_tbl_my_column] ON [my_ns].[my_tbl]",
-        "UPDATE [scalardb].[metadata] SET [indexed]=0 WHERE [full_table_name]='my_ns.my_tbl' AND [column_name]='my_column'");
+        "UPDATE ["
+            + tableMetadataSchemaName
+            + "].[metadata] SET [indexed]=0 WHERE [full_table_name]='my_ns.my_tbl' AND [column_name]='my_column'");
   }
 
   @Test
@@ -1392,9 +1285,13 @@ public class JdbcAdminTest {
       throws Exception {
     dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
         RdbEngine.ORACLE,
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "DROP INDEX \"index_my_ns_my_tbl_my_column\"",
-        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=0 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+        "UPDATE \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" SET \"indexed\"=0 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
   private void dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
@@ -1443,10 +1340,14 @@ public class JdbcAdminTest {
       throws Exception {
     dropIndex_forColumnTypeWithRequiredAlterationForX_ShouldDropIndexProperly(
         RdbEngine.MYSQL,
-        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `scalardb`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
+            + tableMetadataSchemaName
+            + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "DROP INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl`",
         "ALTER TABLE `my_ns`.`my_tbl` MODIFY`my_column` LONGTEXT",
-        "UPDATE `scalardb`.`metadata` SET `indexed`=false WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
+        "UPDATE `"
+            + tableMetadataSchemaName
+            + "`.`metadata` SET `indexed`=false WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
   }
 
   @Test
@@ -1454,10 +1355,14 @@ public class JdbcAdminTest {
       throws Exception {
     dropIndex_forColumnTypeWithRequiredAlterationForX_ShouldDropIndexProperly(
         RdbEngine.POSTGRESQL,
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
         "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN\"my_column\" TYPE TEXT",
-        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+        "UPDATE \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
   @Test
@@ -1465,10 +1370,14 @@ public class JdbcAdminTest {
       throws Exception {
     dropIndex_forColumnTypeWithRequiredAlterationForX_ShouldDropIndexProperly(
         RdbEngine.ORACLE,
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "DROP INDEX \"index_my_ns_my_tbl_my_column\"",
         "ALTER TABLE \"my_ns\".\"my_tbl\" MODIFY ( \"my_column\" VARCHAR2(4000) )",
-        "UPDATE \"scalardb\".\"metadata\" SET \"indexed\"=0 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+        "UPDATE \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" SET \"indexed\"=0 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
   private void dropIndex_forColumnTypeWithRequiredAlterationForX_ShouldDropIndexProperly(
@@ -1521,10 +1430,14 @@ public class JdbcAdminTest {
     repairTable_WithMissingMetadataTableForX_shouldCreateMetadataTableAndAddMetadataForTable(
         RdbEngine.MYSQL,
         "SELECT 1 FROM `my_ns`.`foo_table` LIMIT 1",
-        "SELECT 1 FROM `scalardb`.`metadata` LIMIT 1",
-        "CREATE SCHEMA IF NOT EXISTS `scalardb`",
-        "CREATE TABLE IF NOT EXISTS `scalardb`.`metadata`(`full_table_name` VARCHAR(128),`column_name` VARCHAR(128),`data_type` VARCHAR(20) NOT NULL,`key_type` VARCHAR(20),`clustering_order` VARCHAR(10),`indexed` BOOLEAN NOT NULL,`ordinal_position` INTEGER NOT NULL,PRIMARY KEY (`full_table_name`, `column_name`))",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
+        "SELECT 1 FROM `" + tableMetadataSchemaName + "`.`metadata` LIMIT 1",
+        "CREATE SCHEMA IF NOT EXISTS `" + tableMetadataSchemaName + "`",
+        "CREATE TABLE IF NOT EXISTS `"
+            + tableMetadataSchemaName
+            + "`.`metadata`(`full_table_name` VARCHAR(128),`column_name` VARCHAR(128),`data_type` VARCHAR(20) NOT NULL,`key_type` VARCHAR(20),`clustering_order` VARCHAR(10),`indexed` BOOLEAN NOT NULL,`ordinal_position` INTEGER NOT NULL,PRIMARY KEY (`full_table_name`, `column_name`))",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
   }
 
   @Test
@@ -1534,11 +1447,15 @@ public class JdbcAdminTest {
     repairTable_WithMissingMetadataTableForX_shouldCreateMetadataTableAndAddMetadataForTable(
         RdbEngine.ORACLE,
         "SELECT 1 FROM \"my_ns\".\"foo_table\" FETCH FIRST 1 ROWS ONLY",
-        "SELECT 1 FROM \"scalardb\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
-        "CREATE USER \"scalardb\" IDENTIFIED BY \"oracle\"",
-        "ALTER USER \"scalardb\" quota unlimited on USERS",
-        "CREATE TABLE \"scalardb\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
+        "SELECT 1 FROM \"" + tableMetadataSchemaName + "\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
+        "CREATE USER \"" + tableMetadataSchemaName + "\" IDENTIFIED BY \"oracle\"",
+        "ALTER USER \"" + tableMetadataSchemaName + "\" quota unlimited on USERS",
+        "CREATE TABLE \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
   }
 
   @Test
@@ -1548,10 +1465,14 @@ public class JdbcAdminTest {
     repairTable_WithMissingMetadataTableForX_shouldCreateMetadataTableAndAddMetadataForTable(
         RdbEngine.POSTGRESQL,
         "SELECT 1 FROM \"my_ns\".\"foo_table\" LIMIT 1",
-        "SELECT 1 FROM \"scalardb\".\"metadata\" LIMIT 1",
-        "CREATE SCHEMA IF NOT EXISTS \"scalardb\"",
-        "CREATE TABLE IF NOT EXISTS \"scalardb\".\"metadata\"(\"full_table_name\" VARCHAR(128),\"column_name\" VARCHAR(128),\"data_type\" VARCHAR(20) NOT NULL,\"key_type\" VARCHAR(20),\"clustering_order\" VARCHAR(10),\"indexed\" BOOLEAN NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
+        "SELECT 1 FROM \"" + tableMetadataSchemaName + "\".\"metadata\" LIMIT 1",
+        "CREATE SCHEMA IF NOT EXISTS \"" + tableMetadataSchemaName + "\"",
+        "CREATE TABLE IF NOT EXISTS \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\"(\"full_table_name\" VARCHAR(128),\"column_name\" VARCHAR(128),\"data_type\" VARCHAR(20) NOT NULL,\"key_type\" VARCHAR(20),\"clustering_order\" VARCHAR(10),\"indexed\" BOOLEAN NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
   }
 
   @Test
@@ -1561,10 +1482,14 @@ public class JdbcAdminTest {
     repairTable_WithMissingMetadataTableForX_shouldCreateMetadataTableAndAddMetadataForTable(
         RdbEngine.SQL_SERVER,
         "SELECT TOP 1 1 FROM [my_ns].[foo_table]",
-        "SELECT TOP 1 1 FROM [scalardb].[metadata]",
-        "CREATE SCHEMA [scalardb]",
-        "CREATE TABLE [scalardb].[metadata]([full_table_name] VARCHAR(128),[column_name] VARCHAR(128),[data_type] VARCHAR(20) NOT NULL,[key_type] VARCHAR(20),[clustering_order] VARCHAR(10),[indexed] BIT NOT NULL,[ordinal_position] INTEGER NOT NULL,PRIMARY KEY ([full_table_name], [column_name]))",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
+        "SELECT TOP 1 1 FROM [" + tableMetadataSchemaName + "].[metadata]",
+        "CREATE SCHEMA [" + tableMetadataSchemaName + "]",
+        "CREATE TABLE ["
+            + tableMetadataSchemaName
+            + "].[metadata]([full_table_name] VARCHAR(128),[column_name] VARCHAR(128),[data_type] VARCHAR(20) NOT NULL,[key_type] VARCHAR(20),[clustering_order] VARCHAR(10),[indexed] BIT NOT NULL,[ordinal_position] INTEGER NOT NULL,PRIMARY KEY ([full_table_name], [column_name]))",
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
   }
 
   private void
@@ -1618,9 +1543,13 @@ public class JdbcAdminTest {
     repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
         RdbEngine.MYSQL,
         "SELECT 1 FROM `my_ns`.`foo_table` LIMIT 1",
-        "SELECT 1 FROM `scalardb`.`metadata` LIMIT 1",
-        "DELETE FROM `scalardb`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
+        "SELECT 1 FROM `" + tableMetadataSchemaName + "`.`metadata` LIMIT 1",
+        "DELETE FROM `"
+            + tableMetadataSchemaName
+            + "`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
   }
 
   @Test
@@ -1629,9 +1558,13 @@ public class JdbcAdminTest {
     repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
         RdbEngine.ORACLE,
         "SELECT 1 FROM \"my_ns\".\"foo_table\" FETCH FIRST 1 ROWS ONLY",
-        "SELECT 1 FROM \"scalardb\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
-        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
+        "SELECT 1 FROM \"" + tableMetadataSchemaName + "\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
+        "DELETE FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
   }
 
   @Test
@@ -1640,9 +1573,13 @@ public class JdbcAdminTest {
     repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
         RdbEngine.POSTGRESQL,
         "SELECT 1 FROM \"my_ns\".\"foo_table\" LIMIT 1",
-        "SELECT 1 FROM \"scalardb\".\"metadata\" LIMIT 1",
-        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
+        "SELECT 1 FROM \"" + tableMetadataSchemaName + "\".\"metadata\" LIMIT 1",
+        "DELETE FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
   }
 
   @Test
@@ -1651,9 +1588,13 @@ public class JdbcAdminTest {
     repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
         RdbEngine.SQL_SERVER,
         "SELECT TOP 1 1 FROM [my_ns].[foo_table]",
-        "SELECT TOP 1 1 FROM [scalardb].[metadata]",
-        "DELETE FROM [scalardb].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
+        "SELECT TOP 1 1 FROM [" + tableMetadataSchemaName + "].[metadata]",
+        "DELETE FROM ["
+            + tableMetadataSchemaName
+            + "].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
   }
 
   private void repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
@@ -1757,7 +1698,9 @@ public class JdbcAdminTest {
           throws SQLException {
     addNewColumnToTable_WithAlreadyExistingColumnForX_ShouldThrowIllegalArgumentException(
         RdbEngine.MYSQL,
-        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `scalardb`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC");
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
+            + tableMetadataSchemaName
+            + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC");
   }
 
   @Test
@@ -1766,7 +1709,9 @@ public class JdbcAdminTest {
           throws SQLException {
     addNewColumnToTable_WithAlreadyExistingColumnForX_ShouldThrowIllegalArgumentException(
         RdbEngine.ORACLE,
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
   }
 
   @Test
@@ -1775,7 +1720,9 @@ public class JdbcAdminTest {
           throws SQLException {
     addNewColumnToTable_WithAlreadyExistingColumnForX_ShouldThrowIllegalArgumentException(
         RdbEngine.POSTGRESQL,
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
   }
 
   @Test
@@ -1784,7 +1731,9 @@ public class JdbcAdminTest {
           throws SQLException {
     addNewColumnToTable_WithAlreadyExistingColumnForX_ShouldThrowIllegalArgumentException(
         RdbEngine.SQL_SERVER,
-        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM [scalardb].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC");
+        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
+            + tableMetadataSchemaName
+            + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC");
   }
 
   private void
@@ -1821,11 +1770,19 @@ public class JdbcAdminTest {
       throws SQLException, ExecutionException {
     addNewColumnToTable_ForX_ShouldWorkProperly(
         RdbEngine.MYSQL,
-        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `scalardb`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
+            + tableMetadataSchemaName
+            + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "ALTER TABLE `ns`.`table` ADD `c2` INT",
-        "DELETE FROM `scalardb`.`metadata` WHERE `full_table_name` = 'ns.table'",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('ns.table','c2','INT',NULL,NULL,false,2)");
+        "DELETE FROM `"
+            + tableMetadataSchemaName
+            + "`.`metadata` WHERE `full_table_name` = 'ns.table'",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('ns.table','c2','INT',NULL,NULL,false,2)");
   }
 
   @Test
@@ -1833,11 +1790,19 @@ public class JdbcAdminTest {
       throws SQLException, ExecutionException {
     addNewColumnToTable_ForX_ShouldWorkProperly(
         RdbEngine.ORACLE,
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "ALTER TABLE \"ns\".\"table\" ADD \"c2\" INT",
-        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('ns.table','c2','INT',NULL,NULL,0,2)");
+        "DELETE FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('ns.table','c2','INT',NULL,NULL,0,2)");
   }
 
   @Test
@@ -1845,11 +1810,19 @@ public class JdbcAdminTest {
       throws SQLException, ExecutionException {
     addNewColumnToTable_ForX_ShouldWorkProperly(
         RdbEngine.POSTGRESQL,
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "ALTER TABLE \"ns\".\"table\" ADD \"c2\" INT",
-        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('ns.table','c2','INT',NULL,NULL,false,2)");
+        "DELETE FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('ns.table','c2','INT',NULL,NULL,false,2)");
   }
 
   @Test
@@ -1857,11 +1830,19 @@ public class JdbcAdminTest {
       throws SQLException, ExecutionException {
     addNewColumnToTable_ForX_ShouldWorkProperly(
         RdbEngine.SQL_SERVER,
-        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM [scalardb].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
+        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
+            + tableMetadataSchemaName
+            + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
         "ALTER TABLE [ns].[table] ADD [c2] INT",
-        "DELETE FROM [scalardb].[metadata] WHERE [full_table_name] = 'ns.table'",
-        "INSERT INTO [scalardb].[metadata] VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)",
-        "INSERT INTO [scalardb].[metadata] VALUES ('ns.table','c2','INT',NULL,NULL,0,2)");
+        "DELETE FROM ["
+            + tableMetadataSchemaName
+            + "].[metadata] WHERE [full_table_name] = 'ns.table'",
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)",
+        "INSERT INTO ["
+            + tableMetadataSchemaName
+            + "].[metadata] VALUES ('ns.table','c2','INT',NULL,NULL,0,2)");
   }
 
   private void addNewColumnToTable_ForX_ShouldWorkProperly(
