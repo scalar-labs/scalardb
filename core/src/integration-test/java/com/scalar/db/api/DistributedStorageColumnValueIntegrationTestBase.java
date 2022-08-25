@@ -32,7 +32,7 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedStorageColumnValueIntegrationTestBase {
 
-  private static final String TEST_NAME = "col_val";
+  protected static final String TEST_NAME = "col_val";
   private static final String NAMESPACE = "integration_testing_" + TEST_NAME;
   private static final String TABLE = "test_table";
   private static final String PARTITION_KEY = "pkey";

@@ -25,7 +25,7 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
 
-  private static final String TEST_NAME = "secondary_idx";
+  protected static final String TEST_NAME = "secondary_idx";
   private static final String NAMESPACE = "integration_testing_" + TEST_NAME;
   private static final String PARTITION_KEY = "pkey";
   private static final String INDEX_COL_NAME = "idx_col";

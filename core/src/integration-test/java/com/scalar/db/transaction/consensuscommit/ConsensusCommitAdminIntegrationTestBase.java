@@ -16,16 +16,15 @@ import org.junit.jupiter.api.Test;
 
 public abstract class ConsensusCommitAdminIntegrationTestBase
     extends DistributedTransactionAdminIntegrationTestBase {
-  protected DistributedTransactionAdmin adminWithIncludeMetadataEnabled;
+  private DistributedTransactionAdmin adminWithIncludeMetadataEnabled;
 
   @BeforeAll
   @Override
   public void beforeAll() throws Exception {
     super.beforeAll();
 
-    Properties includeMetadataEnabledProperties = TestUtils.addSuffix(getProperties(), TEST_NAME);
-    includeMetadataEnabledProperties.setProperty(
-        ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
+    Properties includeMetadataEnabledProperties =
+        TestUtils.addSuffix(getPropsWithIncludeMetadataEnabled(), TEST_NAME);
     adminWithIncludeMetadataEnabled =
         TransactionFactory.create(includeMetadataEnabledProperties).getTransactionAdmin();
   }
@@ -42,11 +41,20 @@ public abstract class ConsensusCommitAdminIntegrationTestBase
   protected final Properties getProperties() {
     Properties properties = new Properties();
     properties.putAll(getProps());
-    properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "consensus-commit");
+    String transactionManager = properties.getProperty(DatabaseConfig.TRANSACTION_MANAGER, "");
+    if (!transactionManager.equals("grpc")) {
+      properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "consensus-commit");
+    }
     return properties;
   }
 
   protected abstract Properties getProps();
+
+  protected Properties getPropsWithIncludeMetadataEnabled() {
+    Properties properties = getProperties();
+    properties.setProperty(ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
+    return properties;
+  }
 
   @Test
   public void

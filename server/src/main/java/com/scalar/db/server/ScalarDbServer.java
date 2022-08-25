@@ -16,6 +16,7 @@ import io.grpc.protobuf.services.ProtoReflectionService;
 import java.io.File;
 import java.io.IOException;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
@@ -46,8 +47,8 @@ public class ScalarDbServer implements Callable<Integer> {
 
   public ScalarDbServer() {}
 
-  public ScalarDbServer(ServerConfig config) {
-    this.config = Objects.requireNonNull(config);
+  public ScalarDbServer(Properties properties) {
+    this.config = new ServerConfig(Objects.requireNonNull(properties));
   }
 
   @Override
