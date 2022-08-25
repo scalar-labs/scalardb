@@ -16,6 +16,7 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.common.AbstractTwoPhaseCommitTransactionManager;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.util.ActiveExpiringMap;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.concurrent.ThreadSafe;
@@ -39,9 +40,10 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   private final ParallelExecutor parallelExecutor;
   private final RecoveryHandler recovery;
   private final CommitHandler commit;
-
   private final ActiveExpiringMap<String, TwoPhaseConsensusCommit> activeTransactions;
+  private final boolean isIncludeMetadataEnabled;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
   public TwoPhaseConsensusCommitManager(
       DistributedStorage storage, DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
@@ -55,7 +57,6 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     parallelExecutor = new ParallelExecutor(config);
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
-
     activeTransactions =
         new ActiveExpiringMap<>(
             TRANSACTION_LIFETIME_MILLIS,
@@ -68,6 +69,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
                 logger.warn("rollback failed", e);
               }
             });
+    isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
   }
 
   public TwoPhaseConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -96,8 +98,10 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
                 logger.warn("rollback failed", e);
               }
             });
+    isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   @VisibleForTesting
   TwoPhaseConsensusCommitManager(
       DistributedStorage storage,
@@ -119,28 +123,39 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     this.recovery = recovery;
     this.commit = commit;
     activeTransactions = new ActiveExpiringMap<>(Long.MAX_VALUE, Long.MAX_VALUE, t -> {});
+    isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
   }
 
   @Override
-  public TwoPhaseConsensusCommit start() {
+  public TwoPhaseConsensusCommit begin() {
     String txId = UUID.randomUUID().toString();
-    return start(txId, config.getIsolation(), config.getSerializableStrategy());
+    return begin(txId, config.getIsolation(), config.getSerializableStrategy());
   }
 
   @Override
-  public TwoPhaseConsensusCommit start(String txId) {
+  public TwoPhaseConsensusCommit begin(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
-    return start(txId, config.getIsolation(), config.getSerializableStrategy());
+    return begin(txId, config.getIsolation(), config.getSerializableStrategy());
+  }
+
+  @Override
+  public TwoPhaseConsensusCommit start() throws TransactionException {
+    return (TwoPhaseConsensusCommit) super.start();
+  }
+
+  @Override
+  public TwoPhaseConsensusCommit start(String txId) throws TransactionException {
+    return (TwoPhaseConsensusCommit) super.start(txId);
   }
 
   @VisibleForTesting
-  TwoPhaseConsensusCommit start(Isolation isolation, SerializableStrategy strategy) {
+  TwoPhaseConsensusCommit begin(Isolation isolation, SerializableStrategy strategy) {
     String txId = UUID.randomUUID().toString();
-    return start(txId, isolation, strategy);
+    return begin(txId, isolation, strategy);
   }
 
   @VisibleForTesting
-  TwoPhaseConsensusCommit start(String txId, Isolation isolation, SerializableStrategy strategy) {
+  TwoPhaseConsensusCommit begin(String txId, Isolation isolation, SerializableStrategy strategy) {
     return createNewTransaction(txId, true, isolation, strategy);
   }
 
@@ -159,7 +174,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
       String txId, boolean isCoordinator, Isolation isolation, SerializableStrategy strategy) {
     Snapshot snapshot =
         new Snapshot(txId, isolation, strategy, tableMetadataManager, parallelExecutor);
-    CrudHandler crud = new CrudHandler(storage, snapshot, tableMetadataManager);
+    CrudHandler crud =
+        new CrudHandler(storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled);
 
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator);
@@ -205,7 +221,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   }
 
   @Override
-  public TransactionState abort(String txId) {
+  public TransactionState rollback(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     try {
       return commit.abort(txId);

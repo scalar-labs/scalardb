@@ -26,7 +26,7 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedStorageAdminIntegrationTestBase {
 
-  private static final String TEST_NAME = "storage_admin";
+  protected static final String TEST_NAME = "storage_admin";
   private static final String NAMESPACE1 = "integration_testing_" + TEST_NAME + "1";
   private static final String NAMESPACE2 = "integration_testing_" + TEST_NAME + "2";
   private static final String NAMESPACE3 = "integration_testing_" + TEST_NAME + "3";

@@ -4,6 +4,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.jdbc.RdbEngine;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,6 +26,7 @@ public interface UpsertQuery extends Query {
       this.tableMetadata = tableMetadata;
     }
 
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
     public Builder values(
         Key partitionKey, Optional<Key> clusteringKey, Map<String, Column<?>> columns) {
       this.partitionKey = partitionKey;

@@ -431,11 +431,17 @@ service TwoPhaseCommitTransaction {
   }
   rpc GetState(GetTransactionStateRequest) returns (GetTransactionStateResponse) {
   }
+  rpc Rollback(RollbackRequest) returns (RollbackResponse) {
+  }
   rpc Abort(AbortRequest) returns (AbortResponse) {
   }
 }
 
 message TwoPhaseCommitTransactionRequest {
+  message BeginRequest {
+    optional string transaction_id = 1;
+  }
+
   message StartRequest {
     optional string transaction_id = 1;
   }
@@ -468,6 +474,9 @@ message TwoPhaseCommitTransactionRequest {
   message RollbackRequest {
   }
 
+  message AbortRequest {
+  }
+
   oneof request {
     StartRequest start_request = 1;
     JoinRequest join_request = 2;
@@ -478,10 +487,16 @@ message TwoPhaseCommitTransactionRequest {
     ValidateRequest validate_request = 7;
     CommitRequest commit_request = 8;
     RollbackRequest rollback_request = 9;
+    BeginRequest begin_request = 10;
+    AbortRequest abort_request = 11;
   }
 }
 
 message TwoPhaseCommitTransactionResponse {
+  message BeginResponse {
+    string transaction_id = 1;
+  }
+
   message StartResponse {
     string transaction_id = 1;
   }
@@ -510,6 +525,7 @@ message TwoPhaseCommitTransactionResponse {
     GetResponse get_response = 2;
     ScanResponse scan_response = 3;
     Error error = 4;
+    BeginResponse begin_response = 5;
   }
 }
 

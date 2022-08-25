@@ -13,9 +13,9 @@ public class DistributedStorageServiceIntegrationTest
 
   @Override
   protected void initialize() throws IOException {
-    ServerConfig config = ServerEnv.getServerConfig();
-    if (config != null) {
-      server = new ScalarDbServer(config);
+    Properties properties = ServerEnv.getServerProperties();
+    if (properties != null) {
+      server = new ScalarDbServer(properties);
       server.start();
     }
   }

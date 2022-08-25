@@ -31,6 +31,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -47,7 +48,7 @@ import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 
-public class SelectStatementHandlerTest {
+public abstract class SelectStatementHandlerTestBase {
   private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
@@ -73,7 +74,7 @@ public class SelectStatementHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = new SelectStatementHandler(client, metadataManager);
+    handler = new SelectStatementHandler(client, metadataManager, getNamespacePrefix());
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
@@ -84,6 +85,12 @@ public class SelectStatementHandlerTest {
     when(metadata.getClusteringOrders()).thenReturn(ImmutableMap.of(ANY_NAME_2, Order.ASC));
     when(metadata.getSecondaryIndexNames())
         .thenReturn(new HashSet<>(Collections.singletonList(ANY_NAME_3)));
+  }
+
+  abstract Optional<String> getNamespacePrefix();
+
+  private String getFullTableName() {
+    return getNamespacePrefix().orElse("") + ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME;
   }
 
   private Get prepareGet() {
@@ -123,6 +130,7 @@ public class SelectStatementHandlerTest {
     GetItemRequest actualRequest = captor.getValue();
     assertThat(actualRequest.key()).isEqualTo(expectedKeys);
     assertThat(actualRequest.projectionExpression()).isNull();
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -166,6 +174,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedKeyCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -206,6 +215,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedKeyCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -231,6 +241,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedKeyCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -270,6 +281,7 @@ public class SelectStatementHandlerTest {
     assertThat(actualRequest.projectionExpression())
         .isEqualTo(
             DynamoOperation.COLUMN_NAME_ALIAS + "1," + DynamoOperation.COLUMN_NAME_ALIAS + "2");
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -342,6 +354,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -408,6 +421,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -453,6 +467,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -498,6 +513,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -543,6 +559,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -588,6 +605,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -658,6 +676,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -729,6 +748,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -803,6 +823,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -878,6 +899,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -948,6 +970,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1018,6 +1041,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1088,6 +1112,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1155,6 +1180,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1227,6 +1253,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1296,6 +1323,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1349,6 +1377,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1406,6 +1435,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1472,6 +1502,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1543,6 +1574,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1611,6 +1643,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1684,6 +1717,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1741,6 +1775,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1794,6 +1829,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1842,6 +1878,7 @@ public class SelectStatementHandlerTest {
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
     assertThat(actualRequest.scanIndexForward()).isNull();
     assertThat(actualRequest.limit()).isEqualTo(ANY_LIMIT);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1891,6 +1928,7 @@ public class SelectStatementHandlerTest {
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
     assertThat(actualRequest.scanIndexForward()).isNull();
     assertThat(actualRequest.limit()).isEqualTo(ANY_LIMIT);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1909,6 +1947,7 @@ public class SelectStatementHandlerTest {
     verify(client).scan(captor.capture());
     ScanRequest actualRequest = captor.getValue();
     assertThat(actualRequest.limit()).isEqualTo(ANY_LIMIT);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1927,6 +1966,7 @@ public class SelectStatementHandlerTest {
     verify(client).scan(captor.capture());
     ScanRequest actualRequest = captor.getValue();
     assertThat(actualRequest.limit()).isEqualTo(null);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -1958,5 +1998,6 @@ public class SelectStatementHandlerTest {
     assertThat(actualRequest.projectionExpression())
         .isEqualTo(
             DynamoOperation.COLUMN_NAME_ALIAS + "0," + DynamoOperation.COLUMN_NAME_ALIAS + "1");
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 }

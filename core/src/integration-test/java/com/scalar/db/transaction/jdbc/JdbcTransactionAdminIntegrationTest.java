@@ -9,7 +9,7 @@ public class JdbcTransactionAdminIntegrationTest
     extends DistributedTransactionAdminIntegrationTestBase {
 
   @Override
-  protected Properties gerProperties() {
+  protected Properties getProperties() {
     Properties properties = new Properties();
     properties.putAll(JdbcEnv.getProperties());
     properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "jdbc");

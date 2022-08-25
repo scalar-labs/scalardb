@@ -2,6 +2,7 @@ package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
@@ -9,9 +10,12 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -32,6 +36,7 @@ import software.amazon.awssdk.services.dynamodb.model.Update;
 public class BatchHandler {
   private final DynamoDbClient client;
   private final TableMetadataManager metadataManager;
+  private final String namespacePrefix;
 
   /**
    * Constructs a {@code BatchHandler} with the specified {@link DynamoDbClient} and {@link
@@ -40,9 +45,14 @@ public class BatchHandler {
    * @param client {@code DynamoDbClient} to create a statement with
    * @param metadataManager {@code TableMetadataManager}
    */
-  public BatchHandler(DynamoDbClient client, TableMetadataManager metadataManager) {
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
+  public BatchHandler(
+      DynamoDbClient client,
+      TableMetadataManager metadataManager,
+      Optional<String> namespacePrefix) {
     this.client = client;
     this.metadataManager = metadataManager;
+    this.namespacePrefix = namespacePrefix.orElse("");
   }
 
   /**
@@ -59,6 +69,7 @@ public class BatchHandler {
     }
 
     TableMetadata tableMetadata = metadataManager.getTableMetadata(mutations.get(0));
+    mutations = copyAndAppendNamespacePrefix(mutations);
 
     TransactWriteItemsRequest.Builder builder = TransactWriteItemsRequest.builder();
     List<TransactWriteItem> transactItems = new ArrayList<>();
@@ -162,5 +173,34 @@ public class BatchHandler {
     }
 
     return deleteBuilder.build();
+  }
+
+  private List<? extends Mutation> copyAndAppendNamespacePrefix(
+      List<? extends Mutation> mutations) {
+    return mutations.stream()
+        .map(
+            m -> {
+              if (m instanceof Put) {
+                return copyAndAppendNamespacePrefix((Put) m);
+              } else if (m instanceof com.scalar.db.api.Delete) {
+                return copyAndAppendNamespacePrefix((com.scalar.db.api.Delete) m);
+              } else {
+                throw new IllegalArgumentException(
+                    "unexpected mutation type: " + m.getClass().getName());
+              }
+            })
+        .collect(Collectors.toList());
+  }
+
+  private Put copyAndAppendNamespacePrefix(Put put) {
+    assert put.forNamespace().isPresent();
+    return Put.newBuilder(put).namespace(namespacePrefix + put.forNamespace().get()).build();
+  }
+
+  private com.scalar.db.api.Delete copyAndAppendNamespacePrefix(com.scalar.db.api.Delete delete) {
+    assert delete.forNamespace().isPresent();
+    return com.scalar.db.api.Delete.newBuilder(delete)
+        .namespace(namespacePrefix + delete.forNamespace().get())
+        .build();
   }
 }

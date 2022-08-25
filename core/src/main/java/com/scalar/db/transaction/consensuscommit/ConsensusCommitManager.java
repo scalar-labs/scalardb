@@ -15,6 +15,7 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.common.AbstractDistributedTransactionManager;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.concurrent.ThreadSafe;
@@ -32,7 +33,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final ParallelExecutor parallelExecutor;
   private final RecoveryHandler recovery;
   private final CommitHandler commit;
+  private final boolean isIncludeMetadataEnabled;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
   public ConsensusCommitManager(
       DistributedStorage storage, DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
@@ -46,6 +49,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
   }
 
   ConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -61,8 +65,10 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   @VisibleForTesting
   ConsensusCommitManager(
       DistributedStorage storage,
@@ -83,6 +89,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     this.parallelExecutor = parallelExecutor;
     this.recovery = recovery;
     this.commit = commit;
+    this.isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
   }
 
   @Override
@@ -169,7 +176,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     }
     Snapshot snapshot =
         new Snapshot(txId, isolation, strategy, tableMetadataManager, parallelExecutor);
-    CrudHandler crud = new CrudHandler(storage, snapshot, tableMetadataManager);
+    CrudHandler crud =
+        new CrudHandler(storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled);
     ConsensusCommit consensus = new ConsensusCommit(crud, commit, recovery);
     getNamespace().ifPresent(consensus::withNamespace);
     getTable().ifPresent(consensus::withTable);

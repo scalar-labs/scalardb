@@ -1,7 +1,5 @@
 package com.scalar.db.storage.dynamo;
 
-import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -13,6 +11,8 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.util.ScalarDbUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -96,11 +96,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public static final String DEFAULT_NO_SCALING = "false";
   public static final String DEFAULT_NO_BACKUP = "false";
   public static final String DEFAULT_REQUEST_UNIT = "10";
+  private static final int DEFAULT_WAITING_DURATION_SECS = 3;
 
   @VisibleForTesting static final String PARTITION_KEY = "concatenatedPartitionKey";
   @VisibleForTesting static final String CLUSTERING_KEY = "concatenatedClusteringKey";
   private static final String GLOBAL_INDEX_NAME_PREFIX = "global_index";
-  private static final int WAITING_DURATION_SECS = 3;
   private static final int COOL_DOWN_DURATION_SECS = 60;
   private static final double TARGET_USAGE_RATE = 70.0;
   private static final int DELETE_BATCH_SIZE = 100;
@@ -153,6 +153,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private final DynamoDbClient client;
   private final ApplicationAutoScalingClient applicationAutoScalingClient;
   private final String metadataNamespace;
+  private final String namespacePrefix;
+  private final int waitingDurationSecs;
 
   @Inject
   public DynamoAdmin(DatabaseConfig databaseConfig) {
@@ -168,13 +170,36 @@ public class DynamoAdmin implements DistributedStorageAdmin {
             .build();
 
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
-    metadataNamespace = config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
+    metadataNamespace =
+        config.getNamespacePrefix().orElse("")
+            + config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
+    namespacePrefix = config.getNamespacePrefix().orElse("");
+    waitingDurationSecs = DEFAULT_WAITING_DURATION_SECS;
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   DynamoAdmin(DynamoDbClient client, DynamoConfig config) {
     this.client = client;
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
-    metadataNamespace = config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
+    metadataNamespace =
+        config.getNamespacePrefix().orElse("")
+            + config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
+    namespacePrefix = config.getNamespacePrefix().orElse("");
+    waitingDurationSecs = DEFAULT_WAITING_DURATION_SECS;
+  }
+
+  @VisibleForTesting
+  DynamoAdmin(
+      DynamoDbClient client,
+      ApplicationAutoScalingClient applicationAutoScalingClient,
+      DynamoConfig config) {
+    this.client = client;
+    this.applicationAutoScalingClient = applicationAutoScalingClient;
+    metadataNamespace =
+        config.getNamespacePrefix().orElse("")
+            + config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
+    namespacePrefix = config.getNamespacePrefix().orElse("");
+    waitingDurationSecs = 0;
   }
 
   private AwsCredentialsProvider createCredentialsProvider(DynamoConfig config) {
@@ -191,26 +216,20 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         .build();
   }
 
-  @VisibleForTesting
-  DynamoAdmin(
-      DynamoDbClient client,
-      ApplicationAutoScalingClient applicationAutoScalingClient,
-      DynamoConfig config) {
-    this.client = client;
-    this.applicationAutoScalingClient = applicationAutoScalingClient;
-    metadataNamespace = config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
-  }
-
   @Override
-  public void createNamespace(String namespace, Map<String, String> options) {
+  public void createNamespace(String nonPrefixedNamespace, Map<String, String> options) {
     // In Dynamo DB storage, namespace will be added to table name as prefix along with dot
     // separator.
   }
 
   @Override
   public void createTable(
-      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      String nonPrefixedNamespace,
+      String table,
+      TableMetadata metadata,
+      Map<String, String> options)
       throws ExecutionException {
+    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
     checkMetadata(metadata);
 
     long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_REQUEST_UNIT));
@@ -318,7 +337,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   private void buildSecondaryIndexes(
-      String namespace,
+      Namespace namespace,
       String table,
       CreateTableRequest.Builder requestBuilder,
       TableMetadata metadata,
@@ -346,11 +365,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private String getGlobalIndexName(String namespace, String tableName, String keyName) {
+  private String getGlobalIndexName(Namespace namespace, String tableName, String keyName) {
     return getFullTableName(namespace, tableName) + "." + GLOBAL_INDEX_NAME_PREFIX + "." + keyName;
   }
 
-  private void putTableMetadata(String namespace, String table, TableMetadata metadata)
+  private void putTableMetadata(Namespace namespace, String table, TableMetadata metadata)
       throws ExecutionException {
     // Add metadata
     Map<String, AttributeValue> itemValues = new HashMap<>();
@@ -403,7 +422,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     try {
       client.putItem(
           PutItemRequest.builder()
-              .tableName(getFullTableName(metadataNamespace, METADATA_TABLE))
+              .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, METADATA_TABLE))
               .item(itemValues)
               .build());
     } catch (Exception e) {
@@ -437,15 +456,15 @@ public class DynamoAdmin implements DistributedStorageAdmin {
                       .readCapacityUnits(METADATA_TABLE_REQUEST_UNIT)
                       .writeCapacityUnits(METADATA_TABLE_REQUEST_UNIT)
                       .build())
-              .tableName(getFullTableName(metadataNamespace, METADATA_TABLE))
+              .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, METADATA_TABLE))
               .build());
     } catch (Exception e) {
       throw new ExecutionException("creating the metadata table failed", e);
     }
-    waitForTableCreation(metadataNamespace, METADATA_TABLE);
+    waitForTableCreation(Namespace.of(metadataNamespace), METADATA_TABLE);
 
     if (!noBackup) {
-      enableContinuousBackup(metadataNamespace, METADATA_TABLE);
+      enableContinuousBackup(Namespace.of(metadataNamespace), METADATA_TABLE);
     }
   }
 
@@ -453,7 +472,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     try {
       client.describeTable(
           DescribeTableRequest.builder()
-              .tableName(getFullTableName(metadataNamespace, METADATA_TABLE))
+              .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, METADATA_TABLE))
               .build());
       return true;
     } catch (Exception e) {
@@ -465,10 +484,10 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void waitForTableCreation(String namespace, String table) throws ExecutionException {
+  private void waitForTableCreation(Namespace namespace, String table) throws ExecutionException {
     try {
       while (true) {
-        Uninterruptibles.sleepUninterruptibly(WAITING_DURATION_SECS, TimeUnit.SECONDS);
+        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
         DescribeTableResponse describeTableResponse =
             client.describeTable(
                 DescribeTableRequest.builder()
@@ -484,7 +503,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   private void enableAutoScaling(
-      String namespace, String table, Set<String> secondaryIndexes, long ru)
+      Namespace namespace, String table, Set<String> secondaryIndexes, long ru)
       throws ExecutionException {
     List<RegisterScalableTargetRequest> registerScalableTargetRequestList = new ArrayList<>();
     List<PutScalingPolicyRequest> putScalingPolicyRequestList = new ArrayList<>();
@@ -536,11 +555,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         .build();
   }
 
-  private String getTableResourceID(String namespace, String table) {
+  private String getTableResourceID(Namespace namespace, String table) {
     return "table/" + getFullTableName(namespace, table);
   }
 
-  private String getGlobalIndexResourceID(String namespace, String table, String globalIndex) {
+  private String getGlobalIndexResourceID(Namespace namespace, String table, String globalIndex) {
     return "table/"
         + getFullTableName(namespace, table)
         + "/index/"
@@ -563,7 +582,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         .build();
   }
 
-  private void enableContinuousBackup(String namespace, String table) throws ExecutionException {
+  private void enableContinuousBackup(Namespace namespace, String table) throws ExecutionException {
     waitForTableBackupEnabledAtCreation(namespace, table);
 
     try {
@@ -574,11 +593,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void waitForTableBackupEnabledAtCreation(String namespace, String table)
+  private void waitForTableBackupEnabledAtCreation(Namespace namespace, String table)
       throws ExecutionException {
     try {
       while (true) {
-        Uninterruptibles.sleepUninterruptibly(WAITING_DURATION_SECS, TimeUnit.SECONDS);
+        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
         DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
             client.describeContinuousBackups(
                 DescribeContinuousBackupsRequest.builder()
@@ -601,7 +620,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   private UpdateContinuousBackupsRequest buildUpdateContinuousBackupsRequest(
-      String namespace, String table) {
+      Namespace namespace, String table) {
     return UpdateContinuousBackupsRequest.builder()
         .tableName(getFullTableName(namespace, table))
         .pointInTimeRecoverySpecification(buildPointInTimeRecoverySpecification())
@@ -609,7 +628,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void dropTable(String namespace, String table) throws ExecutionException {
+  public void dropTable(String nonPrefixedNamespace, String table) throws ExecutionException {
+    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
     disableAutoScaling(namespace, table);
 
     String fullTableName = getFullTableName(namespace, table);
@@ -622,8 +642,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     deleteTableMetadata(namespace, table);
   }
 
-  private void disableAutoScaling(String namespace, String table) throws ExecutionException {
-    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+  private void disableAutoScaling(Namespace namespace, String table) throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace.nonPrefixed(), table);
     if (tableMetadata == null) {
       return;
     }
@@ -675,8 +695,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         .build();
   }
 
-  private void deleteTableMetadata(String namespace, String table) throws ExecutionException {
-    String metadataTable = getFullTableName(metadataNamespace, METADATA_TABLE);
+  private void deleteTableMetadata(Namespace namespace, String table) throws ExecutionException {
+    String metadataTable = ScalarDbUtils.getFullTableName(metadataNamespace, METADATA_TABLE);
 
     Map<String, AttributeValue> keyToDelete = new HashMap<>();
     keyToDelete.put(
@@ -702,15 +722,16 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       } catch (Exception e) {
         throw new ExecutionException("deleting the empty metadata table failed", e);
       }
-      waitForTableDeletion(metadataNamespace, METADATA_TABLE);
+      waitForTableDeletion(Namespace.of(metadataNamespace), METADATA_TABLE);
     }
   }
 
-  private void waitForTableDeletion(String namespace, String tableName) throws ExecutionException {
+  private void waitForTableDeletion(Namespace namespace, String tableName)
+      throws ExecutionException {
     try {
       while (true) {
-        Uninterruptibles.sleepUninterruptibly(WAITING_DURATION_SECS, TimeUnit.SECONDS);
-        Set<String> tableSet = getNamespaceTableNames(namespace);
+        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
+        Set<String> tableSet = getNamespaceTableNames(namespace.nonPrefixed());
         if (!tableSet.contains(tableName)) {
           break;
         }
@@ -721,16 +742,17 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void dropNamespace(String namespace) throws ExecutionException {
-    Set<String> tables = getNamespaceTableNames(namespace);
+  public void dropNamespace(String nonPrefixedNamespace) throws ExecutionException {
+    Set<String> tables = getNamespaceTableNames(nonPrefixedNamespace);
     for (String table : tables) {
-      dropTable(namespace, table);
+      dropTable(nonPrefixedNamespace, table);
     }
   }
 
   @Override
-  public void truncateTable(String namespace, String table) throws ExecutionException {
-    String fullTableName = getFullTableName(namespace, table);
+  public void truncateTable(String nonPrefixedNamespace, String table) throws ExecutionException {
+    String fullTableName =
+        getFullTableName(Namespace.of(namespacePrefix, nonPrefixedNamespace), table);
     Map<String, AttributeValue> lastKeyEvaluated = null;
     do {
       ScanResponse scanResponse;
@@ -765,16 +787,19 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public void createIndex(
-      String namespace, String table, String columnName, Map<String, String> options)
+      String nonPrefixedNamespace, String table, String columnName, Map<String, String> options)
       throws ExecutionException {
-    if (getTableMetadata(namespace, table).getColumnDataType(columnName) == DataType.BOOLEAN) {
+    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
+    if (getTableMetadata(nonPrefixedNamespace, table).getColumnDataType(columnName)
+        == DataType.BOOLEAN) {
       throw new IllegalArgumentException(
           "Currently, BOOLEAN type is not supported for a secondary index in DynamoDB: "
               + columnName);
     }
 
     long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_REQUEST_UNIT));
-    TableMetadata metadata = getTableMetadata(namespace, table);
+    TableMetadata metadata = getTableMetadata(nonPrefixedNamespace, table);
+
     try {
       client.updateTable(
           UpdateTableRequest.builder()
@@ -832,19 +857,19 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
 
     // update metadata
-    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    TableMetadata tableMetadata = getTableMetadata(nonPrefixedNamespace, table);
     putTableMetadata(
         namespace,
         table,
         TableMetadata.newBuilder(tableMetadata).addSecondaryIndex(columnName).build());
   }
 
-  private void waitForIndexCreation(String namespace, String table, String columnName)
+  private void waitForIndexCreation(Namespace namespace, String table, String columnName)
       throws ExecutionException {
     try {
       String indexName = getGlobalIndexName(namespace, table, columnName);
       while (true) {
-        Uninterruptibles.sleepUninterruptibly(WAITING_DURATION_SECS, TimeUnit.SECONDS);
+        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
         DescribeTableResponse response =
             client.describeTable(
                 DescribeTableRequest.builder()
@@ -892,8 +917,9 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void dropIndex(String namespace, String table, String columnName)
+  public void dropIndex(String nonPrefixedNamespace, String table, String columnName)
       throws ExecutionException {
+    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
     try {
       client.updateTable(
           UpdateTableRequest.builder()
@@ -929,19 +955,19 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     deregisterScalableTarget(deregisterScalableTargetRequestList);
 
     // update metadata
-    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    TableMetadata tableMetadata = getTableMetadata(nonPrefixedNamespace, table);
     putTableMetadata(
         namespace,
         table,
         TableMetadata.newBuilder(tableMetadata).removeSecondaryIndex(columnName).build());
   }
 
-  private void waitForIndexDeletion(String namespace, String table, String columnName)
+  private void waitForIndexDeletion(Namespace namespace, String table, String columnName)
       throws ExecutionException {
     try {
       String indexName = getGlobalIndexName(namespace, table, columnName);
       while (true) {
-        Uninterruptibles.sleepUninterruptibly(WAITING_DURATION_SECS, TimeUnit.SECONDS);
+        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
         DescribeTableResponse response =
             client.describeTable(
                 DescribeTableRequest.builder()
@@ -996,9 +1022,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
+  public TableMetadata getTableMetadata(String nonPrefixedNamespace, String table)
+      throws ExecutionException {
     try {
-      String fullName = getFullTableName(namespace, table);
+      String fullName =
+          getFullTableName(Namespace.of(namespacePrefix, nonPrefixedNamespace), table);
       return readMetadata(fullName);
     } catch (RuntimeException e) {
       throw new ExecutionException("getting a table metadata failed", e);
@@ -1014,7 +1042,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           client
               .getItem(
                   GetItemRequest.builder()
-                      .tableName(getFullTableName(metadataNamespace, METADATA_TABLE))
+                      .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, METADATA_TABLE))
                       .key(key)
                       .consistentRead(true)
                       .build())
@@ -1073,7 +1101,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
+  public Set<String> getNamespaceTableNames(String nonPrefixedNamespace) throws ExecutionException {
     try {
       Set<String> tableSet = new HashSet<>();
       String lastEvaluatedTableName = null;
@@ -1083,7 +1111,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         ListTablesResponse listTablesResponse = client.listTables(listTablesRequest);
         lastEvaluatedTableName = listTablesResponse.lastEvaluatedTableName();
         List<String> tableNames = listTablesResponse.tableNames();
-        String prefix = namespace + ".";
+        Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
+        String prefix = namespace.prefixed() + ".";
         for (String tableName : tableNames) {
           if (tableName.startsWith(prefix)) {
             tableSet.add(tableName.substring(prefix.length()));
@@ -1098,7 +1127,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public boolean namespaceExists(String namespace) throws ExecutionException {
+  public boolean namespaceExists(String nonPrefixedNamespace) throws ExecutionException {
     try {
       boolean namespaceExists = false;
       String lastEvaluatedTableName = null;
@@ -1108,8 +1137,9 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         ListTablesResponse listTablesResponse = client.listTables(listTablesRequest);
         lastEvaluatedTableName = listTablesResponse.lastEvaluatedTableName();
         List<String> tableNames = listTablesResponse.tableNames();
+        Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
         for (String tableName : tableNames) {
-          if (tableName.startsWith(namespace)) {
+          if (tableName.startsWith(namespace.prefixed())) {
             namespaceExists = true;
             break;
           }
@@ -1124,10 +1154,14 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public void repairTable(
-      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      String nonPrefixedNamespace,
+      String table,
+      TableMetadata metadata,
+      Map<String, String> options)
       throws ExecutionException {
+    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
     try {
-      if (!tableExists(namespace, table)) {
+      if (!tableExists(nonPrefixedNamespace, table)) {
         throw new IllegalArgumentException(
             "The table " + getFullTableName(namespace, table) + "  does not exist");
       }
@@ -1144,10 +1178,10 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public void addNewColumnToTable(
-      String namespace, String table, String columnName, DataType columnType)
+      String nonPrefixedNamespace, String table, String columnName, DataType columnType)
       throws ExecutionException {
     try {
-      TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
+      TableMetadata currentTableMetadata = getTableMetadata(nonPrefixedNamespace, table);
       if (currentTableMetadata.getColumnNames().contains(columnName)) {
         throw new IllegalArgumentException(
             String.format("The column %s already exists", columnName));
@@ -1155,13 +1189,19 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
       TableMetadata updatedTableMetadata =
           TableMetadata.newBuilder(currentTableMetadata).addColumn(columnName, columnType).build();
+      Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
       putTableMetadata(namespace, table, updatedTableMetadata);
     } catch (ExecutionException e) {
       throw new ExecutionException(
           String.format(
-              "Adding the new column %s to the %s.%s table failed", columnName, namespace, table),
+              "Adding the new column %s to the %s.%s table failed",
+              columnName, nonPrefixedNamespace, table),
           e);
     }
+  }
+
+  private String getFullTableName(Namespace namespace, String table) {
+    return ScalarDbUtils.getFullTableName(namespace.prefixed(), table);
   }
 
   @Override

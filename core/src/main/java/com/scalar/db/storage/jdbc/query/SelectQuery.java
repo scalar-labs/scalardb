@@ -5,6 +5,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.jdbc.RdbEngine;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -117,6 +118,7 @@ public interface SelectQuery extends Query {
       indexedColumn = Optional.of(column);
     }
 
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
     public Builder orderBy(List<Scan.Ordering> orderings) {
       this.orderings = orderings;
       return this;

@@ -9,7 +9,9 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
+import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -27,14 +29,22 @@ import software.amazon.awssdk.services.dynamodb.model.TransactionConflictExcepti
 public class DeleteStatementHandler {
   private final DynamoDbClient client;
   private final TableMetadataManager metadataManager;
+  private final String namespacePrefix;
 
-  public DeleteStatementHandler(DynamoDbClient client, TableMetadataManager metadataManager) {
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
+  public DeleteStatementHandler(
+      DynamoDbClient client,
+      TableMetadataManager metadataManager,
+      Optional<String> namespacePrefix) {
     this.client = checkNotNull(client);
     this.metadataManager = checkNotNull(metadataManager);
+    this.namespacePrefix = namespacePrefix.orElse("");
   }
 
   public void handle(Delete delete) throws ExecutionException {
     TableMetadata tableMetadata = metadataManager.getTableMetadata(delete);
+    delete = copyAndAppendNamespacePrefix(delete);
+
     try {
       delete(delete, tableMetadata);
     } catch (ConditionalCheckFailedException e) {
@@ -70,5 +80,12 @@ public class DeleteStatementHandler {
     }
 
     client.deleteItem(builder.build());
+  }
+
+  private Delete copyAndAppendNamespacePrefix(Delete delete) {
+    assert delete.forNamespace().isPresent();
+    return Delete.newBuilder(delete)
+        .namespace(namespacePrefix + delete.forNamespace().get())
+        .build();
   }
 }

@@ -5,6 +5,7 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.storage.common.ScannerIterator;
 import com.scalar.db.storage.dynamo.request.PaginatedRequest;
 import com.scalar.db.storage.dynamo.request.PaginatedRequestResponse;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -25,6 +26,7 @@ public class QueryScanner implements Scanner {
 
   private ScannerIterator scannerIterator;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public QueryScanner(PaginatedRequest request, ResultInterpreter resultInterpreter) {
     this.request = request;
     this.resultInterpreter = resultInterpreter;

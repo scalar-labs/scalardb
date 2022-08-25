@@ -174,6 +174,34 @@ private static final long serialVersionUID = 0L;
             requestCase_ = 9;
             break;
           }
+          case 82: {
+            com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.Builder subBuilder = null;
+            if (requestCase_ == 10) {
+              subBuilder = ((com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest) request_).toBuilder();
+            }
+            request_ =
+                input.readMessage(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.parser(), extensionRegistry);
+            if (subBuilder != null) {
+              subBuilder.mergeFrom((com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest) request_);
+              request_ = subBuilder.buildPartial();
+            }
+            requestCase_ = 10;
+            break;
+          }
+          case 90: {
+            com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.Builder subBuilder = null;
+            if (requestCase_ == 11) {
+              subBuilder = ((com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest) request_).toBuilder();
+            }
+            request_ =
+                input.readMessage(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.parser(), extensionRegistry);
+            if (subBuilder != null) {
+              subBuilder.mergeFrom((com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest) request_);
+              request_ = subBuilder.buildPartial();
+            }
+            requestCase_ = 11;
+            break;
+          }
           default: {
             if (!parseUnknownField(
                 input, unknownFields, extensionRegistry, tag)) {
@@ -206,6 +234,611 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.Builder.class);
+  }
+
+  public interface BeginRequestOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:rpc.TwoPhaseCommitTransactionRequest.BeginRequest)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>optional string transaction_id = 1;</code>
+     * @return Whether the transactionId field is set.
+     */
+    boolean hasTransactionId();
+    /**
+     * <code>optional string transaction_id = 1;</code>
+     * @return The transactionId.
+     */
+    java.lang.String getTransactionId();
+    /**
+     * <code>optional string transaction_id = 1;</code>
+     * @return The bytes for transactionId.
+     */
+    com.google.protobuf.ByteString
+        getTransactionIdBytes();
+  }
+  /**
+   * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.BeginRequest}
+   */
+  public static final class BeginRequest extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:rpc.TwoPhaseCommitTransactionRequest.BeginRequest)
+      BeginRequestOrBuilder {
+  private static final long serialVersionUID = 0L;
+    // Use BeginRequest.newBuilder() to construct.
+    private BeginRequest(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private BeginRequest() {
+      transactionId_ = "";
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new BeginRequest();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private BeginRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 10: {
+              java.lang.String s = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000001;
+              transactionId_ = s;
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (com.google.protobuf.UninitializedMessageException e) {
+        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_BeginRequest_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_BeginRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int TRANSACTION_ID_FIELD_NUMBER = 1;
+    private volatile java.lang.Object transactionId_;
+    /**
+     * <code>optional string transaction_id = 1;</code>
+     * @return Whether the transactionId field is set.
+     */
+    @java.lang.Override
+    public boolean hasTransactionId() {
+      return ((bitField0_ & 0x00000001) != 0);
+    }
+    /**
+     * <code>optional string transaction_id = 1;</code>
+     * @return The transactionId.
+     */
+    @java.lang.Override
+    public java.lang.String getTransactionId() {
+      java.lang.Object ref = transactionId_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        transactionId_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>optional string transaction_id = 1;</code>
+     * @return The bytes for transactionId.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getTransactionIdBytes() {
+      java.lang.Object ref = transactionId_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        transactionId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) != 0)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, transactionId_);
+      }
+      unknownFields.writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) != 0)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, transactionId_);
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest)) {
+        return super.equals(obj);
+      }
+      com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest other = (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest) obj;
+
+      if (hasTransactionId() != other.hasTransactionId()) return false;
+      if (hasTransactionId()) {
+        if (!getTransactionId()
+            .equals(other.getTransactionId())) return false;
+      }
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasTransactionId()) {
+        hash = (37 * hash) + TRANSACTION_ID_FIELD_NUMBER;
+        hash = (53 * hash) + getTransactionId().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.BeginRequest}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:rpc.TwoPhaseCommitTransactionRequest.BeginRequest)
+        com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_BeginRequest_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_BeginRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.Builder.class);
+      }
+
+      // Construct using com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        transactionId_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_BeginRequest_descriptor;
+      }
+
+      @java.lang.Override
+      public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest getDefaultInstanceForType() {
+        return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest build() {
+        com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest buildPartial() {
+        com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest result = new com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.transactionId_ = transactionId_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.setField(field, value);
+      }
+      @java.lang.Override
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+      @java.lang.Override
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest) {
+          return mergeFrom((com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest other) {
+        if (other == com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.getDefaultInstance()) return this;
+        if (other.hasTransactionId()) {
+          bitField0_ |= 0x00000001;
+          transactionId_ = other.transactionId_;
+          onChanged();
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private java.lang.Object transactionId_ = "";
+      /**
+       * <code>optional string transaction_id = 1;</code>
+       * @return Whether the transactionId field is set.
+       */
+      public boolean hasTransactionId() {
+        return ((bitField0_ & 0x00000001) != 0);
+      }
+      /**
+       * <code>optional string transaction_id = 1;</code>
+       * @return The transactionId.
+       */
+      public java.lang.String getTransactionId() {
+        java.lang.Object ref = transactionId_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          transactionId_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string transaction_id = 1;</code>
+       * @return The bytes for transactionId.
+       */
+      public com.google.protobuf.ByteString
+          getTransactionIdBytes() {
+        java.lang.Object ref = transactionId_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          transactionId_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string transaction_id = 1;</code>
+       * @param value The transactionId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setTransactionId(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        transactionId_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string transaction_id = 1;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearTransactionId() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        transactionId_ = getDefaultInstance().getTransactionId();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string transaction_id = 1;</code>
+       * @param value The bytes for transactionId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setTransactionIdBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        bitField0_ |= 0x00000001;
+        transactionId_ = value;
+        onChanged();
+        return this;
+      }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:rpc.TwoPhaseCommitTransactionRequest.BeginRequest)
+    }
+
+    // @@protoc_insertion_point(class_scope:rpc.TwoPhaseCommitTransactionRequest.BeginRequest)
+    private static final com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest();
+    }
+
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<BeginRequest>
+        PARSER = new com.google.protobuf.AbstractParser<BeginRequest>() {
+      @java.lang.Override
+      public BeginRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new BeginRequest(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<BeginRequest> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<BeginRequest> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
   }
 
   public interface StartRequestOrBuilder extends
@@ -5104,6 +5737,426 @@ private static final long serialVersionUID = 0L;
 
   }
 
+  public interface AbortRequestOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:rpc.TwoPhaseCommitTransactionRequest.AbortRequest)
+      com.google.protobuf.MessageOrBuilder {
+  }
+  /**
+   * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.AbortRequest}
+   */
+  public static final class AbortRequest extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:rpc.TwoPhaseCommitTransactionRequest.AbortRequest)
+      AbortRequestOrBuilder {
+  private static final long serialVersionUID = 0L;
+    // Use AbortRequest.newBuilder() to construct.
+    private AbortRequest(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private AbortRequest() {
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new AbortRequest();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private AbortRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (com.google.protobuf.UninitializedMessageException e) {
+        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_AbortRequest_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_AbortRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.Builder.class);
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      unknownFields.writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest)) {
+        return super.equals(obj);
+      }
+      com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest other = (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest) obj;
+
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code rpc.TwoPhaseCommitTransactionRequest.AbortRequest}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:rpc.TwoPhaseCommitTransactionRequest.AbortRequest)
+        com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_AbortRequest_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_AbortRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.class, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.Builder.class);
+      }
+
+      // Construct using com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionRequest_AbortRequest_descriptor;
+      }
+
+      @java.lang.Override
+      public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest getDefaultInstanceForType() {
+        return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest build() {
+        com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest buildPartial() {
+        com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest result = new com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest(this);
+        onBuilt();
+        return result;
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.setField(field, value);
+      }
+      @java.lang.Override
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+      @java.lang.Override
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest) {
+          return mergeFrom((com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest other) {
+        if (other == com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.getDefaultInstance()) return this;
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:rpc.TwoPhaseCommitTransactionRequest.AbortRequest)
+    }
+
+    // @@protoc_insertion_point(class_scope:rpc.TwoPhaseCommitTransactionRequest.AbortRequest)
+    private static final com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest();
+    }
+
+    public static com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<AbortRequest>
+        PARSER = new com.google.protobuf.AbstractParser<AbortRequest>() {
+      @java.lang.Override
+      public AbortRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new AbortRequest(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<AbortRequest> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<AbortRequest> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
   private int requestCase_ = 0;
   private java.lang.Object request_;
   public enum RequestCase
@@ -5118,6 +6171,8 @@ private static final long serialVersionUID = 0L;
     VALIDATE_REQUEST(7),
     COMMIT_REQUEST(8),
     ROLLBACK_REQUEST(9),
+    BEGIN_REQUEST(10),
+    ABORT_REQUEST(11),
     REQUEST_NOT_SET(0);
     private final int value;
     private RequestCase(int value) {
@@ -5144,6 +6199,8 @@ private static final long serialVersionUID = 0L;
         case 7: return VALIDATE_REQUEST;
         case 8: return COMMIT_REQUEST;
         case 9: return ROLLBACK_REQUEST;
+        case 10: return BEGIN_REQUEST;
+        case 11: return ABORT_REQUEST;
         case 0: return REQUEST_NOT_SET;
         default: return null;
       }
@@ -5438,6 +6495,68 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest.getDefaultInstance();
   }
 
+  public static final int BEGIN_REQUEST_FIELD_NUMBER = 10;
+  /**
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+   * @return Whether the beginRequest field is set.
+   */
+  @java.lang.Override
+  public boolean hasBeginRequest() {
+    return requestCase_ == 10;
+  }
+  /**
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+   * @return The beginRequest.
+   */
+  @java.lang.Override
+  public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest getBeginRequest() {
+    if (requestCase_ == 10) {
+       return (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest) request_;
+    }
+    return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.getDefaultInstance();
+  }
+  /**
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+   */
+  @java.lang.Override
+  public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequestOrBuilder getBeginRequestOrBuilder() {
+    if (requestCase_ == 10) {
+       return (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest) request_;
+    }
+    return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.getDefaultInstance();
+  }
+
+  public static final int ABORT_REQUEST_FIELD_NUMBER = 11;
+  /**
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+   * @return Whether the abortRequest field is set.
+   */
+  @java.lang.Override
+  public boolean hasAbortRequest() {
+    return requestCase_ == 11;
+  }
+  /**
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+   * @return The abortRequest.
+   */
+  @java.lang.Override
+  public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest getAbortRequest() {
+    if (requestCase_ == 11) {
+       return (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest) request_;
+    }
+    return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.getDefaultInstance();
+  }
+  /**
+   * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+   */
+  @java.lang.Override
+  public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequestOrBuilder getAbortRequestOrBuilder() {
+    if (requestCase_ == 11) {
+       return (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest) request_;
+    }
+    return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.getDefaultInstance();
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -5478,6 +6597,12 @@ private static final long serialVersionUID = 0L;
     }
     if (requestCase_ == 9) {
       output.writeMessage(9, (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest) request_);
+    }
+    if (requestCase_ == 10) {
+      output.writeMessage(10, (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest) request_);
+    }
+    if (requestCase_ == 11) {
+      output.writeMessage(11, (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest) request_);
     }
     unknownFields.writeTo(output);
   }
@@ -5523,6 +6648,14 @@ private static final long serialVersionUID = 0L;
     if (requestCase_ == 9) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(9, (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest) request_);
+    }
+    if (requestCase_ == 10) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(10, (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest) request_);
+    }
+    if (requestCase_ == 11) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(11, (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest) request_);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -5577,6 +6710,14 @@ private static final long serialVersionUID = 0L;
         if (!getRollbackRequest()
             .equals(other.getRollbackRequest())) return false;
         break;
+      case 10:
+        if (!getBeginRequest()
+            .equals(other.getBeginRequest())) return false;
+        break;
+      case 11:
+        if (!getAbortRequest()
+            .equals(other.getAbortRequest())) return false;
+        break;
       case 0:
       default:
     }
@@ -5627,6 +6768,14 @@ private static final long serialVersionUID = 0L;
       case 9:
         hash = (37 * hash) + ROLLBACK_REQUEST_FIELD_NUMBER;
         hash = (53 * hash) + getRollbackRequest().hashCode();
+        break;
+      case 10:
+        hash = (37 * hash) + BEGIN_REQUEST_FIELD_NUMBER;
+        hash = (53 * hash) + getBeginRequest().hashCode();
+        break;
+      case 11:
+        hash = (37 * hash) + ABORT_REQUEST_FIELD_NUMBER;
+        hash = (53 * hash) + getAbortRequest().hashCode();
         break;
       case 0:
       default:
@@ -5855,6 +7004,20 @@ private static final long serialVersionUID = 0L;
           result.request_ = rollbackRequestBuilder_.build();
         }
       }
+      if (requestCase_ == 10) {
+        if (beginRequestBuilder_ == null) {
+          result.request_ = request_;
+        } else {
+          result.request_ = beginRequestBuilder_.build();
+        }
+      }
+      if (requestCase_ == 11) {
+        if (abortRequestBuilder_ == null) {
+          result.request_ = request_;
+        } else {
+          result.request_ = abortRequestBuilder_.build();
+        }
+      }
       result.requestCase_ = requestCase_;
       onBuilt();
       return result;
@@ -5939,6 +7102,14 @@ private static final long serialVersionUID = 0L;
         }
         case ROLLBACK_REQUEST: {
           mergeRollbackRequest(other.getRollbackRequest());
+          break;
+        }
+        case BEGIN_REQUEST: {
+          mergeBeginRequest(other.getBeginRequest());
+          break;
+        }
+        case ABORT_REQUEST: {
+          mergeAbortRequest(other.getAbortRequest());
           break;
         }
         case REQUEST_NOT_SET: {
@@ -7265,6 +8436,290 @@ private static final long serialVersionUID = 0L;
       requestCase_ = 9;
       onChanged();;
       return rollbackRequestBuilder_;
+    }
+
+    private com.google.protobuf.SingleFieldBuilderV3<
+        com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequestOrBuilder> beginRequestBuilder_;
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     * @return Whether the beginRequest field is set.
+     */
+    @java.lang.Override
+    public boolean hasBeginRequest() {
+      return requestCase_ == 10;
+    }
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     * @return The beginRequest.
+     */
+    @java.lang.Override
+    public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest getBeginRequest() {
+      if (beginRequestBuilder_ == null) {
+        if (requestCase_ == 10) {
+          return (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest) request_;
+        }
+        return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.getDefaultInstance();
+      } else {
+        if (requestCase_ == 10) {
+          return beginRequestBuilder_.getMessage();
+        }
+        return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.getDefaultInstance();
+      }
+    }
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     */
+    public Builder setBeginRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest value) {
+      if (beginRequestBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        request_ = value;
+        onChanged();
+      } else {
+        beginRequestBuilder_.setMessage(value);
+      }
+      requestCase_ = 10;
+      return this;
+    }
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     */
+    public Builder setBeginRequest(
+        com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.Builder builderForValue) {
+      if (beginRequestBuilder_ == null) {
+        request_ = builderForValue.build();
+        onChanged();
+      } else {
+        beginRequestBuilder_.setMessage(builderForValue.build());
+      }
+      requestCase_ = 10;
+      return this;
+    }
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     */
+    public Builder mergeBeginRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest value) {
+      if (beginRequestBuilder_ == null) {
+        if (requestCase_ == 10 &&
+            request_ != com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.getDefaultInstance()) {
+          request_ = com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.newBuilder((com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest) request_)
+              .mergeFrom(value).buildPartial();
+        } else {
+          request_ = value;
+        }
+        onChanged();
+      } else {
+        if (requestCase_ == 10) {
+          beginRequestBuilder_.mergeFrom(value);
+        } else {
+          beginRequestBuilder_.setMessage(value);
+        }
+      }
+      requestCase_ = 10;
+      return this;
+    }
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     */
+    public Builder clearBeginRequest() {
+      if (beginRequestBuilder_ == null) {
+        if (requestCase_ == 10) {
+          requestCase_ = 0;
+          request_ = null;
+          onChanged();
+        }
+      } else {
+        if (requestCase_ == 10) {
+          requestCase_ = 0;
+          request_ = null;
+        }
+        beginRequestBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     */
+    public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.Builder getBeginRequestBuilder() {
+      return getBeginRequestFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     */
+    @java.lang.Override
+    public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequestOrBuilder getBeginRequestOrBuilder() {
+      if ((requestCase_ == 10) && (beginRequestBuilder_ != null)) {
+        return beginRequestBuilder_.getMessageOrBuilder();
+      } else {
+        if (requestCase_ == 10) {
+          return (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest) request_;
+        }
+        return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.getDefaultInstance();
+      }
+    }
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.BeginRequest begin_request = 10;</code>
+     */
+    private com.google.protobuf.SingleFieldBuilderV3<
+        com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequestOrBuilder> 
+        getBeginRequestFieldBuilder() {
+      if (beginRequestBuilder_ == null) {
+        if (!(requestCase_ == 10)) {
+          request_ = com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.getDefaultInstance();
+        }
+        beginRequestBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+            com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequestOrBuilder>(
+                (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.BeginRequest) request_,
+                getParentForChildren(),
+                isClean());
+        request_ = null;
+      }
+      requestCase_ = 10;
+      onChanged();;
+      return beginRequestBuilder_;
+    }
+
+    private com.google.protobuf.SingleFieldBuilderV3<
+        com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequestOrBuilder> abortRequestBuilder_;
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     * @return Whether the abortRequest field is set.
+     */
+    @java.lang.Override
+    public boolean hasAbortRequest() {
+      return requestCase_ == 11;
+    }
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     * @return The abortRequest.
+     */
+    @java.lang.Override
+    public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest getAbortRequest() {
+      if (abortRequestBuilder_ == null) {
+        if (requestCase_ == 11) {
+          return (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest) request_;
+        }
+        return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.getDefaultInstance();
+      } else {
+        if (requestCase_ == 11) {
+          return abortRequestBuilder_.getMessage();
+        }
+        return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.getDefaultInstance();
+      }
+    }
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     */
+    public Builder setAbortRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest value) {
+      if (abortRequestBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        request_ = value;
+        onChanged();
+      } else {
+        abortRequestBuilder_.setMessage(value);
+      }
+      requestCase_ = 11;
+      return this;
+    }
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     */
+    public Builder setAbortRequest(
+        com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.Builder builderForValue) {
+      if (abortRequestBuilder_ == null) {
+        request_ = builderForValue.build();
+        onChanged();
+      } else {
+        abortRequestBuilder_.setMessage(builderForValue.build());
+      }
+      requestCase_ = 11;
+      return this;
+    }
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     */
+    public Builder mergeAbortRequest(com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest value) {
+      if (abortRequestBuilder_ == null) {
+        if (requestCase_ == 11 &&
+            request_ != com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.getDefaultInstance()) {
+          request_ = com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.newBuilder((com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest) request_)
+              .mergeFrom(value).buildPartial();
+        } else {
+          request_ = value;
+        }
+        onChanged();
+      } else {
+        if (requestCase_ == 11) {
+          abortRequestBuilder_.mergeFrom(value);
+        } else {
+          abortRequestBuilder_.setMessage(value);
+        }
+      }
+      requestCase_ = 11;
+      return this;
+    }
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     */
+    public Builder clearAbortRequest() {
+      if (abortRequestBuilder_ == null) {
+        if (requestCase_ == 11) {
+          requestCase_ = 0;
+          request_ = null;
+          onChanged();
+        }
+      } else {
+        if (requestCase_ == 11) {
+          requestCase_ = 0;
+          request_ = null;
+        }
+        abortRequestBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     */
+    public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.Builder getAbortRequestBuilder() {
+      return getAbortRequestFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     */
+    @java.lang.Override
+    public com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequestOrBuilder getAbortRequestOrBuilder() {
+      if ((requestCase_ == 11) && (abortRequestBuilder_ != null)) {
+        return abortRequestBuilder_.getMessageOrBuilder();
+      } else {
+        if (requestCase_ == 11) {
+          return (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest) request_;
+        }
+        return com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.getDefaultInstance();
+      }
+    }
+    /**
+     * <code>.rpc.TwoPhaseCommitTransactionRequest.AbortRequest abort_request = 11;</code>
+     */
+    private com.google.protobuf.SingleFieldBuilderV3<
+        com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequestOrBuilder> 
+        getAbortRequestFieldBuilder() {
+      if (abortRequestBuilder_ == null) {
+        if (!(requestCase_ == 11)) {
+          request_ = com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.getDefaultInstance();
+        }
+        abortRequestBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+            com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequestOrBuilder>(
+                (com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.AbortRequest) request_,
+                getParentForChildren(),
+                isClean());
+        request_ = null;
+      }
+      requestCase_ = 11;
+      onChanged();;
+      return abortRequestBuilder_;
     }
     @java.lang.Override
     public final Builder setUnknownFields(

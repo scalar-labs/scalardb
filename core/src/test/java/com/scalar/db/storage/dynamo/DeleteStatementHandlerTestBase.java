@@ -19,6 +19,7 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -30,7 +31,7 @@ import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
-public class DeleteStatementHandlerTest {
+public abstract class DeleteStatementHandlerTestBase {
   private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
@@ -48,11 +49,17 @@ public class DeleteStatementHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = new DeleteStatementHandler(client, metadataManager);
+    handler = new DeleteStatementHandler(client, metadataManager, getNamespacePrefix());
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
+  }
+
+  abstract Optional<String> getNamespacePrefix();
+
+  private String getFullTableName() {
+    return getNamespacePrefix().orElse("") + ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME;
   }
 
   private Delete prepareDelete() {
@@ -79,6 +86,7 @@ public class DeleteStatementHandlerTest {
     DeleteItemRequest actualRequest = captor.getValue();
     assertThat(actualRequest.key()).isEqualTo(dynamoMutation.getKeyMap());
     assertThat(actualRequest.conditionExpression()).isNull();
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -118,6 +126,7 @@ public class DeleteStatementHandlerTest {
     DeleteItemRequest actualRequest = captor.getValue();
     assertThat(actualRequest.key()).isEqualTo(dynamoMutation.getKeyMap());
     assertThat(actualRequest.conditionExpression()).isNull();
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test
@@ -141,6 +150,7 @@ public class DeleteStatementHandlerTest {
     assertThat(actualRequest.key()).isEqualTo(dynamoMutation.getKeyMap());
     assertThat(actualRequest.conditionExpression())
         .isEqualTo(dynamoMutation.getIfExistsCondition());
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
   @Test

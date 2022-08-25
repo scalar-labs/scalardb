@@ -70,6 +70,12 @@ scalar.db.consensus_commit.isolation_level=SNAPSHOT
 # Either EXTRA_READ or EXTRA_WRITE can be specified. EXTRA_READ is used by default.
 # If SNAPSHOT is specified in the property "scalar.db.consensus_commit.isolation_level", this is ignored.
 scalar.db.consensus_commit.serializable_strategy=
+
+# This is only usable for Consensus Commit.
+# If set to "true", Get and Scan operations results will contain transaction metadata. To see the transaction metadata columns details for a given table, you can use the `DistributedTransactionAdmin.getTableMetadata()`
+# method which will return the table metadata augmented with the transaction metadata columns. Using this configuration can be useful to investigate transaction related issues.
+# The default is false.
+scalar.db.consensus_commit.include_metadata.enabled=false
 ```
 
 ## Start Scalar DB Server

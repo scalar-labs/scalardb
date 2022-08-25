@@ -9,6 +9,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
@@ -38,6 +39,7 @@ import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.ClientCallStreamObserver;
@@ -73,6 +75,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     stub.twoPhaseCommitTransaction(this);
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Override
   public void beforeStart(
       ClientCallStreamObserver<TwoPhaseCommitTransactionRequest> requestStream) {
@@ -115,6 +118,24 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     }
   }
 
+  public String beginTransaction(@Nullable String transactionId) throws TransactionException {
+    throwIfTransactionFinished();
+
+    TwoPhaseCommitTransactionRequest.BeginRequest request;
+    if (transactionId == null) {
+      request = TwoPhaseCommitTransactionRequest.BeginRequest.getDefaultInstance();
+    } else {
+      request =
+          TwoPhaseCommitTransactionRequest.BeginRequest.newBuilder()
+              .setTransactionId(transactionId)
+              .build();
+    }
+    ResponseOrError responseOrError =
+        sendRequest(TwoPhaseCommitTransactionRequest.newBuilder().setBeginRequest(request).build());
+    throwIfErrorForBeginOrStartOrJoin(responseOrError, "begin");
+    return responseOrError.getResponse().getBeginResponse().getTransactionId();
+  }
+
   public String startTransaction(@Nullable String transactionId) throws TransactionException {
     throwIfTransactionFinished();
 
@@ -126,7 +147,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     }
     ResponseOrError responseOrError =
         sendRequest(TwoPhaseCommitTransactionRequest.newBuilder().setStartRequest(request).build());
-    throwIfErrorForStartOrJoin(responseOrError, true);
+    throwIfErrorForBeginOrStartOrJoin(responseOrError, "start");
     return responseOrError.getResponse().getStartResponse().getTransactionId();
   }
 
@@ -138,10 +159,10 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
             TwoPhaseCommitTransactionRequest.newBuilder()
                 .setJoinRequest(JoinRequest.newBuilder().setTransactionId(transactionId).build())
                 .build());
-    throwIfErrorForStartOrJoin(responseOrError, false);
+    throwIfErrorForBeginOrStartOrJoin(responseOrError, "join");
   }
 
-  private void throwIfErrorForStartOrJoin(ResponseOrError responseOrError, boolean start)
+  private void throwIfErrorForBeginOrStartOrJoin(ResponseOrError responseOrError, String command)
       throws TransactionException {
     if (responseOrError.isError()) {
       finished.set(true);
@@ -158,7 +179,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new TransactionException("failed to " + (start ? "start" : "join"), error);
+      throw new TransactionException("failed to " + command, error);
     }
   }
 
@@ -377,6 +398,34 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     TwoPhaseCommitTransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
       throw new RollbackException(response.getError().getMessage());
+    }
+  }
+
+  public void abort() throws AbortException {
+    if (finished.get()) {
+      return;
+    }
+
+    ResponseOrError responseOrError =
+        sendRequest(
+            TwoPhaseCommitTransactionRequest.newBuilder()
+                .setRollbackRequest(RollbackRequest.getDefaultInstance())
+                .build());
+    finished.set(true);
+    throwIfErrorForAbort(responseOrError);
+  }
+
+  private void throwIfErrorForAbort(ResponseOrError responseOrError) throws AbortException {
+    if (responseOrError.isError()) {
+      Throwable error = responseOrError.getError();
+      if (error instanceof Error) {
+        throw (Error) error;
+      }
+      throw new AbortException("failed to abort", error);
+    }
+    TwoPhaseCommitTransactionResponse response = responseOrError.getResponse();
+    if (response.hasError()) {
+      throw new AbortException(response.getError().getMessage());
     }
   }
 
