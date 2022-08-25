@@ -1,4 +1,4 @@
-package com.scalar.db.storage.dynamo;
+package com.scalar.db.storage.cosmos;
 
 import static com.scalar.db.api.ConditionBuilder.column;
 import static com.scalar.db.api.ConditionBuilder.deleteIf;
@@ -19,12 +19,13 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
-public class DynamoOperationCheckerTest {
+public class CosmosOperationCheckerTest {
 
   private static final String NAMESPACE_NAME = "n1";
   private static final String TABLE_NAME = "t1";
@@ -33,7 +34,7 @@ public class DynamoOperationCheckerTest {
   private static final String COL1 = "v1";
   private static final String COL2 = "v2";
   @Mock private TableMetadataManager metadataManager;
-  private DynamoOperationChecker operationChecker;
+  private CosmosOperationChecker operationChecker;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -43,115 +44,13 @@ public class DynamoOperationCheckerTest {
             .addColumn(PKEY1, DataType.INT)
             .addColumn(CKEY1, DataType.INT)
             .addColumn(COL1, DataType.INT)
-            .addColumn(COL2, DataType.BOOLEAN)
+            .addColumn(COL2, DataType.BLOB)
             .addPartitionKey(PKEY1)
             .addClusteringKey(CKEY1)
             .addSecondaryIndex(COL1)
             .build();
     when(metadataManager.getTableMetadata(any())).thenReturn(tableMetadata);
-    operationChecker = new DynamoOperationChecker(metadataManager);
-  }
-
-  @Test
-  public void check_ForPutWithNullIndex_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    Put put = new Put(Key.ofInt(PKEY1, 0), Key.ofInt(CKEY1, 0)).withIntValue(COL1, null);
-
-    // Act Assert
-    assertThatThrownBy(() -> operationChecker.check(put))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void check_ForPutWithNonNullIndex_ShouldDoNothing() {
-    // Arrange
-    Put put = new Put(Key.ofInt(PKEY1, 0), Key.ofInt(CKEY1, 0)).withIntValue(COL1, 1);
-
-    // Act Assert
-    assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void check_ForPutWithoutSettingIndex_ShouldDoNothing() {
-    // Arrange
-    Put put = new Put(Key.ofInt(PKEY1, 0), Key.ofInt(CKEY1, 0));
-
-    // Act Assert
-    assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void check_ForMutationsWithPutWithNullIndex_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    Put putWithNullIndex =
-        Put.newBuilder()
-            .namespace(NAMESPACE_NAME)
-            .table(TABLE_NAME)
-            .partitionKey(Key.ofInt(PKEY1, 0))
-            .clusteringKey(Key.ofInt(CKEY1, 0))
-            .intValue(COL1, null)
-            .build();
-    Put put =
-        Put.newBuilder()
-            .namespace(NAMESPACE_NAME)
-            .table(TABLE_NAME)
-            .partitionKey(Key.ofInt(PKEY1, 0))
-            .clusteringKey(Key.ofInt(CKEY1, 1))
-            .intValue(COL1, 1)
-            .build();
-
-    // Act Assert
-    assertThatThrownBy(() -> operationChecker.check(Arrays.asList(putWithNullIndex, put)))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void check_ForMutationsWithPutWithNonNullIndex_ShouldDoNothing() {
-    // Arrange
-    Put putWithNonNullIndex =
-        Put.newBuilder()
-            .namespace(NAMESPACE_NAME)
-            .table(TABLE_NAME)
-            .partitionKey(Key.ofInt(PKEY1, 0))
-            .clusteringKey(Key.ofInt(CKEY1, 0))
-            .intValue(COL1, 1)
-            .build();
-    Put put =
-        Put.newBuilder()
-            .namespace(NAMESPACE_NAME)
-            .table(TABLE_NAME)
-            .partitionKey(Key.ofInt(PKEY1, 0))
-            .clusteringKey(Key.ofInt(CKEY1, 1))
-            .intValue(COL1, 1)
-            .build();
-
-    // Act Assert
-    assertThatCode(() -> operationChecker.check(Arrays.asList(putWithNonNullIndex, put)))
-        .doesNotThrowAnyException();
-  }
-
-  @Test
-  public void check_ForMutationsWithPutWithoutSettingIndex_ShouldDoNothing() {
-    // Arrange
-    Put putWithoutSettingIndex =
-        Put.newBuilder()
-            .namespace(NAMESPACE_NAME)
-            .table(TABLE_NAME)
-            .partitionKey(Key.ofInt(PKEY1, 0))
-            .clusteringKey(Key.ofInt(CKEY1, 0))
-            .build();
-    Put put =
-        Put.newBuilder()
-            .namespace(NAMESPACE_NAME)
-            .table(TABLE_NAME)
-            .partitionKey(Key.ofInt(PKEY1, 0))
-            .clusteringKey(Key.ofInt(CKEY1, 1))
-            .intValue(COL1, 1)
-            .build();
-
-    // Act Assert
-    assertThatCode(() -> operationChecker.check(Arrays.asList(putWithoutSettingIndex, put)))
-        .doesNotThrowAnyException();
+    operationChecker = new CosmosOperationChecker(metadataManager);
   }
 
   @Test
@@ -182,33 +81,47 @@ public class DynamoOperationCheckerTest {
     assertThatCode(
             () ->
                 operationChecker.check(
-                    buildPutWithCondition(putIf(column(COL2).isEqualToBoolean(true)).build())))
+                    buildPutWithCondition(
+                        putIf(column(COL2).isEqualToBlob("blob".getBytes(StandardCharsets.UTF_8)))
+                            .build())))
         .doesNotThrowAnyException();
     assertThatCode(
             () ->
                 operationChecker.check(
-                    buildPutWithCondition(putIf(column(COL2).isNotEqualToBoolean(true)).build())))
+                    buildPutWithCondition(
+                        putIf(
+                                column(COL2)
+                                    .isNotEqualToBlob("blob".getBytes(StandardCharsets.UTF_8)))
+                            .build())))
         .doesNotThrowAnyException();
     assertThatCode(
             () ->
                 operationChecker.check(
-                    buildPutWithCondition(putIf(column(COL2).isNullBoolean()).build())))
+                    buildPutWithCondition(putIf(column(COL2).isNullBlob()).build())))
         .doesNotThrowAnyException();
     assertThatCode(
             () ->
                 operationChecker.check(
-                    buildPutWithCondition(putIf(column(COL2).isNotNullBoolean()).build())))
+                    buildPutWithCondition(putIf(column(COL2).isNotNullBlob()).build())))
         .doesNotThrowAnyException();
     assertThatThrownBy(
             () ->
                 operationChecker.check(
-                    buildPutWithCondition(putIf(column(COL2).isGreaterThanBoolean(false)).build())))
+                    buildPutWithCondition(
+                        putIf(
+                                column(COL2)
+                                    .isGreaterThanBlob("blob".getBytes(StandardCharsets.UTF_8)))
+                            .build())))
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(
             () ->
                 operationChecker.check(
                     buildPutWithCondition(
-                        putIf(column(COL2).isLessThanOrEqualToBoolean(true)).build())))
+                        putIf(
+                                column(COL2)
+                                    .isLessThanOrEqualToBlob(
+                                        "blob".getBytes(StandardCharsets.UTF_8)))
+                            .build())))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -239,35 +152,47 @@ public class DynamoOperationCheckerTest {
             () ->
                 operationChecker.check(
                     buildDeleteWithCondition(
-                        deleteIf(column(COL2).isEqualToBoolean(true)).build())))
+                        deleteIf(
+                                column(COL2).isEqualToBlob("blob".getBytes(StandardCharsets.UTF_8)))
+                            .build())))
         .doesNotThrowAnyException();
     assertThatCode(
             () ->
                 operationChecker.check(
                     buildDeleteWithCondition(
-                        deleteIf(column(COL2).isNotEqualToBoolean(true)).build())))
+                        deleteIf(
+                                column(COL2)
+                                    .isNotEqualToBlob("blob".getBytes(StandardCharsets.UTF_8)))
+                            .build())))
         .doesNotThrowAnyException();
     assertThatCode(
             () ->
                 operationChecker.check(
-                    buildDeleteWithCondition(deleteIf(column(COL2).isNullBoolean()).build())))
+                    buildDeleteWithCondition(deleteIf(column(COL2).isNullBlob()).build())))
         .doesNotThrowAnyException();
     assertThatCode(
             () ->
                 operationChecker.check(
-                    buildDeleteWithCondition(deleteIf(column(COL2).isNotNullBoolean()).build())))
+                    buildDeleteWithCondition(deleteIf(column(COL2).isNotNullBlob()).build())))
         .doesNotThrowAnyException();
     assertThatThrownBy(
             () ->
                 operationChecker.check(
                     buildDeleteWithCondition(
-                        deleteIf(column(COL2).isGreaterThanBoolean(false)).build())))
+                        deleteIf(
+                                column(COL2)
+                                    .isGreaterThanBlob("blob".getBytes(StandardCharsets.UTF_8)))
+                            .build())))
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(
             () ->
                 operationChecker.check(
                     buildDeleteWithCondition(
-                        deleteIf(column(COL2).isLessThanOrEqualToBoolean(true)).build())))
+                        deleteIf(
+                                column(COL2)
+                                    .isLessThanOrEqualToBlob(
+                                        "blob".getBytes(StandardCharsets.UTF_8)))
+                            .build())))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -315,7 +240,11 @@ public class DynamoOperationCheckerTest {
             () ->
                 operationChecker.check(
                     Arrays.asList(
-                        buildPutWithCondition(putIf(column(COL2).isEqualToBoolean(true)).build()),
+                        buildPutWithCondition(
+                            putIf(
+                                    column(COL2)
+                                        .isEqualToBlob("blob".getBytes(StandardCharsets.UTF_8)))
+                                .build()),
                         put)))
         .doesNotThrowAnyException();
     assertThatCode(
@@ -323,28 +252,33 @@ public class DynamoOperationCheckerTest {
                 operationChecker.check(
                     Arrays.asList(
                         buildPutWithCondition(
-                            putIf(column(COL2).isNotEqualToBoolean(true)).build()),
+                            putIf(
+                                    column(COL2)
+                                        .isNotEqualToBlob("blob".getBytes(StandardCharsets.UTF_8)))
+                                .build()),
                         put)))
         .doesNotThrowAnyException();
     assertThatCode(
             () ->
                 operationChecker.check(
                     Arrays.asList(
-                        buildPutWithCondition(putIf(column(COL2).isNullBoolean()).build()), put)))
+                        buildPutWithCondition(putIf(column(COL2).isNullBlob()).build()), put)))
         .doesNotThrowAnyException();
     assertThatCode(
             () ->
                 operationChecker.check(
                     Arrays.asList(
-                        buildPutWithCondition(putIf(column(COL2).isNotNullBoolean()).build()),
-                        put)))
+                        buildPutWithCondition(putIf(column(COL2).isNotNullBlob()).build()), put)))
         .doesNotThrowAnyException();
     assertThatThrownBy(
             () ->
                 operationChecker.check(
                     Arrays.asList(
                         buildPutWithCondition(
-                            putIf(column(COL2).isGreaterThanBoolean(false)).build()),
+                            putIf(
+                                    column(COL2)
+                                        .isGreaterThanBlob("blob".getBytes(StandardCharsets.UTF_8)))
+                                .build()),
                         put)))
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(
@@ -352,7 +286,11 @@ public class DynamoOperationCheckerTest {
                 operationChecker.check(
                     Arrays.asList(
                         buildPutWithCondition(
-                            putIf(column(COL2).isLessThanOrEqualToBoolean(true)).build()),
+                            putIf(
+                                    column(COL2)
+                                        .isLessThanOrEqualToBlob(
+                                            "blob".getBytes(StandardCharsets.UTF_8)))
+                                .build()),
                         put)))
         .isInstanceOf(IllegalArgumentException.class);
   }
@@ -401,7 +339,10 @@ public class DynamoOperationCheckerTest {
                 operationChecker.check(
                     Arrays.asList(
                         buildDeleteWithCondition(
-                            deleteIf(column(COL2).isEqualToBoolean(true)).build()),
+                            deleteIf(
+                                    column(COL2)
+                                        .isEqualToBlob("blob".getBytes(StandardCharsets.UTF_8)))
+                                .build()),
                         delete)))
         .doesNotThrowAnyException();
     assertThatCode(
@@ -409,21 +350,24 @@ public class DynamoOperationCheckerTest {
                 operationChecker.check(
                     Arrays.asList(
                         buildDeleteWithCondition(
-                            deleteIf(column(COL2).isNotEqualToBoolean(true)).build()),
+                            deleteIf(
+                                    column(COL2)
+                                        .isNotEqualToBlob("blob".getBytes(StandardCharsets.UTF_8)))
+                                .build()),
                         delete)))
         .doesNotThrowAnyException();
     assertThatCode(
             () ->
                 operationChecker.check(
                     Arrays.asList(
-                        buildDeleteWithCondition(deleteIf(column(COL2).isNullBoolean()).build()),
+                        buildDeleteWithCondition(deleteIf(column(COL2).isNullBlob()).build()),
                         delete)))
         .doesNotThrowAnyException();
     assertThatCode(
             () ->
                 operationChecker.check(
                     Arrays.asList(
-                        buildDeleteWithCondition(deleteIf(column(COL2).isNotNullBoolean()).build()),
+                        buildDeleteWithCondition(deleteIf(column(COL2).isNotNullBlob()).build()),
                         delete)))
         .doesNotThrowAnyException();
     assertThatThrownBy(
@@ -431,7 +375,10 @@ public class DynamoOperationCheckerTest {
                 operationChecker.check(
                     Arrays.asList(
                         buildDeleteWithCondition(
-                            deleteIf(column(COL2).isGreaterThanBoolean(false)).build()),
+                            deleteIf(
+                                    column(COL2)
+                                        .isGreaterThanBlob("blob".getBytes(StandardCharsets.UTF_8)))
+                                .build()),
                         delete)))
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(
@@ -439,7 +386,11 @@ public class DynamoOperationCheckerTest {
                 operationChecker.check(
                     Arrays.asList(
                         buildDeleteWithCondition(
-                            deleteIf(column(COL2).isLessThanOrEqualToBoolean(true)).build()),
+                            deleteIf(
+                                    column(COL2)
+                                        .isLessThanOrEqualToBlob(
+                                            "blob".getBytes(StandardCharsets.UTF_8)))
+                                .build()),
                         delete)))
         .isInstanceOf(IllegalArgumentException.class);
   }

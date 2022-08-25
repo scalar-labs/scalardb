@@ -24,14 +24,14 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class OperationChecker {
 
-  private final TableMetadataManager metadataManager;
+  private final TableMetadataManager tableMetadataManager;
 
-  public OperationChecker(TableMetadataManager metadataManager) {
-    this.metadataManager = metadataManager;
+  public OperationChecker(TableMetadataManager tableMetadataManager) {
+    this.tableMetadataManager = tableMetadataManager;
   }
 
   public void check(Get get) throws ExecutionException {
-    TableMetadata metadata = getMetadata(get);
+    TableMetadata metadata = getTableMetadata(get);
 
     checkProjections(get, metadata);
 
@@ -71,7 +71,7 @@ public class OperationChecker {
       return;
     }
 
-    TableMetadata metadata = getMetadata(scan);
+    TableMetadata metadata = getTableMetadata(scan);
 
     checkProjections(scan, metadata);
 
@@ -119,7 +119,7 @@ public class OperationChecker {
   }
 
   private void check(ScanAll scanAll) throws ExecutionException {
-    TableMetadata metadata = getMetadata(scanAll);
+    TableMetadata metadata = getTableMetadata(scanAll);
 
     checkProjections(scanAll, metadata);
 
@@ -217,29 +217,21 @@ public class OperationChecker {
     }
   }
 
-  public void check(Mutation mutation) throws ExecutionException {
-    if (mutation instanceof Put) {
-      check((Put) mutation);
-    } else {
-      check((Delete) mutation);
-    }
-  }
-
   public void check(Put put) throws ExecutionException {
-    TableMetadata metadata = getMetadata(put);
+    TableMetadata metadata = getTableMetadata(put);
     checkPrimaryKey(put, metadata);
     checkColumnsInPut(put, metadata);
     checkCondition(put, metadata);
   }
 
   public void check(Delete delete) throws ExecutionException {
-    TableMetadata metadata = getMetadata(delete);
+    TableMetadata metadata = getTableMetadata(delete);
     checkPrimaryKey(delete, metadata);
     checkCondition(delete, metadata);
   }
 
-  private TableMetadata getMetadata(Operation operation) throws ExecutionException {
-    TableMetadata metadata = metadataManager.getTableMetadata(operation);
+  protected TableMetadata getTableMetadata(Operation operation) throws ExecutionException {
+    TableMetadata metadata = tableMetadataManager.getTableMetadata(operation);
     if (metadata == null) {
       throw new IllegalArgumentException(
           "The specified table is not found: " + operation.forFullTableName().get());
@@ -247,7 +239,7 @@ public class OperationChecker {
     return metadata;
   }
 
-  protected void checkColumnsInPut(Put put, TableMetadata metadata) {
+  private void checkColumnsInPut(Put put, TableMetadata metadata) {
     for (Column<?> column : put.getColumns().values()) {
       if (!new ColumnChecker(metadata, false, false, false, true).check(column)) {
         throw new IllegalArgumentException(
@@ -269,7 +261,7 @@ public class OperationChecker {
             });
   }
 
-  public void check(List<? extends Mutation> mutations) {
+  public void check(List<? extends Mutation> mutations) throws ExecutionException {
     if (mutations.isEmpty()) {
       throw new IllegalArgumentException("The mutations are empty");
     }
@@ -280,6 +272,15 @@ public class OperationChecker {
           || !mutation.forTable().equals(first.forTable())
           || !mutation.getPartitionKey().equals(first.getPartitionKey())) {
         throw new IllegalArgumentException("Mutations that span multi-partition are not supported");
+      }
+    }
+
+    for (Mutation mutation : mutations) {
+      if (mutation instanceof Put) {
+        check((Put) mutation);
+      } else {
+        assert mutation instanceof Delete;
+        check((Delete) mutation);
       }
     }
   }

@@ -1,13 +1,10 @@
 package com.scalar.db.storage.jdbc;
 
-import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.DistributedStorageConditionalMutationIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.TestUtils;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 import java.util.Random;
 
@@ -30,25 +27,6 @@ public class JdbcDatabaseConditionalMutationIntegrationTest
       return 1;
     }
     return super.getThreadNum();
-  }
-
-  @Override
-  protected List<OperatorAndDataType> getOperatorAndDataTypeListForTest() {
-    if (rdbEngine == RdbEngine.ORACLE) {
-      List<OperatorAndDataType> ret = new ArrayList<>();
-      for (Operator operator : Operator.values()) {
-        for (DataType dataType : DataType.values()) {
-          // Oracle doesn't support conditions for BLOB type
-          if (dataType == DataType.BLOB) {
-            continue;
-          }
-          ret.add(new OperatorAndDataType(operator, dataType));
-        }
-      }
-      return ret;
-    }
-
-    return super.getOperatorAndDataTypeListForTest();
   }
 
   @Override

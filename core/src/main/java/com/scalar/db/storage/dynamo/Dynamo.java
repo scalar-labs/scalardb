@@ -151,9 +151,6 @@ public class Dynamo extends AbstractDistributedStorage {
 
     mutations = copyAndSetTargetToIfNot(mutations);
     operationChecker.check(mutations);
-    for (Mutation mutation : mutations) {
-      operationChecker.check(mutation);
-    }
     batchHandler.handle(mutations);
   }
 
