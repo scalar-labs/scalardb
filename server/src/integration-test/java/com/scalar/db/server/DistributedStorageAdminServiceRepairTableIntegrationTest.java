@@ -2,6 +2,7 @@ package com.scalar.db.server;
 
 import com.scalar.db.api.DistributedStorageAdminRepairTableIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.util.TestUtils;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
@@ -15,16 +16,16 @@ public class DistributedStorageAdminServiceRepairTableIntegrationTest
 
   @Override
   protected void initialize() throws IOException {
-    ServerConfig config = ServerEnv.getServerConfig();
-    if (config != null) {
-      server = new ScalarDbServer(config);
+    Properties properties = ServerEnv.getServerProperties();
+    if (properties != null) {
+      server = new ScalarDbServer(TestUtils.addSuffix(properties, TEST_NAME));
       server.start();
     }
   }
 
   @Override
   protected Properties getProperties() {
-    return ServerEnv.getServerConfig().getProperties();
+    return ServerEnv.getProperties();
   }
 
   @Override
@@ -54,18 +55,18 @@ public class DistributedStorageAdminServiceRepairTableIntegrationTest
 
   @Override
   protected Properties getStorageProperties() {
-    return ServerEnv.getServerConfig().getProperties();
+    return ServerEnv.getServerProperties();
   }
 
   @SuppressWarnings("unused")
   private boolean isExternalServerOrCassandraUsed() {
-    ServerConfig config = ServerEnv.getServerConfig();
+    Properties properties = ServerEnv.getServerProperties();
     // An external server is used, so we don't have access to the configuration to connect to the
     // underlying storage which makes it impossible to run these tests
-    if (config == null) {
+    if (properties == null) {
       return true;
     }
     // These tests are skipped for Cassandra
-    return config.getProperties().getProperty(DatabaseConfig.STORAGE, "").equals("cassandra");
+    return properties.getProperty(DatabaseConfig.STORAGE, "").equals("cassandra");
   }
 }

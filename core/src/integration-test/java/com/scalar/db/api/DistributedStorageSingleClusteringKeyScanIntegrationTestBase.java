@@ -37,7 +37,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
     NOTHING,
   }
 
-  private static final String TEST_NAME = "single_ckey";
+  protected static final String TEST_NAME = "single_ckey";
   private static final String NAMESPACE = "integration_testing_" + TEST_NAME;
   private static final String PARTITION_KEY = "pkey";
   private static final String CLUSTERING_KEY = "ckey";
