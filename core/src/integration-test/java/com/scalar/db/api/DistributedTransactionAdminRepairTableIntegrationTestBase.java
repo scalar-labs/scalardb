@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -23,7 +24,7 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase {
 
-  private static final String TEST_NAME = "tx_admin_repair_table";
+  protected static final String TEST_NAME = "tx_admin_repair_table";
   private static final String NAMESPACE = "int_test_" + TEST_NAME;
 
   private static final String TABLE = "test_table";
@@ -62,6 +63,11 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
 
   protected DistributedTransactionAdmin admin;
   protected AdminTestUtils adminTestUtils;
+
+  @BeforeAll
+  public void beforeAll() throws Exception {
+    initialize();
+  }
 
   protected void initialize() throws Exception {}
 

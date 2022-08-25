@@ -32,11 +32,11 @@ public final class ServerEnv {
 
   public ServerEnv() {}
 
-  public static ServerConfig getServerConfig() {
-    return getServerConfig(null, null);
+  public static Properties getServerProperties() {
+    return getServerProperties(null, null);
   }
 
-  public static ServerConfig getServerConfig(
+  public static Properties getServerProperties(
       @Nullable Isolation isolation, @Nullable SerializableStrategy serializableStrategy) {
     boolean externalServerUsed =
         Boolean.parseBoolean(
@@ -69,7 +69,7 @@ public final class ServerEnv {
           ConsensusCommitConfig.SERIALIZABLE_STRATEGY, serializableStrategy.name());
     }
     properties.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "-1");
-    return new ServerConfig(properties);
+    return properties;
   }
 
   public static Properties getProperties() {
