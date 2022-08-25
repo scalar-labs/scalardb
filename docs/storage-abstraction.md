@@ -183,7 +183,7 @@ This section explains how to use them.
 
 ### Administrative API
 
-You can execute administrative operations programmatically as follows, but you can also execute those operations through [Schema Loader](https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md).
+You can execute administrative operations programmatically as follows, but you can also execute those operations through [Schema Loader](schema-loader.md).
 
 #### Get a DistributedStorageAdmin instance
 
@@ -748,4 +748,4 @@ And if you specify multiple conditions in a Mutate operation, the operation is e
 * [Design document](design.md)
 * [Getting started](getting-started.md)
 * [Scalar DB Server](scalardb-server.md)
-* [Schema Loader](https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md)
+* [Schema Loader](schema-loader.md)

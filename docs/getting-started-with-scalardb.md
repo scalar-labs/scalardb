@@ -12,7 +12,7 @@ $ cd docs/getting-started
 
 First of all, you need to define how the data will be organized (a.k.a database schema) in the application with Scalar DB database schema.
 Here is a database schema for the sample application.
-For the supported data types, please see [this doc](https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md#data-type-mapping-between-scalar-db-and-the-other-databases) for more details.
+For the supported data types, please see [this doc](schema-loader.md#data-type-mapping-between-scalar-db-and-the-other-databases) for more details.
 You can create a JSON file `emoney.json` with the JSON below.
 
 ```json
@@ -38,7 +38,7 @@ $ java -jar scalardb-schema-loader-<version>.jar --config scalardb.properties --
 ```
 
 The `--coordinator` option is specified because we have a table with transaction enabled in the schema.
-Please see [here](https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md) for more details of the Schema Loader
+Please see [here](schema-loader.md) for more details of the Schema Loader
 
 ## Store & retrieve data
 
@@ -229,7 +229,7 @@ These are just simple examples of how Scalar DB is used. For more information, p
     * [scalardb-rpc](https://javadoc.io/doc/com.scalar-labs/scalardb-rpc/latest/index.html) - Scalar DB RPC libraries
     * [scalardb-server](https://javadoc.io/doc/com.scalar-labs/scalardb-server/latest/index.html) - Scalar DB Server that is the gRPC interface of Scalar DB
 * [Requirements in the underlying databases](requirements.md)
-* [Schema Loader](https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md)
+* [Schema Loader](schema-loader.md)
 * [How to Back up and Restore](backup-restore.md)
 * [Multi-storage Transactions](multi-storage-transactions.md)
 * [Two-phase Commit Transactions](two-phase-commit-transactions.md)

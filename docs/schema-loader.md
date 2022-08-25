@@ -182,7 +182,7 @@ Create/Delete JDBC schemas
 
 ### Create namespaces and tables
 
-For using a config file (Sample config file can be found [here](../conf/database.properties)):
+For using a config file (Sample config file can be found [here](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties)):
 ```console
 $ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json [--coordinator]
 ```
@@ -223,7 +223,7 @@ This command will add new columns and create/delete secondary index for existing
 the provided table schema to the existing schema to decide which columns need to be added and which
 indexes need to be created or deleted.
 
-For using config file (Sample config file can be found [here](../conf/database.properties)):
+For using config file (Sample config file can be found [here](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties)):
 
 ```console
 $ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json --alter
@@ -254,7 +254,7 @@ $ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> 
 
 ### Delete tables
 
-For using config file (Sample config file can be found [here](../conf/database.properties)):
+For using config file (Sample config file can be found [here](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties)):
 ```console
 $ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json [--coordinator] -D 
 ```
@@ -285,7 +285,7 @@ $ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> 
 
 This command will repair the table metadata of existing tables. When using Cosmos DB, it additionally repairs stored procedure attached to each table.
 
-For using config file (Sample config file can be found [here](../conf/database.properties)):
+For using config file (Sample config file can be found [here](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties)):
 ```console
 $ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json [--coordinator] --repair-all 
 ```
@@ -314,7 +314,7 @@ $ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> 
 
 ### Sample schema file
 
-The sample schema is as follows (Sample schema file can be found [here](sample/schema_sample.json)):
+The sample schema is as follows (Sample schema file can be found [here](https://github.com/scalar-labs/scalardb/blob/master/schema-loader/sample/schema_sample.json)):
 
 ```json
 {
@@ -384,7 +384,7 @@ The `partition-key` field defines which columns the partition key is composed of
 The `secondary-index` field defines which columns are indexed.
 The `transaction` field indicates whether the table is for transactions or not.
 If you set the `transaction` field to `true` or don't specify the `transaction` field, this tool creates a table with transaction metadata if needed.
-If not, it creates a table without any transaction metadata (that is, for a table with [Storage API](https://github.com/scalar-labs/scalardb/blob/master/docs/storage-abstraction.md)).
+If not, it creates a table without any transaction metadata (that is, for a table with [Storage API](storage-abstraction.md)).
 
 You can also specify database/storage-specific options in the table definition as follows:
 ```json
@@ -410,7 +410,7 @@ For Cassandra:
 - `compaction-strategy`, a compaction strategy. It should be `STCS` (SizeTieredCompaction), `LCS` (LeveledCompactionStrategy) or `TWCS` (TimeWindowCompactionStrategy).
 
 For DynamoDB and Cosmos DB:
-- `ru`, a request unit. Please see [RU](#RU) for the details.
+- `ru`, a request unit. Please see [RU](#ru) for the details.
 
 ## Scaling Performance
 

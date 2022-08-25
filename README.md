@@ -34,6 +34,7 @@ To add a dependency using Maven:
 * [Multi-storage Transactions](docs/multi-storage-transactions.md)
 * [Two-phase Commit Transactions](docs/two-phase-commit-transactions.md)
 * [Design document](docs/design.md)
+* [Schema Loader](docs/schema-loader.md)
 * [Requirements in the underlying databases](docs/requirements.md)
 * [How to Back up and Restore](docs/backup-restore.md)
 * [Scalar DB supported databases](docs/scalardb-supported-databases.md)
