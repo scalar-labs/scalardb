@@ -1,10 +1,10 @@
 package com.scalar.db.api;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -74,8 +74,7 @@ public abstract class Selection extends Operation {
 
   @Nonnull
   public List<String> getProjections() {
-    // TODO: use guava immutable.of
-    return Collections.unmodifiableList(projections);
+    return ImmutableList.copyOf(projections);
   }
 
   /**

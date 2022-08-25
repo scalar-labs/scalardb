@@ -1,5 +1,6 @@
 package com.scalar.db.storage.dynamo.request;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -10,6 +11,7 @@ public class ScanRequest implements PaginatedRequest {
   private final software.amazon.awssdk.services.dynamodb.model.ScanRequest dynamoRequest;
   private final DynamoDbClient client;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ScanRequest(
       DynamoDbClient client,
       software.amazon.awssdk.services.dynamodb.model.ScanRequest dynamoRequest) {

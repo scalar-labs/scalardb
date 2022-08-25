@@ -6,6 +6,7 @@ import com.azure.cosmos.models.FeedResponse;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.storage.common.ScannerIterator;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -29,6 +30,7 @@ public final class ScannerImpl implements Scanner {
    *     records.
    * @param resultInterpreter to interpret the result
    */
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ScannerImpl(
       Iterator<FeedResponse<Record>> recordsPages, ResultInterpreter resultInterpreter) {
     this.recordsPages = checkNotNull(recordsPages);

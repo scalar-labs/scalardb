@@ -1,6 +1,6 @@
 package com.scalar.db.storage.cosmos;
 
-import com.google.common.collect.ImmutableMap;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -11,6 +11,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  *
  * @author Yuji Ito
  */
+@SuppressFBWarnings({"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
 @NotThreadSafe
 public class Record {
   private String id = "";
@@ -50,15 +51,15 @@ public class Record {
   }
 
   public Map<String, Object> getPartitionKey() {
-    return ImmutableMap.copyOf(partitionKey);
+    return partitionKey;
   }
 
   public Map<String, Object> getClusteringKey() {
-    return ImmutableMap.copyOf(clusteringKey);
+    return clusteringKey;
   }
 
   public Map<String, Object> getValues() {
-    return Collections.unmodifiableMap(values);
+    return values;
   }
 
   @Override

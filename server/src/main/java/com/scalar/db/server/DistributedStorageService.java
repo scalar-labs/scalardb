@@ -19,6 +19,7 @@ import com.scalar.db.rpc.ScanRequest;
 import com.scalar.db.rpc.ScanResponse;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableRunnable;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
@@ -44,6 +45,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
   private final GateKeeper gateKeeper;
   private final Metrics metrics;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public DistributedStorageService(
       DistributedStorage storage,
       TableMetadataManager tableMetadataManager,

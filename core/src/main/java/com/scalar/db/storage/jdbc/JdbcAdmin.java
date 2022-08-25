@@ -133,12 +133,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcAdmin(BasicDataSource dataSource, JdbcConfig config) {
     this.dataSource = dataSource;
     rdbEngine = JdbcUtils.getRdbEngine(config.getJdbcUrl());
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   @VisibleForTesting
   JdbcAdmin(BasicDataSource dataSource, RdbEngine rdbEngine, JdbcConfig config) {
     this.dataSource = dataSource;

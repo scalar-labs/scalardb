@@ -8,6 +8,7 @@ import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -21,6 +22,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 public class MapVisitor implements ColumnVisitor {
   private final Map<String, Object> values = new HashMap<>();
 
+  @SuppressFBWarnings("EI_EXPOSE_REP")
   public Map<String, Object> get() {
     return values;
   }

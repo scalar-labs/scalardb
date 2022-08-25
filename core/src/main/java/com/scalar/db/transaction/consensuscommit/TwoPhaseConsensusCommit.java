@@ -20,6 +20,7 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.transaction.common.AbstractTwoPhaseCommitTransaction;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -55,6 +56,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private Runnable beforeRecoveryHook = () -> {};
   private Runnable beforePrepareHook = () -> {};
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public TwoPhaseConsensusCommit(
       CrudHandler crud, CommitHandler commit, RecoveryHandler recovery, boolean isCoordinator) {
     this.crud = crud;

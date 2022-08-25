@@ -30,6 +30,7 @@ import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -324,6 +325,7 @@ public final class TestUtils {
       return clusteringKey;
     }
 
+    @SuppressFBWarnings("EI_EXPOSE_REP")
     public Set<Column<?>> getColumns() {
       return columns;
     }
@@ -383,6 +385,7 @@ public final class TestUtils {
         return this;
       }
 
+      @SuppressFBWarnings("EI_EXPOSE_REP2")
       public ExpectedResultBuilder nonKeyColumns(List<Column<?>> nonKeyColumns) {
         this.nonKeyColumns = nonKeyColumns;
         return this;

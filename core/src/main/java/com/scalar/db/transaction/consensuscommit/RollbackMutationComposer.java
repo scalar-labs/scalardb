@@ -21,6 +21,7 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -36,6 +37,7 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
   private final DistributedStorage storage;
   private final TransactionTableMetadataManager tableMetadataManager;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public RollbackMutationComposer(
       String id, DistributedStorage storage, TransactionTableMetadataManager tableMetadataManager) {
     super(id);

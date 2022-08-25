@@ -11,6 +11,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.io.ValueVisitor;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Map;
@@ -27,6 +28,7 @@ public class KeyBytesEncoder implements ValueVisitor {
     return encode(key, Collections.emptyMap());
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ByteBuffer encode(Key key, Map<String, Order> keyOrders) {
     this.keyOrders = keyOrders;
     int length = new KeyBytesEncodedLengthCalculator().calculate(key, keyOrders);

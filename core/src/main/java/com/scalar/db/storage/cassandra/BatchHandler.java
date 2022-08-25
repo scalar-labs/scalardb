@@ -12,6 +12,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -35,6 +36,7 @@ public class BatchHandler {
    * @param session {@code Session} to create a statement with
    * @param handlers {@code StatementHandlerManager}
    */
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public BatchHandler(Session session, StatementHandlerManager handlers) {
     this.session = checkNotNull(session);
     this.handlers = checkNotNull(handlers);
