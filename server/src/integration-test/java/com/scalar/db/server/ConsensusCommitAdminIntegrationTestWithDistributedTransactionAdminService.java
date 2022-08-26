@@ -21,13 +21,18 @@ public class ConsensusCommitAdminIntegrationTestWithDistributedTransactionAdminS
   protected void initialize() throws IOException {
     Properties properties = ServerEnv.getServerProperties();
     if (properties != null) {
-      server = new ScalarDbServer(TestUtils.addSuffix(properties, TEST_NAME));
+      Properties props = TestUtils.addSuffix(properties, TEST_NAME);
+
+      // Async commit can cause unexpected lazy recoveries, which can fail the tests. So we disable
+      // it for now.
+      props.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
+
+      server = new ScalarDbServer(props);
       server.start();
 
-      properties.setProperty(ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
-      properties.setProperty(ServerConfig.PORT, PORT_FOR_SERVER_WITH_INCLUDE_METADATA_ENABLED);
-      serverWithIncludeMetadataEnabled =
-          new ScalarDbServer(TestUtils.addSuffix(properties, TEST_NAME));
+      props.setProperty(ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
+      props.setProperty(ServerConfig.PORT, PORT_FOR_SERVER_WITH_INCLUDE_METADATA_ENABLED);
+      serverWithIncludeMetadataEnabled = new ScalarDbServer(props);
       serverWithIncludeMetadataEnabled.start();
     }
   }
