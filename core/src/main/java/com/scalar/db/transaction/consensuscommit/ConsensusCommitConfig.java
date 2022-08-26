@@ -49,7 +49,7 @@ public class ConsensusCommitConfig {
   private final boolean isIncludeMetadataEnabled;
 
   public ConsensusCommitConfig(DatabaseConfig databaseConfig) {
-    if (databaseConfig.getProperties().containsValue("scalar.db.isolation_level")) {
+    if (databaseConfig.getProperties().containsKey("scalar.db.isolation_level")) {
       logger.warn(
           "The property \"scalar.db.isolation_level\" is deprecated and will be removed in 5.0.0. "
               + "Please use \""
