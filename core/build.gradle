@@ -119,6 +119,7 @@ dependencies {
     testImplementation "org.mockito:mockito-core:${mockitoVersion}"
     testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
     testImplementation "org.apache.commons:commons-lang3:${commonsLangVersion}"
+    testImplementation "org.slf4j:slf4j-simple:${slf4jVersion}"
 
     // for SpotBugs
     compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
