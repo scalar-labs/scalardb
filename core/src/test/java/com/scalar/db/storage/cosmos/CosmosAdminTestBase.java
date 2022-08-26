@@ -54,41 +54,44 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-public class CosmosAdminTest {
+/**
+ * Abstraction that defines unit tests for the {@link CosmosAdmin}. The class purpose is to be able
+ * to run the {@link CosmosAdmin} unit tests with different values for the {@link CosmosConfig},
+ * notably {@link CosmosConfig#TABLE_METADATA_DATABASE}.
+ */
+public abstract class CosmosAdminTestBase {
   @Mock private CosmosClient client;
   @Mock private CosmosConfig config;
   @Mock private CosmosDatabase database;
   @Mock private CosmosContainer container;
   private CosmosAdmin admin;
+  private String metadataDatabaseName;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
+    when(config.getTableMetadataDatabase()).thenReturn(getTableMetadataDatabaseConfig());
     admin = new CosmosAdmin(client, config);
+
+    metadataDatabaseName = getTableMetadataDatabaseConfig().orElse("scalardb");
   }
+
+  /**
+   * This sets the {@link CosmosConfig#TABLE_METADATA_DATABASE} value that will be used to run the
+   * tests.
+   *
+   * @return {@link CosmosConfig#TABLE_METADATA_DATABASE} value
+   */
+  abstract Optional<String> getTableMetadataDatabaseConfig();
 
   @Test
-  public void
-      getTableMetadata_WithoutTableMetadataDatabaseChanged_ShouldReturnCorrectTableMetadata()
-          throws ExecutionException {
-    getTableMetadata_ShouldReturnCorrectTableMetadata(Optional.empty());
-  }
-
-  @Test
-  public void getTableMetadata_WithTableMetadataDatabaseChanged_ShouldReturnCorrectTableMetadata()
-      throws ExecutionException {
-    getTableMetadata_ShouldReturnCorrectTableMetadata(Optional.of("changed"));
-  }
-
-  private void getTableMetadata_ShouldReturnCorrectTableMetadata(
-      Optional<String> tableMetadataDatabase) throws ExecutionException {
+  public void getTableMetadata_ShouldReturnCorrectTableMetadata() throws ExecutionException {
     // Arrange
     String namespace = "ns";
     String table = "table";
     String fullName = getFullTableName(namespace, table);
-    String metadataDatabaseName = tableMetadataDatabase.orElse(CosmosAdmin.METADATA_DATABASE);
 
     @SuppressWarnings("unchecked")
     CosmosItemResponse<CosmosTableMetadata> response = mock(CosmosItemResponse.class);
@@ -108,11 +111,6 @@ public class CosmosAdminTest {
     cosmosTableMetadata.setSecondaryIndexNames(Collections.emptySet());
 
     when(response.getItem()).thenReturn(cosmosTableMetadata);
-
-    if (tableMetadataDatabase.isPresent()) {
-      when(config.getTableMetadataDatabase()).thenReturn(tableMetadataDatabase);
-      admin = new CosmosAdmin(client, config);
-    }
 
     // Act
     TableMetadata actual = admin.getTableMetadata(namespace, table);
@@ -191,19 +189,7 @@ public class CosmosAdminTest {
   }
 
   @Test
-  public void createTable_WithoutTableMetadataDatabaseChanged_ShouldCreateContainer()
-      throws ExecutionException {
-    createTable_ShouldCreateContainer(Optional.empty());
-  }
-
-  @Test
-  public void createTable_WithTableMetadataDatabaseChanged_ShouldCreateContainer()
-      throws ExecutionException {
-    createTable_ShouldCreateContainer(Optional.of("changed"));
-  }
-
-  private void createTable_ShouldCreateContainer(Optional<String> tableMetadataDatabase)
-      throws ExecutionException {
+  public void createTable_ShouldCreateContainer() throws ExecutionException {
     // Arrange
     String namespace = "ns";
     String table = "sample_table";
@@ -228,18 +214,11 @@ public class CosmosAdminTest {
     when(container.getScripts()).thenReturn(cosmosScripts);
 
     // for metadata table
-    String metadataDatabaseName = tableMetadataDatabase.orElse(CosmosAdmin.METADATA_DATABASE);
-
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
     when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
     when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
         .thenReturn(metadataContainer);
-
-    if (tableMetadataDatabase.isPresent()) {
-      when(config.getTableMetadataDatabase()).thenReturn(tableMetadataDatabase);
-      admin = new CosmosAdmin(client, config);
-    }
 
     // Act
     admin.createTable(namespace, table, metadata, Collections.emptyMap());
@@ -304,22 +283,8 @@ public class CosmosAdminTest {
   }
 
   @Test
-  public void
-      createTable_WithoutClusteringKeysWithoutTableMetadataDatabaseChanged_ShouldCreateContainerWithCompositeIndex()
-          throws ExecutionException {
-    createTable_WithoutClusteringKeys_ShouldCreateContainerWithCompositeIndex(Optional.empty());
-  }
-
-  @Test
-  public void
-      createTable_WithoutClusteringKeysWithTableMetadataDatabaseChanged_ShouldCreateContainerWithCompositeIndex()
-          throws ExecutionException {
-    createTable_WithoutClusteringKeys_ShouldCreateContainerWithCompositeIndex(
-        Optional.of("changed"));
-  }
-
-  private void createTable_WithoutClusteringKeys_ShouldCreateContainerWithCompositeIndex(
-      Optional<String> tableMetadataDatabase) throws ExecutionException {
+  public void createTable_WithoutClusteringKeys_ShouldCreateContainerWithCompositeIndex()
+      throws ExecutionException {
     // Arrange
     String namespace = "ns";
     String table = "sample_table";
@@ -342,18 +307,11 @@ public class CosmosAdminTest {
     when(container.getScripts()).thenReturn(cosmosScripts);
 
     // for metadata table
-    String metadataDatabaseName = tableMetadataDatabase.orElse(CosmosAdmin.METADATA_DATABASE);
-
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
     when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
     when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
         .thenReturn(metadataContainer);
-
-    if (tableMetadataDatabase.isPresent()) {
-      when(config.getTableMetadataDatabase()).thenReturn(tableMetadataDatabase);
-      admin = new CosmosAdmin(client, config);
-    }
 
     // Act
     admin.createTable(namespace, table, metadata, Collections.emptyMap());
@@ -426,22 +384,8 @@ public class CosmosAdminTest {
   }
 
   @Test
-  public void
-      dropTable_WithNoMetadataLeftWithoutTableMetadataDatabaseChanged_ShouldDropContainerAndDeleteMetadataAndDatabase()
-          throws ExecutionException {
-    dropTable_WithNoMetadataLeft_ShouldDropContainerAndDeleteMetadataAndDatabase(Optional.empty());
-  }
-
-  @Test
-  public void
-      dropTable_WithNoMetadataLeftWithTableMetadataDatabaseChanged_ShouldDropContainerAndDeleteMetadataAndDatabase()
-          throws ExecutionException {
-    dropTable_WithNoMetadataLeft_ShouldDropContainerAndDeleteMetadataAndDatabase(
-        Optional.of("changed"));
-  }
-
-  private void dropTable_WithNoMetadataLeft_ShouldDropContainerAndDeleteMetadataAndDatabase(
-      Optional<String> tableMetadataDatabase) throws ExecutionException {
+  public void dropTable_WithNoMetadataLeft_ShouldDropContainerAndDeleteMetadataAndDatabase()
+      throws ExecutionException {
     // Arrange
     String namespace = "ns";
     String table = "sample_table";
@@ -450,8 +394,6 @@ public class CosmosAdminTest {
     when(database.getContainer(table)).thenReturn(container);
 
     // for metadata table
-    String metadataDatabaseName = tableMetadataDatabase.orElse(CosmosAdmin.METADATA_DATABASE);
-
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
     when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
@@ -462,11 +404,6 @@ public class CosmosAdminTest {
     when(metadataContainer.queryItems(anyString(), any(), eq(Object.class)))
         .thenReturn(queryResults);
     when(queryResults.stream()).thenReturn(Stream.empty());
-
-    if (tableMetadataDatabase.isPresent()) {
-      when(config.getTableMetadataDatabase()).thenReturn(tableMetadataDatabase);
-      admin = new CosmosAdmin(client, config);
-    }
 
     // Act
     admin.dropTable(namespace, table);
@@ -485,22 +422,8 @@ public class CosmosAdminTest {
     verify(metadataDatabase).delete();
   }
 
-  @Test
-  public void
-      dropTable_WithMetadataLeftWithoutTableMetadataDatabaseChanged_ShouldDropContainerAndOnlyDeleteMetadata()
-          throws ExecutionException {
-    dropTable_WithMetadataLeft_ShouldDropContainerAndOnlyDeleteMetadata(Optional.empty());
-  }
-
-  @Test
-  public void
-      dropTable_WithMetadataLeftWithTableMetadataDatabaseChanged_ShouldDropContainerAndOnlyDeleteMetadata()
-          throws ExecutionException {
-    dropTable_WithMetadataLeft_ShouldDropContainerAndOnlyDeleteMetadata(Optional.of("changed"));
-  }
-
-  private void dropTable_WithMetadataLeft_ShouldDropContainerAndOnlyDeleteMetadata(
-      Optional<String> tableMetadataDatabase) throws ExecutionException {
+  public void dropTable_WithMetadataLeft_ShouldDropContainerAndOnlyDeleteMetadata()
+      throws ExecutionException {
     // Arrange
     String namespace = "ns";
     String table = "sample_table";
@@ -509,8 +432,6 @@ public class CosmosAdminTest {
     when(database.getContainer(anyString())).thenReturn(container);
 
     // for metadata table
-    String metadataDatabaseName = tableMetadataDatabase.orElse(CosmosAdmin.METADATA_DATABASE);
-
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
     when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
@@ -521,11 +442,6 @@ public class CosmosAdminTest {
     when(metadataContainer.queryItems(anyString(), any(), eq(Object.class)))
         .thenReturn(queryResults);
     when(queryResults.stream()).thenReturn(Stream.of(new CosmosTableMetadata()));
-
-    if (tableMetadataDatabase.isPresent()) {
-      when(config.getTableMetadataDatabase()).thenReturn(tableMetadataDatabase);
-      admin = new CosmosAdmin(client, config);
-    }
 
     // Act
     admin.dropTable(namespace, table);
@@ -598,23 +514,9 @@ public class CosmosAdminTest {
   }
 
   @Test
-  public void
-      getNamespaceTableNames_WithoutTableMetadataDatabaseChanged_ShouldGetTableNamesProperly()
-          throws ExecutionException {
-    getNamespaceTableNames_ShouldGetTableNamesProperly(Optional.empty());
-  }
-
-  @Test
-  public void getNamespaceTableNames_WithTableMetadataDatabaseChanged_ShouldGetTableNamesProperly()
-      throws ExecutionException {
-    getNamespaceTableNames_ShouldGetTableNamesProperly(Optional.of("changed"));
-  }
-
-  private void getNamespaceTableNames_ShouldGetTableNamesProperly(
-      Optional<String> tableMetadataDatabase) throws ExecutionException {
+  public void getNamespaceTableNames_ShouldGetTableNamesProperly() throws ExecutionException {
     // Arrange
     String namespace = "ns";
-    String metadataDatabaseName = tableMetadataDatabase.orElse(CosmosAdmin.METADATA_DATABASE);
 
     CosmosTableMetadata t1 = new CosmosTableMetadata();
     t1.setId(getFullTableName(namespace, "t1"));
@@ -628,11 +530,6 @@ public class CosmosAdminTest {
     when(container.queryItems(anyString(), any(), eq(CosmosTableMetadata.class)))
         .thenReturn(queryResults);
     when(queryResults.stream()).thenReturn(Stream.of(t1, t2));
-
-    if (tableMetadataDatabase.isPresent()) {
-      when(config.getTableMetadataDatabase()).thenReturn(tableMetadataDatabase);
-      admin = new CosmosAdmin(client, config);
-    }
 
     // Act
     Set<String> actualTableNames = admin.getNamespaceTableNames(namespace);
@@ -665,7 +562,7 @@ public class CosmosAdminTest {
     // for metadata table
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
-    when(client.getDatabase(CosmosAdmin.METADATA_DATABASE)).thenReturn(metadataDatabase);
+    when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
     when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
         .thenReturn(metadataContainer);
     @SuppressWarnings("unchecked")
@@ -734,7 +631,7 @@ public class CosmosAdminTest {
     // for metadata table
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
-    when(client.getDatabase(CosmosAdmin.METADATA_DATABASE)).thenReturn(metadataDatabase);
+    when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
     when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
         .thenReturn(metadataContainer);
     @SuppressWarnings("unchecked")
@@ -828,7 +725,7 @@ public class CosmosAdminTest {
 
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
-    when(client.getDatabase(CosmosAdmin.METADATA_DATABASE)).thenReturn(metadataDatabase);
+    when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
     when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
         .thenReturn(metadataContainer);
 
@@ -843,7 +740,7 @@ public class CosmosAdminTest {
 
     // Assert
     verify(container).read();
-    verify(client, times(2)).createDatabaseIfNotExists(eq(CosmosAdmin.METADATA_DATABASE), any());
+    verify(client, times(2)).createDatabaseIfNotExists(eq(metadataDatabaseName), any());
 
     verify(metadataDatabase, times(2)).createContainerIfNotExists(any());
     verify(metadataContainer).upsertItem(cosmosTableMetadata);
@@ -878,7 +775,7 @@ public class CosmosAdminTest {
     // Metadata container
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
-    when(client.getDatabase(CosmosAdmin.METADATA_DATABASE)).thenReturn(metadataDatabase);
+    when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
     when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
         .thenReturn(metadataContainer);
 
@@ -897,7 +794,7 @@ public class CosmosAdminTest {
 
     // Assert
     verify(container).read();
-    verify(client, times(2)).createDatabaseIfNotExists(eq(CosmosAdmin.METADATA_DATABASE), any());
+    verify(client, times(2)).createDatabaseIfNotExists(eq(metadataDatabaseName), any());
 
     verify(metadataDatabase, times(2)).createContainerIfNotExists(any());
     verify(metadataContainer).upsertItem(cosmosTableMetadata);
@@ -915,7 +812,7 @@ public class CosmosAdminTest {
     @SuppressWarnings("unchecked")
     CosmosItemResponse<CosmosTableMetadata> response = mock(CosmosItemResponse.class);
 
-    when(client.getDatabase(CosmosAdmin.METADATA_DATABASE)).thenReturn(database);
+    when(client.getDatabase(metadataDatabaseName)).thenReturn(database);
     when(database.getContainer(CosmosAdmin.METADATA_CONTAINER)).thenReturn(container);
     when(container.readItem(
             anyString(),
@@ -950,7 +847,7 @@ public class CosmosAdminTest {
     @SuppressWarnings("unchecked")
     CosmosItemResponse<CosmosTableMetadata> response = mock(CosmosItemResponse.class);
 
-    when(client.getDatabase(CosmosAdmin.METADATA_DATABASE)).thenReturn(database);
+    when(client.getDatabase(metadataDatabaseName)).thenReturn(database);
     when(database.getContainer(CosmosAdmin.METADATA_CONTAINER)).thenReturn(container);
     when(container.readItem(
             anyString(),

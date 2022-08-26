@@ -18,8 +18,8 @@ public class CosmosConfig {
   @Nullable private final String tableMetadataDatabase;
 
   public CosmosConfig(DatabaseConfig databaseConfig) {
-    String storage = databaseConfig.getProperties().getProperty(DatabaseConfig.STORAGE);
-    if (storage == null || !storage.equals("cosmos")) {
+    String storage = databaseConfig.getStorage();
+    if (!storage.equals("cosmos")) {
       throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be 'cosmos'");
     }
 

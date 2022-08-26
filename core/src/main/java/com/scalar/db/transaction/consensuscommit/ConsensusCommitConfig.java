@@ -5,6 +5,7 @@ import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.scalar.db.config.DatabaseConfig;
+import java.util.Locale;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
@@ -64,14 +65,14 @@ public class ConsensusCommitConfig {
                         databaseConfig.getProperties(),
                         "scalar.db.isolation_level", // for backward compatibility
                         Isolation.SNAPSHOT.toString()))
-                .toUpperCase());
+                .toUpperCase(Locale.ROOT));
     strategy =
         SerializableStrategy.valueOf(
             getString(
                     databaseConfig.getProperties(),
                     SERIALIZABLE_STRATEGY,
                     SerializableStrategy.EXTRA_READ.toString())
-                .toUpperCase());
+                .toUpperCase(Locale.ROOT));
 
     coordinatorNamespace = getString(databaseConfig.getProperties(), COORDINATOR_NAMESPACE, null);
 

@@ -14,6 +14,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.util.ScalarDbUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -32,6 +33,7 @@ public class CrudHandler {
   private final TransactionTableMetadataManager tableMetadataManager;
   private final boolean isIncludeMetadataEnabled;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CrudHandler(
       DistributedStorage storage,
       Snapshot snapshot,
@@ -180,6 +182,7 @@ public class CrudHandler {
     }
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP")
   public Snapshot getSnapshot() {
     return snapshot;
   }

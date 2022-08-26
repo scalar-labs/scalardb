@@ -38,6 +38,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
   private boolean isMutated;
   private SQLException sqlException;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ConditionalMutator(
       Mutation mutation,
       TableMetadata tableMetadata,

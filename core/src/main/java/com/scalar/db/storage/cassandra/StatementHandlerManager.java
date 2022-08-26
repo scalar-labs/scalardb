@@ -8,6 +8,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.Scan;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -30,21 +31,25 @@ public class StatementHandlerManager {
     this.delete = builder.delete;
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP")
   @Nonnull
   public SelectStatementHandler select() {
     return select;
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP")
   @Nonnull
   public InsertStatementHandler insert() {
     return insert;
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP")
   @Nonnull
   public UpdateStatementHandler update() {
     return update;
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP")
   @Nonnull
   public DeleteStatementHandler delete() {
     return delete;
@@ -79,21 +84,25 @@ public class StatementHandlerManager {
     private UpdateStatementHandler update;
     private DeleteStatementHandler delete;
 
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
     public Builder select(SelectStatementHandler select) {
       this.select = select;
       return this;
     }
 
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
     public Builder insert(InsertStatementHandler insert) {
       this.insert = insert;
       return this;
     }
 
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
     public Builder update(UpdateStatementHandler update) {
       this.update = update;
       return this;
     }
 
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
     public Builder delete(DeleteStatementHandler delete) {
       this.delete = delete;
       return this;

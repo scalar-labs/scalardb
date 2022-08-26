@@ -12,9 +12,11 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.common.AbstractTwoPhaseCommitTransactionManager;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.util.ActiveExpiringMap;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.concurrent.ThreadSafe;
@@ -41,6 +43,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   private final ActiveExpiringMap<String, TwoPhaseConsensusCommit> activeTransactions;
   private final boolean isIncludeMetadataEnabled;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
   public TwoPhaseConsensusCommitManager(
       DistributedStorage storage, DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
@@ -69,6 +72,36 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
   }
 
+  public TwoPhaseConsensusCommitManager(DatabaseConfig databaseConfig) {
+    StorageFactory storageFactory = StorageFactory.create(databaseConfig.getProperties());
+    storage = storageFactory.getStorage();
+    admin = storageFactory.getStorageAdmin();
+
+    config = new ConsensusCommitConfig(databaseConfig);
+    tableMetadataManager =
+        new TransactionTableMetadataManager(
+            admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
+    coordinator = new Coordinator(storage, config);
+    parallelExecutor = new ParallelExecutor(config);
+    recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
+    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+
+    activeTransactions =
+        new ActiveExpiringMap<>(
+            TRANSACTION_LIFETIME_MILLIS,
+            TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
+            t -> {
+              logger.warn("the transaction is expired. transactionId: {}", t.getId());
+              try {
+                t.rollback();
+              } catch (RollbackException e) {
+                logger.warn("rollback failed", e);
+              }
+            });
+    isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
+  }
+
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   @VisibleForTesting
   TwoPhaseConsensusCommitManager(
       DistributedStorage storage,

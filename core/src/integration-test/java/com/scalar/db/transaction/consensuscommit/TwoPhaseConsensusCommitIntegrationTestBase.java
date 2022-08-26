@@ -38,9 +38,7 @@ public abstract class TwoPhaseConsensusCommitIntegrationTestBase
     super.beforeAll();
 
     Properties includeMetadataEnabledProperties =
-        TestUtils.addSuffix(getProperties(), getTestName());
-    includeMetadataEnabledProperties.setProperty(
-        ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
+        TestUtils.addSuffix(getPropsWithIncludeMetadataEnabled(), getTestName());
     managerWithWithIncludeMetadataEnabled =
         TransactionFactory.create(includeMetadataEnabledProperties)
             .getTwoPhaseCommitTransactionManager();
@@ -63,11 +61,20 @@ public abstract class TwoPhaseConsensusCommitIntegrationTestBase
   protected final Properties getProperties() {
     Properties properties = new Properties();
     properties.putAll(getProps());
-    properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "consensus-commit");
+    String transactionManager = properties.getProperty(DatabaseConfig.TRANSACTION_MANAGER, "");
+    if (!transactionManager.equals("grpc")) {
+      properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "consensus-commit");
+    }
     return properties;
   }
 
   protected abstract Properties getProps();
+
+  protected Properties getPropsWithIncludeMetadataEnabled() {
+    Properties properties = getProperties();
+    properties.setProperty(ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
+    return properties;
+  }
 
   @Test
   public void scan_WithIncludeMetadataEnabled_ShouldReturnTransactionMetadataColumns()

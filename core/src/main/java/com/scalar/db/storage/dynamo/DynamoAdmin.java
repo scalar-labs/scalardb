@@ -12,6 +12,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.ScalarDbUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -176,7 +177,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     waitingDurationSecs = DEFAULT_WAITING_DURATION_SECS;
   }
 
-  public DynamoAdmin(DynamoDbClient client, DynamoConfig config) {
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
+  DynamoAdmin(DynamoDbClient client, DynamoConfig config) {
     this.client = client;
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
     metadataNamespace =

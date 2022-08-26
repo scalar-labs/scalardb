@@ -32,7 +32,7 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase {
 
-  private static final String TEST_NAME = "mul_pkey";
+  protected static final String TEST_NAME = "mul_pkey";
   private static final String NAMESPACE_BASE_NAME = "integration_testing_" + TEST_NAME + "_";
   private static final String FIRST_PARTITION_KEY = "pkey1";
   private static final String SECOND_PARTITION_KEY = "pkey2";

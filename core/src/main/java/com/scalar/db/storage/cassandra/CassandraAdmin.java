@@ -24,6 +24,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -44,7 +45,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     clusterManager = new ClusterManager(config);
   }
 
-  public CassandraAdmin(ClusterManager clusterManager, DatabaseConfig config) {
+  CassandraAdmin(ClusterManager clusterManager) {
     this.clusterManager = clusterManager;
   }
 
@@ -309,7 +310,9 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     // Add compaction strategy
     CompactionStrategy compactionStrategy =
         CompactionStrategy.valueOf(
-            options.getOrDefault(COMPACTION_STRATEGY, CompactionStrategy.STCS.toString()));
+            options
+                .getOrDefault(COMPACTION_STRATEGY, CompactionStrategy.STCS.toString())
+                .toUpperCase(Locale.ROOT));
 
     CompactionOptions<?> strategy;
     switch (compactionStrategy) {

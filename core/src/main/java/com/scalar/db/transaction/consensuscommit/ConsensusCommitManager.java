@@ -12,8 +12,10 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.common.AbstractDistributedTransactionManager;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.concurrent.ThreadSafe;
@@ -33,14 +35,15 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final CommitHandler commit;
   private final boolean isIncludeMetadataEnabled;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
   public ConsensusCommitManager(
       DistributedStorage storage, DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
     this.storage = storage;
     this.admin = admin;
     config = new ConsensusCommitConfig(databaseConfig);
-    this.coordinator = new Coordinator(storage, config);
-    this.parallelExecutor = new ParallelExecutor(config);
+    coordinator = new Coordinator(storage, config);
+    parallelExecutor = new ParallelExecutor(config);
     tableMetadataManager =
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
@@ -49,8 +52,25 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
   }
 
+  ConsensusCommitManager(DatabaseConfig databaseConfig) {
+    StorageFactory storageFactory = StorageFactory.create(databaseConfig.getProperties());
+    storage = storageFactory.getStorage();
+    admin = storageFactory.getStorageAdmin();
+
+    config = new ConsensusCommitConfig(databaseConfig);
+    coordinator = new Coordinator(storage, config);
+    parallelExecutor = new ParallelExecutor(config);
+    tableMetadataManager =
+        new TransactionTableMetadataManager(
+            admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
+    recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
+    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
+  }
+
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   @VisibleForTesting
-  public ConsensusCommitManager(
+  ConsensusCommitManager(
       DistributedStorage storage,
       DistributedStorageAdmin admin,
       ConsensusCommitConfig config,

@@ -50,7 +50,7 @@ public class OperationChecker {
       if (!new ColumnChecker(metadata, true, false, false, false)
           .check(get.getPartitionKey().getColumns().get(0))) {
         throw new IllegalArgumentException(
-            "The partition key is not properly specified. Operation: " + get);
+            "The index key is not properly specified. Operation: " + get);
       }
 
       // The following check is not needed when we use GetWithIndex. But we need to keep it for
@@ -90,7 +90,7 @@ public class OperationChecker {
       if (!new ColumnChecker(metadata, true, false, false, false)
           .check(scan.getPartitionKey().getColumns().get(0))) {
         throw new IllegalArgumentException(
-            "The partition key is not properly specified. Operation: " + scan);
+            "The index key is not properly specified. Operation: " + scan);
       }
 
       // The following checks are not needed when we use ScanWithIndex. But we need to keep them for
@@ -132,7 +132,10 @@ public class OperationChecker {
     for (String projection : selection.getProjections()) {
       if (!metadata.getColumnNames().contains(projection)) {
         throw new IllegalArgumentException(
-            "The specified projection is not found. Operation: " + selection);
+            "The specified projection is not found. Invalid projection: "
+                + projection
+                + ", Operation: "
+                + selection);
       }
     }
   }
@@ -147,7 +150,7 @@ public class OperationChecker {
       Key startClusteringKey = scan.getStartClusteringKey().get();
       Key endClusteringKey = scan.getEndClusteringKey().get();
       Supplier<String> message =
-          () -> "The clustering key range is not properly specified. Operation: " + scan;
+          () -> "The clustering key boundary is not properly specified. Operation: " + scan;
 
       if (startClusteringKey.size() != endClusteringKey.size()) {
         throw new IllegalArgumentException(message.get());
@@ -251,7 +254,10 @@ public class OperationChecker {
     for (Column<?> column : put.getColumns().values()) {
       if (!new ColumnChecker(metadata, false, false, false, true).check(column)) {
         throw new IllegalArgumentException(
-            "The values are not properly specified. Operation: " + put);
+            "The column value is not properly specified. Invalid column: "
+                + column
+                + ", Operation: "
+                + put);
       }
     }
   }
@@ -279,7 +285,8 @@ public class OperationChecker {
       if (!mutation.forNamespace().equals(first.forNamespace())
           || !mutation.forTable().equals(first.forTable())
           || !mutation.getPartitionKey().equals(first.getPartitionKey())) {
-        throw new IllegalArgumentException("Mutations that span multi-partition are not supported");
+        throw new IllegalArgumentException(
+            "Mutations that span multi-partition are not supported. Mutations: " + mutations);
       }
     }
   }

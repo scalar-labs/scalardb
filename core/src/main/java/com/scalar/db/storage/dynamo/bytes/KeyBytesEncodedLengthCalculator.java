@@ -11,6 +11,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.io.ValueVisitor;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -20,6 +21,7 @@ public class KeyBytesEncodedLengthCalculator implements ValueVisitor {
   private int length;
   private Map<String, Order> keyOrders;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public int calculate(Key key, Map<String, Order> keyOrders) {
     this.keyOrders = keyOrders;
     for (Value<?> value : key) {

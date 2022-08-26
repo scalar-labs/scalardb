@@ -3,6 +3,7 @@ package com.scalar.db.api;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.ScanBuilder.BuildableScanOrScanAllFromExisting;
 import com.scalar.db.api.ScanBuilder.Namespace;
 import com.scalar.db.io.Key;
@@ -194,7 +195,7 @@ public class Scan extends Selection {
    */
   @Nonnull
   public List<Ordering> getOrderings() {
-    return orderings;
+    return ImmutableList.copyOf(orderings);
   }
 
   /**

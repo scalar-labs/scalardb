@@ -4,6 +4,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.ScannerIterator;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -29,6 +30,7 @@ public class ScannerImpl implements Scanner {
 
   private ScannerIterator scannerIterator;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ScannerImpl(
       ResultInterpreter resultInterpreter,
       Connection connection,
