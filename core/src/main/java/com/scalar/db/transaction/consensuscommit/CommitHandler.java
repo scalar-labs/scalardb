@@ -135,7 +135,7 @@ public class CommitHandler {
       for (PartitionedMutations.Key key : orderedKeys) {
         tasks.add(() -> storage.mutate(mutations.get(key)));
       }
-      parallelExecutor.commit(tasks);
+      parallelExecutor.commitRecords(tasks);
     } catch (Exception e) {
       logger.warn("committing records failed", e);
       // ignore since records are recovered lazily
@@ -179,7 +179,7 @@ public class CommitHandler {
       for (PartitionedMutations.Key key : orderedKeys) {
         tasks.add(() -> storage.mutate(mutations.get(key)));
       }
-      parallelExecutor.rollback(tasks);
+      parallelExecutor.rollbackRecords(tasks);
     } catch (Exception e) {
       logger.warn("rolling back records failed", e);
       // ignore since records are recovered lazily

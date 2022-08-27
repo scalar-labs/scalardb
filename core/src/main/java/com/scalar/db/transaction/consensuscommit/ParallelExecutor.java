@@ -5,17 +5,22 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
-import java.util.Collections;
+import com.scalar.db.storage.cassandra.BatchHandler;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class ParallelExecutor {
+  private static final Logger logger = LoggerFactory.getLogger(BatchHandler.class);
 
   @FunctionalInterface
   public interface ParallelExecutorTask {
@@ -49,7 +54,7 @@ public class ParallelExecutor {
 
   public void prepare(List<ParallelExecutorTask> tasks) throws ExecutionException {
     try {
-      executeTasks(tasks, config.isParallelPreparationEnabled(), false);
+      executeTasks("preparation", tasks, config.isParallelPreparationEnabled(), false, true);
     } catch (CommitConflictException ignored) {
       // tasks for preparation should not throw CommitConflictException
     }
@@ -57,71 +62,136 @@ public class ParallelExecutor {
 
   public void validate(List<ParallelExecutorTask> tasks)
       throws ExecutionException, CommitConflictException {
-    executeTasks(tasks, config.isParallelValidationEnabled(), false);
+    executeTasks("validation", tasks, config.isParallelValidationEnabled(), false, true);
   }
 
-  public void commit(List<ParallelExecutorTask> tasks) throws ExecutionException {
+  public void commitRecords(List<ParallelExecutorTask> tasks) throws ExecutionException {
     try {
-      executeTasks(tasks, config.isParallelCommitEnabled(), config.isAsyncCommitEnabled());
+      executeTasks(
+          "commitRecords",
+          tasks,
+          config.isParallelCommitEnabled(),
+          config.isAsyncCommitEnabled(),
+          false);
     } catch (CommitConflictException ignored) {
       // tasks for commit should not throw CommitConflictException
     }
   }
 
-  public void rollback(List<ParallelExecutorTask> tasks) throws ExecutionException {
+  public void rollbackRecords(List<ParallelExecutorTask> tasks) throws ExecutionException {
     try {
-      executeTasks(tasks, config.isParallelRollbackEnabled(), config.isAsyncRollbackEnabled());
+      executeTasks(
+          "rollbackRecords",
+          tasks,
+          config.isParallelRollbackEnabled(),
+          config.isAsyncRollbackEnabled(),
+          false);
     } catch (CommitConflictException ignored) {
       // tasks for rollback should not throw CommitConflictException
     }
   }
 
-  private void executeTasks(List<ParallelExecutorTask> tasks, boolean parallel, boolean noWait)
+  private void executeTasks(
+      String name,
+      List<ParallelExecutorTask> tasks,
+      boolean parallel,
+      boolean noWait,
+      boolean stopOnError)
       throws ExecutionException, CommitConflictException {
-    List<Future<?>> futures;
     if (parallel) {
-      assert parallelExecutorService != null;
-      futures =
-          tasks.stream()
-              .map(
-                  t ->
-                      parallelExecutorService.submit(
-                          () -> {
-                            t.run();
-                            return null;
-                          }))
-              .collect(Collectors.toList());
+      executeTasksInParallel(name, tasks, noWait, stopOnError);
     } else {
-      futures = Collections.emptyList();
-      for (ParallelExecutorTask task : tasks) {
-        task.run();
-      }
+      executeTasksSerially(name, tasks, stopOnError);
     }
+  }
+
+  private void executeTasksInParallel(
+      String name, List<ParallelExecutorTask> tasks, boolean noWait, boolean stopOnError)
+      throws ExecutionException, CommitConflictException {
+    assert parallelExecutorService != null;
+
+    CompletionService<Void> completionService =
+        new ExecutorCompletionService<>(parallelExecutorService);
+    tasks.forEach(
+        t ->
+            completionService.submit(
+                () -> {
+                  try {
+                    t.run();
+                  } catch (Exception e) {
+                    logger.warn("failed to run a {} task", name, e);
+                    throw e;
+                  }
+                  return null;
+                }));
 
     if (!noWait) {
-      for (Future<?> future : futures) {
+      Exception exception = null;
+      for (int i = 0; i < tasks.size(); i++) {
+        Future<Void> future = ScalarDbUtils.takeUninterruptibly(completionService);
+
         try {
           Uninterruptibles.getUninterruptibly(future);
         } catch (java.util.concurrent.ExecutionException e) {
           if (e.getCause() instanceof ExecutionException) {
-            throw (ExecutionException) e.getCause();
-          }
-          if (e.getCause() instanceof CommitConflictException) {
-            throw (CommitConflictException) e.getCause();
-          }
-          if (e.getCause() instanceof RuntimeException) {
+            if (!stopOnError) {
+              exception = (ExecutionException) e.getCause();
+            } else {
+              throw (ExecutionException) e.getCause();
+            }
+          } else if (e.getCause() instanceof CommitConflictException) {
+            if (!stopOnError) {
+              exception = (CommitConflictException) e.getCause();
+            } else {
+              throw (CommitConflictException) e.getCause();
+            }
+          } else if (e.getCause() instanceof RuntimeException) {
             throw (RuntimeException) e.getCause();
-          }
-          if (e.getCause() instanceof Error) {
+          } else if (e.getCause() instanceof Error) {
             throw (Error) e.getCause();
+          } else {
+            throw new AssertionError("Can't reach here. Maybe a bug", e);
           }
-          throw new AssertionError("Can't reach here. Maybe a bug", e);
+        }
+      }
+
+      if (!stopOnError && exception != null) {
+        if (exception instanceof ExecutionException) {
+          throw (ExecutionException) exception;
+        } else {
+          throw (CommitConflictException) exception;
         }
       }
     }
   }
 
-  @SuppressWarnings("UnstableApiUsage")
+  private void executeTasksSerially(
+      String name, List<ParallelExecutorTask> tasks, boolean stopOnError)
+      throws ExecutionException, CommitConflictException {
+    Exception exception = null;
+    for (ParallelExecutorTask task : tasks) {
+      try {
+        task.run();
+      } catch (ExecutionException | CommitConflictException e) {
+        logger.warn("failed to run a {} task", name, e);
+
+        if (!stopOnError) {
+          exception = e;
+        } else {
+          throw e;
+        }
+      }
+    }
+
+    if (!stopOnError && exception != null) {
+      if (exception instanceof ExecutionException) {
+        throw (ExecutionException) exception;
+      } else {
+        throw (CommitConflictException) exception;
+      }
+    }
+  }
+
   public void close() {
     if (parallelExecutorService != null) {
       parallelExecutorService.shutdown();
