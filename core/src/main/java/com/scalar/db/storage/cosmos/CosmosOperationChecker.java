@@ -1,4 +1,4 @@
-package com.scalar.db.storage.dynamo;
+package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
@@ -8,13 +8,10 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.common.checker.ColumnChecker;
 import com.scalar.db.storage.common.checker.OperationChecker;
-import javax.annotation.concurrent.ThreadSafe;
 
-@ThreadSafe
-public class DynamoOperationChecker extends OperationChecker {
-  public DynamoOperationChecker(TableMetadataManager metadataManager) {
+public class CosmosOperationChecker extends OperationChecker {
+  public CosmosOperationChecker(TableMetadataManager metadataManager) {
     super(metadataManager);
   }
 
@@ -22,16 +19,6 @@ public class DynamoOperationChecker extends OperationChecker {
   public void check(Put put) throws ExecutionException {
     super.check(put);
     TableMetadata metadata = getTableMetadata(put);
-    put.getColumns().values().stream()
-        .filter(column -> metadata.getSecondaryIndexNames().contains(column.getName()))
-        .forEach(
-            column -> {
-              if (!new ColumnChecker(metadata, true, false, false, false).check(column)) {
-                throw new IllegalArgumentException(
-                    "A secondary index column cannot be set to null in DynamoDB. Operation: "
-                        + put);
-              }
-            });
     checkCondition(put, metadata);
   }
 
@@ -47,13 +34,13 @@ public class DynamoOperationChecker extends OperationChecker {
       return;
     }
     for (ConditionalExpression expression : mutation.getCondition().get().getExpressions()) {
-      if (metadata.getColumnDataType(expression.getColumn().getName()) == DataType.BOOLEAN) {
+      if (metadata.getColumnDataType(expression.getColumn().getName()) == DataType.BLOB) {
         if (expression.getOperator() != ConditionalExpression.Operator.EQ
             && expression.getOperator() != ConditionalExpression.Operator.NE
             && expression.getOperator() != ConditionalExpression.Operator.IS_NULL
             && expression.getOperator() != ConditionalExpression.Operator.IS_NOT_NULL) {
           throw new IllegalArgumentException(
-              "DynamoDB only supports EQ, NE, IS_NULL, and IS_NOT_NULL operations for BOOLEAN type in conditions.");
+              "Cosmos DB only supports EQ, NE, IS_NULL, and IS_NOT_NULL operations for BLOB type in conditions.");
         }
       }
     }

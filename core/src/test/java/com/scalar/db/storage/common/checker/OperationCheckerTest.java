@@ -40,7 +40,7 @@ import org.mockito.MockitoAnnotations;
 
 public class OperationCheckerTest {
 
-  private static final String NAMESPACE = "s1";
+  private static final String NAMESPACE = "n1";
   private static final String TABLE_NAME = "t1";
   private static final String PKEY1 = "p1";
   private static final String PKEY2 = "p2";
@@ -1331,7 +1331,35 @@ public class OperationCheckerTest {
             .withValue(COL1, 1)
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
-    Delete delete = new Delete(partitionKey, clusteringKey).forNamespace("s2").forTable(TABLE_NAME);
+    Delete delete = new Delete(partitionKey, clusteringKey).forNamespace("n2").forTable(TABLE_NAME);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(Arrays.asList(put, delete)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingMutateOperationWithMutationsWithPutWithInvalidClusteringKey_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
+    Key invalidClusteringKey = Key.of(CKEY1, 2, "c3", "val3");
+    Key clusteringKey = Key.of(CKEY1, 2, CKEY2, "val3");
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(invalidClusteringKey)
+            .intValue(COL1, 1)
+            .build();
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(Arrays.asList(put, delete)))
