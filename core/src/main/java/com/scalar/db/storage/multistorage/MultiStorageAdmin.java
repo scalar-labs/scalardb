@@ -66,12 +66,11 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
   MultiStorageAdmin(
       Map<String, DistributedStorageAdmin> tableAdminMap,
       Map<String, DistributedStorageAdmin> namespaceAdminMap,
-      DistributedStorageAdmin defaultAdmin,
-      List<DistributedStorageAdmin> admins) {
+      DistributedStorageAdmin defaultAdmin) {
     this.tableAdminMap = tableAdminMap;
     this.namespaceAdminMap = namespaceAdminMap;
     this.defaultAdmin = defaultAdmin;
-    this.admins = admins;
+    admins = null;
   }
 
   @Override
@@ -186,6 +185,9 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
 
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
+    Set<DistributedStorageAdmin> admins = new HashSet<>(namespaceAdminMap.values());
+    admins.add(defaultAdmin);
+
     Set<String> namespaceNames = new HashSet<>();
     for (DistributedStorageAdmin admin : admins) {
       namespaceNames.addAll(admin.getNamespaceNames());

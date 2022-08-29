@@ -199,8 +199,8 @@ public abstract class JdbcAdminTestBase {
         "CREATE SCHEMA IF NOT EXISTS `" + metadataSchemaName + "`",
         "CREATE TABLE IF NOT EXISTS `"
             + metadataSchemaName
-            + "`.`namespace`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
-        "INSERT INTO `" + metadataSchemaName + "`.`namespace` VALUES ('my_ns')");
+            + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
+        "INSERT INTO `" + metadataSchemaName + "`.`namespaces` VALUES ('my_ns')");
   }
 
   @Test
@@ -212,8 +212,8 @@ public abstract class JdbcAdminTestBase {
         "CREATE SCHEMA IF NOT EXISTS \"" + metadataSchemaName + "\"",
         "CREATE TABLE IF NOT EXISTS \""
             + metadataSchemaName
-            + "\".\"namespace\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
-        "INSERT INTO \"" + metadataSchemaName + "\".\"namespace\" VALUES ('my_ns')");
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
+        "INSERT INTO \"" + metadataSchemaName + "\".\"namespaces\" VALUES ('my_ns')");
   }
 
   @Test
@@ -225,8 +225,8 @@ public abstract class JdbcAdminTestBase {
         "CREATE SCHEMA [" + metadataSchemaName + "]",
         "CREATE TABLE ["
             + metadataSchemaName
-            + "].[namespace]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
-        "INSERT INTO [" + metadataSchemaName + "].[namespace] VALUES ('my_ns')");
+            + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
+        "INSERT INTO [" + metadataSchemaName + "].[namespaces] VALUES ('my_ns')");
   }
 
   @Test
@@ -919,58 +919,58 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  public void dropNamespace_WithLastExistingSchemaForMysql_shouldDropSchemaAndNamespaceTable()
+  public void dropNamespace_WithLastExistingSchemaForMysql_shouldDropSchemaAndNamespacesTable()
       throws Exception {
-    dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespaceTable(
+    dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespacesTable(
         RdbEngine.MYSQL,
         "DROP SCHEMA `my_ns`",
-        "DELETE FROM `" + metadataSchemaName + "`.`namespace` WHERE `namespace_name` = 'my_ns'",
-        "SELECT * FROM `" + metadataSchemaName + "`.`namespace`",
-        "DROP TABLE `" + metadataSchemaName + "`.`namespace`",
+        "DELETE FROM `" + metadataSchemaName + "`.`namespaces` WHERE `namespace_name` = 'my_ns'",
+        "SELECT * FROM `" + metadataSchemaName + "`.`namespaces`",
+        "DROP TABLE `" + metadataSchemaName + "`.`namespaces`",
         "DROP SCHEMA `" + metadataSchemaName + "`");
   }
 
   @Test
-  public void dropNamespace_WithLastExistingSchemaForPostgresql_shouldDropSchemaAndNamespaceTable()
+  public void dropNamespace_WithLastExistingSchemaForPostgresql_shouldDropSchemaAndNamespacesTable()
       throws Exception {
-    dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespaceTable(
+    dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespacesTable(
         RdbEngine.POSTGRESQL,
         "DROP SCHEMA \"my_ns\"",
         "DELETE FROM \""
             + metadataSchemaName
-            + "\".\"namespace\" WHERE \"namespace_name\" = 'my_ns'",
-        "SELECT * FROM \"" + metadataSchemaName + "\".\"namespace\"",
-        "DROP TABLE \"" + metadataSchemaName + "\".\"namespace\"",
+            + "\".\"namespaces\" WHERE \"namespace_name\" = 'my_ns'",
+        "SELECT * FROM \"" + metadataSchemaName + "\".\"namespaces\"",
+        "DROP TABLE \"" + metadataSchemaName + "\".\"namespaces\"",
         "DROP SCHEMA \"" + metadataSchemaName + "\"");
   }
 
   @Test
-  public void dropNamespace_WithLastExistingSchemaForSqlServer_shouldDropSchemaAndNamespaceTable()
+  public void dropNamespace_WithLastExistingSchemaForSqlServer_shouldDropSchemaAndNamespacesTable()
       throws Exception {
-    dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespaceTable(
+    dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespacesTable(
         RdbEngine.SQL_SERVER,
         "DROP SCHEMA [my_ns]",
-        "DELETE FROM [" + metadataSchemaName + "].[namespace] WHERE [namespace_name] = 'my_ns'",
-        "SELECT * FROM [" + metadataSchemaName + "].[namespace]",
-        "DROP TABLE [" + metadataSchemaName + "].[namespace]",
+        "DELETE FROM [" + metadataSchemaName + "].[namespaces] WHERE [namespace_name] = 'my_ns'",
+        "SELECT * FROM [" + metadataSchemaName + "].[namespaces]",
+        "DROP TABLE [" + metadataSchemaName + "].[namespaces]",
         "DROP SCHEMA [" + metadataSchemaName + "]");
   }
 
   @Test
-  public void dropNamespace_WithLastExistingSchemaForOracle_shouldDropSchemaAndNamespaceTable()
+  public void dropNamespace_WithLastExistingSchemaForOracle_shouldDropSchemaAndNamespacesTable()
       throws Exception {
-    dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespaceTable(
+    dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespacesTable(
         RdbEngine.ORACLE,
         "DROP USER \"my_ns\"",
         "DELETE FROM \""
             + metadataSchemaName
-            + "\".\"namespace\" WHERE \"namespace_name\" = 'my_ns'",
-        "SELECT * FROM \"" + metadataSchemaName + "\".\"namespace\"",
-        "DROP TABLE \"" + metadataSchemaName + "\".\"namespace\"",
+            + "\".\"namespaces\" WHERE \"namespace_name\" = 'my_ns'",
+        "SELECT * FROM \"" + metadataSchemaName + "\".\"namespaces\"",
+        "DROP TABLE \"" + metadataSchemaName + "\".\"namespaces\"",
         "DROP USER \"" + metadataSchemaName + "\"");
   }
 
-  private void dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespaceTable(
+  private void dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespacesTable(
       RdbEngine rdbEngine, String... expectedStatements) throws Exception {
     // Arrange
     String namespace = "my_ns";
@@ -984,7 +984,7 @@ public abstract class JdbcAdminTestBase {
             mockedStatements.get(0),
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
-    // Namespace table is empty
+    // Namespaces table is empty
     ResultSet resultSet =
         mockResultSet(new SelectFullTableNameFromMetadataTableResultSetMocker.Row[0]);
     when(mockedStatements.get(2).executeQuery(anyString())).thenReturn(resultSet);
@@ -1008,8 +1008,8 @@ public abstract class JdbcAdminTestBase {
     dropNamespace_WithOtherNamespaceLeftForX_shouldOnlyDropNamespace(
         RdbEngine.MYSQL,
         "DROP SCHEMA `my_ns`",
-        "DELETE FROM `" + metadataSchemaName + "`.`namespace` WHERE `namespace_name` = 'my_ns'",
-        "SELECT * FROM `" + metadataSchemaName + "`.`namespace`");
+        "DELETE FROM `" + metadataSchemaName + "`.`namespaces` WHERE `namespace_name` = 'my_ns'",
+        "SELECT * FROM `" + metadataSchemaName + "`.`namespaces`");
   }
 
   @Test
@@ -1020,8 +1020,8 @@ public abstract class JdbcAdminTestBase {
         "DROP SCHEMA \"my_ns\"",
         "DELETE FROM \""
             + metadataSchemaName
-            + "\".\"namespace\" WHERE \"namespace_name\" = 'my_ns'",
-        "SELECT * FROM \"" + metadataSchemaName + "\".\"namespace\"");
+            + "\".\"namespaces\" WHERE \"namespace_name\" = 'my_ns'",
+        "SELECT * FROM \"" + metadataSchemaName + "\".\"namespaces\"");
   }
 
   @Test
@@ -1030,8 +1030,8 @@ public abstract class JdbcAdminTestBase {
     dropNamespace_WithOtherNamespaceLeftForX_shouldOnlyDropNamespace(
         RdbEngine.SQL_SERVER,
         "DROP SCHEMA [my_ns]",
-        "DELETE FROM [" + metadataSchemaName + "].[namespace] WHERE [namespace_name] = 'my_ns'",
-        "SELECT * FROM [" + metadataSchemaName + "].[namespace]");
+        "DELETE FROM [" + metadataSchemaName + "].[namespaces] WHERE [namespace_name] = 'my_ns'",
+        "SELECT * FROM [" + metadataSchemaName + "].[namespaces]");
   }
 
   @Test
@@ -1042,8 +1042,8 @@ public abstract class JdbcAdminTestBase {
         "DROP USER \"my_ns\"",
         "DELETE FROM \""
             + metadataSchemaName
-            + "\".\"namespace\" WHERE \"namespace_name\" = 'my_ns'",
-        "SELECT * FROM \"" + metadataSchemaName + "\".\"namespace\"");
+            + "\".\"namespaces\" WHERE \"namespace_name\" = 'my_ns'",
+        "SELECT * FROM \"" + metadataSchemaName + "\".\"namespaces\"");
   }
 
   private void dropNamespace_WithOtherNamespaceLeftForX_shouldOnlyDropNamespace(
@@ -1064,7 +1064,7 @@ public abstract class JdbcAdminTestBase {
         .thenReturn(
             dropNamespaceStatementMock, deleteFromNamespaceTableMock, selectNamespaceStatementMock);
     when(dataSource.getConnection()).thenReturn(connection);
-    // Namespace table contains other namespaces
+    // Namespaces table contains other namespaces
     ResultSet resultSet =
         mockResultSet(
             new SelectFullTableNameFromMetadataTableResultSetMocker.Row(namespace + ".tbl1"));
@@ -2036,25 +2036,25 @@ public abstract class JdbcAdminTestBase {
   @Test
   public void getNamespaceNames_forMysql_ShouldReturnNamespaceNames() throws Exception {
     getNamespaceNames_forX_ShouldReturnNamespaceNames(
-        RdbEngine.MYSQL, "SELECT * FROM `" + metadataSchemaName + "`.`namespace`");
+        RdbEngine.MYSQL, "SELECT * FROM `" + metadataSchemaName + "`.`namespaces`");
   }
 
   @Test
   public void getNamespaceNames_forPostgresql_ShouldReturnNamespaceNames() throws Exception {
     getNamespaceNames_forX_ShouldReturnNamespaceNames(
-        RdbEngine.POSTGRESQL, "SELECT * FROM \"" + metadataSchemaName + "\".\"namespace\"");
+        RdbEngine.POSTGRESQL, "SELECT * FROM \"" + metadataSchemaName + "\".\"namespaces\"");
   }
 
   @Test
   public void getNamespaceNames_forSqlServer_ShouldReturnNamespaceNames() throws Exception {
     getNamespaceNames_forX_ShouldReturnNamespaceNames(
-        RdbEngine.SQL_SERVER, "SELECT * FROM [" + metadataSchemaName + "].[namespace]");
+        RdbEngine.SQL_SERVER, "SELECT * FROM [" + metadataSchemaName + "].[namespaces]");
   }
 
   @Test
   public void getNamespaceNames_forOracle_ShouldReturnNamespaceNames() throws Exception {
     getNamespaceNames_forX_ShouldReturnNamespaceNames(
-        RdbEngine.ORACLE, "SELECT * FROM \"" + metadataSchemaName + "\".\"namespace\"");
+        RdbEngine.ORACLE, "SELECT * FROM \"" + metadataSchemaName + "\".\"namespaces\"");
   }
 
   private void getNamespaceNames_forX_ShouldReturnNamespaceNames(

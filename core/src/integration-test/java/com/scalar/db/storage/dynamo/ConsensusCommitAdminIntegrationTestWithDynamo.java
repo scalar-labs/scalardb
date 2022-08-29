@@ -32,12 +32,12 @@ public class ConsensusCommitAdminIntegrationTestWithDynamo
   @Disabled("Temporarily until admin.getNamespacesNames() is implemented")
   @Test
   @Override
-  public void createNamespace_ForExistingNamespace_ShouldExecutionException() {}
+  public void createNamespace_ForExistingNamespace_ShouldThrowExecutionException() {}
 
   @Disabled("Temporarily until admin.getNamespacesNames() is implemented")
   @Test
   @Override
-  public void dropNamespace_ForNonExistingNamespace_ShouldExecutionException() {}
+  public void dropNamespace_ForNonExistingNamespace_ShouldThrowExecutionException() {}
 
   @Disabled("Temporarily until admin.getNamespacesNames() is implemented")
   @Test

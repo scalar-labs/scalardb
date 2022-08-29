@@ -36,7 +36,7 @@ public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrati
   @Disabled("Temporarily until admin.getNamespacesNames() is implemented")
   @Test
   @Override
-  public void dropNamespace_ForNonExistingNamespace_ShouldExecutionException() {}
+  public void dropNamespace_ForNonExistingNamespace_ShouldThrowExecutionException() {}
 
   @Disabled("Temporarily until admin.getNamespacesNames() is implemented")
   @Test

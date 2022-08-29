@@ -49,7 +49,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String METADATA_COL_CLUSTERING_ORDER = "clustering_order";
   @VisibleForTesting static final String METADATA_COL_INDEXED = "indexed";
   @VisibleForTesting static final String METADATA_COL_ORDINAL_POSITION = "ordinal_position";
-  private static final String NAMESPACE_TABLE = "namespace";
+  private static final String NAMESPACES_TABLE = "namespaces";
   @VisibleForTesting static final String NAMESPACE_COL_NAMESPACE_NAME = "namespace_name";
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
   private static final ImmutableMap<RdbEngine, ImmutableMap<DataType, String>> DATA_TYPE_MAPPING =
@@ -164,8 +164,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       } else {
         execute(connection, "CREATE SCHEMA " + fullNamespace);
       }
-      createNamespaceTableIfNotExists(connection);
-      insertIntoNamespaceTable(connection, namespace);
+      createNamespacesTableIfNotExists(connection);
+      insertIntoNamespacesTable(connection, namespace);
     } catch (SQLException e) {
       throw new ExecutionException("creating the schema failed", e);
     }
@@ -572,8 +572,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, dropStatement);
-      deleteFromNamespaceTable(connection, namespace);
-      deleteNamespaceTableIfEmpty(connection);
+      deleteFromNamespacesTable(connection, namespace);
+      deleteNamespacesTableIfEmpty(connection);
     } catch (SQLException e) {
       throw new ExecutionException(
           String.format(
@@ -1062,7 +1062,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
-      String selectQuery = "SELECT * FROM " + encloseFullTableName(metadataSchema, NAMESPACE_TABLE);
+      String selectQuery =
+          "SELECT * FROM " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE);
       Set<String> namespaces = new HashSet<>();
       try (Statement statement = connection.createStatement();
           ResultSet resultSet = statement.executeQuery(selectQuery)) {
@@ -1084,12 +1085,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void createNamespaceTableIfNotExists(Connection connection) throws ExecutionException {
+  private void createNamespacesTableIfNotExists(Connection connection) throws ExecutionException {
     try {
       createMetadataSchemaIfNotExists(connection);
       String createTableStatement =
           "CREATE TABLE "
-              + encloseFullTableName(metadataSchema, NAMESPACE_TABLE)
+              + encloseFullTableName(metadataSchema, NAMESPACES_TABLE)
               + "("
               + enclose(NAMESPACE_COL_NAMESPACE_NAME)
               + " "
@@ -1104,22 +1105,22 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void insertIntoNamespaceTable(Connection connection, String namespaceName)
+  private void insertIntoNamespacesTable(Connection connection, String namespaceName)
       throws SQLException {
     String insertStatement =
         "INSERT INTO "
-            + encloseFullTableName(metadataSchema, NAMESPACE_TABLE)
+            + encloseFullTableName(metadataSchema, NAMESPACES_TABLE)
             + " VALUES ('"
             + namespaceName
             + "')";
     execute(connection, insertStatement);
   }
 
-  private void deleteFromNamespaceTable(Connection connection, String namespaceName)
+  private void deleteFromNamespacesTable(Connection connection, String namespaceName)
       throws SQLException {
     String deleteStatement =
         "DELETE FROM "
-            + encloseFullTableName(metadataSchema, NAMESPACE_TABLE)
+            + encloseFullTableName(metadataSchema, NAMESPACES_TABLE)
             + " WHERE "
             + enclose(NAMESPACE_COL_NAMESPACE_NAME)
             + " = '"
@@ -1128,16 +1129,16 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     execute(connection, deleteStatement);
   }
 
-  private void deleteNamespaceTableIfEmpty(Connection connection) throws SQLException {
-    if (isNamespaceTableEmpty(connection)) {
-      deleteTable(connection, encloseFullTableName(metadataSchema, NAMESPACE_TABLE));
+  private void deleteNamespacesTableIfEmpty(Connection connection) throws SQLException {
+    if (isNamespacesTableEmpty(connection)) {
+      deleteTable(connection, encloseFullTableName(metadataSchema, NAMESPACES_TABLE));
       deleteMetadataSchema(connection);
     }
   }
 
-  private boolean isNamespaceTableEmpty(Connection connection) throws SQLException {
+  private boolean isNamespacesTableEmpty(Connection connection) throws SQLException {
     String selectAllTables =
-        "SELECT * FROM " + encloseFullTableName(metadataSchema, NAMESPACE_TABLE);
+        "SELECT * FROM " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE);
     try (Statement statement = connection.createStatement();
         ResultSet results = statement.executeQuery(selectAllTables)) {
       return !results.next();
