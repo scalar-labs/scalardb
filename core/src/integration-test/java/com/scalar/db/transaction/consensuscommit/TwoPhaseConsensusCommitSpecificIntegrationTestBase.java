@@ -71,6 +71,11 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   public void beforeAll() throws Exception {
     initialize();
     Properties properties = TestUtils.addSuffix(getProperties(), TEST_NAME);
+
+    // Async commit can cause unexpected lazy recoveries, which can fail the tests. So we disable it
+    // for now.
+    properties.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
+
     namespace = getNamespace();
     StorageFactory factory = StorageFactory.create(properties);
     admin = factory.getAdmin();

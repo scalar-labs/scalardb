@@ -2,6 +2,7 @@ package com.scalar.db.server;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminRepairTableIntegrationTestBase;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.util.TestUtils;
 import java.io.IOException;
 import java.util.Properties;
@@ -18,7 +19,13 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithDistributedTransa
   protected void initialize() throws IOException {
     Properties properties = ServerEnv.getServerProperties();
     if (properties != null) {
-      server = new ScalarDbServer(TestUtils.addSuffix(properties, TEST_NAME));
+      Properties props = TestUtils.addSuffix(properties, TEST_NAME);
+
+      // Async commit can cause unexpected lazy recoveries, which can fail the tests. So we disable
+      // it for now.
+      props.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
+
+      server = new ScalarDbServer(props);
       server.start();
     }
   }
