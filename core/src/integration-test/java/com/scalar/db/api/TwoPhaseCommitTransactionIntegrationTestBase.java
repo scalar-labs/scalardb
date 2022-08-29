@@ -388,6 +388,24 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .indexKey(Key.ofInt(SOME_COLUMN, 2))
             .build();
 
+    List<ExpectedResult> expectedResults = new ArrayList<>();
+    expectedResults.add(
+        new ExpectedResultBuilder()
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
+            .nonKeyColumns(
+                ImmutableList.of(
+                    IntColumn.of(BALANCE, INITIAL_BALANCE), IntColumn.of(SOME_COLUMN, 2)))
+            .build());
+    expectedResults.add(
+        new ExpectedResultBuilder()
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+            .nonKeyColumns(
+                ImmutableList.of(
+                    IntColumn.of(BALANCE, INITIAL_BALANCE), IntColumn.of(SOME_COLUMN, 2)))
+            .build());
+
     // Act
     List<Result> results1 = transaction.scan(scanBuiltByConstructor);
     List<Result> results2 = transaction.scan(scanBuiltByBuilder);
@@ -396,18 +414,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    assertThat(results1.size()).isEqualTo(2);
-    assertThat(results1.get(0).getInt(ACCOUNT_ID)).isEqualTo(1);
-    assertThat(results1.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(2);
-    assertThat(getBalance(results1.get(0))).isEqualTo(INITIAL_BALANCE);
-    assertThat(results1.get(0).getInt(SOME_COLUMN)).isEqualTo(2);
-
-    assertThat(results1.get(1).getInt(ACCOUNT_ID)).isEqualTo(2);
-    assertThat(results1.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(getBalance(results1.get(1))).isEqualTo(INITIAL_BALANCE);
-    assertThat(results1.get(1).getInt(SOME_COLUMN)).isEqualTo(2);
-
-    assertThat(results2).isEqualTo(results1);
+    assertResultsContainsExactlyInAnyOrder(results1, expectedResults);
+    assertResultsContainsExactlyInAnyOrder(results2, expectedResults);
   }
 
   @Test
