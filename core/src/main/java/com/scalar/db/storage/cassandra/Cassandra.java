@@ -134,9 +134,6 @@ public class Cassandra extends AbstractDistributedStorage {
 
     mutations = copyAndSetTargetToIfNot(mutations);
     operationChecker.check(mutations);
-    for (Mutation mutation : mutations) {
-      operationChecker.check(mutation);
-    }
     batch.handle(mutations);
   }
 

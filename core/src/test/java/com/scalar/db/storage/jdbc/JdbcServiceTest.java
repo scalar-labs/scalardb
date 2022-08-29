@@ -529,8 +529,6 @@ public class JdbcServiceTest {
     // Assert
     assertThat(ret).isTrue();
     verify(operationChecker).check(anyList());
-    verify(operationChecker).check(any(Put.class));
-    verify(operationChecker).check(any(Delete.class));
     verify(queryBuilder).upsertInto(any(), any(), any());
     verify(queryBuilder).deleteFrom(any(), any(), any());
   }
