@@ -492,9 +492,7 @@ jobs:
         if : always()
         run: |
           mkdir -p /tmp/gradle_integration_test_reports/server
-          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
           cp -a server/build/reports/tests/integrationTestScalarDbServer /tmp/gradle_integration_test_reports/server/
-          cp -a schema-loader/build/reports/tests/integrationTestScalarDbServer /tmp/gradle_integration_test_reports/schema-loader/
 
       - name: Upload Gradle test reports
         uses: actions/upload-artifact@v3

@@ -54,8 +54,7 @@ public abstract class StorageSpecificCommand {
     List<TableSchema> tableSchemaList = parser.parse();
 
     // Create or delete tables
-    SchemaOperator operator = getSchemaOperator(props);
-    try {
+    try (SchemaOperator operator = getSchemaOperator(props)) {
       boolean hasTransactionTable =
           tableSchemaList.stream().anyMatch(TableSchema::isTransactionTable);
 
@@ -68,8 +67,6 @@ public abstract class StorageSpecificCommand {
       } else if (getMode().alterTables) {
         operator.alterTables(tableSchemaList, options);
       }
-    } finally {
-      operator.close();
     }
   }
 

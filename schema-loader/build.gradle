@@ -66,16 +66,6 @@ sourceSets {
         }
         resources.srcDir file('src/integration-test/resources')
     }
-    integrationTestScalarDbServer {
-        java {
-            compileClasspath += main.output + test.output
-            runtimeClasspath += main.output + test.output
-            srcDir file('src/integration-test/java')
-            include '**/com/scalar/db/schemaloader/*.java'
-            include '**/com/scalar/db/server/*.java'
-        }
-        resources.srcDir file('src/integration-test/resources')
-    }
 }
 
 configurations {
@@ -97,13 +87,9 @@ configurations {
     integrationTestMultiStorageImplementation.extendsFrom testImplementation
     integrationTestMultiStorageRuntimeOnly.extendsFrom testRuntimeOnly
     integrationTestMultiStorageCompileOnly.extendsFrom testCompileOnly
-    integrationTestScalarDbServerImplementation.extendsFrom testImplementation
-    integrationTestScalarDbServerRuntimeOnly.extendsFrom testRuntimeOnly
-    integrationTestScalarDbServerCompileOnly.extendsFrom testCompileOnly
 }
 
 evaluationDependsOn ':core'
-evaluationDependsOn ':server'
 
 dependencies {
     implementation project(':core')
@@ -117,8 +103,6 @@ dependencies {
     testImplementation "org.mockito:mockito-core:${mockitoVersion}"
     testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
     testImplementation project(':core').sourceSets.integrationTestAll.output
-    testImplementation project(':server')
-    testImplementation project(':server').sourceSets.integrationTestScalarDbServer.output
 
     // for SpotBugs
     compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
@@ -153,12 +137,7 @@ shadowJar {
     mergeServiceFiles()
 }
 
-// The fat jar path
-def schemaLoaderJarPath = "${project.buildDir}/libs/${archivesBaseName}-${project.version}.jar"
-
 task integrationTestCassandra(type: Test) {
-    dependsOn shadowJar
-    useJUnitPlatform()
     description = 'Runs the schema loader integration tests for Cassandra.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestCassandra.output.classesDirs
@@ -166,13 +145,10 @@ task integrationTestCassandra(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties())
-        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
     }
 }
 
 task integrationTestCosmos(type: Test) {
-    dependsOn shadowJar
-    useJUnitPlatform()
     description = 'Runs the schema loader integration tests for Cosmos DB.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestCosmos.output.classesDirs
@@ -180,13 +156,11 @@ task integrationTestCosmos(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties())
-        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
     }
+    jvmArgs '-XX:MaxDirectMemorySize=2g'
 }
 
 task integrationTestDynamo(type: Test) {
-    dependsOn shadowJar
-    useJUnitPlatform()
     description = 'Runs the schema loader integration tests for DynamoDB.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestDynamo.output.classesDirs
@@ -194,13 +168,10 @@ task integrationTestDynamo(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties())
-        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
     }
 }
 
 task integrationTestJdbc(type: Test) {
-    dependsOn shadowJar
-    useJUnitPlatform()
     description = 'Runs the schema loader integration tests for a JDBC database.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestJdbc.output.classesDirs
@@ -208,13 +179,10 @@ task integrationTestJdbc(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties())
-        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
     }
 }
 
 task integrationTestMultiStorage(type: Test) {
-    dependsOn shadowJar
-    useJUnitPlatform()
     description = 'Runs the schema loader integration tests for multi-storage.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestMultiStorage.output.classesDirs
@@ -222,21 +190,6 @@ task integrationTestMultiStorage(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties())
-        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
-    }
-}
-
-task integrationTestScalarDbServer(type: Test) {
-    dependsOn shadowJar
-    useJUnitPlatform()
-    description = 'Runs the schema loader integration tests with Scalar DB Server.'
-    group = 'verification'
-    testClassesDirs = sourceSets.integrationTestScalarDbServer.output.classesDirs
-    classpath = sourceSets.integrationTestScalarDbServer.runtimeClasspath
-    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
-    options {
-        systemProperties(System.getProperties())
-        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
     }
 }
 
@@ -287,6 +240,6 @@ if (!project.gradle.startParameter.taskNames.isEmpty() &&
         (project.gradle.startParameter.taskNames[0].endsWith('publish') ||
                 project.gradle.startParameter.taskNames[0].endsWith('publishToMavenLocal'))) {
     // not to publish the fat jar
-    project.gradle.startParameter.excludedTaskNames= ["shadowJar"]
+    project.gradle.startParameter.excludedTaskNames = ["shadowJar"]
     apply from: 'archive.gradle'
 }
