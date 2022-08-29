@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 
-public class SchemaLoaderWithScalarDbServer extends SchemaLoaderIntegrationTestBase {
+public class SchemaLoaderIntegrationTestWithScalarDbServer extends SchemaLoaderIntegrationTestBase {
 
   private ScalarDbServer server;
 
@@ -26,7 +26,7 @@ public class SchemaLoaderWithScalarDbServer extends SchemaLoaderIntegrationTestB
 
   @AfterAll
   @Override
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws ExecutionException, IOException {
     super.afterAll();
     if (server != null) {
       server.shutdown();

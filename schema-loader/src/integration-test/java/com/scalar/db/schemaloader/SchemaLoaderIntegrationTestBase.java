@@ -17,15 +17,12 @@ import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.util.AdminTestUtils;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.OutputStream;
 import java.io.Writer;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -39,9 +36,10 @@ import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class SchemaLoaderIntegrationTestBase {
-  private static final String CONFIG_FILE = "config.properties";
-  private static final String SCHEMA_FILE = "schema.json";
-  private static final String ALTERED_SCHEMA_FILE = "altered_schema.json";
+  private static final Path CONFIG_FILE_PATH = Paths.get("config.properties").toAbsolutePath();
+  private static final Path SCHEMA_FILE_PATH = Paths.get("schema.json").toAbsolutePath();
+  private static final Path ALTERED_SCHEMA_FILE_PATH =
+      Paths.get("altered_schema.json").toAbsolutePath();
 
   private static final String NAMESPACE_1 = "integration_testing_schema_loader1";
   private static final String TABLE_1 = "test_table2";
@@ -75,8 +73,6 @@ public abstract class SchemaLoaderIntegrationTestBase {
           .addColumn("col2", DataType.BIGINT)
           .addColumn("col3", DataType.FLOAT)
           .build();
-  private static final String schemaLoaderJarPath =
-      System.getProperty("scalardb.schemaloader.jar_path");
 
   private DistributedStorageAdmin storageAdmin;
   private DistributedTransactionAdmin transactionAdmin;
@@ -90,8 +86,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
     writeConfigFile(properties);
-    writeSchemaFile(SCHEMA_FILE, getSchemaJsonMap());
-    writeSchemaFile(ALTERED_SCHEMA_FILE, getAlteredSchemaJsonMap());
+    writeSchemaFile(SCHEMA_FILE_PATH, getSchemaJsonMap());
+    writeSchemaFile(ALTERED_SCHEMA_FILE_PATH, getAlteredSchemaJsonMap());
     StorageFactory factory = StorageFactory.create(properties);
     storageAdmin = factory.getStorageAdmin();
     TransactionFactory transactionFactory = TransactionFactory.create(properties);
@@ -108,8 +104,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
   protected abstract Properties getProperties();
 
   protected void writeConfigFile(Properties properties) throws IOException {
-    try (FileOutputStream fileOutputStream = new FileOutputStream(CONFIG_FILE)) {
-      properties.store(fileOutputStream, null);
+    try (OutputStream outputStream = Files.newOutputStream(CONFIG_FILE_PATH)) {
+      properties.store(outputStream, null);
     }
   }
 
@@ -207,79 +203,79 @@ public abstract class SchemaLoaderIntegrationTestBase {
             .build());
   }
 
-  protected void writeSchemaFile(String fileName, Map<String, Object> schemaJsonMap)
+  protected void writeSchemaFile(Path schemaFilePath, Map<String, Object> schemaJsonMap)
       throws IOException {
     Gson gson = new Gson();
-    try (FileOutputStream outputStream = new FileOutputStream(fileName);
-        Writer writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8)) {
+    try (Writer writer = Files.newBufferedWriter(schemaFilePath)) {
       gson.toJson(schemaJsonMap, writer);
     }
   }
 
-  protected List<String> getCommandArgsForCreation(String configFile, String schemaFile)
+  protected List<String> getCommandArgsForCreation(Path configFilePath, Path schemaFilePath)
       throws Exception {
-    return ImmutableList.of("--config", configFile, "--schema-file", schemaFile);
+    return ImmutableList.of(
+        "--config", configFilePath.toString(), "--schema-file", schemaFilePath.toString());
   }
 
   protected List<String> getCommandArgsForCreationWithCoordinator(
-      String configFile, String schemaFile) throws Exception {
+      Path configFilePath, Path schemaFilePath) throws Exception {
     return ImmutableList.<String>builder()
-        .addAll(getCommandArgsForCreation(configFile, schemaFile))
+        .addAll(getCommandArgsForCreation(configFilePath, schemaFilePath))
         .add("--coordinator")
         .build();
   }
 
-  protected List<String> getCommandArgsForTableReparation(String configFile, String schemaFile) {
-    return ImmutableList.of("--config", configFile, "--schema-file", schemaFile, "--repair-all");
+  protected List<String> getCommandArgsForTableReparation(
+      Path configFilePath, Path schemaFilePath) {
+    return ImmutableList.of(
+        "--config",
+        configFilePath.toString(),
+        "--schema-file",
+        schemaFilePath.toString(),
+        "--repair-all");
   }
 
   protected List<String> getCommandArgsForTableReparationWithCoordinator(
-      String configFile, String schemaFile) throws Exception {
+      Path configFilePath, Path schemaFilePath) throws Exception {
     return ImmutableList.<String>builder()
-        .addAll(getCommandArgsForTableReparation(configFile, schemaFile))
+        .addAll(getCommandArgsForTableReparation(configFilePath, schemaFilePath))
         .add("--coordinator")
         .build();
   }
 
-  protected List<String> getCommandArgsForDeletion(String configFile, String schemaFile)
+  protected List<String> getCommandArgsForDeletion(Path configFilePath, Path schemaFilePath)
       throws Exception {
     return ImmutableList.<String>builder()
-        .addAll(getCommandArgsForCreation(configFile, schemaFile))
+        .addAll(getCommandArgsForCreation(configFilePath, schemaFilePath))
         .add("-D")
         .build();
   }
 
   protected List<String> getCommandArgsForDeletionWithCoordinator(
-      String configFile, String schemaFile) throws Exception {
+      Path configFilePath, Path schemaFilePath) throws Exception {
     return ImmutableList.<String>builder()
-        .addAll(getCommandArgsForCreationWithCoordinator(configFile, schemaFile))
+        .addAll(getCommandArgsForCreationWithCoordinator(configFilePath, schemaFilePath))
         .add("-D")
         .build();
   }
 
-  protected List<String> getCommandArgsForAlteration(String configFile, String schemaFile)
+  protected List<String> getCommandArgsForAlteration(Path configFilePath, Path schemaFilePath)
       throws Exception {
     return ImmutableList.<String>builder()
-        .addAll(getCommandArgsForCreation(configFile, schemaFile))
+        .addAll(getCommandArgsForCreation(configFilePath, schemaFilePath))
         .add("--alter")
         .build();
   }
 
   @AfterAll
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws ExecutionException, IOException {
     dropTablesIfExist();
     storageAdmin.close();
 
     // Delete the files
-    if (!new File(CONFIG_FILE).delete()) {
-      System.err.println("failed to delete " + CONFIG_FILE);
-    }
-    if (!new File(SCHEMA_FILE).delete()) {
-      System.err.println("failed to delete " + SCHEMA_FILE);
-    }
-    if (!new File(ALTERED_SCHEMA_FILE).delete()) {
-      System.err.println("failed to delete " + ALTERED_SCHEMA_FILE);
-    }
+    Files.delete(CONFIG_FILE_PATH);
+    Files.delete(SCHEMA_FILE_PATH);
+    Files.delete(ALTERED_SCHEMA_FILE_PATH);
   }
 
   private void dropTablesIfExist() throws ExecutionException {
@@ -298,7 +294,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
   private void createTables_ShouldCreateTables() throws Exception {
     // Act
-    int exitCode = executeCommandWithArgs(getCommandArgsForCreation(CONFIG_FILE, SCHEMA_FILE));
+    int exitCode = executeWithArgs(getCommandArgsForCreation(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
@@ -309,7 +305,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
   private void deleteTables_ShouldDeleteTables() throws Exception {
     // Act
-    int exitCode = executeCommandWithArgs(getCommandArgsForDeletion(CONFIG_FILE, SCHEMA_FILE));
+    int exitCode = executeWithArgs(getCommandArgsForDeletion(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
@@ -329,13 +325,13 @@ public abstract class SchemaLoaderIntegrationTestBase {
       throws Exception {
     // Arrange
     int exitCodeCreation =
-        executeCommandWithArgs(getCommandArgsForCreation(CONFIG_FILE, SCHEMA_FILE));
+        executeWithArgs(getCommandArgsForCreation(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
     assertThat(exitCodeCreation).isZero();
     dropMetadataTable();
 
     // Act
     int exitCodeReparation =
-        executeCommandWithArgs(getCommandArgsForTableReparation(CONFIG_FILE, SCHEMA_FILE));
+        executeWithArgs(getCommandArgsForTableReparation(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
 
     // Assert
     assertThat(exitCodeReparation).isZero();
@@ -349,14 +345,15 @@ public abstract class SchemaLoaderIntegrationTestBase {
           throws Exception {
     // Arrange
     int exitCodeCreation =
-        executeCommandWithArgs(getCommandArgsForCreationWithCoordinator(CONFIG_FILE, SCHEMA_FILE));
+        executeWithArgs(
+            getCommandArgsForCreationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
     assertThat(exitCodeCreation).isZero();
     dropMetadataTable();
 
     // Act
     int exitCodeReparation =
-        executeCommandWithArgs(
-            getCommandArgsForTableReparationWithCoordinator(CONFIG_FILE, SCHEMA_FILE));
+        executeWithArgs(
+            getCommandArgsForTableReparationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
 
     // Assert
     assertThat(exitCodeReparation).isZero();
@@ -369,7 +366,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
   public void createTableThenAlterTables_ShouldExecuteProperly() throws Exception {
     // Arrange
     int exitCodeCreation =
-        executeCommandWithArgs(getCommandArgsForCreationWithCoordinator(CONFIG_FILE, SCHEMA_FILE));
+        executeWithArgs(
+            getCommandArgsForCreationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
     assertThat(exitCodeCreation).isZero();
 
     TableMetadata expectedTable1Metadata =
@@ -386,7 +384,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Act
     int exitCodeAlteration =
-        executeCommandWithArgs(getCommandArgsForAlteration(CONFIG_FILE, ALTERED_SCHEMA_FILE));
+        executeWithArgs(getCommandArgsForAlteration(CONFIG_FILE_PATH, ALTERED_SCHEMA_FILE_PATH));
 
     // Assert
     assertThat(exitCodeAlteration).isZero();
@@ -399,7 +397,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
   private void createTables_ShouldCreateTablesWithCoordinator() throws Exception {
     // Act
     int exitCode =
-        executeCommandWithArgs(getCommandArgsForCreationWithCoordinator(CONFIG_FILE, SCHEMA_FILE));
+        executeWithArgs(
+            getCommandArgsForCreationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
@@ -411,7 +410,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
   private void deleteTables_ShouldDeleteTablesWithCoordinator() throws Exception {
     // Act
     int exitCode =
-        executeCommandWithArgs(getCommandArgsForDeletionWithCoordinator(CONFIG_FILE, SCHEMA_FILE));
+        executeWithArgs(
+            getCommandArgsForDeletionWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
@@ -420,27 +420,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
     assertThat(transactionAdmin.coordinatorTablesExist()).isFalse();
   }
 
-  private int executeCommandWithArgs(List<String> args) throws Exception {
-    List<String> command =
-        ImmutableList.<String>builder()
-            .add("java")
-            .add("-jar")
-            .add(schemaLoaderJarPath)
-            .addAll(args)
-            .build();
-    ProcessBuilder processBuilder = new ProcessBuilder(command);
-
-    Process process = processBuilder.start();
-    try (final BufferedReader input =
-        new BufferedReader(
-            new InputStreamReader(process.getErrorStream(), Charset.defaultCharset()))) {
-      String line;
-      while ((line = input.readLine()) != null) {
-        System.out.println(line);
-      }
-    }
-
-    return process.waitFor();
+  private int executeWithArgs(List<String> args) {
+    return SchemaLoader.mainInternal(args.toArray(new String[0]));
   }
 
   protected void assertTableMetadataForCoordinatorTableArePresent() throws Exception {

@@ -2,7 +2,6 @@ package com.scalar.db.schemaloader;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.scalar.db.schemaloader.command.CassandraCommand;
 import com.scalar.db.schemaloader.command.CosmosCommand;
 import com.scalar.db.schemaloader.command.DynamoCommand;
@@ -25,16 +24,7 @@ import picocli.CommandLine;
 
 public class SchemaLoader {
   private static final Logger logger = LoggerFactory.getLogger(SchemaLoader.class);
-  private static final Object SCHEMA_LOADER_COMMAND = new SchemaLoaderCommand();
-  private static final ImmutableMap<String, Object> COMMAND_MAP =
-      ImmutableMap.<String, Object>builder()
-          .put("--config", SCHEMA_LOADER_COMMAND)
-          .put("-c", SCHEMA_LOADER_COMMAND)
-          .put("--cassandra", new CassandraCommand())
-          .put("--cosmos", new CosmosCommand())
-          .put("--dynamo", new DynamoCommand())
-          .put("--jdbc", new JdbcCommand())
-          .build();
+
   private static final ImmutableList<String> STORAGE_SPECIFIC_OPTION_LIST =
       ImmutableList.<String>builder()
           .add("--cassandra")
@@ -44,11 +34,16 @@ public class SchemaLoader {
           .build();
 
   public static void main(String... args) {
+    System.exit(mainInternal(args));
+  }
+
+  @VisibleForTesting
+  static int mainInternal(String... args) {
     Object command = null;
     String[] commandArgs = args;
     for (String arg : args) {
-      if (COMMAND_MAP.containsKey(arg)) {
-        command = COMMAND_MAP.get(arg);
+      command = getCommand(arg);
+      if (command != null) {
         if (STORAGE_SPECIFIC_OPTION_LIST.contains(arg)) {
           logger.warn(
               "Storage-specific options (--cassandra, --cosmos, --dynamo, --jdbc) "
@@ -61,15 +56,32 @@ public class SchemaLoader {
       }
     }
 
-    int status;
     if (command != null) {
-      status = new CommandLine(command).execute(commandArgs);
+      return new CommandLine(command).execute(commandArgs);
     } else {
       logger.error(
           "Need to specify either --config <configPath> or --cassandra or --cosmos or --dynamo or --jdbc");
-      status = 1;
+      return 1;
     }
-    System.exit(status);
+  }
+
+  @Nullable
+  private static Object getCommand(String arg) {
+    switch (arg) {
+      case "--config":
+      case "-c":
+        return new SchemaLoaderCommand();
+      case "--cassandra":
+        return new CassandraCommand();
+      case "--cosmos":
+        return new CosmosCommand();
+      case "--dynamo":
+        return new DynamoCommand();
+      case "--jdbc":
+        return new JdbcCommand();
+      default:
+        return null;
+    }
   }
 
   /**
@@ -171,14 +183,11 @@ public class SchemaLoader {
     List<TableSchema> tableSchemaList = getTableSchemaList(schema, options);
 
     // Create tables
-    SchemaOperator operator = getSchemaOperator(config);
-    try {
+    try (SchemaOperator operator = getSchemaOperator(config)) {
       operator.createTables(tableSchemaList);
       if (createCoordinatorTables) {
         operator.createCoordinatorTables(options);
       }
-    } finally {
-      operator.close();
     }
   }
 
@@ -263,14 +272,11 @@ public class SchemaLoader {
     List<TableSchema> tableSchemaList = getTableSchemaList(schema, Collections.emptyMap());
 
     // Delete tables
-    SchemaOperator operator = getSchemaOperator(config);
-    try {
+    try (SchemaOperator operator = getSchemaOperator(config)) {
       operator.deleteTables(tableSchemaList);
       if (deleteCoordinatorTables) {
         operator.dropCoordinatorTables();
       }
-    } finally {
-      operator.close();
     }
   }
 
@@ -370,14 +376,11 @@ public class SchemaLoader {
     List<TableSchema> tableSchemaList = getTableSchemaList(schema, options);
 
     // Repair tables
-    SchemaOperator operator = getSchemaOperator(config);
-    try {
+    try (SchemaOperator operator = getSchemaOperator(config)) {
       operator.repairTables(tableSchemaList);
       if (repairCoordinatorTable) {
         operator.repairCoordinatorTables(options);
       }
-    } finally {
-      operator.close();
     }
   }
 
@@ -496,11 +499,8 @@ public class SchemaLoader {
     List<TableSchema> tableSchemaList = getTableSchemaList(schema, indexCreationOptions);
 
     // Alter tables
-    SchemaOperator operator = getSchemaOperator(config);
-    try {
+    try (SchemaOperator operator = getSchemaOperator(config)) {
       operator.alterTables(tableSchemaList, indexCreationOptions);
-    } finally {
-      operator.close();
     }
   }
 
