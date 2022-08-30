@@ -151,6 +151,11 @@ public class JdbcService {
 
   public boolean put(Put put, Connection connection) throws SQLException, ExecutionException {
     operationChecker.check(put);
+    return putInternal(put, connection);
+  }
+
+  private boolean putInternal(Put put, Connection connection)
+      throws SQLException, ExecutionException {
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(put);
 
     if (!put.getCondition().isPresent()) {
@@ -172,6 +177,11 @@ public class JdbcService {
   public boolean delete(Delete delete, Connection connection)
       throws SQLException, ExecutionException {
     operationChecker.check(delete);
+    return deleteInternal(delete, connection);
+  }
+
+  private boolean deleteInternal(Delete delete, Connection connection)
+      throws SQLException, ExecutionException {
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(delete);
 
     if (!delete.getCondition().isPresent()) {
@@ -197,11 +207,12 @@ public class JdbcService {
 
     for (Mutation mutation : mutations) {
       if (mutation instanceof Put) {
-        if (!put((Put) mutation, connection)) {
+        if (!putInternal((Put) mutation, connection)) {
           return false;
         }
       } else {
-        if (!delete((Delete) mutation, connection)) {
+        assert mutation instanceof Delete;
+        if (!deleteInternal((Delete) mutation, connection)) {
           return false;
         }
       }

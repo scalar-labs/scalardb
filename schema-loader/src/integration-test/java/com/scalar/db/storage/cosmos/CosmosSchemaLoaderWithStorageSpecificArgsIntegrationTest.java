@@ -3,8 +3,8 @@ package com.scalar.db.storage.cosmos;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
@@ -35,15 +35,15 @@ public class CosmosSchemaLoaderWithStorageSpecificArgsIntegrationTest
 
   @Override
   protected List<String> getCommandArgsForCreationWithCoordinator(
-      String configFile, String schemaFile) throws IOException {
-    CosmosConfig config = new CosmosConfig(new DatabaseConfig(new File(configFile)));
+      Path configFilePath, Path schemaFilePath) throws IOException {
+    CosmosConfig config = new CosmosConfig(new DatabaseConfig(configFilePath));
     ImmutableList.Builder<String> builder =
         ImmutableList.<String>builder()
             .add("--cosmos")
             .add("-h")
             .add(config.getEndpoint())
             .add("--schema-file")
-            .add(schemaFile)
+            .add(schemaFilePath.toString())
             .add("-p")
             .add(config.getKey());
     CosmosEnv.getDatabasePrefix()
@@ -59,18 +59,18 @@ public class CosmosSchemaLoaderWithStorageSpecificArgsIntegrationTest
 
   @Override
   protected List<String> getCommandArgsForTableReparationWithCoordinator(
-      String configFile, String schemaFile) throws Exception {
+      Path configFilePath, Path schemaFilePath) throws Exception {
     return ImmutableList.<String>builder()
-        .addAll(getCommandArgsForCreationWithCoordinator(configFile, schemaFile))
+        .addAll(getCommandArgsForCreationWithCoordinator(configFilePath, schemaFilePath))
         .add("--repair-all")
         .build();
   }
 
   @Override
-  protected List<String> getCommandArgsForAlteration(String configFile, String schemaFile)
+  protected List<String> getCommandArgsForAlteration(Path configFilePath, Path schemaFilePath)
       throws Exception {
     return ImmutableList.<String>builder()
-        .addAll(getCommandArgsForCreationWithCoordinator(configFile, schemaFile))
+        .addAll(getCommandArgsForCreationWithCoordinator(configFilePath, schemaFilePath))
         .add("--alter")
         .build();
   }

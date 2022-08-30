@@ -22,7 +22,7 @@ public class MultiStorageSchemaLoaderIntegrationTest extends SchemaLoaderIntegra
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage1.contact_points",
         propertiesForStorage1.getProperty(DatabaseConfig.CONTACT_POINTS));
-    if (propertiesForStorage1.containsValue(DatabaseConfig.CONTACT_PORT)) {
+    if (propertiesForStorage1.containsKey(DatabaseConfig.CONTACT_PORT)) {
       props.setProperty(
           MultiStorageConfig.STORAGES + ".storage1.contact_port",
           propertiesForStorage1.getProperty(DatabaseConfig.CONTACT_PORT));
@@ -41,7 +41,7 @@ public class MultiStorageSchemaLoaderIntegrationTest extends SchemaLoaderIntegra
     props.setProperty(
         MultiStorageConfig.STORAGES + ".storage2.contact_points",
         propertiesForStorage2.getProperty(DatabaseConfig.CONTACT_POINTS));
-    if (propertiesForStorage2.containsValue(DatabaseConfig.CONTACT_PORT)) {
+    if (propertiesForStorage2.containsKey(DatabaseConfig.CONTACT_PORT)) {
       props.setProperty(
           MultiStorageConfig.STORAGES + ".storage2.contact_port",
           propertiesForStorage2.getProperty(DatabaseConfig.CONTACT_PORT));

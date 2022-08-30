@@ -30,7 +30,7 @@ public class ConsensusCommitConfig {
   public static final String ASYNC_COMMIT_ENABLED = PREFIX + "async_commit.enabled";
   public static final String ASYNC_ROLLBACK_ENABLED = PREFIX + "async_rollback.enabled";
 
-  public static final int DEFAULT_PARALLEL_EXECUTOR_COUNT = 30;
+  public static final int DEFAULT_PARALLEL_EXECUTOR_COUNT = 128;
 
   public static final String INCLUDE_METADATA_ENABLED = PREFIX + "include_metadata.enabled";
 
@@ -49,7 +49,7 @@ public class ConsensusCommitConfig {
   private final boolean isIncludeMetadataEnabled;
 
   public ConsensusCommitConfig(DatabaseConfig databaseConfig) {
-    if (databaseConfig.getProperties().containsValue("scalar.db.isolation_level")) {
+    if (databaseConfig.getProperties().containsKey("scalar.db.isolation_level")) {
       logger.warn(
           "The property \"scalar.db.isolation_level\" is deprecated and will be removed in 5.0.0. "
               + "Please use \""
@@ -82,9 +82,9 @@ public class ConsensusCommitConfig {
             PARALLEL_EXECUTOR_COUNT,
             DEFAULT_PARALLEL_EXECUTOR_COUNT);
     parallelPreparationEnabled =
-        getBoolean(databaseConfig.getProperties(), PARALLEL_PREPARATION_ENABLED, false);
+        getBoolean(databaseConfig.getProperties(), PARALLEL_PREPARATION_ENABLED, true);
     parallelCommitEnabled =
-        getBoolean(databaseConfig.getProperties(), PARALLEL_COMMIT_ENABLED, false);
+        getBoolean(databaseConfig.getProperties(), PARALLEL_COMMIT_ENABLED, true);
 
     // Use the value of parallel commit for parallel validation and parallel rollback as default
     // value
@@ -95,7 +95,7 @@ public class ConsensusCommitConfig {
         getBoolean(
             databaseConfig.getProperties(), PARALLEL_ROLLBACK_ENABLED, parallelCommitEnabled);
 
-    asyncCommitEnabled = getBoolean(databaseConfig.getProperties(), ASYNC_COMMIT_ENABLED, false);
+    asyncCommitEnabled = getBoolean(databaseConfig.getProperties(), ASYNC_COMMIT_ENABLED, true);
     asyncRollbackEnabled =
         getBoolean(databaseConfig.getProperties(), ASYNC_ROLLBACK_ENABLED, asyncCommitEnabled);
     isIncludeMetadataEnabled =

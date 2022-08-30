@@ -57,7 +57,7 @@ public class Cosmos extends AbstractDistributedStorage {
     TableMetadataManager metadataManager =
         new TableMetadataManager(
             new CosmosAdmin(client, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
-    operationChecker = new OperationChecker(metadataManager);
+    operationChecker = new CosmosOperationChecker(metadataManager);
 
     selectStatementHandler = new SelectStatementHandler(client, metadataManager);
     putStatementHandler = new PutStatementHandler(client, metadataManager);
@@ -131,9 +131,6 @@ public class Cosmos extends AbstractDistributedStorage {
 
     mutations = copyAndSetTargetToIfNot(mutations);
     operationChecker.check(mutations);
-    for (Mutation mutation : mutations) {
-      operationChecker.check(mutation);
-    }
     batchHandler.handle(mutations);
   }
 

@@ -82,6 +82,23 @@ public class DynamoConfigTest {
   }
 
   @Test
+  public void constructor_PropertiesWithDeprecatedEndpointOverrideGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_REGION);
+    props.setProperty(DatabaseConfig.STORAGE, DYNAMO_STORAGE);
+    props.setProperty("scalar.db.dynamo.endpoint-override", ANY_ENDPOINT_OVERRIDE);
+
+    // Act
+    DynamoConfig config = new DynamoConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.getRegion()).isEqualTo(ANY_REGION);
+    assertThat(config.getEndpointOverride().isPresent()).isTrue();
+    assertThat(config.getEndpointOverride().get()).isEqualTo(ANY_ENDPOINT_OVERRIDE);
+  }
+
+  @Test
   public void constructor_PropertiesWithoutTableMetadataNamespaceGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();

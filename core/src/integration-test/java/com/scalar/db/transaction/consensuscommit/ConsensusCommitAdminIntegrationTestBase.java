@@ -44,6 +44,10 @@ public abstract class ConsensusCommitAdminIntegrationTestBase
     String transactionManager = properties.getProperty(DatabaseConfig.TRANSACTION_MANAGER, "");
     if (!transactionManager.equals("grpc")) {
       properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "consensus-commit");
+
+      // Async commit can cause unexpected lazy recoveries, which can fail the tests. So we disable
+      // it for now.
+      properties.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
     }
     return properties;
   }

@@ -22,7 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class SchemaOperator {
+public class SchemaOperator implements AutoCloseable {
   private static final Logger logger = LoggerFactory.getLogger(SchemaOperator.class);
 
   private final DistributedStorageAdmin storageAdmin;
@@ -321,6 +321,7 @@ public class SchemaOperator {
     }
   }
 
+  @Override
   public void close() {
     storageAdmin.close();
     transactionAdmin.close();
