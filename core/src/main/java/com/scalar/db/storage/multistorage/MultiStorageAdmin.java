@@ -57,7 +57,8 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
     config
         .getNamespaceStorageMap()
         .forEach(
-            (table, storageName) -> namespaceAdminMap.put(table, nameAdminMap.get(storageName)));
+            (namespace, storageName) ->
+                namespaceAdminMap.put(namespace, nameAdminMap.get(storageName)));
 
     defaultAdmin = nameAdminMap.get(config.getDefaultStorage());
   }
@@ -185,13 +186,17 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
 
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
-    Set<DistributedStorageAdmin> admins = new HashSet<>(namespaceAdminMap.values());
-    admins.add(defaultAdmin);
-
     Set<String> namespaceNames = new HashSet<>();
-    for (DistributedStorageAdmin admin : admins) {
-      namespaceNames.addAll(admin.getNamespaceNames());
+    for (DistributedStorageAdmin admin : new HashSet<>(namespaceAdminMap.values())) {
+      Set<String> existingNamespaces = admin.getNamespaceNames();
+      // Only keep namespaces that are present in the namespace mapping
+      for (String existingNamespace : existingNamespaces) {
+        if (admin.equals(namespaceAdminMap.get(existingNamespace))) {
+          namespaceNames.add(existingNamespace);
+        }
+      }
     }
+    namespaceNames.addAll(defaultAdmin.getNamespaceNames());
 
     return namespaceNames;
   }
