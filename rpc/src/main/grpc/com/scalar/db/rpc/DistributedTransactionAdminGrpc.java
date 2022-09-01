@@ -542,6 +542,37 @@ public final class DistributedTransactionAdminGrpc {
     return getAddNewColumnToTableMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.GetNamespaceNamesRequest,
+      com.scalar.db.rpc.GetNamespaceNamesResponse> getGetNamespaceNamesMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetNamespaceNames",
+      requestType = com.scalar.db.rpc.GetNamespaceNamesRequest.class,
+      responseType = com.scalar.db.rpc.GetNamespaceNamesResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.GetNamespaceNamesRequest,
+      com.scalar.db.rpc.GetNamespaceNamesResponse> getGetNamespaceNamesMethod() {
+    io.grpc.MethodDescriptor<com.scalar.db.rpc.GetNamespaceNamesRequest, com.scalar.db.rpc.GetNamespaceNamesResponse> getGetNamespaceNamesMethod;
+    if ((getGetNamespaceNamesMethod = DistributedTransactionAdminGrpc.getGetNamespaceNamesMethod) == null) {
+      synchronized (DistributedTransactionAdminGrpc.class) {
+        if ((getGetNamespaceNamesMethod = DistributedTransactionAdminGrpc.getGetNamespaceNamesMethod) == null) {
+          DistributedTransactionAdminGrpc.getGetNamespaceNamesMethod = getGetNamespaceNamesMethod =
+              io.grpc.MethodDescriptor.<com.scalar.db.rpc.GetNamespaceNamesRequest, com.scalar.db.rpc.GetNamespaceNamesResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetNamespaceNames"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.GetNamespaceNamesRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.GetNamespaceNamesResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DistributedTransactionAdminMethodDescriptorSupplier("GetNamespaceNames"))
+              .build();
+        }
+      }
+    }
+    return getGetNamespaceNamesMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -709,6 +740,13 @@ public final class DistributedTransactionAdminGrpc {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAddNewColumnToTableMethod(), responseObserver);
     }
 
+    /**
+     */
+    public void getNamespaceNames(com.scalar.db.rpc.GetNamespaceNamesRequest request,
+        io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetNamespaceNamesResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetNamespaceNamesMethod(), responseObserver);
+    }
+
     @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
       return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
           .addMethod(
@@ -830,6 +868,13 @@ public final class DistributedTransactionAdminGrpc {
                 com.scalar.db.rpc.AddNewColumnToTableRequest,
                 com.google.protobuf.Empty>(
                   this, METHODID_ADD_NEW_COLUMN_TO_TABLE)))
+          .addMethod(
+            getGetNamespaceNamesMethod(),
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
+              new MethodHandlers<
+                com.scalar.db.rpc.GetNamespaceNamesRequest,
+                com.scalar.db.rpc.GetNamespaceNamesResponse>(
+                  this, METHODID_GET_NAMESPACE_NAMES)))
           .build();
     }
   }
@@ -983,6 +1028,14 @@ public final class DistributedTransactionAdminGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getAddNewColumnToTableMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     */
+    public void getNamespaceNames(com.scalar.db.rpc.GetNamespaceNamesRequest request,
+        io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetNamespaceNamesResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetNamespaceNamesMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -1116,6 +1169,13 @@ public final class DistributedTransactionAdminGrpc {
     public com.google.protobuf.Empty addNewColumnToTable(com.scalar.db.rpc.AddNewColumnToTableRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getAddNewColumnToTableMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.scalar.db.rpc.GetNamespaceNamesResponse getNamespaceNames(com.scalar.db.rpc.GetNamespaceNamesRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetNamespaceNamesMethod(), getCallOptions(), request);
     }
   }
 
@@ -1268,6 +1328,14 @@ public final class DistributedTransactionAdminGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getAddNewColumnToTableMethod(), getCallOptions()), request);
     }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.scalar.db.rpc.GetNamespaceNamesResponse> getNamespaceNames(
+        com.scalar.db.rpc.GetNamespaceNamesRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetNamespaceNamesMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_NAMESPACE = 0;
@@ -1287,6 +1355,7 @@ public final class DistributedTransactionAdminGrpc {
   private static final int METHODID_REPAIR_TABLE = 14;
   private static final int METHODID_REPAIR_COORDINATOR_TABLES = 15;
   private static final int METHODID_ADD_NEW_COLUMN_TO_TABLE = 16;
+  private static final int METHODID_GET_NAMESPACE_NAMES = 17;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -1373,6 +1442,10 @@ public final class DistributedTransactionAdminGrpc {
           serviceImpl.addNewColumnToTable((com.scalar.db.rpc.AddNewColumnToTableRequest) request,
               (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
           break;
+        case METHODID_GET_NAMESPACE_NAMES:
+          serviceImpl.getNamespaceNames((com.scalar.db.rpc.GetNamespaceNamesRequest) request,
+              (io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetNamespaceNamesResponse>) responseObserver);
+          break;
         default:
           throw new AssertionError();
       }
@@ -1451,6 +1524,7 @@ public final class DistributedTransactionAdminGrpc {
               .addMethod(getRepairTableMethod())
               .addMethod(getRepairCoordinatorTablesMethod())
               .addMethod(getAddNewColumnToTableMethod())
+              .addMethod(getGetNamespaceNamesMethod())
               .build();
         }
       }

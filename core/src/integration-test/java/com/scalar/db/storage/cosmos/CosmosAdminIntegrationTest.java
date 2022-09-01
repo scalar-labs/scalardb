@@ -4,6 +4,8 @@ import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 public class CosmosAdminIntegrationTest extends DistributedStorageAdminIntegrationTestBase {
 
@@ -36,4 +38,19 @@ public class CosmosAdminIntegrationTest extends DistributedStorageAdminIntegrati
   protected Map<String, String> getCreationOptions() {
     return CosmosEnv.getCreationOptions();
   }
+
+  @Disabled("Temporarily until admin.getNamespacesNames() is implemented")
+  @Test
+  @Override
+  public void createNamespace_ForNonExistingNamespace_ShouldCreateNamespaceProperly() {}
+
+  @Disabled("Temporarily until admin.getNamespacesNames() is implemented")
+  @Test
+  @Override
+  public void dropNamespace_ForNonExistingNamespace_ShouldDropNamespaceProperly() {}
+
+  @Disabled("Temporarily until admin.getNamespacesNames() is implemented")
+  @Test
+  @Override
+  public void getNamespaceNames_ShouldReturnCreatedNamespaces() {}
 }
