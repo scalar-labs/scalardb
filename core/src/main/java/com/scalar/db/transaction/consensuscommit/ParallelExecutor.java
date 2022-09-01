@@ -5,7 +5,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
-import com.scalar.db.storage.cassandra.BatchHandler;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.concurrent.CompletionService;
