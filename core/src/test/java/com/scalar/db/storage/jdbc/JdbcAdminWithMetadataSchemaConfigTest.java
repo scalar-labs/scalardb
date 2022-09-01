@@ -2,7 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import java.util.Optional;
 
-public class JdbcAdminWithTableMetadataSchemaConfigTest extends JdbcAdminTestBase {
+public class JdbcAdminWithMetadataSchemaConfigTest extends JdbcAdminTestBase {
 
   @Override
   Optional<String> getTableMetadataSchemaConfig() {

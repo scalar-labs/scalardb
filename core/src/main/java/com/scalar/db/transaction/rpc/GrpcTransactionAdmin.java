@@ -19,6 +19,8 @@ import com.scalar.db.rpc.DropCoordinatorTablesRequest;
 import com.scalar.db.rpc.DropIndexRequest;
 import com.scalar.db.rpc.DropNamespaceRequest;
 import com.scalar.db.rpc.DropTableRequest;
+import com.scalar.db.rpc.GetNamespaceNamesRequest;
+import com.scalar.db.rpc.GetNamespaceNamesResponse;
 import com.scalar.db.rpc.GetNamespaceTableNamesRequest;
 import com.scalar.db.rpc.GetNamespaceTableNamesResponse;
 import com.scalar.db.rpc.GetTableMetadataRequest;
@@ -393,6 +395,17 @@ public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
                         .setColumnName(columnName)
                         .setColumnType(ProtoUtils.toDataType(columnType))
                         .build()));
+  }
+
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    return execute(
+        () -> {
+          GetNamespaceNamesResponse response =
+              stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                  .getNamespaceNames(GetNamespaceNamesRequest.newBuilder().build());
+          return new HashSet<>(response.getNamespaceNamesList());
+        });
   }
 
   private static <T> T execute(ThrowableSupplier<T, ExecutionException> supplier)

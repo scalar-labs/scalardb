@@ -434,4 +434,9 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       return strategyName;
     }
   }
+
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
 }

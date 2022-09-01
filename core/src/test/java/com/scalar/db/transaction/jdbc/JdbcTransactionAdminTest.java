@@ -227,4 +227,18 @@ public class JdbcTransactionAdminTest {
     // Assert
     verify(jdbcAdmin).addNewColumnToTable(namespace, table, column, dataType);
   }
+
+  @Test
+  public void getNamespaceNames_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    Set<String> namespaceNames = ImmutableSet.of("n1", "n2");
+    when(jdbcAdmin.getNamespaceNames()).thenReturn(namespaceNames);
+
+    // Act
+    Set<String> actualNamespaces = admin.getNamespaceNames();
+
+    // Assert
+    verify(jdbcAdmin).getNamespaceNames();
+    assertThat(actualNamespaces).containsOnly("n1", "n2");
+  }
 }

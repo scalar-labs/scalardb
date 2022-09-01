@@ -15,6 +15,8 @@ import com.scalar.db.rpc.DropCoordinatorTablesRequest;
 import com.scalar.db.rpc.DropIndexRequest;
 import com.scalar.db.rpc.DropNamespaceRequest;
 import com.scalar.db.rpc.DropTableRequest;
+import com.scalar.db.rpc.GetNamespaceNamesRequest;
+import com.scalar.db.rpc.GetNamespaceNamesResponse;
 import com.scalar.db.rpc.GetNamespaceTableNamesRequest;
 import com.scalar.db.rpc.GetNamespaceTableNamesResponse;
 import com.scalar.db.rpc.GetTableMetadataRequest;
@@ -296,6 +298,21 @@ public class DistributedTransactionAdminService
         },
         responseObserver,
         "add_new_column_to_table");
+  }
+
+  @Override
+  public void getNamespaceNames(
+      GetNamespaceNamesRequest request,
+      StreamObserver<GetNamespaceNamesResponse> responseObserver) {
+    execute(
+        () -> {
+          Set<String> namespaceNames = admin.getNamespaceNames();
+          responseObserver.onNext(
+              GetNamespaceNamesResponse.newBuilder().addAllNamespaceNames(namespaceNames).build());
+          responseObserver.onCompleted();
+        },
+        responseObserver,
+        "get_namespaces_names");
   }
 
   private void execute(

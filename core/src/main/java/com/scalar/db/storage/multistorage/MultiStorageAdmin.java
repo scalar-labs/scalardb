@@ -10,6 +10,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,7 +57,8 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
     config
         .getNamespaceStorageMap()
         .forEach(
-            (table, storageName) -> namespaceAdminMap.put(table, nameAdminMap.get(storageName)));
+            (namespace, storageName) ->
+                namespaceAdminMap.put(namespace, nameAdminMap.get(storageName)));
 
     defaultAdmin = nameAdminMap.get(config.getDefaultStorage());
   }
@@ -180,6 +182,23 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {
     getAdmin(namespace, table).addNewColumnToTable(namespace, table, columnName, columnType);
+  }
+
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    Set<String> namespaceNames = new HashSet<>();
+    for (DistributedStorageAdmin admin : new HashSet<>(namespaceAdminMap.values())) {
+      Set<String> existingNamespaces = admin.getNamespaceNames();
+      // Only keep namespaces that are present in the namespace mapping
+      for (String existingNamespace : existingNamespaces) {
+        if (admin.equals(namespaceAdminMap.get(existingNamespace))) {
+          namespaceNames.add(existingNamespace);
+        }
+      }
+    }
+    namespaceNames.addAll(defaultAdmin.getNamespaceNames());
+
+    return namespaceNames;
   }
 
   private DistributedStorageAdmin getAdmin(String namespace) {
