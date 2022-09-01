@@ -28,6 +28,8 @@ import org.mockito.MockitoAnnotations;
 
 public class ParallelExecutorTest {
 
+  private static final String TX_ID = "id";
+
   @Mock private ConsensusCommitConfig config;
   @Mock private ParallelExecutorTask task;
 
@@ -60,7 +62,7 @@ public class ParallelExecutorTest {
     when(config.isParallelPreparationEnabled()).thenReturn(false);
 
     // Act
-    parallelExecutor.prepare(tasks);
+    parallelExecutor.prepare(tasks, TX_ID);
 
     // Assert
     verify(task, times(tasks.size())).run();
@@ -76,7 +78,7 @@ public class ParallelExecutorTest {
     doThrow(ExecutionException.class).when(task).run();
 
     // Act Assert
-    assertThatThrownBy(() -> parallelExecutor.prepare(tasks))
+    assertThatThrownBy(() -> parallelExecutor.prepare(tasks, TX_ID))
         .isInstanceOf(ExecutionException.class);
 
     verify(task, only()).run();
@@ -90,7 +92,7 @@ public class ParallelExecutorTest {
     when(config.isParallelPreparationEnabled()).thenReturn(true);
 
     // Act
-    parallelExecutor.prepare(tasks);
+    parallelExecutor.prepare(tasks, TX_ID);
 
     // Assert
     verify(task, times(tasks.size())).run();
@@ -106,7 +108,7 @@ public class ParallelExecutorTest {
     doThrow(ExecutionException.class).when(task).run();
 
     // Act Assert
-    assertThatThrownBy(() -> parallelExecutor.prepare(tasks))
+    assertThatThrownBy(() -> parallelExecutor.prepare(tasks, TX_ID))
         .isInstanceOf(ExecutionException.class);
 
     verify(task, atMost(tasks.size())).run();
@@ -120,7 +122,7 @@ public class ParallelExecutorTest {
     when(config.isParallelValidationEnabled()).thenReturn(false);
 
     // Act
-    parallelExecutor.validate(tasks);
+    parallelExecutor.validate(tasks, TX_ID);
 
     // Assert
     verify(task, times(tasks.size())).run();
@@ -136,7 +138,7 @@ public class ParallelExecutorTest {
     doThrow(ExecutionException.class).when(task).run();
 
     // Act Assert
-    assertThatThrownBy(() -> parallelExecutor.validate(tasks))
+    assertThatThrownBy(() -> parallelExecutor.validate(tasks, TX_ID))
         .isInstanceOf(ExecutionException.class);
 
     verify(task, only()).run();
@@ -152,7 +154,7 @@ public class ParallelExecutorTest {
     doThrow(CommitConflictException.class).when(task).run();
 
     // Act Assert
-    assertThatThrownBy(() -> parallelExecutor.validate(tasks))
+    assertThatThrownBy(() -> parallelExecutor.validate(tasks, TX_ID))
         .isInstanceOf(CommitConflictException.class);
 
     verify(task, only()).run();
@@ -166,7 +168,7 @@ public class ParallelExecutorTest {
     when(config.isParallelValidationEnabled()).thenReturn(true);
 
     // Act
-    parallelExecutor.validate(tasks);
+    parallelExecutor.validate(tasks, TX_ID);
 
     // Assert
     verify(task, times(tasks.size())).run();
@@ -182,7 +184,7 @@ public class ParallelExecutorTest {
     doThrow(ExecutionException.class).when(task).run();
 
     // Act Assert
-    assertThatThrownBy(() -> parallelExecutor.validate(tasks))
+    assertThatThrownBy(() -> parallelExecutor.validate(tasks, TX_ID))
         .isInstanceOf(ExecutionException.class);
 
     verify(task, atMost(tasks.size())).run();
@@ -198,7 +200,7 @@ public class ParallelExecutorTest {
     doThrow(CommitConflictException.class).when(task).run();
 
     // Act Assert
-    assertThatThrownBy(() -> parallelExecutor.validate(tasks))
+    assertThatThrownBy(() -> parallelExecutor.validate(tasks, TX_ID))
         .isInstanceOf(CommitConflictException.class);
 
     verify(task, atMost(tasks.size())).run();
@@ -212,7 +214,7 @@ public class ParallelExecutorTest {
     when(config.isParallelCommitEnabled()).thenReturn(false);
 
     // Act
-    parallelExecutor.commitRecords(tasks);
+    parallelExecutor.commitRecords(tasks, TX_ID);
 
     // Assert
     verify(task, times(tasks.size())).run();
@@ -228,7 +230,7 @@ public class ParallelExecutorTest {
     doThrow(ExecutionException.class).when(task).run();
 
     // Act Assert
-    assertThatThrownBy(() -> parallelExecutor.commitRecords(tasks))
+    assertThatThrownBy(() -> parallelExecutor.commitRecords(tasks, TX_ID))
         .isInstanceOf(ExecutionException.class);
 
     verify(task, times(tasks.size())).run();
@@ -244,7 +246,7 @@ public class ParallelExecutorTest {
     when(config.isAsyncCommitEnabled()).thenReturn(false);
 
     // Act
-    parallelExecutor.commitRecords(tasks);
+    parallelExecutor.commitRecords(tasks, TX_ID);
 
     // Assert
     verify(task, times(tasks.size())).run();
@@ -261,7 +263,7 @@ public class ParallelExecutorTest {
     doThrow(ExecutionException.class).when(task).run();
 
     // Act Assert
-    assertThatThrownBy(() -> parallelExecutor.commitRecords(tasks))
+    assertThatThrownBy(() -> parallelExecutor.commitRecords(tasks, TX_ID))
         .isInstanceOf(ExecutionException.class);
 
     verify(task, times(tasks.size())).run();
@@ -277,7 +279,7 @@ public class ParallelExecutorTest {
     when(config.isAsyncCommitEnabled()).thenReturn(true);
 
     // Act
-    parallelExecutor.commitRecords(tasks);
+    parallelExecutor.commitRecords(tasks, TX_ID);
 
     // Assert
     verify(task, atMost(tasks.size())).run();
@@ -294,7 +296,7 @@ public class ParallelExecutorTest {
     doThrow(ExecutionException.class).when(task).run();
 
     // Act Assert
-    assertThatCode(() -> parallelExecutor.commitRecords(tasks)).doesNotThrowAnyException();
+    assertThatCode(() -> parallelExecutor.commitRecords(tasks, TX_ID)).doesNotThrowAnyException();
 
     verify(task, atMost(tasks.size())).run();
     verify(parallelExecutorService, times(tasks.size())).execute(any());
@@ -307,7 +309,7 @@ public class ParallelExecutorTest {
     when(config.isParallelRollbackEnabled()).thenReturn(false);
 
     // Act
-    parallelExecutor.rollbackRecords(tasks);
+    parallelExecutor.rollbackRecords(tasks, TX_ID);
 
     // Assert
     verify(task, times(tasks.size())).run();
@@ -323,7 +325,7 @@ public class ParallelExecutorTest {
     doThrow(ExecutionException.class).when(task).run();
 
     // Act Assert
-    assertThatThrownBy(() -> parallelExecutor.rollbackRecords(tasks))
+    assertThatThrownBy(() -> parallelExecutor.rollbackRecords(tasks, TX_ID))
         .isInstanceOf(ExecutionException.class);
 
     verify(task, times(tasks.size())).run();
@@ -339,7 +341,7 @@ public class ParallelExecutorTest {
     when(config.isAsyncRollbackEnabled()).thenReturn(false);
 
     // Act
-    parallelExecutor.rollbackRecords(tasks);
+    parallelExecutor.rollbackRecords(tasks, TX_ID);
 
     // Assert
     verify(task, times(tasks.size())).run();
@@ -356,7 +358,7 @@ public class ParallelExecutorTest {
     doThrow(ExecutionException.class).when(task).run();
 
     // Act Assert
-    assertThatThrownBy(() -> parallelExecutor.rollbackRecords(tasks))
+    assertThatThrownBy(() -> parallelExecutor.rollbackRecords(tasks, TX_ID))
         .isInstanceOf(ExecutionException.class);
 
     verify(task, times(tasks.size())).run();
@@ -372,7 +374,7 @@ public class ParallelExecutorTest {
     when(config.isAsyncRollbackEnabled()).thenReturn(true);
 
     // Act
-    parallelExecutor.rollbackRecords(tasks);
+    parallelExecutor.rollbackRecords(tasks, TX_ID);
 
     // Assert
     verify(task, atMost(tasks.size())).run();
@@ -389,7 +391,7 @@ public class ParallelExecutorTest {
     doThrow(ExecutionException.class).when(task).run();
 
     // Act Assert
-    assertThatCode(() -> parallelExecutor.rollbackRecords(tasks)).doesNotThrowAnyException();
+    assertThatCode(() -> parallelExecutor.rollbackRecords(tasks, TX_ID)).doesNotThrowAnyException();
 
     verify(task, atMost(tasks.size())).run();
     verify(parallelExecutorService, times(tasks.size())).execute(any());

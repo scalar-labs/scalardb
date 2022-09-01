@@ -51,61 +51,73 @@ public class ParallelExecutor {
     this.parallelExecutorService = parallelExecutorService;
   }
 
-  public void prepare(List<ParallelExecutorTask> tasks) throws ExecutionException {
+  public void prepare(List<ParallelExecutorTask> tasks, String transactionId)
+      throws ExecutionException {
     try {
-      executeTasks("preparation", tasks, config.isParallelPreparationEnabled(), false, true);
+      executeTasks(
+          tasks, config.isParallelPreparationEnabled(), false, true, "preparation", transactionId);
     } catch (CommitConflictException ignored) {
       // tasks for preparation should not throw CommitConflictException
     }
   }
 
-  public void validate(List<ParallelExecutorTask> tasks)
+  public void validate(List<ParallelExecutorTask> tasks, String transactionId)
       throws ExecutionException, CommitConflictException {
-    executeTasks("validation", tasks, config.isParallelValidationEnabled(), false, true);
+    executeTasks(
+        tasks, config.isParallelValidationEnabled(), false, true, "validation", transactionId);
   }
 
-  public void commitRecords(List<ParallelExecutorTask> tasks) throws ExecutionException {
+  public void commitRecords(List<ParallelExecutorTask> tasks, String transactionId)
+      throws ExecutionException {
     try {
       executeTasks(
-          "commitRecords",
           tasks,
           config.isParallelCommitEnabled(),
           config.isAsyncCommitEnabled(),
-          false);
+          false,
+          "commitRecords",
+          transactionId);
     } catch (CommitConflictException ignored) {
       // tasks for commit should not throw CommitConflictException
     }
   }
 
-  public void rollbackRecords(List<ParallelExecutorTask> tasks) throws ExecutionException {
+  public void rollbackRecords(List<ParallelExecutorTask> tasks, String transactionId)
+      throws ExecutionException {
     try {
       executeTasks(
-          "rollbackRecords",
           tasks,
           config.isParallelRollbackEnabled(),
           config.isAsyncRollbackEnabled(),
-          false);
+          false,
+          "rollbackRecords",
+          transactionId);
     } catch (CommitConflictException ignored) {
       // tasks for rollback should not throw CommitConflictException
     }
   }
 
   private void executeTasks(
-      String name,
       List<ParallelExecutorTask> tasks,
       boolean parallel,
       boolean noWait,
-      boolean stopOnError)
+      boolean stopOnError,
+      String taskName,
+      String transactionId)
       throws ExecutionException, CommitConflictException {
     if (parallel) {
-      executeTasksInParallel(name, tasks, noWait, stopOnError);
+      executeTasksInParallel(tasks, noWait, stopOnError, taskName, transactionId);
     } else {
-      executeTasksSerially(name, tasks, stopOnError);
+      executeTasksSerially(tasks, stopOnError, taskName, transactionId);
     }
   }
 
   private void executeTasksInParallel(
-      String name, List<ParallelExecutorTask> tasks, boolean noWait, boolean stopOnError)
+      List<ParallelExecutorTask> tasks,
+      boolean noWait,
+      boolean stopOnError,
+      String taskName,
+      String transactionId)
       throws ExecutionException, CommitConflictException {
     assert parallelExecutorService != null;
 
@@ -118,7 +130,8 @@ public class ParallelExecutor {
                   try {
                     t.run();
                   } catch (Exception e) {
-                    logger.warn("failed to run a {} task", name, e);
+                    logger.warn(
+                        "failed to run a {} task. transaction ID: {}", taskName, transactionId, e);
                     throw e;
                   }
                   return null;
@@ -165,14 +178,14 @@ public class ParallelExecutor {
   }
 
   private void executeTasksSerially(
-      String name, List<ParallelExecutorTask> tasks, boolean stopOnError)
+      List<ParallelExecutorTask> tasks, boolean stopOnError, String taskName, String transactionId)
       throws ExecutionException, CommitConflictException {
     Exception exception = null;
     for (ParallelExecutorTask task : tasks) {
       try {
         task.run();
       } catch (ExecutionException | CommitConflictException e) {
-        logger.warn("failed to run a {} task", name, e);
+        logger.warn("failed to run a {} task. transactionId: {}", taskName, transactionId, e);
 
         if (!stopOnError) {
           exception = e;
