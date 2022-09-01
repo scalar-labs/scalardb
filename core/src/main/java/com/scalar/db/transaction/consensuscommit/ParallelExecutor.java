@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class ParallelExecutor {
-  private static final Logger logger = LoggerFactory.getLogger(BatchHandler.class);
+  private static final Logger logger = LoggerFactory.getLogger(ParallelExecutor.class);
 
   @FunctionalInterface
   public interface ParallelExecutorTask {
