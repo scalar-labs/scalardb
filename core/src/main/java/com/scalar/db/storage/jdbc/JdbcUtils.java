@@ -1,10 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
-import com.microsoft.sqlserver.jdbc.SQLServerDriver;
 import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.SQLException;
-import oracle.jdbc.OracleDriver;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 public final class JdbcUtils {
@@ -30,16 +27,7 @@ public final class JdbcUtils {
 
   public static BasicDataSource initDataSource(JdbcConfig config, boolean transactional) {
     BasicDataSource dataSource = new BasicDataSource();
-
-    /*
-     * We need to set the driver class of an underlying database to the dataSource in order
-     * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
-     * work (e.g., when we dynamically load a driver class from a fatJar).
-     */
-    dataSource.setDriver(getDriverClass(config.getJdbcUrl()));
-
     dataSource.setUrl(config.getJdbcUrl());
-
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
 
@@ -78,71 +66,29 @@ public final class JdbcUtils {
     dataSource.setMaxTotal(config.getConnectionPoolMaxTotal());
     dataSource.setPoolPreparedStatements(config.isPreparedStatementsPoolEnabled());
     dataSource.setMaxOpenPreparedStatements(config.getPreparedStatementsPoolMaxOpen());
-
     return dataSource;
   }
 
   public static BasicDataSource initDataSourceForTableMetadata(JdbcConfig config) {
     BasicDataSource dataSource = new BasicDataSource();
-
-    /*
-     * We need to set the driver class of an underlying database to the dataSource in order
-     * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
-     * work (e.g., when we dynamically load a driver class from a fatJar).
-     */
-    dataSource.setDriver(getDriverClass(config.getJdbcUrl()));
-
     dataSource.setUrl(config.getJdbcUrl());
-
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
-
     dataSource.setMinIdle(config.getTableMetadataConnectionPoolMinIdle());
     dataSource.setMaxIdle(config.getTableMetadataConnectionPoolMaxIdle());
     dataSource.setMaxTotal(config.getTableMetadataConnectionPoolMaxTotal());
-
     return dataSource;
   }
 
   public static BasicDataSource initDataSourceForAdmin(JdbcConfig config) {
     BasicDataSource dataSource = new BasicDataSource();
-
-    /*
-     * We need to set the driver class of an underlying database to the dataSource in order
-     * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
-     * work (e.g., when we dynamically load a driver class from a fatJar).
-     */
-    dataSource.setDriver(getDriverClass(config.getJdbcUrl()));
-
     dataSource.setUrl(config.getJdbcUrl());
-
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
-
     dataSource.setMinIdle(config.getAdminConnectionPoolMinIdle());
     dataSource.setMaxIdle(config.getAdminConnectionPoolMaxIdle());
     dataSource.setMaxTotal(config.getAdminConnectionPoolMaxTotal());
-
     return dataSource;
-  }
-
-  private static Driver getDriverClass(String jdbcUrl) {
-    switch (getRdbEngine(jdbcUrl)) {
-      case MYSQL:
-        try {
-          return new com.mysql.cj.jdbc.Driver();
-        } catch (SQLException e) {
-          throw new RuntimeException(e);
-        }
-      case POSTGRESQL:
-        return new org.postgresql.Driver();
-      case ORACLE:
-        return new OracleDriver();
-      case SQL_SERVER:
-        return new SQLServerDriver();
-      default:
-        throw new AssertionError();
-    }
   }
 
   public static boolean isConflictError(SQLException e, RdbEngine rdbEngine) {
