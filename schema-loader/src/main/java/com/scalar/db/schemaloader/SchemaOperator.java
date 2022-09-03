@@ -61,7 +61,7 @@ public class SchemaOperator implements AutoCloseable {
       String tableName = tableSchema.getTable();
 
       createNamespace(namespace, tableSchema.getOptions());
-      if (tableExists(namespace, tableName)) {
+      if (tableExists(namespace, tableName, tableSchema.isTransactionTable())) {
         logger.warn("Table {} in the namespace {} already exists.", tableName, namespace);
       } else {
         createTable(tableSchema);
@@ -92,7 +92,9 @@ public class SchemaOperator implements AutoCloseable {
   private void createNamespace(String namespace, Map<String, String> options)
       throws SchemaLoaderException {
     try {
-      storageAdmin.createNamespace(namespace, true, options);
+      // always use transactionAdmin since we are not sure this namespace is for transaction or
+      // storage
+      transactionAdmin.createNamespace(namespace, true, options);
     } catch (ExecutionException e) {
       throw new SchemaLoaderException("Creating the namespace " + namespace + " failed.", e);
     }
@@ -121,20 +123,26 @@ public class SchemaOperator implements AutoCloseable {
     for (TableSchema tableSchema : tableSchemaList) {
       String namespace = tableSchema.getNamespace();
       String tableName = tableSchema.getTable();
+      boolean isTransactional = tableSchema.isTransactionTable();
 
-      if (!tableExists(namespace, tableName)) {
+      if (!tableExists(namespace, tableName, isTransactional)) {
         logger.warn("Table {} in the namespace {} doesn't exist.", tableName, namespace);
       } else {
-        dropTable(namespace, tableName);
+        dropTable(namespace, tableName, isTransactional);
         namespaces.add(namespace);
       }
     }
     dropNamespaces(namespaces);
   }
 
-  private void dropTable(String namespace, String tableName) throws SchemaLoaderException {
+  private void dropTable(String namespace, String tableName, boolean isTransactional)
+      throws SchemaLoaderException {
     try {
-      storageAdmin.dropTable(namespace, tableName);
+      if (isTransactional) {
+        transactionAdmin.dropTable(namespace, tableName);
+      } else {
+        storageAdmin.dropTable(namespace, tableName);
+      }
       logger.info("Deleting the table {} in the namespace {} succeeded.", tableName, namespace);
     } catch (ExecutionException e) {
       throw new SchemaLoaderException(
@@ -145,16 +153,23 @@ public class SchemaOperator implements AutoCloseable {
   private void dropNamespaces(Set<String> namespaces) throws SchemaLoaderException {
     for (String namespace : namespaces) {
       try {
-        storageAdmin.dropNamespace(namespace, true);
+        // always use transactionAdmin since we are not sure this namespace is for transaction or
+        // storage
+        transactionAdmin.dropNamespace(namespace, true);
       } catch (ExecutionException e) {
         throw new SchemaLoaderException("Deleting the namespace " + namespace + " failed.", e);
       }
     }
   }
 
-  private boolean tableExists(String namespace, String tableName) throws SchemaLoaderException {
+  private boolean tableExists(String namespace, String tableName, boolean isTransactional)
+      throws SchemaLoaderException {
     try {
-      return storageAdmin.tableExists(namespace, tableName);
+      if (isTransactional) {
+        return transactionAdmin.tableExists(namespace, tableName);
+      } else {
+        return storageAdmin.tableExists(namespace, tableName);
+      }
     } catch (ExecutionException e) {
       throw new SchemaLoaderException(
           "Checking the existence of the table "
@@ -218,7 +233,7 @@ public class SchemaOperator implements AutoCloseable {
       boolean isTransactional = tableSchema.isTransactionTable();
 
       try {
-        if (!tableExists(namespace, table)) {
+        if (!tableExists(namespace, table, isTransactional)) {
           throw new UnsupportedOperationException(
               String.format(
                   "Altering the table %s.%s is not possible as the table was not created beforehand.",
