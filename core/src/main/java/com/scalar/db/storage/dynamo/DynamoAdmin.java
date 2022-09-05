@@ -993,7 +993,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       try {
         applicationAutoScalingClient.deleteScalingPolicy(deleteScalingPolicyRequest);
         // Suppress exceptions when the scaling policy does not exist
-      } catch (ObjectNotFoundException e) {
+      } catch (ObjectNotFoundException ignored) {
         // ObjectNotFoundException is thrown when using a regular Dynamo DB instance
       } catch (ApplicationAutoScalingException e) {
         // The auto-scaling service is not supported with Dynamo DB local. Any API call to the
@@ -1012,7 +1012,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       try {
         applicationAutoScalingClient.deregisterScalableTarget(deregisterScalableTargetRequest);
         // Suppress exceptions when the scalable target does not exist
-      } catch (ObjectNotFoundException e) {
+      } catch (ObjectNotFoundException ignored) {
         // ObjectNotFoundException is thrown when using a regular Dynamo DB instance
       } catch (ApplicationAutoScalingException e) {
         // The auto-scaling service is not supported with Dynamo DB local. Any API call to the
