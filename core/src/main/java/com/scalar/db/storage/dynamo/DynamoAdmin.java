@@ -25,14 +25,13 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.applicationautoscaling.ApplicationAutoScalingClient;
 import software.amazon.awssdk.services.applicationautoscaling.ApplicationAutoScalingClientBuilder;
+import software.amazon.awssdk.services.applicationautoscaling.model.ApplicationAutoScalingException;
 import software.amazon.awssdk.services.applicationautoscaling.model.DeleteScalingPolicyRequest;
 import software.amazon.awssdk.services.applicationautoscaling.model.DeregisterScalableTargetRequest;
 import software.amazon.awssdk.services.applicationautoscaling.model.MetricType;
@@ -88,8 +87,6 @@ import software.amazon.awssdk.services.dynamodb.model.UpdateTableRequest;
  */
 @ThreadSafe
 public class DynamoAdmin implements DistributedStorageAdmin {
-  private static final Logger logger = LoggerFactory.getLogger(DynamoAdmin.class);
-
   public static final String NO_SCALING = "no-scaling";
   public static final String NO_BACKUP = "no-backup";
   public static final String REQUEST_UNIT = "ru";
@@ -995,10 +992,14 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     for (DeleteScalingPolicyRequest deleteScalingPolicyRequest : deleteScalingPolicyRequestList) {
       try {
         applicationAutoScalingClient.deleteScalingPolicy(deleteScalingPolicyRequest);
-      } catch (Exception e) {
-        if (!(e instanceof ObjectNotFoundException)) {
-          logger.warn(
-              "The scaling policy " + deleteScalingPolicyRequest.policyName() + " is not found.");
+        // Suppress exceptions when the scaling policy does not exist
+      } catch (ObjectNotFoundException ignored) {
+        // ObjectNotFoundException is thrown when using a regular Dynamo DB instance
+      } catch (ApplicationAutoScalingException e) {
+        // The auto-scaling service is not supported with Dynamo DB local. Any API call to the
+        // 'applicationAutoScalingClient' will raise an ApplicationAutoScalingException
+        if (!(e.awsErrorDetails().errorCode().equals("InvalidAction") && e.statusCode() == 400)) {
+          throw e;
         }
       }
     }
@@ -1010,12 +1011,14 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         deregisterScalableTargetRequestList) {
       try {
         applicationAutoScalingClient.deregisterScalableTarget(deregisterScalableTargetRequest);
-      } catch (Exception e) {
-        if (!(e instanceof ObjectNotFoundException)) {
-          logger.warn(
-              "The scalable target "
-                  + deregisterScalableTargetRequest.resourceId()
-                  + " is not found");
+        // Suppress exceptions when the scalable target does not exist
+      } catch (ObjectNotFoundException ignored) {
+        // ObjectNotFoundException is thrown when using a regular Dynamo DB instance
+      } catch (ApplicationAutoScalingException e) {
+        // The auto-scaling service is not supported with Dynamo DB local. Any API call to the
+        // 'applicationAutoScalingClient' will raise an ApplicationAutoScalingException
+        if (!(e.awsErrorDetails().errorCode().equals("InvalidAction") && e.statusCode() == 400)) {
+          throw e;
         }
       }
     }
