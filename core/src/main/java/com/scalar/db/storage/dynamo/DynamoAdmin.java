@@ -781,7 +781,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
     try {
       deleteFromNamespaceTable(namespace);
-      dropAllTableOfNamespace(namespace);
+      dropAllTablesOfNamespace(namespace);
       dropNamespaceTableIfEmpty();
     } catch (Exception e) {
       throw new ExecutionException(
@@ -792,7 +792,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void dropAllTableOfNamespace(Namespace namespace) throws ExecutionException {
+  private void dropAllTablesOfNamespace(Namespace namespace) throws ExecutionException {
     Set<String> tables = getNamespaceTableNames(namespace.nonPrefixed());
     for (String table : tables) {
       dropTable(namespace.nonPrefixed(), table);
