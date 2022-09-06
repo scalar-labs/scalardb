@@ -240,7 +240,7 @@ public abstract class CassandraAdminTestBase {
         QueryBuilder.insertInto(
                 quoteIfNecessary(metadataKeyspaceName),
                 quoteIfNecessary(CassandraAdmin.KEYSPACES_TABLE))
-            .value(quoteIfNecessary(CassandraAdmin.KEYSPACES_NAME_COL), keyspace)
+            .value(CassandraAdmin.KEYSPACES_NAME_COL,quoteIfNecessary( keyspace))
             .toString();
     verify(cassandraSession).execute(query);
   }
@@ -519,14 +519,14 @@ public abstract class CassandraAdminTestBase {
             .from(
                 quoteIfNecessary(metadataKeyspaceName),
                 quoteIfNecessary(CassandraAdmin.KEYSPACES_TABLE))
-            .where(QueryBuilder.eq(quoteIfNecessary(CassandraAdmin.KEYSPACES_NAME_COL), keyspace))
+            .where(QueryBuilder.eq(CassandraAdmin.KEYSPACES_NAME_COL, quoteIfNecessary(keyspace)))
             .toString();
     verify(cassandraSession).execute(query);
   }
 
   private void verifySelectOneFromKeyspacesTableQuery() {
     String query =
-        QueryBuilder.select(quoteIfNecessary(CassandraAdmin.KEYSPACES_NAME_COL))
+        QueryBuilder.select(CassandraAdmin.KEYSPACES_NAME_COL)
             .from(
                 quoteIfNecessary(metadataKeyspaceName),
                 quoteIfNecessary(CassandraAdmin.KEYSPACES_TABLE))
@@ -788,7 +788,7 @@ public abstract class CassandraAdminTestBase {
     assertThat(actualKeyspaceNames).containsOnly("ns1", "ns2");
     verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.KEYSPACES_TABLE);
     String selectQuery =
-        QueryBuilder.select(quoteIfNecessary(CassandraAdmin.KEYSPACES_NAME_COL))
+        QueryBuilder.select(CassandraAdmin.KEYSPACES_NAME_COL)
             .from(
                 quoteIfNecessary(metadataKeyspaceName),
                 quoteIfNecessary(CassandraAdmin.KEYSPACES_TABLE))

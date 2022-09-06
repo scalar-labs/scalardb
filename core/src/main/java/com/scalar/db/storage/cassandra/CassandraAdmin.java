@@ -117,7 +117,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     String insertQuery =
         QueryBuilder.insertInto(
                 quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
-            .value(quoteIfNecessary(KEYSPACES_NAME_COL), keyspace)
+            .value(KEYSPACES_NAME_COL, quoteIfNecessary(keyspace))
             .toString();
     clusterManager.getSession().execute(insertQuery);
   }
@@ -156,7 +156,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     String deleteQuery =
         QueryBuilder.delete()
             .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
-            .where(QueryBuilder.eq(quoteIfNecessary(KEYSPACES_NAME_COL), keyspace))
+            .where(QueryBuilder.eq(KEYSPACES_NAME_COL, quoteIfNecessary(keyspace)))
             .toString();
     clusterManager.getSession().execute(deleteQuery);
   }
@@ -337,7 +337,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
       Set<String> keyspaceNames = new HashSet<>();
       String selectQuery =
-          QueryBuilder.select(quoteIfNecessary(KEYSPACES_NAME_COL))
+          QueryBuilder.select(KEYSPACES_NAME_COL)
               .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
               .getQueryString();
       for (Row row : clusterManager.getSession().execute(selectQuery).all()) {
@@ -362,7 +362,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   private void dropKeyspacesTableIfEmpty() {
     String selectQuery =
-        QueryBuilder.select(quoteIfNecessary(KEYSPACES_NAME_COL))
+        QueryBuilder.select(KEYSPACES_NAME_COL)
             .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
             .limit(1)
             .getQueryString();
