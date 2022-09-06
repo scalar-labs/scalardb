@@ -623,7 +623,8 @@ public abstract class CassandraAdminTestBase {
   }
 
   @Test
-  public void namespaceExists_WithNonExistingNamespace_ShouldReturnFalse() throws ExecutionException {
+  public void namespaceExists_WithNonExistingNamespace_ShouldReturnFalse()
+      throws ExecutionException {
     // Arrange
     String namespace = "sample_ns";
     when(clusterManager.getMetadata(anyString(), anyString()))
@@ -648,11 +649,11 @@ public abstract class CassandraAdminTestBase {
   }
 
   @Test
-  public void namespaceExists_WithNonExistingKeyspacesTable_ShouldReturnFalse() throws ExecutionException {
+  public void namespaceExists_WithNonExistingKeyspacesTable_ShouldReturnFalse()
+      throws ExecutionException {
     // Arrange
     String namespace = "sample_ns";
-    when(clusterManager.getMetadata(anyString(), anyString()))
-        .thenReturn(null);
+    when(clusterManager.getMetadata(anyString(), anyString())).thenReturn(null);
 
     // Act
     // Assert
