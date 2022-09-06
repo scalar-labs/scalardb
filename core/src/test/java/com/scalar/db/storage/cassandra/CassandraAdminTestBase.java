@@ -240,7 +240,7 @@ public abstract class CassandraAdminTestBase {
         QueryBuilder.insertInto(
                 quoteIfNecessary(metadataKeyspaceName),
                 quoteIfNecessary(CassandraAdmin.KEYSPACES_TABLE))
-            .value(CassandraAdmin.KEYSPACES_NAME_COL,quoteIfNecessary( keyspace))
+            .value(CassandraAdmin.KEYSPACES_NAME_COL, quoteIfNecessary(keyspace))
             .toString();
     verify(cassandraSession).execute(query);
   }
@@ -601,19 +601,64 @@ public abstract class CassandraAdminTestBase {
   public void namespaceExists_WithExistingNamespace_ShouldReturnTrue() throws ExecutionException {
     // Arrange
     String namespace = "sample_ns";
-    Cluster cluster = mock(Cluster.class);
-    Metadata metadata = mock(Metadata.class);
-    KeyspaceMetadata keyspace = mock(KeyspaceMetadata.class);
-
-    when(cassandraSession.getCluster()).thenReturn(cluster);
-    when(cluster.getMetadata()).thenReturn(metadata);
-    when(metadata.getKeyspace(any())).thenReturn(keyspace);
+    when(clusterManager.getMetadata(anyString(), anyString()))
+        .thenReturn(mock(com.datastax.driver.core.TableMetadata.class));
+    ResultSet resultSet = mock(ResultSet.class);
+    when(cassandraSession.execute(anyString())).thenReturn(resultSet);
+    when(resultSet.one()).thenReturn(mock(Row.class));
 
     // Act
     // Assert
     assertThat(cassandraAdmin.namespaceExists(namespace)).isTrue();
 
-    verify(metadata).getKeyspace(namespace);
+    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.KEYSPACES_TABLE);
+    String query =
+        QueryBuilder.select(CassandraAdmin.KEYSPACES_NAME_COL)
+            .from(
+                quoteIfNecessary(metadataKeyspaceName),
+                quoteIfNecessary(CassandraAdmin.KEYSPACES_TABLE))
+            .where(QueryBuilder.eq(CassandraAdmin.KEYSPACES_NAME_COL, quoteIfNecessary(namespace)))
+            .toString();
+    verify(cassandraSession).execute(query);
+  }
+
+  @Test
+  public void namespaceExists_WithNonExistingNamespace_ShouldReturnFalse() throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    when(clusterManager.getMetadata(anyString(), anyString()))
+        .thenReturn(mock(com.datastax.driver.core.TableMetadata.class));
+    ResultSet resultSet = mock(ResultSet.class);
+    when(cassandraSession.execute(anyString())).thenReturn(resultSet);
+    when(resultSet.one()).thenReturn(null);
+
+    // Act
+    // Assert
+    assertThat(cassandraAdmin.namespaceExists(namespace)).isFalse();
+
+    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.KEYSPACES_TABLE);
+    String query =
+        QueryBuilder.select(CassandraAdmin.KEYSPACES_NAME_COL)
+            .from(
+                quoteIfNecessary(metadataKeyspaceName),
+                quoteIfNecessary(CassandraAdmin.KEYSPACES_TABLE))
+            .where(QueryBuilder.eq(CassandraAdmin.KEYSPACES_NAME_COL, quoteIfNecessary(namespace)))
+            .toString();
+    verify(cassandraSession).execute(query);
+  }
+
+  @Test
+  public void namespaceExists_WithNonExistingKeyspacesTable_ShouldReturnFalse() throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    when(clusterManager.getMetadata(anyString(), anyString()))
+        .thenReturn(null);
+
+    // Act
+    // Assert
+    assertThat(cassandraAdmin.namespaceExists(namespace)).isFalse();
+
+    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.KEYSPACES_TABLE);
   }
 
   @Test

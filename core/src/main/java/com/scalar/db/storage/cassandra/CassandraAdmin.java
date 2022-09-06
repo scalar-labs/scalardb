@@ -6,6 +6,7 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import com.datastax.driver.core.ClusteringOrder;
 import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.schemabuilder.Create;
@@ -276,13 +277,18 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
     try {
-      KeyspaceMetadata keyspace =
-          clusterManager
-              .getSession()
-              .getCluster()
-              .getMetadata()
-              .getKeyspace(quoteIfNecessary(namespace));
-      return keyspace != null;
+      if (clusterManager.getMetadata(metadataKeyspace, KEYSPACES_TABLE) == null) {
+        return false;
+      }
+
+      String query =
+          QueryBuilder.select(KEYSPACES_NAME_COL)
+              .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
+              .where(QueryBuilder.eq(KEYSPACES_NAME_COL, quoteIfNecessary(namespace)))
+              .toString();
+      ResultSet resultSet = clusterManager.getSession().execute(query);
+
+      return resultSet.one() != null;
     } catch (RuntimeException e) {
       throw new ExecutionException("checking if the namespace exists failed", e);
     }
