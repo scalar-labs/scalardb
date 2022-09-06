@@ -67,10 +67,14 @@ public class SchemaLoader {
 
   @Nullable
   private static Object getCommand(String arg) {
+    if (arg.equals("--config")
+        || arg.startsWith("--config=")
+        || arg.equals("-c")
+        || arg.startsWith("-c=")) {
+      return new SchemaLoaderCommand();
+    }
+
     switch (arg) {
-      case "--config":
-      case "-c":
-        return new SchemaLoaderCommand();
       case "--cassandra":
         return new CassandraCommand();
       case "--cosmos":
