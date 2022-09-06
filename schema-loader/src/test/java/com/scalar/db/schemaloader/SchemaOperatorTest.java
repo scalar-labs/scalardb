@@ -64,8 +64,8 @@ public class SchemaOperatorTest {
     operator.createTables(tableSchemaList);
 
     // Assert
-    verify(storageAdmin, times(3)).createNamespace("ns", true, options);
-    verify(storageAdmin, times(3)).tableExists("ns", "tb");
+    verify(transactionAdmin, times(3)).createNamespace("ns", true, options);
+    verify(transactionAdmin, times(3)).tableExists("ns", "tb");
     verify(transactionAdmin, times(3)).createTable("ns", "tb", tableMetadata, options);
   }
 
@@ -84,7 +84,7 @@ public class SchemaOperatorTest {
     operator.createTables(tableSchemaList);
 
     // Assert
-    verify(storageAdmin, times(3)).createNamespace("ns", true, options);
+    verify(transactionAdmin, times(3)).createNamespace("ns", true, options);
     verify(storageAdmin, times(3)).tableExists("ns", "tb");
     verify(storageAdmin, times(3)).createTable("ns", "tb", tableMetadata, options);
   }
@@ -129,15 +129,15 @@ public class SchemaOperatorTest {
     when(tableSchema.getTable()).thenReturn("tb");
     TableMetadata tableMetadata = mock(TableMetadata.class);
     when(tableSchema.getTableMetadata()).thenReturn(tableMetadata);
-    when(storageAdmin.tableExists("ns", "tb")).thenReturn(true);
+    when(transactionAdmin.tableExists("ns", "tb")).thenReturn(true);
 
     // Act
     operator.deleteTables(tableSchemaList);
 
     // Assert
-    verify(storageAdmin, times(3)).tableExists("ns", "tb");
-    verify(storageAdmin, times(3)).dropTable("ns", "tb");
-    verify(storageAdmin).dropNamespace("ns", true);
+    verify(transactionAdmin, times(3)).tableExists("ns", "tb");
+    verify(transactionAdmin, times(3)).dropTable("ns", "tb");
+    verify(transactionAdmin).dropNamespace("ns", true);
   }
 
   @Test
@@ -225,7 +225,7 @@ public class SchemaOperatorTest {
     List<TableSchema> tableSchemaList = Collections.singletonList(tableSchema);
     String namespace = "ns";
     String table = "tb";
-    when(storageAdmin.tableExists(anyString(), anyString())).thenReturn(true);
+    when(transactionAdmin.tableExists(anyString(), anyString())).thenReturn(true);
     when(tableSchema.getNamespace()).thenReturn(namespace);
     when(tableSchema.getOptions()).thenReturn(options);
     when(tableSchema.isTransactionTable()).thenReturn(true);
@@ -242,10 +242,9 @@ public class SchemaOperatorTest {
     operator.alterTables(tableSchemaList, options);
 
     // Assert
-    verify(storageAdmin).tableExists(namespace, table);
+    verify(transactionAdmin).tableExists(namespace, table);
     verify(transactionAdmin).getTableMetadata(namespace, table);
     verifyNoMoreInteractions(transactionAdmin);
-    verifyNoMoreInteractions(storageAdmin);
     verify(alterationProcessor)
         .computeAlteration(eq("ns"), eq("tb"), refEq(oldMetadata), refEq(newMetadata));
   }
@@ -276,6 +275,7 @@ public class SchemaOperatorTest {
     String namespace2 = "ns2";
     String table2 = "tb2";
 
+    when(transactionAdmin.tableExists(anyString(), anyString())).thenReturn(true);
     when(tableSchema2.getNamespace()).thenReturn(namespace2);
     when(tableSchema2.isTransactionTable()).thenReturn(true);
     when(tableSchema2.getTable()).thenReturn(table2);
@@ -314,7 +314,7 @@ public class SchemaOperatorTest {
             eq(namespace1), eq(table1), refEq(oldMetadataForTable1), refEq(newMetadataForTable1));
 
     // Table 2
-    verify(storageAdmin).tableExists(namespace2, table2);
+    verify(transactionAdmin).tableExists(namespace2, table2);
     verify(transactionAdmin).getTableMetadata(namespace2, table2);
     verify(alterationProcessor)
         .computeAlteration(
@@ -362,6 +362,7 @@ public class SchemaOperatorTest {
     String namespace2 = "ns2";
     String table2 = "tb2";
 
+    when(transactionAdmin.tableExists(anyString(), anyString())).thenReturn(true);
     when(tableSchema2.getNamespace()).thenReturn(namespace2);
     when(tableSchema2.isTransactionTable()).thenReturn(true);
     when(tableSchema2.getTable()).thenReturn(table2);
@@ -399,7 +400,7 @@ public class SchemaOperatorTest {
     verify(storageAdmin).addNewColumnToTable(namespace1, table1, "c2", DataType.BOOLEAN);
 
     // Table 2
-    verify(storageAdmin).tableExists(namespace2, table2);
+    verify(transactionAdmin).tableExists(namespace2, table2);
     verify(transactionAdmin).getTableMetadata(namespace2, table2);
     verify(alterationProcessor)
         .computeAlteration(

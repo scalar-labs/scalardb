@@ -33,7 +33,6 @@ public class JdbcUtilsTest {
 
     // Assert
     assertThat(dataSource.getUrl()).isEqualTo("jdbc:mysql://localhost:3306/");
-    assertThat(dataSource.getDriver().getClass().getName()).isEqualTo("com.mysql.cj.jdbc.Driver");
     assertThat(dataSource.getUsername()).isEqualTo("root");
     assertThat(dataSource.getPassword()).isEqualTo("mysql");
 
@@ -73,7 +72,6 @@ public class JdbcUtilsTest {
 
     // Assert
     assertThat(dataSource.getUrl()).isEqualTo("jdbc:postgresql://localhost:5432/");
-    assertThat(dataSource.getDriver().getClass().getName()).isEqualTo("org.postgresql.Driver");
     assertThat(dataSource.getUsername()).isEqualTo("user");
     assertThat(dataSource.getPassword()).isEqualTo("postgres");
 
@@ -112,8 +110,6 @@ public class JdbcUtilsTest {
     // Assert
     assertThat(tableMetadataDataSource.getUrl())
         .isEqualTo("jdbc:oracle:thin:@localhost:1521/XEPDB1");
-    assertThat(tableMetadataDataSource.getDriver().getClass().getName())
-        .isEqualTo("oracle.jdbc.OracleDriver");
     assertThat(tableMetadataDataSource.getUsername()).isEqualTo("user");
     assertThat(tableMetadataDataSource.getPassword()).isEqualTo("oracle");
 
@@ -143,8 +139,6 @@ public class JdbcUtilsTest {
 
     // Assert
     assertThat(adminDataSource.getUrl()).isEqualTo("jdbc:sqlserver://localhost:1433");
-    assertThat(adminDataSource.getDriver().getClass().getName())
-        .isEqualTo("com.microsoft.sqlserver.jdbc.SQLServerDriver");
     assertThat(adminDataSource.getUsername()).isEqualTo("user");
     assertThat(adminDataSource.getPassword()).isEqualTo("sqlserver");
 
