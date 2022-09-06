@@ -246,6 +246,9 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     } catch (ConditionalCheckFailedException e) {
       throw new ExecutionException(
           "the namespace " + namespace + " cannot be created as it already exists");
+    } catch (Exception e) {
+      throw new ExecutionException(
+          "inserting the namespace " + namespace + " into the namespaces table failed", e);
     }
   }
 
@@ -824,6 +827,9 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     } catch (ConditionalCheckFailedException e) {
       throw new ExecutionException(
           "the namespace " + namespace + " cannot be dropped as it does not exist", e);
+    } catch (Exception e) {
+      throw new ExecutionException(
+          "deleting the namespace " + namespace + " from the namespaces table failed", e);
     }
   }
 
