@@ -1001,8 +1001,7 @@ public abstract class CosmosAdminTestBase {
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
     CosmosContainer namespacesContainer = mock(CosmosContainer.class);
     when(client.getDatabase(anyString())).thenReturn(metadataDatabase);
-    when(metadataDatabase.getContainer(CosmosAdmin.NAMESPACES_CONTAINER))
-        .thenReturn(namespacesContainer);
+    when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
     CosmosPagedIterable<CosmosNamespace> pagedIterable = mock(CosmosPagedIterable.class);
     when(namespacesContainer.queryItems(anyString(), any(), eq(CosmosNamespace.class)))
         .thenReturn(pagedIterable);
@@ -1021,5 +1020,33 @@ public abstract class CosmosAdminTestBase {
             refEq(new CosmosQueryRequestOptions()),
             eq(CosmosNamespace.class));
     assertThat(actualNamespaces).containsOnly("ns1", "ns2");
+  }
+
+  @Test
+  public void namespaceExists_WithExistingNamespace_ShouldReturnTrue() throws ExecutionException {
+    // Arrange
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer namespacesContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(anyString())).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
+
+    // Act Assert
+    assertThat(admin.namespaceExists("ns")).isTrue();
+
+    verify(client).getDatabase(metadataDatabaseName);
+    verify(metadataDatabase).getContainer(CosmosAdmin.NAMESPACES_CONTAINER);
+    verify(namespacesContainer).readItem("ns", new PartitionKey("ns"), CosmosNamespace.class);
+  }
+
+  @Test
+  public void namespaceExists_WithNonExistingMetadataDatabase_ShouldReturnFalse()
+      throws ExecutionException {
+    // Arrange
+    when(client.getDatabase(anyString())).thenThrow(notFoundException);
+
+    // Act Assert
+    assertThat(admin.namespaceExists("ns")).isFalse();
+
+    verify(client).getDatabase(metadataDatabaseName);
   }
 }

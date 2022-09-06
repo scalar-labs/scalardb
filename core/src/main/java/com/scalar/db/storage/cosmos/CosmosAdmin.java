@@ -493,7 +493,17 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    return databaseExists(namespace);
+    try {
+      getNamespacesContainer()
+          .readItem(namespace, new PartitionKey(namespace), CosmosNamespace.class);
+      return true;
+    } catch (RuntimeException e) {
+      if (e instanceof CosmosException
+          && ((CosmosException) e).getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
+        return false;
+      }
+      throw new ExecutionException("checking if the namespace exists failed", e);
+    }
   }
 
   @Override
