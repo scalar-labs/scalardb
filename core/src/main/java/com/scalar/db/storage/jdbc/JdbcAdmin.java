@@ -706,36 +706,28 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    String namespaceExistsStatement = "";
-    switch (rdbEngine) {
-      case POSTGRESQL:
-      case MYSQL:
-        namespaceExistsStatement =
-            "SELECT 1 FROM "
-                + encloseFullTableName("information_schema", "schemata")
-                + " WHERE "
-                + enclose("schema_name")
-                + " = ?";
-        break;
-      case ORACLE:
-        namespaceExistsStatement =
-            "SELECT 1 FROM " + enclose("ALL_USERS") + " WHERE " + enclose("USERNAME") + " = ?";
-        break;
-      case SQL_SERVER:
-        namespaceExistsStatement =
-            "SELECT 1 FROM "
-                + encloseFullTableName("sys", "schemas")
-                + " WHERE "
-                + enclose("name")
-                + " = ?";
-        break;
-    }
+    String selectQuery =
+        "SELECT 1 FROM "
+            + encloseFullTableName(metadataSchema, NAMESPACES_TABLE)
+            + " WHERE "
+            + enclose(NAMESPACE_COL_NAMESPACE_NAME)
+            + " = ?";
     try (Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement =
-            connection.prepareStatement(namespaceExistsStatement)) {
-      preparedStatement.setString(1, namespace);
-      return preparedStatement.executeQuery().next();
+        PreparedStatement statement = connection.prepareStatement(selectQuery); ) {
+      statement.setString(1, namespace);
+      try (ResultSet resultSet = statement.executeQuery()) {
+        return resultSet.next();
+      }
     } catch (SQLException e) {
+      // An exception will be thrown if the namespaces table does not exist when executing the
+      // select
+      // query
+      if ((rdbEngine == RdbEngine.MYSQL && (e.getErrorCode() == 1049 || e.getErrorCode() == 1146))
+          || (rdbEngine == RdbEngine.POSTGRESQL && "42P01".equals(e.getSQLState()))
+          || (rdbEngine == RdbEngine.ORACLE && e.getErrorCode() == 942)
+          || (rdbEngine == RdbEngine.SQL_SERVER && e.getErrorCode() == 208)) {
+        return false;
+      }
       throw new ExecutionException("checking if the namespace exists failed", e);
     }
   }
