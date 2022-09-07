@@ -15,8 +15,6 @@ import com.scalar.db.rpc.DistributedStorageAdminGrpc;
 import com.scalar.db.rpc.DropIndexRequest;
 import com.scalar.db.rpc.DropNamespaceRequest;
 import com.scalar.db.rpc.DropTableRequest;
-import com.scalar.db.rpc.GetNamespaceNamesRequest;
-import com.scalar.db.rpc.GetNamespaceNamesResponse;
 import com.scalar.db.rpc.GetNamespaceTableNamesRequest;
 import com.scalar.db.rpc.GetNamespaceTableNamesResponse;
 import com.scalar.db.rpc.GetTableMetadataRequest;
@@ -298,14 +296,17 @@ public class GrpcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     execute(
         () ->
-            stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
-                .repairTable(
-                    RepairTableRequest.newBuilder()
-                        .setNamespace(namespace)
-                        .setTable(table)
-                        .setTableMetadata(ProtoUtils.toTableMetadata(metadata))
-                        .putAllOptions(options)
-                        .build()));
+            execute(
+                () ->
+                    stub.withDeadlineAfter(
+                            config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                        .repairTable(
+                            RepairTableRequest.newBuilder()
+                                .setNamespace(namespace)
+                                .setTable(table)
+                                .setTableMetadata(ProtoUtils.toTableMetadata(metadata))
+                                .putAllOptions(options)
+                                .build())));
   }
 
   @Override
@@ -314,25 +315,17 @@ public class GrpcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     execute(
         () ->
-            stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
-                .addNewColumnToTable(
-                    AddNewColumnToTableRequest.newBuilder()
-                        .setNamespace(namespace)
-                        .setTable(table)
-                        .setColumnName(columnName)
-                        .setColumnType(ProtoUtils.toDataType(columnType))
-                        .build()));
-  }
-
-  @Override
-  public Set<String> getNamespaceNames() throws ExecutionException {
-    return execute(
-        () -> {
-          GetNamespaceNamesResponse response =
-              stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
-                  .getNamespaceNames(GetNamespaceNamesRequest.newBuilder().build());
-          return new HashSet<>(response.getNamespaceNamesList());
-        });
+            execute(
+                () ->
+                    stub.withDeadlineAfter(
+                            config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                        .addNewColumnToTable(
+                            AddNewColumnToTableRequest.newBuilder()
+                                .setNamespace(namespace)
+                                .setTable(table)
+                                .setColumnName(columnName)
+                                .setColumnType(ProtoUtils.toDataType(columnType))
+                                .build())));
   }
 
   private static <T> T execute(ThrowableSupplier<T, ExecutionException> supplier)

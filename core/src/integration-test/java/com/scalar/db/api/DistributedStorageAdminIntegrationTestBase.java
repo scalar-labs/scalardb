@@ -213,14 +213,13 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
       // Assert
       assertThat(admin.namespaceExists(namespace3)).isTrue();
-      assertThat(admin.getNamespaceNames()).contains(namespace3);
     } finally {
       admin.dropNamespace(namespace3, true);
     }
   }
 
   @Test
-  public void createNamespace_ForExistingNamespace_ShouldThrowExecutionException() {
+  public void createNamespace_ForExistingNamespace_ShouldExecutionException() {
     // Arrange
 
     // Act Assert
@@ -248,14 +247,13 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
       // Assert
       assertThat(admin.namespaceExists(namespace3)).isFalse();
-      assertThat(admin.getNamespaceNames()).doesNotContain(namespace3);
     } finally {
       admin.dropNamespace(namespace3, true);
     }
   }
 
   @Test
-  public void dropNamespace_ForNonExistingNamespace_ShouldThrowExecutionException() {
+  public void dropNamespace_ForNonExistingNamespace_ShouldExecutionException() {
     // Arrange
 
     // Act Assert
@@ -289,7 +287,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
-  public void createTable_ForExistingTable_ShouldThrowExecutionException() {
+  public void createTable_ForExistingTable_ShouldExecutionException() {
     // Arrange
 
     // Act Assert
@@ -324,7 +322,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
-  public void dropTable_ForNonExistingTable_ShouldThrowExecutionException() {
+  public void dropTable_ForNonExistingTable_ShouldExecutionException() {
     // Arrange
 
     // Act Assert
@@ -598,17 +596,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
     }
-  }
-
-  @Test
-  public void getNamespaceNames_ShouldReturnCreatedNamespaces() throws ExecutionException {
-    // Arrange
-
-    // Act
-    Set<String> namespaces = admin.getNamespaceNames();
-
-    // Assert
-    assertThat(namespaces).containsOnly(namespace1, namespace2);
   }
 
   protected boolean isIndexOnBooleanColumnSupported() {

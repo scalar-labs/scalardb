@@ -1212,9 +1212,4 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     client.close();
     applicationAutoScalingClient.close();
   }
-
-  @Override
-  public Set<String> getNamespaceNames() throws ExecutionException {
-    throw new UnsupportedOperationException("Not yet implemented");
-  }
 }

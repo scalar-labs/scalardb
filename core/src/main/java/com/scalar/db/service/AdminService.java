@@ -92,11 +92,6 @@ public class AdminService implements DistributedStorageAdmin {
   }
 
   @Override
-  public Set<String> getNamespaceNames() throws ExecutionException {
-    return admin.getNamespaceNames();
-  }
-
-  @Override
   public void close() {
     admin.close();
   }
