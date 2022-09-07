@@ -556,18 +556,4 @@ public class ConsensusCommitAdminTest {
     verify(distributedStorageAdmin)
         .addNewColumnToTable(NAMESPACE, TABLE, Attribute.BEFORE_PREFIX + newColumn, DataType.TEXT);
   }
-
-  @Test
-  public void getNamespacesNames_ShouldCallJdbcAdminProperly() throws ExecutionException {
-    // Arrange
-    Set<String> namespaces = ImmutableSet.of("n1", "n2");
-    when(distributedStorageAdmin.getNamespaceNames()).thenReturn(namespaces);
-
-    // Act
-    Set<String> actualNamespaces = admin.getNamespaceNames();
-
-    // Assert
-    verify(distributedStorageAdmin).getNamespaceNames();
-    assertThat(actualNamespaces).containsOnly("n1", "n2");
-  }
 }

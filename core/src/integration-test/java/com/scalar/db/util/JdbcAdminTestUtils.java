@@ -8,6 +8,7 @@ import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.query.QueryUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -23,7 +24,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   public JdbcAdminTestUtils(Properties properties) {
     super();
     config = new JdbcConfig(new DatabaseConfig(properties));
-    metadataNamespace = config.getMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
+    metadataNamespace = config.getTableMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
     metadataTable = JdbcAdmin.METADATA_TABLE;
     rdbEngine = JdbcUtils.getRdbEngine(config.getJdbcUrl());
   }
@@ -31,6 +32,14 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   @Override
   public void dropMetadataTable() throws SQLException {
     execute("DROP TABLE " + enclosedFullTableName(metadataNamespace, metadataTable, rdbEngine));
+
+    String dropNamespaceStatement;
+    if (rdbEngine == RdbEngine.ORACLE) {
+      dropNamespaceStatement = "DROP USER " + QueryUtils.enclose(metadataNamespace, rdbEngine);
+    } else {
+      dropNamespaceStatement = "DROP SCHEMA " + QueryUtils.enclose(metadataNamespace, rdbEngine);
+    }
+    execute(dropNamespaceStatement);
   }
 
   @Override

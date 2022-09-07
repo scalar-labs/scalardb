@@ -572,11 +572,6 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     }
   }
 
-  @Override
-  public Set<String> getNamespaceNames() throws ExecutionException {
-    throw new UnsupportedOperationException("Not yet implemented");
-  }
-
   private boolean metadataContainerExists() {
     try {
       client.getDatabase(metadataDatabase).getContainer(METADATA_CONTAINER).read();

@@ -15,14 +15,4 @@ public class JdbcTransactionAdminIntegrationTest
     properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "jdbc");
     return properties;
   }
-
-  @Override
-  protected boolean hasCoordinatorTables() {
-    return false;
-  }
-
-  @Override
-  protected String getCoordinatorNamespace() {
-    throw new UnsupportedOperationException();
-  }
 }
