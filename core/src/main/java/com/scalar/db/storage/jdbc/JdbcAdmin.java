@@ -720,8 +720,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       }
     } catch (SQLException e) {
       // An exception will be thrown if the namespaces table does not exist when executing the
-      // select
-      // query
+      // select query
       if ((rdbEngine == RdbEngine.MYSQL && (e.getErrorCode() == 1049 || e.getErrorCode() == 1146))
           || (rdbEngine == RdbEngine.POSTGRESQL && "42P01".equals(e.getSQLState()))
           || (rdbEngine == RdbEngine.ORACLE && e.getErrorCode() == 942)
