@@ -4,8 +4,6 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegration
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 
 public class ConsensusCommitAdminIntegrationTestWithCosmos
     extends ConsensusCommitAdminIntegrationTestBase {
@@ -39,19 +37,4 @@ public class ConsensusCommitAdminIntegrationTestWithCosmos
   protected Map<String, String> getCreationOptions() {
     return CosmosEnv.getCreationOptions();
   }
-
-  @Disabled("Temporarily until admin.getNamespacesNames() is implemented")
-  @Test
-  @Override
-  public void createNamespace_ForNonExistingNamespace_ShouldCreateNamespaceProperly() {}
-
-  @Disabled("Temporarily until admin.getNamespacesNames() is implemented")
-  @Test
-  @Override
-  public void dropNamespace_ForNonExistingNamespace_ShouldDropNamespaceProperly() {}
-
-  @Disabled("Temporarily until admin.getNamespacesNames() is implemented")
-  @Test
-  @Override
-  public void getNamespaceNames_ShouldReturnCreatedNamespaces() {}
 }
