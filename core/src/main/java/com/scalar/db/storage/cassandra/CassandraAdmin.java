@@ -6,6 +6,8 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import com.datastax.driver.core.ClusteringOrder;
 import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.schemabuilder.Create;
 import com.datastax.driver.core.schemabuilder.CreateKeyspace;
@@ -23,6 +25,8 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -36,17 +40,24 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public static final String REPLICATION_STRATEGY = "replication-strategy";
   public static final String COMPACTION_STRATEGY = "compaction-strategy";
   public static final String REPLICATION_FACTOR = "replication-factor";
+  public static final String METADATA_KEYSPACE = "scalardb";
+  public static final String KEYSPACES_TABLE = "keyspaces";
+  public static final String KEYSPACES_NAME_COL = "name";
   @VisibleForTesting static final String INDEX_NAME_PREFIX = "index";
-
   private final ClusterManager clusterManager;
+  private final String metadataKeyspace;
 
   @Inject
   public CassandraAdmin(DatabaseConfig config) {
     clusterManager = new ClusterManager(config);
+    CassandraConfig cassandraConfig = new CassandraConfig(config);
+    metadataKeyspace = cassandraConfig.getMetadataKeyspace().orElse(METADATA_KEYSPACE);
   }
 
-  CassandraAdmin(ClusterManager clusterManager) {
+  CassandraAdmin(ClusterManager clusterManager, DatabaseConfig config) {
     this.clusterManager = clusterManager;
+    CassandraConfig cassandraConfig = new CassandraConfig(config);
+    metadataKeyspace = cassandraConfig.getMetadataKeyspace().orElse(METADATA_KEYSPACE);
   }
 
   @Override
@@ -60,7 +71,20 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
-    CreateKeyspace query = SchemaBuilder.createKeyspace(quoteIfNecessary(namespace));
+    try {
+      createKeyspace(namespace, options);
+      createMetadataKeyspaceIfNotExists();
+      createKeyspacesTableIfNotExists();
+      insertIntoKeyspacesTable(namespace);
+    } catch (IllegalArgumentException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw new ExecutionException(String.format("creating the keyspace %s failed", namespace), e);
+    }
+  }
+
+  private void createKeyspace(String keyspace, Map<String, String> options) {
+    CreateKeyspace query = SchemaBuilder.createKeyspace(quoteIfNecessary(keyspace));
     String replicationFactor = options.getOrDefault(REPLICATION_FACTOR, "1");
     ReplicationStrategy replicationStrategy =
         options.containsKey(REPLICATION_STRATEGY)
@@ -74,13 +98,29 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       replicationOptions.put("class", ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
       replicationOptions.put("dc1", replicationFactor);
     }
-    try {
-      clusterManager
-          .getSession()
-          .execute(query.with().replication(replicationOptions).getQueryString());
-    } catch (RuntimeException e) {
-      throw new ExecutionException(String.format("creating the keyspace %s failed", namespace), e);
-    }
+    String queryString = query.with().replication(replicationOptions).getQueryString();
+
+    clusterManager.getSession().execute(queryString);
+  }
+
+  private void createMetadataKeyspaceIfNotExists() {
+    CreateKeyspace query =
+        SchemaBuilder.createKeyspace(quoteIfNecessary(metadataKeyspace)).ifNotExists();
+    Map<String, Object> replicationOptions = new HashMap<>();
+    replicationOptions.put("class", ReplicationStrategy.SIMPLE_STRATEGY.toString());
+    replicationOptions.put("replication_factor", "1");
+    String queryString = query.with().replication(replicationOptions).getQueryString();
+
+    clusterManager.getSession().execute(queryString);
+  }
+
+  private void insertIntoKeyspacesTable(String keyspace) {
+    String insertQuery =
+        QueryBuilder.insertInto(
+                quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
+            .value(KEYSPACES_NAME_COL, quoteIfNecessary(keyspace))
+            .toString();
+    clusterManager.getSession().execute(insertQuery);
   }
 
   @Override
@@ -98,12 +138,28 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
-    String dropKeyspace = SchemaBuilder.dropKeyspace(quoteIfNecessary(namespace)).getQueryString();
     try {
-      clusterManager.getSession().execute(dropKeyspace);
+      dropKeyspace(namespace);
+      deleteFromKeyspacesTable(namespace);
+      dropKeyspacesTableIfEmpty();
     } catch (RuntimeException e) {
       throw new ExecutionException(String.format("dropping the %s keyspace failed", namespace), e);
     }
+  }
+
+  private void dropKeyspace(String keyspace) {
+    String dropKeyspaceQuery =
+        SchemaBuilder.dropKeyspace(quoteIfNecessary(keyspace)).getQueryString();
+    clusterManager.getSession().execute(dropKeyspaceQuery);
+  }
+
+  private void deleteFromKeyspacesTable(String keyspace) {
+    String deleteQuery =
+        QueryBuilder.delete()
+            .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
+            .where(QueryBuilder.eq(KEYSPACES_NAME_COL, quoteIfNecessary(keyspace)))
+            .toString();
+    clusterManager.getSession().execute(deleteQuery);
   }
 
   @Override
@@ -221,13 +277,18 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
     try {
-      KeyspaceMetadata keyspace =
-          clusterManager
-              .getSession()
-              .getCluster()
-              .getMetadata()
-              .getKeyspace(quoteIfNecessary(namespace));
-      return keyspace != null;
+      if (clusterManager.getMetadata(metadataKeyspace, KEYSPACES_TABLE) == null) {
+        return false;
+      }
+
+      String query =
+          QueryBuilder.select(KEYSPACES_NAME_COL)
+              .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
+              .where(QueryBuilder.eq(KEYSPACES_NAME_COL, quoteIfNecessary(namespace)))
+              .toString();
+      ResultSet resultSet = clusterManager.getSession().execute(query);
+
+      return resultSet.one() != null;
     } catch (RuntimeException e) {
       throw new ExecutionException("checking if the namespace exists failed", e);
     }
@@ -270,6 +331,50 @@ public class CassandraAdmin implements DistributedStorageAdmin {
           String.format(
               "Adding the new column %s to the %s.%s table failed", columnName, namespace, table),
           e);
+    }
+  }
+
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    try {
+      if (clusterManager.getMetadata(metadataKeyspace, KEYSPACES_TABLE) == null) {
+        return Collections.emptySet();
+      }
+
+      Set<String> keyspaceNames = new HashSet<>();
+      String selectQuery =
+          QueryBuilder.select(KEYSPACES_NAME_COL)
+              .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
+              .getQueryString();
+      for (Row row : clusterManager.getSession().execute(selectQuery).all()) {
+        keyspaceNames.add(row.getString(KEYSPACES_NAME_COL));
+      }
+
+      return keyspaceNames;
+    } catch (RuntimeException e) {
+      throw new ExecutionException("Retrieving the existing namespace names failed", e);
+    }
+  }
+
+  private void createKeyspacesTableIfNotExists() {
+    String createTableQuery =
+        SchemaBuilder.createTable(
+                quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
+            .ifNotExists()
+            .addPartitionKey(KEYSPACES_NAME_COL, com.datastax.driver.core.DataType.text())
+            .getQueryString();
+    clusterManager.getSession().execute(createTableQuery);
+  }
+
+  private void dropKeyspacesTableIfEmpty() {
+    String selectQuery =
+        QueryBuilder.select(KEYSPACES_NAME_COL)
+            .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
+            .limit(1)
+            .getQueryString();
+    boolean isKeyspacesTableEmpty = clusterManager.getSession().execute(selectQuery).one() == null;
+    if (isKeyspacesTableEmpty) {
+      dropKeyspace(metadataKeyspace);
     }
   }
 
@@ -433,10 +538,5 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     public String toString() {
       return strategyName;
     }
-  }
-
-  @Override
-  public Set<String> getNamespaceNames() throws ExecutionException {
-    throw new UnsupportedOperationException("Not yet implemented");
   }
 }
