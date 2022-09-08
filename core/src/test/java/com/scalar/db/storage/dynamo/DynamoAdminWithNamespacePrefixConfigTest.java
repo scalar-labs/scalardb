@@ -5,7 +5,7 @@ import java.util.Optional;
 public class DynamoAdminWithNamespacePrefixConfigTest extends DynamoAdminTestBase {
 
   @Override
-  Optional<String> getTableMetadataNamespaceConfig() {
+  Optional<String> getMetadataNamespaceConfig() {
     return Optional.empty();
   }
 

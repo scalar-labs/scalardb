@@ -2,10 +2,10 @@ package com.scalar.db.storage.dynamo;
 
 import java.util.Optional;
 
-public class DynamoAdminWithNamespacePrefixAndTableMetadataNamespaceConfigTest
+public class DynamoAdminWithNamespacePrefixAndMetadataNamespaceConfigTest
     extends DynamoAdminTestBase {
   @Override
-  Optional<String> getTableMetadataNamespaceConfig() {
+  Optional<String> getMetadataNamespaceConfig() {
     return Optional.of("my_meta_ns");
   }
 
