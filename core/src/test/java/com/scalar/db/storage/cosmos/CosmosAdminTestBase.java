@@ -160,13 +160,7 @@ public abstract class CosmosAdminTestBase {
                 ThroughputProperties.createManualThroughput(
                     Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
     verify(client, times(2)).getDatabase(metadataDatabaseName);
-    ArgumentCaptor<CosmosContainerProperties> containerPropertiesCaptor =
-        ArgumentCaptor.forClass(CosmosContainerProperties.class);
-    verify(metadataDatabase).createContainerIfNotExists(containerPropertiesCaptor.capture());
-    CosmosContainerProperties namespaceContainerProperties = containerPropertiesCaptor.getValue();
-    assertThat(namespaceContainerProperties.getId()).isEqualTo(CosmosAdmin.NAMESPACES_CONTAINER);
-    assertThat(namespaceContainerProperties.getPartitionKeyDefinition().getPaths())
-        .containsExactly("/id");
+    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
     verify(namespacesContainer).createItem(new CosmosNamespace(namespace));
   }
 
@@ -197,13 +191,7 @@ public abstract class CosmosAdminTestBase {
                 ThroughputProperties.createManualThroughput(
                     Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
     verify(client, times(2)).getDatabase(metadataDatabaseName);
-    ArgumentCaptor<CosmosContainerProperties> containerPropertiesCaptor =
-        ArgumentCaptor.forClass(CosmosContainerProperties.class);
-    verify(metadataDatabase).createContainerIfNotExists(containerPropertiesCaptor.capture());
-    CosmosContainerProperties namespaceContainerProperties = containerPropertiesCaptor.getValue();
-    assertThat(namespaceContainerProperties.getId()).isEqualTo(CosmosAdmin.NAMESPACES_CONTAINER);
-    assertThat(namespaceContainerProperties.getPartitionKeyDefinition().getPaths())
-        .containsExactly("/id");
+    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
     verify(namespacesContainer).createItem(new CosmosNamespace(namespace));
   }
 
@@ -237,13 +225,7 @@ public abstract class CosmosAdminTestBase {
                 ThroughputProperties.createManualThroughput(
                     Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
     verify(client, times(2)).getDatabase(metadataDatabaseName);
-    ArgumentCaptor<CosmosContainerProperties> containerPropertiesCaptor =
-        ArgumentCaptor.forClass(CosmosContainerProperties.class);
-    verify(metadataDatabase).createContainerIfNotExists(containerPropertiesCaptor.capture());
-    CosmosContainerProperties namespaceContainerProperties = containerPropertiesCaptor.getValue();
-    assertThat(namespaceContainerProperties.getId()).isEqualTo(CosmosAdmin.NAMESPACES_CONTAINER);
-    assertThat(namespaceContainerProperties.getPartitionKeyDefinition().getPaths())
-        .containsExactly("/id");
+    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
     verify(namespacesContainer).createItem(new CosmosNamespace(namespace));
   }
 
@@ -1048,5 +1030,54 @@ public abstract class CosmosAdminTestBase {
     assertThat(admin.namespaceExists("ns")).isFalse();
 
     verify(client).getDatabase(metadataDatabaseName);
+  }
+
+  @Test
+  public void upgrade_WithExistingTables_ShouldUpsertNamespaces() throws ExecutionException {
+    // Arrange
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer namespacesContainer = mock(CosmosContainer.class);
+    CosmosContainer tableMetadataContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(anyString())).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(anyString()))
+        .thenReturn(
+            tableMetadataContainer,
+            tableMetadataContainer,
+            namespacesContainer,
+            namespacesContainer);
+    CosmosPagedIterable<CosmosTableMetadata> cosmosPagedIterable = mock(CosmosPagedIterable.class);
+    CosmosTableMetadata tableMetadata1 = new CosmosTableMetadata();
+    tableMetadata1.setId("ns1.tbl1");
+    CosmosTableMetadata tableMetadata2 = new CosmosTableMetadata();
+    tableMetadata2.setId("ns1.tbl2");
+    CosmosTableMetadata tableMetadata3 = new CosmosTableMetadata();
+    tableMetadata3.setId("ns2.tbl3");
+    when(cosmosPagedIterable.stream())
+        .thenReturn(Stream.of(tableMetadata1, tableMetadata2, tableMetadata3));
+    when(tableMetadataContainer.queryItems(anyString(), any(), eq(CosmosTableMetadata.class)))
+        .thenReturn(cosmosPagedIterable);
+
+    // Act
+    admin.upgrade(Collections.emptyMap());
+
+    // Assert
+    verify(client, times(5)).getDatabase(metadataDatabaseName);
+    verify(metadataDatabase, times(2)).getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER);
+    verify(tableMetadataContainer).read();
+    verify(client)
+        .createDatabaseIfNotExists(
+            eq(metadataDatabaseName),
+            refEq(
+                ThroughputProperties.createManualThroughput(
+                    Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
+    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
+    verify(tableMetadataContainer)
+        .queryItems(
+            eq("SELECT container.id FROM container"),
+            refEq(new CosmosQueryRequestOptions()),
+            eq(CosmosTableMetadata.class));
+    verify(metadataDatabase, times(2)).getContainer(CosmosAdmin.NAMESPACES_CONTAINER);
+    verify(namespacesContainer).upsertItem(new CosmosNamespace("ns1"));
+    verify(namespacesContainer).upsertItem(new CosmosNamespace("ns2"));
   }
 }
