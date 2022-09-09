@@ -9,8 +9,8 @@ public class ConsensusCommitSpecificIntegrationTestWithCosmos
     extends ConsensusCommitSpecificIntegrationTestBase {
 
   @Override
-  protected Properties getProperties() {
-    return CosmosEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return CosmosEnv.getProperties(testName);
   }
 
   @Override

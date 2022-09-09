@@ -13,8 +13,8 @@ import java.util.Set;
 public class DynamoSecondaryIndexIntegrationTest
     extends DistributedStorageSecondaryIndexIntegrationTestBase {
   @Override
-  protected Properties getProperties() {
-    return DynamoEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return DynamoEnv.getProperties(testName);
   }
 
   @Override

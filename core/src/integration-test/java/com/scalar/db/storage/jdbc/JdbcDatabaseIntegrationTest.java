@@ -6,16 +6,17 @@ import java.util.Properties;
 
 public class JdbcDatabaseIntegrationTest extends DistributedStorageIntegrationTestBase {
 
+  private RdbEngine rdbEngine;
+
   @Override
-  protected Properties getProperties() {
-    return JdbcEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    Properties properties = JdbcEnv.getProperties(testName);
+    rdbEngine = JdbcUtils.getRdbEngine(new JdbcConfig(new DatabaseConfig(properties)).getJdbcUrl());
+    return JdbcEnv.getProperties(testName);
   }
 
   @Override
   protected int getLargeDataSizeInBytes() {
-    RdbEngine rdbEngine =
-        JdbcUtils.getRdbEngine(new JdbcConfig(new DatabaseConfig(getProperties())).getJdbcUrl());
-
     if (rdbEngine == RdbEngine.ORACLE) {
       // For Oracle, the max data size for BLOB is 2000 bytes
       return 2000;

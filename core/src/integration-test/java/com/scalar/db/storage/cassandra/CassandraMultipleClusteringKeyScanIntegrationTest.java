@@ -7,7 +7,7 @@ public class CassandraMultipleClusteringKeyScanIntegrationTest
     extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
 
   @Override
-  protected Properties getProperties() {
-    return CassandraEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return CassandraEnv.getProperties(testName);
   }
 }
