@@ -26,6 +26,11 @@ public class DistributedStorageAdminServiceIntegrationTest
     return ServerEnv.getProperties();
   }
 
+  @Override
+  protected Properties getStorageProperties() {
+    return TestUtils.addSuffix(ServerEnv.getServerProperties(), TEST_NAME);
+  }
+
   @AfterAll
   @Override
   public void afterAll() throws ExecutionException {

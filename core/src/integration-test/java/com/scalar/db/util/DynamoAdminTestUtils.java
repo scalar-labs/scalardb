@@ -137,4 +137,9 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
             .item(itemValues)
             .build());
   }
+
+  @Override
+  public void dropNamespacesTable() throws Exception {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
 }

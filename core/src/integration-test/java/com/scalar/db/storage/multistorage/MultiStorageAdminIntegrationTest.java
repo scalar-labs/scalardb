@@ -10,11 +10,14 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.util.AdminTestUtils;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Properties;
 import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
@@ -35,6 +38,8 @@ public class MultiStorageAdminIntegrationTest {
 
   private DistributedStorageAdmin admin1;
   private DistributedStorageAdmin admin2;
+  private AdminTestUtils adminTestUtils1;
+  private AdminTestUtils adminTestUtils2;
   private MultiStorageAdmin multiStorageAdmin;
 
   @BeforeAll
@@ -42,6 +47,7 @@ public class MultiStorageAdminIntegrationTest {
     initAdmin1();
     initAdmin2();
     initMultiStorageAdmin();
+    initAdminTestUtils();
   }
 
   private void initAdmin1() throws ExecutionException {
@@ -148,6 +154,11 @@ public class MultiStorageAdminIntegrationTest {
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "storage1");
 
     multiStorageAdmin = new MultiStorageAdmin(new DatabaseConfig(props));
+  }
+
+  private void initAdminTestUtils() {
+    adminTestUtils1 = AdminTestUtils.create(MultiStorageEnv.getPropertiesForStorage1());
+    adminTestUtils2 = AdminTestUtils.create(MultiStorageEnv.getPropertiesForStorage2());
   }
 
   @AfterAll
@@ -370,5 +381,21 @@ public class MultiStorageAdminIntegrationTest {
 
     // Assert
     assertThat(namespaces).containsExactlyInAnyOrder(NAMESPACE1, NAMESPACE2);
+  }
+
+  @Disabled("Temporarily until admin.upgrade() is implemented")
+  @Test
+  public void
+      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces()
+          throws Exception {
+    // Arrange
+    adminTestUtils1.dropNamespacesTable();
+    adminTestUtils2.dropNamespacesTable();
+
+    // Act
+    multiStorageAdmin.upgrade(Collections.emptyMap());
+
+    // Assert
+    assertThat(multiStorageAdmin.getNamespaceNames()).containsOnly(NAMESPACE1, NAMESPACE2);
   }
 }

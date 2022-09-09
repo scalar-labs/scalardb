@@ -25,6 +25,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
     config = new JdbcConfig(new DatabaseConfig(properties));
     metadataNamespace = config.getMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
     metadataTable = JdbcAdmin.METADATA_TABLE;
+    namespacesTable = JdbcAdmin.NAMESPACES_TABLE;
     rdbEngine = JdbcUtils.getRdbEngine(config.getJdbcUrl());
   }
 
@@ -50,6 +51,11 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
             + getFullTableName(namespace, table)
             + "','corrupted','corrupted','corrupted','corrupted','0','0')";
     execute(insertCorruptedMetadataStatement);
+  }
+
+  @Override
+  public void dropNamespacesTable() throws Exception {
+    execute("DROP TABLE " + enclosedFullTableName(metadataNamespace, namespacesTable, rdbEngine));
   }
 
   private void execute(String sql) throws SQLException {

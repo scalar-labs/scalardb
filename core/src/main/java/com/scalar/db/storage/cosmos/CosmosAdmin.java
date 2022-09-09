@@ -609,6 +609,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     }
   }
 
+  @Override
+  public void upgrade(Map<String, String> options) throws ExecutionException {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
+
   private void createMetadataDatabaseAndNamespaceContainerIfNotExists() {
     ThroughputProperties manualThroughput =
         ThroughputProperties.createManualThroughput(Integer.parseInt(DEFAULT_REQUEST_UNIT));

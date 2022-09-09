@@ -31,6 +31,7 @@ import com.scalar.db.rpc.RepairCoordinatorTablesRequest;
 import com.scalar.db.rpc.RepairTableRequest;
 import com.scalar.db.rpc.TruncateCoordinatorTablesRequest;
 import com.scalar.db.rpc.TruncateTableRequest;
+import com.scalar.db.rpc.UpgradeRequest;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.util.ProtoUtils;
@@ -406,6 +407,14 @@ public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
                   .getNamespaceNames(GetNamespaceNamesRequest.newBuilder().build());
           return new HashSet<>(response.getNamespaceNamesList());
         });
+  }
+
+  @Override
+  public void upgrade(Map<String, String> options) throws ExecutionException {
+    execute(
+        () ->
+            stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                .upgrade(UpgradeRequest.newBuilder().putAllOptions(options).build()));
   }
 
   private static <T> T execute(ThrowableSupplier<T, ExecutionException> supplier)

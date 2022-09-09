@@ -201,6 +201,16 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
     return namespaceNames;
   }
 
+  @Override
+  public void upgrade(Map<String, String> options) throws ExecutionException {
+    Set<DistributedStorageAdmin> admins = new HashSet<>(namespaceAdminMap.values());
+    admins.add(defaultAdmin);
+
+    for (DistributedStorageAdmin admin : admins) {
+      admin.upgrade(options);
+    }
+  }
+
   private DistributedStorageAdmin getAdmin(String namespace) {
     DistributedStorageAdmin admin = namespaceAdminMap.get(namespace);
     return admin != null ? admin : defaultAdmin;

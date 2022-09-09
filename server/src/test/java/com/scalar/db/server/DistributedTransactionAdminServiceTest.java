@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Empty;
 import com.scalar.db.api.DistributedTransactionAdmin;
@@ -32,9 +33,11 @@ import com.scalar.db.rpc.NamespaceExistsRequest;
 import com.scalar.db.rpc.NamespaceExistsResponse;
 import com.scalar.db.rpc.TruncateCoordinatorTablesRequest;
 import com.scalar.db.rpc.TruncateTableRequest;
+import com.scalar.db.rpc.UpgradeRequest;
 import com.scalar.db.util.ProtoUtils;
 import io.grpc.stub.StreamObserver;
 import java.util.Collections;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -376,6 +379,24 @@ public class DistributedTransactionAdminServiceTest {
     // Assert
     verify(admin).addNewColumnToTable(namespace, table, column, DataType.TEXT);
     verify(responseObserver).onNext(any());
+    verify(responseObserver).onCompleted();
+  }
+
+  @Test
+  public void upgrade_IsCalledWithProperArguments_AdminShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+    UpgradeRequest request = UpgradeRequest.newBuilder().putAllOptions(options).build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
+
+    // Act
+    adminService.upgrade(request, responseObserver);
+
+    // Assert
+    verify(admin).upgrade(options);
+    verify(responseObserver).onNext(Empty.getDefaultInstance());
     verify(responseObserver).onCompleted();
   }
 }

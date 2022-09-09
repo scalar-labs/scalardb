@@ -27,6 +27,7 @@ import com.scalar.db.rpc.RepairCoordinatorTablesRequest;
 import com.scalar.db.rpc.RepairTableRequest;
 import com.scalar.db.rpc.TruncateCoordinatorTablesRequest;
 import com.scalar.db.rpc.TruncateTableRequest;
+import com.scalar.db.rpc.UpgradeRequest;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableRunnable;
 import io.grpc.Status;
@@ -313,6 +314,18 @@ public class DistributedTransactionAdminService
         },
         responseObserver,
         "get_namespaces_names");
+  }
+
+  @Override
+  public void upgrade(UpgradeRequest request, StreamObserver<Empty> responseObserver) {
+    execute(
+        () -> {
+          admin.upgrade(request.getOptionsMap());
+          responseObserver.onNext(Empty.getDefaultInstance());
+          responseObserver.onCompleted();
+        },
+        responseObserver,
+        "upgrade");
   }
 
   private void execute(

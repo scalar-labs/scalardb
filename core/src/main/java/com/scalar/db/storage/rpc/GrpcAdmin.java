@@ -25,6 +25,7 @@ import com.scalar.db.rpc.NamespaceExistsRequest;
 import com.scalar.db.rpc.NamespaceExistsResponse;
 import com.scalar.db.rpc.RepairTableRequest;
 import com.scalar.db.rpc.TruncateTableRequest;
+import com.scalar.db.rpc.UpgradeRequest;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableSupplier;
 import io.grpc.ManagedChannel;
@@ -333,6 +334,14 @@ public class GrpcAdmin implements DistributedStorageAdmin {
                   .getNamespaceNames(GetNamespaceNamesRequest.newBuilder().build());
           return new HashSet<>(response.getNamespaceNamesList());
         });
+  }
+
+  @Override
+  public void upgrade(Map<String, String> options) throws ExecutionException {
+    execute(
+        () ->
+            stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                .upgrade(UpgradeRequest.newBuilder().putAllOptions(options).build()));
   }
 
   private static <T> T execute(ThrowableSupplier<T, ExecutionException> supplier)

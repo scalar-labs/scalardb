@@ -8,6 +8,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.util.AdminTestUtils;
 import com.scalar.db.util.TestUtils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -68,6 +69,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
           .build();
   private StorageFactory storageFactory;
   private DistributedStorageAdmin admin;
+  private AdminTestUtils adminTestUtils;
   private String namespace1;
   private String namespace2;
   private String namespace3;
@@ -77,6 +79,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     initialize();
     storageFactory = StorageFactory.create(TestUtils.addSuffix(getProperties(), TEST_NAME));
     admin = storageFactory.getAdmin();
+    adminTestUtils = AdminTestUtils.create(getStorageProperties());
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
     namespace3 = getNamespace3();
@@ -111,6 +114,10 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
   protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
+  }
+
+  protected Properties getStorageProperties() {
+    return TestUtils.addSuffix(getProperties(), TEST_NAME);
   }
 
   @AfterAll
@@ -609,6 +616,20 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
     // Assert
     assertThat(namespaces).containsOnly(namespace1, namespace2);
+  }
+
+  @Test
+  public void
+      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces()
+          throws Exception {
+    // Arrange
+    adminTestUtils.dropNamespacesTable();
+
+    // Act
+    admin.upgrade(getCreationOptions());
+
+    // Assert
+    assertThat(admin.getNamespaceNames()).containsOnly(namespace1, namespace2);
   }
 
   protected boolean isIndexOnBooleanColumnSupported() {

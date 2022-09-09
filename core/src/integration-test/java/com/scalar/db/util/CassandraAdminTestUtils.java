@@ -20,4 +20,9 @@ public class CassandraAdminTestUtils extends AdminTestUtils {
   public void corruptMetadata(String namespace, String table) throws Exception {
     // Do nothing
   }
+
+  @Override
+  public void dropNamespacesTable() throws Exception {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
 }

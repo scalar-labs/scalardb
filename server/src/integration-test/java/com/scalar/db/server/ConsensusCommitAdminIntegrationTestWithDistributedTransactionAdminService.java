@@ -43,6 +43,11 @@ public class ConsensusCommitAdminIntegrationTestWithDistributedTransactionAdminS
   }
 
   @Override
+  protected Properties getStorageProperties() {
+    return TestUtils.addSuffix(ServerEnv.getServerProperties(), TEST_NAME);
+  }
+
+  @Override
   protected Properties getPropsWithIncludeMetadataEnabled() {
     Properties properties = getProperties();
     properties.setProperty(
