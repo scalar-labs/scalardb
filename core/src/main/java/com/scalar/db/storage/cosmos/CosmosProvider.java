@@ -2,22 +2,22 @@ package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
-import com.scalar.db.api.DistributedStorageFactory;
+import com.scalar.db.api.DistributedStorageProvider;
 import com.scalar.db.config.DatabaseConfig;
 
-public class CosmosFactory implements DistributedStorageFactory {
+public class CosmosProvider implements DistributedStorageProvider {
   @Override
   public String getName() {
     return "cosmos";
   }
 
   @Override
-  public DistributedStorage getDistributedStorage(DatabaseConfig config) {
+  public DistributedStorage createDistributedStorage(DatabaseConfig config) {
     return new Cosmos(config);
   }
 
   @Override
-  public DistributedStorageAdmin getDistributedStorageAdmin(DatabaseConfig config) {
+  public DistributedStorageAdmin createDistributedStorageAdmin(DatabaseConfig config) {
     return new CosmosAdmin(config);
   }
 }
