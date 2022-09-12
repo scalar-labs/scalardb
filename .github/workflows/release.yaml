@@ -5,6 +5,10 @@ on:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -51,6 +55,17 @@ jobs:
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASSWORD }}
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.AWS_MARKETPLACE_ROLE_OIDC }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon Elastic Container Registry
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registries: ${{ secrets.AWS_MARKETPLACE_ECR_ID }}
+
       - name: Create containers
         run: gradle docker
 
@@ -66,11 +81,18 @@ jobs:
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:${{ steps.version.outputs.version }}
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:${{ steps.version.outputs.minor_version }}
 
+      # Push the latest tag image since it is required from the perspective of the specification of Azure Marketplace.
       - name: Push latest tag to Azure Container Registry
         if: ${{ steps.version.outputs.version == steps.version.outputs.latest_version }}
         run: |
           docker tag ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }} ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:latest
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:latest
+
+      # Push the patch version image only since AWS Marketplace restricts using the latest tag.
+      - name: Push containers to Amazon Elastic Container Registry
+        run: |
+          docker tag ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }} ${{ secrets.AWS_MARKETPLACE_ECR_ID }}.dkr.ecr.us-east-1.amazonaws.com/scalar/scalardb-server:${{ steps.version.outputs.version }}
+          docker push ${{ secrets.AWS_MARKETPLACE_ECR_ID }}.dkr.ecr.us-east-1.amazonaws.com/scalar/scalardb-server:${{ steps.version.outputs.version }}
 
       - name: Upload scalardb, scalardb-server, scalardb-rpc, and scalardb-schema-loader to Maven Central Repository
         run: |
