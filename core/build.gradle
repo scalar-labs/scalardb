@@ -17,9 +17,6 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
-            include '**/com/scalar/db/api/*.java'
-            include '**/com/scalar/db/transaction/consensuscommit/*.java'
-            include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/cassandra/*.java'
         }
         resources.srcDir file('src/integration-test/resources')
@@ -29,9 +26,6 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
-            include '**/com/scalar/db/api/*.java'
-            include '**/com/scalar/db/transaction/consensuscommit/*.java'
-            include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/cosmos/*.java'
         }
         resources.srcDir file('src/integration-test/resources')
@@ -41,9 +35,6 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
-            include '**/com/scalar/db/api/*.java'
-            include '**/com/scalar/db/transaction/consensuscommit/*.java'
-            include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/dynamo/*.java'
         }
         resources.srcDir file('src/integration-test/resources')
@@ -53,9 +44,6 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
-            include '**/com/scalar/db/api/*.java'
-            include '**/com/scalar/db/transaction/consensuscommit/*.java'
-            include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/jdbc/*.java'
             include '**/com/scalar/db/transaction/jdbc/*.java'
         }
@@ -66,9 +54,6 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
-            include '**/com/scalar/db/api/*.java'
-            include '**/com/scalar/db/transaction/consensuscommit/*.java'
-            include '**/com/scalar/db/util/*.java'
             include '**/com/scalar/db/storage/multistorage/*.java'
         }
         resources.srcDir file('src/integration-test/resources')
@@ -120,6 +105,7 @@ dependencies {
     testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
     testImplementation "org.apache.commons:commons-lang3:${commonsLangVersion}"
     testImplementation "org.slf4j:slf4j-simple:${slf4jVersion}"
+    testImplementation project(':integration-test')
 
     // for SpotBugs
     compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
@@ -156,7 +142,7 @@ task integrationTestCosmos(type: Test) {
         systemProperties(System.getProperties())
     }
     maxParallelForks = 3
-    jvmArgs '-XX:MaxDirectMemorySize=1g'
+    jvmArgs '-XX:MaxDirectMemorySize=2g'
 }
 
 task integrationTestDynamo(type: Test) {

@@ -10,8 +10,8 @@ public class ConsensusCommitAdminIntegrationTestWithDynamo
     extends ConsensusCommitAdminIntegrationTestBase {
 
   @Override
-  protected Properties getProps() {
-    return DynamoEnv.getProperties();
+  protected Properties getProps(String testName) {
+    return DynamoEnv.getProperties(testName);
   }
 
   @Override

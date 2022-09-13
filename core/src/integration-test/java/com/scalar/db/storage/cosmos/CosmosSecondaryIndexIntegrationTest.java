@@ -8,8 +8,8 @@ import java.util.Properties;
 public class CosmosSecondaryIndexIntegrationTest
     extends DistributedStorageSecondaryIndexIntegrationTestBase {
   @Override
-  protected Properties getProperties() {
-    return CosmosEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return CosmosEnv.getProperties(testName);
   }
 
   @Override

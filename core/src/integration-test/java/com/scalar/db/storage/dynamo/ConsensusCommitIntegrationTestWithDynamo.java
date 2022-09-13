@@ -7,8 +7,8 @@ import java.util.Properties;
 public class ConsensusCommitIntegrationTestWithDynamo extends ConsensusCommitIntegrationTestBase {
 
   @Override
-  protected Properties getProps() {
-    return DynamoEnv.getProperties();
+  protected Properties getProps(String testName) {
+    return DynamoEnv.getProperties(testName);
   }
 
   @Override

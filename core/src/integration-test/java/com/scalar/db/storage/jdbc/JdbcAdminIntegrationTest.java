@@ -6,7 +6,7 @@ import java.util.Properties;
 public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegrationTestBase {
 
   @Override
-  protected Properties getProperties() {
-    return JdbcEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return JdbcEnv.getProperties(testName);
   }
 }

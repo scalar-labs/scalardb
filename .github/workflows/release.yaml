@@ -94,7 +94,7 @@ jobs:
           docker tag ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }} ${{ secrets.AWS_MARKETPLACE_ECR_ID }}.dkr.ecr.us-east-1.amazonaws.com/scalar/scalardb-server:${{ steps.version.outputs.version }}
           docker push ${{ secrets.AWS_MARKETPLACE_ECR_ID }}.dkr.ecr.us-east-1.amazonaws.com/scalar/scalardb-server:${{ steps.version.outputs.version }}
 
-      - name: Upload scalardb, scalardb-server, scalardb-rpc, and scalardb-schema-loader to Maven Central Repository
+      - name: Upload scalardb, scalardb-server, scalardb-rpc, scalardb-schema-loader, and scalardb-integration-test to Maven Central Repository
         run: |
           echo "${{secrets.SIGNING_SECRET_KEY_RING}}" | base64 -d > ~/.gradle/secring.gpg
           gradle publish \

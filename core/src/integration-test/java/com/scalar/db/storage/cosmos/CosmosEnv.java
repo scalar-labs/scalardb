@@ -19,7 +19,7 @@ public final class CosmosEnv {
 
   private CosmosEnv() {}
 
-  public static Properties getProperties() {
+  public static Properties getProperties(String testName) {
     String contactPoint = System.getProperty(PROP_COSMOS_URI);
     String password = System.getProperty(PROP_COSMOS_PASSWORD);
     Optional<String> databasePrefix = getDatabasePrefix();
@@ -28,13 +28,22 @@ public final class CosmosEnv {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, contactPoint);
     props.setProperty(DatabaseConfig.PASSWORD, password);
     props.setProperty(DatabaseConfig.STORAGE, "cosmos");
-    databasePrefix.ifPresent(
-        prefix -> {
-          props.setProperty(
-              CosmosConfig.TABLE_METADATA_DATABASE, prefix + CosmosAdmin.METADATA_DATABASE);
-          props.setProperty(
-              ConsensusCommitConfig.COORDINATOR_NAMESPACE, prefix + Coordinator.NAMESPACE);
-        });
+
+    if (databasePrefix.isPresent()) {
+      // Add the prefix and testName as a metadata database suffix
+      props.setProperty(
+          CosmosConfig.TABLE_METADATA_DATABASE,
+          databasePrefix.get() + CosmosAdmin.METADATA_DATABASE + "_" + testName);
+
+      props.setProperty(
+          ConsensusCommitConfig.COORDINATOR_NAMESPACE,
+          databasePrefix.get() + Coordinator.NAMESPACE);
+    } else {
+      // Add testName as a metadata database suffix
+      props.setProperty(
+          CosmosConfig.TABLE_METADATA_DATABASE, CosmosAdmin.METADATA_DATABASE + "_" + testName);
+    }
+
     return props;
   }
 
