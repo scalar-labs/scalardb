@@ -22,7 +22,7 @@ public final class DynamoEnv {
 
   private DynamoEnv() {}
 
-  public static Properties getProperties() {
+  public static Properties getProperties(String testName) {
     String endpointOverride =
         System.getProperty(PROP_DYNAMO_ENDPOINT_OVERRIDE, DEFAULT_DYNAMO_ENDPOINT_OVERRIDE);
     String region = System.getProperty(PROP_DYNAMO_REGION, DEFAULT_DYNAMO_REGION);
@@ -39,6 +39,11 @@ public final class DynamoEnv {
     props.setProperty(DatabaseConfig.USERNAME, accessKeyId);
     props.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
     props.setProperty(DatabaseConfig.STORAGE, "dynamo");
+
+    // Add testName as a metadata namespace suffix
+    props.setProperty(
+        DynamoConfig.TABLE_METADATA_NAMESPACE, DynamoAdmin.METADATA_NAMESPACE + "_" + testName);
+
     return props;
   }
 

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.scalar.db.api.DistributedStorageAdminRepairTableIntegrationTestBase;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -13,8 +14,13 @@ public class CassandraAdminRepairTableIntegrationTest
     extends DistributedStorageAdminRepairTableIntegrationTestBase {
 
   @Override
-  protected Properties getProperties() {
-    return CassandraEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return CassandraEnv.getProperties(testName);
+  }
+
+  @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    return new CassandraAdminTestUtils(getProperties(testName));
   }
 
   @Test

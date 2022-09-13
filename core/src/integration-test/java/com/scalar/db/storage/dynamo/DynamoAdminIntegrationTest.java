@@ -9,8 +9,8 @@ import org.junit.jupiter.api.Test;
 public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrationTestBase {
 
   @Override
-  protected Properties getProperties() {
-    return DynamoEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return DynamoEnv.getProperties(testName);
   }
 
   @Override

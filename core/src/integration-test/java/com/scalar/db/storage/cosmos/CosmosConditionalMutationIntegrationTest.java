@@ -12,8 +12,8 @@ import java.util.Properties;
 public class CosmosConditionalMutationIntegrationTest
     extends DistributedStorageConditionalMutationIntegrationTestBase {
   @Override
-  protected Properties getProperties() {
-    return CosmosEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return CosmosEnv.getProperties(testName);
   }
 
   @Override

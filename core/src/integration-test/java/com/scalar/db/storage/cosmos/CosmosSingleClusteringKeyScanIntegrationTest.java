@@ -11,8 +11,8 @@ import java.util.Set;
 public class CosmosSingleClusteringKeyScanIntegrationTest
     extends DistributedStorageSingleClusteringKeyScanIntegrationTestBase {
   @Override
-  protected Properties getProperties() {
-    return CosmosEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return CosmosEnv.getProperties(testName);
   }
 
   @Override

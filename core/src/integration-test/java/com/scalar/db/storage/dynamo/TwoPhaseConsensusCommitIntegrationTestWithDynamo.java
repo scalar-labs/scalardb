@@ -8,8 +8,8 @@ public class TwoPhaseConsensusCommitIntegrationTestWithDynamo
     extends TwoPhaseConsensusCommitIntegrationTestBase {
 
   @Override
-  protected Properties getProps() {
-    return DynamoEnv.getProperties();
+  protected Properties getProps(String testName) {
+    return DynamoEnv.getProperties(testName);
   }
 
   @Override

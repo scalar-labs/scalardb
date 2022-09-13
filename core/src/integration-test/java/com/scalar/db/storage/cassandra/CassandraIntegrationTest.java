@@ -5,7 +5,7 @@ import java.util.Properties;
 
 public class CassandraIntegrationTest extends DistributedStorageIntegrationTestBase {
   @Override
-  protected Properties getProperties() {
-    return CassandraEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return CassandraEnv.getProperties(testName);
   }
 }
