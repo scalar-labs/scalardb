@@ -218,7 +218,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
-  public void createNamespace_ForExistingNamespace_ShouldExecutionException() {
+  public void createNamespace_ForExistingNamespace_ShouldThrowExecutionException() {
     // Arrange
 
     // Act Assert
@@ -252,7 +252,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
-  public void dropNamespace_ForNonExistingNamespace_ShouldExecutionException() {
+  public void dropNamespace_ForNonExistingNamespace_ShouldThrowExecutionException() {
     // Arrange
 
     // Act Assert
@@ -286,7 +286,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
-  public void createTable_ForExistingTable_ShouldExecutionException() {
+  public void createTable_ForExistingTable_ShouldThrowExecutionException() {
     // Arrange
 
     // Act Assert
@@ -321,7 +321,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
-  public void dropTable_ForNonExistingTable_ShouldExecutionException() {
+  public void dropTable_ForNonExistingTable_ShouldThrowExecutionException() {
     // Arrange
 
     // Act Assert

@@ -34,10 +34,10 @@ public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrati
   @Disabled
   @Test
   @Override
-  public void createNamespace_ForExistingNamespace_ShouldExecutionException() {}
+  public void createNamespace_ForExistingNamespace_ShouldThrowExecutionException() {}
 
   @Disabled
   @Test
   @Override
-  public void dropNamespace_ForNonExistingNamespace_ShouldExecutionException() {}
+  public void dropNamespace_ForNonExistingNamespace_ShouldThrowExecutionException() {}
 }
