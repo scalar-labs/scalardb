@@ -137,7 +137,13 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
-  public void dropNamespacesTable() throws Exception {
-    throw new UnsupportedOperationException("Not yet implemented");
+  public void dropNamespacesTable() {
+    client.deleteTable(
+        DeleteTableRequest.builder()
+            .tableName(getFullTableName(metadataNamespace, DynamoAdmin.NAMESPACES_TABLE))
+            .build());
+    if (!waitForTableDeletion(metadataNamespace, DynamoAdmin.NAMESPACES_TABLE)) {
+      throw new RuntimeException("Deleting the namespaces table timed out");
+    }
   }
 }
