@@ -1,5 +1,7 @@
 package sample;
 
+import java.io.File;
+
 public class ElectronicMoneyMain {
 
   public static void main(String[] args) throws Exception {
@@ -8,6 +10,7 @@ public class ElectronicMoneyMain {
     String to = null;
     String from = null;
     String id = null;
+    String scalarDBProperties = null;
 
     for (int i = 0; i < args.length; ++i) {
       if ("-action".equals(args[i])) {
@@ -20,6 +23,8 @@ public class ElectronicMoneyMain {
         from = args[++i];
       } else if ("-id".equals(args[i])) {
         id = args[++i];
+      } else if ("-config".equals(args[i])) {
+        scalarDBProperties = args[++i];
       } else if ("-help".equals(args[i])) {
         printUsageAndExit();
         return;
@@ -31,7 +36,13 @@ public class ElectronicMoneyMain {
       return;
     }
 
-    ElectronicMoney eMoney = new ElectronicMoney();
+    ElectronicMoney eMoney;
+    if (scalarDBProperties != null) {
+      eMoney = new ElectronicMoney(scalarDBProperties);
+    } else {
+      scalarDBProperties = System.getProperty("user.dir") + File.separator + "scalardb.properties";
+      eMoney = new ElectronicMoney(scalarDBProperties);
+    }
 
     if (action.equalsIgnoreCase("charge")) {
       if (to == null || amount < 0) {
