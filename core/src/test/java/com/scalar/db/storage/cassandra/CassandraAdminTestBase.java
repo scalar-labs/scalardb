@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -840,5 +841,51 @@ public abstract class CassandraAdminTestBase {
                 quoteIfNecessary(CassandraAdmin.KEYSPACES_TABLE))
             .getQueryString();
     verify(cassandraSession).execute(selectQuery);
+  }
+
+  @Test
+  public void upgrade_withExistingUserKeyspaces_ShouldUpsertKeyspacesIntoNamespacesTable()
+      throws ExecutionException {
+    // Arrange
+    Cluster cluster = mock(Cluster.class);
+    Metadata metadata = mock(Metadata.class);
+    KeyspaceMetadata keyspace1 = mock(KeyspaceMetadata.class);
+    KeyspaceMetadata keyspace2 = mock(KeyspaceMetadata.class);
+    KeyspaceMetadata keyspace3 = mock(KeyspaceMetadata.class);
+    KeyspaceMetadata keyspace4 = mock(KeyspaceMetadata.class);
+
+    when(cassandraSession.getCluster()).thenReturn(cluster);
+    when(cluster.getMetadata()).thenReturn(metadata);
+    when(metadata.getKeyspaces())
+        .thenReturn(ImmutableList.of(keyspace1, keyspace2, keyspace3, keyspace4));
+    when(keyspace1.getName()).thenReturn("system_foo");
+    when(keyspace2.getName()).thenReturn(metadataKeyspaceName);
+    when(keyspace3.getName()).thenReturn("ks1");
+    when(keyspace4.getName()).thenReturn("ks2");
+
+    // Act
+    cassandraAdmin.upgrade(Collections.emptyMap());
+
+    // Assert
+    verifyCreateMetadataKeyspaceQuery();
+    verifyCreateKeyspacesTableQuery();
+    verify(clusterManager, times(5)).getSession();
+    String upsertKs1Query =
+        QueryBuilder.insertInto(
+                quoteIfNecessary(metadataKeyspaceName),
+                quoteIfNecessary(CassandraAdmin.KEYSPACES_TABLE))
+            .ifNotExists()
+            .value(CassandraAdmin.KEYSPACES_NAME_COL, "ks1")
+            .toString();
+
+    String upsertKs2Query =
+        QueryBuilder.insertInto(
+                quoteIfNecessary(metadataKeyspaceName),
+                quoteIfNecessary(CassandraAdmin.KEYSPACES_TABLE))
+            .ifNotExists()
+            .value(CassandraAdmin.KEYSPACES_NAME_COL, "ks2")
+            .toString();
+    verify(cassandraSession).execute(upsertKs1Query);
+    verify(cassandraSession).execute(upsertKs2Query);
   }
 }
