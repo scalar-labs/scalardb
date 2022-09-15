@@ -13,6 +13,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
@@ -119,16 +120,27 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     TableMetadata metadata = admin.getTableMetadata(namespace, table);
     if (metadata == null) {
       return null;
-    } else if (isIncludeMetadataEnabled) {
-      return metadata;
-    } else {
-      return removeTransactionMetaColumns(metadata);
     }
+    if (!ConsensusCommitUtils.isTransactionTableMetadata(metadata)) {
+      return null;
+    }
+    if (isIncludeMetadataEnabled) {
+      return metadata;
+    }
+    return removeTransactionMetaColumns(metadata);
   }
 
   @Override
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
-    return admin.getNamespaceTableNames(namespace);
+    Set<String> tables = new HashSet<>();
+    for (String table : admin.getNamespaceTableNames(namespace)) {
+      // Remove non transaction table
+      if (getTableMetadata(namespace, table) != null) {
+        tables.add(table);
+      }
+    }
+
+    return tables;
   }
 
   @Override
