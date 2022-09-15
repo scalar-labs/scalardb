@@ -6,7 +6,6 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
@@ -17,23 +16,23 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
+import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @NotThreadSafe
 public class RollbackMutationComposer extends AbstractMutationComposer {
-  private static final Logger logger = LoggerFactory.getLogger(RollbackMutationComposer.class);
+
   private final DistributedStorage storage;
   private final TransactionTableMetadataManager tableMetadataManager;
 
@@ -45,35 +44,24 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
     this.tableMetadataManager = tableMetadataManager;
   }
 
-  @VisibleForTesting
-  RollbackMutationComposer(
-      String id,
-      DistributedStorage storage,
-      TransactionTableMetadataManager tableMetadataManager,
-      List<Mutation> mutations) {
-    super(id, mutations, System.currentTimeMillis());
-    this.storage = storage;
-    this.tableMetadataManager = tableMetadataManager;
-  }
-
   /** rollback in either prepare phase in commit or lazy recovery phase in read */
   @Override
-  public void add(Operation base, TransactionResult result) throws ExecutionException {
-    TransactionResult latest;
-    if (result == null || !result.getId().equals(id)) {
-      // rollback from snapshot
-      latest = getLatestResult(base, result).orElse(null);
-      if (latest == null) {
-        logger.debug("the record was not prepared or has already rollback deleted");
-        return;
-      }
-      if (!latest.getId().equals(id)) {
-        logger.debug(
-            "the record is not prepared (yet) by this transaction or has already rolled back");
-        return;
-      }
-    } else {
-      latest = result;
+  public void add(Operation base, @Nullable TransactionResult result) throws ExecutionException {
+    // We always re-read the latest record here because of the following reasons:
+    // 1. for usual rollback, we need to check the latest status of the record
+    // 2. for rollback in lazy recovery, the result doesn't have before image columns
+    TransactionResult latest = getLatestResult(base, result).orElse(null);
+    if (latest == null) {
+      // the record was not prepared (yet) by this transaction or has already been rollback deleted
+      return;
+    }
+    if (!latest.getId().equals(id)) {
+      // the record was not prepared (yet) by this transaction or has already been rolled back
+      return;
+    }
+    if (latest.isCommitted()) {
+      // the record has already been rolled back
+      return;
     }
 
     TextValue beforeId = (TextValue) latest.getValue(Attribute.BEFORE_ID).get();
@@ -86,8 +74,9 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
   }
 
   private Put composePut(Operation base, TransactionResult result) throws ExecutionException {
-    assert result.getState().equals(TransactionState.PREPARED)
-        || result.getState().equals(TransactionState.DELETED);
+    assert result != null
+        && (result.getState().equals(TransactionState.PREPARED)
+            || result.getState().equals(TransactionState.DELETED));
 
     TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(base);
     LinkedHashSet<String> beforeImageColumnNames = metadata.getBeforeImageColumnNames();
@@ -103,7 +92,7 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
               }
             });
 
-    return new Put(getPartitionKey(base, result), getClusteringKey(base, result).orElse(null))
+    return new Put(result.getPartitionKey().get(), result.getClusteringKey().orElse(null))
         .forNamespace(base.forNamespace().get())
         .forTable(base.forTable().get())
         .withCondition(
@@ -115,10 +104,11 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
   }
 
   private Delete composeDelete(Operation base, TransactionResult result) {
-    assert result.getState().equals(TransactionState.PREPARED)
-        || result.getState().equals(TransactionState.DELETED);
+    assert result != null
+        && (result.getState().equals(TransactionState.PREPARED)
+            || result.getState().equals(TransactionState.DELETED));
 
-    return new Delete(getPartitionKey(base, result), getClusteringKey(base, result).orElse(null))
+    return new Delete(result.getPartitionKey().get(), result.getClusteringKey().orElse(null))
         .forNamespace(base.forNamespace().get())
         .forTable(base.forTable().get())
         .withCondition(
@@ -128,12 +118,31 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private Optional<TransactionResult> getLatestResult(Operation operation, TransactionResult result)
-      throws ExecutionException {
+  private Optional<TransactionResult> getLatestResult(
+      Operation operation, @Nullable TransactionResult result) throws ExecutionException {
+    Key partitionKey;
+    Key clusteringKey;
+    if (operation instanceof Mutation) {
+      // for usual rollback
+      partitionKey = operation.getPartitionKey();
+      clusteringKey = operation.getClusteringKey().orElse(null);
+    } else {
+      assert operation instanceof Selection;
+      if (result != null) {
+        // for rollback in lazy recovery
+        partitionKey = result.getPartitionKey().get();
+        clusteringKey = result.getClusteringKey().orElse(null);
+      } else {
+        // for deleting non-existing record that was prepared with DELETED for Serializable with
+        // Extra-write
+        assert operation instanceof Get;
+        partitionKey = operation.getPartitionKey();
+        clusteringKey = operation.getClusteringKey().orElse(null);
+      }
+    }
+
     Get get =
-        new Get(
-                getPartitionKey(operation, result),
-                getClusteringKey(operation, result).orElse(null))
+        new Get(partitionKey, clusteringKey)
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(operation.forNamespace().get())
             .forTable(operation.forTable().get());
