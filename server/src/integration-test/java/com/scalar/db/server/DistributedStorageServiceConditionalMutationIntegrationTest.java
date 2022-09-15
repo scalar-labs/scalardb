@@ -2,7 +2,6 @@ package com.scalar.db.server;
 
 import com.scalar.db.api.DistributedStorageConditionalMutationIntegrationTestBase;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.util.TestUtils;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
@@ -13,17 +12,17 @@ public class DistributedStorageServiceConditionalMutationIntegrationTest
   private ScalarDbServer server;
 
   @Override
-  protected void initialize() throws IOException {
-    Properties properties = ServerEnv.getServerProperties();
+  protected void initialize(String testName) throws IOException {
+    Properties properties = ServerEnv.getServerProperties(testName);
     if (properties != null) {
-      server = new ScalarDbServer(TestUtils.addSuffix(properties, TEST_NAME));
+      server = new ScalarDbServer(properties);
       server.start();
     }
   }
 
   @Override
-  protected Properties getProperties() {
-    return ServerEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return ServerEnv.getProperties(testName);
   }
 
   @AfterAll

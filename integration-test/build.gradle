@@ -1,0 +1,58 @@
+plugins {
+    id 'com.github.spotbugs' version "${spotbugsPluginVersion}"
+    id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
+}
+
+dependencies {
+    implementation project(':core')
+    implementation project(':schema-loader')
+    implementation "com.google.guava:guava:${guavaVersion}"
+    implementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
+    implementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
+    runtimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+    implementation "org.assertj:assertj-core:${assertjVersion}"
+    implementation "org.mockito:mockito-core:${mockitoVersion}"
+    implementation "org.mockito:mockito-inline:${mockitoVersion}"
+    implementation "org.apache.commons:commons-lang3:${commonsLangVersion}"
+    implementation "com.google.code.gson:gson:${gsonVersion}"
+
+    // for SpotBugs
+    compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
+    testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
+
+    // for Error Prone
+    errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
+    errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
+}
+
+javadoc {
+    title = "Scalar DB Integration test"
+}
+
+spotless {
+    java {
+        target 'src/*/java/**/*.java'
+        importOrder()
+        removeUnusedImports()
+        googleJavaFormat()
+    }
+}
+
+spotbugsMain.reports {
+    html.enabled = true
+}
+spotbugsMain.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
+
+spotbugsTest.reports {
+    html.enabled = true
+}
+spotbugsTest.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
+
+archivesBaseName = "scalardb-integration-test"
+
+// for archiving and uploading to maven central
+if (!project.gradle.startParameter.taskNames.isEmpty() &&
+        (project.gradle.startParameter.taskNames[0].endsWith('publish') ||
+                project.gradle.startParameter.taskNames[0].endsWith('publishToMavenLocal'))) {
+    apply from: 'archive.gradle'
+}

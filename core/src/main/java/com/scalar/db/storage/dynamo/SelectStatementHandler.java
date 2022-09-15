@@ -55,6 +55,7 @@ public class SelectStatementHandler {
    *
    * @param client {@code DynamoDbClient}
    * @param metadataManager {@code TableMetadataManager}
+   * @param namespacePrefix a namespace prefix
    */
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public SelectStatementHandler(

@@ -32,8 +32,9 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class MultiStorageIntegrationTest {
 
-  private static final String NAMESPACE1 = "integration_testing1";
-  private static final String NAMESPACE2 = "integration_testing2";
+  private static final String TEST_NAME = "mstorage";
+  private static final String NAMESPACE1 = "int_test_" + TEST_NAME + "1";
+  private static final String NAMESPACE2 = "int_test_" + TEST_NAME + "2";
   private static final String TABLE1 = "test_table1";
   private static final String TABLE2 = "test_table2";
   private static final String TABLE3 = "test_table3";
@@ -54,31 +55,32 @@ public class MultiStorageIntegrationTest {
           .addClusteringKey(COL_NAME4)
           .build();
 
-  private DistributedStorage storage1;
-  private DistributedStorageAdmin admin1;
-  private DistributedStorage storage2;
-  private DistributedStorageAdmin admin2;
+  private DistributedStorage cassandra;
+  private DistributedStorageAdmin cassandraAdmin;
+  private DistributedStorage jdbcDatabase;
+  private DistributedStorageAdmin jdbcAdmin;
   private MultiStorage multiStorage;
 
   @BeforeAll
   public void beforeAll() throws ExecutionException {
-    initStorage1AndAdmin1();
-    initStorage2AndAdmin2();
+    initCassandraAndCassandraAdmin();
+    initJdbcDatabaseAndJdbcAdmin();
     initMultiStorage();
   }
 
-  private void initStorage1AndAdmin1() throws ExecutionException {
-    StorageFactory factory = StorageFactory.create(MultiStorageEnv.getPropertiesForStorage1());
-    admin1 = factory.getAdmin();
-    createTables(admin1);
-    storage1 = factory.getStorage();
+  private void initCassandraAndCassandraAdmin() throws ExecutionException {
+    StorageFactory factory =
+        StorageFactory.create(MultiStorageEnv.getPropertiesForCassandra(TEST_NAME));
+    cassandraAdmin = factory.getAdmin();
+    createTables(cassandraAdmin);
+    cassandra = factory.getStorage();
   }
 
-  private void initStorage2AndAdmin2() throws ExecutionException {
-    StorageFactory factory = StorageFactory.create(MultiStorageEnv.getPropertiesForStorage2());
-    admin2 = factory.getAdmin();
-    createTables(admin2);
-    storage2 = factory.getStorage();
+  private void initJdbcDatabaseAndJdbcAdmin() throws ExecutionException {
+    StorageFactory factory = StorageFactory.create(MultiStorageEnv.getPropertiesForJdbc(TEST_NAME));
+    jdbcAdmin = factory.getAdmin();
+    createTables(jdbcAdmin);
+    jdbcDatabase = factory.getStorage();
   }
 
   private void createTables(DistributedStorageAdmin admin) throws ExecutionException {
@@ -94,65 +96,45 @@ public class MultiStorageIntegrationTest {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
 
-    // Define storages, storage1 and storage2
-    props.setProperty(MultiStorageConfig.STORAGES, "storage1,storage2");
+    // Define storages, cassandra and jdbc
+    props.setProperty(MultiStorageConfig.STORAGES, "cassandra,jdbc");
 
-    Properties propertiesForStorage1 = MultiStorageEnv.getPropertiesForStorage1();
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".storage1.storage",
-        propertiesForStorage1.getProperty(DatabaseConfig.STORAGE));
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".storage1.contact_points",
-        propertiesForStorage1.getProperty(DatabaseConfig.CONTACT_POINTS));
-    if (propertiesForStorage1.containsKey(DatabaseConfig.CONTACT_PORT)) {
+    Properties propertiesForCassandra = MultiStorageEnv.getPropertiesForCassandra(TEST_NAME);
+    for (String propertyName : propertiesForCassandra.stringPropertyNames()) {
       props.setProperty(
-          MultiStorageConfig.STORAGES + ".storage1.contact_port",
-          propertiesForStorage1.getProperty(DatabaseConfig.CONTACT_PORT));
+          MultiStorageConfig.STORAGES
+              + ".cassandra."
+              + propertyName.substring(DatabaseConfig.PREFIX.length()),
+          propertiesForCassandra.getProperty(propertyName));
     }
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".storage1.username",
-        propertiesForStorage1.getProperty(DatabaseConfig.USERNAME));
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".storage1.password",
-        propertiesForStorage1.getProperty(DatabaseConfig.PASSWORD));
 
-    Properties propertiesForStorage2 = MultiStorageEnv.getPropertiesForStorage2();
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".storage2.storage",
-        propertiesForStorage2.getProperty(DatabaseConfig.STORAGE));
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".storage2.contact_points",
-        propertiesForStorage2.getProperty(DatabaseConfig.CONTACT_POINTS));
-    if (propertiesForStorage2.containsKey(DatabaseConfig.CONTACT_PORT)) {
+    Properties propertiesForJdbc = MultiStorageEnv.getPropertiesForJdbc(TEST_NAME);
+    for (String propertyName : propertiesForJdbc.stringPropertyNames()) {
       props.setProperty(
-          MultiStorageConfig.STORAGES + ".storage2.contact_port",
-          propertiesForStorage2.getProperty(DatabaseConfig.CONTACT_PORT));
+          MultiStorageConfig.STORAGES
+              + ".jdbc."
+              + propertyName.substring(DatabaseConfig.PREFIX.length()),
+          propertiesForJdbc.getProperty(propertyName));
     }
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".storage2.username",
-        propertiesForStorage2.getProperty(DatabaseConfig.USERNAME));
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".storage2.password",
-        propertiesForStorage2.getProperty(DatabaseConfig.PASSWORD));
 
-    // Define table mapping from table1 to storage1, and from table2 to storage2
+    // Define table mapping from table1 to cassandra, and from table2 to jdbc
     props.setProperty(
         MultiStorageConfig.TABLE_MAPPING,
-        NAMESPACE1 + "." + TABLE1 + ":storage1," + NAMESPACE1 + "." + TABLE2 + ":storage2");
+        NAMESPACE1 + "." + TABLE1 + ":cassandra," + NAMESPACE1 + "." + TABLE2 + ":jdbc");
 
-    // Define namespace mapping from namespace2 to storage2
-    props.setProperty(MultiStorageConfig.NAMESPACE_MAPPING, NAMESPACE2 + ":storage2");
+    // Define namespace mapping from namespace2 to jdbc
+    props.setProperty(MultiStorageConfig.NAMESPACE_MAPPING, NAMESPACE2 + ":jdbc");
 
-    // The default storage is storage1
-    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "storage1");
+    // The default storage is cassandra
+    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
     multiStorage = new MultiStorage(new DatabaseConfig(props));
   }
 
   @BeforeEach
   public void setUp() throws ExecutionException {
-    truncateTables(admin1);
-    truncateTables(admin2);
+    truncateTables(cassandraAdmin);
+    truncateTables(jdbcAdmin);
   }
 
   private void truncateTables(DistributedStorageAdmin admin) throws ExecutionException {
@@ -165,8 +147,8 @@ public class MultiStorageIntegrationTest {
   @AfterAll
   public void afterAll() throws ExecutionException {
     multiStorage.close();
-    cleanUp(storage1, admin1);
-    cleanUp(storage2, admin2);
+    cleanUp(cassandra, cassandraAdmin);
+    cleanUp(jdbcDatabase, jdbcAdmin);
   }
 
   private void cleanUp(DistributedStorage storage, DistributedStorageAdmin admin)
@@ -183,7 +165,7 @@ public class MultiStorageIntegrationTest {
   }
 
   @Test
-  public void whenPutDataIntoTable1_DataShouldBeWrittenIntoStorage1() throws ExecutionException {
+  public void whenPutDataIntoTable1_DataShouldBeWrittenIntoCassandra() throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
@@ -211,7 +193,7 @@ public class MultiStorageIntegrationTest {
     assertThat(getCol4Value(result.get())).isEqualTo(4);
     assertThat(getCol5Value(result.get())).isTrue();
 
-    result = storage1.get(get);
+    result = cassandra.get(get);
     assertThat(result.isPresent()).isTrue();
     assertThat(getCol1Value(result.get())).isEqualTo(1);
     assertThat(getCol2Value(result.get())).isEqualTo("val2");
@@ -219,12 +201,13 @@ public class MultiStorageIntegrationTest {
     assertThat(getCol4Value(result.get())).isEqualTo(4);
     assertThat(getCol5Value(result.get())).isTrue();
 
-    result = storage2.get(get);
+    result = jdbcDatabase.get(get);
     assertThat(result.isPresent()).isFalse();
   }
 
   @Test
-  public void whenPutDataIntoTable2_DataShouldBeWrittenIntoStorage2() throws ExecutionException {
+  public void whenPutDataIntoTable2_DataShouldBeWrittenIntoJdbcDatabase()
+      throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
@@ -252,10 +235,10 @@ public class MultiStorageIntegrationTest {
     assertThat(getCol4Value(result.get())).isEqualTo(4);
     assertThat(getCol5Value(result.get())).isTrue();
 
-    result = storage1.get(get);
+    result = cassandra.get(get);
     assertThat(result.isPresent()).isFalse();
 
-    result = storage2.get(get);
+    result = jdbcDatabase.get(get);
     assertThat(result.isPresent()).isTrue();
     assertThat(getCol1Value(result.get())).isEqualTo(1);
     assertThat(getCol2Value(result.get())).isEqualTo("val2");
@@ -295,7 +278,7 @@ public class MultiStorageIntegrationTest {
     assertThat(getCol4Value(result.get())).isEqualTo(4);
     assertThat(getCol5Value(result.get())).isTrue();
 
-    result = storage1.get(get);
+    result = cassandra.get(get);
     assertThat(result.isPresent()).isTrue();
     assertThat(getCol1Value(result.get())).isEqualTo(1);
     assertThat(getCol2Value(result.get())).isEqualTo("val2");
@@ -303,12 +286,12 @@ public class MultiStorageIntegrationTest {
     assertThat(getCol4Value(result.get())).isEqualTo(4);
     assertThat(getCol5Value(result.get())).isTrue();
 
-    result = storage2.get(get);
+    result = jdbcDatabase.get(get);
     assertThat(result.isPresent()).isFalse();
   }
 
   @Test
-  public void whenScanDataFromTable1_DataShouldBeScannedFromStorage1()
+  public void whenScanDataFromTable1_DataShouldBeScannedFromCassandra()
       throws ExecutionException, IOException {
     // Arrange
     String namespace = NAMESPACE1;
@@ -318,7 +301,7 @@ public class MultiStorageIntegrationTest {
     Key clusteringKey2 = new Key(COL_NAME4, 1);
     Key clusteringKey3 = new Key(COL_NAME4, 2);
 
-    storage1.mutate(
+    cassandra.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey1)
                 .withValue(COL_NAME3, 2)
@@ -350,7 +333,7 @@ public class MultiStorageIntegrationTest {
   }
 
   @Test
-  public void whenScanDataFromTable2_DataShouldBeScannedFromStorage2()
+  public void whenScanDataFromTable2_DataShouldBeScannedFromJdbcDatabase()
       throws ExecutionException, IOException {
     // Arrange
     String namespace = NAMESPACE1;
@@ -360,7 +343,7 @@ public class MultiStorageIntegrationTest {
     Key clusteringKey2 = new Key(COL_NAME4, 1);
     Key clusteringKey3 = new Key(COL_NAME4, 2);
 
-    storage2.mutate(
+    jdbcDatabase.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey1)
                 .withValue(COL_NAME3, 2)
@@ -402,7 +385,7 @@ public class MultiStorageIntegrationTest {
     Key clusteringKey2 = new Key(COL_NAME4, 1);
     Key clusteringKey3 = new Key(COL_NAME4, 2);
 
-    storage1.mutate(
+    cassandra.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey1)
                 .withValue(COL_NAME3, 2)
@@ -440,7 +423,8 @@ public class MultiStorageIntegrationTest {
   }
 
   @Test
-  public void whenDeleteDataFromTable1_DataShouldBeDeletedFromStorage1() throws ExecutionException {
+  public void whenDeleteDataFromTable1_DataShouldBeDeletedFromCassandra()
+      throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
@@ -452,8 +436,8 @@ public class MultiStorageIntegrationTest {
             .forNamespace(namespace)
             .forTable(table);
 
-    storage1.put(put);
-    storage2.put(put);
+    cassandra.put(put);
+    jdbcDatabase.put(put);
 
     // Act
     multiStorage.delete(
@@ -465,10 +449,10 @@ public class MultiStorageIntegrationTest {
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isFalse();
 
-    result = storage1.get(get);
+    result = cassandra.get(get);
     assertThat(result.isPresent()).isFalse();
 
-    result = storage2.get(get);
+    result = jdbcDatabase.get(get);
     assertThat(result.isPresent()).isTrue();
     assertThat(getCol1Value(result.get())).isEqualTo(1);
     assertThat(getCol3Value(result.get())).isEqualTo(3);
@@ -476,7 +460,8 @@ public class MultiStorageIntegrationTest {
   }
 
   @Test
-  public void whenDeleteDataFromTable2_DataShouldBeDeletedFromStorage2() throws ExecutionException {
+  public void whenDeleteDataFromTable2_DataShouldBeDeletedFromJdbcDatabase()
+      throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
@@ -488,8 +473,8 @@ public class MultiStorageIntegrationTest {
             .forNamespace(namespace)
             .forTable(table);
 
-    storage1.put(put);
-    storage2.put(put);
+    cassandra.put(put);
+    jdbcDatabase.put(put);
 
     // Act
     multiStorage.delete(
@@ -501,13 +486,13 @@ public class MultiStorageIntegrationTest {
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isFalse();
 
-    result = storage1.get(get);
+    result = cassandra.get(get);
     assertThat(result.isPresent()).isTrue();
     assertThat(getCol1Value(result.get())).isEqualTo(1);
     assertThat(getCol3Value(result.get())).isEqualTo(3);
     assertThat(getCol4Value(result.get())).isEqualTo(4);
 
-    result = storage2.get(get);
+    result = jdbcDatabase.get(get);
     assertThat(result.isPresent()).isFalse();
   }
 
@@ -525,8 +510,8 @@ public class MultiStorageIntegrationTest {
             .forNamespace(namespace)
             .forTable(table);
 
-    storage1.put(put);
-    storage2.put(put);
+    cassandra.put(put);
+    jdbcDatabase.put(put);
 
     // Act
     multiStorage.delete(
@@ -538,10 +523,10 @@ public class MultiStorageIntegrationTest {
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isFalse();
 
-    result = storage1.get(get);
+    result = cassandra.get(get);
     assertThat(result.isPresent()).isFalse();
 
-    result = storage2.get(get);
+    result = jdbcDatabase.get(get);
     assertThat(result.isPresent()).isTrue();
     assertThat(getCol1Value(result.get())).isEqualTo(1);
     assertThat(getCol3Value(result.get())).isEqualTo(3);
@@ -549,7 +534,7 @@ public class MultiStorageIntegrationTest {
   }
 
   @Test
-  public void whenMutateDataToTable1_ShouldExecuteForStorage1() throws ExecutionException {
+  public void whenMutateDataToTable1_ShouldExecuteForCassandra() throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
@@ -562,8 +547,8 @@ public class MultiStorageIntegrationTest {
             .forNamespace(namespace)
             .forTable(table);
 
-    storage1.put(put);
-    storage2.put(put);
+    cassandra.put(put);
+    jdbcDatabase.put(put);
 
     // Act
     multiStorage.mutate(
@@ -586,25 +571,25 @@ public class MultiStorageIntegrationTest {
     assertThat(getCol3Value(result.get())).isEqualTo(3);
     assertThat(getCol4Value(result.get())).isEqualTo(2);
 
-    result = storage1.get(get1);
+    result = cassandra.get(get1);
     assertThat(result.isPresent()).isFalse();
-    result = storage1.get(get2);
+    result = cassandra.get(get2);
     assertThat(result.isPresent()).isTrue();
     assertThat(getCol1Value(result.get())).isEqualTo(1);
     assertThat(getCol3Value(result.get())).isEqualTo(3);
     assertThat(getCol4Value(result.get())).isEqualTo(2);
 
-    result = storage2.get(get1);
+    result = jdbcDatabase.get(get1);
     assertThat(result.isPresent()).isTrue();
     assertThat(getCol1Value(result.get())).isEqualTo(1);
     assertThat(getCol3Value(result.get())).isEqualTo(3);
     assertThat(getCol4Value(result.get())).isEqualTo(1);
-    result = storage2.get(get2);
+    result = jdbcDatabase.get(get2);
     assertThat(result.isPresent()).isFalse();
   }
 
   @Test
-  public void whenMutateDataToTable2_ShouldExecuteForStorage2() throws ExecutionException {
+  public void whenMutateDataToTable2_ShouldExecuteForJdbcDatabase() throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
@@ -617,8 +602,8 @@ public class MultiStorageIntegrationTest {
             .forNamespace(namespace)
             .forTable(table);
 
-    storage1.put(put);
-    storage2.put(put);
+    cassandra.put(put);
+    jdbcDatabase.put(put);
 
     // Act
     multiStorage.mutate(
@@ -641,17 +626,17 @@ public class MultiStorageIntegrationTest {
     assertThat(getCol3Value(result.get())).isEqualTo(3);
     assertThat(getCol4Value(result.get())).isEqualTo(2);
 
-    result = storage1.get(get1);
+    result = cassandra.get(get1);
     assertThat(result.isPresent()).isTrue();
     assertThat(getCol1Value(result.get())).isEqualTo(1);
     assertThat(getCol3Value(result.get())).isEqualTo(3);
     assertThat(getCol4Value(result.get())).isEqualTo(1);
-    result = storage1.get(get2);
+    result = cassandra.get(get2);
     assertThat(result.isPresent()).isFalse();
 
-    result = storage2.get(get1);
+    result = jdbcDatabase.get(get1);
     assertThat(result.isPresent()).isFalse();
-    result = storage2.get(get2);
+    result = jdbcDatabase.get(get2);
     assertThat(result.isPresent()).isTrue();
     assertThat(getCol1Value(result.get())).isEqualTo(1);
     assertThat(getCol3Value(result.get())).isEqualTo(3);
@@ -672,8 +657,8 @@ public class MultiStorageIntegrationTest {
             .forNamespace(namespace)
             .forTable(table);
 
-    storage1.put(put);
-    storage2.put(put);
+    cassandra.put(put);
+    jdbcDatabase.put(put);
 
     // Act
     multiStorage.mutate(
@@ -696,25 +681,25 @@ public class MultiStorageIntegrationTest {
     assertThat(getCol3Value(result.get())).isEqualTo(3);
     assertThat(getCol4Value(result.get())).isEqualTo(2);
 
-    result = storage1.get(get1);
+    result = cassandra.get(get1);
     assertThat(result.isPresent()).isFalse();
-    result = storage1.get(get2);
+    result = cassandra.get(get2);
     assertThat(result.isPresent()).isTrue();
     assertThat(getCol1Value(result.get())).isEqualTo(1);
     assertThat(getCol3Value(result.get())).isEqualTo(3);
     assertThat(getCol4Value(result.get())).isEqualTo(2);
 
-    result = storage2.get(get1);
+    result = jdbcDatabase.get(get1);
     assertThat(result.isPresent()).isTrue();
     assertThat(getCol1Value(result.get())).isEqualTo(1);
     assertThat(getCol3Value(result.get())).isEqualTo(3);
     assertThat(getCol4Value(result.get())).isEqualTo(1);
-    result = storage2.get(get2);
+    result = jdbcDatabase.get(get2);
     assertThat(result.isPresent()).isFalse();
   }
 
   @Test
-  public void whenPutDataIntoTable1InNamespace2_DataShouldBeWrittenIntoStorage2()
+  public void whenPutDataIntoTable1InNamespace2_DataShouldBeWrittenIntoJdbcDatabase()
       throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE2;
@@ -743,10 +728,10 @@ public class MultiStorageIntegrationTest {
     assertThat(getCol4Value(result.get())).isEqualTo(4);
     assertThat(getCol5Value(result.get())).isTrue();
 
-    result = storage1.get(get);
+    result = cassandra.get(get);
     assertThat(result.isPresent()).isFalse();
 
-    result = storage2.get(get);
+    result = jdbcDatabase.get(get);
     assertThat(result.isPresent()).isTrue();
     assertThat(getCol1Value(result.get())).isEqualTo(1);
     assertThat(getCol2Value(result.get())).isEqualTo("val2");
@@ -756,7 +741,7 @@ public class MultiStorageIntegrationTest {
   }
 
   @Test
-  public void whenScanDataFromTable1InNamespace2_DataShouldBeScannedFromStorage2()
+  public void whenScanDataFromTable1InNamespace2_DataShouldBeScannedFromJdbcDatabase()
       throws ExecutionException, IOException {
     // Arrange
     String namespace = NAMESPACE2;
@@ -766,7 +751,7 @@ public class MultiStorageIntegrationTest {
     Key clusteringKey2 = new Key(COL_NAME4, 1);
     Key clusteringKey3 = new Key(COL_NAME4, 2);
 
-    storage2.mutate(
+    jdbcDatabase.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey1)
                 .withValue(COL_NAME3, 2)
@@ -798,7 +783,7 @@ public class MultiStorageIntegrationTest {
   }
 
   @Test
-  public void whenDeleteDataFromTable1InNamespace2_DataShouldBeDeletedFromStorage2()
+  public void whenDeleteDataFromTable1InNamespace2_DataShouldBeDeletedFromJdbcDatabase()
       throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE2;
@@ -811,8 +796,8 @@ public class MultiStorageIntegrationTest {
             .forNamespace(namespace)
             .forTable(table);
 
-    storage1.put(put);
-    storage2.put(put);
+    cassandra.put(put);
+    jdbcDatabase.put(put);
 
     // Act
     multiStorage.delete(
@@ -824,18 +809,18 @@ public class MultiStorageIntegrationTest {
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isFalse();
 
-    result = storage1.get(get);
+    result = cassandra.get(get);
     assertThat(result.isPresent()).isTrue();
     assertThat(getCol1Value(result.get())).isEqualTo(1);
     assertThat(getCol3Value(result.get())).isEqualTo(3);
     assertThat(getCol4Value(result.get())).isEqualTo(4);
 
-    result = storage2.get(get);
+    result = jdbcDatabase.get(get);
     assertThat(result.isPresent()).isFalse();
   }
 
   @Test
-  public void whenMutateDataToTable1InNamespace2_ShouldExecuteForStorage1()
+  public void whenMutateDataToTable1InNamespace2_ShouldExecuteForCassandra()
       throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE2;
@@ -849,8 +834,8 @@ public class MultiStorageIntegrationTest {
             .forNamespace(namespace)
             .forTable(table);
 
-    storage1.put(put);
-    storage2.put(put);
+    cassandra.put(put);
+    jdbcDatabase.put(put);
 
     // Act
     multiStorage.mutate(
@@ -873,17 +858,17 @@ public class MultiStorageIntegrationTest {
     assertThat(getCol3Value(result.get())).isEqualTo(3);
     assertThat(getCol4Value(result.get())).isEqualTo(2);
 
-    result = storage1.get(get1);
+    result = cassandra.get(get1);
     assertThat(result.isPresent()).isTrue();
     assertThat(getCol1Value(result.get())).isEqualTo(1);
     assertThat(getCol3Value(result.get())).isEqualTo(3);
     assertThat(getCol4Value(result.get())).isEqualTo(1);
-    result = storage1.get(get2);
+    result = cassandra.get(get2);
     assertThat(result.isPresent()).isFalse();
 
-    result = storage2.get(get1);
+    result = jdbcDatabase.get(get1);
     assertThat(result.isPresent()).isFalse();
-    result = storage2.get(get2);
+    result = jdbcDatabase.get(get2);
     assertThat(result.isPresent()).isTrue();
     assertThat(getCol1Value(result.get())).isEqualTo(1);
     assertThat(getCol3Value(result.get())).isEqualTo(3);
