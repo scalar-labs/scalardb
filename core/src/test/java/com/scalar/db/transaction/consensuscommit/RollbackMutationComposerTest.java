@@ -284,22 +284,6 @@ public class RollbackMutationComposerTest {
   }
 
   @Test
-  public void add_PutAndNullResultGivenAndItsAlreadyCommitted_ShouldDoNothing()
-      throws ExecutionException {
-    // Arrange
-    when(storage.get(any(Get.class)))
-        .thenReturn(Optional.of(prepareResult(TransactionState.COMMITTED)));
-    Put put = preparePut();
-
-    // Act
-    composer.add(put, null);
-
-    // Assert
-    assertThat(composer.get().size()).isEqualTo(0);
-    verify(storage).get(any(Get.class));
-  }
-
-  @Test
   public void add_PutAndResultFromSnapshotGivenAndPreparedResultGivenFromStorage_ShouldComposePut()
       throws ExecutionException {
     // Arrange
@@ -378,23 +362,6 @@ public class RollbackMutationComposerTest {
     // Arrange
     TransactionResult result = prepareInitialResult(ANY_ID_1, TransactionState.COMMITTED);
     when(storage.get(any(Get.class))).thenReturn(Optional.empty());
-    Put put = preparePut();
-
-    // Act
-    composer.add(put, result);
-
-    // Assert
-    assertThat(composer.get().size()).isEqualTo(0);
-    verify(storage).get(any(Get.class));
-  }
-
-  @Test
-  public void add_PutAndResultFromSnapshotGivenAndItsAlreadyCommitted_ShouldDoNothing()
-      throws ExecutionException {
-    // Arrange
-    TransactionResult result = prepareInitialResult(ANY_ID_1, TransactionState.COMMITTED);
-    when(storage.get(any(Get.class)))
-        .thenReturn(Optional.of(prepareResult(TransactionState.COMMITTED)));
     Put put = preparePut();
 
     // Act

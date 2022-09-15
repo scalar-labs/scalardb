@@ -59,10 +59,6 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
       // the record was not prepared (yet) by this transaction or has already been rolled back
       return;
     }
-    if (latest.isCommitted()) {
-      // the record has already been rolled back
-      return;
-    }
 
     TextValue beforeId = (TextValue) latest.getValue(Attribute.BEFORE_ID).get();
     if (beforeId.get().isPresent()) {
