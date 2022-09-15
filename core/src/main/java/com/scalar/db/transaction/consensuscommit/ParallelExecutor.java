@@ -54,8 +54,12 @@ public class ParallelExecutor {
   public void prepare(List<ParallelExecutorTask> tasks, String transactionId)
       throws ExecutionException {
     try {
-      // when the parallel preparation disabled, we stop running the tasks when one of them fails.
-      // when not, we need to wait for all the tasks to finish even if some of them fail
+      // When parallel preparation is disabled, we stop running the tasks when one of them fails
+      // (stopOnError=true). When not, however, we need to wait for all the tasks to finish even if
+      // some of them fail (stopOnError=false). This is because enabling stopOnError in parallel
+      // preparation would cause the corresponding rollback to be executed earlier than the
+      // preparation of records, which could result in left-unrecovered records even in a normal
+      // case. Thus, we disable stopOnError when parallel preparation is enabled.
       boolean stopOnError = !config.isParallelPreparationEnabled();
 
       executeTasks(
