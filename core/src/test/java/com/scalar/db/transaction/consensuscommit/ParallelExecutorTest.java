@@ -101,7 +101,7 @@ public class ParallelExecutorTest {
 
   @Test
   public void
-      prepare_ParallelPreparationEnabled_ExecutionExceptionThrownByTask_ShouldStopRunningTasks()
+      prepare_ParallelPreparationEnabled_ExecutionExceptionThrownByTask_ShouldNotStopRunningTasks()
           throws ExecutionException, CommitConflictException {
     // Arrange
     when(config.isParallelPreparationEnabled()).thenReturn(true);
@@ -111,7 +111,7 @@ public class ParallelExecutorTest {
     assertThatThrownBy(() -> parallelExecutor.prepare(tasks, TX_ID))
         .isInstanceOf(ExecutionException.class);
 
-    verify(task, atMost(tasks.size())).run();
+    verify(task, times(tasks.size())).run();
     verify(parallelExecutorService, times(tasks.size())).execute(any());
   }
 

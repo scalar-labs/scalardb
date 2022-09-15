@@ -54,8 +54,17 @@ public class ParallelExecutor {
   public void prepare(List<ParallelExecutorTask> tasks, String transactionId)
       throws ExecutionException {
     try {
+      // when the parallel preparation disabled, we stop running the tasks when one of them fails.
+      // when not, we need to wait for all the tasks to finish even if some of them fail
+      boolean stopOnError = !config.isParallelPreparationEnabled();
+
       executeTasks(
-          tasks, config.isParallelPreparationEnabled(), false, true, "preparation", transactionId);
+          tasks,
+          config.isParallelPreparationEnabled(),
+          false,
+          stopOnError,
+          "preparation",
+          transactionId);
     } catch (CommitConflictException ignored) {
       // tasks for preparation should not throw CommitConflictException
     }
