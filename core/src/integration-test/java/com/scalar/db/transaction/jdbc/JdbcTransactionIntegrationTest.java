@@ -14,9 +14,9 @@ public class JdbcTransactionIntegrationTest extends DistributedTransactionIntegr
   }
 
   @Override
-  protected Properties getProperties() {
+  protected Properties getProperties(String testName) {
     Properties properties = new Properties();
-    properties.putAll(JdbcEnv.getProperties());
+    properties.putAll(JdbcEnv.getProperties(testName));
     properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "jdbc");
     return properties;
   }

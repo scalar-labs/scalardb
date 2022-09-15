@@ -10,8 +10,8 @@ public class ConsensusCommitAdminIntegrationTestWithDynamo
     extends ConsensusCommitAdminIntegrationTestBase {
 
   @Override
-  protected Properties getProps() {
-    return DynamoEnv.getProperties();
+  protected Properties getProps(String testName) {
+    return DynamoEnv.getProperties(testName);
   }
 
   @Override
@@ -35,10 +35,10 @@ public class ConsensusCommitAdminIntegrationTestWithDynamo
   @Disabled
   @Test
   @Override
-  public void createNamespace_ForExistingNamespace_ShouldExecutionException() {}
+  public void createNamespace_ForExistingNamespace_ShouldThrowExecutionException() {}
 
   @Disabled
   @Test
   @Override
-  public void dropNamespace_ForNonExistingNamespace_ShouldExecutionException() {}
+  public void dropNamespace_ForNonExistingNamespace_ShouldThrowExecutionException() {}
 }

@@ -9,8 +9,8 @@ public class TwoPhaseConsensusCommitIntegrationTestWithCosmos
     extends TwoPhaseConsensusCommitIntegrationTestBase {
 
   @Override
-  protected Properties getProps() {
-    return CosmosEnv.getProperties();
+  protected Properties getProps(String testName) {
+    return CosmosEnv.getProperties(testName);
   }
 
   @Override

@@ -6,7 +6,7 @@ import java.util.Properties;
 public class CassandraSingleClusteringKeyScanIntegrationTest
     extends DistributedStorageSingleClusteringKeyScanIntegrationTestBase {
   @Override
-  protected Properties getProperties() {
-    return CassandraEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return CassandraEnv.getProperties(testName);
   }
 }

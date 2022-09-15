@@ -8,8 +8,8 @@ import java.util.Properties;
 public class CosmosColumnValueIntegrationTest
     extends DistributedStorageColumnValueIntegrationTestBase {
   @Override
-  protected Properties getProperties() {
-    return CosmosEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return CosmosEnv.getProperties(testName);
   }
 
   @Override

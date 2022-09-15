@@ -44,6 +44,7 @@ public class BatchHandler {
    *
    * @param client {@code DynamoDbClient} to create a statement with
    * @param metadataManager {@code TableMetadataManager}
+   * @param namespacePrefix a namespace prefix
    */
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public BatchHandler(

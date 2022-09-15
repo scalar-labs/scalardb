@@ -9,8 +9,8 @@ import org.junit.jupiter.api.Test;
 public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrationTestBase {
 
   @Override
-  protected Properties getProperties() {
-    return DynamoEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return DynamoEnv.getProperties(testName);
   }
 
   @Override
@@ -34,10 +34,10 @@ public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrati
   @Disabled
   @Test
   @Override
-  public void createNamespace_ForExistingNamespace_ShouldExecutionException() {}
+  public void createNamespace_ForExistingNamespace_ShouldThrowExecutionException() {}
 
   @Disabled
   @Test
   @Override
-  public void dropNamespace_ForNonExistingNamespace_ShouldExecutionException() {}
+  public void dropNamespace_ForNonExistingNamespace_ShouldThrowExecutionException() {}
 }
