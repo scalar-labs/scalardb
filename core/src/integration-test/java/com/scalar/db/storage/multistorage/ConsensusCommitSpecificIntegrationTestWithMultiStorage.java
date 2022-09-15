@@ -9,64 +9,44 @@ public class ConsensusCommitSpecificIntegrationTestWithMultiStorage
     extends ConsensusCommitSpecificIntegrationTestBase {
 
   @Override
-  protected Properties getProperties() {
+  protected Properties getProperties(String testName) {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
 
-    // Define storages, storage1 and storage2
-    props.setProperty(MultiStorageConfig.STORAGES, "storage1,storage2");
+    // Define storages, cassandra and jdbc
+    props.setProperty(MultiStorageConfig.STORAGES, "cassandra,jdbc");
 
-    Properties propertiesForStorage1 = MultiStorageEnv.getPropertiesForStorage1();
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".storage1.storage",
-        propertiesForStorage1.getProperty(DatabaseConfig.STORAGE));
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".storage1.contact_points",
-        propertiesForStorage1.getProperty(DatabaseConfig.CONTACT_POINTS));
-    if (propertiesForStorage1.containsKey(DatabaseConfig.CONTACT_PORT)) {
+    Properties propertiesForCassandra = MultiStorageEnv.getPropertiesForCassandra(testName);
+    for (String propertyName : propertiesForCassandra.stringPropertyNames()) {
       props.setProperty(
-          MultiStorageConfig.STORAGES + ".storage1.contact_port",
-          propertiesForStorage1.getProperty(DatabaseConfig.CONTACT_PORT));
+          MultiStorageConfig.STORAGES
+              + ".cassandra."
+              + propertyName.substring(DatabaseConfig.PREFIX.length()),
+          propertiesForCassandra.getProperty(propertyName));
     }
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".storage1.username",
-        propertiesForStorage1.getProperty(DatabaseConfig.USERNAME));
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".storage1.password",
-        propertiesForStorage1.getProperty(DatabaseConfig.PASSWORD));
 
-    Properties propertiesForStorage2 = MultiStorageEnv.getPropertiesForStorage2();
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".storage2.storage",
-        propertiesForStorage2.getProperty(DatabaseConfig.STORAGE));
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".storage2.contact_points",
-        propertiesForStorage2.getProperty(DatabaseConfig.CONTACT_POINTS));
-    if (propertiesForStorage2.containsKey(DatabaseConfig.CONTACT_PORT)) {
+    Properties propertiesForJdbc = MultiStorageEnv.getPropertiesForJdbc(testName);
+    for (String propertyName : propertiesForJdbc.stringPropertyNames()) {
       props.setProperty(
-          MultiStorageConfig.STORAGES + ".storage2.contact_port",
-          propertiesForStorage2.getProperty(DatabaseConfig.CONTACT_PORT));
+          MultiStorageConfig.STORAGES
+              + ".jdbc."
+              + propertyName.substring(DatabaseConfig.PREFIX.length()),
+          propertiesForJdbc.getProperty(propertyName));
     }
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".storage2.username",
-        propertiesForStorage2.getProperty(DatabaseConfig.USERNAME));
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".storage2.password",
-        propertiesForStorage2.getProperty(DatabaseConfig.PASSWORD));
 
-    // Define namespace mapping from namespace1 to storage1, from namespace2 to storage2, and from
-    // the coordinator namespace to storage1
+    // Define namespace mapping from namespace1 to cassandra, from namespace2 to jdbc, and from
+    // the coordinator namespace to cassandra
     props.setProperty(
         MultiStorageConfig.NAMESPACE_MAPPING,
         getNamespace1()
-            + ":storage1,"
+            + ":cassandra,"
             + getNamespace2()
-            + ":storage2,"
+            + ":jdbc,"
             + Coordinator.NAMESPACE
-            + ":storage1");
+            + ":cassandra");
 
-    // The default storage is storage1
-    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "storage1");
+    // The default storage is cassandra
+    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
     return props;
   }

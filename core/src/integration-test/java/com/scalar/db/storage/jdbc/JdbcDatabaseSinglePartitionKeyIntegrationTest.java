@@ -13,8 +13,8 @@ public class JdbcDatabaseSinglePartitionKeyIntegrationTest
   private RdbEngine rdbEngine;
 
   @Override
-  protected Properties getProperties() {
-    Properties properties = JdbcEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    Properties properties = JdbcEnv.getProperties(testName);
     rdbEngine = JdbcUtils.getRdbEngine(new JdbcConfig(new DatabaseConfig(properties)).getJdbcUrl());
     return properties;
   }

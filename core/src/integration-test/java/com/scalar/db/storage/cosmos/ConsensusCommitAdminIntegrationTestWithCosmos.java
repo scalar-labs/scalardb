@@ -9,8 +9,8 @@ public class ConsensusCommitAdminIntegrationTestWithCosmos
     extends ConsensusCommitAdminIntegrationTestBase {
 
   @Override
-  protected Properties getProps() {
-    return CosmosEnv.getProperties();
+  protected Properties getProps(String testName) {
+    return CosmosEnv.getProperties(testName);
   }
 
   @Override

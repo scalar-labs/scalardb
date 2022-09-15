@@ -6,7 +6,7 @@ import java.util.Properties;
 public class ConsensusCommitAdminIntegrationTestWithCassandra
     extends ConsensusCommitAdminIntegrationTestBase {
   @Override
-  protected Properties getProps() {
-    return CassandraEnv.getProperties();
+  protected Properties getProps(String testName) {
+    return CassandraEnv.getProperties(testName);
   }
 }

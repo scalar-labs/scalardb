@@ -12,8 +12,8 @@ public class DistributedStorageServiceIntegrationTest
   private ScalarDbServer server;
 
   @Override
-  protected void initialize() throws IOException {
-    Properties properties = ServerEnv.getServerProperties();
+  protected void initialize(String testName) throws IOException {
+    Properties properties = ServerEnv.getServerProperties(testName);
     if (properties != null) {
       server = new ScalarDbServer(properties);
       server.start();
@@ -21,8 +21,8 @@ public class DistributedStorageServiceIntegrationTest
   }
 
   @Override
-  protected Properties getProperties() {
-    return ServerEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return ServerEnv.getProperties(testName);
   }
 
   @AfterAll
