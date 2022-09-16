@@ -5,7 +5,6 @@ import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.get
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.removeTransactionMetaColumns;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
@@ -24,14 +23,6 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   private final DistributedStorageAdmin admin;
   private final String coordinatorNamespace;
   private final boolean isIncludeMetadataEnabled;
-
-  @Inject
-  public ConsensusCommitAdmin(DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
-    this.admin = admin;
-    ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
-    coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
-    isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
-  }
 
   public ConsensusCommitAdmin(DatabaseConfig databaseConfig) {
     StorageFactory storageFactory = StorageFactory.create(databaseConfig.getProperties());
