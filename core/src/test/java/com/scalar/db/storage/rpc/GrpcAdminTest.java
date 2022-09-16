@@ -32,6 +32,7 @@ import com.scalar.db.rpc.NamespaceExistsRequest;
 import com.scalar.db.rpc.NamespaceExistsResponse;
 import com.scalar.db.rpc.RepairTableRequest;
 import com.scalar.db.rpc.TruncateTableRequest;
+import com.scalar.db.rpc.UpgradeRequest;
 import com.scalar.db.util.ProtoUtils;
 import java.util.Collections;
 import java.util.Map;
@@ -351,5 +352,17 @@ public class GrpcAdminTest {
     // Assert
     verify(stub).getNamespaceNames(GetNamespaceNamesRequest.newBuilder().build());
     assertThat(actualNamespaces).containsOnly("n1", "n2");
+  }
+
+  @Test
+  public void upgrade_StubShouldBeCalledProperly() throws ExecutionException {
+    // Arrange
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    admin.upgrade(options);
+
+    // Assert
+    verify(stub).upgrade(UpgradeRequest.newBuilder().putAllOptions(options).build());
   }
 }

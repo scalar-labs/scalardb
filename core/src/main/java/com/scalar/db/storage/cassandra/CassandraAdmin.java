@@ -539,4 +539,9 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       return strategyName;
     }
   }
+
+  @Override
+  public void upgrade(Map<String, String> options) throws ExecutionException {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
 }

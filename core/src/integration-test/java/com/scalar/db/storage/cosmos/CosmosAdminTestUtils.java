@@ -86,4 +86,9 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
         .getScripts()
         .getStoredProcedure(CosmosAdmin.STORED_PROCEDURE_FILE_NAME);
   }
+
+  @Override
+  public void dropNamespacesTable() throws Exception {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
 }

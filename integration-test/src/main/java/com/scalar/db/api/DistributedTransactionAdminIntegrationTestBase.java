@@ -9,6 +9,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.util.AdminTestUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -68,6 +69,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
           .build();
   private TransactionFactory transactionFactory;
   private DistributedTransactionAdmin admin;
+
   private String namespace1;
   private String namespace2;
   private String namespace3;
@@ -86,6 +88,8 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   protected void initialize(String testName) throws Exception {}
 
   protected abstract Properties getProperties(String testName);
+
+  protected abstract AdminTestUtils getAdminTestUtils(String testName);
 
   protected String getNamespace1() {
     return NAMESPACE1;
@@ -627,6 +631,25 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
           .containsOnly(namespace1, namespace2, getCoordinatorNamespace(TEST_NAME));
     } else {
       assertThat(namespaces).containsOnly(namespace1, namespace2);
+    }
+  }
+
+  @Test
+  public void
+      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces()
+          throws Exception {
+    // Arrange
+    getAdminTestUtils(TEST_NAME).dropNamespacesTable();
+
+    // Act
+    admin.upgrade(getCreationOptions());
+
+    // Assert
+    if (hasCoordinatorTables()) {
+      assertThat(admin.getNamespaceNames())
+          .containsOnly(namespace1, namespace2, getCoordinatorNamespace(TEST_NAME));
+    } else {
+      assertThat(admin.getNamespaceNames()).containsOnly(namespace1, namespace2);
     }
   }
 

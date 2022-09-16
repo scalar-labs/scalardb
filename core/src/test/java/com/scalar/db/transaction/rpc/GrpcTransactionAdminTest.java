@@ -38,6 +38,7 @@ import com.scalar.db.rpc.RepairCoordinatorTablesRequest;
 import com.scalar.db.rpc.RepairTableRequest;
 import com.scalar.db.rpc.TruncateCoordinatorTablesRequest;
 import com.scalar.db.rpc.TruncateTableRequest;
+import com.scalar.db.rpc.UpgradeRequest;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.util.ProtoUtils;
 import java.util.Collections;
@@ -430,5 +431,17 @@ public class GrpcTransactionAdminTest {
     // Assert
     verify(stub).getNamespaceNames(GetNamespaceNamesRequest.newBuilder().build());
     assertThat(actualNamespaces).containsOnly("n1", "n2");
+  }
+
+  @Test
+  public void upgrade_StubShouldBeCalledProperly() throws ExecutionException {
+    // Arrange
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    admin.upgrade(options);
+
+    // Assert
+    verify(stub).upgrade(UpgradeRequest.newBuilder().putAllOptions(options).build());
   }
 }

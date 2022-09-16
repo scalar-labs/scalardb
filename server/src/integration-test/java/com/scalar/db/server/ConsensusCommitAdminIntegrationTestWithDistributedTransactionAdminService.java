@@ -5,6 +5,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
@@ -63,6 +64,19 @@ public class ConsensusCommitAdminIntegrationTestWithDistributedTransactionAdminS
         ServerEnv.getServerProperties(testName)
             .getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
     return coordinatorNamespace + "_" + testName;
+  }
+
+  @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    Properties properties = ServerEnv.getServerProperties(testName);
+
+    // Add testName as a coordinator namespace suffix
+    String coordinatorNamespace =
+        properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
+    properties.setProperty(
+        ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
+
+    return new ServerAdminTestUtils(properties);
   }
 
   @AfterAll

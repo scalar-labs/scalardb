@@ -49,7 +49,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String METADATA_COL_CLUSTERING_ORDER = "clustering_order";
   @VisibleForTesting static final String METADATA_COL_INDEXED = "indexed";
   @VisibleForTesting static final String METADATA_COL_ORDINAL_POSITION = "ordinal_position";
-  private static final String NAMESPACES_TABLE = "namespaces";
+  public static final String NAMESPACES_TABLE = "namespaces";
   @VisibleForTesting static final String NAMESPACE_COL_NAMESPACE_NAME = "namespace_name";
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
   private static final ImmutableMap<RdbEngine, ImmutableMap<DataType, String>> DATA_TYPE_MAPPING =
@@ -1073,6 +1073,44 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         return Collections.emptySet();
       }
       throw new ExecutionException("getting the namespace names failed", e);
+    }
+  }
+
+  @Override
+  public void upgrade(Map<String, String> options) throws ExecutionException {
+    try (Connection connection = dataSource.getConnection()) {
+      if (tableExistsInternal(connection, metadataSchema, METADATA_TABLE)) {
+        createNamespacesTableIfNotExists(connection);
+        importNamespacesNamesOfExistingTables(connection);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException("failed to upgrade Scalar DB environment", e);
+    }
+  }
+
+  private void importNamespacesNamesOfExistingTables(Connection connection)
+      throws ExecutionException {
+    String select =
+        "SELECT "
+            + enclose(METADATA_COL_FULL_TABLE_NAME)
+            + " FROM "
+            + encloseFullTableName(metadataSchema, METADATA_TABLE);
+    try (Statement stmt = connection.createStatement();
+        ResultSet rs = stmt.executeQuery(select)) {
+      Set<String> namespaceOfExistingTables = new HashSet<>();
+      while (rs.next()) {
+        String fullTableName = rs.getString(METADATA_COL_FULL_TABLE_NAME);
+        String namespaceName = fullTableName.substring(0, fullTableName.indexOf('.'));
+        namespaceOfExistingTables.add(namespaceName);
+      }
+      // Insert only namespaces that are not already present
+      Set<String> namespacesToInsert =
+          Sets.difference(namespaceOfExistingTables, getNamespaceNames());
+      for (String namespace : namespacesToInsert) {
+        insertIntoNamespacesTable(connection, namespace);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException("failed to import namespace names of existing tables", e);
     }
   }
 

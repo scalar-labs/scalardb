@@ -67,6 +67,16 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     execute(insertCorruptedMetadataStatement);
   }
 
+  @Override
+  public void dropNamespacesTable() throws Exception {
+    // Do nothing for Cassandra
+
+    // for JDBC
+    execute(
+        "DROP TABLE "
+            + enclosedFullTableName(jdbcMetadataSchema, JdbcAdmin.NAMESPACES_TABLE, rdbEngine));
+  }
+
   private void execute(String sql) throws SQLException {
     try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(jdbcConfig);
         Connection connection = dataSource.getConnection();

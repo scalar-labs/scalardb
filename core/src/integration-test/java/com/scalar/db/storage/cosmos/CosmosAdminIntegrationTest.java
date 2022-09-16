@@ -1,9 +1,13 @@
 package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
+import com.scalar.db.util.AdminTestUtils;
+import com.scalar.db.util.CosmosAdminTestUtils;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 public class CosmosAdminIntegrationTest extends DistributedStorageAdminIntegrationTestBase {
 
@@ -36,4 +40,15 @@ public class CosmosAdminIntegrationTest extends DistributedStorageAdminIntegrati
   protected Map<String, String> getCreationOptions() {
     return CosmosEnv.getCreationOptions();
   }
+
+  @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    return new CosmosAdminTestUtils(getProperties(testName));
+  }
+
+  @Disabled("Temporarily until admin.upgrade() is implemented")
+  @Test
+  @Override
+  public void
+      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
 }

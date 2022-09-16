@@ -1368,4 +1368,9 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     client.close();
     applicationAutoScalingClient.close();
   }
+
+  @Override
+  public void upgrade(Map<String, String> options) throws ExecutionException {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
 }

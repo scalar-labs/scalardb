@@ -2,7 +2,9 @@ package com.scalar.db.transaction.jdbc;
 
 import com.scalar.db.api.DistributedTransactionAdminIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.storage.jdbc.JdbcAdminTestUtils;
 import com.scalar.db.storage.jdbc.JdbcEnv;
+import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 
 public class JdbcTransactionAdminIntegrationTest
@@ -19,6 +21,11 @@ public class JdbcTransactionAdminIntegrationTest
   @Override
   protected boolean hasCoordinatorTables() {
     return false;
+  }
+
+  @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    return new JdbcAdminTestUtils(JdbcEnv.getProperties(testName));
   }
 
   @Override
