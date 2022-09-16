@@ -400,7 +400,7 @@ public class Snapshot {
           });
     }
 
-    parallelExecutor.validate(tasks);
+    parallelExecutor.validate(tasks, getId());
   }
 
   private boolean isChanged(

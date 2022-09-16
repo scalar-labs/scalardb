@@ -31,6 +31,8 @@ import com.scalar.db.io.Value;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -145,6 +147,23 @@ public final class ScalarDbUtils {
         } catch (InterruptedException e) {
           interrupted = true;
           remainingNanos = end - System.nanoTime();
+        }
+      }
+    } finally {
+      if (interrupted) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
+  public static <T> Future<T> takeUninterruptibly(CompletionService<T> completionService) {
+    boolean interrupted = false;
+    try {
+      while (true) {
+        try {
+          return completionService.take();
+        } catch (InterruptedException e) {
+          interrupted = true;
         }
       }
     } finally {
