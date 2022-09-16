@@ -10,9 +10,6 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.storage.cassandra.CassandraAdminTestUtils;
-import com.scalar.db.storage.jdbc.JdbcAdminTestUtils;
-import com.scalar.db.util.AdminTestUtils;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Properties;
@@ -365,12 +362,11 @@ public class MultiStorageAdminIntegrationTest {
       upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces()
           throws Exception {
     // Arrange
-    AdminTestUtils cassandraAdminTestUtils =
-        new CassandraAdminTestUtils(MultiStorageEnv.getPropertiesForCassandra(TEST_NAME));
-    AdminTestUtils jdbcAdminTestUtils =
-        new JdbcAdminTestUtils(MultiStorageEnv.getPropertiesForJdbc(TEST_NAME));
-    cassandraAdminTestUtils.dropNamespacesTable();
-    jdbcAdminTestUtils.dropNamespacesTable();
+    MultiStorageAdminTestUtils adminTestUtils =
+        new MultiStorageAdminTestUtils(
+            MultiStorageEnv.getPropertiesForCassandra(TEST_NAME),
+            MultiStorageEnv.getPropertiesForJdbc(TEST_NAME));
+    adminTestUtils.dropNamespacesTable();
 
     // Act
     multiStorageAdmin.upgrade(Collections.emptyMap());
