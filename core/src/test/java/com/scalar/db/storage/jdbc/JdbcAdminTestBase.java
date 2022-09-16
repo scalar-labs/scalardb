@@ -1153,7 +1153,8 @@ public abstract class JdbcAdminTestBase {
   @Test
   public void namespaceExists_forMysqlWithExistingNamespace_shouldReturnTrue() throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
-        RdbEngine.MYSQL, "SELECT 1 FROM `information_schema`.`schemata` WHERE `schema_name` = ?");
+        RdbEngine.MYSQL,
+        "SELECT 1 FROM `" + metadataSchemaName + "`.`namespaces` WHERE `namespace_name` = ?");
   }
 
   @Test
@@ -1161,20 +1162,22 @@ public abstract class JdbcAdminTestBase {
       throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
         RdbEngine.POSTGRESQL,
-        "SELECT 1 FROM \"information_schema\".\"schemata\" WHERE \"schema_name\" = ?");
+        "SELECT 1 FROM \"" + metadataSchemaName + "\".\"namespaces\" WHERE \"namespace_name\" = ?");
   }
 
   @Test
   public void namespaceExists_forSqlServerWithExistingNamespace_shouldReturnTrue()
       throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
-        RdbEngine.SQL_SERVER, "SELECT 1 FROM [sys].[schemas] WHERE [name] = ?");
+        RdbEngine.SQL_SERVER,
+        "SELECT 1 FROM [" + metadataSchemaName + "].[namespaces] WHERE [namespace_name] = ?");
   }
 
   @Test
   public void namespaceExists_forOracleWithExistingNamespace_shouldReturnTrue() throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
-        RdbEngine.ORACLE, "SELECT 1 FROM \"ALL_USERS\" WHERE \"USERNAME\" = ?");
+        RdbEngine.ORACLE,
+        "SELECT 1 FROM \"" + metadataSchemaName + "\".\"namespaces\" WHERE \"namespace_name\" = ?");
   }
 
   private void namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(

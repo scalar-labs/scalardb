@@ -6,7 +6,7 @@ import java.util.Properties;
 public class CassandraMultiplePartitionKeyIntegrationTest
     extends DistributedStorageMultiplePartitionKeyIntegrationTestBase {
   @Override
-  protected Properties getProperties() {
-    return CassandraEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return CassandraEnv.getProperties(testName);
   }
 }

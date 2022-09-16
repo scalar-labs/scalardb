@@ -8,8 +8,8 @@ import java.util.Properties;
 public class ConsensusCommitIntegrationTestWithCosmos extends ConsensusCommitIntegrationTestBase {
 
   @Override
-  protected Properties getProps() {
-    return CosmosEnv.getProperties();
+  protected Properties getProps(String testName) {
+    return CosmosEnv.getProperties(testName);
   }
 
   @Override

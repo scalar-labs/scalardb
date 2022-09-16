@@ -1,8 +1,7 @@
 package com.scalar.db.server;
 
 import com.scalar.db.api.DistributedStorageAdminRepairTableIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.util.TestUtils;
+import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
@@ -13,19 +12,27 @@ public class DistributedStorageAdminServiceRepairTableIntegrationTest
     extends DistributedStorageAdminRepairTableIntegrationTestBase {
 
   private ScalarDbServer server;
+  private boolean isExternalServerUsed;
 
   @Override
-  protected void initialize() throws IOException {
-    Properties properties = ServerEnv.getServerProperties();
+  protected void initialize(String testName) throws IOException {
+    Properties properties = ServerEnv.getServerProperties(testName);
     if (properties != null) {
-      server = new ScalarDbServer(TestUtils.addSuffix(properties, TEST_NAME));
+      server = new ScalarDbServer(properties);
       server.start();
+    } else {
+      isExternalServerUsed = true;
     }
   }
 
   @Override
-  protected Properties getProperties() {
-    return ServerEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return ServerEnv.getProperties(testName);
+  }
+
+  @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    return new ServerAdminTestUtils(ServerEnv.getServerProperties(testName));
   }
 
   @Override
@@ -37,36 +44,26 @@ public class DistributedStorageAdminServiceRepairTableIntegrationTest
     }
   }
 
-  /** This test is disabled if {@link #isExternalServerOrCassandraUsed()} return true */
+  /** This test is disabled if {@link #isExternalServerUsed()} return true */
   @Override
   @Test
-  @DisabledIf("isExternalServerOrCassandraUsed")
+  @DisabledIf("isExternalServerUsed")
   public void repairTable_ForDeletedMetadataTable_ShouldRepairProperly() throws Exception {
     super.repairTable_ForDeletedMetadataTable_ShouldRepairProperly();
   }
 
-  /** This test is disabled if {@link #isExternalServerOrCassandraUsed()} return true */
+  /** This test is disabled if {@link #isExternalServerUsed()} return true */
   @Override
   @Test
-  @DisabledIf("isExternalServerOrCassandraUsed")
+  @DisabledIf("isExternalServerUsed")
   public void repairTable_ForTruncatedMetadataTable_ShouldRepairProperly() throws Exception {
     super.repairTable_ForTruncatedMetadataTable_ShouldRepairProperly();
   }
 
-  @Override
-  protected Properties getStorageProperties() {
-    return ServerEnv.getServerProperties();
-  }
-
   @SuppressWarnings("unused")
-  private boolean isExternalServerOrCassandraUsed() {
-    Properties properties = ServerEnv.getServerProperties();
+  private boolean isExternalServerUsed() {
     // An external server is used, so we don't have access to the configuration to connect to the
     // underlying storage which makes it impossible to run these tests
-    if (properties == null) {
-      return true;
-    }
-    // These tests are skipped for Cassandra
-    return properties.getProperty(DatabaseConfig.STORAGE, "").equals("cassandra");
+    return isExternalServerUsed;
   }
 }

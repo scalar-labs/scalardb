@@ -10,8 +10,8 @@ import java.util.Random;
 public class DynamoSinglePartitionKeyIntegrationTest
     extends DistributedStorageSinglePartitionKeyIntegrationTestBase {
   @Override
-  protected Properties getProperties() {
-    return DynamoEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return DynamoEnv.getProperties(testName);
   }
 
   @Override

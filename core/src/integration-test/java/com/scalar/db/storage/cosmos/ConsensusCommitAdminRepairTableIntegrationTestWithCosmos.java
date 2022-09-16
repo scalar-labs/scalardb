@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminRepairTableIntegrationTestBase;
+import com.scalar.db.util.AdminTestUtils;
 import com.scalar.db.util.CosmosAdminTestUtils;
 import java.util.Map;
 import java.util.Optional;
@@ -14,8 +15,8 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithCosmos
     extends ConsensusCommitAdminRepairTableIntegrationTestBase {
 
   @Override
-  protected Properties getProps() {
-    return CosmosEnv.getProperties();
+  protected Properties getProps(String testName) {
+    return CosmosEnv.getProperties(testName);
   }
 
   @Override
@@ -31,6 +32,11 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithCosmos
   @Override
   protected Map<String, String> getCreationOptions() {
     return CosmosEnv.getCreationOptions();
+  }
+
+  @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    return new CosmosAdminTestUtils(getProperties(testName));
   }
 
   @Test

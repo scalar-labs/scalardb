@@ -14,8 +14,8 @@ import java.util.Random;
 public class DynamoConditionalMutationIntegrationTest
     extends DistributedStorageConditionalMutationIntegrationTestBase {
   @Override
-  protected Properties getProperties() {
-    return DynamoEnv.getProperties();
+  protected Properties getProperties(String testName) {
+    return DynamoEnv.getProperties(testName);
   }
 
   @Override
