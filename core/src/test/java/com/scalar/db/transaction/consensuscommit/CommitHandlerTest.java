@@ -468,7 +468,7 @@ public class CommitHandlerTest {
     handler.commit(snapshot);
 
     // Assert
-    verify(storage, times(3)).mutate(anyList());
+    verify(storage, times(4)).mutate(anyList());
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(coordinator, never()).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(handler, never()).rollbackRecords(snapshot);

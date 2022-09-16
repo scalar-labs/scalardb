@@ -31,7 +31,7 @@ public class StorageFactory {
    * @return a {@link DistributedStorage} instance
    */
   public DistributedStorage getStorage() {
-    return FactoryManager.getDistributedStorage(config);
+    return ProviderManager.createDistributedStorage(config);
   }
 
   /**
@@ -53,7 +53,7 @@ public class StorageFactory {
    * @return a {@link DistributedStorageAdmin} instance
    */
   public DistributedStorageAdmin getStorageAdmin() {
-    return FactoryManager.getDistributedStorageAdmin(config);
+    return ProviderManager.createDistributedStorageAdmin(config);
   }
 
   /**

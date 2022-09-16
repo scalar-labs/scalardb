@@ -1,0 +1,3 @@
+com.scalar.db.transaction.consensuscommit.ConsensusCommitProvider
+com.scalar.db.transaction.jdbc.JdbcTransactionProvider
+com.scalar.db.transaction.rpc.GrpcTransactionProvider
