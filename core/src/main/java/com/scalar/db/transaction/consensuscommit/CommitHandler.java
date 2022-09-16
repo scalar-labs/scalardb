@@ -80,7 +80,7 @@ public class CommitHandler {
     for (PartitionedMutations.Key key : orderedKeys) {
       tasks.add(() -> storage.mutate(mutations.get(key)));
     }
-    parallelExecutor.prepare(tasks);
+    parallelExecutor.prepare(tasks, snapshot.getId());
   }
 
   public void preCommitValidation(Snapshot snapshot, boolean abortIfError)
@@ -133,7 +133,7 @@ public class CommitHandler {
       for (PartitionedMutations.Key key : orderedKeys) {
         tasks.add(() -> storage.mutate(mutations.get(key)));
       }
-      parallelExecutor.commit(tasks);
+      parallelExecutor.commitRecords(tasks, snapshot.getId());
     } catch (Exception e) {
       logger.warn("committing records failed", e);
       // ignore since records are recovered lazily
@@ -177,7 +177,7 @@ public class CommitHandler {
       for (PartitionedMutations.Key key : orderedKeys) {
         tasks.add(() -> storage.mutate(mutations.get(key)));
       }
-      parallelExecutor.rollback(tasks);
+      parallelExecutor.rollbackRecords(tasks, snapshot.getId());
     } catch (Exception e) {
       logger.warn("rolling back records failed", e);
       // ignore since records are recovered lazily
