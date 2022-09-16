@@ -436,17 +436,84 @@ public class ConsensusCommitAdminTest {
   }
 
   @Test
-  public void getNamespaceTableNames_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void getTableMetadata_ForNonTransactionTable_ShouldReturnNull() throws ExecutionException {
     // Arrange
-    Set<String> tableNames = ImmutableSet.of("tbl1", "tbl2", "tbl3");
-    when(distributedStorageAdmin.getNamespaceTableNames(any())).thenReturn(tableNames);
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.TEXT)
+            .addColumn("c1", DataType.BOOLEAN)
+            .build();
+    when(distributedStorageAdmin.getTableMetadata(any(), any())).thenReturn(tableMetadata);
 
     // Act
-    Set<String> actual = admin.getNamespaceTableNames("ns");
+    TableMetadata actual = admin.getTableMetadata(NAMESPACE, TABLE);
 
     // Assert
-    verify(distributedStorageAdmin).getNamespaceTableNames("ns");
-    assertThat(actual).isEqualTo(tableNames);
+    assertThat(actual).isNull();
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
+  }
+
+  @Test
+  public void getTableMetadata_ForNonExistingTable_ShouldReturnNull() throws ExecutionException {
+    // Arrange
+    when(distributedStorageAdmin.getTableMetadata(any(), any())).thenReturn(null);
+
+    // Act
+    TableMetadata actual = admin.getTableMetadata(NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(actual).isNull();
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
+  }
+
+  @Test
+  public void
+      getNamespaceTableNames_ForNamespaceContainingTransactionAndStorageTables_ShouldCallReturnOnlyTransactionTables()
+          throws ExecutionException {
+    // Arrange
+    TableMetadata storageTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("id")
+            .addColumn("id", DataType.TEXT)
+            .addColumn("created_at", DataType.BIGINT)
+            .build();
+    TableMetadata transactionTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("account_id")
+            .addColumn("account_id", DataType.INT)
+            .addColumn("balance", DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + "balance", DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .build();
+
+    when(distributedStorageAdmin.getNamespaceTableNames(any()))
+        .thenReturn(ImmutableSet.of("tbl1", "tbl2", "tbl3"));
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, "tbl1"))
+        .thenReturn(transactionTableMetadata);
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, "tbl2"))
+        .thenReturn(storageTableMetadata);
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, "tbl3"))
+        .thenReturn(transactionTableMetadata);
+
+    // Act
+    Set<String> actual = admin.getNamespaceTableNames(NAMESPACE);
+
+    // Assert
+    assertThat(actual).containsExactlyInAnyOrder("tbl1", "tbl3");
+    verify(distributedStorageAdmin).getNamespaceTableNames(NAMESPACE);
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, "tbl1");
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, "tbl2");
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, "tbl3");
   }
 
   @Test
