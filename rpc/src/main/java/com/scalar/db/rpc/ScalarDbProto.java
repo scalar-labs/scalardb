@@ -709,7 +709,7 @@ public final class ScalarDbProto {
       "et\022\017.rpc.GetRequest\032\020.rpc.GetResponse\"\000\022" +
       "1\n\004Scan\022\020.rpc.ScanRequest\032\021.rpc.ScanResp" +
       "onse\"\000(\0010\001\0226\n\006Mutate\022\022.rpc.MutateRequest" +
-      "\032\026.google.protobuf.Empty\"\0002\231\010\n\027Distribut" +
+      "\032\026.google.protobuf.Empty\"\0002\233\010\n\027Distribut" +
       "edStorageAdmin\022H\n\017CreateNamespace\022\033.rpc." +
       "CreateNamespaceRequest\032\026.google.protobuf" +
       ".Empty\"\000\022D\n\rDropNamespace\022\031.rpc.DropName" +
@@ -734,63 +734,63 @@ public final class ScalarDbProto {
       "rpc.AddNewColumnToTableRequest\032\026.google." +
       "protobuf.Empty\"\000\022T\n\021GetNamespaceNames\022\035." +
       "rpc.GetNamespaceNamesRequest\032\036.rpc.GetNa" +
-      "mespaceNamesResponse\"\000\0226\n\007Upgrade\022\023.rpc." +
-      "UpgradeRequest\032\026.google.protobuf.Empty2\236" +
-      "\002\n\026DistributedTransaction\022F\n\013Transaction" +
-      "\022\027.rpc.TransactionRequest\032\030.rpc.Transact" +
-      "ionResponse\"\000(\0010\001\022O\n\010GetState\022\037.rpc.GetT" +
-      "ransactionStateRequest\032 .rpc.GetTransact" +
-      "ionStateResponse\"\000\0229\n\010Rollback\022\024.rpc.Rol" +
-      "lbackRequest\032\025.rpc.RollbackResponse\"\000\0220\n" +
-      "\005Abort\022\021.rpc.AbortRequest\032\022.rpc.AbortRes" +
-      "ponse\"\0002\313\002\n\031TwoPhaseCommitTransaction\022p\n" +
-      "\031TwoPhaseCommitTransaction\022%.rpc.TwoPhas" +
-      "eCommitTransactionRequest\032&.rpc.TwoPhase" +
-      "CommitTransactionResponse\"\000(\0010\001\022O\n\010GetSt" +
-      "ate\022\037.rpc.GetTransactionStateRequest\032 .r" +
-      "pc.GetTransactionStateResponse\"\000\0229\n\010Roll" +
-      "back\022\024.rpc.RollbackRequest\032\025.rpc.Rollbac" +
-      "kResponse\"\000\0220\n\005Abort\022\021.rpc.AbortRequest\032" +
-      "\022.rpc.AbortResponse\"\0002\354\013\n\033DistributedTra" +
-      "nsactionAdmin\022H\n\017CreateNamespace\022\033.rpc.C" +
-      "reateNamespaceRequest\032\026.google.protobuf." +
-      "Empty\"\000\022D\n\rDropNamespace\022\031.rpc.DropNames" +
-      "paceRequest\032\026.google.protobuf.Empty\"\000\022@\n" +
-      "\013CreateTable\022\027.rpc.CreateTableRequest\032\026." +
-      "google.protobuf.Empty\"\000\022<\n\tDropTable\022\025.r" +
-      "pc.DropTableRequest\032\026.google.protobuf.Em" +
-      "pty\"\000\022D\n\rTruncateTable\022\031.rpc.TruncateTab" +
-      "leRequest\032\026.google.protobuf.Empty\"\000\022@\n\013C" +
-      "reateIndex\022\027.rpc.CreateIndexRequest\032\026.go" +
-      "ogle.protobuf.Empty\"\000\022<\n\tDropIndex\022\025.rpc" +
-      ".DropIndexRequest\032\026.google.protobuf.Empt" +
-      "y\"\000\022Q\n\020GetTableMetadata\022\034.rpc.GetTableMe" +
-      "tadataRequest\032\035.rpc.GetTableMetadataResp" +
-      "onse\"\000\022c\n\026GetNamespaceTableNames\022\".rpc.G" +
-      "etNamespaceTableNamesRequest\032#.rpc.GetNa" +
-      "mespaceTableNamesResponse\"\000\022N\n\017Namespace" +
-      "Exists\022\033.rpc.NamespaceExistsRequest\032\034.rp" +
-      "c.NamespaceExistsResponse\"\000\022X\n\027CreateCoo" +
-      "rdinatorTables\022#.rpc.CreateCoordinatorTa" +
-      "blesRequest\032\026.google.protobuf.Empty\"\000\022T\n" +
-      "\025DropCoordinatorTables\022!.rpc.DropCoordin" +
-      "atorTablesRequest\032\026.google.protobuf.Empt" +
-      "y\"\000\022\\\n\031TruncateCoordinatorTables\022%.rpc.T" +
-      "runcateCoordinatorTablesRequest\032\026.google" +
-      ".protobuf.Empty\"\000\022c\n\026CoordinatorTablesEx" +
-      "ist\022\".rpc.CoordinatorTablesExistRequest\032" +
-      "#.rpc.CoordinatorTablesExistResponse\"\000\022@" +
-      "\n\013RepairTable\022\027.rpc.RepairTableRequest\032\026" +
-      ".google.protobuf.Empty\"\000\022X\n\027RepairCoordi" +
-      "natorTables\022#.rpc.RepairCoordinatorTable" +
-      "sRequest\032\026.google.protobuf.Empty\"\000\022P\n\023Ad" +
-      "dNewColumnToTable\022\037.rpc.AddNewColumnToTa" +
-      "bleRequest\032\026.google.protobuf.Empty\"\000\022T\n\021" +
-      "GetNamespaceNames\022\035.rpc.GetNamespaceName" +
-      "sRequest\032\036.rpc.GetNamespaceNamesResponse" +
-      "\"\000\0228\n\007Upgrade\022\023.rpc.UpgradeRequest\032\026.goo" +
-      "gle.protobuf.Empty\"\000B$\n\021com.scalar.db.rp" +
-      "cB\rScalarDbProtoP\001b\006proto3"
+      "mespaceNamesResponse\"\000\0228\n\007Upgrade\022\023.rpc." +
+      "UpgradeRequest\032\026.google.protobuf.Empty\"\000" +
+      "2\236\002\n\026DistributedTransaction\022F\n\013Transacti" +
+      "on\022\027.rpc.TransactionRequest\032\030.rpc.Transa" +
+      "ctionResponse\"\000(\0010\001\022O\n\010GetState\022\037.rpc.Ge" +
+      "tTransactionStateRequest\032 .rpc.GetTransa" +
+      "ctionStateResponse\"\000\0229\n\010Rollback\022\024.rpc.R" +
+      "ollbackRequest\032\025.rpc.RollbackResponse\"\000\022" +
+      "0\n\005Abort\022\021.rpc.AbortRequest\032\022.rpc.AbortR" +
+      "esponse\"\0002\313\002\n\031TwoPhaseCommitTransaction\022" +
+      "p\n\031TwoPhaseCommitTransaction\022%.rpc.TwoPh" +
+      "aseCommitTransactionRequest\032&.rpc.TwoPha" +
+      "seCommitTransactionResponse\"\000(\0010\001\022O\n\010Get" +
+      "State\022\037.rpc.GetTransactionStateRequest\032 " +
+      ".rpc.GetTransactionStateResponse\"\000\0229\n\010Ro" +
+      "llback\022\024.rpc.RollbackRequest\032\025.rpc.Rollb" +
+      "ackResponse\"\000\0220\n\005Abort\022\021.rpc.AbortReques" +
+      "t\032\022.rpc.AbortResponse\"\0002\354\013\n\033DistributedT" +
+      "ransactionAdmin\022H\n\017CreateNamespace\022\033.rpc" +
+      ".CreateNamespaceRequest\032\026.google.protobu" +
+      "f.Empty\"\000\022D\n\rDropNamespace\022\031.rpc.DropNam" +
+      "espaceRequest\032\026.google.protobuf.Empty\"\000\022" +
+      "@\n\013CreateTable\022\027.rpc.CreateTableRequest\032" +
+      "\026.google.protobuf.Empty\"\000\022<\n\tDropTable\022\025" +
+      ".rpc.DropTableRequest\032\026.google.protobuf." +
+      "Empty\"\000\022D\n\rTruncateTable\022\031.rpc.TruncateT" +
+      "ableRequest\032\026.google.protobuf.Empty\"\000\022@\n" +
+      "\013CreateIndex\022\027.rpc.CreateIndexRequest\032\026." +
+      "google.protobuf.Empty\"\000\022<\n\tDropIndex\022\025.r" +
+      "pc.DropIndexRequest\032\026.google.protobuf.Em" +
+      "pty\"\000\022Q\n\020GetTableMetadata\022\034.rpc.GetTable" +
+      "MetadataRequest\032\035.rpc.GetTableMetadataRe" +
+      "sponse\"\000\022c\n\026GetNamespaceTableNames\022\".rpc" +
+      ".GetNamespaceTableNamesRequest\032#.rpc.Get" +
+      "NamespaceTableNamesResponse\"\000\022N\n\017Namespa" +
+      "ceExists\022\033.rpc.NamespaceExistsRequest\032\034." +
+      "rpc.NamespaceExistsResponse\"\000\022X\n\027CreateC" +
+      "oordinatorTables\022#.rpc.CreateCoordinator" +
+      "TablesRequest\032\026.google.protobuf.Empty\"\000\022" +
+      "T\n\025DropCoordinatorTables\022!.rpc.DropCoord" +
+      "inatorTablesRequest\032\026.google.protobuf.Em" +
+      "pty\"\000\022\\\n\031TruncateCoordinatorTables\022%.rpc" +
+      ".TruncateCoordinatorTablesRequest\032\026.goog" +
+      "le.protobuf.Empty\"\000\022c\n\026CoordinatorTables" +
+      "Exist\022\".rpc.CoordinatorTablesExistReques" +
+      "t\032#.rpc.CoordinatorTablesExistResponse\"\000" +
+      "\022@\n\013RepairTable\022\027.rpc.RepairTableRequest" +
+      "\032\026.google.protobuf.Empty\"\000\022X\n\027RepairCoor" +
+      "dinatorTables\022#.rpc.RepairCoordinatorTab" +
+      "lesRequest\032\026.google.protobuf.Empty\"\000\022P\n\023" +
+      "AddNewColumnToTable\022\037.rpc.AddNewColumnTo" +
+      "TableRequest\032\026.google.protobuf.Empty\"\000\022T" +
+      "\n\021GetNamespaceNames\022\035.rpc.GetNamespaceNa" +
+      "mesRequest\032\036.rpc.GetNamespaceNamesRespon" +
+      "se\"\000\0228\n\007Upgrade\022\023.rpc.UpgradeRequest\032\026.g" +
+      "oogle.protobuf.Empty\"\000B$\n\021com.scalar.db." +
+      "rpcB\rScalarDbProtoP\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -200,7 +200,8 @@ service DistributedStorageAdmin {
   }
   rpc GetNamespaceNames(GetNamespaceNamesRequest) returns (GetNamespaceNamesResponse) {
   }
-  rpc Upgrade(UpgradeRequest) returns (google.protobuf.Empty);
+  rpc Upgrade(UpgradeRequest) returns (google.protobuf.Empty){
+  }
 }
 
 enum DataType {
@@ -313,7 +314,7 @@ message GetNamespaceNamesResponse {
 }
 
 message UpgradeRequest {
-  map<string, string> options =1;
+  map<string, string> options = 1;
 }
 
 // DistributedTransaction
@@ -583,7 +584,6 @@ service DistributedTransactionAdmin {
   rpc GetNamespaceNames(GetNamespaceNamesRequest) returns (GetNamespaceNamesResponse) {
   }
   rpc Upgrade(UpgradeRequest) returns (google.protobuf.Empty){
-
   }
 }
 
