@@ -3,16 +3,11 @@ package com.scalar.db.transaction.consensuscommit;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.scalar.db.api.Consistency;
 import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
-import com.scalar.db.api.Scan;
-import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.io.Key;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
@@ -42,28 +37,9 @@ public class RecoveryHandler {
   public void recover(Selection selection, TransactionResult result) {
     logger.debug("recovering for {}", result.getId());
 
-    // as the result doesn't have before image columns, need to get the latest result
-    Optional<TransactionResult> latestResult;
-    try {
-      latestResult = getLatestResult(selection, result);
-    } catch (ExecutionException e) {
-      logger.warn("can't get the latest result", e);
-      return;
-    }
-
-    if (!latestResult.isPresent()) {
-      // indicates the record has been deleted by another transaction
-      return;
-    }
-
-    if (latestResult.get().isCommitted()) {
-      // indicates the record has been committed by another transaction
-      return;
-    }
-
     Optional<Coordinator.State> state;
     try {
-      state = coordinator.getState(latestResult.get().getId());
+      state = coordinator.getState(result.getId());
     } catch (CoordinatorException e) {
       logger.warn("can't get coordinator state", e);
       return;
@@ -71,41 +47,12 @@ public class RecoveryHandler {
 
     if (state.isPresent()) {
       if (state.get().getState().equals(TransactionState.COMMITTED)) {
-        rollforwardRecord(selection, latestResult.get());
+        rollforwardRecord(selection, result);
       } else {
-        rollbackRecord(selection, latestResult.get());
+        rollbackRecord(selection, result);
       }
     } else {
-      abortIfExpired(selection, latestResult.get());
-    }
-  }
-
-  @VisibleForTesting
-  Optional<TransactionResult> getLatestResult(Selection selection, TransactionResult result)
-      throws ExecutionException {
-    Get get =
-        new Get(
-                getPartitionKey(selection, result),
-                getClusteringKey(selection, result).orElse(null))
-            .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(selection.forNamespace().get())
-            .forTable(selection.forTable().get());
-    return storage.get(get).map(TransactionResult::new);
-  }
-
-  private Optional<Key> getClusteringKey(Selection selection, TransactionResult result) {
-    if (selection instanceof Scan) {
-      return result.getClusteringKey();
-    } else {
-      return selection.getClusteringKey();
-    }
-  }
-
-  private Key getPartitionKey(Selection selection, TransactionResult result) {
-    if (selection instanceof ScanAll) {
-      return result.getPartitionKey().get();
-    } else {
-      return selection.getPartitionKey();
+      abortIfExpired(selection, result);
     }
   }
 
@@ -154,6 +101,9 @@ public class RecoveryHandler {
   }
 
   private void mutate(List<Mutation> mutations) {
+    if (mutations.isEmpty()) {
+      return;
+    }
     try {
       storage.mutate(mutations);
     } catch (ExecutionException e) {

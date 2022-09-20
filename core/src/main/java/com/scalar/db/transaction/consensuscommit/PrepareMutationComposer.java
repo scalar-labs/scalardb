@@ -22,6 +22,7 @@ import com.scalar.db.io.Value;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
@@ -32,12 +33,12 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
   }
 
   @VisibleForTesting
-  PrepareMutationComposer(String id, List<Mutation> mutations, long current) {
-    super(id, mutations, current);
+  PrepareMutationComposer(String id, long current) {
+    super(id, current);
   }
 
   @Override
-  public void add(Operation base, TransactionResult result) {
+  public void add(Operation base, @Nullable TransactionResult result) {
     if (base instanceof Put) {
       add((Put) base, result);
     } else if (base instanceof Delete) {
@@ -49,9 +50,9 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     }
   }
 
-  private void add(Put base, TransactionResult result) {
+  private void add(Put base, @Nullable TransactionResult result) {
     Put put =
-        new Put(base.getPartitionKey(), getClusteringKey(base, result).orElse(null))
+        new Put(base.getPartitionKey(), base.getClusteringKey().orElse(null))
             .forNamespace(base.forNamespace().get())
             .forTable(base.forTable().get())
             .withConsistency(Consistency.LINEARIZABLE);
@@ -81,9 +82,9 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     mutations.add(put);
   }
 
-  private void add(Delete base, TransactionResult result) {
+  private void add(Delete base, @Nullable TransactionResult result) {
     Put put =
-        new Put(base.getPartitionKey(), getClusteringKey(base, result).orElse(null))
+        new Put(base.getPartitionKey(), base.getClusteringKey().orElse(null))
             .forNamespace(base.forNamespace().get())
             .forTable(base.forTable().get())
             .withConsistency(Consistency.LINEARIZABLE);
@@ -118,7 +119,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
   // This is only called when Serializable with Extra-write strategy is enabled.
   private void add(Get base) {
     Put put =
-        new Put(base.getPartitionKey(), getClusteringKey(base, null).orElse(null))
+        new Put(base.getPartitionKey(), base.getClusteringKey().orElse(null))
             .forNamespace(base.forNamespace().get())
             .forTable(base.forTable().get())
             .withConsistency(Consistency.LINEARIZABLE);
@@ -137,16 +138,13 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
   }
 
   private List<Value<?>> createBeforeValues(Mutation base, TransactionResult result) {
-    Key partitionKey = base.getPartitionKey();
-    Optional<Key> clusteringKey = getClusteringKey(base, result);
-
     List<Value<?>> values = new ArrayList<>();
     result
         .getValues()
         .values()
         .forEach(
             v -> {
-              if (isBeforeRequired(v, partitionKey, clusteringKey)) {
+              if (isBeforeRequired(v, base.getPartitionKey(), base.getClusteringKey())) {
                 values.add(v.copyWith(Attribute.BEFORE_PREFIX + v.getName()));
               }
             });
