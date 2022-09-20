@@ -537,7 +537,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, times(2))
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
@@ -607,7 +608,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, times(2)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     // rollback called twice but executed once actually
     TransactionResult result;
     if (s instanceof Get) {
@@ -885,7 +886,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, times(2))
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
     if (s instanceof Get) {
       assertThat(transaction.get((Get) s).isPresent()).isFalse();
     } else {
@@ -947,7 +949,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, times(2)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     // rollback called twice but executed once actually
     TransactionResult result;
     if (s instanceof Get) {
