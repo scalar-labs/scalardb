@@ -184,7 +184,7 @@ jobs:
 
       - name : Delete gradle daemon log files
         if: always()
-#       Delete all files created more than 3 days ago with the ".out.log" file extension located in the "/home/azureuser/.gradle/daemon"
+#       Delete all files modified more than 3 days ago with the ".out.log" file extension located in the "/home/azureuser/.gradle/daemon"
 #       folder hierarchy. These files accumulate over time and can end up using a lot of disk space
         run : find /home/azureuser/.gradle/daemon -name "*.out.log" -type f -mtime +3 -exec rm -vf {} +
 
