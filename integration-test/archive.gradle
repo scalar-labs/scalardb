@@ -4,7 +4,7 @@ apply plugin: 'signing'
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            artifactId = 'scalardb-integraion-test'
+            artifactId = 'scalardb-integration-test'
             from components.java
             pom {
                 name = 'Scalar DB Integration test'
