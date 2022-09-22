@@ -35,7 +35,7 @@ public class TransactionFactory {
    * @return a {@link DistributedTransactionManager} instance
    */
   public DistributedTransactionManager getTransactionManager() {
-    return FactoryManager.getDistributedTransactionManager(config);
+    return ProviderManager.createDistributedTransactionManager(config);
   }
 
   /**
@@ -44,7 +44,7 @@ public class TransactionFactory {
    * @return a {@link DistributedTransactionAdmin} instance
    */
   public DistributedTransactionAdmin getTransactionAdmin() {
-    return FactoryManager.getDistributedTransactionAdmin(config);
+    return ProviderManager.createDistributedTransactionAdmin(config);
   }
 
   /**
@@ -53,7 +53,7 @@ public class TransactionFactory {
    * @return a {@link TwoPhaseCommitTransactionManager} instance
    */
   public TwoPhaseCommitTransactionManager getTwoPhaseCommitTransactionManager() {
-    return FactoryManager.getTwoPhaseCommitTransactionManager(config);
+    return ProviderManager.createTwoPhaseCommitTransactionManager(config);
   }
 
   /**

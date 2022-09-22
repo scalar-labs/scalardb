@@ -8,14 +8,11 @@ import com.scalar.db.api.Result;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.TransactionFactory;
-import java.io.File;
 import java.io.IOException;
 import java.util.Optional;
 
 public class ElectronicMoney {
 
-  private static final String SCALARDB_PROPERTIES =
-      System.getProperty("user.dir") + File.separator + "scalardb.properties";
   private static final String NAMESPACE = "emoney";
   private static final String TABLENAME = "account";
   private static final String ID = "id";
@@ -23,8 +20,8 @@ public class ElectronicMoney {
 
   private final DistributedTransactionManager manager;
 
-  public ElectronicMoney() throws IOException {
-    TransactionFactory factory = TransactionFactory.create(SCALARDB_PROPERTIES);
+  public ElectronicMoney(String scalarDBProperties) throws IOException {
+    TransactionFactory factory = TransactionFactory.create(scalarDBProperties);
     manager = factory.getTransactionManager();
   }
 

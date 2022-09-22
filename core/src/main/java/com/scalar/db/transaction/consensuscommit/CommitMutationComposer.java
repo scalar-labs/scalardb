@@ -11,13 +11,16 @@ import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
+import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
-import java.util.List;
+import com.scalar.db.io.Key;
+import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,12 +34,12 @@ public class CommitMutationComposer extends AbstractMutationComposer {
   }
 
   @VisibleForTesting
-  CommitMutationComposer(String id, List<Mutation> mutations, long current) {
-    super(id, mutations, current);
+  CommitMutationComposer(String id, long current) {
+    super(id, current);
   }
 
   @Override
-  public void add(Operation base, TransactionResult result) {
+  public void add(Operation base, @Nullable TransactionResult result) {
     if (base instanceof Put) {
       // for usual commit
       add((Put) base, result);
@@ -44,27 +47,28 @@ public class CommitMutationComposer extends AbstractMutationComposer {
       // for usual commit
       add((Delete) base, result);
     } else { // Selection
-      // for rollforward
       add((Selection) base, result);
     }
   }
 
-  private void add(Put base, TransactionResult result) {
+  private void add(Put base, @Nullable TransactionResult result) {
     mutations.add(composePut(base, result));
   }
 
-  private void add(Delete base, TransactionResult result) {
+  private void add(Delete base, @Nullable TransactionResult result) {
     mutations.add(composeDelete(base, result));
   }
 
-  // for rollforward
-  private void add(Selection base, TransactionResult result) {
+  private void add(Selection base, @Nullable TransactionResult result) {
     if (result == null) {
-      // delete non-existing record that was prepared with DELETED for Serializable with Extra-write
+      // for deleting non-existing record that was prepared with DELETED for Serializable with
+      // Extra-write
       mutations.add(composeDelete(base, null));
     } else if (result.getState().equals(TransactionState.PREPARED)) {
+      // for rollforward in lazy recovery
       mutations.add(composePut(base, result));
     } else if (result.getState().equals(TransactionState.DELETED)) {
+      // for rollforward in lazy recovery
       mutations.add(composeDelete(base, result));
     } else {
       logger.debug(
@@ -74,7 +78,7 @@ public class CommitMutationComposer extends AbstractMutationComposer {
     }
   }
 
-  private Put composePut(Operation base, TransactionResult result) {
+  private Put composePut(Operation base, @Nullable TransactionResult result) {
     return new Put(getPartitionKey(base, result), getClusteringKey(base, result).orElse(null))
         .forNamespace(base.forNamespace().get())
         .forTable(base.forTable().get())
@@ -88,7 +92,7 @@ public class CommitMutationComposer extends AbstractMutationComposer {
         .withValue(Attribute.toStateValue(TransactionState.COMMITTED));
   }
 
-  private Delete composeDelete(Operation base, TransactionResult result) {
+  private Delete composeDelete(Operation base, @Nullable TransactionResult result) {
     return new Delete(getPartitionKey(base, result), getClusteringKey(base, result).orElse(null))
         .forNamespace(base.forNamespace().get())
         .forTable(base.forTable().get())
@@ -98,5 +102,41 @@ public class CommitMutationComposer extends AbstractMutationComposer {
                 new ConditionalExpression(ID, toIdValue(id), Operator.EQ),
                 new ConditionalExpression(
                     STATE, toStateValue(TransactionState.DELETED), Operator.EQ)));
+  }
+
+  private Key getPartitionKey(Operation base, @Nullable TransactionResult result) {
+    if (base instanceof Mutation) {
+      // for usual commit
+      return base.getPartitionKey();
+    } else {
+      assert base instanceof Selection;
+      if (result != null) {
+        // for rollforward in lazy recovery
+        return result.getPartitionKey().get();
+      } else {
+        // for deleting non-existing record that was prepared with DELETED for Serializable with
+        // Extra-write
+        assert base instanceof Get;
+        return base.getPartitionKey();
+      }
+    }
+  }
+
+  private Optional<Key> getClusteringKey(Operation base, @Nullable TransactionResult result) {
+    if (base instanceof Mutation) {
+      // for usual commit
+      return base.getClusteringKey();
+    } else {
+      assert base instanceof Selection;
+      if (result != null) {
+        // for rollforward in lazy recovery
+        return result.getClusteringKey();
+      } else {
+        // for deleting non-existing record that was prepared with DELETED for Serializable with
+        // Extra-write
+        assert base instanceof Get;
+        return base.getClusteringKey();
+      }
+    }
   }
 }

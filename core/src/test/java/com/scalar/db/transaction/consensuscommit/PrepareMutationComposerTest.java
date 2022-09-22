@@ -6,15 +6,17 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toVersionValue;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
@@ -24,8 +26,6 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.ScalarDbUtils;
-import java.util.ArrayList;
-import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -60,12 +60,10 @@ public class PrepareMutationComposerTest {
               .build());
 
   private PrepareMutationComposer composer;
-  private List<Mutation> mutations;
 
   @BeforeEach
   public void setUp() {
-    mutations = new ArrayList<>();
-    composer = new PrepareMutationComposer(ANY_ID_3, mutations, ANY_TIME_5);
+    composer = new PrepareMutationComposer(ANY_ID_3, ANY_TIME_5);
   }
 
   private Put preparePut() {
@@ -83,6 +81,23 @@ public class PrepareMutationComposerTest {
     return new Delete(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
+  }
+
+  private Get prepareGet() {
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    return new Get(partitionKey, clusteringKey)
+        .forNamespace(ANY_NAMESPACE_NAME)
+        .forTable(ANY_TABLE_NAME);
+  }
+
+  private Scan prepareScan() {
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .build();
   }
 
   private TransactionResult prepareResult() {
@@ -131,7 +146,7 @@ public class PrepareMutationComposerTest {
     composer.add(put, result);
 
     // Assert
-    Put actual = (Put) mutations.get(0);
+    Put actual = (Put) composer.get().get(0);
     put.withConsistency(Consistency.LINEARIZABLE);
     put.withCondition(
         new PutIf(
@@ -159,7 +174,7 @@ public class PrepareMutationComposerTest {
     composer.add(put, null);
 
     // Assert
-    Put actual = (Put) mutations.get(0);
+    Put actual = (Put) composer.get().get(0);
     put.withConsistency(Consistency.LINEARIZABLE);
     put.withCondition(new PutIfNotExists());
     put.withValue(Attribute.toPreparedAtValue(ANY_TIME_5));
@@ -170,7 +185,7 @@ public class PrepareMutationComposerTest {
   }
 
   @Test
-  public void delete_DeleteAndResultGiven_ShouldComposePutWithPutIfCondition() {
+  public void add_DeleteAndResultGiven_ShouldComposePutWithPutIfCondition() {
     // Arrange
     Delete delete = prepareDelete();
     TransactionResult result = prepareResult();
@@ -179,7 +194,7 @@ public class PrepareMutationComposerTest {
     composer.add(delete, result);
 
     // Assert
-    Put actual = (Put) mutations.get(0);
+    Put actual = (Put) composer.get().get(0);
     Put expected =
         new Put(delete.getPartitionKey(), delete.getClusteringKey().orElse(null))
             .forNamespace(delete.forNamespace().get())
@@ -203,7 +218,7 @@ public class PrepareMutationComposerTest {
   }
 
   @Test
-  public void delete_DeleteAndNullResultGiven_ShouldComposePutWithPutIfNotExistsCondition() {
+  public void add_DeleteAndNullResultGiven_ShouldComposePutWithPutIfNotExistsCondition() {
     // Arrange
     Delete delete = prepareDelete();
 
@@ -211,7 +226,7 @@ public class PrepareMutationComposerTest {
     composer.add(delete, null);
 
     // Assert
-    Put actual = (Put) mutations.get(0);
+    Put actual = (Put) composer.get().get(0);
     Put expected =
         new Put(delete.getPartitionKey(), delete.getClusteringKey().orElse(null))
             .forNamespace(delete.forNamespace().get())
@@ -223,5 +238,38 @@ public class PrepareMutationComposerTest {
     expected.withValue(Attribute.toStateValue(TransactionState.DELETED));
     expected.withValue(Attribute.toVersionValue(1));
     assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void
+      add_GetAndNullResultGiven_ShouldComposePutForPuttingNonExistingRecordForSerializableWithExtraWrite() {
+    // Arrange
+    Get get = prepareGet();
+
+    // Act
+    composer.add(get, null);
+
+    // Assert
+    Put actual = (Put) composer.get().get(0);
+    Put expected =
+        new Put(get.getPartitionKey(), get.getClusteringKey().orElse(null))
+            .forNamespace(get.forNamespace().get())
+            .forTable(get.forTable().get());
+    expected.withConsistency(Consistency.LINEARIZABLE);
+    expected.withCondition(new PutIfNotExists());
+    expected.withValue(Attribute.toPreparedAtValue(ANY_TIME_5));
+    expected.withValue(Attribute.toIdValue(ANY_ID_3));
+    expected.withValue(Attribute.toStateValue(TransactionState.DELETED));
+    expected.withValue(Attribute.toVersionValue(1));
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void add_SelectionOtherThanGetGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Scan scan = prepareScan();
+
+    // Act Assert
+    assertThatThrownBy(() -> composer.add(scan, null)).isInstanceOf(IllegalArgumentException.class);
   }
 }

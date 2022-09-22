@@ -13,7 +13,6 @@ import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.TableMetadata;
@@ -25,8 +24,6 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.ScalarDbUtils;
-import java.util.ArrayList;
-import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -54,12 +51,10 @@ public class CommitMutationComposerTest {
           .build();
 
   private CommitMutationComposer composer;
-  private List<Mutation> mutations;
 
   @BeforeEach
   public void setUp() {
-    mutations = new ArrayList<>();
-    composer = new CommitMutationComposer(ANY_ID, mutations, ANY_TIME_2);
+    composer = new CommitMutationComposer(ANY_ID, ANY_TIME_2);
   }
 
   private Put preparePut() {
@@ -104,15 +99,16 @@ public class CommitMutationComposerTest {
   }
 
   @Test
-  public void add_PutGiven_ShouldComposePutWithPutIfCondition() {
+  public void add_PutAndPreparedResultGiven_ShouldComposePutWithPutIfCondition() {
     // Arrange
     Put put = preparePut();
+    TransactionResult result = prepareResult(TransactionState.PREPARED);
 
     // Act
-    composer.add(put, null); // result is not used, so it's set null
+    composer.add(put, result);
 
     // Assert
-    Put actual = (Put) mutations.get(0);
+    Put actual = (Put) composer.get().get(0);
     Put expected =
         new Put(put.getPartitionKey(), put.getClusteringKey().orElse(null))
             .forNamespace(put.forNamespace().get())
@@ -129,7 +125,51 @@ public class CommitMutationComposerTest {
   }
 
   @Test
-  public void add_DeleteGiven_ShouldComposeDeleteWithDeleteIfCondition() {
+  public void add_PutAndNullResultGiven_ShouldComposePutWithPutIfCondition() {
+    // Arrange
+    Put put = preparePut();
+
+    // Act
+    composer.add(put, null); // result is not used, so it's set null
+
+    // Assert
+    Put actual = (Put) composer.get().get(0);
+    Put expected =
+        new Put(put.getPartitionKey(), put.getClusteringKey().orElse(null))
+            .forNamespace(put.forNamespace().get())
+            .forTable(put.forTable().get());
+    expected.withConsistency(Consistency.LINEARIZABLE);
+    expected.withCondition(
+        new PutIf(
+            new ConditionalExpression(ID, toIdValue(ANY_ID), Operator.EQ),
+            new ConditionalExpression(
+                STATE, toStateValue(TransactionState.PREPARED), Operator.EQ)));
+    expected.withValue(Attribute.toCommittedAtValue(ANY_TIME_2));
+    expected.withValue(Attribute.toStateValue(TransactionState.COMMITTED));
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void add_DeleteAndDeletedResultGiven_ShouldComposeDeleteWithDeleteIfCondition() {
+    // Arrange
+    Delete delete = prepareDelete();
+    TransactionResult result = prepareResult(TransactionState.DELETED);
+
+    // Act
+    composer.add(delete, result);
+
+    // Assert
+    Delete actual = (Delete) composer.get().get(0);
+    delete.withConsistency(Consistency.LINEARIZABLE);
+    delete.withCondition(
+        new DeleteIf(
+            new ConditionalExpression(ID, toIdValue(ANY_ID), Operator.EQ),
+            new ConditionalExpression(STATE, toStateValue(TransactionState.DELETED), Operator.EQ)));
+    assertThat(actual).isEqualTo(delete);
+  }
+
+  @Test
+  public void add_DeleteAndNullResultGiven_ShouldComposeDeleteWithDeleteIfCondition() {
     // Arrange
     Delete delete = prepareDelete();
 
@@ -137,7 +177,7 @@ public class CommitMutationComposerTest {
     composer.add(delete, null); // result is not used, so it's set null
 
     // Assert
-    Delete actual = (Delete) mutations.get(0);
+    Delete actual = (Delete) composer.get().get(0);
     delete.withConsistency(Consistency.LINEARIZABLE);
     delete.withCondition(
         new DeleteIf(
@@ -156,7 +196,7 @@ public class CommitMutationComposerTest {
     composer.add(get, result);
 
     // Assert
-    Put actual = (Put) mutations.get(0);
+    Put actual = (Put) composer.get().get(0);
     Put expected =
         new Put(get.getPartitionKey(), get.getClusteringKey().orElse(null))
             .forNamespace(get.forNamespace().get())
@@ -173,7 +213,7 @@ public class CommitMutationComposerTest {
   }
 
   @Test
-  public void add_SelectionAndDeletedResultGiven_ShouldComposePutForRollforward() {
+  public void add_SelectionAndDeletedResultGiven_ShouldComposeDeleteForRollforward() {
     // Arrange
     Get get = prepareGet();
     TransactionResult result = prepareResult(TransactionState.DELETED);
@@ -182,7 +222,30 @@ public class CommitMutationComposerTest {
     composer.add(get, result);
 
     // Assert
-    Delete actual = (Delete) mutations.get(0);
+    Delete actual = (Delete) composer.get().get(0);
+    Delete expected =
+        new Delete(get.getPartitionKey(), get.getClusteringKey().orElse(null))
+            .forNamespace(get.forNamespace().get())
+            .forTable(get.forTable().get());
+    expected.withConsistency(Consistency.LINEARIZABLE);
+    expected.withCondition(
+        new DeleteIf(
+            new ConditionalExpression(ID, toIdValue(ANY_ID), Operator.EQ),
+            new ConditionalExpression(STATE, toStateValue(TransactionState.DELETED), Operator.EQ)));
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void
+      add_GetAndNullResultGiven_ShouldComposeDeleteForDeletingNonExistingRecordForSerializableWithExtraWrite() {
+    // Arrange
+    Get get = prepareGet();
+
+    // Act
+    composer.add(get, null);
+
+    // Assert
+    Delete actual = (Delete) composer.get().get(0);
     Delete expected =
         new Delete(get.getPartitionKey(), get.getClusteringKey().orElse(null))
             .forNamespace(get.forNamespace().get())
