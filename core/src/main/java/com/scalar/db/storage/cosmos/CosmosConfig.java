@@ -19,7 +19,7 @@ public class CosmosConfig {
 
   public CosmosConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
-    if (!storage.equals("cosmos")) {
+    if (!"cosmos".equals(storage)) {
       throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be 'cosmos'");
     }
 

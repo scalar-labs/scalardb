@@ -27,7 +27,7 @@ public class DynamoConfig {
 
   public DynamoConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
-    if (!storage.equals("dynamo")) {
+    if (!"dynamo".equals(storage)) {
       throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be 'dynamo'");
     }
 
