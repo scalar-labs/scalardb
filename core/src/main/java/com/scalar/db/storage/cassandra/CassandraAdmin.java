@@ -542,6 +542,23 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
-    throw new UnsupportedOperationException("Not yet implemented");
+    createMetadataKeyspaceIfNotExists();
+    createKeyspacesTableIfNotExists();
+    // Retrieve user keyspace and filter out system ones. A downside is that this may include
+    // keyspace not created by Scalar DB.
+    Set<String> userKeyspaces =
+        clusterManager.getSession().getCluster().getMetadata().getKeyspaces().stream()
+            .map(KeyspaceMetadata::getName)
+            .filter(name -> !name.startsWith("system") && !name.equals(metadataKeyspace))
+            .collect(Collectors.toSet());
+    for (String userKeyspace : userKeyspaces) {
+      String insertQuery =
+          QueryBuilder.insertInto(
+                  quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
+              .ifNotExists()
+              .value(KEYSPACES_NAME_COL, quoteIfNecessary(userKeyspace))
+              .toString();
+      clusterManager.getSession().execute(insertQuery);
+    }
   }
 }

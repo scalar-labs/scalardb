@@ -1,9 +1,14 @@
 package com.scalar.db.storage.multistorage;
 
+import static com.datastax.driver.core.Metadata.quoteIfNecessary;
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
+import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.storage.cassandra.CassandraAdmin;
+import com.scalar.db.storage.cassandra.CassandraConfig;
+import com.scalar.db.storage.cassandra.ClusterManager;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcUtils;
@@ -17,7 +22,10 @@ import java.util.Properties;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 public class MultiStorageAdminTestUtils extends AdminTestUtils {
-
+  // for Cassandra
+  private final String cassandraMetadataKeyspace;
+  private final ClusterManager clusterManager;
+  // for JDBC
   private final JdbcConfig jdbcConfig;
   private final String jdbcMetadataSchema;
   private final RdbEngine rdbEngine;
@@ -26,6 +34,14 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     // Cassandra has the coordinator tables
     super(cassandraProperties);
 
+    // for Cassandra
+    DatabaseConfig databaseConfig = new DatabaseConfig(cassandraProperties);
+    CassandraConfig cassandraConfig = new CassandraConfig(databaseConfig);
+    cassandraMetadataKeyspace =
+        cassandraConfig.getMetadataKeyspace().orElse(CassandraAdmin.METADATA_KEYSPACE);
+    clusterManager = new ClusterManager(databaseConfig);
+
+    // for JDBC
     jdbcConfig = new JdbcConfig(new DatabaseConfig(jdbcProperties));
     jdbcMetadataSchema = jdbcConfig.getMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
     rdbEngine = JdbcUtils.getRdbEngine(jdbcConfig.getJdbcUrl());
@@ -69,7 +85,10 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
 
   @Override
   public void dropNamespacesTable() throws Exception {
-    // Do nothing for Cassandra
+    // for Cassandra
+    String dropKeyspaceQuery =
+        SchemaBuilder.dropKeyspace(quoteIfNecessary(cassandraMetadataKeyspace)).getQueryString();
+    clusterManager.getSession().execute(dropKeyspaceQuery);
 
     // for JDBC
     execute(

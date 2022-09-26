@@ -16,7 +16,6 @@ import java.util.Properties;
 import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
@@ -356,7 +355,6 @@ public class MultiStorageAdminIntegrationTest {
     assertThat(namespaces).containsExactlyInAnyOrder(NAMESPACE1, NAMESPACE2);
   }
 
-  @Disabled("Temporarily until admin.upgrade() is implemented")
   @Test
   public void
       upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces()
