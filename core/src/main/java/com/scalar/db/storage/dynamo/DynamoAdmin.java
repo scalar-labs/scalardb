@@ -80,6 +80,7 @@ import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import software.amazon.awssdk.services.dynamodb.model.TableStatus;
 import software.amazon.awssdk.services.dynamodb.model.UpdateContinuousBackupsRequest;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.UpdateTableRequest;
 
 /**
@@ -1371,6 +1372,53 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
-    throw new UnsupportedOperationException("Not yet implemented");
+    if (!metadataTableExists()) {
+      return;
+    }
+    boolean noBackup = Boolean.parseBoolean(options.getOrDefault(NO_BACKUP, DEFAULT_NO_BACKUP));
+    createNamespacesTableIfNotExists(noBackup);
+
+    Set<String> existingNamespaceNames = getNamespacesOfExistingTables();
+    try {
+      for (String namespaceName : existingNamespaceNames) {
+        client.updateItem(
+            UpdateItemRequest.builder()
+                .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, NAMESPACES_TABLE))
+                .key(
+                    ImmutableMap.of(
+                        NAMESPACES_ATTR_NAME, AttributeValue.builder().s(namespaceName).build()))
+                .build());
+      }
+    } catch (RuntimeException e) {
+      throw new ExecutionException("failed to import namespace names of existing tables", e);
+    }
+  }
+
+  private Set<String> getNamespacesOfExistingTables() throws ExecutionException {
+    Set<String> namespaceNames = new HashSet<>();
+    Map<String, AttributeValue> lastEvaluatedKey = null;
+    do {
+      ScanResponse scanResponse;
+      try {
+        scanResponse =
+            client.scan(
+                ScanRequest.builder()
+                    .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, METADATA_TABLE))
+                    .exclusiveStartKey(lastEvaluatedKey)
+                    .build());
+      } catch (RuntimeException e) {
+        throw new ExecutionException(
+            "failed to retrieve the namespaces names of existing tables", e);
+      }
+      lastEvaluatedKey = scanResponse.lastEvaluatedKey();
+
+      for (Map<String, AttributeValue> tableMetadata : scanResponse.items()) {
+        String fullTableName = tableMetadata.get(METADATA_ATTR_TABLE).s();
+        String namespaceName = fullTableName.substring(0, fullTableName.indexOf('.'));
+        namespaceNames.add(namespaceName);
+      }
+    } while (!lastEvaluatedKey.isEmpty());
+
+    return namespaceNames;
   }
 }
