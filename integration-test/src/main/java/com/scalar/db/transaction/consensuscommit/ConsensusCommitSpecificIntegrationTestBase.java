@@ -98,7 +98,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     properties.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
 
     StorageFactory factory = StorageFactory.create(properties);
-    admin = factory.getAdmin();
+    admin = factory.getStorageAdmin();
     databaseConfig = new DatabaseConfig(properties);
     consensusCommitConfig = new ConsensusCommitConfig(databaseConfig);
     consensusCommitAdmin = new ConsensusCommitAdmin(admin, consensusCommitConfig, false);
@@ -1181,24 +1181,23 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     puts1.get(from).withValue(BALANCE, expected);
     puts2.get(to).withValue(BALANCE, expected);
 
-    ConsensusCommit transaction = manager.begin();
-    transaction.setBeforeCommitHook(
-        () -> {
-          ConsensusCommit another = manager.begin();
-          puts1.get(anotherTo).withValue(BALANCE, expected);
-          assertThatCode(
-                  () -> {
-                    another.put(puts2.get(anotherFrom));
-                    another.put(puts1.get(anotherTo));
-                    another.commit();
-                  })
-              .doesNotThrowAnyException();
-        });
+    ConsensusCommit transaction1 = manager.begin();
+    transaction1.put(puts1.get(from));
+    transaction1.put(puts2.get(to));
+
+    ConsensusCommit transaction2 = manager.begin();
+    puts1.get(anotherTo).withValue(BALANCE, expected);
 
     // Act Assert
-    transaction.put(puts1.get(from));
-    transaction.put(puts2.get(to));
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
+    assertThatCode(
+            () -> {
+              transaction2.put(puts2.get(anotherFrom));
+              transaction2.put(puts1.get(anotherTo));
+              transaction2.commit();
+            })
+        .doesNotThrowAnyException();
+
+    assertThatThrownBy(transaction1::commit).isInstanceOf(CommitException.class);
 
     // Assert
     verify(commit).rollbackRecords(any(Snapshot.class));
@@ -1253,27 +1252,19 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     List<Delete> deletes1 = prepareDeletes(namespace1, table1);
     List<Get> gets2 = differentTables ? prepareGets(namespace2, table2) : gets1;
     List<Delete> deletes2 = differentTables ? prepareDeletes(namespace2, table2) : deletes1;
-
     transaction.get(gets1.get(from));
     transaction.delete(deletes1.get(from));
     transaction.get(gets2.get(to));
     transaction.delete(deletes2.get(to));
-    transaction.setBeforeCommitHook(
-        () ->
-            assertThatCode(
-                    () ->
-                        prepareTransfer(
-                                anotherFrom,
-                                namespace2,
-                                table2,
-                                anotherTo,
-                                namespace1,
-                                table1,
-                                amount)
-                            .commit())
-                .doesNotThrowAnyException());
 
-    // Act
+    // Act Assert
+    assertThatCode(
+            () ->
+                prepareTransfer(
+                        anotherFrom, namespace2, table2, anotherTo, namespace1, table1, amount)
+                    .commit())
+        .doesNotThrowAnyException();
+
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
@@ -1326,22 +1317,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     ConsensusCommit transaction =
         prepareTransfer(from, namespace1, table1, to, namespace2, table2, amount1);
-    transaction.setBeforeCommitHook(
-        () ->
-            assertThatCode(
-                    () ->
-                        prepareTransfer(
-                                anotherFrom,
-                                namespace2,
-                                table2,
-                                anotherTo,
-                                namespace1,
-                                table1,
-                                amount2)
-                            .commit())
-                .doesNotThrowAnyException());
 
-    // Act
+    // Act Assert
+    assertThatCode(
+            () ->
+                prepareTransfer(
+                        anotherFrom, namespace2, table2, anotherTo, namespace1, table1, amount2)
+                    .commit())
+        .doesNotThrowAnyException();
+
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
@@ -1396,22 +1380,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     ConsensusCommit transaction =
         prepareTransfer(from, namespace1, table1, to, namespace2, table2, amount1);
-    transaction.setBeforeCommitHook(
-        () ->
-            assertThatCode(
-                    () ->
-                        prepareTransfer(
-                                anotherFrom,
-                                namespace2,
-                                table2,
-                                anotherTo,
-                                namespace1,
-                                table1,
-                                amount2)
-                            .commit())
-                .doesNotThrowAnyException());
 
-    // Act
+    // Act Assert
+    assertThatCode(
+            () ->
+                prepareTransfer(
+                        anotherFrom, namespace2, table2, anotherTo, namespace1, table1, amount2)
+                    .commit())
+        .doesNotThrowAnyException();
+
     assertThatCode(transaction::commit).doesNotThrowAnyException();
 
     // Assert
@@ -1462,25 +1439,24 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     puts1.get(from).withValue(BALANCE, expected);
     puts1.get(to).withValue(BALANCE, expected);
 
-    ConsensusCommit transaction = manager.begin();
-    transaction.setBeforeCommitHook(
-        () -> {
-          ConsensusCommit another = manager.begin();
-          puts2.get(from).withValue(BALANCE, expected);
-          puts2.get(to).withValue(BALANCE, expected);
-          assertThatCode(
-                  () -> {
-                    another.put(puts2.get(anotherFrom));
-                    another.put(puts2.get(anotherTo));
-                    another.commit();
-                  })
-              .doesNotThrowAnyException();
-        });
+    ConsensusCommit transaction1 = manager.begin();
+    transaction1.put(puts1.get(from));
+    transaction1.put(puts1.get(to));
+
+    ConsensusCommit transaction2 = manager.begin();
+    puts2.get(from).withValue(BALANCE, expected);
+    puts2.get(to).withValue(BALANCE, expected);
 
     // Act Assert
-    transaction.put(puts1.get(from));
-    transaction.put(puts1.get(to));
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
+    assertThatCode(
+            () -> {
+              transaction2.put(puts2.get(anotherFrom));
+              transaction2.put(puts2.get(anotherTo));
+              transaction2.commit();
+            })
+        .doesNotThrowAnyException();
+
+    assertThatCode(transaction1::commit).doesNotThrowAnyException();
 
     // Assert
     List<Get> gets1 = prepareGets(namespace1, TABLE_1);
@@ -1561,15 +1537,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     ConsensusCommit transaction =
         prepareDeletes(account1, namespace1, table1, account2, namespace2, table2);
-    transaction.setBeforeCommitHook(
-        () ->
-            assertThatCode(
-                    () ->
-                        prepareDeletes(account2, namespace2, table2, account3, namespace1, table1)
-                            .commit())
-                .doesNotThrowAnyException());
 
     // Act
+    assertThatCode(
+            () ->
+                prepareDeletes(account2, namespace2, table2, account3, namespace1, table1).commit())
+        .doesNotThrowAnyException();
+
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
@@ -1619,15 +1593,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     ConsensusCommit transaction =
         prepareDeletes(account1, namespace1, table1, account2, namespace2, table2);
-    transaction.setBeforeCommitHook(
-        () ->
-            assertThatCode(
-                    () ->
-                        prepareDeletes(account3, namespace2, table2, account4, namespace1, table1)
-                            .commit())
-                .doesNotThrowAnyException());
 
     // Act
+    assertThatCode(
+            () ->
+                prepareDeletes(account3, namespace2, table2, account4, namespace1, table1).commit())
+        .doesNotThrowAnyException();
+
     assertThatCode(transaction::commit).doesNotThrowAnyException();
 
     // Assert
