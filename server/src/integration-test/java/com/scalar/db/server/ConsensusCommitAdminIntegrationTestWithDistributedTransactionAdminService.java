@@ -8,6 +8,8 @@ import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
 
 public class ConsensusCommitAdminIntegrationTestWithDistributedTransactionAdminService
     extends ConsensusCommitAdminIntegrationTestBase {
@@ -16,6 +18,7 @@ public class ConsensusCommitAdminIntegrationTestWithDistributedTransactionAdminS
 
   private ScalarDbServer server;
   private ScalarDbServer serverWithIncludeMetadataEnabled;
+  private boolean isExternalServerUsed;
 
   @Override
   protected void initialize(String testName) throws IOException {
@@ -41,6 +44,8 @@ public class ConsensusCommitAdminIntegrationTestWithDistributedTransactionAdminS
       properties.setProperty(ServerConfig.PORT, PORT_FOR_SERVER_WITH_INCLUDE_METADATA_ENABLED);
       serverWithIncludeMetadataEnabled = new ScalarDbServer(properties);
       serverWithIncludeMetadataEnabled.start();
+    } else {
+      isExternalServerUsed = true;
     }
   }
 
@@ -67,5 +72,23 @@ public class ConsensusCommitAdminIntegrationTestWithDistributedTransactionAdminS
     if (serverWithIncludeMetadataEnabled != null) {
       serverWithIncludeMetadataEnabled.shutdown();
     }
+  }
+
+  /** This test is disabled if {@link #isExternalServerUsed()} return true */
+  @Override
+  @Test
+  @DisabledIf("isExternalServerUsed")
+  public void
+      getTableMetadata_WhenIncludeMetadataIsEnabled_ShouldReturnCorrectMetadataWithTransactionMetadataColumns()
+          throws ExecutionException {
+    super
+        .getTableMetadata_WhenIncludeMetadataIsEnabled_ShouldReturnCorrectMetadataWithTransactionMetadataColumns();
+  }
+
+  @SuppressWarnings("unused")
+  private boolean isExternalServerUsed() {
+    // An external server is used, so we don't have access to the configuration to connect to the
+    // underlying storage which makes it impossible to run these tests
+    return isExternalServerUsed;
   }
 }
