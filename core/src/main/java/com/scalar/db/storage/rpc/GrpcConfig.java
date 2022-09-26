@@ -22,7 +22,7 @@ public class GrpcConfig {
   public GrpcConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
     String transactionManager = databaseConfig.getTransactionManager();
-    if (!storage.equals("grpc") && !transactionManager.equals("jdbc")) {
+    if (!"grpc".equals(storage) && !"grpc".equals(transactionManager)) {
       throw new IllegalArgumentException(
           DatabaseConfig.STORAGE
               + " or "
