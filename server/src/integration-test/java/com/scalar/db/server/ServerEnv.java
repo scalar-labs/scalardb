@@ -20,9 +20,9 @@ public final class ServerEnv {
   private static final String PROP_SERVER_JDBC_USERNAME = "scalardb.server.jdbc.username";
   private static final String PROP_SERVER_JDBC_PASSWORD = "scalardb.server.jdbc.password";
 
-  private static final String DEFAULT_SERVER_CONTACT_POINTS = "jdbc:mysql://localhost:3306/";
-  private static final String DEFAULT_SERVER_USERNAME = "root";
-  private static final String DEFAULT_SERVER_PASSWORD = "mysql";
+  private static final String DEFAULT_SERVER_JDBC_CONTACT_POINTS = "jdbc:mysql://localhost:3306/";
+  private static final String DEFAULT_SERVER_JDBC_USERNAME = "root";
+  private static final String DEFAULT_SERVER_JDBC_PASSWORD = "mysql";
 
   private static final String PROP_GRPC_CONTACT_POINTS = "scalardb.grpc.contact_points";
   private static final String PROP_GRPC_CONTACT_PORT = "scalardb.grpc.contact_port";
@@ -49,9 +49,11 @@ public final class ServerEnv {
     }
 
     String jdbcContactPoints =
-        System.getProperty(PROP_SERVER_JDBC_CONTACT_POINTS, DEFAULT_SERVER_CONTACT_POINTS);
-    String jdbcUsername = System.getProperty(PROP_SERVER_JDBC_USERNAME, DEFAULT_SERVER_USERNAME);
-    String jdbcPassword = System.getProperty(PROP_SERVER_JDBC_PASSWORD, DEFAULT_SERVER_PASSWORD);
+        System.getProperty(PROP_SERVER_JDBC_CONTACT_POINTS, DEFAULT_SERVER_JDBC_CONTACT_POINTS);
+    String jdbcUsername =
+        System.getProperty(PROP_SERVER_JDBC_USERNAME, DEFAULT_SERVER_JDBC_USERNAME);
+    String jdbcPassword =
+        System.getProperty(PROP_SERVER_JDBC_PASSWORD, DEFAULT_SERVER_JDBC_PASSWORD);
 
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcContactPoints);
