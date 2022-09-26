@@ -6,8 +6,6 @@ import com.scalar.db.util.CosmosAdminTestUtils;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 
 public class ConsensusCommitAdminIntegrationTestWithCosmos
     extends ConsensusCommitAdminIntegrationTestBase {
@@ -46,10 +44,4 @@ public class ConsensusCommitAdminIntegrationTestWithCosmos
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new CosmosAdminTestUtils(getProperties(testName));
   }
-
-  @Disabled("Temporarily until admin.upgrade() is implemented")
-  @Test
-  @Override
-  public void
-      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
 }

@@ -88,7 +88,7 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
-  public void dropNamespacesTable() throws Exception {
-    throw new UnsupportedOperationException("Not yet implemented");
+  public void dropNamespacesTable() {
+    client.getDatabase(metadataDatabase).getContainer(CosmosAdmin.NAMESPACES_CONTAINER).delete();
   }
 }
