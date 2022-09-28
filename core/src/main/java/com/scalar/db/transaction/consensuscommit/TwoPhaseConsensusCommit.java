@@ -54,7 +54,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
   // For test
   private Runnable beforeRecoveryHook = () -> {};
-  private Runnable beforePrepareHook = () -> {};
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public TwoPhaseConsensusCommit(
@@ -149,7 +148,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   @Override
   public void prepare() throws PreparationException {
     checkStatus("The transaction is not active", Status.ACTIVE);
-    beforePrepareHook.run();
 
     try {
       commit.prepare(crud.getSnapshot(), false);
@@ -257,11 +255,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   @VisibleForTesting
   void setBeforeRecoveryHook(Runnable beforeRecoveryHook) {
     this.beforeRecoveryHook = beforeRecoveryHook;
-  }
-
-  @VisibleForTesting
-  void setBeforePrepareHook(Runnable beforePrepareHook) {
-    this.beforePrepareHook = beforePrepareHook;
   }
 
   private void checkStatus(@Nullable String message, Status... expectedStatus) {
