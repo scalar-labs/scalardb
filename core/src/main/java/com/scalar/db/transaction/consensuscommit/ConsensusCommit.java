@@ -42,7 +42,6 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   private final CommitHandler commit;
   private final RecoveryHandler recovery;
   private Runnable beforeRecoveryHook;
-  private Runnable beforeCommitHook;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ConsensusCommit(CrudHandler crud, CommitHandler commit, RecoveryHandler recovery) {
@@ -50,7 +49,6 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     this.commit = checkNotNull(commit);
     this.recovery = checkNotNull(recovery);
     this.beforeRecoveryHook = () -> {};
-    this.beforeCommitHook = () -> {};
   }
 
   @Override
@@ -119,7 +117,6 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
-    beforeCommitHook.run();
     commit.commit(crud.getSnapshot());
   }
 
@@ -146,11 +143,6 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   @VisibleForTesting
   void setBeforeRecoveryHook(Runnable beforeRecoveryHook) {
     this.beforeRecoveryHook = beforeRecoveryHook;
-  }
-
-  @VisibleForTesting
-  void setBeforeCommitHook(Runnable beforeCommitHook) {
-    this.beforeCommitHook = beforeCommitHook;
   }
 
   private void lazyRecovery(Selection selection, List<TransactionResult> results) {

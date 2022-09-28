@@ -9,13 +9,21 @@ public class TwoPhaseConsensusCommitSpecificIntegrationTestWithCosmos
     extends TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
   @Override
-  protected Properties getProperties(String testName) {
+  protected Properties getProperties1(String testName) {
     return CosmosEnv.getProperties(testName);
   }
 
   @Override
-  protected String getNamespace() {
-    String namespace = super.getNamespace();
+  protected String getNamespace1() {
+    return getNamespace(super.getNamespace1());
+  }
+
+  @Override
+  protected String getNamespace2() {
+    return getNamespace(super.getNamespace2());
+  }
+
+  private String getNamespace(String namespace) {
     Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
     return databasePrefix.map(prefix -> prefix + namespace).orElse(namespace);
   }

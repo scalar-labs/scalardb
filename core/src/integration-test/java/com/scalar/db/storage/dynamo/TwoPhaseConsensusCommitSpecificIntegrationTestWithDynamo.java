@@ -8,7 +8,7 @@ public class TwoPhaseConsensusCommitSpecificIntegrationTestWithDynamo
     extends TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
   @Override
-  protected Properties getProperties(String testName) {
+  protected Properties getProperties1(String testName) {
     return DynamoEnv.getProperties(testName);
   }
 

@@ -47,7 +47,8 @@ import org.junit.jupiter.api.TestInstance;
 public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
   private static final String TEST_NAME = "2pcc";
-  private static final String NAMESPACE = "int_test_" + TEST_NAME;
+  private static final String NAMESPACE_1 = "int_test_" + TEST_NAME + "1";
+  private static final String NAMESPACE_2 = "int_test_" + TEST_NAME + "2";
   private static final String TABLE_1 = "tx_test_table1";
   private static final String TABLE_2 = "tx_test_table2";
   private static final String ACCOUNT_ID = "account_id";
@@ -59,18 +60,43 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   private static final String ANY_ID_1 = "id1";
   private static final String ANY_ID_2 = "id2";
 
-  private TwoPhaseConsensusCommitManager manager;
-  private DistributedStorage storage;
-  private DistributedStorageAdmin admin;
-  private ConsensusCommitAdmin consensusCommitAdmin;
-  private Coordinator coordinator;
-  private String namespace;
+  private TwoPhaseConsensusCommitManager manager1;
+  private TwoPhaseConsensusCommitManager manager2;
+  private DistributedStorage storage1;
+  private DistributedStorage storage2;
+  private ConsensusCommitAdmin consensusCommitAdmin1;
+  private ConsensusCommitAdmin consensusCommitAdmin2;
+  private Coordinator coordinatorForStorage1;
+  private String namespace1;
+  private String namespace2;
 
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize();
-    Properties properties = getProperties(TEST_NAME);
+    Properties properties1 = modifyProperties(getProperties1(TEST_NAME));
+    Properties properties2 = modifyProperties(getProperties2(TEST_NAME));
 
+    namespace1 = getNamespace1();
+    namespace2 = getNamespace2();
+    StorageFactory factory1 = StorageFactory.create(properties1);
+    StorageFactory factory2 = StorageFactory.create(properties2);
+    DistributedStorageAdmin admin1 = factory1.getStorageAdmin();
+    DistributedStorageAdmin admin2 = factory2.getStorageAdmin();
+    DatabaseConfig databaseConfig1 = new DatabaseConfig(properties1);
+    DatabaseConfig databaseConfig2 = new DatabaseConfig(properties2);
+    ConsensusCommitConfig consensusCommitConfig1 = new ConsensusCommitConfig(databaseConfig1);
+    ConsensusCommitConfig consensusCommitConfig2 = new ConsensusCommitConfig(databaseConfig2);
+    consensusCommitAdmin1 = new ConsensusCommitAdmin(admin1, consensusCommitConfig1, false);
+    consensusCommitAdmin2 = new ConsensusCommitAdmin(admin2, consensusCommitConfig2, false);
+    createTables();
+    storage1 = factory1.getStorage();
+    storage2 = factory2.getStorage();
+    manager1 = new TwoPhaseConsensusCommitManager(storage1, admin1, databaseConfig1);
+    manager2 = new TwoPhaseConsensusCommitManager(storage2, admin2, databaseConfig2);
+    coordinatorForStorage1 = new Coordinator(storage1, consensusCommitConfig1);
+  }
+
+  private Properties modifyProperties(Properties properties) {
     // Add testName as a coordinator namespace suffix
     String coordinatorNamespace =
         properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
@@ -81,23 +107,23 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     // for now.
     properties.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
 
-    namespace = getNamespace();
-    StorageFactory factory = StorageFactory.create(properties);
-    admin = factory.getAdmin();
-    DatabaseConfig databaseConfig = new DatabaseConfig(properties);
-    ConsensusCommitConfig consensusCommitConfig = new ConsensusCommitConfig(databaseConfig);
-    consensusCommitAdmin = new ConsensusCommitAdmin(admin, consensusCommitConfig, false);
-    createTables();
-    storage = factory.getStorage();
-    initManagerAndCoordinator(databaseConfig, consensusCommitConfig);
+    return properties;
   }
 
   protected void initialize() throws Exception {}
 
-  protected abstract Properties getProperties(String testName);
+  protected abstract Properties getProperties1(String testName);
 
-  protected String getNamespace() {
-    return NAMESPACE;
+  protected Properties getProperties2(String testName) {
+    return getProperties1(testName);
+  }
+
+  protected String getNamespace1() {
+    return NAMESPACE_1;
+  }
+
+  protected String getNamespace2() {
+    return NAMESPACE_2;
   }
 
   private void createTables() throws ExecutionException {
@@ -110,20 +136,15 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
             .addPartitionKey(ACCOUNT_ID)
             .addClusteringKey(ACCOUNT_TYPE)
             .build();
-    admin.createNamespace(namespace, true, options);
-    consensusCommitAdmin.createTable(namespace, TABLE_1, tableMetadata, true, options);
-    consensusCommitAdmin.createTable(namespace, TABLE_2, tableMetadata, true, options);
-    consensusCommitAdmin.createCoordinatorTables(true, options);
+    consensusCommitAdmin1.createNamespace(namespace1, true, options);
+    consensusCommitAdmin1.createTable(namespace1, TABLE_1, tableMetadata, true, options);
+    consensusCommitAdmin1.createCoordinatorTables(true, options);
+    consensusCommitAdmin2.createNamespace(namespace2, true, options);
+    consensusCommitAdmin2.createTable(namespace2, TABLE_2, tableMetadata, true, options);
   }
 
   protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
-  }
-
-  private void initManagerAndCoordinator(
-      DatabaseConfig databaseConfig, ConsensusCommitConfig consensusCommitConfig) {
-    manager = new TwoPhaseConsensusCommitManager(storage, admin, databaseConfig);
-    coordinator = new Coordinator(storage, consensusCommitConfig);
   }
 
   @BeforeEach
@@ -132,34 +153,38 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   private void truncateTables() throws ExecutionException {
-    admin.truncateTable(namespace, TABLE_1);
-    admin.truncateTable(namespace, TABLE_2);
-    consensusCommitAdmin.truncateCoordinatorTables();
+    consensusCommitAdmin1.truncateTable(namespace1, TABLE_1);
+    consensusCommitAdmin1.truncateCoordinatorTables();
+    consensusCommitAdmin2.truncateTable(namespace2, TABLE_2);
   }
 
   @AfterAll
   public void afterAll() throws ExecutionException {
     dropTables();
-    admin.close();
-    storage.close();
-    manager.close();
+    consensusCommitAdmin1.close();
+    consensusCommitAdmin2.close();
+    storage1.close();
+    storage2.close();
+    manager1.close();
+    manager2.close();
   }
 
   private void dropTables() throws ExecutionException {
-    admin.dropTable(namespace, TABLE_1);
-    admin.dropTable(namespace, TABLE_2);
-    admin.dropNamespace(namespace);
-    consensusCommitAdmin.dropCoordinatorTables();
+    consensusCommitAdmin1.dropTable(namespace1, TABLE_1);
+    consensusCommitAdmin1.dropNamespace(namespace1);
+    consensusCommitAdmin1.dropCoordinatorTables();
+    consensusCommitAdmin2.dropTable(namespace2, TABLE_2);
+    consensusCommitAdmin2.dropNamespace(namespace2);
   }
 
   @Test
   public void get_GetGivenForCommittedRecord_ShouldReturnRecord() throws TransactionException {
     // Arrange
-    populate(TABLE_1);
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    populate(manager1, namespace1, TABLE_1);
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     // Act
-    Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
+    Optional<Result> result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
 
     // Assert
     assertThat(result.isPresent()).isTrue();
@@ -171,11 +196,11 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   @Test
   public void scan_ScanGivenForCommittedRecord_ShouldReturnRecord() throws TransactionException {
     // Arrange
-    populate(TABLE_1);
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    populate(manager1, namespace1, TABLE_1);
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     // Act
-    List<Result> results = transaction.scan(prepareScan(0, 0, 0, TABLE_1));
+    List<Result> results = transaction.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
 
     // Assert
     assertThat(results.size()).isEqualTo(1);
@@ -189,12 +214,12 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
       get_CalledTwiceAndAnotherTransactionCommitsInBetween_ShouldReturnFromSnapshotInSecondTime()
           throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     // Act
-    Optional<Result> result1 = transaction.get(prepareGet(0, 0, TABLE_1));
-    populate(TABLE_1);
-    Optional<Result> result2 = transaction.get(prepareGet(0, 0, TABLE_1));
+    Optional<Result> result1 = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+    populate(manager1, namespace1, TABLE_1);
+    Optional<Result> result2 = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
 
     // Assert
     assertThat(result1).isEqualTo(result2);
@@ -203,11 +228,11 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   @Test
   public void get_GetGivenForNonExisting_ShouldReturnEmpty() throws TransactionException {
     // Arrange
-    populate(TABLE_1);
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    populate(manager1, namespace1, TABLE_1);
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     // Act
-    Optional<Result> result = transaction.get(prepareGet(0, 4, TABLE_1));
+    Optional<Result> result = transaction.get(prepareGet(0, 4, namespace1, TABLE_1));
 
     // Assert
     assertThat(result.isPresent()).isFalse();
@@ -216,11 +241,11 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   @Test
   public void scan_ScanGivenForNonExisting_ShouldReturnEmpty() throws TransactionException {
     // Arrange
-    populate(TABLE_1);
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    populate(manager1, namespace1, TABLE_1);
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     // Act
-    List<Result> results = transaction.scan(prepareScan(0, 4, 4, TABLE_1));
+    List<Result> results = transaction.scan(prepareScan(0, 4, 4, namespace1, TABLE_1));
 
     // Assert
     assertThat(results.size()).isEqualTo(0);
@@ -231,20 +256,20 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
       throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long current = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.PREPARED, current, TransactionState.COMMITTED);
+    populatePreparedRecordAndCoordinatorStateRecordForStorage1(
+        TransactionState.PREPARED, current, TransactionState.COMMITTED);
 
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               if (selectionType == SelectionType.GET) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
+                transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
               } else if (selectionType == SelectionType.SCAN) {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
+                transaction.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
               } else {
-                transaction.scan(prepareScanAll(TABLE_1));
+                transaction.scan(prepareScanAll(namespace1, TABLE_1));
               }
             })
         .isInstanceOf(UncommittedRecordException.class);
@@ -252,12 +277,12 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     // Assert
     Optional<Result> result;
     if (selectionType == SelectionType.GET) {
-      result = transaction.get(prepareGet(0, 0, TABLE_1));
+      result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     } else {
       Scan scan =
           selectionType == SelectionType.SCAN
-              ? prepareScan(0, 0, 0, TABLE_1)
-              : prepareScanAll(TABLE_1);
+              ? prepareScan(0, 0, 0, namespace1, TABLE_1)
+              : prepareScanAll(namespace1, TABLE_1);
       List<Result> results = transaction.scan(scan);
       assertThat(results.size()).isEqualTo(1);
       result = Optional.of(results.get(0));
@@ -288,20 +313,20 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
       throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long current = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.PREPARED, current, TransactionState.ABORTED);
+    populatePreparedRecordAndCoordinatorStateRecordForStorage1(
+        TransactionState.PREPARED, current, TransactionState.ABORTED);
 
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               if (selectionType == SelectionType.GET) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
+                transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
               } else if (selectionType == SelectionType.SCAN) {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
+                transaction.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
               } else {
-                transaction.scan(prepareScanAll(TABLE_1));
+                transaction.scan(prepareScanAll(namespace1, TABLE_1));
               }
             })
         .isInstanceOf(UncommittedRecordException.class);
@@ -309,12 +334,12 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     // Assert
     Optional<Result> result;
     if (selectionType == SelectionType.GET) {
-      result = transaction.get(prepareGet(0, 0, TABLE_1));
+      result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     } else {
       Scan scan =
           selectionType == SelectionType.SCAN
-              ? prepareScan(0, 0, 0, TABLE_1)
-              : prepareScanAll(TABLE_1);
+              ? prepareScan(0, 0, 0, namespace1, TABLE_1)
+              : prepareScanAll(namespace1, TABLE_1);
       List<Result> results = transaction.scan(scan);
       assertThat(results.size()).isEqualTo(1);
       result = Optional.of(results.get(0));
@@ -345,26 +370,26 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
           SelectionType selectionType) throws ExecutionException, CoordinatorException {
     // Arrange
     long prepared_at = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.PREPARED, prepared_at, null);
+    populatePreparedRecordAndCoordinatorStateRecordForStorage1(
+        TransactionState.PREPARED, prepared_at, null);
 
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               if (selectionType == SelectionType.GET) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
+                transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
               } else if (selectionType == SelectionType.SCAN) {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
+                transaction.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
               } else {
-                transaction.scan(prepareScanAll(TABLE_1));
+                transaction.scan(prepareScanAll(namespace1, TABLE_1));
               }
             })
         .isInstanceOf(UncommittedRecordException.class);
 
     // Assert
-    assertThat(coordinator.getState(ANY_ID_2).isPresent()).isFalse();
+    assertThat(coordinatorForStorage1.getState(ANY_ID_2).isPresent()).isFalse();
   }
 
   @Test
@@ -389,20 +414,20 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
           throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.PREPARED, prepared_at, null);
+    populatePreparedRecordAndCoordinatorStateRecordForStorage1(
+        TransactionState.PREPARED, prepared_at, null);
 
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               if (selectionType == SelectionType.GET) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
+                transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
               } else if (selectionType == SelectionType.SCAN) {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
+                transaction.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
               } else {
-                transaction.scan(prepareScanAll(TABLE_1));
+                transaction.scan(prepareScanAll(namespace1, TABLE_1));
               }
             })
         .isInstanceOf(UncommittedRecordException.class);
@@ -410,12 +435,12 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     // Assert
     Optional<Result> result;
     if (selectionType == SelectionType.GET) {
-      result = transaction.get(prepareGet(0, 0, TABLE_1));
+      result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     } else {
       Scan scan =
           selectionType == SelectionType.SCAN
-              ? prepareScan(0, 0, 0, TABLE_1)
-              : prepareScanAll(TABLE_1);
+              ? prepareScan(0, 0, 0, namespace1, TABLE_1)
+              : prepareScanAll(namespace1, TABLE_1);
       List<Result> results = transaction.scan(scan);
       assertThat(results.size()).isEqualTo(1);
       result = Optional.of(results.get(0));
@@ -426,8 +451,9 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     assertThat(getAccountType(result.get())).isEqualTo(0);
     assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
 
-    assertThat(coordinator.getState(ANY_ID_2).isPresent()).isTrue();
-    assertThat(coordinator.getState(ANY_ID_2).get().getState()).isEqualTo(TransactionState.ABORTED);
+    assertThat(coordinatorForStorage1.getState(ANY_ID_2).isPresent()).isTrue();
+    assertThat(coordinatorForStorage1.getState(ANY_ID_2).get().getState())
+        .isEqualTo(TransactionState.ABORTED);
   }
 
   @Test
@@ -451,22 +477,22 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
           throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long current = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.PREPARED, current, TransactionState.COMMITTED);
+    populatePreparedRecordAndCoordinatorStateRecordForStorage1(
+        TransactionState.PREPARED, current, TransactionState.COMMITTED);
 
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     transaction.setBeforeRecoveryHook(
         () -> {
-          TwoPhaseConsensusCommit another = manager.begin();
+          TwoPhaseConsensusCommit another = manager1.begin();
           assertThatThrownBy(
                   () -> {
                     if (selectionType == SelectionType.GET) {
-                      another.get(prepareGet(0, 0, TABLE_1));
+                      another.get(prepareGet(0, 0, namespace1, TABLE_1));
                     } else if (selectionType == SelectionType.SCAN) {
-                      another.scan(prepareScan(0, 0, 0, TABLE_1));
+                      another.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
                     } else {
-                      another.scan(prepareScanAll(TABLE_1));
+                      another.scan(prepareScanAll(namespace1, TABLE_1));
                     }
                   })
               .isInstanceOf(UncommittedRecordException.class);
@@ -476,11 +502,11 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     assertThatThrownBy(
             () -> {
               if (selectionType == SelectionType.GET) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
+                transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
               } else if (selectionType == SelectionType.SCAN) {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
+                transaction.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
               } else {
-                transaction.scan(prepareScanAll(TABLE_1));
+                transaction.scan(prepareScanAll(namespace1, TABLE_1));
               }
             })
         .isInstanceOf(UncommittedRecordException.class);
@@ -488,12 +514,12 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     // Assert
     Optional<Result> result;
     if (selectionType == SelectionType.GET) {
-      result = transaction.get(prepareGet(0, 0, TABLE_1));
+      result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     } else {
       Scan scan =
           selectionType == SelectionType.SCAN
-              ? prepareScan(0, 0, 0, TABLE_1)
-              : prepareScanAll(TABLE_1);
+              ? prepareScan(0, 0, 0, namespace1, TABLE_1)
+              : prepareScanAll(namespace1, TABLE_1);
       List<Result> results = transaction.scan(scan);
       assertThat(results.size()).isEqualTo(1);
       result = Optional.of(results.get(0));
@@ -527,22 +553,22 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
           throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long current = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.PREPARED, current, TransactionState.ABORTED);
+    populatePreparedRecordAndCoordinatorStateRecordForStorage1(
+        TransactionState.PREPARED, current, TransactionState.ABORTED);
 
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     transaction.setBeforeRecoveryHook(
         () -> {
-          TwoPhaseConsensusCommit another = manager.begin();
+          TwoPhaseConsensusCommit another = manager1.begin();
           assertThatThrownBy(
                   () -> {
                     if (selectionType == SelectionType.GET) {
-                      another.get(prepareGet(0, 0, TABLE_1));
+                      another.get(prepareGet(0, 0, namespace1, TABLE_1));
                     } else if (selectionType == SelectionType.SCAN) {
-                      another.scan(prepareScan(0, 0, 0, TABLE_1));
+                      another.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
                     } else {
-                      another.scan(prepareScanAll(TABLE_1));
+                      another.scan(prepareScanAll(namespace1, TABLE_1));
                     }
                   })
               .isInstanceOf(UncommittedRecordException.class);
@@ -552,11 +578,11 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     assertThatThrownBy(
             () -> {
               if (selectionType == SelectionType.GET) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
+                transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
               } else if (selectionType == SelectionType.SCAN) {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
+                transaction.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
               } else {
-                transaction.scan(prepareScanAll(TABLE_1));
+                transaction.scan(prepareScanAll(namespace1, TABLE_1));
               }
             })
         .isInstanceOf(UncommittedRecordException.class);
@@ -564,12 +590,12 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     // Assert
     Optional<Result> result;
     if (selectionType == SelectionType.GET) {
-      result = transaction.get(prepareGet(0, 0, TABLE_1));
+      result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     } else {
       Scan scan =
           selectionType == SelectionType.SCAN
-              ? prepareScan(0, 0, 0, TABLE_1)
-              : prepareScanAll(TABLE_1);
+              ? prepareScan(0, 0, 0, namespace1, TABLE_1)
+              : prepareScanAll(namespace1, TABLE_1);
       List<Result> results = transaction.scan(scan);
       assertThat(results.size()).isEqualTo(1);
       result = Optional.of(results.get(0));
@@ -602,33 +628,33 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
       throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long current = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.DELETED, current, TransactionState.COMMITTED);
+    populatePreparedRecordAndCoordinatorStateRecordForStorage1(
+        TransactionState.DELETED, current, TransactionState.COMMITTED);
 
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               if (selectionType == SelectionType.GET) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
+                transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
               } else if (selectionType == SelectionType.SCAN) {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
+                transaction.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
               } else {
-                transaction.scan(prepareScanAll(TABLE_1));
+                transaction.scan(prepareScanAll(namespace1, TABLE_1));
               }
             })
         .isInstanceOf(UncommittedRecordException.class);
 
     // Assert
     if (selectionType == SelectionType.GET) {
-      Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
+      Optional<Result> result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
       assertThat(result.isPresent()).isFalse(); // deleted
     } else {
       Scan scan =
           selectionType == SelectionType.SCAN
-              ? prepareScan(0, 0, 0, TABLE_1)
-              : prepareScanAll(TABLE_1);
+              ? prepareScan(0, 0, 0, namespace1, TABLE_1)
+              : prepareScanAll(namespace1, TABLE_1);
       List<Result> results = transaction.scan(scan);
       assertThat(results.size()).isEqualTo(0); // deleted
     }
@@ -653,20 +679,20 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
       throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long current = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.DELETED, current, TransactionState.ABORTED);
+    populatePreparedRecordAndCoordinatorStateRecordForStorage1(
+        TransactionState.DELETED, current, TransactionState.ABORTED);
 
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               if (selectionType == SelectionType.GET) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
+                transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
               } else if (selectionType == SelectionType.SCAN) {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
+                transaction.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
               } else {
-                transaction.scan(prepareScanAll(TABLE_1));
+                transaction.scan(prepareScanAll(namespace1, TABLE_1));
               }
             })
         .isInstanceOf(UncommittedRecordException.class);
@@ -674,12 +700,12 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     // Assert
     Optional<Result> result;
     if (selectionType == SelectionType.GET) {
-      result = transaction.get(prepareGet(0, 0, TABLE_1));
+      result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     } else {
       Scan scan =
           selectionType == SelectionType.SCAN
-              ? prepareScan(0, 0, 0, TABLE_1)
-              : prepareScanAll(TABLE_1);
+              ? prepareScan(0, 0, 0, namespace1, TABLE_1)
+              : prepareScanAll(namespace1, TABLE_1);
       List<Result> results = transaction.scan(scan);
       assertThat(results.size()).isEqualTo(1);
       result = Optional.of(results.get(0));
@@ -709,26 +735,26 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
           SelectionType selectionType) throws ExecutionException, CoordinatorException {
     // Arrange
     long prepared_at = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.DELETED, prepared_at, null);
+    populatePreparedRecordAndCoordinatorStateRecordForStorage1(
+        TransactionState.DELETED, prepared_at, null);
 
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               if (selectionType == SelectionType.GET) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
+                transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
               } else if (selectionType == SelectionType.SCAN) {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
+                transaction.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
               } else {
-                transaction.scan(prepareScanAll(TABLE_1));
+                transaction.scan(prepareScanAll(namespace1, TABLE_1));
               }
             })
         .isInstanceOf(UncommittedRecordException.class);
 
     // Assert
-    assertThat(coordinator.getState(ANY_ID_2).isPresent()).isFalse();
+    assertThat(coordinatorForStorage1.getState(ANY_ID_2).isPresent()).isFalse();
   }
 
   @Test
@@ -753,20 +779,20 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
           throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.DELETED, prepared_at, null);
+    populatePreparedRecordAndCoordinatorStateRecordForStorage1(
+        TransactionState.DELETED, prepared_at, null);
 
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               if (selectionType == SelectionType.GET) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
+                transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
               } else if (selectionType == SelectionType.SCAN) {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
+                transaction.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
               } else {
-                transaction.scan(prepareScanAll(TABLE_1));
+                transaction.scan(prepareScanAll(namespace1, TABLE_1));
               }
             })
         .isInstanceOf(UncommittedRecordException.class);
@@ -774,12 +800,12 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     // Assert
     Optional<Result> result;
     if (selectionType == SelectionType.GET) {
-      result = transaction.get(prepareGet(0, 0, TABLE_1));
+      result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     } else {
       Scan scan =
           selectionType == SelectionType.SCAN
-              ? prepareScan(0, 0, 0, TABLE_1)
-              : prepareScanAll(TABLE_1);
+              ? prepareScan(0, 0, 0, namespace1, TABLE_1)
+              : prepareScanAll(namespace1, TABLE_1);
       List<Result> results = transaction.scan(scan);
       assertThat(results.size()).isEqualTo(1);
       result = Optional.of(results.get(0));
@@ -790,8 +816,9 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     assertThat(getAccountType(result.get())).isEqualTo(0);
     assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
 
-    assertThat(coordinator.getState(ANY_ID_2).isPresent()).isTrue();
-    assertThat(coordinator.getState(ANY_ID_2).get().getState()).isEqualTo(TransactionState.ABORTED);
+    assertThat(coordinatorForStorage1.getState(ANY_ID_2).isPresent()).isTrue();
+    assertThat(coordinatorForStorage1.getState(ANY_ID_2).get().getState())
+        .isEqualTo(TransactionState.ABORTED);
   }
 
   @Test
@@ -815,22 +842,22 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
           throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long current = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.DELETED, current, TransactionState.COMMITTED);
+    populatePreparedRecordAndCoordinatorStateRecordForStorage1(
+        TransactionState.DELETED, current, TransactionState.COMMITTED);
 
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     transaction.setBeforeRecoveryHook(
         () -> {
-          TwoPhaseConsensusCommit another = manager.begin();
+          TwoPhaseConsensusCommit another = manager1.begin();
           assertThatThrownBy(
                   () -> {
                     if (selectionType == SelectionType.GET) {
-                      another.get(prepareGet(0, 0, TABLE_1));
+                      another.get(prepareGet(0, 0, namespace1, TABLE_1));
                     } else if (selectionType == SelectionType.SCAN) {
-                      another.scan(prepareScan(0, 0, 0, TABLE_1));
+                      another.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
                     } else {
-                      another.scan(prepareScanAll(TABLE_1));
+                      another.scan(prepareScanAll(namespace1, TABLE_1));
                     }
                   })
               .isInstanceOf(UncommittedRecordException.class);
@@ -840,24 +867,24 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     assertThatThrownBy(
             () -> {
               if (selectionType == SelectionType.GET) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
+                transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
               } else if (selectionType == SelectionType.SCAN) {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
+                transaction.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
               } else {
-                transaction.scan(prepareScanAll(TABLE_1));
+                transaction.scan(prepareScanAll(namespace1, TABLE_1));
               }
             })
         .isInstanceOf(UncommittedRecordException.class);
 
     // Assert
     if (selectionType == SelectionType.GET) {
-      Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
+      Optional<Result> result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
       assertThat(result.isPresent()).isFalse(); // deleted
     } else {
       Scan scan =
           selectionType == SelectionType.SCAN
-              ? prepareScan(0, 0, 0, TABLE_1)
-              : prepareScanAll(TABLE_1);
+              ? prepareScan(0, 0, 0, namespace1, TABLE_1)
+              : prepareScanAll(namespace1, TABLE_1);
       List<Result> results = transaction.scan(scan);
       assertThat(results.size()).isEqualTo(0); // deleted
     }
@@ -885,22 +912,22 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
           throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long current = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.DELETED, current, TransactionState.ABORTED);
+    populatePreparedRecordAndCoordinatorStateRecordForStorage1(
+        TransactionState.DELETED, current, TransactionState.ABORTED);
 
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     transaction.setBeforeRecoveryHook(
         () -> {
-          TwoPhaseConsensusCommit another = manager.begin();
+          TwoPhaseConsensusCommit another = manager1.begin();
           assertThatThrownBy(
                   () -> {
                     if (selectionType == SelectionType.GET) {
-                      another.get(prepareGet(0, 0, TABLE_1));
+                      another.get(prepareGet(0, 0, namespace1, TABLE_1));
                     } else if (selectionType == SelectionType.SCAN) {
-                      another.scan(prepareScan(0, 0, 0, TABLE_1));
+                      another.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
                     } else {
-                      another.scan(prepareScanAll(TABLE_1));
+                      another.scan(prepareScanAll(namespace1, TABLE_1));
                     }
                   })
               .isInstanceOf(UncommittedRecordException.class);
@@ -910,11 +937,11 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     assertThatThrownBy(
             () -> {
               if (selectionType == SelectionType.GET) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
+                transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
               } else if (selectionType == SelectionType.SCAN) {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
+                transaction.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
               } else {
-                transaction.scan(prepareScanAll(TABLE_1));
+                transaction.scan(prepareScanAll(namespace1, TABLE_1));
               }
             })
         .isInstanceOf(UncommittedRecordException.class);
@@ -922,12 +949,12 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     // Assert
     Optional<Result> result;
     if (selectionType == SelectionType.GET) {
-      result = transaction.get(prepareGet(0, 0, TABLE_1));
+      result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     } else {
       Scan scan =
           selectionType == SelectionType.SCAN
-              ? prepareScan(0, 0, 0, TABLE_1)
-              : prepareScanAll(TABLE_1);
+              ? prepareScan(0, 0, 0, namespace1, TABLE_1)
+              : prepareScanAll(namespace1, TABLE_1);
       List<Result> results = transaction.scan(scan);
       assertThat(results.size()).isEqualTo(1);
       result = Optional.of(results.get(0));
@@ -959,23 +986,23 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   public void getAndScan_CommitHappenedInBetween_ShouldReadRepeatably()
       throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.prepare();
     transaction.commit();
 
-    TwoPhaseConsensusCommit transaction1 = manager.begin();
-    Optional<Result> result1 = transaction1.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction1 = manager1.begin();
+    Optional<Result> result1 = transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
 
-    TwoPhaseConsensusCommit transaction2 = manager.begin();
-    transaction2.get(prepareGet(0, 0, TABLE_1));
-    transaction2.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2));
+    TwoPhaseConsensusCommit transaction2 = manager1.begin();
+    transaction2.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction2.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 2));
     transaction2.prepare();
     transaction2.commit();
 
     // Act
-    Result result2 = transaction1.scan(prepareScan(0, 0, 0, TABLE_1)).get(0);
-    Optional<Result> result3 = transaction1.get(prepareGet(0, 0, TABLE_1));
+    Result result2 = transaction1.scan(prepareScan(0, 0, 0, namespace1, TABLE_1)).get(0);
+    Optional<Result> result3 = transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
 
     // Assert
     assertThat(result1).isPresent();
@@ -987,16 +1014,16 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   public void putAndCommit_PutGivenForNonExisting_ShouldCreateRecord() throws TransactionException {
     // Arrange
     int expected = INITIAL_BALANCE;
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     // Act
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, expected));
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, expected));
     transaction.prepare();
     transaction.commit();
 
     // Assert
-    TwoPhaseConsensusCommit another = manager.begin();
-    Optional<Result> result = another.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit another = manager1.begin();
+    Optional<Result> result = another.get(prepareGet(0, 0, namespace1, TABLE_1));
 
     assertThat(result).isPresent();
     assertThat(getAccountId(result.get())).isEqualTo(0);
@@ -1008,22 +1035,22 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   public void putAndCommit_PutGivenForExistingAfterRead_ShouldUpdateRecord()
       throws TransactionException {
     // Arrange
-    populate(TABLE_1);
+    populate(manager1, namespace1, TABLE_1);
 
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     // Act
-    Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
+    Optional<Result> result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result.isPresent()).isTrue();
 
     int afterBalance = getBalance(result.get()) + 100;
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, afterBalance));
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, afterBalance));
     transaction.prepare();
     transaction.commit();
 
     // Assert
-    TwoPhaseConsensusCommit another = manager.begin();
-    result = another.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit another = manager1.begin();
+    result = another.get(prepareGet(0, 0, namespace1, TABLE_1));
 
     assertThat(result).isPresent();
     assertThat(getAccountId(result.get())).isEqualTo(0);
@@ -1035,18 +1062,18 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   public void putAndCommit_PutGivenForExistingAndNeverRead_ShouldThrowPreparationException()
       throws TransactionException {
     // Arrange
-    populate(TABLE_1);
+    populate(manager1, namespace1, TABLE_1);
 
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1100));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1100));
 
     // Act Assert
     assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationException.class);
     transaction.rollback();
 
     // Assert
-    TwoPhaseConsensusCommit another = manager.begin();
-    Optional<Result> result = another.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit another = manager1.begin();
+    Optional<Result> result = another.get(prepareGet(0, 0, namespace1, TABLE_1));
 
     assertThat(result).isPresent();
     assertThat(getAccountId(result.get())).isEqualTo(0);
@@ -1057,8 +1084,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   @Test
   public void putAndCommit_GetsAndPutsGiven_ShouldCommitProperly() throws TransactionException {
     // Arrange
-    populate(TABLE_1);
-    populate(TABLE_2);
+    populate(manager1, namespace1, TABLE_1);
+    populate(manager2, namespace2, TABLE_2);
 
     int amount = 100;
     int fromBalance = INITIAL_BALANCE - amount;
@@ -1068,9 +1095,20 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     int toId = 1;
     int toType = 0;
 
-    TwoPhaseConsensusCommit fromTx = manager.begin();
-    TwoPhaseConsensusCommit toTx = manager.join(fromTx.getId());
-    transfer(fromId, fromType, TABLE_1, fromTx, toId, toType, TABLE_2, toTx, amount);
+    TwoPhaseConsensusCommit fromTx = manager1.begin();
+    TwoPhaseConsensusCommit toTx = manager2.join(fromTx.getId());
+    transfer(
+        fromId,
+        fromType,
+        namespace1,
+        TABLE_1,
+        fromTx,
+        toId,
+        toType,
+        namespace2,
+        TABLE_2,
+        toTx,
+        amount);
 
     // Act Assert
     assertThatCode(
@@ -1083,12 +1121,14 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
         .doesNotThrowAnyException();
 
     // Assert
-    TwoPhaseConsensusCommit another = manager.begin();
-    Optional<Result> result = another.get(prepareGet(fromId, fromType, TABLE_1));
+    TwoPhaseConsensusCommit another1 = manager1.begin();
+    TwoPhaseConsensusCommit another2 = manager2.join(another1.getId());
+
+    Optional<Result> result = another1.get(prepareGet(fromId, fromType, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(fromBalance);
 
-    result = another.get(prepareGet(toId, toType, TABLE_2));
+    result = another2.get(prepareGet(toId, toType, namespace2, TABLE_2));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(toBalance);
   }
@@ -1107,31 +1147,29 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     int anotherToId = 2;
     int anotherToType = 0;
 
-    TwoPhaseConsensusCommit fromTx = manager.begin();
-    TwoPhaseConsensusCommit toTx = manager.join(fromTx.getId());
-    fromTx.put(preparePut(fromId, fromType, TABLE_1).withValue(BALANCE, expected));
-    toTx.put(preparePut(toId, toType, TABLE_2).withValue(BALANCE, expected));
-
-    fromTx.setBeforePrepareHook(
-        () ->
-            assertThatCode(
-                    () -> {
-                      TwoPhaseConsensusCommit anotherFromTx = manager.begin();
-                      TwoPhaseConsensusCommit anotherToTx = manager.join(anotherFromTx.getId());
-                      anotherFromTx.put(
-                          preparePut(anotherFromId, anotherFromType, TABLE_2)
-                              .withValue(BALANCE, expected));
-                      anotherToTx.put(
-                          preparePut(anotherToId, anotherToType, TABLE_1)
-                              .withValue(BALANCE, expected));
-                      anotherFromTx.prepare();
-                      anotherToTx.prepare();
-                      anotherFromTx.commit();
-                      anotherToTx.commit();
-                    })
-                .doesNotThrowAnyException());
+    TwoPhaseConsensusCommit fromTx = manager1.begin();
+    TwoPhaseConsensusCommit toTx = manager2.join(fromTx.getId());
+    fromTx.put(preparePut(fromId, fromType, namespace1, TABLE_1).withValue(BALANCE, expected));
+    toTx.put(preparePut(toId, toType, namespace2, TABLE_2).withValue(BALANCE, expected));
 
     // Act Assert
+    assertThatCode(
+            () -> {
+              TwoPhaseConsensusCommit anotherFromTx = manager2.begin();
+              TwoPhaseConsensusCommit anotherToTx = manager1.join(anotherFromTx.getId());
+              anotherFromTx.put(
+                  preparePut(anotherFromId, anotherFromType, namespace2, TABLE_2)
+                      .withValue(BALANCE, expected));
+              anotherToTx.put(
+                  preparePut(anotherToId, anotherToType, namespace1, TABLE_1)
+                      .withValue(BALANCE, expected));
+              anotherFromTx.prepare();
+              anotherToTx.prepare();
+              anotherFromTx.commit();
+              anotherToTx.commit();
+            })
+        .doesNotThrowAnyException();
+
     assertThatThrownBy(
             () -> {
               fromTx.prepare();
@@ -1142,15 +1180,17 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     toTx.rollback();
 
     // Assert
-    TwoPhaseConsensusCommit another = manager.begin();
-    Optional<Result> result = another.get(prepareGet(fromId, fromType, TABLE_1));
+    TwoPhaseConsensusCommit another1 = manager1.begin();
+    TwoPhaseConsensusCommit another2 = manager2.join(another1.getId());
+
+    Optional<Result> result = another1.get(prepareGet(fromId, fromType, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
 
-    result = another.get(prepareGet(toId, toType, TABLE_2));
+    result = another2.get(prepareGet(toId, toType, namespace2, TABLE_2));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(expected);
 
-    result = another.get(prepareGet(anotherToId, anotherToType, TABLE_1));
+    result = another1.get(prepareGet(anotherToId, anotherToType, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(expected);
   }
@@ -1169,41 +1209,41 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     int anotherToId = 2;
     int anotherToType = 0;
 
-    populate(TABLE_1);
-    populate(TABLE_2);
+    populate(manager1, namespace1, TABLE_1);
+    populate(manager2, namespace2, TABLE_2);
 
-    TwoPhaseConsensusCommit fromTx = manager.begin();
-    TwoPhaseConsensusCommit toTx = manager.join(fromTx.getId());
-    fromTx.get(prepareGet(fromId, fromType, TABLE_1));
-    fromTx.delete(prepareDelete(fromId, fromType, TABLE_1));
-    toTx.get(prepareGet(toId, toType, TABLE_2));
-    toTx.delete(prepareDelete(toId, toType, TABLE_2));
-
-    fromTx.setBeforePrepareHook(
-        () ->
-            assertThatCode(
-                    () -> {
-                      TwoPhaseConsensusCommit anotherFromTx = manager.begin();
-                      TwoPhaseConsensusCommit anotherToTx = manager.join(anotherFromTx.getId());
-                      transfer(
-                          anotherFromId,
-                          anotherFromType,
-                          TABLE_2,
-                          anotherFromTx,
-                          anotherToId,
-                          anotherToType,
-                          TABLE_1,
-                          anotherToTx,
-                          amount);
-
-                      anotherFromTx.prepare();
-                      anotherToTx.prepare();
-                      anotherFromTx.commit();
-                      anotherToTx.commit();
-                    })
-                .doesNotThrowAnyException());
+    TwoPhaseConsensusCommit fromTx = manager1.begin();
+    TwoPhaseConsensusCommit toTx = manager2.join(fromTx.getId());
+    fromTx.get(prepareGet(fromId, fromType, namespace1, TABLE_1));
+    fromTx.delete(prepareDelete(fromId, fromType, namespace1, TABLE_1));
+    toTx.get(prepareGet(toId, toType, namespace2, TABLE_2));
+    toTx.delete(prepareDelete(toId, toType, namespace2, TABLE_2));
 
     // Act Assert
+    assertThatCode(
+            () -> {
+              TwoPhaseConsensusCommit anotherFromTx = manager2.begin();
+              TwoPhaseConsensusCommit anotherToTx = manager1.join(anotherFromTx.getId());
+              transfer(
+                  anotherFromId,
+                  anotherFromType,
+                  namespace2,
+                  TABLE_2,
+                  anotherFromTx,
+                  anotherToId,
+                  anotherToType,
+                  namespace1,
+                  TABLE_1,
+                  anotherToTx,
+                  amount);
+
+              anotherFromTx.prepare();
+              anotherToTx.prepare();
+              anotherFromTx.commit();
+              anotherToTx.commit();
+            })
+        .doesNotThrowAnyException();
+
     assertThatThrownBy(
             () -> {
               fromTx.prepare();
@@ -1214,16 +1254,18 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     toTx.rollback();
 
     // Assert
-    TwoPhaseConsensusCommit another = manager.begin();
-    Optional<Result> result = another.get(prepareGet(fromId, fromType, TABLE_1));
+    TwoPhaseConsensusCommit another1 = manager1.begin();
+    TwoPhaseConsensusCommit another2 = manager2.join(another1.getId());
+
+    Optional<Result> result = another1.get(prepareGet(fromId, fromType, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
 
-    result = another.get(prepareGet(anotherFromId, anotherFromType, TABLE_2));
+    result = another2.get(prepareGet(anotherFromId, anotherFromType, namespace2, TABLE_2));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE - amount);
 
-    result = another.get(prepareGet(anotherToId, anotherToType, TABLE_1));
+    result = another1.get(prepareGet(anotherToId, anotherToType, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE + amount);
   }
@@ -1243,38 +1285,49 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     int anotherToId = 2;
     int anotherToType = 0;
 
-    populate(TABLE_1);
-    populate(TABLE_2);
+    populate(manager1, namespace1, TABLE_1);
+    populate(manager2, namespace2, TABLE_2);
 
-    TwoPhaseConsensusCommit fromTx = manager.begin();
-    TwoPhaseConsensusCommit toTx = manager.join(fromTx.getId());
-    transfer(fromId, fromType, TABLE_1, fromTx, toId, toType, TABLE_2, toTx, amount1);
-
-    fromTx.setBeforePrepareHook(
-        () ->
-            assertThatCode(
-                    () -> {
-                      TwoPhaseConsensusCommit anotherFromTx = manager.begin();
-                      TwoPhaseConsensusCommit anotherToTx = manager.join(anotherFromTx.getId());
-                      transfer(
-                          anotherFromId,
-                          anotherFromType,
-                          TABLE_2,
-                          anotherFromTx,
-                          anotherToId,
-                          anotherToType,
-                          TABLE_1,
-                          anotherToTx,
-                          amount2);
-
-                      anotherFromTx.prepare();
-                      anotherToTx.prepare();
-                      anotherFromTx.commit();
-                      anotherToTx.commit();
-                    })
-                .doesNotThrowAnyException());
+    TwoPhaseConsensusCommit fromTx = manager1.begin();
+    TwoPhaseConsensusCommit toTx = manager2.join(fromTx.getId());
+    transfer(
+        fromId,
+        fromType,
+        namespace1,
+        TABLE_1,
+        fromTx,
+        toId,
+        toType,
+        namespace2,
+        TABLE_2,
+        toTx,
+        amount1);
 
     // Act Assert
+    assertThatCode(
+            () -> {
+              TwoPhaseConsensusCommit anotherFromTx = manager2.begin();
+              TwoPhaseConsensusCommit anotherToTx = manager1.join(anotherFromTx.getId());
+              transfer(
+                  anotherFromId,
+                  anotherFromType,
+                  namespace2,
+                  TABLE_2,
+                  anotherFromTx,
+                  anotherToId,
+                  anotherToType,
+                  namespace1,
+                  TABLE_1,
+                  anotherToTx,
+                  amount2);
+
+              anotherFromTx.prepare();
+              anotherToTx.prepare();
+              anotherFromTx.commit();
+              anotherToTx.commit();
+            })
+        .doesNotThrowAnyException();
+
     assertThatThrownBy(
             () -> {
               fromTx.prepare();
@@ -1285,16 +1338,18 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     toTx.rollback();
 
     // Assert
-    TwoPhaseConsensusCommit another = manager.begin();
-    Optional<Result> result = another.get(prepareGet(fromId, fromType, TABLE_1));
+    TwoPhaseConsensusCommit another1 = manager1.begin();
+    TwoPhaseConsensusCommit another2 = manager2.join(another1.getId());
+
+    Optional<Result> result = another1.get(prepareGet(fromId, fromType, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
 
-    result = another.get(prepareGet(anotherFromId, anotherFromType, TABLE_2));
+    result = another2.get(prepareGet(anotherFromId, anotherFromType, namespace2, TABLE_2));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE - amount2);
 
-    result = another.get(prepareGet(anotherToId, anotherToType, TABLE_1));
+    result = another1.get(prepareGet(anotherToId, anotherToType, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE + amount2);
   }
@@ -1314,38 +1369,49 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     int anotherToId = 3;
     int anotherToType = 0;
 
-    populate(TABLE_1);
-    populate(TABLE_2);
+    populate(manager1, namespace1, TABLE_1);
+    populate(manager2, namespace2, TABLE_2);
 
-    TwoPhaseConsensusCommit fromTx = manager.begin();
-    TwoPhaseConsensusCommit toTx = manager.join(fromTx.getId());
-    transfer(fromId, fromType, TABLE_1, fromTx, toId, toType, TABLE_2, toTx, amount1);
-
-    fromTx.setBeforePrepareHook(
-        () ->
-            assertThatCode(
-                    () -> {
-                      TwoPhaseConsensusCommit anotherFromTx = manager.begin();
-                      TwoPhaseConsensusCommit anotherToTx = manager.join(anotherFromTx.getId());
-                      transfer(
-                          anotherFromId,
-                          anotherFromType,
-                          TABLE_2,
-                          anotherFromTx,
-                          anotherToId,
-                          anotherToType,
-                          TABLE_1,
-                          anotherToTx,
-                          amount2);
-
-                      anotherFromTx.prepare();
-                      anotherToTx.prepare();
-                      anotherFromTx.commit();
-                      anotherToTx.commit();
-                    })
-                .doesNotThrowAnyException());
+    TwoPhaseConsensusCommit fromTx = manager1.begin();
+    TwoPhaseConsensusCommit toTx = manager2.join(fromTx.getId());
+    transfer(
+        fromId,
+        fromType,
+        namespace1,
+        TABLE_1,
+        fromTx,
+        toId,
+        toType,
+        namespace2,
+        TABLE_2,
+        toTx,
+        amount1);
 
     // Act Assert
+    assertThatCode(
+            () -> {
+              TwoPhaseConsensusCommit anotherFromTx = manager2.begin();
+              TwoPhaseConsensusCommit anotherToTx = manager1.join(anotherFromTx.getId());
+              transfer(
+                  anotherFromId,
+                  anotherFromType,
+                  namespace2,
+                  TABLE_2,
+                  anotherFromTx,
+                  anotherToId,
+                  anotherToType,
+                  namespace1,
+                  TABLE_1,
+                  anotherToTx,
+                  amount2);
+
+              anotherFromTx.prepare();
+              anotherToTx.prepare();
+              anotherFromTx.commit();
+              anotherToTx.commit();
+            })
+        .doesNotThrowAnyException();
+
     assertThatCode(
             () -> {
               fromTx.prepare();
@@ -1356,20 +1422,22 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
         .doesNotThrowAnyException();
 
     // Assert
-    TwoPhaseConsensusCommit another = manager.begin();
-    Optional<Result> result = another.get(prepareGet(fromId, fromType, TABLE_1));
+    TwoPhaseConsensusCommit another1 = manager1.begin();
+    TwoPhaseConsensusCommit another2 = manager2.join(another1.getId());
+
+    Optional<Result> result = another1.get(prepareGet(fromId, fromType, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE - amount1);
 
-    result = another.get(prepareGet(toId, toType, TABLE_2));
+    result = another2.get(prepareGet(toId, toType, namespace2, TABLE_2));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE + amount1);
 
-    result = another.get(prepareGet(anotherFromId, anotherFromType, TABLE_2));
+    result = another2.get(prepareGet(anotherFromId, anotherFromType, namespace2, TABLE_2));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE - amount2);
 
-    result = another.get(prepareGet(anotherToId, anotherToType, TABLE_1));
+    result = another1.get(prepareGet(anotherToId, anotherToType, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE + amount2);
   }
@@ -1388,32 +1456,30 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     int anotherToId = toId;
     int anotherToType = toType;
 
-    TwoPhaseConsensusCommit fromTx = manager.begin();
-    TwoPhaseConsensusCommit toTx = manager.join(fromTx.getId());
-    fromTx.put(preparePut(fromId, fromType, TABLE_1).withValue(BALANCE, expected));
-    toTx.put(preparePut(toId, toType, TABLE_2).withValue(BALANCE, expected));
-
-    fromTx.setBeforePrepareHook(
-        () ->
-            assertThatCode(
-                    () -> {
-                      TwoPhaseConsensusCommit anotherFromTx = manager.begin();
-                      TwoPhaseConsensusCommit anotherToTx = manager.join(anotherFromTx.getId());
-                      anotherFromTx.put(
-                          preparePut(anotherFromId, anotherFromType, TABLE_2)
-                              .withValue(BALANCE, expected));
-                      anotherToTx.put(
-                          preparePut(anotherToId, anotherToType, TABLE_1)
-                              .withValue(BALANCE, expected));
-
-                      anotherFromTx.prepare();
-                      anotherToTx.prepare();
-                      anotherFromTx.commit();
-                      anotherToTx.commit();
-                    })
-                .doesNotThrowAnyException());
+    TwoPhaseConsensusCommit fromTx = manager1.begin();
+    TwoPhaseConsensusCommit toTx = manager2.join(fromTx.getId());
+    fromTx.put(preparePut(fromId, fromType, namespace1, TABLE_1).withValue(BALANCE, expected));
+    toTx.put(preparePut(toId, toType, namespace2, TABLE_2).withValue(BALANCE, expected));
 
     // Act Assert
+    assertThatCode(
+            () -> {
+              TwoPhaseConsensusCommit anotherFromTx = manager2.begin();
+              TwoPhaseConsensusCommit anotherToTx = manager1.join(anotherFromTx.getId());
+              anotherFromTx.put(
+                  preparePut(anotherFromId, anotherFromType, namespace2, TABLE_2)
+                      .withValue(BALANCE, expected));
+              anotherToTx.put(
+                  preparePut(anotherToId, anotherToType, namespace1, TABLE_1)
+                      .withValue(BALANCE, expected));
+
+              anotherFromTx.prepare();
+              anotherToTx.prepare();
+              anotherFromTx.commit();
+              anotherToTx.commit();
+            })
+        .doesNotThrowAnyException();
+
     assertThatCode(
             () -> {
               fromTx.prepare();
@@ -1424,20 +1490,22 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
         .doesNotThrowAnyException();
 
     // Assert
-    TwoPhaseConsensusCommit another = manager.begin();
-    Optional<Result> result = another.get(prepareGet(fromId, fromType, TABLE_1));
+    TwoPhaseConsensusCommit another1 = manager1.begin();
+    TwoPhaseConsensusCommit another2 = manager2.join(another1.getId());
+
+    Optional<Result> result = another1.get(prepareGet(fromId, fromType, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(expected);
 
-    result = another.get(prepareGet(toId, toType, TABLE_2));
+    result = another2.get(prepareGet(toId, toType, namespace2, TABLE_2));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(expected);
 
-    result = another.get(prepareGet(anotherFromId, anotherFromType, TABLE_2));
+    result = another2.get(prepareGet(anotherFromId, anotherFromType, namespace2, TABLE_2));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(expected);
 
-    result = another.get(prepareGet(anotherToId, anotherToType, TABLE_1));
+    result = another1.get(prepareGet(anotherToId, anotherToType, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(expected);
   }
@@ -1445,8 +1513,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   @Test
   public void prepare_DeleteGivenWithoutRead_ShouldNotThrowAnyExceptions() {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.delete(prepareDelete(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.delete(prepareDelete(0, 0, namespace1, TABLE_1));
 
     // Act Assert
     assertThatCode(transaction::prepare).doesNotThrowAnyException();
@@ -1456,9 +1524,9 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   public void prepare_DeleteGivenForNonExisting_ShouldNotThrowAnyExceptions()
       throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.get(prepareGet(0, 0, TABLE_1));
-    transaction.delete(prepareDelete(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction.delete(prepareDelete(0, 0, namespace1, TABLE_1));
 
     // Act Assert
     assertThatCode(transaction::prepare).doesNotThrowAnyException();
@@ -1468,20 +1536,20 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   public void commit_DeleteGivenForExistingAfterRead_ShouldDeleteRecord()
       throws TransactionException {
     // Arrange
-    populate(TABLE_1);
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    populate(manager1, namespace1, TABLE_1);
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     // Act
-    Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
-    transaction.delete(prepareDelete(0, 0, TABLE_1));
+    Optional<Result> result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction.delete(prepareDelete(0, 0, namespace1, TABLE_1));
     transaction.prepare();
     transaction.commit();
 
     // Assert
     assertThat(result.isPresent()).isTrue();
 
-    TwoPhaseConsensusCommit another = manager.begin();
-    result = another.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit another = manager1.begin();
+    result = another.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result.isPresent()).isFalse();
   }
 
@@ -1496,37 +1564,47 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     int account3Id = 2;
     int account3Type = 0;
 
-    populate(TABLE_1);
-    populate(TABLE_2);
+    populate(manager1, namespace1, TABLE_1);
+    populate(manager2, namespace2, TABLE_2);
 
-    TwoPhaseConsensusCommit tx1 = manager.begin();
-    TwoPhaseConsensusCommit tx2 = manager.join(tx1.getId());
-    deletes(account1Id, account1Type, TABLE_1, tx1, account2Id, account2Type, TABLE_2, tx2);
-
-    tx1.setBeforePrepareHook(
-        () ->
-            assertThatCode(
-                    () -> {
-                      TwoPhaseConsensusCommit tx3 = manager.begin();
-                      TwoPhaseConsensusCommit tx4 = manager.join(tx3.getId());
-                      deletes(
-                          account2Id,
-                          account2Type,
-                          TABLE_2,
-                          tx3,
-                          account3Id,
-                          account3Type,
-                          TABLE_1,
-                          tx4);
-
-                      tx3.prepare();
-                      tx4.prepare();
-                      tx3.commit();
-                      tx4.commit();
-                    })
-                .doesNotThrowAnyException());
+    TwoPhaseConsensusCommit tx1 = manager1.begin();
+    TwoPhaseConsensusCommit tx2 = manager2.join(tx1.getId());
+    deletes(
+        account1Id,
+        account1Type,
+        namespace1,
+        TABLE_1,
+        tx1,
+        account2Id,
+        account2Type,
+        namespace2,
+        TABLE_2,
+        tx2);
 
     // Act Assert
+    assertThatCode(
+            () -> {
+              TwoPhaseConsensusCommit tx3 = manager2.begin();
+              TwoPhaseConsensusCommit tx4 = manager1.join(tx3.getId());
+              deletes(
+                  account2Id,
+                  account2Type,
+                  namespace2,
+                  TABLE_2,
+                  tx3,
+                  account3Id,
+                  account3Type,
+                  namespace1,
+                  TABLE_1,
+                  tx4);
+
+              tx3.prepare();
+              tx4.prepare();
+              tx3.commit();
+              tx4.commit();
+            })
+        .doesNotThrowAnyException();
+
     assertThatThrownBy(
             () -> {
               tx1.prepare();
@@ -1537,14 +1615,17 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     tx2.rollback();
 
     // Assert
-    TwoPhaseConsensusCommit another = manager.begin();
-    Optional<Result> result = another.get(prepareGet(account1Id, account1Type, TABLE_1));
+    TwoPhaseConsensusCommit another1 = manager1.begin();
+    TwoPhaseConsensusCommit another2 = manager2.join(another1.getId());
+
+    Optional<Result> result =
+        another1.get(prepareGet(account1Id, account1Type, namespace1, TABLE_1));
     assertThat(result).isPresent();
 
-    result = another.get(prepareGet(account2Id, account2Type, TABLE_2));
+    result = another2.get(prepareGet(account2Id, account2Type, namespace2, TABLE_2));
     assertThat(result).isNotPresent();
 
-    result = another.get(prepareGet(account3Id, account3Type, TABLE_1));
+    result = another1.get(prepareGet(account3Id, account3Type, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
   }
 
@@ -1561,37 +1642,47 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     int account4Id = 3;
     int account4Type = 0;
 
-    populate(TABLE_1);
-    populate(TABLE_2);
+    populate(manager1, namespace1, TABLE_1);
+    populate(manager2, namespace2, TABLE_2);
 
-    TwoPhaseConsensusCommit tx1 = manager.begin();
-    TwoPhaseConsensusCommit tx2 = manager.join(tx1.getId());
-    deletes(account1Id, account1Type, TABLE_1, tx1, account2Id, account2Type, TABLE_2, tx2);
-
-    tx1.setBeforePrepareHook(
-        () ->
-            assertThatCode(
-                    () -> {
-                      TwoPhaseConsensusCommit tx3 = manager.begin();
-                      TwoPhaseConsensusCommit tx4 = manager.join(tx3.getId());
-                      deletes(
-                          account3Id,
-                          account3Type,
-                          TABLE_2,
-                          tx3,
-                          account4Id,
-                          account4Type,
-                          TABLE_1,
-                          tx4);
-
-                      tx3.prepare();
-                      tx4.prepare();
-                      tx3.commit();
-                      tx4.commit();
-                    })
-                .doesNotThrowAnyException());
+    TwoPhaseConsensusCommit tx1 = manager1.begin();
+    TwoPhaseConsensusCommit tx2 = manager2.join(tx1.getId());
+    deletes(
+        account1Id,
+        account1Type,
+        namespace1,
+        TABLE_1,
+        tx1,
+        account2Id,
+        account2Type,
+        namespace2,
+        TABLE_2,
+        tx2);
 
     // Act Assert
+    assertThatCode(
+            () -> {
+              TwoPhaseConsensusCommit tx3 = manager2.begin();
+              TwoPhaseConsensusCommit tx4 = manager1.join(tx3.getId());
+              deletes(
+                  account3Id,
+                  account3Type,
+                  namespace2,
+                  TABLE_2,
+                  tx3,
+                  account4Id,
+                  account4Type,
+                  namespace1,
+                  TABLE_1,
+                  tx4);
+
+              tx3.prepare();
+              tx4.prepare();
+              tx3.commit();
+              tx4.commit();
+            })
+        .doesNotThrowAnyException();
+
     assertThatCode(
             () -> {
               tx1.prepare();
@@ -1602,17 +1693,20 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
         .doesNotThrowAnyException();
 
     // Assert
-    TwoPhaseConsensusCommit another = manager.begin();
-    Optional<Result> result = another.get(prepareGet(account1Id, account1Type, TABLE_1));
+    TwoPhaseConsensusCommit another1 = manager1.begin();
+    TwoPhaseConsensusCommit another2 = manager2.join(another1.getId());
+
+    Optional<Result> result =
+        another1.get(prepareGet(account1Id, account1Type, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
 
-    result = another.get(prepareGet(account2Id, account2Type, TABLE_2));
+    result = another2.get(prepareGet(account2Id, account2Type, namespace2, TABLE_2));
     assertThat(result).isNotPresent();
 
-    result = another.get(prepareGet(account3Id, account3Type, TABLE_2));
+    result = another2.get(prepareGet(account3Id, account3Type, namespace2, TABLE_2));
     assertThat(result).isNotPresent();
 
-    result = another.get(prepareGet(account4Id, account4Type, TABLE_1));
+    result = another1.get(prepareGet(account4Id, account4Type, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
   }
 
@@ -1620,28 +1714,31 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   public void commit_WriteSkewOnExistingRecordsWithSnapshot_ShouldProduceNonSerializableResult()
       throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
-    transaction.put(preparePut(1, 0, TABLE_2).withValue(BALANCE, 1));
-    transaction.prepare();
-    transaction.commit();
+    TwoPhaseConsensusCommit transaction1 = manager1.begin();
+    TwoPhaseConsensusCommit transaction2 = manager2.join(transaction1.getId());
+    transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
+    transaction2.put(preparePut(1, 0, namespace2, TABLE_2).withValue(BALANCE, 1));
+    transaction1.prepare();
+    transaction2.prepare();
+    transaction1.commit();
+    transaction2.commit();
 
     // Act
-    TwoPhaseConsensusCommit tx1Sub1 = manager.begin();
-    TwoPhaseConsensusCommit tx1Sub2 = manager.join(tx1Sub1.getId());
-    Optional<Result> result = tx1Sub2.get(prepareGet(1, 0, TABLE_2));
+    TwoPhaseConsensusCommit tx1Sub1 = manager1.begin();
+    TwoPhaseConsensusCommit tx1Sub2 = manager2.join(tx1Sub1.getId());
+    Optional<Result> result = tx1Sub2.get(prepareGet(1, 0, namespace2, TABLE_2));
     assertThat(result).isPresent();
     int current1 = getBalance(result.get());
-    tx1Sub1.get(prepareGet(0, 0, TABLE_1));
-    tx1Sub1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, current1 + 1));
+    tx1Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
+    tx1Sub1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, current1 + 1));
 
-    TwoPhaseConsensusCommit tx2Sub1 = manager.begin();
-    TwoPhaseConsensusCommit tx2Sub2 = manager.join(tx2Sub1.getId());
-    result = tx2Sub1.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit tx2Sub1 = manager1.begin();
+    TwoPhaseConsensusCommit tx2Sub2 = manager2.join(tx2Sub1.getId());
+    result = tx2Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isPresent();
     int current2 = getBalance(result.get());
-    tx2Sub2.get(prepareGet(1, 0, TABLE_2));
-    tx2Sub2.put(preparePut(1, 0, TABLE_2).withValue(BALANCE, current2 + 1));
+    tx2Sub2.get(prepareGet(1, 0, namespace2, TABLE_2));
+    tx2Sub2.put(preparePut(1, 0, namespace2, TABLE_2).withValue(BALANCE, current2 + 1));
 
     tx1Sub1.prepare();
     tx1Sub2.prepare();
@@ -1654,12 +1751,14 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     tx2Sub2.commit();
 
     // Assert
-    transaction = manager.begin();
+    transaction1 = manager1.begin();
+    transaction2 = manager2.join(transaction1.getId());
+
     // the results can not be produced by executing the transactions serially
-    result = transaction.get(prepareGet(0, 0, TABLE_1));
+    result = transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(current1 + 1);
-    result = transaction.get(prepareGet(1, 0, TABLE_2));
+    result = transaction2.get(prepareGet(1, 0, namespace2, TABLE_2));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(current2 + 1);
   }
@@ -1669,31 +1768,34 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
       commit_WriteSkewOnExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowPreparationException()
           throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
-    transaction.put(preparePut(1, 0, TABLE_2).withValue(BALANCE, 1));
-    transaction.prepare();
-    transaction.commit();
+    TwoPhaseConsensusCommit transaction1 = manager1.begin();
+    TwoPhaseConsensusCommit transaction2 = manager2.join(transaction1.getId());
+    transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
+    transaction2.put(preparePut(1, 0, namespace2, TABLE_2).withValue(BALANCE, 1));
+    transaction1.prepare();
+    transaction2.prepare();
+    transaction1.commit();
+    transaction2.commit();
 
     Isolation isolation = Isolation.SERIALIZABLE;
     SerializableStrategy strategy = SerializableStrategy.EXTRA_WRITE;
 
     // Act Assert
-    TwoPhaseConsensusCommit tx1Sub1 = manager.begin(isolation, strategy);
-    TwoPhaseConsensusCommit tx1Sub2 = manager.join(tx1Sub1.getId(), isolation, strategy);
-    Optional<Result> result = tx1Sub2.get(prepareGet(1, 0, TABLE_2));
+    TwoPhaseConsensusCommit tx1Sub1 = manager1.begin(isolation, strategy);
+    TwoPhaseConsensusCommit tx1Sub2 = manager2.join(tx1Sub1.getId(), isolation, strategy);
+    Optional<Result> result = tx1Sub2.get(prepareGet(1, 0, namespace2, TABLE_2));
     assertThat(result).isPresent();
     int current1 = getBalance(result.get());
-    tx1Sub1.get(prepareGet(0, 0, TABLE_1));
-    tx1Sub1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, current1 + 1));
+    tx1Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
+    tx1Sub1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, current1 + 1));
 
-    TwoPhaseConsensusCommit tx2Sub1 = manager.begin(isolation, strategy);
-    TwoPhaseConsensusCommit tx2Sub2 = manager.join(tx2Sub1.getId(), isolation, strategy);
-    result = tx2Sub1.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit tx2Sub1 = manager1.begin(isolation, strategy);
+    TwoPhaseConsensusCommit tx2Sub2 = manager2.join(tx2Sub1.getId(), isolation, strategy);
+    result = tx2Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isPresent();
     int current2 = getBalance(result.get());
-    tx2Sub2.get(prepareGet(1, 0, TABLE_2));
-    tx2Sub2.put(preparePut(1, 0, TABLE_2).withValue(BALANCE, current2 + 1));
+    tx2Sub2.get(prepareGet(1, 0, namespace2, TABLE_2));
+    tx2Sub2.put(preparePut(1, 0, namespace2, TABLE_2).withValue(BALANCE, current2 + 1));
 
     tx1Sub1.prepare();
     tx1Sub2.prepare();
@@ -1710,11 +1812,13 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     tx2Sub2.rollback();
 
     // Assert
-    transaction = manager.begin();
-    result = transaction.get(prepareGet(0, 0, TABLE_1));
+    transaction1 = manager1.begin();
+    transaction2 = manager2.join(transaction1.getId());
+
+    result = transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(current1 + 1);
-    result = transaction.get(prepareGet(1, 0, TABLE_2));
+    result = transaction2.get(prepareGet(1, 0, namespace2, TABLE_2));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(current2);
   }
@@ -1724,31 +1828,34 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
       commit_WriteSkewOnExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowValidationException()
           throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
-    transaction.put(preparePut(1, 0, TABLE_2).withValue(BALANCE, 1));
-    transaction.prepare();
-    transaction.commit();
+    TwoPhaseConsensusCommit transaction1 = manager1.begin();
+    TwoPhaseConsensusCommit transaction2 = manager2.join(transaction1.getId());
+    transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
+    transaction2.put(preparePut(1, 0, namespace2, TABLE_2).withValue(BALANCE, 1));
+    transaction1.prepare();
+    transaction2.prepare();
+    transaction1.commit();
+    transaction2.commit();
 
     Isolation isolation = Isolation.SERIALIZABLE;
     SerializableStrategy strategy = SerializableStrategy.EXTRA_READ;
 
     // Act Assert
-    TwoPhaseConsensusCommit tx1Sub1 = manager.begin(isolation, strategy);
-    TwoPhaseConsensusCommit tx1Sub2 = manager.join(tx1Sub1.getId(), isolation, strategy);
-    Optional<Result> result = tx1Sub2.get(prepareGet(1, 0, TABLE_2));
+    TwoPhaseConsensusCommit tx1Sub1 = manager1.begin(isolation, strategy);
+    TwoPhaseConsensusCommit tx1Sub2 = manager2.join(tx1Sub1.getId(), isolation, strategy);
+    Optional<Result> result = tx1Sub2.get(prepareGet(1, 0, namespace2, TABLE_2));
     assertThat(result).isPresent();
     int current1 = getBalance(result.get());
-    tx1Sub1.get(prepareGet(0, 0, TABLE_1));
-    tx1Sub1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, current1 + 1));
+    tx1Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
+    tx1Sub1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, current1 + 1));
 
-    TwoPhaseConsensusCommit tx2Sub1 = manager.begin(isolation, strategy);
-    TwoPhaseConsensusCommit tx2Sub2 = manager.join(tx2Sub1.getId(), isolation, strategy);
-    result = tx2Sub1.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit tx2Sub1 = manager1.begin(isolation, strategy);
+    TwoPhaseConsensusCommit tx2Sub2 = manager2.join(tx2Sub1.getId(), isolation, strategy);
+    result = tx2Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isPresent();
     int current2 = getBalance(result.get());
-    tx2Sub2.get(prepareGet(1, 0, TABLE_2));
-    tx2Sub2.put(preparePut(1, 0, TABLE_2).withValue(BALANCE, current2 + 1));
+    tx2Sub2.get(prepareGet(1, 0, namespace2, TABLE_2));
+    tx2Sub2.put(preparePut(1, 0, namespace2, TABLE_2).withValue(BALANCE, current2 + 1));
 
     tx1Sub1.prepare();
     tx1Sub2.prepare();
@@ -1769,11 +1876,13 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     tx2Sub2.rollback();
 
     // Assert
-    transaction = manager.begin();
-    result = transaction.get(prepareGet(0, 0, TABLE_1));
+    transaction1 = manager1.begin();
+    transaction2 = manager2.join(transaction1.getId());
+
+    result = transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(current1 + 1);
-    result = transaction.get(prepareGet(1, 0, TABLE_2));
+    result = transaction2.get(prepareGet(1, 0, namespace2, TABLE_2));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(current2);
   }
@@ -1787,21 +1896,21 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     SerializableStrategy strategy = SerializableStrategy.EXTRA_WRITE;
 
     // Act Assert
-    TwoPhaseConsensusCommit tx1Sub1 = manager.begin(isolation, strategy);
-    TwoPhaseConsensusCommit tx1Sub2 = manager.join(tx1Sub1.getId(), isolation, strategy);
-    Optional<Result> result = tx1Sub2.get(prepareGet(1, 0, TABLE_2));
+    TwoPhaseConsensusCommit tx1Sub1 = manager1.begin(isolation, strategy);
+    TwoPhaseConsensusCommit tx1Sub2 = manager2.join(tx1Sub1.getId(), isolation, strategy);
+    Optional<Result> result = tx1Sub2.get(prepareGet(1, 0, namespace2, TABLE_2));
     assertThat(result).isNotPresent();
     int current1 = 0;
-    tx1Sub1.get(prepareGet(0, 0, TABLE_1));
-    tx1Sub1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, current1 + 1));
+    tx1Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
+    tx1Sub1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, current1 + 1));
 
-    TwoPhaseConsensusCommit tx2Sub1 = manager.begin(isolation, strategy);
-    TwoPhaseConsensusCommit tx2Sub2 = manager.join(tx2Sub1.getId(), isolation, strategy);
-    result = tx2Sub1.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit tx2Sub1 = manager1.begin(isolation, strategy);
+    TwoPhaseConsensusCommit tx2Sub2 = manager2.join(tx2Sub1.getId(), isolation, strategy);
+    result = tx2Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
     int current2 = 0;
-    tx2Sub2.get(prepareGet(1, 0, TABLE_2));
-    tx2Sub2.put(preparePut(1, 0, TABLE_2).withValue(BALANCE, current2 + 1));
+    tx2Sub2.get(prepareGet(1, 0, namespace2, TABLE_2));
+    tx2Sub2.put(preparePut(1, 0, namespace2, TABLE_2).withValue(BALANCE, current2 + 1));
 
     tx1Sub1.prepare();
     tx1Sub2.prepare();
@@ -1818,11 +1927,13 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     tx2Sub2.rollback();
 
     // Assert
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    result = transaction.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction1 = manager1.begin();
+    TwoPhaseConsensusCommit transaction2 = manager2.join(transaction1.getId());
+
+    result = transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(current1 + 1);
-    result = transaction.get(prepareGet(1, 0, TABLE_2));
+    result = transaction2.get(prepareGet(1, 0, namespace2, TABLE_2));
     assertThat(result).isNotPresent();
   }
 
@@ -1832,21 +1943,21 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
           throws TransactionException, CoordinatorException {
     // Arrange
     State state = new State(ANY_ID_1, TransactionState.ABORTED);
-    coordinator.putState(state);
+    coordinatorForStorage1.putState(state);
 
     Isolation isolation = Isolation.SERIALIZABLE;
     SerializableStrategy strategy = SerializableStrategy.EXTRA_WRITE;
 
     // Act
-    TwoPhaseConsensusCommit txSub1 = manager.begin(ANY_ID_1, isolation, strategy);
-    TwoPhaseConsensusCommit txSub2 = manager.join(txSub1.getId(), isolation, strategy);
+    TwoPhaseConsensusCommit txSub1 = manager1.begin(ANY_ID_1, isolation, strategy);
+    TwoPhaseConsensusCommit txSub2 = manager2.join(txSub1.getId(), isolation, strategy);
 
-    Optional<Result> result = txSub2.get(prepareGet(1, 0, TABLE_2));
+    Optional<Result> result = txSub2.get(prepareGet(1, 0, namespace2, TABLE_2));
     assertThat(result).isNotPresent();
-    result = txSub1.get(prepareGet(0, 0, TABLE_1));
+    result = txSub1.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
     int current1 = 0;
-    txSub1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, current1 + 1));
+    txSub1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, current1 + 1));
 
     assertThatThrownBy(
             () -> {
@@ -1860,10 +1971,12 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     txSub2.rollback();
 
     // Assert
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    result = transaction.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction1 = manager1.begin();
+    TwoPhaseConsensusCommit transaction2 = manager2.join(transaction1.getId());
+
+    result = transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
-    result = transaction.get(prepareGet(1, 0, TABLE_2));
+    result = transaction2.get(prepareGet(1, 0, namespace2, TABLE_2));
     assertThat(result).isNotPresent();
   }
 
@@ -1876,21 +1989,21 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     SerializableStrategy strategy = SerializableStrategy.EXTRA_READ;
 
     // Act
-    TwoPhaseConsensusCommit tx1Sub1 = manager.begin(isolation, strategy);
-    TwoPhaseConsensusCommit tx1Sub2 = manager.join(tx1Sub1.getId(), isolation, strategy);
-    Optional<Result> result = tx1Sub2.get(prepareGet(1, 0, TABLE_2));
+    TwoPhaseConsensusCommit tx1Sub1 = manager1.begin(isolation, strategy);
+    TwoPhaseConsensusCommit tx1Sub2 = manager2.join(tx1Sub1.getId(), isolation, strategy);
+    Optional<Result> result = tx1Sub2.get(prepareGet(1, 0, namespace2, TABLE_2));
     assertThat(result).isNotPresent();
     int current1 = 0;
-    tx1Sub1.get(prepareGet(0, 0, TABLE_1));
-    tx1Sub1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, current1 + 1));
+    tx1Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
+    tx1Sub1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, current1 + 1));
 
-    TwoPhaseConsensusCommit tx2Sub1 = manager.begin(isolation, strategy);
-    TwoPhaseConsensusCommit tx2Sub2 = manager.join(tx2Sub1.getId(), isolation, strategy);
-    result = tx2Sub1.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit tx2Sub1 = manager1.begin(isolation, strategy);
+    TwoPhaseConsensusCommit tx2Sub2 = manager2.join(tx2Sub1.getId(), isolation, strategy);
+    result = tx2Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
     int current2 = 0;
-    tx2Sub2.get(prepareGet(1, 0, TABLE_2));
-    tx2Sub2.put(preparePut(1, 0, TABLE_2).withValue(BALANCE, current2 + 1));
+    tx2Sub2.get(prepareGet(1, 0, namespace2, TABLE_2));
+    tx2Sub2.put(preparePut(1, 0, namespace2, TABLE_2).withValue(BALANCE, current2 + 1));
 
     tx1Sub1.prepare();
     tx1Sub2.prepare();
@@ -1911,11 +2024,13 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     tx2Sub2.rollback();
 
     // Assert
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    result = transaction.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction1 = manager1.begin();
+    TwoPhaseConsensusCommit transaction2 = manager2.join(transaction1.getId());
+
+    result = transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(current1 + 1);
-    result = transaction.get(prepareGet(1, 0, TABLE_2));
+    result = transaction2.get(prepareGet(1, 0, namespace2, TABLE_2));
     assertThat(result).isNotPresent();
   }
 
@@ -1928,17 +2043,17 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     SerializableStrategy strategy = SerializableStrategy.EXTRA_WRITE;
 
     // Act Assert
-    TwoPhaseConsensusCommit transaction1 = manager.begin(isolation, strategy);
-    List<Result> results = transaction1.scan(prepareScan(0, 0, 1, TABLE_1));
+    TwoPhaseConsensusCommit transaction1 = manager1.begin(isolation, strategy);
+    List<Result> results = transaction1.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
     assertThat(results).isEmpty();
     int count1 = 0;
-    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, count1 + 1));
+    transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, count1 + 1));
 
-    TwoPhaseConsensusCommit transaction2 = manager.begin(isolation, strategy);
-    results = transaction2.scan(prepareScan(0, 0, 1, TABLE_1));
+    TwoPhaseConsensusCommit transaction2 = manager1.begin(isolation, strategy);
+    results = transaction2.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
     assertThat(results).isEmpty();
     int count2 = 0;
-    transaction2.put(preparePut(0, 1, TABLE_1).withValue(BALANCE, count2 + 1));
+    transaction2.put(preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, count2 + 1));
 
     assertThatThrownBy(transaction1::prepare).isInstanceOf(PreparationException.class);
     transaction1.rollback();
@@ -1947,10 +2062,10 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     transaction2.rollback();
 
     // Assert
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    Optional<Result> result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
-    result = transaction.get(prepareGet(0, 1, TABLE_1));
+    result = transaction.get(prepareGet(0, 1, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
   }
 
@@ -1963,17 +2078,17 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     SerializableStrategy strategy = SerializableStrategy.EXTRA_READ;
 
     // Act Assert
-    TwoPhaseConsensusCommit transaction1 = manager.begin(isolation, strategy);
-    List<Result> results = transaction1.scan(prepareScan(0, 0, 1, TABLE_1));
+    TwoPhaseConsensusCommit transaction1 = manager1.begin(isolation, strategy);
+    List<Result> results = transaction1.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
     assertThat(results).isEmpty();
     int count1 = 0;
-    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, count1 + 1));
+    transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, count1 + 1));
 
-    TwoPhaseConsensusCommit transaction2 = manager.begin(isolation, strategy);
-    results = transaction2.scan(prepareScan(0, 0, 1, TABLE_1));
+    TwoPhaseConsensusCommit transaction2 = manager1.begin(isolation, strategy);
+    results = transaction2.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
     assertThat(results).isEmpty();
     int count2 = 0;
-    transaction2.put(preparePut(0, 1, TABLE_1).withValue(BALANCE, count2 + 1));
+    transaction2.put(preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, count2 + 1));
 
     assertThatCode(
             () -> {
@@ -1988,11 +2103,11 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     transaction2.rollback();
 
     // Assert
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    Optional<Result> result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(count1 + 1);
-    result = transaction.get(prepareGet(0, 1, TABLE_1));
+    result = transaction.get(prepareGet(0, 1, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
   }
 
@@ -2001,9 +2116,9 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
       commit_WriteSkewWithScanOnExistingRecordsWithSerializableWithExtraRead_ShouldThrowValidationException()
           throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
-    transaction.put(preparePut(0, 1, TABLE_1).withValue(BALANCE, 1));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
+    transaction.put(preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.prepare();
     transaction.commit();
 
@@ -2011,17 +2126,17 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     SerializableStrategy strategy = SerializableStrategy.EXTRA_READ;
 
     // Act Assert
-    TwoPhaseConsensusCommit transaction1 = manager.begin(isolation, strategy);
-    List<Result> results = transaction1.scan(prepareScan(0, 0, 1, TABLE_1));
+    TwoPhaseConsensusCommit transaction1 = manager1.begin(isolation, strategy);
+    List<Result> results = transaction1.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
     assertThat(results.size()).isEqualTo(2);
     int count1 = results.size();
-    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, count1 + 1));
+    transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, count1 + 1));
 
-    TwoPhaseConsensusCommit transaction2 = manager.begin(isolation, strategy);
-    results = transaction2.scan(prepareScan(0, 0, 1, TABLE_1));
+    TwoPhaseConsensusCommit transaction2 = manager1.begin(isolation, strategy);
+    results = transaction2.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
     assertThat(results.size()).isEqualTo(2);
     int count2 = results.size();
-    transaction2.put(preparePut(0, 1, TABLE_1).withValue(BALANCE, count2 + 1));
+    transaction2.put(preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, count2 + 1));
 
     assertThatCode(
             () -> {
@@ -2036,11 +2151,11 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     transaction2.rollback();
 
     // Assert
-    transaction = manager.begin();
-    Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
+    transaction = manager1.begin();
+    Optional<Result> result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(count1 + 1);
-    result = transaction.get(prepareGet(0, 1, TABLE_1));
+    result = transaction.get(prepareGet(0, 1, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(1);
   }
@@ -2049,13 +2164,13 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   public void scanAndCommit_MultipleScansGivenInTransactionWithExtraRead_ShouldCommitProperly()
       throws TransactionException {
     // Arrange
-    populate(TABLE_1);
+    populate(manager1, namespace1, TABLE_1);
 
     // Act Assert
     TwoPhaseConsensusCommit transaction =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
-    transaction.scan(prepareScan(0, TABLE_1));
-    transaction.scan(prepareScan(1, TABLE_1));
+        manager1.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    transaction.scan(prepareScan(0, namespace1, TABLE_1));
+    transaction.scan(prepareScan(1, namespace1, TABLE_1));
     assertThatCode(
             () -> {
               transaction.prepare();
@@ -2069,30 +2184,30 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   public void putAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
       throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 2));
     transaction.prepare();
     transaction.commit();
 
     // Act
-    TwoPhaseConsensusCommit transaction1 = manager.begin();
-    Optional<Result> result = transaction1.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction1 = manager1.begin();
+    Optional<Result> result = transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isPresent();
     int balance1 = getBalance(result.get());
-    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, balance1 + 1));
+    transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, balance1 + 1));
 
-    TwoPhaseConsensusCommit transaction2 = manager.begin();
-    transaction2.get(prepareGet(0, 0, TABLE_1));
-    transaction2.delete(prepareDelete(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction2 = manager1.begin();
+    transaction2.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction2.delete(prepareDelete(0, 0, namespace1, TABLE_1));
     transaction2.prepare();
     transaction2.commit();
 
     // the same transaction processing as transaction1
-    TwoPhaseConsensusCommit transaction3 = manager.begin();
-    result = transaction3.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction3 = manager1.begin();
+    result = transaction3.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
     int balance3 = 0;
-    transaction3.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, balance3 + 1));
+    transaction3.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, balance3 + 1));
     transaction3.prepare();
     transaction3.commit();
 
@@ -2100,8 +2215,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     transaction1.rollback();
 
     // Assert
-    transaction = manager.begin();
-    result = transaction.get(prepareGet(0, 0, TABLE_1));
+    transaction = manager1.begin();
+    result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(1);
   }
@@ -2110,27 +2225,27 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   public void deleteAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
       throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 2));
     transaction.prepare();
     transaction.commit();
 
     // Act
-    TwoPhaseConsensusCommit transaction1 = manager.begin();
-    transaction1.get(prepareGet(0, 0, TABLE_1));
-    transaction1.delete(prepareDelete(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction1 = manager1.begin();
+    transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
 
-    TwoPhaseConsensusCommit transaction2 = manager.begin();
-    transaction2.get(prepareGet(0, 0, TABLE_1));
-    transaction2.delete(prepareDelete(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction2 = manager1.begin();
+    transaction2.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction2.delete(prepareDelete(0, 0, namespace1, TABLE_1));
     transaction2.prepare();
     transaction2.commit();
 
-    TwoPhaseConsensusCommit transaction3 = manager.begin();
-    Optional<Result> result = transaction3.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction3 = manager1.begin();
+    Optional<Result> result = transaction3.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
     int balance3 = 0;
-    transaction3.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, balance3 + 1));
+    transaction3.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, balance3 + 1));
     transaction3.prepare();
     transaction3.commit();
 
@@ -2138,8 +2253,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     transaction1.rollback();
 
     // Assert
-    transaction = manager.begin();
-    result = transaction.get(prepareGet(0, 0, TABLE_1));
+    transaction = manager1.begin();
+    result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(1);
   }
@@ -2147,11 +2262,11 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   @Test
   public void get_PutCalledBefore_ShouldGet() throws CrudException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction = manager1.begin();
 
     // Act
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
-    Get get = prepareGet(0, 0, TABLE_1);
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
     Optional<Result> result = transaction.get(get);
     assertThatCode(
             () -> {
@@ -2168,16 +2283,16 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   @Test
   public void get_DeleteCalledBefore_ShouldReturnEmpty() throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.prepare();
     transaction.commit();
 
     // Act
-    TwoPhaseConsensusCommit transaction1 = manager.begin();
-    Optional<Result> resultBefore = transaction1.get(prepareGet(0, 0, TABLE_1));
-    transaction1.delete(prepareDelete(0, 0, TABLE_1));
-    Optional<Result> resultAfter = transaction1.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction1 = manager1.begin();
+    Optional<Result> resultBefore = transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
+    Optional<Result> resultAfter = transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
 
     assertThatCode(
             () -> {
@@ -2194,16 +2309,16 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   @Test
   public void scan_DeleteCalledBefore_ShouldReturnEmpty() throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.prepare();
     transaction.commit();
 
     // Act Assert
-    TwoPhaseConsensusCommit transaction1 = manager.begin();
-    List<Result> resultBefore = transaction1.scan(prepareScan(0, 0, 0, TABLE_1));
-    transaction1.delete(prepareDelete(0, 0, TABLE_1));
-    List<Result> resultAfter = transaction1.scan(prepareScan(0, 0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction1 = manager1.begin();
+    List<Result> resultBefore = transaction1.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
+    transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
+    List<Result> resultAfter = transaction1.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
 
     assertThatCode(
             () -> {
@@ -2220,16 +2335,16 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   @Test
   public void delete_PutCalledBefore_ShouldDelete() throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.prepare();
     transaction.commit();
 
     // Act Assert
-    TwoPhaseConsensusCommit transaction1 = manager.begin();
-    Optional<Result> resultBefore = transaction1.get(prepareGet(0, 0, TABLE_1));
-    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2));
-    transaction1.delete(prepareDelete(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction1 = manager1.begin();
+    Optional<Result> resultBefore = transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 2));
+    transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
 
     assertThatCode(
             () -> {
@@ -2239,8 +2354,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
         .doesNotThrowAnyException();
 
     // Assert
-    TwoPhaseConsensusCommit transaction2 = manager.begin();
-    Optional<Result> resultAfter = transaction2.get(prepareGet(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit transaction2 = manager1.begin();
+    Optional<Result> resultAfter = transaction2.get(prepareGet(0, 0, namespace1, TABLE_1));
 
     assertThat(resultBefore.isPresent()).isTrue();
     assertThat(resultAfter.isPresent()).isFalse();
@@ -2250,18 +2365,19 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   public void put_DeleteCalledBefore_ShouldThrowIllegalArgumentException()
       throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.prepare();
     transaction.commit();
 
     // Act
-    TwoPhaseConsensusCommit transaction1 = manager.begin();
-    Get get = prepareGet(0, 0, TABLE_1);
+    TwoPhaseConsensusCommit transaction1 = manager1.begin();
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
     transaction1.get(get);
-    transaction1.delete(prepareDelete(0, 0, TABLE_1));
+    transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
     Throwable thrown =
-        catchThrowable(() -> transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2)));
+        catchThrowable(
+            () -> transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 2)));
     transaction1.rollback();
 
     // Assert
@@ -2271,38 +2387,38 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   @Test
   public void scan_OverlappingPutGivenBefore_ShouldIllegalArgumentException() {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
 
     // Act Assert
-    assertThatThrownBy(() -> transaction.scan(prepareScan(0, 0, 0, TABLE_1)))
+    assertThatThrownBy(() -> transaction.scan(prepareScan(0, 0, 0, namespace1, TABLE_1)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void scan_NonOverlappingPutGivenBefore_ShouldScan() {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
 
     // Act Assert
-    assertThatCode(() -> transaction.scan(prepareScan(0, 1, 1, TABLE_1)))
+    assertThatCode(() -> transaction.scan(prepareScan(0, 1, 1, namespace1, TABLE_1)))
         .doesNotThrowAnyException();
   }
 
   @Test
   public void scan_DeleteGivenBefore_ShouldScan() throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
-    transaction.put(preparePut(0, 1, TABLE_1).withValue(BALANCE, 1));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
+    transaction.put(preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.prepare();
     transaction.commit();
 
     // Act
-    TwoPhaseConsensusCommit transaction1 = manager.begin();
-    transaction1.delete(prepareDelete(0, 0, TABLE_1));
-    Scan scan = prepareScan(0, 0, 1, TABLE_1);
+    TwoPhaseConsensusCommit transaction1 = manager1.begin();
+    transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
+    Scan scan = prepareScan(0, 0, 1, namespace1, TABLE_1);
     List<Result> results = transaction1.scan(scan);
     assertThatCode(
             () -> {
@@ -2323,7 +2439,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     // Act Assert
     assertThatCode(
             () -> {
-              TwoPhaseConsensusCommit transaction = manager.begin(transactionId);
+              TwoPhaseConsensusCommit transaction = manager1.begin(transactionId);
               transaction.prepare();
               transaction.commit();
             })
@@ -2336,7 +2452,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     String transactionId = "";
 
     // Act Assert
-    assertThatThrownBy(() -> manager.begin(transactionId))
+    assertThatThrownBy(() -> manager1.begin(transactionId))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -2344,14 +2460,14 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   public void getState_forSuccessfulTransaction_ShouldReturnCommittedState()
       throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.get(prepareGet(0, 0, TABLE_1));
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.prepare();
     transaction.commit();
 
     // Act
-    TransactionState state = manager.getState(transaction.getId());
+    TransactionState state = manager1.getState(transaction.getId());
 
     // Assert
     assertThat(state).isEqualTo(TransactionState.COMMITTED);
@@ -2360,13 +2476,13 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   @Test
   public void getState_forFailedTransaction_ShouldReturnAbortedState() throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction1 = manager.begin();
-    transaction1.get(prepareGet(0, 0, TABLE_1));
-    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    TwoPhaseConsensusCommit transaction1 = manager1.begin();
+    transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
 
-    TwoPhaseConsensusCommit transaction2 = manager.begin();
-    transaction2.get(prepareGet(0, 0, TABLE_1));
-    transaction2.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    TwoPhaseConsensusCommit transaction2 = manager1.begin();
+    transaction2.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction2.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction2.prepare();
     transaction2.commit();
 
@@ -2374,7 +2490,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     transaction1.rollback();
 
     // Act
-    TransactionState state = manager.getState(transaction1.getId());
+    TransactionState state = manager1.getState(transaction1.getId());
 
     // Assert
     assertThat(state).isEqualTo(TransactionState.ABORTED);
@@ -2383,35 +2499,35 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   @Test
   public void abort_forOngoingTransaction_ShouldAbortCorrectly() throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.get(prepareGet(0, 0, TABLE_1));
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
 
     // Act
-    manager.abort(transaction.getId());
+    manager1.abort(transaction.getId());
 
     transaction.prepare();
     assertThatCode(transaction::commit).isInstanceOf(CommitException.class);
     transaction.rollback();
 
     // Assert
-    TransactionState state = manager.getState(transaction.getId());
+    TransactionState state = manager1.getState(transaction.getId());
     assertThat(state).isEqualTo(TransactionState.ABORTED);
   }
 
   @Test
   public void scanAll_DeleteCalledBefore_ShouldReturnEmpty() throws TransactionException {
     // Arrange
-    TwoPhaseCommitTransaction transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withIntValue(BALANCE, 1));
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, 1));
     transaction.prepare();
     transaction.commit();
 
     // Act
-    TwoPhaseCommitTransaction transaction1 = manager.begin();
-    ScanAll scanAll = prepareScanAll(TABLE_1);
+    TwoPhaseCommitTransaction transaction1 = manager1.begin();
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
     List<Result> resultBefore = transaction1.scan(scanAll);
-    transaction1.delete(prepareDelete(0, 0, TABLE_1));
+    transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
     List<Result> resultAfter = transaction1.scan(scanAll);
     assertThatCode(
             () -> {
@@ -2428,16 +2544,16 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   @Test
   public void scanAll_DeleteGivenBefore_ShouldScanAll() throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withIntValue(BALANCE, 1));
-    transaction.put(preparePut(0, 1, TABLE_1).withIntValue(BALANCE, 1));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, 1));
+    transaction.put(preparePut(0, 1, namespace1, TABLE_1).withIntValue(BALANCE, 1));
     transaction.prepare();
     transaction.commit();
 
     // Act
-    TwoPhaseConsensusCommit transaction1 = manager.begin();
-    transaction1.delete(prepareDelete(0, 0, TABLE_1));
-    ScanAll scanAll = prepareScanAll(TABLE_1);
+    TwoPhaseConsensusCommit transaction1 = manager1.begin();
+    transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
     List<Result> results = transaction1.scan(scanAll);
     assertThatCode(
             () -> {
@@ -2451,23 +2567,26 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scanAll_NonOverlappingPutGivenBefore_ShouldScanAll() {
+  public void scanAll_NonOverlappingPutGivenBefore_ShouldScanAll() throws TransactionException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withIntValue(BALANCE, 1));
+    TwoPhaseConsensusCommit transaction1 = manager1.begin();
+    TwoPhaseConsensusCommit transaction2 = manager2.join(transaction1.getId());
+
+    transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, 1));
 
     // Act
-    assertThatCode(() -> transaction.scan(prepareScanAll(TABLE_2))).doesNotThrowAnyException();
+    assertThatCode(() -> transaction2.scan(prepareScanAll(namespace2, TABLE_2)))
+        .doesNotThrowAnyException();
   }
 
   @Test
   public void scanAll_OverlappingPutGivenBefore_ShouldThrowIllegalArgumentException() {
     // Arrange
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    transaction.put(preparePut(0, 0, TABLE_1).withIntValue(BALANCE, 1));
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, 1));
 
     // Act
-    assertThatThrownBy(() -> transaction.scan(prepareScanAll(TABLE_1)))
+    assertThatThrownBy(() -> transaction.scan(prepareScanAll(namespace1, TABLE_1)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -2475,9 +2594,9 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   public void scanAll_ScanAllGivenForCommittedRecord_ShouldReturnRecord()
       throws TransactionException {
     // Arrange
-    populate(TABLE_1);
-    TwoPhaseConsensusCommit transaction = manager.begin();
-    ScanAll scanAll = prepareScanAll(TABLE_1).withLimit(1);
+    populate(manager1, namespace1, TABLE_1);
+    TwoPhaseConsensusCommit transaction = manager1.begin();
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1).withLimit(1);
 
     // Act
     List<Result> results = transaction.scan(scanAll);
@@ -2540,15 +2659,15 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
       throws CrudException, CommitException, UnknownTransactionStatusException,
           PreparationException {
     // Arrange
-    TwoPhaseConsensusCommit putTransaction = manager.begin();
-    putTransaction.put(preparePut(0, 0, TABLE_1));
+    TwoPhaseConsensusCommit putTransaction = manager1.begin();
+    putTransaction.put(preparePut(0, 0, namespace1, TABLE_1));
     putTransaction.prepare();
     putTransaction.commit();
 
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction = manager2.begin();
     ScanAll scanAll =
         new ScanAll()
-            .forNamespace(namespace)
+            .forNamespace(namespace2)
             .forTable(TABLE_2)
             .withConsistency(Consistency.LINEARIZABLE);
 
@@ -2605,36 +2724,34 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
         SelectionType.SCAN_ALL);
   }
 
-  private void populate(String table) throws TransactionException {
+  private void populate(TwoPhaseConsensusCommitManager manager, String namespace, String table)
+      throws TransactionException {
     TwoPhaseConsensusCommit transaction = manager.begin();
     for (int i = 0; i < NUM_ACCOUNTS; i++) {
       for (int j = 0; j < NUM_TYPES; j++) {
-        transaction.put(preparePut(i, j, table).withValue(BALANCE, INITIAL_BALANCE));
+        transaction.put(preparePut(i, j, namespace, table).withValue(BALANCE, INITIAL_BALANCE));
       }
     }
     transaction.prepare();
     transaction.commit();
   }
 
-  private ScanAll prepareScanAll(String table) {
+  private ScanAll prepareScanAll(String namespace, String table) {
     return new ScanAll()
         .forNamespace(namespace)
         .forTable(table)
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private void populatePreparedRecordAndCoordinatorStateRecord(
-      String table,
-      TransactionState recordState,
-      long preparedAt,
-      TransactionState coordinatorState)
+  private void populatePreparedRecordAndCoordinatorStateRecordForStorage1(
+      TransactionState recordState, long preparedAt, TransactionState coordinatorState)
       throws ExecutionException, CoordinatorException {
     Key partitionKey = new Key(new IntValue(ACCOUNT_ID, 0));
     Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, 0));
     Put put =
         new Put(partitionKey, clusteringKey)
-            .forNamespace(namespace)
-            .forTable(table)
+            .forNamespace(namespace1)
+            .forTable(TABLE_1)
             .withValue(new IntValue(BALANCE, INITIAL_BALANCE))
             .withValue(Attribute.toIdValue(ANY_ID_2))
             .withValue(Attribute.toStateValue(recordState))
@@ -2645,56 +2762,66 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
             .withValue(Attribute.toBeforeVersionValue(1))
             .withValue(Attribute.toBeforePreparedAtValue(1))
             .withValue(Attribute.toBeforeCommittedAtValue(1));
-    storage.put(put);
+    storage1.put(put);
 
     if (coordinatorState == null) {
       return;
     }
     State state = new State(ANY_ID_2, coordinatorState);
-    coordinator.putState(state);
+    coordinatorForStorage1.putState(state);
   }
 
   private void transfer(
       int fromId,
       int fromType,
+      String fromNamespace,
       String fromTable,
       TwoPhaseConsensusCommit fromTx,
       int toId,
       int toType,
+      String toNamespace,
       String toTable,
       TwoPhaseConsensusCommit toTx,
       int amount)
       throws TransactionException {
     int fromBalance =
         fromTx
-            .get(prepareGet(fromId, fromType, fromTable))
+            .get(prepareGet(fromId, fromType, fromNamespace, fromTable))
             .get()
             .getValue(BALANCE)
             .get()
             .getAsInt();
     int toBalance =
-        toTx.get(prepareGet(toId, toType, toTable)).get().getValue(BALANCE).get().getAsInt();
-    fromTx.put(preparePut(fromId, fromType, fromTable).withValue(BALANCE, fromBalance - amount));
-    toTx.put(preparePut(toId, toType, toTable).withValue(BALANCE, toBalance + amount));
+        toTx.get(prepareGet(toId, toType, toNamespace, toTable))
+            .get()
+            .getValue(BALANCE)
+            .get()
+            .getAsInt();
+    fromTx.put(
+        preparePut(fromId, fromType, fromNamespace, fromTable)
+            .withValue(BALANCE, fromBalance - amount));
+    toTx.put(preparePut(toId, toType, toNamespace, toTable).withValue(BALANCE, toBalance + amount));
   }
 
   private void deletes(
       int id,
       int type,
+      String namespace,
       String table,
       TwoPhaseConsensusCommit tx,
       int anotherId,
       int anotherType,
+      String anotherNamespace,
       String anotherTable,
       TwoPhaseConsensusCommit anotherTx)
       throws TransactionException {
-    tx.get(prepareGet(id, type, table));
-    anotherTx.get(prepareGet(anotherId, anotherType, anotherTable));
-    tx.delete(prepareDelete(id, type, table));
-    anotherTx.delete(prepareDelete(anotherId, anotherType, anotherTable));
+    tx.get(prepareGet(id, type, namespace, table));
+    anotherTx.get(prepareGet(anotherId, anotherType, anotherNamespace, anotherTable));
+    tx.delete(prepareDelete(id, type, namespace, table));
+    anotherTx.delete(prepareDelete(anotherId, anotherType, anotherNamespace, anotherTable));
   }
 
-  private Get prepareGet(int id, int type, String table) {
+  private Get prepareGet(int id, int type, String namespace, String table) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Get(partitionKey, clusteringKey)
@@ -2703,7 +2830,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private Scan prepareScan(int id, int fromType, int toType, String table) {
+  private Scan prepareScan(int id, int fromType, int toType, String namespace, String table) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     return new Scan(partitionKey)
         .forNamespace(namespace)
@@ -2713,7 +2840,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
         .withEnd(new Key(ACCOUNT_TYPE, toType));
   }
 
-  private Scan prepareScan(int id, String table) {
+  private Scan prepareScan(int id, String namespace, String table) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     return new Scan(partitionKey)
         .forNamespace(namespace)
@@ -2721,7 +2848,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private Put preparePut(int id, int type, String table) {
+  private Put preparePut(int id, int type, String namespace, String table) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Put(partitionKey, clusteringKey)
@@ -2730,7 +2857,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private Delete prepareDelete(int id, int type, String table) {
+  private Delete prepareDelete(int id, int type, String namespace, String table) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Delete(partitionKey, clusteringKey)
