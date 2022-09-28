@@ -50,13 +50,13 @@ public class TwoPhaseConsensusCommitIntegrationTestWithTwoPhaseCommitTransaction
   }
 
   @Override
-  protected Properties getProps(String testName) {
+  protected Properties getProps1(String testName) {
     return ServerEnv.getProperties(testName);
   }
 
   @Override
   protected Properties getPropsWithIncludeMetadataEnabled(String testName) {
-    Properties properties = getProperties(testName);
+    Properties properties = getProperties1(testName);
     properties.setProperty(
         DatabaseConfig.CONTACT_PORT, PORT_FOR_SERVER_WITH_INCLUDE_METADATA_ENABLED);
     return properties;

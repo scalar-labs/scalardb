@@ -37,7 +37,8 @@ import org.junit.jupiter.api.TestInstance;
 public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
   private static final String NAMESPACE_BASE_NAME = "int_test_";
-  protected static final String TABLE = "test_table";
+  protected static final String TABLE_1 = "test_table1";
+  protected static final String TABLE_2 = "test_table2";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String ACCOUNT_TYPE = "account_type";
   protected static final String BALANCE = "balance";
@@ -55,27 +56,38 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
           .addClusteringKey(ACCOUNT_TYPE)
           .addSecondaryIndex(SOME_COLUMN)
           .build();
-  private DistributedTransactionAdmin admin;
-  private TwoPhaseCommitTransactionManager manager;
+  private DistributedTransactionAdmin admin1;
+  private DistributedTransactionAdmin admin2;
+  private TwoPhaseCommitTransactionManager manager1;
+  private TwoPhaseCommitTransactionManager manager2;
 
-  protected String namespace;
+  protected String namespace1;
+  protected String namespace2;
 
   @BeforeAll
   public void beforeAll() throws Exception {
     String testName = getTestName();
     initialize(testName);
-    TransactionFactory factory = TransactionFactory.create(getProperties(testName));
-    admin = factory.getTransactionAdmin();
-    namespace = getNamespaceBaseName() + testName;
+    TransactionFactory factory1 = TransactionFactory.create(getProperties1(testName));
+    admin1 = factory1.getTransactionAdmin();
+    TransactionFactory factory2 = TransactionFactory.create(getProperties2(testName));
+    admin2 = factory2.getTransactionAdmin();
+    namespace1 = getNamespaceBaseName() + testName + "1";
+    namespace2 = getNamespaceBaseName() + testName + "2";
     createTables();
-    manager = factory.getTwoPhaseCommitTransactionManager();
+    manager1 = factory1.getTwoPhaseCommitTransactionManager();
+    manager2 = factory2.getTwoPhaseCommitTransactionManager();
   }
 
   protected void initialize(String testName) throws Exception {}
 
   protected abstract String getTestName();
 
-  protected abstract Properties getProperties(String testName);
+  protected abstract Properties getProperties1(String testName);
+
+  protected Properties getProperties2(String testName) {
+    return getProperties1(testName);
+  }
 
   protected String getNamespaceBaseName() {
     return NAMESPACE_BASE_NAME;
@@ -83,9 +95,11 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
-    admin.createNamespace(namespace, true, options);
-    admin.createTable(namespace, TABLE, TABLE_METADATA, true, options);
-    admin.createCoordinatorTables(true, options);
+    admin1.createNamespace(namespace1, true, options);
+    admin1.createTable(namespace1, TABLE_1, TABLE_METADATA, true, options);
+    admin1.createCoordinatorTables(true, options);
+    admin2.createNamespace(namespace2, true, options);
+    admin2.createTable(namespace2, TABLE_2, TABLE_METADATA, true, options);
   }
 
   protected Map<String, String> getCreationOptions() {
@@ -94,29 +108,34 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
   @BeforeEach
   public void setUp() throws ExecutionException {
-    admin.truncateTable(namespace, TABLE);
-    admin.truncateCoordinatorTables();
+    admin1.truncateTable(namespace1, TABLE_1);
+    admin1.truncateCoordinatorTables();
+    admin2.truncateTable(namespace2, TABLE_2);
   }
 
   @AfterAll
   public void afterAll() throws ExecutionException {
     dropTables();
-    admin.close();
-    manager.close();
+    admin1.close();
+    admin2.close();
+    manager1.close();
+    manager2.close();
   }
 
   private void dropTables() throws ExecutionException {
-    admin.dropTable(namespace, TABLE);
-    admin.dropNamespace(namespace);
-    admin.dropCoordinatorTables();
+    admin1.dropTable(namespace1, TABLE_1);
+    admin1.dropNamespace(namespace1);
+    admin1.dropCoordinatorTables();
+    admin2.dropTable(namespace2, TABLE_2);
+    admin2.dropNamespace(namespace2);
   }
 
   @Test
   public void get_GetGivenForCommittedRecord_ShouldReturnRecord() throws TransactionException {
     // Arrange
-    populateRecords();
-    TwoPhaseCommitTransaction transaction = manager.start();
-    Get get = prepareGet(0, 0);
+    populateRecords(manager1, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.start();
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
 
     // Act
     Optional<Result> result = transaction.get(get);
@@ -136,10 +155,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void get_GetWithProjectionGivenForCommittedRecord_ShouldReturnRecord()
       throws TransactionException {
     // Arrange
-    populateRecords();
-    TwoPhaseCommitTransaction transaction = manager.start();
+    populateRecords(manager1, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.start();
     Get get =
-        prepareGet(0, 0)
+        prepareGet(0, 0, namespace1, TABLE_1)
             .withProjection(ACCOUNT_ID)
             .withProjection(ACCOUNT_TYPE)
             .withProjection(BALANCE);
@@ -161,9 +180,9 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   @Test
   public void scan_ScanGivenForCommittedRecord_ShouldReturnRecords() throws TransactionException {
     // Arrange
-    populateRecords();
-    TwoPhaseCommitTransaction transaction = manager.start();
-    Scan scan = prepareScan(1, 0, 2);
+    populateRecords(manager1, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.start();
+    Scan scan = prepareScan(1, 0, 2, namespace1, TABLE_1);
 
     // Act
     List<Result> results = transaction.scan(scan);
@@ -193,10 +212,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void scan_ScanWithProjectionsGivenForCommittedRecord_ShouldReturnRecords()
       throws TransactionException {
     // Arrange
-    populateRecords();
-    TwoPhaseCommitTransaction transaction = manager.start();
+    populateRecords(manager1, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.start();
     Scan scan =
-        prepareScan(1, 0, 2)
+        prepareScan(1, 0, 2, namespace1, TABLE_1)
             .withProjection(ACCOUNT_ID)
             .withProjection(ACCOUNT_TYPE)
             .withProjection(BALANCE);
@@ -229,9 +248,9 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void scan_ScanWithOrderingGivenForCommittedRecord_ShouldReturnRecords()
       throws TransactionException {
     // Arrange
-    populateRecords();
-    TwoPhaseCommitTransaction transaction = manager.start();
-    Scan scan = prepareScan(1, 0, 2).withOrdering(Ordering.desc(ACCOUNT_TYPE));
+    populateRecords(manager1, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.start();
+    Scan scan = prepareScan(1, 0, 2, namespace1, TABLE_1).withOrdering(Ordering.desc(ACCOUNT_TYPE));
 
     // Act
     List<Result> results = transaction.scan(scan);
@@ -261,9 +280,9 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void scan_ScanWithLimitGivenForCommittedRecord_ShouldReturnRecords()
       throws TransactionException {
     // Arrange
-    populateRecords();
-    TwoPhaseCommitTransaction transaction = manager.start();
-    Scan scan = prepareScan(1, 0, 2).withLimit(2);
+    populateRecords(manager1, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.start();
+    Scan scan = prepareScan(1, 0, 2, namespace1, TABLE_1).withLimit(2);
 
     // Act
     List<Result> results = transaction.scan(scan);
@@ -287,9 +306,9 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   @Test
   public void get_GetGivenForNonExisting_ShouldReturnEmpty() throws TransactionException {
     // Arrange
-    populateRecords();
-    TwoPhaseCommitTransaction transaction = manager.start();
-    Get get = prepareGet(0, 4);
+    populateRecords(manager1, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.start();
+    Get get = prepareGet(0, 4, namespace1, TABLE_1);
 
     // Act
     Optional<Result> result = transaction.get(get);
@@ -304,9 +323,9 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   @Test
   public void scan_ScanGivenForNonExisting_ShouldReturnEmpty() throws TransactionException {
     // Arrange
-    populateRecords();
-    TwoPhaseCommitTransaction transaction = manager.start();
-    Scan scan = prepareScan(0, 4, 4);
+    populateRecords(manager1, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.start();
+    Scan scan = prepareScan(0, 4, 4, namespace1, TABLE_1);
 
     // Act
     List<Result> results = transaction.scan(scan);
@@ -321,11 +340,11 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   @Test
   public void get_GetGivenForIndexColumn_ShouldReturnRecords() throws TransactionException {
     // Arrange
-    TwoPhaseCommitTransaction transaction = manager.start();
+    TwoPhaseCommitTransaction transaction = manager1.start();
     transaction.put(
         Put.newBuilder()
-            .namespace(namespace)
-            .table(TABLE)
+            .namespace(namespace1)
+            .table(TABLE_1)
             .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
             .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
             .intValue(BALANCE, INITIAL_BALANCE)
@@ -335,17 +354,17 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     transaction.validate();
     transaction.commit();
 
-    transaction = manager.start();
+    transaction = manager1.start();
     Get getBuiltByConstructor =
         new Get(Key.ofInt(SOME_COLUMN, 2))
-            .forNamespace(namespace)
-            .forTable(TABLE)
+            .forNamespace(namespace1)
+            .forTable(TABLE_1)
             .withConsistency(Consistency.LINEARIZABLE);
 
     Get getBuiltByBuilder =
         Get.newBuilder()
-            .namespace(namespace)
-            .table(TABLE)
+            .namespace(namespace1)
+            .table(TABLE_1)
             .indexKey(Key.ofInt(SOME_COLUMN, 2))
             .build();
 
@@ -370,18 +389,18 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   @Test
   public void scan_ScanGivenForIndexColumn_ShouldReturnRecords() throws TransactionException {
     // Arrange
-    populateRecords();
-    TwoPhaseCommitTransaction transaction = manager.start();
+    populateRecords(manager1, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.start();
     Scan scanBuiltByConstructor =
         new Scan(Key.ofInt(SOME_COLUMN, 2))
-            .forNamespace(namespace)
-            .forTable(TABLE)
+            .forNamespace(namespace1)
+            .forTable(TABLE_1)
             .withConsistency(Consistency.LINEARIZABLE);
 
     Scan scanBuiltByBuilder =
         Scan.newBuilder()
-            .namespace(namespace)
-            .table(TABLE)
+            .namespace(namespace1)
+            .table(TABLE_1)
             .indexKey(Key.ofInt(SOME_COLUMN, 2))
             .build();
 
@@ -419,8 +438,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void putAndCommit_PutGivenForNonExisting_ShouldCreateRecord() throws TransactionException {
     // Arrange
     int expected = INITIAL_BALANCE;
-    Put put = preparePut(0, 0).withValue(BALANCE, expected);
-    TwoPhaseCommitTransaction transaction = manager.start();
+    Put put = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, expected);
+    TwoPhaseCommitTransaction transaction = manager1.start();
 
     // Act
     transaction.put(put);
@@ -429,8 +448,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    Get get = prepareGet(0, 0);
-    TwoPhaseCommitTransaction another = manager.start();
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction another = manager1.start();
     Optional<Result> result = another.get(get);
     another.prepare();
     another.validate();
@@ -443,22 +462,22 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void putAndCommit_PutGivenForExistingAfterRead_ShouldUpdateRecord()
       throws TransactionException {
     // Arrange
-    populateRecords();
-    Get get = prepareGet(0, 0);
-    TwoPhaseCommitTransaction transaction = manager.start();
+    populateRecords(manager1, namespace1, TABLE_1);
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.start();
 
     // Act
     Optional<Result> result = transaction.get(get);
     assertThat(result.isPresent()).isTrue();
     int expected = getBalance(result.get()) + 100;
-    Put put = preparePut(0, 0).withValue(BALANCE, expected);
+    Put put = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, expected);
     transaction.put(put);
     transaction.prepare();
     transaction.validate();
     transaction.commit();
 
     // Assert
-    TwoPhaseCommitTransaction another = manager.start();
+    TwoPhaseCommitTransaction another = manager1.start();
     Optional<Result> actual = another.get(get);
     another.prepare();
     another.validate();
@@ -471,8 +490,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   @Test
   public void putWithNullValueAndCommit_ShouldCreateRecordProperly() throws TransactionException {
     // Arrange
-    Put put = preparePut(0, 0).withIntValue(BALANCE, null);
-    TwoPhaseCommitTransaction transaction = manager.begin();
+    Put put = preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, null);
+    TwoPhaseCommitTransaction transaction = manager1.begin();
 
     // Act
     transaction.put(put);
@@ -481,8 +500,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    Get get = prepareGet(0, 0);
-    TwoPhaseCommitTransaction another = manager.begin();
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction another = manager1.begin();
     Optional<Result> result = another.get(get);
     another.prepare();
     another.validate();
@@ -494,14 +513,14 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   @Test
   public void putAndCommit_GetsAndPutsGiven_ShouldCommitProperly() throws TransactionException {
     // Arrange
-    populateRecords();
+    populateRecords(manager1, namespace1, TABLE_1);
     int amount = 100;
     int fromId = 0;
     int toId = NUM_TYPES;
 
     // Act
-    TwoPhaseCommitTransaction transaction = manager.begin();
-    List<Get> gets = prepareGets();
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+    List<Get> gets = prepareGets(namespace1, TABLE_1);
 
     Optional<Result> fromResult = transaction.get(gets.get(fromId));
     assertThat(fromResult.isPresent()).isTrue();
@@ -511,7 +530,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     assertThat(toResult.isPresent()).isTrue();
     IntValue toBalance = new IntValue(BALANCE, getBalance(toResult.get()) + amount);
 
-    List<Put> puts = preparePuts();
+    List<Put> puts = preparePuts(namespace1, TABLE_1);
     puts.get(fromId).withValue(fromBalance);
     puts.get(toId).withValue(toBalance);
     transaction.put(puts.get(fromId));
@@ -522,7 +541,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    TwoPhaseCommitTransaction another = manager.begin();
+    TwoPhaseCommitTransaction another = manager1.begin();
     fromResult = another.get(gets.get(fromId));
     assertThat(fromResult.isPresent()).isTrue();
     assertThat(getBalance(fromResult.get())).isEqualTo(INITIAL_BALANCE - amount);
@@ -538,16 +557,16 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   @Test
   public void putAndRollback_ShouldNotCreateRecord() throws TransactionException {
     // Arrange
-    Put put = preparePut(0, 0).withValue(BALANCE, INITIAL_BALANCE);
-    TwoPhaseCommitTransaction transaction = manager.begin();
+    Put put = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, INITIAL_BALANCE);
+    TwoPhaseCommitTransaction transaction = manager1.begin();
 
     // Act
     transaction.put(put);
     transaction.rollback();
 
     // Assert
-    Get get = prepareGet(0, 0);
-    TwoPhaseCommitTransaction another = manager.begin();
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction another = manager1.begin();
     Optional<Result> result = another.get(get);
     another.prepare();
     another.validate();
@@ -558,16 +577,16 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   @Test
   public void putAndAbort_ShouldNotCreateRecord() throws TransactionException {
     // Arrange
-    Put put = preparePut(0, 0).withValue(BALANCE, INITIAL_BALANCE);
-    TwoPhaseCommitTransaction transaction = manager.begin();
+    Put put = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, INITIAL_BALANCE);
+    TwoPhaseCommitTransaction transaction = manager1.begin();
 
     // Act
     transaction.put(put);
     transaction.abort();
 
     // Assert
-    Get get = prepareGet(0, 0);
-    TwoPhaseCommitTransaction another = manager.begin();
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction another = manager1.begin();
     Optional<Result> result = another.get(get);
     another.prepare();
     another.validate();
@@ -579,10 +598,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void deleteAndCommit_DeleteGivenForExistingAfterRead_ShouldDeleteRecord()
       throws TransactionException {
     // Arrange
-    populateRecords();
-    Get get = prepareGet(0, 0);
-    Delete delete = prepareDelete(0, 0);
-    TwoPhaseCommitTransaction transaction = manager.begin();
+    populateRecords(manager1, namespace1, TABLE_1);
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.begin();
 
     // Act
     Optional<Result> result = transaction.get(get);
@@ -593,7 +612,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
     // Assert
     assertThat(result.isPresent()).isTrue();
-    TwoPhaseCommitTransaction another = manager.begin();
+    TwoPhaseCommitTransaction another = manager1.begin();
     Optional<Result> result1 = another.get(get);
     another.prepare();
     another.validate();
@@ -604,10 +623,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   @Test
   public void deleteAndRollback_ShouldNotDeleteRecord() throws TransactionException {
     // Arrange
-    populateRecords();
-    Get get = prepareGet(0, 0);
-    Delete delete = prepareDelete(0, 0);
-    TwoPhaseCommitTransaction transaction = manager.begin();
+    populateRecords(manager1, namespace1, TABLE_1);
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.begin();
 
     // Act
     Optional<Result> result = transaction.get(get);
@@ -616,7 +635,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
     // Assert
     assertThat(result).isPresent();
-    TwoPhaseCommitTransaction another = manager.begin();
+    TwoPhaseCommitTransaction another = manager1.begin();
     Optional<Result> result1 = another.get(get);
     another.prepare();
     another.validate();
@@ -627,10 +646,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   @Test
   public void deleteAndAbort_ShouldNotDeleteRecord() throws TransactionException {
     // Arrange
-    populateRecords();
-    Get get = prepareGet(0, 0);
-    Delete delete = prepareDelete(0, 0);
-    TwoPhaseCommitTransaction transaction = manager.begin();
+    populateRecords(manager1, namespace1, TABLE_1);
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.begin();
 
     // Act
     Optional<Result> result = transaction.get(get);
@@ -639,7 +658,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
     // Assert
     assertThat(result).isPresent();
-    TwoPhaseCommitTransaction another = manager.begin();
+    TwoPhaseCommitTransaction another = manager1.begin();
     Optional<Result> result1 = another.get(get);
     another.prepare();
     another.validate();
@@ -650,13 +669,13 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   @Test
   public void mutateAndCommit_ShouldMutateRecordsProperly() throws TransactionException {
     // Arrange
-    populateRecords();
-    Get get1 = prepareGet(0, 0);
-    Get get2 = prepareGet(1, 0);
-    Put put = preparePut(0, 0).withIntValue(BALANCE, INITIAL_BALANCE - 100);
-    Delete delete = prepareDelete(1, 0);
+    populateRecords(manager1, namespace1, TABLE_1);
+    Get get1 = prepareGet(0, 0, namespace1, TABLE_1);
+    Get get2 = prepareGet(1, 0, namespace1, TABLE_1);
+    Put put = preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, INITIAL_BALANCE - 100);
+    Delete delete = prepareDelete(1, 0, namespace1, TABLE_1);
 
-    TwoPhaseCommitTransaction transaction = manager.begin();
+    TwoPhaseCommitTransaction transaction = manager1.begin();
 
     // Act
     transaction.get(get1);
@@ -667,7 +686,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    TwoPhaseCommitTransaction another = manager.begin();
+    TwoPhaseCommitTransaction another = manager1.begin();
     Optional<Result> result1 = another.get(get1);
     Optional<Result> result2 = another.get(get2);
     another.prepare();
@@ -683,54 +702,47 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void mutateAndCommit_WithMultipleSubTransactions_ShouldMutateRecordsProperly()
       throws TransactionException {
     // Arrange
-    populateRecords();
-    Get get1 = prepareGet(0, 0);
-    Get get2 = prepareGet(1, 0);
-    Put put = preparePut(0, 0).withIntValue(BALANCE, INITIAL_BALANCE - 100);
-    Delete delete = prepareDelete(1, 0);
+    populateRecords(manager1, namespace1, TABLE_1);
+    populateRecords(manager2, namespace2, TABLE_2);
 
-    TwoPhaseCommitTransaction transaction1 = manager.begin();
-    TwoPhaseCommitTransaction transaction2;
+    Get get1 = prepareGet(0, 0, namespace1, TABLE_1);
+    Get get2 = prepareGet(1, 0, namespace2, TABLE_2);
+    Put put = preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, INITIAL_BALANCE - 100);
+    Delete delete = prepareDelete(1, 0, namespace2, TABLE_2);
+
+    TwoPhaseCommitTransaction transaction1 = manager1.begin();
+    TwoPhaseCommitTransaction transaction2 = manager2.join(transaction1.getId());
 
     // Act
     transaction1.get(get1);
     transaction1.put(put);
 
-    transaction2 = manager.join(transaction1.getId());
     transaction2.get(get2);
-    manager.suspend(transaction2);
-
-    transaction2 = manager.resume(transaction1.getId());
     transaction2.delete(delete);
-    manager.suspend(transaction2);
 
     // Prepare
     transaction1.prepare();
-
-    transaction2 = manager.resume(transaction1.getId());
     transaction2.prepare();
-    manager.suspend(transaction2);
 
     // Validate
     transaction1.validate();
-
-    transaction2 = manager.resume(transaction1.getId());
     transaction2.validate();
-    manager.suspend(transaction2);
 
     // Commit
     transaction1.commit();
-
-    transaction2 = manager.resume(transaction1.getId());
     transaction2.commit();
 
     // Assert
-    TwoPhaseCommitTransaction another = manager.begin();
-    Optional<Result> result1 = another.get(get1);
-    Optional<Result> result2 = another.get(get2);
-    another.prepare();
-    another.validate();
-    another.commit();
+    TwoPhaseCommitTransaction another1 = manager1.begin();
+    TwoPhaseCommitTransaction another2 = manager2.join(another1.getId());
+    Optional<Result> result1 = another1.get(get1);
+    Optional<Result> result2 = another2.get(get2);
+    another1.prepare();
+    another2.prepare();
+    another1.validate();
+    another2.validate();
+    another1.commit();
+    another2.commit();
 
     assertThat(result1.isPresent()).isTrue();
     assertThat(result1.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE - 100);
@@ -738,57 +750,50 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
-  public void mutateAndRollback_WithMultipleSubTransactions_ShouldMutateRecordsProperly()
+  public void mutateAndRollback_WithMultipleSubTransactions_ShouldRollbackRecordsProperly()
       throws TransactionException {
     // Arrange
-    populateRecords();
-    Get get1 = prepareGet(0, 0);
-    Get get2 = prepareGet(1, 0);
-    Put put = preparePut(0, 0).withIntValue(BALANCE, INITIAL_BALANCE - 100);
-    Delete delete = prepareDelete(1, 0);
+    populateRecords(manager1, namespace1, TABLE_1);
+    populateRecords(manager2, namespace2, TABLE_2);
 
-    TwoPhaseCommitTransaction transaction1 = manager.begin();
-    TwoPhaseCommitTransaction transaction2;
+    Get get1 = prepareGet(0, 0, namespace1, TABLE_1);
+    Get get2 = prepareGet(1, 0, namespace2, TABLE_2);
+    Put put = preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, INITIAL_BALANCE - 100);
+    Delete delete = prepareDelete(1, 0, namespace2, TABLE_2);
+
+    TwoPhaseCommitTransaction transaction1 = manager1.begin();
+    TwoPhaseCommitTransaction transaction2 = manager2.join(transaction1.getId());
 
     // Act
     transaction1.get(get1);
     transaction1.put(put);
 
-    transaction2 = manager.join(transaction1.getId());
     transaction2.get(get2);
-    manager.suspend(transaction2);
-
-    transaction2 = manager.resume(transaction1.getId());
     transaction2.delete(delete);
-    manager.suspend(transaction2);
 
     // Prepare
     transaction1.prepare();
-
-    transaction2 = manager.resume(transaction1.getId());
     transaction2.prepare();
-    manager.suspend(transaction2);
 
     // Validate
     transaction1.validate();
-
-    transaction2 = manager.resume(transaction1.getId());
     transaction2.validate();
-    manager.suspend(transaction2);
 
     // Rollback
     transaction1.rollback();
-
-    transaction2 = manager.resume(transaction1.getId());
     transaction2.rollback();
 
     // Assert
-    TwoPhaseCommitTransaction another = manager.begin();
-    Optional<Result> result1 = another.get(get1);
-    Optional<Result> result2 = another.get(get2);
-    another.prepare();
-    another.validate();
-    another.commit();
+    TwoPhaseCommitTransaction another1 = manager1.begin();
+    TwoPhaseCommitTransaction another2 = manager2.join(another1.getId());
+    Optional<Result> result1 = another1.get(get1);
+    Optional<Result> result2 = another2.get(get2);
+    another1.prepare();
+    another2.prepare();
+    another1.validate();
+    another2.validate();
+    another1.commit();
+    another2.commit();
 
     assertThat(result1.isPresent()).isTrue();
     assertThat(result1.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
@@ -800,15 +805,15 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void getState_forSuccessfulTransaction_ShouldReturnCommittedState()
       throws TransactionException {
     // Arrange
-    TwoPhaseCommitTransaction transaction = manager.begin();
-    transaction.get(prepareGet(0, 0));
-    transaction.put(preparePut(0, 0).withValue(BALANCE, 1));
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+    transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.prepare();
     transaction.validate();
     transaction.commit();
 
     // Act
-    TransactionState state = manager.getState(transaction.getId());
+    TransactionState state = manager1.getState(transaction.getId());
 
     // Assert
     assertThat(state).isEqualTo(TransactionState.COMMITTED);
@@ -817,13 +822,13 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   @Test
   public void getState_forFailedTransaction_ShouldReturnAbortedState() throws TransactionException {
     // Arrange
-    TwoPhaseCommitTransaction transaction1 = manager.begin();
-    transaction1.get(prepareGet(0, 0));
-    transaction1.put(preparePut(0, 0).withValue(BALANCE, 1));
+    TwoPhaseCommitTransaction transaction1 = manager1.begin();
+    transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
 
-    TwoPhaseCommitTransaction transaction2 = manager.begin();
-    transaction2.get(prepareGet(0, 0));
-    transaction2.put(preparePut(0, 0).withValue(BALANCE, 1));
+    TwoPhaseCommitTransaction transaction2 = manager1.begin();
+    transaction2.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction2.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction2.prepare();
     transaction2.validate();
     transaction2.commit();
@@ -832,7 +837,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     transaction1.rollback();
 
     // Act
-    TransactionState state = manager.getState(transaction1.getId());
+    TransactionState state = manager1.getState(transaction1.getId());
 
     // Assert
     assertThat(state).isEqualTo(TransactionState.ABORTED);
@@ -841,12 +846,12 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   @Test
   public void rollback_forOngoingTransaction_ShouldRollbackCorrectly() throws TransactionException {
     // Arrange
-    TwoPhaseCommitTransaction transaction = manager.begin();
-    transaction.get(prepareGet(0, 0));
-    transaction.put(preparePut(0, 0).withValue(BALANCE, 1));
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+    transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
 
     // Act
-    manager.rollback(transaction.getId());
+    manager1.rollback(transaction.getId());
 
     transaction.prepare();
     transaction.validate();
@@ -854,19 +859,19 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     transaction.rollback();
 
     // Assert
-    TransactionState state = manager.getState(transaction.getId());
+    TransactionState state = manager1.getState(transaction.getId());
     assertThat(state).isEqualTo(TransactionState.ABORTED);
   }
 
   @Test
   public void abort_forOngoingTransaction_ShouldAbortCorrectly() throws TransactionException {
     // Arrange
-    TwoPhaseCommitTransaction transaction = manager.begin();
-    transaction.get(prepareGet(0, 0));
-    transaction.put(preparePut(0, 0).withValue(BALANCE, 1));
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+    transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
 
     // Act
-    manager.abort(transaction.getId());
+    manager1.abort(transaction.getId());
 
     transaction.prepare();
     transaction.validate();
@@ -874,7 +879,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     transaction.rollback();
 
     // Assert
-    TransactionState state = manager.getState(transaction.getId());
+    TransactionState state = manager1.getState(transaction.getId());
     assertThat(state).isEqualTo(TransactionState.ABORTED);
   }
 
@@ -882,9 +887,9 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void scan_ScanAllGivenForCommittedRecord_ShouldReturnRecords()
       throws TransactionException {
     // Arrange
-    populateRecords();
-    TwoPhaseCommitTransaction transaction = manager.begin();
-    ScanAll scanAll = prepareScanAll();
+    populateRecords(manager1, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
 
     // Act
     List<Result> results = transaction.scan(scanAll);
@@ -917,27 +922,27 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void scan_ScanAllGivenWithLimit_ShouldReturnLimitedAmountOfRecords()
       throws TransactionException {
     // Arrange
-    TwoPhaseCommitTransaction putTransaction = manager.begin();
+    TwoPhaseCommitTransaction putTransaction = manager1.begin();
     putTransaction.put(
         Arrays.asList(
             new Put(Key.ofInt(ACCOUNT_ID, 1), Key.ofInt(ACCOUNT_TYPE, 1))
-                .forNamespace(namespace)
-                .forTable(TABLE),
+                .forNamespace(namespace1)
+                .forTable(TABLE_1),
             new Put(Key.ofInt(ACCOUNT_ID, 1), Key.ofInt(ACCOUNT_TYPE, 2))
-                .forNamespace(namespace)
-                .forTable(TABLE),
+                .forNamespace(namespace1)
+                .forTable(TABLE_1),
             new Put(Key.ofInt(ACCOUNT_ID, 2), Key.ofInt(ACCOUNT_TYPE, 1))
-                .forNamespace(namespace)
-                .forTable(TABLE),
+                .forNamespace(namespace1)
+                .forTable(TABLE_1),
             new Put(Key.ofInt(ACCOUNT_ID, 3), Key.ofInt(ACCOUNT_TYPE, 0))
-                .forNamespace(namespace)
-                .forTable(TABLE)));
+                .forNamespace(namespace1)
+                .forTable(TABLE_1)));
     putTransaction.prepare();
     putTransaction.validate();
     putTransaction.commit();
 
-    TwoPhaseCommitTransaction scanAllTransaction = manager.begin();
-    ScanAll scanAll = prepareScanAll().withLimit(2);
+    TwoPhaseCommitTransaction scanAllTransaction = manager1.begin();
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1).withLimit(2);
 
     // Act
     List<Result> results = scanAllTransaction.scan(scanAll);
@@ -980,9 +985,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void scan_ScanAllWithProjectionsGiven_ShouldRetrieveSpecifiedValues()
       throws TransactionException {
     // Arrange
-    populateRecords();
-    TwoPhaseCommitTransaction transaction = manager.begin();
-    ScanAll scanAll = prepareScanAll().withProjection(ACCOUNT_TYPE).withProjection(BALANCE);
+    populateRecords(manager1, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+    ScanAll scanAll =
+        prepareScanAll(namespace1, TABLE_1).withProjection(ACCOUNT_TYPE).withProjection(BALANCE);
 
     // Act
     List<Result> results = transaction.scan(scanAll);
@@ -1016,8 +1022,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   @Test
   public void scan_ScanAllGivenForNonExisting_ShouldReturnEmpty() throws TransactionException {
     // Arrange
-    TwoPhaseCommitTransaction transaction = manager.begin();
-    ScanAll scanAll = prepareScanAll();
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
 
     // Act
     List<Result> results = transaction.scan(scanAll);
@@ -1034,9 +1040,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       get_GetWithProjectionOnNonPrimaryKeyColumnsForGivenForCommittedRecord_ShouldReturnOnlyProjectedColumns()
           throws TransactionException {
     // Arrange
-    populateSingleRecord();
-    TwoPhaseCommitTransaction transaction = manager.begin();
-    Get get = prepareGet(0, 0).withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
+    populateSingleRecord(namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+    Get get =
+        prepareGet(0, 0, namespace1, TABLE_1).withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
 
     // Act
     Optional<Result> result = transaction.get(get);
@@ -1056,9 +1063,11 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       scan_ScanWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns()
           throws TransactionException {
     // Arrange
-    TwoPhaseCommitTransaction transaction = manager.begin();
-    populateSingleRecord();
-    Scan scan = prepareScan(0, 0, 0).withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+    populateSingleRecord(namespace1, TABLE_1);
+    Scan scan =
+        prepareScan(0, 0, 0, namespace1, TABLE_1)
+            .withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
 
     // Act
     List<Result> results = transaction.scan(scan);
@@ -1080,9 +1089,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       scan_ScanAllWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns()
           throws TransactionException {
     // Arrange
-    populateSingleRecord();
-    TwoPhaseCommitTransaction transaction = manager.begin();
-    ScanAll scanAll = prepareScanAll().withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
+    populateSingleRecord(namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+    ScanAll scanAll =
+        prepareScanAll(namespace1, TABLE_1).withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
 
     // Act
     List<Result> results = transaction.scan(scanAll);
@@ -1101,7 +1111,9 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         results, Collections.singletonList(expectedResult));
   }
 
-  private void populateRecords() throws TransactionException {
+  private void populateRecords(
+      TwoPhaseCommitTransactionManager manager, String namespaceName, String tableName)
+      throws TransactionException {
     TwoPhaseCommitTransaction transaction = manager.begin();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(
@@ -1113,8 +1125,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
                           Key clusteringKey = new Key(ACCOUNT_TYPE, j);
                           Put put =
                               new Put(partitionKey, clusteringKey)
-                                  .forNamespace(namespace)
-                                  .forTable(TABLE)
+                                  .forNamespace(namespaceName)
+                                  .forTable(tableName)
                                   .withIntValue(BALANCE, INITIAL_BALANCE)
                                   .withIntValue(SOME_COLUMN, i * j);
                           try {
@@ -1128,75 +1140,83 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     transaction.commit();
   }
 
-  private void populateSingleRecord() throws TransactionException {
+  private void populateSingleRecord(String namespaceName, String tableName)
+      throws TransactionException {
     Put put =
         new Put(Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0))
-            .forNamespace(namespace)
-            .forTable(TABLE)
+            .forNamespace(namespaceName)
+            .forTable(tableName)
             .withIntValue(BALANCE, INITIAL_BALANCE);
-    TwoPhaseCommitTransaction transaction = manager.begin();
+    TwoPhaseCommitTransaction transaction = manager1.begin();
     transaction.put(put);
     transaction.prepare();
     transaction.validate();
     transaction.commit();
   }
 
-  protected Get prepareGet(int id, int type) {
+  protected Get prepareGet(int id, int type, String namespaceName, String tableName) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Get(partitionKey, clusteringKey)
-        .forNamespace(namespace)
-        .forTable(TABLE)
+        .forNamespace(namespaceName)
+        .forTable(tableName)
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private List<Get> prepareGets() {
+  private List<Get> prepareGets(String namespaceName, String tableName) {
     List<Get> gets = new ArrayList<>();
     IntStream.range(0, NUM_ACCOUNTS)
-        .forEach(i -> IntStream.range(0, NUM_TYPES).forEach(j -> gets.add(prepareGet(i, j))));
+        .forEach(
+            i ->
+                IntStream.range(0, NUM_TYPES)
+                    .forEach(j -> gets.add(prepareGet(i, j, namespaceName, tableName))));
     return gets;
   }
 
-  protected Scan prepareScan(int id, int fromType, int toType) {
+  protected Scan prepareScan(
+      int id, int fromType, int toType, String namespaceName, String tableName) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     return new Scan(partitionKey)
-        .forNamespace(namespace)
-        .forTable(TABLE)
+        .forNamespace(namespaceName)
+        .forTable(tableName)
         .withConsistency(Consistency.LINEARIZABLE)
         .withStart(new Key(ACCOUNT_TYPE, fromType))
         .withEnd(new Key(ACCOUNT_TYPE, toType));
   }
 
-  private ScanAll prepareScanAll() {
+  private ScanAll prepareScanAll(String namespaceName, String tableName) {
     return new ScanAll()
-        .forNamespace(namespace)
-        .forTable(TABLE)
+        .forNamespace(namespaceName)
+        .forTable(tableName)
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private Put preparePut(int id, int type) {
+  private Put preparePut(int id, int type, String namespaceName, String tableName) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Put(partitionKey, clusteringKey)
-        .forNamespace(namespace)
-        .forTable(TABLE)
+        .forNamespace(namespaceName)
+        .forTable(tableName)
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private List<Put> preparePuts() {
+  private List<Put> preparePuts(String namespaceName, String tableName) {
     List<Put> puts = new ArrayList<>();
     IntStream.range(0, NUM_ACCOUNTS)
-        .forEach(i -> IntStream.range(0, NUM_TYPES).forEach(j -> puts.add(preparePut(i, j))));
+        .forEach(
+            i ->
+                IntStream.range(0, NUM_TYPES)
+                    .forEach(j -> puts.add(preparePut(i, j, namespaceName, tableName))));
 
     return puts;
   }
 
-  private Delete prepareDelete(int id, int type) {
+  private Delete prepareDelete(int id, int type, String namespaceName, String tableName) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Delete(partitionKey, clusteringKey)
-        .forNamespace(namespace)
-        .forTable(TABLE)
+        .forNamespace(namespaceName)
+        .forTable(tableName)
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
