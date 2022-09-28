@@ -56,30 +56,47 @@ public abstract class TwoPhaseConsensusCommitIntegrationTestBase
   }
 
   @Override
-  protected final Properties getProperties(String testName) {
+  protected final Properties getProperties1(String testName) {
     Properties properties = new Properties();
-    properties.putAll(getProps(testName));
+    properties.putAll(getProps1(testName));
     if (!properties.containsKey(DatabaseConfig.TRANSACTION_MANAGER)) {
-      properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "consensus-commit");
-
-      // Add testName as a coordinator namespace suffix
-      String coordinatorNamespace =
-          properties.getProperty(
-              ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
-      properties.setProperty(
-          ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
-
-      // Async commit can cause unexpected lazy recoveries, which can fail the tests. So we disable
-      // it for now.
-      properties.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
+      modifyProperties(properties, testName);
     }
     return properties;
   }
 
-  protected abstract Properties getProps(String testName);
+  @Override
+  protected final Properties getProperties2(String testName) {
+    Properties properties = new Properties();
+    properties.putAll(getProps2(testName));
+    if (!properties.containsKey(DatabaseConfig.TRANSACTION_MANAGER)) {
+      modifyProperties(properties, testName);
+    }
+    return properties;
+  }
+
+  private void modifyProperties(Properties properties, String testName) {
+    properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "consensus-commit");
+
+    // Add testName as a coordinator namespace suffix
+    String coordinatorNamespace =
+        properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
+    properties.setProperty(
+        ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
+
+    // Async commit can cause unexpected lazy recoveries, which can fail the tests. So we disable
+    // it for now.
+    properties.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
+  }
+
+  protected abstract Properties getProps1(String testName);
+
+  protected Properties getProps2(String testName) {
+    return getProps1(testName);
+  }
 
   protected Properties getPropsWithIncludeMetadataEnabled(String testName) {
-    Properties properties = getProperties(testName);
+    Properties properties = getProperties1(testName);
     properties.setProperty(ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
     return properties;
   }
@@ -113,8 +130,8 @@ public abstract class TwoPhaseConsensusCommitIntegrationTestBase
     // Arrange
     Put put =
         Put.newBuilder()
-            .namespace(namespace)
-            .table(TABLE)
+            .namespace(namespace1)
+            .table(TABLE_1)
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
             .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
             .intValue(BALANCE, INITIAL_BALANCE)
@@ -132,7 +149,8 @@ public abstract class TwoPhaseConsensusCommitIntegrationTestBase
     Result result;
     if (isScan) {
       // Perform a Scan
-      BuildableScanOrScanAllFromExisting scanBuilder = Scan.newBuilder(prepareScan(0, 0, 1));
+      BuildableScanOrScanAllFromExisting scanBuilder =
+          Scan.newBuilder(prepareScan(0, 0, 1, namespace1, TABLE_1));
       if (hasProjections) {
         scanBuilder.projections(projections);
       }
@@ -141,7 +159,7 @@ public abstract class TwoPhaseConsensusCommitIntegrationTestBase
       result = results.get(0);
     } else {
       // Perform a Get
-      BuildableGet getBuilder = Get.newBuilder(prepareGet(0, 0));
+      BuildableGet getBuilder = Get.newBuilder(prepareGet(0, 0, namespace1, TABLE_1));
       if (hasProjections) {
         getBuilder.projections(projections);
       }
