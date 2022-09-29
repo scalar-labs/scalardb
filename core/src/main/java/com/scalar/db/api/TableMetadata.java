@@ -209,7 +209,7 @@ public class TableMetadata {
           k -> {
             if (!columns.containsKey(k)) {
               throw new IllegalStateException(
-                  "need tp specify the column definition of "
+                  "need to specify the column definition of "
                       + k
                       + " specified as a partition key");
             }
@@ -218,7 +218,7 @@ public class TableMetadata {
           k -> {
             if (!columns.containsKey(k)) {
               throw new IllegalStateException(
-                  "need tp specify the column definition of "
+                  "need to specify the column definition of "
                       + k
                       + " specified as a clustering key");
             }
