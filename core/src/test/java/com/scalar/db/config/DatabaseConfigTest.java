@@ -34,6 +34,7 @@ public class DatabaseConfigTest {
     assertThat(config.getStorage()).isEqualTo("cassandra");
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
     assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
+    assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(0);
   }
 
   @Test
@@ -56,6 +57,7 @@ public class DatabaseConfigTest {
     assertThat(config.getStorage()).isEqualTo("cassandra");
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
     assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
+    assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(0);
   }
 
   @Test
@@ -78,6 +80,7 @@ public class DatabaseConfigTest {
     assertThat(config.getStorage()).isEqualTo("cassandra");
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
     assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
+    assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(0);
   }
 
   @Test
@@ -102,6 +105,7 @@ public class DatabaseConfigTest {
     assertThat(config.getStorage()).isEqualTo("cassandra");
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
     assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
+    assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(0);
   }
 
   @Test
@@ -332,5 +336,28 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(3600);
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithActiveTransactionManagementExpirationTimeMillisGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS, "3600");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
+    assertThat(config.getContactPort()).isEqualTo(0);
+    assertThat(config.getUsername().isPresent()).isTrue();
+    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
+    assertThat(config.getPassword().isPresent()).isTrue();
+    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(3600);
   }
 }

@@ -18,7 +18,7 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithDistributedTransa
 
   @Override
   protected void initialize(String testName) throws IOException {
-    Properties properties = ServerEnv.getServerProperties(testName);
+    Properties properties = ServerEnv.getServerProperties1(testName);
     if (properties != null) {
       // Add testName as a coordinator namespace suffix
       String coordinatorNamespace =
@@ -40,7 +40,7 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithDistributedTransa
 
   @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
-    Properties properties = ServerEnv.getServerProperties(testName);
+    Properties properties = ServerEnv.getServerProperties1(testName);
 
     // Add testName as a coordinator namespace suffix
     String coordinatorNamespace =
@@ -66,7 +66,7 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithDistributedTransa
 
   @Override
   protected Properties getProps(String testName) {
-    return ServerEnv.getProperties(testName);
+    return ServerEnv.getClientProperties1(testName);
   }
 
   /** This test is disabled if {@link #isExternalServerUsed()} return true */

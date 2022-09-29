@@ -3,11 +3,7 @@ package com.scalar.db.server;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.Isolation;
-import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
 import java.util.Properties;
-import javax.annotation.Nullable;
 
 public final class ServerEnv {
 
@@ -24,22 +20,22 @@ public final class ServerEnv {
   private static final String DEFAULT_SERVER_JDBC_USERNAME = "root";
   private static final String DEFAULT_SERVER_JDBC_PASSWORD = "mysql";
 
-  private static final String PROP_GRPC_CONTACT_POINTS = "scalardb.grpc.contact_points";
-  private static final String PROP_GRPC_CONTACT_PORT = "scalardb.grpc.contact_port";
+  private static final String PROP_GRPC_CONTACT_POINTS_FOR_SERVER1 =
+      "scalardb.server.server1.contact_points";
+  private static final String PROP_GRPC_CONTACT_PORT_FOR_SERVER1 =
+      "scalardb.server.server1.contact_port";
+  private static final String PROP_GRPC_CONTACT_POINTS_FOR_SERVER2 =
+      "scalardb.server.server2.contact_points";
+  private static final String PROP_GRPC_CONTACT_PORT_FOR_SERVER2 =
+      "scalardb.server.server2.contact_port";
 
   private static final String DEFAULT_GRPC_CONTACT_POINTS = "localhost";
-  private static final String DEFAULT_GRPC_CONTACT_PORT = "60051";
+  private static final String DEFAULT_GRPC_CONTACT_PORT_SERVER1 = "60051";
+  private static final String DEFAULT_GRPC_CONTACT_PORT_SERVER2 = "60052";
 
   public ServerEnv() {}
 
-  public static Properties getServerProperties(String testName) {
-    return getServerProperties(testName, null, null);
-  }
-
-  public static Properties getServerProperties(
-      String testName,
-      @Nullable Isolation isolation,
-      @Nullable SerializableStrategy serializableStrategy) {
+  public static Properties getServerProperties1(String testName) {
     boolean externalServerUsed =
         Boolean.parseBoolean(
             System.getProperty(
@@ -60,13 +56,8 @@ public final class ServerEnv {
     properties.setProperty(DatabaseConfig.USERNAME, jdbcUsername);
     properties.setProperty(DatabaseConfig.PASSWORD, jdbcPassword);
     properties.setProperty(DatabaseConfig.STORAGE, "jdbc"); // use JDBC storage
-    if (isolation != null) {
-      properties.setProperty(ConsensusCommitConfig.ISOLATION_LEVEL, isolation.name());
-    }
-    if (serializableStrategy != null) {
-      properties.setProperty(
-          ConsensusCommitConfig.SERIALIZABLE_STRATEGY, serializableStrategy.name());
-    }
+
+    properties.setProperty(ServerConfig.PORT, DEFAULT_GRPC_CONTACT_PORT_SERVER1);
     properties.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "-1");
 
     // Add testName as a metadata schema suffix
@@ -76,10 +67,35 @@ public final class ServerEnv {
     return properties;
   }
 
-  public static Properties getProperties(@SuppressWarnings("unused") String testName) {
+  public static Properties getServerProperties2(String testName) {
+    Properties properties = getServerProperties1(testName);
+    if (properties == null) {
+      return null;
+    }
+
+    properties.setProperty(ServerConfig.PORT, DEFAULT_GRPC_CONTACT_PORT_SERVER2);
+    return properties;
+  }
+
+  public static Properties getClientProperties1(@SuppressWarnings("unused") String testName) {
     String contactPoints =
-        System.getProperty(PROP_GRPC_CONTACT_POINTS, DEFAULT_GRPC_CONTACT_POINTS);
-    String contactPort = System.getProperty(PROP_GRPC_CONTACT_PORT, DEFAULT_GRPC_CONTACT_PORT);
+        System.getProperty(PROP_GRPC_CONTACT_POINTS_FOR_SERVER1, DEFAULT_GRPC_CONTACT_POINTS);
+    String contactPort =
+        System.getProperty(PROP_GRPC_CONTACT_PORT_FOR_SERVER1, DEFAULT_GRPC_CONTACT_PORT_SERVER1);
+
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, contactPoints);
+    properties.setProperty(DatabaseConfig.CONTACT_PORT, contactPort);
+    properties.setProperty(DatabaseConfig.STORAGE, "grpc");
+    properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "grpc");
+    return properties;
+  }
+
+  public static Properties getClientProperties2(@SuppressWarnings("unused") String testName) {
+    String contactPoints =
+        System.getProperty(PROP_GRPC_CONTACT_POINTS_FOR_SERVER2, DEFAULT_GRPC_CONTACT_POINTS);
+    String contactPort =
+        System.getProperty(PROP_GRPC_CONTACT_PORT_FOR_SERVER2, DEFAULT_GRPC_CONTACT_PORT_SERVER2);
 
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, contactPoints);

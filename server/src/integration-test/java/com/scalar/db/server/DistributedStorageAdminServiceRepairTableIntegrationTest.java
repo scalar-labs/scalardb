@@ -16,7 +16,7 @@ public class DistributedStorageAdminServiceRepairTableIntegrationTest
 
   @Override
   protected void initialize(String testName) throws IOException {
-    Properties properties = ServerEnv.getServerProperties(testName);
+    Properties properties = ServerEnv.getServerProperties1(testName);
     if (properties != null) {
       server = new ScalarDbServer(properties);
       server.start();
@@ -27,12 +27,12 @@ public class DistributedStorageAdminServiceRepairTableIntegrationTest
 
   @Override
   protected Properties getProperties(String testName) {
-    return ServerEnv.getProperties(testName);
+    return ServerEnv.getClientProperties1(testName);
   }
 
   @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
-    return new ServerAdminTestUtils(ServerEnv.getServerProperties(testName));
+    return new ServerAdminTestUtils(ServerEnv.getServerProperties1(testName));
   }
 
   @Override

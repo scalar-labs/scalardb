@@ -7,17 +7,23 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.util.ScalarDbUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 public abstract class AbstractTwoPhaseCommitTransaction implements TwoPhaseCommitTransaction {
 
   private Optional<String> namespace;
   private Optional<String> tableName;
+  private final AbstractTwoPhaseCommitTransactionManager transactionManager;
 
-  public AbstractTwoPhaseCommitTransaction() {
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
+  public AbstractTwoPhaseCommitTransaction(
+      AbstractTwoPhaseCommitTransactionManager transactionManager) {
     namespace = Optional.empty();
     tableName = Optional.empty();
+    this.transactionManager = Objects.requireNonNull(transactionManager);
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
@@ -74,5 +80,9 @@ public abstract class AbstractTwoPhaseCommitTransaction implements TwoPhaseCommi
 
   protected Delete copyAndSetTargetToIfNot(Delete delete) {
     return ScalarDbUtils.copyAndSetTargetToIfNot(delete, namespace, tableName);
+  }
+
+  protected void removeActiveTransaction(String transactionId) {
+    transactionManager.removeActiveTransaction(transactionId);
   }
 }

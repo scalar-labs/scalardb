@@ -13,8 +13,8 @@ import org.junit.jupiter.api.condition.DisabledIf;
 
 public class ConsensusCommitAdminIntegrationTestWithDistributedTransactionAdminService
     extends ConsensusCommitAdminIntegrationTestBase {
-  private static final String PORT_FOR_SERVER_WITH_INCLUDE_METADATA_ENABLED =
-      Integer.toString(ServerConfig.DEFAULT_PORT + 1);
+
+  private static final String PORT_FOR_SERVER_WITH_INCLUDE_METADATA_ENABLED = "60053";
 
   private ScalarDbServer server;
   private ScalarDbServer serverWithIncludeMetadataEnabled;
@@ -24,7 +24,7 @@ public class ConsensusCommitAdminIntegrationTestWithDistributedTransactionAdminS
   protected void initialize(String testName) throws IOException {
     super.initialize(testName);
 
-    Properties properties = ServerEnv.getServerProperties(testName);
+    Properties properties = ServerEnv.getServerProperties1(testName);
     if (properties != null) {
       // Add testName as a coordinator namespace suffix
       String coordinatorNamespace =
@@ -51,7 +51,7 @@ public class ConsensusCommitAdminIntegrationTestWithDistributedTransactionAdminS
 
   @Override
   protected Properties getProps(String testName) {
-    return ServerEnv.getProperties(testName);
+    return ServerEnv.getClientProperties1(testName);
   }
 
   @Override
