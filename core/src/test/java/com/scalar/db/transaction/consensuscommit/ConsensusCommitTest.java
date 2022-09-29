@@ -43,6 +43,11 @@ public class ConsensusCommitTest {
   @Mock private CrudHandler crud;
   @Mock private CommitHandler commit;
   @Mock private RecoveryHandler recovery;
+
+  @SuppressWarnings("unused")
+  @Mock
+  private ConsensusCommitManager manager;
+
   @InjectMocks private ConsensusCommit consensus;
 
   @BeforeEach
