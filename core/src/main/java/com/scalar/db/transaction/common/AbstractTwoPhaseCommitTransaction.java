@@ -7,7 +7,6 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.util.ScalarDbUtils;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,7 +15,6 @@ public abstract class AbstractTwoPhaseCommitTransaction implements TwoPhaseCommi
   private Optional<String> namespace;
   private Optional<String> tableName;
 
-  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public AbstractTwoPhaseCommitTransaction() {
     namespace = Optional.empty();
     tableName = Optional.empty();
