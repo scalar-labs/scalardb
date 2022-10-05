@@ -10,7 +10,6 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
@@ -22,7 +21,6 @@ import com.scalar.db.rpc.TwoPhaseCommitTransactionGrpc;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.transaction.common.AbstractTwoPhaseCommitTransactionManager;
-import com.scalar.db.util.ActiveExpiringMap;
 import com.scalar.db.util.ProtoUtils;
 import io.grpc.ManagedChannel;
 import io.grpc.netty.NettyChannelBuilder;
@@ -37,19 +35,15 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
   private static final Logger logger =
       LoggerFactory.getLogger(GrpcTwoPhaseCommitTransactionManager.class);
 
-  private static final long TRANSACTION_LIFETIME_MILLIS = 60000;
-  private static final long TRANSACTION_EXPIRATION_INTERVAL_MILLIS = 1000;
-
   private final GrpcConfig config;
   private final ManagedChannel channel;
   private final TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionStub stub;
   private final TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionBlockingStub blockingStub;
   private final TableMetadataManager metadataManager;
 
-  private final ActiveExpiringMap<String, GrpcTwoPhaseCommitTransaction> activeTransactions;
-
   @Inject
   public GrpcTwoPhaseCommitTransactionManager(DatabaseConfig databaseConfig) {
+    super(databaseConfig);
     config = new GrpcConfig(databaseConfig);
     channel =
         NettyChannelBuilder.forAddress(config.getHost(), config.getPort()).usePlaintext().build();
@@ -58,122 +52,91 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
     metadataManager =
         new TableMetadataManager(
             new GrpcAdmin(channel, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
-
-    activeTransactions =
-        new ActiveExpiringMap<>(
-            TRANSACTION_LIFETIME_MILLIS,
-            TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
-            t -> {
-              logger.warn("the transaction is expired. transactionId: {}", t.getId());
-              try {
-                t.rollback();
-              } catch (RollbackException e) {
-                logger.warn("rollback failed", e);
-              }
-            });
   }
 
   @VisibleForTesting
   GrpcTwoPhaseCommitTransactionManager(
       GrpcConfig config,
+      DatabaseConfig databaseConfig,
       TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionStub stub,
       TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionBlockingStub blockingStub,
       TableMetadataManager metadataManager) {
+    super(databaseConfig);
     this.config = config;
     channel = null;
     this.stub = stub;
     this.blockingStub = blockingStub;
     this.metadataManager = metadataManager;
-    activeTransactions = new ActiveExpiringMap<>(Long.MAX_VALUE, Long.MAX_VALUE, t -> {});
   }
 
   @Override
-  public GrpcTwoPhaseCommitTransaction begin() throws TransactionException {
+  public TwoPhaseCommitTransaction begin() throws TransactionException {
     return beginInternal(null);
   }
 
   @Override
-  public GrpcTwoPhaseCommitTransaction begin(String txId) throws TransactionException {
+  public TwoPhaseCommitTransaction begin(String txId) throws TransactionException {
     return beginInternal(txId);
   }
 
-  private GrpcTwoPhaseCommitTransaction beginInternal(@Nullable String txId)
+  private TwoPhaseCommitTransaction beginInternal(@Nullable String txId)
       throws TransactionException {
     return executeWithRetries(
         () -> {
-          GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream =
-              new GrpcTwoPhaseCommitTransactionOnBidirectionalStream(config, stub, metadataManager);
+          GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getBidirectionalStream();
           String transactionId = stream.beginTransaction(txId);
           GrpcTwoPhaseCommitTransaction transaction =
               new GrpcTwoPhaseCommitTransaction(transactionId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
           getTable().ifPresent(transaction::withTable);
-          return transaction;
+          return new ActiveTransaction(transaction);
         },
         EXCEPTION_FACTORY);
   }
 
   @Override
-  public GrpcTwoPhaseCommitTransaction start() throws TransactionException {
+  public TwoPhaseCommitTransaction start() throws TransactionException {
     return startInternal(null);
   }
 
   @Override
-  public GrpcTwoPhaseCommitTransaction start(String txId) throws TransactionException {
+  public TwoPhaseCommitTransaction start(String txId) throws TransactionException {
     return startInternal(txId);
   }
 
-  private GrpcTwoPhaseCommitTransaction startInternal(@Nullable String txId)
+  private TwoPhaseCommitTransaction startInternal(@Nullable String txId)
       throws TransactionException {
     return executeWithRetries(
         () -> {
-          GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream =
-              new GrpcTwoPhaseCommitTransactionOnBidirectionalStream(config, stub, metadataManager);
+          GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getBidirectionalStream();
           String transactionId = stream.startTransaction(txId);
           GrpcTwoPhaseCommitTransaction transaction =
               new GrpcTwoPhaseCommitTransaction(transactionId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
           getTable().ifPresent(transaction::withTable);
-          return transaction;
+          return new ActiveTransaction(transaction);
         },
         EXCEPTION_FACTORY);
   }
 
   @Override
-  public GrpcTwoPhaseCommitTransaction join(String txId) throws TransactionException {
+  public TwoPhaseCommitTransaction join(String txId) throws TransactionException {
     return executeWithRetries(
         () -> {
-          GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream =
-              new GrpcTwoPhaseCommitTransactionOnBidirectionalStream(config, stub, metadataManager);
+          GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getBidirectionalStream();
           stream.joinTransaction(txId);
           GrpcTwoPhaseCommitTransaction transaction =
               new GrpcTwoPhaseCommitTransaction(txId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
           getTable().ifPresent(transaction::withTable);
-          return transaction;
+          return new ActiveTransaction(transaction);
         },
         EXCEPTION_FACTORY);
   }
 
-  @Override
-  public void suspend(TwoPhaseCommitTransaction transaction) throws TransactionException {
-    if (activeTransactions.putIfAbsent(
-            transaction.getId(), (GrpcTwoPhaseCommitTransaction) transaction)
-        != null) {
-      transaction.rollback();
-      throw new TransactionException("The transaction already exists");
-    }
-  }
-
-  @Override
-  public GrpcTwoPhaseCommitTransaction resume(String txId) throws TransactionException {
-    GrpcTwoPhaseCommitTransaction transaction = activeTransactions.remove(txId);
-    if (transaction == null) {
-      throw new TransactionException(
-          "A transaction associated with the specified transaction ID is not found. "
-              + "It might have been expired");
-    }
-    return transaction;
+  @VisibleForTesting
+  GrpcTwoPhaseCommitTransactionOnBidirectionalStream getBidirectionalStream() {
+    return new GrpcTwoPhaseCommitTransactionOnBidirectionalStream(config, stub, metadataManager);
   }
 
   @Override
