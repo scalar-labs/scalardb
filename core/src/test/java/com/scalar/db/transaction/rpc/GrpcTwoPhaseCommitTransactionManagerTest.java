@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitException;
@@ -64,10 +65,10 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
     when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
 
-    GrpcTwoPhaseCommitTransaction transaction1 = spiedManager.begin(ANY_ID);
+    TwoPhaseCommitTransaction transaction1 = spiedManager.begin(ANY_ID);
 
     // Act
-    GrpcTwoPhaseCommitTransaction transaction2 = spiedManager.resume(ANY_ID);
+    TwoPhaseCommitTransaction transaction2 = spiedManager.resume(ANY_ID);
 
     // Assert
     assertThat(transaction1).isEqualTo(transaction2);
@@ -82,10 +83,10 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
     when(bidirectionalStream.startTransaction(ANY_ID)).thenReturn(ANY_ID);
 
-    GrpcTwoPhaseCommitTransaction transaction1 = spiedManager.start(ANY_ID);
+    TwoPhaseCommitTransaction transaction1 = spiedManager.start(ANY_ID);
 
     // Act
-    GrpcTwoPhaseCommitTransaction transaction2 = spiedManager.resume(ANY_ID);
+    TwoPhaseCommitTransaction transaction2 = spiedManager.resume(ANY_ID);
 
     // Assert
     assertThat(transaction1).isEqualTo(transaction2);
@@ -99,10 +100,10 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
         mock(GrpcTwoPhaseCommitTransactionOnBidirectionalStream.class);
     doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
 
-    GrpcTwoPhaseCommitTransaction transaction1 = spiedManager.join(ANY_ID);
+    TwoPhaseCommitTransaction transaction1 = spiedManager.join(ANY_ID);
 
     // Act
-    GrpcTwoPhaseCommitTransaction transaction2 = spiedManager.resume(ANY_ID);
+    TwoPhaseCommitTransaction transaction2 = spiedManager.resume(ANY_ID);
 
     // Assert
     assertThat(transaction1).isEqualTo(transaction2);
@@ -126,7 +127,7 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
     when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
 
-    GrpcTwoPhaseCommitTransaction transaction = spiedManager.begin(ANY_ID);
+    TwoPhaseCommitTransaction transaction = spiedManager.begin(ANY_ID);
     transaction.prepare();
     transaction.commit();
 
@@ -146,7 +147,7 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
 
     doThrow(CommitException.class).when(bidirectionalStream).commit();
 
-    GrpcTwoPhaseCommitTransaction transaction1 = spiedManager.begin(ANY_ID);
+    TwoPhaseCommitTransaction transaction1 = spiedManager.begin(ANY_ID);
     transaction1.prepare();
     try {
       transaction1.commit();
@@ -155,7 +156,7 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     }
 
     // Act
-    GrpcTwoPhaseCommitTransaction transaction2 = spiedManager.resume(ANY_ID);
+    TwoPhaseCommitTransaction transaction2 = spiedManager.resume(ANY_ID);
 
     // Assert
     assertThat(transaction1).isEqualTo(transaction2);
@@ -171,7 +172,7 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
     when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
 
-    GrpcTwoPhaseCommitTransaction transaction = spiedManager.begin(ANY_ID);
+    TwoPhaseCommitTransaction transaction = spiedManager.begin(ANY_ID);
     transaction.prepare();
     transaction.rollback();
 
@@ -191,7 +192,7 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
 
     doThrow(RollbackException.class).when(bidirectionalStream).rollback();
 
-    GrpcTwoPhaseCommitTransaction transaction1 = spiedManager.begin(ANY_ID);
+    TwoPhaseCommitTransaction transaction1 = spiedManager.begin(ANY_ID);
     try {
       transaction1.rollback();
     } catch (RollbackException ignored) {

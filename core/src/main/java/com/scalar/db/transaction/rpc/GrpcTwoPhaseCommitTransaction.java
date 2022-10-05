@@ -25,10 +25,7 @@ public class GrpcTwoPhaseCommitTransaction extends AbstractTwoPhaseCommitTransac
   private final GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream;
 
   public GrpcTwoPhaseCommitTransaction(
-      String txId,
-      GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream,
-      GrpcTwoPhaseCommitTransactionManager transactionManager) {
-    super(transactionManager);
+      String txId, GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream) {
     this.txId = txId;
     this.stream = stream;
   }
@@ -91,16 +88,11 @@ public class GrpcTwoPhaseCommitTransaction extends AbstractTwoPhaseCommitTransac
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
     stream.commit();
-    removeActiveTransaction(getId());
   }
 
   @Override
   public void rollback() throws RollbackException {
-    try {
-      stream.rollback();
-    } finally {
-      removeActiveTransaction(getId());
-    }
+    stream.rollback();
   }
 
   @Override

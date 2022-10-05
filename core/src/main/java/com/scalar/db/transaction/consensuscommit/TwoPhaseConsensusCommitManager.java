@@ -7,6 +7,7 @@ import com.google.common.base.Strings;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -93,53 +94,43 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   }
 
   @Override
-  public TwoPhaseConsensusCommit begin() throws TransactionException {
+  public TwoPhaseCommitTransaction begin() throws TransactionException {
     String txId = UUID.randomUUID().toString();
     return begin(txId, config.getIsolation(), config.getSerializableStrategy());
   }
 
   @Override
-  public TwoPhaseConsensusCommit begin(String txId) throws TransactionException {
+  public TwoPhaseCommitTransaction begin(String txId) throws TransactionException {
     checkArgument(!Strings.isNullOrEmpty(txId));
     return begin(txId, config.getIsolation(), config.getSerializableStrategy());
   }
 
-  @Override
-  public TwoPhaseConsensusCommit start() throws TransactionException {
-    return (TwoPhaseConsensusCommit) super.start();
-  }
-
-  @Override
-  public TwoPhaseConsensusCommit start(String txId) throws TransactionException {
-    return (TwoPhaseConsensusCommit) super.start(txId);
-  }
-
   @VisibleForTesting
-  TwoPhaseConsensusCommit begin(Isolation isolation, SerializableStrategy strategy)
+  TwoPhaseCommitTransaction begin(Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
     String txId = UUID.randomUUID().toString();
     return begin(txId, isolation, strategy);
   }
 
   @VisibleForTesting
-  TwoPhaseConsensusCommit begin(String txId, Isolation isolation, SerializableStrategy strategy)
+  TwoPhaseCommitTransaction begin(String txId, Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
     return createNewTransaction(txId, true, isolation, strategy);
   }
 
   @Override
-  public TwoPhaseConsensusCommit join(String txId) throws TransactionException {
+  public TwoPhaseCommitTransaction join(String txId) throws TransactionException {
     checkArgument(!Strings.isNullOrEmpty(txId));
     return join(txId, config.getIsolation(), config.getSerializableStrategy());
   }
 
   @VisibleForTesting
-  TwoPhaseConsensusCommit join(String txId, Isolation isolation, SerializableStrategy strategy)
+  TwoPhaseCommitTransaction join(String txId, Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
     return createNewTransaction(txId, false, isolation, strategy);
   }
 
-  private TwoPhaseConsensusCommit createNewTransaction(
+  private TwoPhaseCommitTransaction createNewTransaction(
       String txId, boolean isCoordinator, Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
     Snapshot snapshot =
@@ -148,16 +139,10 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         new CrudHandler(storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled);
 
     TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator, this);
+        new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator);
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
-    addActiveTransaction(transaction);
-    return transaction;
-  }
-
-  @Override
-  public TwoPhaseConsensusCommit resume(String txId) throws TransactionException {
-    return (TwoPhaseConsensusCommit) super.resume(txId);
+    return new ActiveTransaction(transaction);
   }
 
   @Override

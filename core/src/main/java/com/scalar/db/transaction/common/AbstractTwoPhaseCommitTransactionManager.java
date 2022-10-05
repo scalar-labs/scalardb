@@ -1,11 +1,25 @@
 package com.scalar.db.transaction.common;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.scalar.db.api.Delete;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.util.ActiveExpiringMap;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,15 +90,14 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
     return tableName;
   }
 
-  protected void addActiveTransaction(TwoPhaseCommitTransaction transaction)
-      throws TransactionException {
+  private void addActiveTransaction(ActiveTransaction transaction) throws TransactionException {
     if (activeTransactions.putIfAbsent(transaction.getId(), transaction) != null) {
       transaction.rollback();
       throw new TransactionException("The transaction already exists");
     }
   }
 
-  protected void removeActiveTransaction(String transactionId) {
+  private void removeActiveTransaction(String transactionId) {
     activeTransactions.remove(transactionId);
   }
 
@@ -97,5 +110,87 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
                 new TransactionException(
                     "A transaction associated with the specified transaction ID is not found. "
                         + "It might have been expired"));
+  }
+
+  @VisibleForTesting
+  public class ActiveTransaction extends AbstractTwoPhaseCommitTransaction {
+
+    private final TwoPhaseCommitTransaction transaction;
+
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
+    public ActiveTransaction(TwoPhaseCommitTransaction transaction) throws TransactionException {
+      this.transaction = transaction;
+      addActiveTransaction(this);
+    }
+
+    @Override
+    public String getId() {
+      return transaction.getId();
+    }
+
+    @Override
+    public Optional<Result> get(Get get) throws CrudException {
+      return transaction.get(get);
+    }
+
+    @Override
+    public List<Result> scan(Scan scan) throws CrudException {
+      return transaction.scan(scan);
+    }
+
+    @Override
+    public void put(Put put) throws CrudException {
+      transaction.put(put);
+    }
+
+    @Override
+    public void put(List<Put> puts) throws CrudException {
+      transaction.put(puts);
+    }
+
+    @Override
+    public void delete(Delete delete) throws CrudException {
+      transaction.delete(delete);
+    }
+
+    @Override
+    public void delete(List<Delete> deletes) throws CrudException {
+      transaction.delete(deletes);
+    }
+
+    @Override
+    public void mutate(List<? extends Mutation> mutations) throws CrudException {
+      transaction.mutate(mutations);
+    }
+
+    @Override
+    public void prepare() throws PreparationException {
+      transaction.prepare();
+    }
+
+    @Override
+    public void validate() throws ValidationException {
+      transaction.validate();
+    }
+
+    @Override
+    public void commit() throws CommitException, UnknownTransactionStatusException {
+      transaction.commit();
+      removeActiveTransaction(getId());
+    }
+
+    @Override
+    public void rollback() throws RollbackException {
+      try {
+        transaction.rollback();
+      } finally {
+        removeActiveTransaction(getId());
+      }
+    }
+
+    @VisibleForTesting
+    public TwoPhaseCommitTransaction getActualTransaction() {
+      return transaction;
+    }
   }
 }

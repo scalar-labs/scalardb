@@ -7,6 +7,7 @@ import static com.scalar.db.util.retry.Retry.executeWithRetries;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -69,69 +70,66 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
   }
 
   @Override
-  public GrpcTwoPhaseCommitTransaction begin() throws TransactionException {
+  public TwoPhaseCommitTransaction begin() throws TransactionException {
     return beginInternal(null);
   }
 
   @Override
-  public GrpcTwoPhaseCommitTransaction begin(String txId) throws TransactionException {
+  public TwoPhaseCommitTransaction begin(String txId) throws TransactionException {
     return beginInternal(txId);
   }
 
-  private GrpcTwoPhaseCommitTransaction beginInternal(@Nullable String txId)
+  private TwoPhaseCommitTransaction beginInternal(@Nullable String txId)
       throws TransactionException {
     return executeWithRetries(
         () -> {
           GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getBidirectionalStream();
           String transactionId = stream.beginTransaction(txId);
           GrpcTwoPhaseCommitTransaction transaction =
-              new GrpcTwoPhaseCommitTransaction(transactionId, stream, this);
+              new GrpcTwoPhaseCommitTransaction(transactionId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
           getTable().ifPresent(transaction::withTable);
-          addActiveTransaction(transaction);
-          return transaction;
+          return new ActiveTransaction(transaction);
         },
         EXCEPTION_FACTORY);
   }
 
   @Override
-  public GrpcTwoPhaseCommitTransaction start() throws TransactionException {
+  public TwoPhaseCommitTransaction start() throws TransactionException {
     return startInternal(null);
   }
 
   @Override
-  public GrpcTwoPhaseCommitTransaction start(String txId) throws TransactionException {
+  public TwoPhaseCommitTransaction start(String txId) throws TransactionException {
     return startInternal(txId);
   }
 
-  private GrpcTwoPhaseCommitTransaction startInternal(@Nullable String txId)
+  private TwoPhaseCommitTransaction startInternal(@Nullable String txId)
       throws TransactionException {
     return executeWithRetries(
         () -> {
           GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getBidirectionalStream();
           String transactionId = stream.startTransaction(txId);
           GrpcTwoPhaseCommitTransaction transaction =
-              new GrpcTwoPhaseCommitTransaction(transactionId, stream, this);
+              new GrpcTwoPhaseCommitTransaction(transactionId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
           getTable().ifPresent(transaction::withTable);
-          addActiveTransaction(transaction);
-          return transaction;
+          return new ActiveTransaction(transaction);
         },
         EXCEPTION_FACTORY);
   }
 
   @Override
-  public GrpcTwoPhaseCommitTransaction join(String txId) throws TransactionException {
+  public TwoPhaseCommitTransaction join(String txId) throws TransactionException {
     return executeWithRetries(
         () -> {
           GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getBidirectionalStream();
           stream.joinTransaction(txId);
           GrpcTwoPhaseCommitTransaction transaction =
-              new GrpcTwoPhaseCommitTransaction(txId, stream, this);
+              new GrpcTwoPhaseCommitTransaction(txId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
           getTable().ifPresent(transaction::withTable);
-          addActiveTransaction(transaction);
-          return transaction;
+          return new ActiveTransaction(transaction);
         },
         EXCEPTION_FACTORY);
   }
@@ -139,11 +137,6 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
   @VisibleForTesting
   GrpcTwoPhaseCommitTransactionOnBidirectionalStream getBidirectionalStream() {
     return new GrpcTwoPhaseCommitTransactionOnBidirectionalStream(config, stub, metadataManager);
-  }
-
-  @Override
-  public GrpcTwoPhaseCommitTransaction resume(String txId) throws TransactionException {
-    return (GrpcTwoPhaseCommitTransaction) super.resume(txId);
   }
 
   @Override

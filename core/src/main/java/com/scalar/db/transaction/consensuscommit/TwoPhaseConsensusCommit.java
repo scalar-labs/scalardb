@@ -57,12 +57,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public TwoPhaseConsensusCommit(
-      CrudHandler crud,
-      CommitHandler commit,
-      RecoveryHandler recovery,
-      boolean isCoordinator,
-      TwoPhaseConsensusCommitManager manager) {
-    super(manager);
+      CrudHandler crud, CommitHandler commit, RecoveryHandler recovery, boolean isCoordinator) {
     this.crud = crud;
     this.commit = commit;
     this.recovery = recovery;
@@ -208,7 +203,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
       commit.commitRecords(crud.getSnapshot());
       status = Status.COMMITTED;
-      removeActiveTransaction(getId());
     } catch (CommitException e) {
       status = Status.COMMIT_FAILED;
       throw e;
@@ -240,7 +234,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
       commit.rollbackRecords(crud.getSnapshot());
     } finally {
       status = Status.ROLLED_BACK;
-      removeActiveTransaction(getId());
     }
   }
 
