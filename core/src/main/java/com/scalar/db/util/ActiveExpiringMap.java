@@ -25,7 +25,9 @@ public class ActiveExpiringMap<K, V> {
     this.valueLifetimeMillis = valueLifetimeMillis;
     this.valueExpirationThreadIntervalMillis = valueExpirationThreadIntervalMillis;
     this.valueExpirationHandler = valueExpirationHandler;
-    startValueExpirationThread();
+    if (valueLifetimeMillis > 0) {
+      startValueExpirationThread();
+    }
   }
 
   private void startValueExpirationThread() {

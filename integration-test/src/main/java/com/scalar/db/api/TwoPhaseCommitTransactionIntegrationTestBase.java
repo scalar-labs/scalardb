@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Scan.Ordering;
@@ -722,14 +723,20 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
     // Prepare
     transaction1.prepare();
+
+    transaction2 = manager2.resume(transaction1.getId());
     transaction2.prepare();
 
     // Validate
     transaction1.validate();
+
+    transaction2 = manager2.resume(transaction1.getId());
     transaction2.validate();
 
     // Commit
     transaction1.commit();
+
+    transaction2 = manager2.resume(transaction1.getId());
     transaction2.commit();
 
     // Assert
@@ -773,14 +780,20 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
     // Prepare
     transaction1.prepare();
+
+    transaction2 = manager2.resume(transaction1.getId());
     transaction2.prepare();
 
     // Validate
     transaction1.validate();
+
+    transaction2 = manager2.resume(transaction1.getId());
     transaction2.validate();
 
     // Rollback
     transaction1.rollback();
+
+    transaction2 = manager2.resume(transaction1.getId());
     transaction2.rollback();
 
     // Assert
@@ -1109,6 +1122,55 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .build();
     TestUtils.assertResultsContainsExactlyInAnyOrder(
         results, Collections.singletonList(expectedResult));
+  }
+
+  @Test
+  public void resume_WithBeginningTransaction_ShouldReturnBegunTransaction()
+      throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+
+    // Act
+    TwoPhaseCommitTransaction resumed = manager1.resume(transaction.getId());
+
+    // Assert
+    assertThat(resumed).isEqualTo(transaction);
+
+    transaction.prepare();
+    transaction.commit();
+  }
+
+  @Test
+  public void resume_WithoutBeginningTransaction_ShouldThrowTransactionException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> manager1.resume("txId")).isInstanceOf(TransactionException.class);
+  }
+
+  @Test
+  public void resume_WithBeginningAndCommittingTransaction_ShouldThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+    transaction.prepare();
+    transaction.commit();
+
+    // Act Assert
+    assertThatThrownBy(() -> manager1.resume(transaction.getId()))
+        .isInstanceOf(TransactionException.class);
+  }
+
+  @Test
+  public void resume_WithBeginningAndRollingBackTransaction_ShouldThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+    transaction.rollback();
+
+    // Act Assert
+    assertThatThrownBy(() -> manager1.resume(transaction.getId()))
+        .isInstanceOf(TransactionException.class);
   }
 
   private void populateRecords(

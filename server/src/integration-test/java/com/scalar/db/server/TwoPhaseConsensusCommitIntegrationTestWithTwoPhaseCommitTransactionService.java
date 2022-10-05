@@ -15,43 +15,55 @@ import org.junit.jupiter.api.condition.DisabledIf;
 public class TwoPhaseConsensusCommitIntegrationTestWithTwoPhaseCommitTransactionService
     extends TwoPhaseConsensusCommitIntegrationTestBase {
 
-  private static final String PORT_FOR_SERVER_WITH_INCLUDE_METADATA_ENABLED =
-      Integer.toString(ServerConfig.DEFAULT_PORT + 1);
+  private static final String PORT_FOR_SERVER_WITH_INCLUDE_METADATA_ENABLED = "60053";
 
-  private ScalarDbServer server;
+  private ScalarDbServer server1;
+  private ScalarDbServer server2;
   private ScalarDbServer serverWithIncludeMetadataEnabled;
   private boolean isExternalServerUsed;
 
   @Override
   protected void initialize(String testName) throws IOException {
-    Properties properties = ServerEnv.getServerProperties(testName);
-    if (properties != null) {
-      // Add testName as a coordinator namespace suffix
-      String coordinatorNamespace =
-          properties.getProperty(
-              ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
-      properties.setProperty(
-          ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
+    Properties properties1 = ServerEnv.getServerProperties1(testName);
+    Properties properties2 = ServerEnv.getServerProperties2(testName);
+    if (properties1 != null && properties2 != null) {
+      server1 = new ScalarDbServer(modifyProperties(properties1, testName));
+      server1.start();
 
-      // Async commit can cause unexpected lazy recoveries, which can fail the tests. So we disable
-      // it for now.
-      properties.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
+      server2 = new ScalarDbServer(modifyProperties(properties2, testName));
+      server2.start();
 
-      server = new ScalarDbServer(properties);
-      server.start();
-
-      properties.setProperty(ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
-      properties.setProperty(ServerConfig.PORT, PORT_FOR_SERVER_WITH_INCLUDE_METADATA_ENABLED);
-      serverWithIncludeMetadataEnabled = new ScalarDbServer(properties);
+      properties1.setProperty(ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
+      properties1.setProperty(ServerConfig.PORT, PORT_FOR_SERVER_WITH_INCLUDE_METADATA_ENABLED);
+      serverWithIncludeMetadataEnabled = new ScalarDbServer(properties1);
       serverWithIncludeMetadataEnabled.start();
     } else {
       isExternalServerUsed = true;
     }
   }
 
+  private Properties modifyProperties(Properties properties, String testName) {
+    // Add testName as a coordinator namespace suffix
+    String coordinatorNamespace =
+        properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
+    properties.setProperty(
+        ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
+
+    // Async commit can cause unexpected lazy recoveries, which can fail the tests. So we disable
+    // it for now.
+    properties.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
+
+    return properties;
+  }
+
   @Override
   protected Properties getProps1(String testName) {
-    return ServerEnv.getProperties(testName);
+    return ServerEnv.getClientProperties1(testName);
+  }
+
+  @Override
+  protected Properties getProps2(String testName) {
+    return ServerEnv.getClientProperties2(testName);
   }
 
   @Override
@@ -66,8 +78,11 @@ public class TwoPhaseConsensusCommitIntegrationTestWithTwoPhaseCommitTransaction
   @Override
   public void afterAll() throws ExecutionException {
     super.afterAll();
-    if (server != null) {
-      server.shutdown();
+    if (server1 != null) {
+      server1.shutdown();
+    }
+    if (server2 != null) {
+      server2.shutdown();
     }
     if (serverWithIncludeMetadataEnabled != null) {
       serverWithIncludeMetadataEnabled.shutdown();
