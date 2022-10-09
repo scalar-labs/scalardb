@@ -98,7 +98,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
   private DistributedTransaction beginInternal(@Nullable String txId) throws TransactionException {
     return executeWithRetries(
         () -> {
-          GrpcTransactionOnBidirectionalStream stream = getBidirectionalStream();
+          GrpcTransactionOnBidirectionalStream stream = getStream();
           String transactionId = stream.beginTransaction(txId);
           GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
@@ -121,7 +121,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
   private DistributedTransaction startInternal(@Nullable String txId) throws TransactionException {
     return executeWithRetries(
         () -> {
-          GrpcTransactionOnBidirectionalStream stream = getBidirectionalStream();
+          GrpcTransactionOnBidirectionalStream stream = getStream();
           String transactionId = stream.startTransaction(txId);
           GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
@@ -132,7 +132,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
   }
 
   @VisibleForTesting
-  GrpcTransactionOnBidirectionalStream getBidirectionalStream() {
+  GrpcTransactionOnBidirectionalStream getStream() {
     return new GrpcTransactionOnBidirectionalStream(config, stub, metadataManager);
   }
 

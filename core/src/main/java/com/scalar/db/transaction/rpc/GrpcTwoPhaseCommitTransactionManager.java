@@ -83,7 +83,7 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
       throws TransactionException {
     return executeWithRetries(
         () -> {
-          GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getBidirectionalStream();
+          GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getStream();
           String transactionId = stream.beginTransaction(txId);
           GrpcTwoPhaseCommitTransaction transaction =
               new GrpcTwoPhaseCommitTransaction(transactionId, stream);
@@ -108,7 +108,7 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
       throws TransactionException {
     return executeWithRetries(
         () -> {
-          GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getBidirectionalStream();
+          GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getStream();
           String transactionId = stream.startTransaction(txId);
           GrpcTwoPhaseCommitTransaction transaction =
               new GrpcTwoPhaseCommitTransaction(transactionId, stream);
@@ -123,7 +123,7 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
   public TwoPhaseCommitTransaction join(String txId) throws TransactionException {
     return executeWithRetries(
         () -> {
-          GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getBidirectionalStream();
+          GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getStream();
           stream.joinTransaction(txId);
           GrpcTwoPhaseCommitTransaction transaction =
               new GrpcTwoPhaseCommitTransaction(txId, stream);
@@ -135,7 +135,7 @@ public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommit
   }
 
   @VisibleForTesting
-  GrpcTwoPhaseCommitTransactionOnBidirectionalStream getBidirectionalStream() {
+  GrpcTwoPhaseCommitTransactionOnBidirectionalStream getStream() {
     return new GrpcTwoPhaseCommitTransactionOnBidirectionalStream(config, stub, metadataManager);
   }
 
