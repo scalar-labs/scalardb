@@ -4,6 +4,7 @@ import static com.scalar.db.util.retry.Retry.executeWithRetries;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
+import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
@@ -58,6 +59,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
 
   @Inject
   public GrpcTransactionManager(DatabaseConfig databaseConfig) {
+    super(databaseConfig);
     config = new GrpcConfig(databaseConfig);
     channel =
         NettyChannelBuilder.forAddress(config.getHost(), config.getPort()).usePlaintext().build();
@@ -70,10 +72,12 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
 
   @VisibleForTesting
   GrpcTransactionManager(
+      DatabaseConfig databaseConfig,
       GrpcConfig config,
       DistributedTransactionGrpc.DistributedTransactionStub stub,
       DistributedTransactionGrpc.DistributedTransactionBlockingStub blockingStub,
       TableMetadataManager metadataManager) {
+    super(databaseConfig);
     this.config = config;
     channel = null;
     this.stub = stub;
@@ -82,58 +86,61 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
   }
 
   @Override
-  public GrpcTransaction begin() throws TransactionException {
+  public DistributedTransaction begin() throws TransactionException {
     return beginInternal(null);
   }
 
   @Override
-  public GrpcTransaction begin(String txId) throws TransactionException {
+  public DistributedTransaction begin(String txId) throws TransactionException {
     return beginInternal(Objects.requireNonNull(txId));
   }
 
-  private GrpcTransaction beginInternal(@Nullable String txId) throws TransactionException {
+  private DistributedTransaction beginInternal(@Nullable String txId) throws TransactionException {
     return executeWithRetries(
         () -> {
-          GrpcTransactionOnBidirectionalStream stream =
-              new GrpcTransactionOnBidirectionalStream(config, stub, metadataManager);
+          GrpcTransactionOnBidirectionalStream stream = getBidirectionalStream();
           String transactionId = stream.beginTransaction(txId);
           GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
           getTable().ifPresent(transaction::withTable);
-          return transaction;
+          return new ActiveTransaction(transaction);
         },
         EXCEPTION_FACTORY);
   }
 
   @Override
-  public GrpcTransaction start() throws TransactionException {
+  public DistributedTransaction start() throws TransactionException {
     return startInternal(null);
   }
 
   @Override
-  public GrpcTransaction start(String txId) throws TransactionException {
+  public DistributedTransaction start(String txId) throws TransactionException {
     return startInternal(Objects.requireNonNull(txId));
   }
 
-  private GrpcTransaction startInternal(@Nullable String txId) throws TransactionException {
+  private DistributedTransaction startInternal(@Nullable String txId) throws TransactionException {
     return executeWithRetries(
         () -> {
-          GrpcTransactionOnBidirectionalStream stream =
-              new GrpcTransactionOnBidirectionalStream(config, stub, metadataManager);
+          GrpcTransactionOnBidirectionalStream stream = getBidirectionalStream();
           String transactionId = stream.startTransaction(txId);
           GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
           getTable().ifPresent(transaction::withTable);
-          return transaction;
+          return new ActiveTransaction(transaction);
         },
         EXCEPTION_FACTORY);
   }
 
+  @VisibleForTesting
+  GrpcTransactionOnBidirectionalStream getBidirectionalStream() {
+    return new GrpcTransactionOnBidirectionalStream(config, stub, metadataManager);
+  }
+
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
-  public GrpcTransaction start(Isolation isolation) throws TransactionException {
+  public DistributedTransaction start(Isolation isolation) throws TransactionException {
     return begin();
   }
 
@@ -141,32 +148,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
-  public GrpcTransaction start(String txId, Isolation isolation) throws TransactionException {
-    return begin(txId);
-  }
-
-  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
-  @SuppressWarnings("InlineMeSuggester")
-  @Deprecated
-  @Override
-  public GrpcTransaction start(Isolation isolation, SerializableStrategy strategy)
-      throws TransactionException {
-    return begin();
-  }
-
-  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
-  @SuppressWarnings("InlineMeSuggester")
-  @Deprecated
-  @Override
-  public GrpcTransaction start(SerializableStrategy strategy) throws TransactionException {
-    return begin();
-  }
-
-  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
-  @SuppressWarnings("InlineMeSuggester")
-  @Deprecated
-  @Override
-  public GrpcTransaction start(String txId, SerializableStrategy strategy)
+  public DistributedTransaction start(String txId, Isolation isolation)
       throws TransactionException {
     return begin(txId);
   }
@@ -175,8 +157,34 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
-  public GrpcTransaction start(String txId, Isolation isolation, SerializableStrategy strategy)
+  public DistributedTransaction start(Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
+    return begin();
+  }
+
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
+  @Override
+  public DistributedTransaction start(SerializableStrategy strategy) throws TransactionException {
+    return begin();
+  }
+
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
+  @Override
+  public DistributedTransaction start(String txId, SerializableStrategy strategy)
+      throws TransactionException {
+    return begin(txId);
+  }
+
+  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
+  @Override
+  public DistributedTransaction start(
+      String txId, Isolation isolation, SerializableStrategy strategy) throws TransactionException {
     return begin(txId);
   }
 

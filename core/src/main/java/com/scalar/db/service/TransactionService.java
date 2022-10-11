@@ -123,6 +123,11 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
+  public DistributedTransaction resume(String txId) throws TransactionException {
+    return manager.resume(txId);
+  }
+
+  @Override
   public TransactionState getState(String txId) throws TransactionException {
     return manager.getState(txId);
   }
