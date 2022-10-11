@@ -1,5 +1,7 @@
 package com.scalar.db.io;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import java.util.Objects;
@@ -31,6 +33,7 @@ public class BigIntColumn implements Column<Long> {
 
   private BigIntColumn(String name, long value, boolean hasNullValue) {
     this.name = Objects.requireNonNull(name);
+    checkArgument(value >= MIN_VALUE && value <= MAX_VALUE, "Out of range column value for BigInt");
     this.value = value;
     this.hasNullValue = hasNullValue;
   }
