@@ -8,6 +8,7 @@ import com.google.common.base.Strings;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -39,6 +40,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   @Inject
   public ConsensusCommitManager(
       DistributedStorage storage, DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
+    super(databaseConfig);
     this.storage = storage;
     this.admin = admin;
     config = new ConsensusCommitConfig(databaseConfig);
@@ -53,6 +55,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   }
 
   ConsensusCommitManager(DatabaseConfig databaseConfig) {
+    super(databaseConfig);
     StorageFactory storageFactory = StorageFactory.create(databaseConfig.getProperties());
     storage = storageFactory.getStorage();
     admin = storageFactory.getStorageAdmin();
@@ -79,6 +82,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       ParallelExecutor parallelExecutor,
       RecoveryHandler recovery,
       CommitHandler commit) {
+    super(databaseConfig);
     this.storage = storage;
     this.admin = admin;
     this.config = config;
@@ -93,79 +97,77 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   }
 
   @Override
-  public ConsensusCommit begin() {
+  public DistributedTransaction begin() throws TransactionException {
     return begin(config.getIsolation(), config.getSerializableStrategy());
   }
 
   @Override
-  public ConsensusCommit begin(String txId) {
+  public DistributedTransaction begin(String txId) throws TransactionException {
     return begin(txId, config.getIsolation(), config.getSerializableStrategy());
-  }
-
-  @Override
-  public ConsensusCommit start() throws TransactionException {
-    return (ConsensusCommit) super.start();
-  }
-
-  @Override
-  public ConsensusCommit start(String txId) throws TransactionException {
-    return (ConsensusCommit) super.start(txId);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
-  public ConsensusCommit start(com.scalar.db.api.Isolation isolation) {
+  public DistributedTransaction start(com.scalar.db.api.Isolation isolation)
+      throws TransactionException {
     return begin(Isolation.valueOf(isolation.name()), config.getSerializableStrategy());
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
-  public ConsensusCommit start(String txId, com.scalar.db.api.Isolation isolation) {
+  public DistributedTransaction start(String txId, com.scalar.db.api.Isolation isolation)
+      throws TransactionException {
     return begin(txId, Isolation.valueOf(isolation.name()), config.getSerializableStrategy());
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
-  public ConsensusCommit start(
-      com.scalar.db.api.Isolation isolation, com.scalar.db.api.SerializableStrategy strategy) {
+  public DistributedTransaction start(
+      com.scalar.db.api.Isolation isolation, com.scalar.db.api.SerializableStrategy strategy)
+      throws TransactionException {
     return begin(Isolation.valueOf(isolation.name()), (SerializableStrategy) strategy);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
-  public ConsensusCommit start(com.scalar.db.api.SerializableStrategy strategy) {
+  public DistributedTransaction start(com.scalar.db.api.SerializableStrategy strategy)
+      throws TransactionException {
     return begin(Isolation.SERIALIZABLE, (SerializableStrategy) strategy);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
-  public ConsensusCommit start(String txId, com.scalar.db.api.SerializableStrategy strategy) {
+  public DistributedTransaction start(String txId, com.scalar.db.api.SerializableStrategy strategy)
+      throws TransactionException {
     return begin(txId, Isolation.SERIALIZABLE, (SerializableStrategy) strategy);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
-  public ConsensusCommit start(
+  public DistributedTransaction start(
       String txId,
       com.scalar.db.api.Isolation isolation,
-      com.scalar.db.api.SerializableStrategy strategy) {
+      com.scalar.db.api.SerializableStrategy strategy)
+      throws TransactionException {
     return begin(txId, Isolation.valueOf(isolation.name()), (SerializableStrategy) strategy);
   }
 
   @VisibleForTesting
-  ConsensusCommit begin(Isolation isolation, SerializableStrategy strategy) {
+  DistributedTransaction begin(Isolation isolation, SerializableStrategy strategy)
+      throws TransactionException {
     String txId = UUID.randomUUID().toString();
     return begin(txId, isolation, strategy);
   }
 
   @VisibleForTesting
-  ConsensusCommit begin(String txId, Isolation isolation, SerializableStrategy strategy) {
+  DistributedTransaction begin(String txId, Isolation isolation, SerializableStrategy strategy)
+      throws TransactionException {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkNotNull(isolation);
     if (!config.getIsolation().equals(isolation)
@@ -181,7 +183,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     ConsensusCommit consensus = new ConsensusCommit(crud, commit, recovery);
     getNamespace().ifPresent(consensus::withNamespace);
     getTable().ifPresent(consensus::withTable);
-    return consensus;
+    return new ActiveTransaction(consensus);
   }
 
   @Override

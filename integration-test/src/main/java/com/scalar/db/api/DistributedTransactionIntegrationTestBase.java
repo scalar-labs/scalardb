@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Scan.Ordering;
@@ -897,6 +898,53 @@ public abstract class DistributedTransactionIntegrationTestBase {
             .build();
     TestUtils.assertResultsContainsExactlyInAnyOrder(
         results, Collections.singletonList(expectedResult));
+  }
+
+  @Test
+  public void resume_WithBeginningTransaction_ShouldReturnBegunTransaction()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    DistributedTransaction resumed = manager.resume(transaction.getId());
+
+    // Assert
+    assertThat(resumed).isEqualTo(transaction);
+
+    transaction.commit();
+  }
+
+  @Test
+  public void resume_WithoutBeginningTransaction_ShouldThrowTransactionException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.resume("txId")).isInstanceOf(TransactionException.class);
+  }
+
+  @Test
+  public void resume_WithBeginningAndCommittingTransaction_ShouldThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+    transaction.commit();
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.resume(transaction.getId()))
+        .isInstanceOf(TransactionException.class);
+  }
+
+  @Test
+  public void resume_WithBeginningAndRollingBackTransaction_ShouldThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+    transaction.rollback();
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.resume(transaction.getId()))
+        .isInstanceOf(TransactionException.class);
   }
 
   private void populateRecords() throws TransactionException {
