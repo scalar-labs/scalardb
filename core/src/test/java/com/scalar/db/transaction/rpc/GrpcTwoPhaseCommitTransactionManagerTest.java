@@ -62,7 +62,7 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
     GrpcTwoPhaseCommitTransactionOnBidirectionalStream bidirectionalStream =
         mock(GrpcTwoPhaseCommitTransactionOnBidirectionalStream.class);
-    doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
     when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
 
     TwoPhaseCommitTransaction transaction1 = spiedManager.begin(ANY_ID);
@@ -80,7 +80,7 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
     GrpcTwoPhaseCommitTransactionOnBidirectionalStream bidirectionalStream =
         mock(GrpcTwoPhaseCommitTransactionOnBidirectionalStream.class);
-    doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
     when(bidirectionalStream.startTransaction(ANY_ID)).thenReturn(ANY_ID);
 
     TwoPhaseCommitTransaction transaction1 = spiedManager.start(ANY_ID);
@@ -98,7 +98,7 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
     GrpcTwoPhaseCommitTransactionOnBidirectionalStream bidirectionalStream =
         mock(GrpcTwoPhaseCommitTransactionOnBidirectionalStream.class);
-    doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
 
     TwoPhaseCommitTransaction transaction1 = spiedManager.join(ANY_ID);
 
@@ -110,21 +110,21 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
   }
 
   @Test
-  public void resume_CalledWithoutBeginOrStartOrJoin_ThrowTransactionException() {
+  public void resume_CalledWithoutBeginOrStartOrJoin_ThrowIllegalStateException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
-  public void resume_CalledWithBeginAndCommit_ThrowTransactionException()
+  public void resume_CalledWithBeginAndCommit_ThrowIllegalStateException()
       throws TransactionException {
     // Arrange
     GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
     GrpcTwoPhaseCommitTransactionOnBidirectionalStream bidirectionalStream =
         mock(GrpcTwoPhaseCommitTransactionOnBidirectionalStream.class);
-    doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
     when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
 
     TwoPhaseCommitTransaction transaction = spiedManager.begin(ANY_ID);
@@ -132,7 +132,7 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     transaction.commit();
 
     // Act Assert
-    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
@@ -142,7 +142,7 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
     GrpcTwoPhaseCommitTransactionOnBidirectionalStream bidirectionalStream =
         mock(GrpcTwoPhaseCommitTransactionOnBidirectionalStream.class);
-    doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
     when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
 
     doThrow(CommitException.class).when(bidirectionalStream).commit();
@@ -163,13 +163,13 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
   }
 
   @Test
-  public void resume_CalledWithBeginAndRollback_ThrowTransactionException()
+  public void resume_CalledWithBeginAndRollback_ThrowIllegalStateException()
       throws TransactionException {
     // Arrange
     GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
     GrpcTwoPhaseCommitTransactionOnBidirectionalStream bidirectionalStream =
         mock(GrpcTwoPhaseCommitTransactionOnBidirectionalStream.class);
-    doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
     when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
 
     TwoPhaseCommitTransaction transaction = spiedManager.begin(ANY_ID);
@@ -177,17 +177,17 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     transaction.rollback();
 
     // Act Assert
-    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
-  public void resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowTransactionException()
+  public void resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowIllegalStateException()
       throws TransactionException {
     // Arrange
     GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
     GrpcTwoPhaseCommitTransactionOnBidirectionalStream bidirectionalStream =
         mock(GrpcTwoPhaseCommitTransactionOnBidirectionalStream.class);
-    doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
     when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
 
     doThrow(RollbackException.class).when(bidirectionalStream).rollback();
@@ -200,7 +200,7 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     }
 
     // Act Assert
-    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test

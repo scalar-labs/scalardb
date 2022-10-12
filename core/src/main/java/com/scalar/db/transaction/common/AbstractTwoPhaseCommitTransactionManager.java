@@ -95,7 +95,8 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
   private void addActiveTransaction(ActiveTransaction transaction) throws TransactionException {
     if (activeTransactions.putIfAbsent(transaction.getId(), transaction) != null) {
       transaction.rollback();
-      throw new TransactionException("The transaction already exists");
+      throw new IllegalStateException(
+          "The transaction already exists. transactionId: " + transaction.getId());
     }
   }
 
@@ -104,14 +105,15 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
   }
 
   @Override
-  public TwoPhaseCommitTransaction resume(String txId) throws TransactionException {
+  public TwoPhaseCommitTransaction resume(String txId) {
     return activeTransactions
         .get(txId)
         .orElseThrow(
             () ->
-                new TransactionException(
+                new IllegalStateException(
                     "A transaction associated with the specified transaction ID is not found. "
-                        + "It might have been expired"));
+                        + "It might have been expired. transactionId: "
+                        + txId));
   }
 
   protected TwoPhaseCommitTransaction activate(TwoPhaseCommitTransaction transaction)

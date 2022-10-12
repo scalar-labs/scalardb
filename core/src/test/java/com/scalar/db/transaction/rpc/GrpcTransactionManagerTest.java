@@ -62,7 +62,7 @@ public class GrpcTransactionManagerTest {
     GrpcTransactionManager spiedManager = spy(manager);
     GrpcTransactionOnBidirectionalStream bidirectionalStream =
         mock(GrpcTransactionOnBidirectionalStream.class);
-    doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
     when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
 
     DistributedTransaction transaction1 = spiedManager.begin(ANY_ID);
@@ -80,7 +80,7 @@ public class GrpcTransactionManagerTest {
     GrpcTransactionManager spiedManager = spy(manager);
     GrpcTransactionOnBidirectionalStream bidirectionalStream =
         mock(GrpcTransactionOnBidirectionalStream.class);
-    doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
     when(bidirectionalStream.startTransaction(ANY_ID)).thenReturn(ANY_ID);
 
     DistributedTransaction transaction1 = spiedManager.start(ANY_ID);
@@ -93,28 +93,28 @@ public class GrpcTransactionManagerTest {
   }
 
   @Test
-  public void resume_CalledWithoutBeginOrStart_ThrowTransactionException() {
+  public void resume_CalledWithoutBeginOrStart_ThrowIllegalStateException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
-  public void resume_CalledWithBeginAndCommit_ThrowTransactionException()
+  public void resume_CalledWithBeginAndCommit_ThrowIllegalStateException()
       throws TransactionException {
     // Arrange
     GrpcTransactionManager spiedManager = spy(manager);
     GrpcTransactionOnBidirectionalStream bidirectionalStream =
         mock(GrpcTransactionOnBidirectionalStream.class);
-    doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
     when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
 
     DistributedTransaction transaction = spiedManager.begin(ANY_ID);
     transaction.commit();
 
     // Act Assert
-    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
@@ -124,7 +124,7 @@ public class GrpcTransactionManagerTest {
     GrpcTransactionManager spiedManager = spy(manager);
     GrpcTransactionOnBidirectionalStream bidirectionalStream =
         mock(GrpcTransactionOnBidirectionalStream.class);
-    doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
     when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
 
     doThrow(CommitException.class).when(bidirectionalStream).commit();
@@ -144,30 +144,30 @@ public class GrpcTransactionManagerTest {
   }
 
   @Test
-  public void resume_CalledWithBeginAndRollback_ThrowTransactionException()
+  public void resume_CalledWithBeginAndRollback_ThrowIllegalStateException()
       throws TransactionException {
     // Arrange
     GrpcTransactionManager spiedManager = spy(manager);
     GrpcTransactionOnBidirectionalStream bidirectionalStream =
         mock(GrpcTransactionOnBidirectionalStream.class);
-    doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
     when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
 
     DistributedTransaction transaction = spiedManager.begin(ANY_ID);
     transaction.rollback();
 
     // Act Assert
-    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
-  public void resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowTransactionException()
+  public void resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowIllegalStateException()
       throws TransactionException {
     // Arrange
     GrpcTransactionManager spiedManager = spy(manager);
     GrpcTransactionOnBidirectionalStream bidirectionalStream =
         mock(GrpcTransactionOnBidirectionalStream.class);
-    doReturn(bidirectionalStream).when(spiedManager).getBidirectionalStream();
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
     when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
 
     doThrow(RollbackException.class).when(bidirectionalStream).rollback();
@@ -180,7 +180,7 @@ public class GrpcTransactionManagerTest {
     }
 
     // Act Assert
-    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test

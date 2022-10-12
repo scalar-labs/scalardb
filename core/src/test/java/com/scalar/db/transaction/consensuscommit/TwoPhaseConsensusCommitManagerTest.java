@@ -213,15 +213,15 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
-  public void resume_CalledWithoutBeginOrJoin_ThrowTransactionException() {
+  public void resume_CalledWithoutBeginOrJoin_ThrowIllegalStateException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
-  public void resume_CalledWithBeginAndCommit_ThrowTransactionException()
+  public void resume_CalledWithBeginAndCommit_ThrowIllegalStateException()
       throws TransactionException {
     // Arrange
     TwoPhaseCommitTransaction transaction = manager.begin(ANY_TX_ID);
@@ -229,7 +229,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     transaction.commit();
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
@@ -254,7 +254,7 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
-  public void resume_CalledWithBeginAndRollback_ThrowTransactionException()
+  public void resume_CalledWithBeginAndRollback_ThrowIllegalStateException()
       throws TransactionException {
     // Arrange
     TwoPhaseCommitTransaction transaction = manager.begin(ANY_TX_ID);
@@ -262,11 +262,11 @@ public class TwoPhaseConsensusCommitManagerTest {
     transaction.rollback();
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
-  public void resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowTransactionException()
+  public void resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowIllegalStateException()
       throws TransactionException {
     // Arrange
     doThrow(UnknownTransactionStatusException.class).when(commit).abort(any());
@@ -279,7 +279,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     }
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
