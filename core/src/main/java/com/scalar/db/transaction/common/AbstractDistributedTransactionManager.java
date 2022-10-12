@@ -113,7 +113,7 @@ public abstract class AbstractDistributedTransactionManager
                         + "It might have been expired"));
   }
 
-  protected DistributedTransaction wrap(DistributedTransaction transaction)
+  protected DistributedTransaction activate(DistributedTransaction transaction)
       throws TransactionException {
     return new ActiveTransaction(new StateManagedTransaction(transaction));
   }

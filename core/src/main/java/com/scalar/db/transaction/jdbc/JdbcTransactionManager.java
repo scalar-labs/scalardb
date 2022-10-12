@@ -79,7 +79,7 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
           new JdbcTransaction(txId, jdbcService, dataSource.getConnection(), rdbEngine);
       getNamespace().ifPresent(transaction::withNamespace);
       getTable().ifPresent(transaction::withTable);
-      return wrap(transaction);
+      return activate(transaction);
     } catch (SQLException e) {
       throw new TransactionException("failed to start the transaction", e);
     }

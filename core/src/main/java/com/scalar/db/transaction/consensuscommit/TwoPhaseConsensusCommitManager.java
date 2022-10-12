@@ -142,7 +142,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator);
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
-    return wrap(transaction);
+    return activate(transaction);
   }
 
   @Override

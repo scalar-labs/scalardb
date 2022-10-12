@@ -183,7 +183,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     ConsensusCommit consensus = new ConsensusCommit(crud, commit, recovery);
     getNamespace().ifPresent(consensus::withNamespace);
     getTable().ifPresent(consensus::withTable);
-    return wrap(consensus);
+    return activate(consensus);
   }
 
   @Override

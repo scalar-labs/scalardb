@@ -114,7 +114,7 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
                         + "It might have been expired"));
   }
 
-  protected TwoPhaseCommitTransaction wrap(TwoPhaseCommitTransaction transaction)
+  protected TwoPhaseCommitTransaction activate(TwoPhaseCommitTransaction transaction)
       throws TransactionException {
     return new ActiveTransaction(new StateManagedTransaction(transaction));
   }
