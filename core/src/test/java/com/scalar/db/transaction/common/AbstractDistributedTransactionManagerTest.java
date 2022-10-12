@@ -27,11 +27,11 @@ public class AbstractDistributedTransactionManagerTest {
   @SuppressFBWarnings("SIC_INNER_SHOULD_BE_STATIC")
   @SuppressWarnings("ClassCanBeStatic")
   @Nested
-  public class TransactionStateManagementTest {
+  public class StateManagedTransactionTest {
 
-    @Mock private DistributedTransaction distributedTransaction;
+    @Mock private DistributedTransaction wrappedTransaction;
 
-    private AbstractDistributedTransactionManager.TransactionStateManagement transaction;
+    private AbstractDistributedTransactionManager.StateManagedTransaction transaction;
 
     @BeforeEach
     public void setUp() throws Exception {
@@ -39,8 +39,7 @@ public class AbstractDistributedTransactionManagerTest {
 
       // Arrange
       transaction =
-          new AbstractDistributedTransactionManager.TransactionStateManagement(
-              distributedTransaction);
+          new AbstractDistributedTransactionManager.StateManagedTransaction(wrappedTransaction);
     }
 
     @Test
@@ -165,7 +164,7 @@ public class AbstractDistributedTransactionManagerTest {
     public void rollback_AfterCommitFailed_ShouldNotThrowAnyException()
         throws CommitException, UnknownTransactionStatusException {
       // Arrange
-      doThrow(CommitException.class).when(distributedTransaction).commit();
+      doThrow(CommitException.class).when(wrappedTransaction).commit();
       assertThatThrownBy(() -> transaction.commit()).isInstanceOf(CommitException.class);
 
       // Act Assert

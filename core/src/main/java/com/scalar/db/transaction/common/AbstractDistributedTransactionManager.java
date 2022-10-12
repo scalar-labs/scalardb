@@ -115,7 +115,7 @@ public abstract class AbstractDistributedTransactionManager
 
   protected DistributedTransaction wrap(DistributedTransaction transaction)
       throws TransactionException {
-    return new ActiveTransaction(new TransactionStateManagement(transaction));
+    return new ActiveTransaction(new StateManagedTransaction(transaction));
   }
 
   private class ActiveTransaction extends AbstractDistributedTransaction
@@ -194,7 +194,7 @@ public abstract class AbstractDistributedTransactionManager
   }
 
   @VisibleForTesting
-  static class TransactionStateManagement extends AbstractDistributedTransaction
+  static class StateManagedTransaction extends AbstractDistributedTransaction
       implements WrappedDistributedTransaction {
 
     private enum Status {
@@ -208,7 +208,7 @@ public abstract class AbstractDistributedTransactionManager
     private Status status;
 
     @VisibleForTesting
-    TransactionStateManagement(DistributedTransaction transaction) {
+    StateManagedTransaction(DistributedTransaction transaction) {
       this.transaction = transaction;
       status = Status.ACTIVE;
     }

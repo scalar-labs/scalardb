@@ -116,7 +116,7 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
 
   protected TwoPhaseCommitTransaction wrap(TwoPhaseCommitTransaction transaction)
       throws TransactionException {
-    return new ActiveTransaction(new TransactionStateManagement(transaction));
+    return new ActiveTransaction(new StateManagedTransaction(transaction));
   }
 
   private class ActiveTransaction extends AbstractTwoPhaseCommitTransaction
@@ -205,7 +205,7 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
   }
 
   @VisibleForTesting
-  static class TransactionStateManagement extends AbstractTwoPhaseCommitTransaction
+  static class StateManagedTransaction extends AbstractTwoPhaseCommitTransaction
       implements WrappedTwoPhaseCommitTransaction {
 
     private enum Status {
@@ -223,7 +223,7 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
     private Status status;
 
     @VisibleForTesting
-    TransactionStateManagement(TwoPhaseCommitTransaction transaction) {
+    StateManagedTransaction(TwoPhaseCommitTransaction transaction) {
       this.transaction = transaction;
       status = Status.ACTIVE;
     }

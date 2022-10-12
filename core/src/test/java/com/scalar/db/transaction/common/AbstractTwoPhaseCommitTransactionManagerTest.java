@@ -29,11 +29,11 @@ public class AbstractTwoPhaseCommitTransactionManagerTest {
   @SuppressFBWarnings("SIC_INNER_SHOULD_BE_STATIC")
   @SuppressWarnings("ClassCanBeStatic")
   @Nested
-  public class TransactionStateManagementTest {
+  public class StateManagedTransactionTest {
 
-    @Mock private TwoPhaseCommitTransaction twoPhaseCommitTransaction;
+    @Mock private TwoPhaseCommitTransaction wrappedTransaction;
 
-    private AbstractTwoPhaseCommitTransactionManager.TransactionStateManagement transaction;
+    private AbstractTwoPhaseCommitTransactionManager.StateManagedTransaction transaction;
 
     @BeforeEach
     public void setUp() throws Exception {
@@ -41,8 +41,7 @@ public class AbstractTwoPhaseCommitTransactionManagerTest {
 
       // Arrange
       transaction =
-          new AbstractTwoPhaseCommitTransactionManager.TransactionStateManagement(
-              twoPhaseCommitTransaction);
+          new AbstractTwoPhaseCommitTransactionManager.StateManagedTransaction(wrappedTransaction);
     }
 
     @Test
@@ -176,7 +175,7 @@ public class AbstractTwoPhaseCommitTransactionManagerTest {
     public void validate_AfterPrepareFailed_ShouldThrowIllegalStateException()
         throws PreparationException {
       // Arrange
-      doThrow(PreparationException.class).when(twoPhaseCommitTransaction).prepare();
+      doThrow(PreparationException.class).when(wrappedTransaction).prepare();
       assertThatThrownBy(() -> transaction.prepare()).isInstanceOf(PreparationException.class);
 
       // Act Assert
@@ -218,7 +217,7 @@ public class AbstractTwoPhaseCommitTransactionManagerTest {
     public void commit_AfterPrepareFailed_ShouldThrowIllegalStateException()
         throws PreparationException {
       // Arrange
-      doThrow(PreparationException.class).when(twoPhaseCommitTransaction).prepare();
+      doThrow(PreparationException.class).when(wrappedTransaction).prepare();
       assertThatThrownBy(() -> transaction.prepare()).isInstanceOf(PreparationException.class);
 
       // Act Assert
@@ -229,7 +228,7 @@ public class AbstractTwoPhaseCommitTransactionManagerTest {
     public void commit_AfterValidateFailed_ShouldThrowIllegalStateException()
         throws PreparationException, ValidationException {
       // Arrange
-      doThrow(ValidationException.class).when(twoPhaseCommitTransaction).validate();
+      doThrow(ValidationException.class).when(wrappedTransaction).validate();
 
       transaction.prepare();
       assertThatThrownBy(() -> transaction.validate()).isInstanceOf(ValidationException.class);
@@ -259,7 +258,7 @@ public class AbstractTwoPhaseCommitTransactionManagerTest {
     public void rollback_AfterCommitFailed_ShouldNotThrowAnyException()
         throws PreparationException, CommitException, UnknownTransactionStatusException {
       // Arrange
-      doThrow(CommitException.class).when(twoPhaseCommitTransaction).commit();
+      doThrow(CommitException.class).when(wrappedTransaction).commit();
 
       transaction.prepare();
       assertThatThrownBy(() -> transaction.commit()).isInstanceOf(CommitException.class);
@@ -272,7 +271,7 @@ public class AbstractTwoPhaseCommitTransactionManagerTest {
     public void rollback_AfterPrepareFailed_ShouldNotThrowAnyException()
         throws PreparationException {
       // Arrange
-      doThrow(PreparationException.class).when(twoPhaseCommitTransaction).prepare();
+      doThrow(PreparationException.class).when(wrappedTransaction).prepare();
       assertThatThrownBy(() -> transaction.prepare()).isInstanceOf(PreparationException.class);
 
       // Act Assert
@@ -283,7 +282,7 @@ public class AbstractTwoPhaseCommitTransactionManagerTest {
     public void rollback_AfterValidateFailed_ShouldNotThrowAnyException()
         throws PreparationException, ValidationException {
       // Arrange
-      doThrow(ValidationException.class).when(twoPhaseCommitTransaction).validate();
+      doThrow(ValidationException.class).when(wrappedTransaction).validate();
 
       transaction.prepare();
       assertThatThrownBy(() -> transaction.validate()).isInstanceOf(ValidationException.class);
