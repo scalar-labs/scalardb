@@ -28,7 +28,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.transaction.common.AbstractTwoPhaseCommitTransactionManager;
+import com.scalar.db.transaction.common.WrappedTwoPhaseCommitTransaction;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Collections;
 import java.util.List;
@@ -498,8 +498,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
     TwoPhaseConsensusCommit transaction =
         (TwoPhaseConsensusCommit)
-            ((AbstractTwoPhaseCommitTransactionManager.ActiveTransaction) manager1.begin())
-                .getActualTransaction();
+            ((WrappedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -578,8 +577,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
     TwoPhaseConsensusCommit transaction =
         (TwoPhaseConsensusCommit)
-            ((AbstractTwoPhaseCommitTransactionManager.ActiveTransaction) manager1.begin())
-                .getActualTransaction();
+            ((WrappedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -880,8 +878,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
     TwoPhaseConsensusCommit transaction =
         (TwoPhaseConsensusCommit)
-            ((AbstractTwoPhaseCommitTransactionManager.ActiveTransaction) manager1.begin())
-                .getActualTransaction();
+            ((WrappedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -954,8 +951,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
     TwoPhaseConsensusCommit transaction =
         (TwoPhaseConsensusCommit)
-            ((AbstractTwoPhaseCommitTransactionManager.ActiveTransaction) manager1.begin())
-                .getActualTransaction();
+            ((WrappedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->

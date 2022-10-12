@@ -35,7 +35,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.transaction.common.AbstractDistributedTransactionManager;
+import com.scalar.db.transaction.common.WrappedDistributedTransaction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -522,8 +522,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((AbstractDistributedTransactionManager.ActiveTransaction) manager.begin())
-                .getActualTransaction();
+            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -600,8 +599,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((AbstractDistributedTransactionManager.ActiveTransaction) manager.begin())
-                .getActualTransaction();
+            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -892,8 +890,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((AbstractDistributedTransactionManager.ActiveTransaction) manager.begin())
-                .getActualTransaction();
+            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -961,8 +958,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((AbstractDistributedTransactionManager.ActiveTransaction) manager.begin())
-                .getActualTransaction();
+            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->

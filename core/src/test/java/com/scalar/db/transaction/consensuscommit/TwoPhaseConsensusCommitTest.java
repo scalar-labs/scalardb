@@ -21,7 +21,6 @@ import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.io.Key;
-import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommit.Status;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -234,11 +233,12 @@ public class TwoPhaseConsensusCommitTest {
 
   @Test
   public void validate_ProcessedCrudGiven_ShouldPerformPreCommitValidationWithSnapshot()
-      throws ValidationException, CommitException, UnknownTransactionStatusException {
+      throws ValidationException, CommitException, UnknownTransactionStatusException,
+          PreparationException {
     // Arrange
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, false);
-    transaction.status = Status.PREPARED;
+    transaction.prepare();
     when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
@@ -250,12 +250,12 @@ public class TwoPhaseConsensusCommitTest {
 
   @Test
   public void commit_CalledWithCoordinator_ShouldCommitStateAndRecords()
-      throws CommitException, UnknownTransactionStatusException {
+      throws CommitException, UnknownTransactionStatusException, PreparationException {
     // Arrange
     boolean isCoordinator = true;
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator);
-    transaction.status = Status.PREPARED;
+    transaction.prepare();
     when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
@@ -268,12 +268,12 @@ public class TwoPhaseConsensusCommitTest {
 
   @Test
   public void commit_CalledWithParticipant_ShouldCommitRecordsOnly()
-      throws CommitException, UnknownTransactionStatusException {
+      throws CommitException, UnknownTransactionStatusException, PreparationException {
     // Arrange
     boolean isCoordinator = false; // means it's a participant process
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator);
-    transaction.status = Status.PREPARED;
+    transaction.prepare();
     when(crud.getSnapshot()).thenReturn(snapshot);
     when(snapshot.getId()).thenReturn(ANY_TX_ID);
 
@@ -287,12 +287,14 @@ public class TwoPhaseConsensusCommitTest {
 
   @Test
   public void commit_ExtraReadUsedAndValidatedState_ShouldCommitProperly()
-      throws CommitException, UnknownTransactionStatusException {
+      throws CommitException, UnknownTransactionStatusException, PreparationException,
+          ValidationException {
     // Arrange
     boolean isCoordinator = true; // means it's a coordinator process
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator);
-    transaction.status = Status.VALIDATED;
+    transaction.prepare();
+    transaction.validate();
     when(crud.getSnapshot()).thenReturn(snapshot);
     when(snapshot.getId()).thenReturn(ANY_TX_ID);
     when(snapshot.isPreCommitValidationRequired()).thenReturn(true);
@@ -306,12 +308,13 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void commit_ExtraReadUsedAndPreparedState_ShouldThrowIllegalStateException() {
+  public void commit_ExtraReadUsedAndPreparedState_ShouldThrowIllegalStateException()
+      throws PreparationException {
     // Arrange
     boolean isCoordinator = true; // means it's a coordinator process
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator);
-    transaction.status = Status.PREPARED;
+    transaction.prepare();
     when(crud.getSnapshot()).thenReturn(snapshot);
     when(snapshot.getId()).thenReturn(ANY_TX_ID);
     when(snapshot.isPreCommitValidationRequired()).thenReturn(true);
@@ -322,12 +325,12 @@ public class TwoPhaseConsensusCommitTest {
 
   @Test
   public void rollback_CalledWithCoordinator_ShouldAbortStateAndRollbackRecords()
-      throws RollbackException, UnknownTransactionStatusException {
+      throws RollbackException, UnknownTransactionStatusException, PreparationException {
     // Arrange
     boolean isCoordinator = true; // means it's a coordinator process
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator);
-    transaction.status = Status.PREPARED;
+    transaction.prepare();
     when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
@@ -360,12 +363,13 @@ public class TwoPhaseConsensusCommitTest {
   @Test
   public void
       rollback_CalledWithCoordinatorAfterCommitFails_ShouldNeverAbortStateAndRollbackRecords()
-          throws CommitException, UnknownTransactionStatusException, RollbackException {
+          throws CommitException, UnknownTransactionStatusException, RollbackException,
+              PreparationException {
     // Arrange
     boolean isCoordinator = true; // means it's a coordinator process
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator);
-    transaction.status = Status.PREPARED;
+    transaction.prepare();
     when(crud.getSnapshot()).thenReturn(snapshot);
     doThrow(CommitException.class).when(commit).commitState(snapshot);
 
@@ -379,12 +383,13 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void rollback_CalledWithParticipant_ShouldRollbackRecordsOnly() throws RollbackException {
+  public void rollback_CalledWithParticipant_ShouldRollbackRecordsOnly()
+      throws RollbackException, PreparationException {
     // Arrange
     boolean isCoordinator = false; // means it's a participant process
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator);
-    transaction.status = Status.PREPARED;
+    transaction.prepare();
     when(crud.getSnapshot()).thenReturn(snapshot);
     when(snapshot.getId()).thenReturn(ANY_TX_ID);
 

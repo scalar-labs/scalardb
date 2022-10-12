@@ -15,7 +15,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.transaction.common.AbstractDistributedTransactionManager;
+import com.scalar.db.transaction.common.WrappedDistributedTransaction;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,8 +63,7 @@ public class ConsensusCommitManagerTest {
     // Act
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((AbstractDistributedTransactionManager.ActiveTransaction) manager.begin())
-                .getActualTransaction();
+            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
@@ -80,8 +79,7 @@ public class ConsensusCommitManagerTest {
     // Act
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((AbstractDistributedTransactionManager.ActiveTransaction) manager.begin(ANY_TX_ID))
-                .getActualTransaction();
+            ((WrappedDistributedTransaction) manager.begin(ANY_TX_ID)).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
@@ -97,12 +95,10 @@ public class ConsensusCommitManagerTest {
     // Act
     ConsensusCommit transaction1 =
         (ConsensusCommit)
-            ((AbstractDistributedTransactionManager.ActiveTransaction) manager.begin())
-                .getActualTransaction();
+            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
     ConsensusCommit transaction2 =
         (ConsensusCommit)
-            ((AbstractDistributedTransactionManager.ActiveTransaction) manager.begin())
-                .getActualTransaction();
+            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
@@ -124,8 +120,7 @@ public class ConsensusCommitManagerTest {
     // Act
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((AbstractDistributedTransactionManager.ActiveTransaction) manager.start())
-                .getActualTransaction();
+            ((WrappedDistributedTransaction) manager.start()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
@@ -141,8 +136,7 @@ public class ConsensusCommitManagerTest {
     // Act
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((AbstractDistributedTransactionManager.ActiveTransaction) manager.start(ANY_TX_ID))
-                .getActualTransaction();
+            ((WrappedDistributedTransaction) manager.start(ANY_TX_ID)).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
@@ -158,9 +152,9 @@ public class ConsensusCommitManagerTest {
     // Act
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((AbstractDistributedTransactionManager.ActiveTransaction)
+            ((WrappedDistributedTransaction)
                     manager.start(com.scalar.db.api.Isolation.SERIALIZABLE))
-                .getActualTransaction();
+                .getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
@@ -185,12 +179,10 @@ public class ConsensusCommitManagerTest {
     // Act
     ConsensusCommit transaction1 =
         (ConsensusCommit)
-            ((AbstractDistributedTransactionManager.ActiveTransaction) manager.start())
-                .getActualTransaction();
+            ((WrappedDistributedTransaction) manager.start()).getOriginalTransaction();
     ConsensusCommit transaction2 =
         (ConsensusCommit)
-            ((AbstractDistributedTransactionManager.ActiveTransaction) manager.start())
-                .getActualTransaction();
+            ((WrappedDistributedTransaction) manager.start()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
