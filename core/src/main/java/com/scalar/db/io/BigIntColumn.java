@@ -33,7 +33,9 @@ public class BigIntColumn implements Column<Long> {
 
   private BigIntColumn(String name, long value, boolean hasNullValue) {
     this.name = Objects.requireNonNull(name);
-    checkArgument(value >= MIN_VALUE && value <= MAX_VALUE, "Out of range column value for BigInt");
+    checkArgument(
+        value >= MIN_VALUE && value <= MAX_VALUE,
+        "Out of range column value for BigInt. value: " + value);
     this.value = value;
     this.hasNullValue = hasNullValue;
   }
