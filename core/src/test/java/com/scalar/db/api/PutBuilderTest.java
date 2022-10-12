@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
@@ -67,8 +68,8 @@ public class PutBuilderTest {
             .partitionKey(partitionKey1)
             .clusteringKey(clusteringKey1)
             .consistency(Consistency.EVENTUAL)
-            .bigIntValue("bigint1", Long.MAX_VALUE)
-            .bigIntValue("bigint2", Long.valueOf(Long.MAX_VALUE))
+            .bigIntValue("bigint1", BigIntColumn.MAX_VALUE)
+            .bigIntValue("bigint2", Long.valueOf(BigIntColumn.MAX_VALUE))
             .blobValue("blob1", "blob".getBytes(StandardCharsets.UTF_8))
             .blobValue("blob2", ByteBuffer.allocate(1))
             .booleanValue("bool1", true)
@@ -91,8 +92,8 @@ public class PutBuilderTest {
                 .forNamespace(NAMESPACE_1)
                 .forTable(TABLE_1)
                 .withConsistency(Consistency.EVENTUAL)
-                .withBigIntValue("bigint1", Long.MAX_VALUE)
-                .withBigIntValue("bigint2", Long.valueOf(Long.MAX_VALUE))
+                .withBigIntValue("bigint1", BigIntColumn.MAX_VALUE)
+                .withBigIntValue("bigint2", Long.valueOf(BigIntColumn.MAX_VALUE))
                 .withBlobValue("blob1", "blob".getBytes(StandardCharsets.UTF_8))
                 .withBlobValue("blob2", ByteBuffer.allocate(1))
                 .withBooleanValue("bool1", true)
@@ -171,8 +172,8 @@ public class PutBuilderTest {
             .forNamespace(NAMESPACE_1)
             .forTable(TABLE_1)
             .withConsistency(Consistency.EVENTUAL)
-            .withBigIntValue("bigint1", Long.MAX_VALUE)
-            .withBigIntValue("bigint2", Long.valueOf(Long.MAX_VALUE))
+            .withBigIntValue("bigint1", BigIntColumn.MAX_VALUE)
+            .withBigIntValue("bigint2", Long.valueOf(BigIntColumn.MAX_VALUE))
             .withBlobValue("blob1", "blob".getBytes(StandardCharsets.UTF_8))
             .withBlobValue("blob2", ByteBuffer.allocate(1))
             .withBooleanValue("bool1", true)
@@ -201,8 +202,8 @@ public class PutBuilderTest {
             .forNamespace(NAMESPACE_1)
             .forTable(TABLE_1)
             .withConsistency(Consistency.EVENTUAL)
-            .withBigIntValue("bigint1", Long.MAX_VALUE)
-            .withBigIntValue("bigint2", Long.valueOf(Long.MAX_VALUE))
+            .withBigIntValue("bigint1", BigIntColumn.MAX_VALUE)
+            .withBigIntValue("bigint2", Long.valueOf(BigIntColumn.MAX_VALUE))
             .withBlobValue("blob1", "blob".getBytes(StandardCharsets.UTF_8))
             .withBlobValue("blob2", ByteBuffer.allocate(1))
             .withBooleanValue("bool1", true)
@@ -226,8 +227,8 @@ public class PutBuilderTest {
             .clusteringKey(clusteringKey2)
             .consistency(Consistency.LINEARIZABLE)
             .clearValues()
-            .bigIntValue("bigint1", Long.MIN_VALUE)
-            .bigIntValue("bigint2", Long.valueOf(Long.MIN_VALUE))
+            .bigIntValue("bigint1", BigIntColumn.MIN_VALUE)
+            .bigIntValue("bigint2", Long.valueOf(BigIntColumn.MIN_VALUE))
             .blobValue("blob1", "foo".getBytes(StandardCharsets.UTF_8))
             .blobValue("blob2", ByteBuffer.allocate(2))
             .booleanValue("bool1", false)
@@ -250,8 +251,8 @@ public class PutBuilderTest {
                 .forNamespace(NAMESPACE_2)
                 .forTable(TABLE_2)
                 .withConsistency(Consistency.LINEARIZABLE)
-                .withBigIntValue("bigint1", Long.MIN_VALUE)
-                .withBigIntValue("bigint2", Long.valueOf(Long.MIN_VALUE))
+                .withBigIntValue("bigint1", BigIntColumn.MIN_VALUE)
+                .withBigIntValue("bigint2", Long.valueOf(BigIntColumn.MIN_VALUE))
                 .withBlobValue("blob1", "foo".getBytes(StandardCharsets.UTF_8))
                 .withBlobValue("blob2", ByteBuffer.allocate(2))
                 .withBooleanValue("bool1", false)
