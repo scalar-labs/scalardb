@@ -204,6 +204,11 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
     }
   }
 
+  /**
+   * This class is to unify the call sequence of the transaction object. It doesn't care about the
+   * potential inconsistency between the status field on JVM memory and the underlying persistent
+   * layer.
+   */
   @VisibleForTesting
   static class StateManagedTransaction extends AbstractTwoPhaseCommitTransaction
       implements WrappedTwoPhaseCommitTransaction {
