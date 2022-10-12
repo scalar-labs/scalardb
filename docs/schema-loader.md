@@ -448,6 +448,8 @@ However, the following types in JDBC databases are converted differently when th
 
 If this data type mapping doesn't match your application, please alter the tables to change the data types after creating them with this tool.
 
+Also, the data types of Scalar DB have some limitations. For example, BIGINT has a limitation of range. Please refer to the [javadoc](https://javadoc.io/doc/com.scalar-labs/scalardb/latest/index.html) (`com.scalar.db.io` package) for more details of the data types of Scalar DB.
+
 ## Internal metadata for Consensus Commit
 
 The Consensus Commit transaction manager manages metadata (e.g., transaction ID, record version, transaction status) stored along with the actual records to handle transactions properly.
