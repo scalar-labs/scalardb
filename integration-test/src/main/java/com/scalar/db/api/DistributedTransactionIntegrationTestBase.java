@@ -916,15 +916,15 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
-  public void resume_WithoutBeginningTransaction_ShouldThrowTransactionException() {
+  public void resume_WithoutBeginningTransaction_ShouldThrowIllegalStateException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume("txId")).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> manager.resume("txId")).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
-  public void resume_WithBeginningAndCommittingTransaction_ShouldThrowTransactionException()
+  public void resume_WithBeginningAndCommittingTransaction_ShouldThrowIllegalStateException()
       throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin();
@@ -932,11 +932,11 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
     // Act Assert
     assertThatThrownBy(() -> manager.resume(transaction.getId()))
-        .isInstanceOf(TransactionException.class);
+        .isInstanceOf(IllegalStateException.class);
   }
 
   @Test
-  public void resume_WithBeginningAndRollingBackTransaction_ShouldThrowTransactionException()
+  public void resume_WithBeginningAndRollingBackTransaction_ShouldThrowIllegalStateException()
       throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin();
@@ -944,7 +944,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
     // Act Assert
     assertThatThrownBy(() -> manager.resume(transaction.getId()))
-        .isInstanceOf(TransactionException.class);
+        .isInstanceOf(IllegalStateException.class);
   }
 
   private void populateRecords() throws TransactionException {

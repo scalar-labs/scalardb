@@ -1141,15 +1141,15 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
-  public void resume_WithoutBeginningTransaction_ShouldThrowTransactionException() {
+  public void resume_WithoutBeginningTransaction_ShouldThrowIllegalStateException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager1.resume("txId")).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> manager1.resume("txId")).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
-  public void resume_WithBeginningAndCommittingTransaction_ShouldThrowTransactionException()
+  public void resume_WithBeginningAndCommittingTransaction_ShouldThrowIllegalStateException()
       throws TransactionException {
     // Arrange
     TwoPhaseCommitTransaction transaction = manager1.begin();
@@ -1158,11 +1158,11 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
     // Act Assert
     assertThatThrownBy(() -> manager1.resume(transaction.getId()))
-        .isInstanceOf(TransactionException.class);
+        .isInstanceOf(IllegalStateException.class);
   }
 
   @Test
-  public void resume_WithBeginningAndRollingBackTransaction_ShouldThrowTransactionException()
+  public void resume_WithBeginningAndRollingBackTransaction_ShouldThrowIllegalStateException()
       throws TransactionException {
     // Arrange
     TwoPhaseCommitTransaction transaction = manager1.begin();
@@ -1170,7 +1170,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
     // Act Assert
     assertThatThrownBy(() -> manager1.resume(transaction.getId()))
-        .isInstanceOf(TransactionException.class);
+        .isInstanceOf(IllegalStateException.class);
   }
 
   private void populateRecords(

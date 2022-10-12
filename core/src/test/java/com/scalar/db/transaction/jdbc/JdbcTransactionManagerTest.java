@@ -391,22 +391,22 @@ public class JdbcTransactionManagerTest {
   }
 
   @Test
-  public void resume_CalledWithoutBegin_ThrowTransactionException() {
+  public void resume_CalledWithoutBegin_ThrowIllegalStateException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
-  public void resume_CalledWithBeginAndCommit_ThrowTransactionException()
+  public void resume_CalledWithBeginAndCommit_ThrowIllegalStateException()
       throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin(ANY_ID);
     transaction.commit();
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
@@ -430,18 +430,18 @@ public class JdbcTransactionManagerTest {
   }
 
   @Test
-  public void resume_CalledWithBeginAndRollback_ThrowTransactionException()
+  public void resume_CalledWithBeginAndRollback_ThrowIllegalStateException()
       throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin(ANY_ID);
     transaction.rollback();
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
-  public void resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowTransactionException()
+  public void resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowIllegalStateException()
       throws TransactionException, SQLException {
     // Arrange
     doThrow(SQLException.class).when(connection).rollback();
@@ -454,6 +454,6 @@ public class JdbcTransactionManagerTest {
     }
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
   }
 }

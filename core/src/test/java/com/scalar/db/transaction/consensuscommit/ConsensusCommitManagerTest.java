@@ -209,22 +209,22 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void resume_CalledWithoutBegin_ThrowTransactionException() {
+  public void resume_CalledWithoutBegin_ThrowIllegalStateException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
-  public void resume_CalledWithBeginAndCommit_ThrowTransactionException()
+  public void resume_CalledWithBeginAndCommit_ThrowIllegalStateException()
       throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.commit();
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
@@ -248,14 +248,14 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void resume_CalledWithBeginAndRollback_ThrowTransactionException()
+  public void resume_CalledWithBeginAndRollback_ThrowIllegalStateException()
       throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.rollback();
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
