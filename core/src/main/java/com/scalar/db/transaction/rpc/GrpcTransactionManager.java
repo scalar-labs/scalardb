@@ -103,7 +103,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
           GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
           getTable().ifPresent(transaction::withTable);
-          return new ActiveTransaction(transaction);
+          return activate(transaction);
         },
         EXCEPTION_FACTORY);
   }
@@ -126,7 +126,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
           GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
           getTable().ifPresent(transaction::withTable);
-          return new ActiveTransaction(transaction);
+          return activate(transaction);
         },
         EXCEPTION_FACTORY);
   }
