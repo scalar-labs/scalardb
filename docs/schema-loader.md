@@ -446,7 +446,7 @@ However, the following types in JDBC databases are converted differently when th
 | TEXT     | VARCHAR(64)   | VARCHAR(10485760) | VARCHAR2(64) |
 | BLOB     | VARBINARY(64) |                   | RAW(64)      |
 
-Also, `BIGINT` of Scalar DB supports a value from -2^53 to 2^53 even if you use any databases.
+The value range of `BIGINT` in Scalar DB is from -2^53 to 2^53 regardless of the underlying database.
 
 If this data type mapping doesn't match your application, please alter the tables to change the data types after creating them with this tool.
 
