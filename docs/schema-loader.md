@@ -446,9 +446,9 @@ However, the following types in JDBC databases are converted differently when th
 | TEXT     | VARCHAR(64)   | VARCHAR(10485760) | VARCHAR2(64) |
 | BLOB     | VARBINARY(64) |                   | RAW(64)      |
 
-If this data type mapping doesn't match your application, please alter the tables to change the data types after creating them with this tool.
+Also, `BIGINT` of Scalar DB supports a value from -2^53 to 2^53 even if you use any databases.
 
-Also, the data types of Scalar DB have some limitations. For example, BIGINT has a limitation of range. Please refer to the [javadoc](https://javadoc.io/doc/com.scalar-labs/scalardb/latest/index.html) (`com.scalar.db.io` package) for more details of the data types of Scalar DB.
+If this data type mapping doesn't match your application, please alter the tables to change the data types after creating them with this tool.
 
 ## Internal metadata for Consensus Commit
 
