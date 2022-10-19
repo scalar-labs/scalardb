@@ -1134,7 +1134,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     TwoPhaseCommitTransaction resumed = manager1.resume(transaction.getId());
 
     // Assert
-    assertThat(resumed).isEqualTo(transaction);
+    assertThat(resumed.getId()).isEqualTo(transaction.getId());
 
     transaction.prepare();
     transaction.commit();

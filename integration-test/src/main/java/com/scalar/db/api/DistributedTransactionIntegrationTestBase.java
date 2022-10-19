@@ -910,7 +910,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     DistributedTransaction resumed = manager.resume(transaction.getId());
 
     // Assert
-    assertThat(resumed).isEqualTo(transaction);
+    assertThat(resumed.getId()).isEqualTo(transaction.getId());
 
     transaction.commit();
   }
