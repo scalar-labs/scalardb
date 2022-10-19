@@ -20,7 +20,7 @@ import com.scalar.db.rpc.RollbackResponse;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionGrpc;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
-import com.scalar.db.transaction.common.AbstractTwoPhaseCommitTransactionManager;
+import com.scalar.db.transaction.common.ActiveTransactionManagedTwoPhaseCommitTransactionManager;
 import com.scalar.db.util.ProtoUtils;
 import io.grpc.ManagedChannel;
 import io.grpc.netty.NettyChannelBuilder;
@@ -31,7 +31,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommitTransactionManager {
+public class GrpcTwoPhaseCommitTransactionManager
+    extends ActiveTransactionManagedTwoPhaseCommitTransactionManager {
   private static final Logger logger =
       LoggerFactory.getLogger(GrpcTwoPhaseCommitTransactionManager.class);
 
