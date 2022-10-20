@@ -45,8 +45,7 @@ public abstract class ActiveTransactionManagedTransactionManager
             });
   }
 
-  private void addActiveTransaction(DistributedTransaction transaction)
-      throws TransactionException {
+  private void add(DistributedTransaction transaction) throws TransactionException {
     if (activeTransactions.putIfAbsent(transaction.getId(), transaction) != null) {
       transaction.rollback();
       throw new IllegalStateException(
@@ -54,7 +53,7 @@ public abstract class ActiveTransactionManagedTransactionManager
     }
   }
 
-  private void removeActiveTransaction(String transactionId) {
+  private void remove(String transactionId) {
     activeTransactions.remove(transactionId);
   }
 
@@ -84,7 +83,7 @@ public abstract class ActiveTransactionManagedTransactionManager
     @SuppressFBWarnings("EI_EXPOSE_REP2")
     private ActiveTransaction(DistributedTransaction transaction) throws TransactionException {
       this.transaction = transaction;
-      addActiveTransaction(this);
+      add(this);
     }
 
     @Override
@@ -130,7 +129,7 @@ public abstract class ActiveTransactionManagedTransactionManager
     @Override
     public void commit() throws CommitException, UnknownTransactionStatusException {
       transaction.commit();
-      removeActiveTransaction(getId());
+      remove(getId());
     }
 
     @Override
@@ -138,7 +137,7 @@ public abstract class ActiveTransactionManagedTransactionManager
       try {
         transaction.rollback();
       } finally {
-        removeActiveTransaction(getId());
+        remove(getId());
       }
     }
 

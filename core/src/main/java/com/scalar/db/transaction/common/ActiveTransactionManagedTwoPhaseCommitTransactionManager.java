@@ -47,7 +47,7 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
             });
   }
 
-  private void addActiveTransaction(ActiveTransaction transaction) throws TransactionException {
+  private void add(ActiveTransaction transaction) throws TransactionException {
     if (activeTransactions.putIfAbsent(transaction.getId(), transaction) != null) {
       transaction.rollback();
       throw new IllegalStateException(
@@ -55,7 +55,7 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
     }
   }
 
-  private void removeActiveTransaction(String transactionId) {
+  private void remove(String transactionId) {
     activeTransactions.remove(transactionId);
   }
 
@@ -85,7 +85,7 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
     @SuppressFBWarnings("EI_EXPOSE_REP2")
     private ActiveTransaction(TwoPhaseCommitTransaction transaction) throws TransactionException {
       this.transaction = transaction;
-      addActiveTransaction(this);
+      add(this);
     }
 
     @Override
@@ -141,7 +141,7 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
     @Override
     public void commit() throws CommitException, UnknownTransactionStatusException {
       transaction.commit();
-      removeActiveTransaction(getId());
+      remove(getId());
     }
 
     @Override
@@ -149,7 +149,7 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
       try {
         transaction.rollback();
       } finally {
-        removeActiveTransaction(getId());
+        remove(getId());
       }
     }
 
