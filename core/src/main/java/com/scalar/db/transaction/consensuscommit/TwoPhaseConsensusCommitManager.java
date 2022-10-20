@@ -12,7 +12,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.transaction.common.AbstractTwoPhaseCommitTransactionManager;
+import com.scalar.db.transaction.common.ActiveTransactionManagedTwoPhaseCommitTransactionManager;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
@@ -21,7 +21,8 @@ import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
 
 @ThreadSafe
-public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransactionManager {
+public class TwoPhaseConsensusCommitManager
+    extends ActiveTransactionManagedTwoPhaseCommitTransactionManager {
 
   private final DistributedStorage storage;
   private final DistributedStorageAdmin admin;

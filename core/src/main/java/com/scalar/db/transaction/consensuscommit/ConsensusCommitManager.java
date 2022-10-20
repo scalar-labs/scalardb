@@ -14,7 +14,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.transaction.common.AbstractDistributedTransactionManager;
+import com.scalar.db.transaction.common.ActiveTransactionManagedTransactionManager;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
@@ -24,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class ConsensusCommitManager extends AbstractDistributedTransactionManager {
+public class ConsensusCommitManager extends ActiveTransactionManagedTransactionManager {
   private static final Logger logger = LoggerFactory.getLogger(ConsensusCommitManager.class);
   private final DistributedStorage storage;
   private final DistributedStorageAdmin admin;
