@@ -16,7 +16,7 @@ import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
-import com.scalar.db.transaction.common.AbstractDistributedTransactionManager;
+import com.scalar.db.transaction.common.ActiveTransactionManagedTransactionManager;
 import java.sql.SQLException;
 import java.util.UUID;
 import javax.annotation.concurrent.ThreadSafe;
@@ -25,7 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class JdbcTransactionManager extends AbstractDistributedTransactionManager {
+public class JdbcTransactionManager extends ActiveTransactionManagedTransactionManager {
   private static final Logger logger = LoggerFactory.getLogger(JdbcTransactionManager.class);
 
   private final BasicDataSource dataSource;

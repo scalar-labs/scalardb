@@ -20,7 +20,7 @@ import com.scalar.db.rpc.RollbackRequest;
 import com.scalar.db.rpc.RollbackResponse;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
-import com.scalar.db.transaction.common.AbstractDistributedTransactionManager;
+import com.scalar.db.transaction.common.ActiveTransactionManagedTransactionManager;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableSupplier;
 import com.scalar.db.util.retry.Retry;
@@ -37,7 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class GrpcTransactionManager extends AbstractDistributedTransactionManager {
+public class GrpcTransactionManager extends ActiveTransactionManagedTransactionManager {
   private static final Logger logger = LoggerFactory.getLogger(GrpcTransactionManager.class);
 
   static final Retry.ExceptionFactory<TransactionException> EXCEPTION_FACTORY =
