@@ -24,7 +24,7 @@ If an underlying database supports a point-in-time snapshot/backup mechanism, yo
 If an underlying database supports a point-in-time restore/recovery mechanism, you can set a restore point to a time (preferably the mid-time) in the period.
 
 To easily make Scalar DB drain outstanding requests and stop accepting new requests to create a pause duration, it is recommended to use [Scalar DB Server](https://github.com/scalar-labs/scalardb/tree/master/server) (which implements `scalar-admin` interface) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your Scalar DB applications.
-With [scalar-admin client tool](https://github.com/scalar-labs/scalar-admin/tree/scalar-admin-dockerfile#client-side-tool), you can pause nodes/servers/applications that implement the scalar-admin interface without losing ongoing transactions.
+With [scalar-admin client tool](https://github.com/scalar-labs/scalar-admin/tree/main/java#scalar-admin-client-tool), you can pause nodes/servers/applications that implement the scalar-admin interface without losing ongoing transactions.
 
 Note that when you use a point-in-time-restore/recovery mechanism, it is recommended to minimize the clock drifts between clients and servers by using clock synchronization such as NTP.
 Otherwise, the time you get as a paused duration might be too different from the time in which the pause was actually conducted, which could restore to a point where ongoing transactions exist.
