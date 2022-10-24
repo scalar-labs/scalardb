@@ -162,6 +162,7 @@ task integrationTestCosmos(type: Test) {
         systemProperties(System.getProperties())
     }
     maxParallelForks = 3
+    jvmArgs '-XX:MaxDirectMemorySize=2g', '-Xmx4g'
 }
 
 task integrationTestDynamo(type: Test) {
