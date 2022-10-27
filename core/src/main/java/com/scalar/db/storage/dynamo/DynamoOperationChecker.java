@@ -26,9 +26,9 @@ public class DynamoOperationChecker extends OperationChecker {
         .filter(column -> metadata.getSecondaryIndexNames().contains(column.getName()))
         .forEach(
             column -> {
-              if (!new ColumnChecker(metadata, true, false, false, false).check(column)) {
+              if (!new ColumnChecker(metadata, true, false, true, false).check(column)) {
                 throw new IllegalArgumentException(
-                    "A secondary index column cannot be set to null in DynamoDB. Operation: "
+                    "A secondary index column cannot be set to null or an empty value (for Text and Blob) in DynamoDB. Operation: "
                         + put);
               }
             });
