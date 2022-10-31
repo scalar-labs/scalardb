@@ -44,13 +44,13 @@ public class ParallelExecutor {
       return;
     }
     Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).setNameFormat("idle-thread-auto-terminator-%d").build())
-        .schedule(() -> {
+        .scheduleAtFixedRate(() -> {
+          // TODO: Make the timeout and interval configurable
           Instant thresholdOfIdleTimeout = Instant.now().minusSeconds(30);
           if (lastParallelTaskTime.get().isBefore(thresholdOfIdleTimeout)) {
-            logger.info("Detected idle parallel-execution thread (last timestamp: {}). Stopping it", lastParallelTaskTime.get());
             teardownParallelExecutionService();
           }
-        }, 10, TimeUnit.SECONDS);
+        }, 10, 10, TimeUnit.SECONDS);
   }
 
   @VisibleForTesting
