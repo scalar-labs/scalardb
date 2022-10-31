@@ -6,12 +6,15 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.util.ScalarDbUtils;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -27,21 +30,27 @@ public class ParallelExecutor {
   }
 
   private final ConsensusCommitConfig config;
-  @Nullable private final ExecutorService parallelExecutorService;
+  @Nullable private ExecutorService parallelExecutorService;
+  private final AtomicReference<Instant> lastParallelTaskTime = new AtomicReference<>(Instant.now());
 
   public ParallelExecutor(ConsensusCommitConfig config) {
     this.config = config;
-    if (config.isParallelPreparationEnabled()
-        || config.isParallelValidationEnabled()
-        || config.isParallelCommitEnabled()
-        || config.isParallelRollbackEnabled()) {
-      parallelExecutorService =
-          Executors.newFixedThreadPool(
-              config.getParallelExecutorCount(),
-              new ThreadFactoryBuilder().setNameFormat("parallel-executor-%d").build());
-    } else {
-      parallelExecutorService = null;
+    setupOrReuseParallelExecutionService(config);
+    startIdleThreadAutoTerminator(config);
+  }
+
+  private void startIdleThreadAutoTerminator(ConsensusCommitConfig config) {
+    if (!config.isIdleThreadAutoTerminationEnabled()) {
+      return;
     }
+    Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).setNameFormat("idle-thread-auto-terminator-%d").build())
+        .schedule(() -> {
+          Instant thresholdOfIdleTimeout = Instant.now().minusSeconds(30);
+          if (lastParallelTaskTime.get().isBefore(thresholdOfIdleTimeout)) {
+            logger.info("Detected idle parallel-execution thread (last timestamp: {}). Stopping it", lastParallelTaskTime.get());
+            teardownParallelExecutionService();
+          }
+        }, 10, TimeUnit.SECONDS);
   }
 
   @VisibleForTesting
@@ -132,10 +141,9 @@ public class ParallelExecutor {
       String taskName,
       String transactionId)
       throws ExecutionException, CommitConflictException {
-    assert parallelExecutorService != null;
+    ExecutorService executorService = setupOrReuseParallelExecutionService(config);
 
-    CompletionService<Void> completionService =
-        new ExecutorCompletionService<>(parallelExecutorService);
+    CompletionService<Void> completionService = new ExecutorCompletionService<>(executorService);
     tasks.forEach(
         t ->
             completionService.submit(
@@ -217,10 +225,38 @@ public class ParallelExecutor {
     }
   }
 
-  public void close() {
+  private synchronized ExecutorService setupOrReuseParallelExecutionService(ConsensusCommitConfig config) {
+    if (config.isParallelPreparationEnabled()
+        || config.isParallelValidationEnabled()
+        || config.isParallelCommitEnabled()
+        || config.isParallelRollbackEnabled()) {
+      if (parallelExecutorService == null) {
+        ExecutorService executorService = Executors.newFixedThreadPool(
+            config.getParallelExecutorCount(),
+            new ThreadFactoryBuilder().setNameFormat("parallel-executor-%d").build());
+        parallelExecutorService = executorService;
+        logger.info("Setup parallel-execution thread {}", executorService);
+      }
+      return parallelExecutorService;
+    }
+    return null;
+  }
+
+  private synchronized ExecutorService teardownParallelExecutionService() {
     if (parallelExecutorService != null) {
+      logger.info("Shutting down parallel-execution thread {}", parallelExecutorService);
       parallelExecutorService.shutdown();
-      Uninterruptibles.awaitTerminationUninterruptibly(parallelExecutorService);
+      ExecutorService shutdownParallelExecutorService = parallelExecutorService;
+      parallelExecutorService = null;
+      return shutdownParallelExecutorService;
+    }
+    return null;
+  }
+
+  public void close() {
+    ExecutorService shutdownExecutorService = teardownParallelExecutionService();
+    if (shutdownExecutorService != null) {
+      Uninterruptibles.awaitTerminationUninterruptibly(shutdownExecutorService);
     }
   }
 }

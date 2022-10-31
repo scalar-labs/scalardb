@@ -29,6 +29,7 @@ public class ConsensusCommitConfig {
 
   public static final String ASYNC_COMMIT_ENABLED = PREFIX + "async_commit.enabled";
   public static final String ASYNC_ROLLBACK_ENABLED = PREFIX + "async_rollback.enabled";
+  public static final String IDLE_THREAD_AUTO_TERMINATION_ENABLED = PREFIX + "idle_thread_auto_termination.enabled";
 
   public static final int DEFAULT_PARALLEL_EXECUTOR_COUNT = 128;
 
@@ -45,6 +46,7 @@ public class ConsensusCommitConfig {
   private final boolean parallelRollbackEnabled;
   private final boolean asyncCommitEnabled;
   private final boolean asyncRollbackEnabled;
+  private final boolean idleThreadAutoTerminationEnabled;
 
   private final boolean isIncludeMetadataEnabled;
 
@@ -104,6 +106,8 @@ public class ConsensusCommitConfig {
     asyncCommitEnabled = getBoolean(databaseConfig.getProperties(), ASYNC_COMMIT_ENABLED, true);
     asyncRollbackEnabled =
         getBoolean(databaseConfig.getProperties(), ASYNC_ROLLBACK_ENABLED, asyncCommitEnabled);
+    idleThreadAutoTerminationEnabled =
+        getBoolean(databaseConfig.getProperties(), IDLE_THREAD_AUTO_TERMINATION_ENABLED, false);
     isIncludeMetadataEnabled =
         getBoolean(databaseConfig.getProperties(), INCLUDE_METADATA_ENABLED, false);
   }
@@ -146,6 +150,10 @@ public class ConsensusCommitConfig {
 
   public boolean isAsyncRollbackEnabled() {
     return asyncRollbackEnabled;
+  }
+
+  public boolean isIdleThreadAutoTerminationEnabled() {
+    return idleThreadAutoTerminationEnabled;
   }
 
   public boolean isIncludeMetadataEnabled() {
