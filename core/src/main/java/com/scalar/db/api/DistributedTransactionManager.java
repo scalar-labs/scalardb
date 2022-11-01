@@ -178,6 +178,15 @@ public interface DistributedTransactionManager {
       throws TransactionException;
 
   /**
+   * Resumes an ongoing transaction associated with the specified transaction ID.
+   *
+   * @param txId the transaction ID
+   * @return {@link DistributedTransaction}
+   * @throws TransactionException if resuming the transaction failed
+   */
+  DistributedTransaction resume(String txId) throws TransactionException;
+
+  /**
    * Returns the state of a given transaction.
    *
    * @param txId a transaction ID

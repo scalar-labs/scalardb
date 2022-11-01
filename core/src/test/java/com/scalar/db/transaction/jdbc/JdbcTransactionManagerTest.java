@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -8,15 +9,18 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.jdbc.JdbcService;
@@ -35,7 +39,9 @@ public class JdbcTransactionManagerTest {
 
   private static final String NAMESPACE = "ns";
   private static final String TABLE = "tbl";
+  private static final String ANY_ID = "id";
 
+  @Mock private DatabaseConfig databaseConfig;
   @Mock private BasicDataSource dataSource;
   @Mock private BasicDataSource tableMetadataDataSource;
   @Mock private JdbcService jdbcService;
@@ -52,7 +58,7 @@ public class JdbcTransactionManagerTest {
     when(dataSource.getConnection()).thenReturn(connection);
     manager =
         new JdbcTransactionManager(
-            dataSource, tableMetadataDataSource, RdbEngine.MYSQL, jdbcService);
+            databaseConfig, dataSource, tableMetadataDataSource, RdbEngine.MYSQL, jdbcService);
   }
 
   @Test
@@ -63,7 +69,7 @@ public class JdbcTransactionManagerTest {
     when(jdbcService.delete(any(), any())).thenReturn(true);
 
     // Act
-    JdbcTransaction transaction = manager.begin();
+    DistributedTransaction transaction = manager.begin();
     Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
     transaction.get(get);
     Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
@@ -97,7 +103,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.start();
+              DistributedTransaction transaction = manager.start();
               Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.get(get);
             })
@@ -114,7 +120,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.begin();
+              DistributedTransaction transaction = manager.begin();
               Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.get(get);
             })
@@ -130,7 +136,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.start();
+              DistributedTransaction transaction = manager.start();
               Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.scan(scan);
             })
@@ -147,7 +153,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.begin();
+              DistributedTransaction transaction = manager.begin();
               Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.scan(scan);
             })
@@ -163,7 +169,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.start();
+              DistributedTransaction transaction = manager.start();
               Put put =
                   new Put(new Key("p1", "val1"))
                       .withValue("v1", "val2")
@@ -184,7 +190,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.begin();
+              DistributedTransaction transaction = manager.begin();
               Put put =
                   new Put(new Key("p1", "val1"))
                       .withValue("v1", "val2")
@@ -205,7 +211,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.start();
+              DistributedTransaction transaction = manager.start();
               Delete delete =
                   new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.delete(delete);
@@ -223,7 +229,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.begin();
+              DistributedTransaction transaction = manager.begin();
               Delete delete =
                   new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.delete(delete);
@@ -241,7 +247,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.start();
+              DistributedTransaction transaction = manager.start();
               Put put =
                   new Put(new Key("p1", "val1"))
                       .withValue("v1", "val2")
@@ -264,7 +270,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.begin();
+              DistributedTransaction transaction = manager.begin();
               Put put =
                   new Put(new Key("p1", "val1"))
                       .withValue("v1", "val2")
@@ -285,7 +291,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.start();
+              DistributedTransaction transaction = manager.start();
               Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.get(get);
               Put put =
@@ -309,7 +315,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.begin();
+              DistributedTransaction transaction = manager.begin();
               Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.get(get);
               Put put =
@@ -332,7 +338,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.begin();
+              DistributedTransaction transaction = manager.begin();
               Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.get(get);
               Put put =
@@ -357,7 +363,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              JdbcTransaction transaction = manager.start();
+              DistributedTransaction transaction = manager.start();
               Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.get(get);
               Put put =
@@ -370,5 +376,84 @@ public class JdbcTransactionManagerTest {
             })
         .isInstanceOf(UnknownTransactionStatusException.class);
     verify(connection).close();
+  }
+
+  @Test
+  public void resume_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction1 = manager.begin(ANY_ID);
+
+    // Act
+    DistributedTransaction transaction2 = manager.resume(ANY_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void resume_CalledWithoutBegin_ThrowIllegalStateException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void resume_CalledWithBeginAndCommit_ThrowIllegalStateException()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin(ANY_ID);
+    transaction.commit();
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void resume_CalledWithBeginAndCommit_CommitExceptionThrown_ReturnSameTransactionObject()
+      throws TransactionException, SQLException {
+    // Arrange
+    doThrow(SQLException.class).when(connection).commit();
+
+    DistributedTransaction transaction1 = manager.begin(ANY_ID);
+    try {
+      transaction1.commit();
+    } catch (CommitException ignored) {
+      // expected
+    }
+
+    // Act
+    DistributedTransaction transaction2 = manager.resume(ANY_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void resume_CalledWithBeginAndRollback_ThrowIllegalStateException()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin(ANY_ID);
+    transaction.rollback();
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowIllegalStateException()
+      throws TransactionException, SQLException {
+    // Arrange
+    doThrow(SQLException.class).when(connection).rollback();
+
+    DistributedTransaction transaction1 = manager.begin(ANY_ID);
+    try {
+      transaction1.rollback();
+    } catch (RollbackException ignored) {
+      // expected
+    }
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
   }
 }

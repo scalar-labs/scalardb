@@ -112,15 +112,7 @@ public interface TwoPhaseCommitTransactionManager {
   TwoPhaseCommitTransaction join(String txId) throws TransactionException;
 
   /**
-   * Suspends a transaction. You can resume this transaction with {@link #resume(String)}.
-   *
-   * @param transaction a transaction to suspend
-   * @throws TransactionException if suspending the transaction failed
-   */
-  void suspend(TwoPhaseCommitTransaction transaction) throws TransactionException;
-
-  /**
-   * Resumes a suspended transaction associated with the specified transaction ID.
+   * Resumes an ongoing transaction associated with the specified transaction ID.
    *
    * @param txId the transaction ID
    * @return {@link TwoPhaseCommitTransaction}

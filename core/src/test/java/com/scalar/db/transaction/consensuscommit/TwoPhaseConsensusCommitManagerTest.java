@@ -1,16 +1,22 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.transaction.common.WrappedTwoPhaseCommitTransaction;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,11 +59,14 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
-  public void begin_NoArgumentGiven_ReturnWithSomeTxIdAndSnapshotIsolation() {
+  public void begin_NoArgumentGiven_ReturnWithSomeTxIdAndSnapshotIsolation()
+      throws TransactionException {
     // Arrange
 
     // Act
-    TwoPhaseConsensusCommit transaction = manager.begin();
+    TwoPhaseConsensusCommit transaction =
+        (TwoPhaseConsensusCommit)
+            ((WrappedTwoPhaseCommitTransaction) manager.begin()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
@@ -66,11 +75,14 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
-  public void begin_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation() {
+  public void begin_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
+      throws TransactionException {
     // Arrange
 
     // Act
-    TwoPhaseConsensusCommit transaction = manager.begin(ANY_TX_ID);
+    TwoPhaseConsensusCommit transaction =
+        (TwoPhaseConsensusCommit)
+            ((WrappedTwoPhaseCommitTransaction) manager.begin(ANY_TX_ID)).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
@@ -79,12 +91,17 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
-  public void begin_CalledTwice_ReturnRespectiveConsensusCommitWithSharedObjects() {
+  public void begin_CalledTwice_ReturnRespectiveConsensusCommitWithSharedObjects()
+      throws TransactionException {
     // Arrange
 
     // Act
-    TwoPhaseConsensusCommit transaction1 = manager.begin();
-    TwoPhaseConsensusCommit transaction2 = manager.begin();
+    TwoPhaseConsensusCommit transaction1 =
+        (TwoPhaseConsensusCommit)
+            ((WrappedTwoPhaseCommitTransaction) manager.begin()).getOriginalTransaction();
+    TwoPhaseConsensusCommit transaction2 =
+        (TwoPhaseConsensusCommit)
+            ((WrappedTwoPhaseCommitTransaction) manager.begin()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
@@ -104,7 +121,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Arrange
 
     // Act
-    TwoPhaseConsensusCommit transaction = manager.start();
+    TwoPhaseConsensusCommit transaction =
+        (TwoPhaseConsensusCommit)
+            ((WrappedTwoPhaseCommitTransaction) manager.start()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
@@ -118,7 +137,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Arrange
 
     // Act
-    TwoPhaseConsensusCommit transaction = manager.start(ANY_TX_ID);
+    TwoPhaseConsensusCommit transaction =
+        (TwoPhaseConsensusCommit)
+            ((WrappedTwoPhaseCommitTransaction) manager.start(ANY_TX_ID)).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
@@ -132,8 +153,12 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Arrange
 
     // Act
-    TwoPhaseConsensusCommit transaction1 = manager.start();
-    TwoPhaseConsensusCommit transaction2 = manager.start();
+    TwoPhaseConsensusCommit transaction1 =
+        (TwoPhaseConsensusCommit)
+            ((WrappedTwoPhaseCommitTransaction) manager.start()).getOriginalTransaction();
+    TwoPhaseConsensusCommit transaction2 =
+        (TwoPhaseConsensusCommit)
+            ((WrappedTwoPhaseCommitTransaction) manager.start()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
@@ -148,11 +173,14 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
-  public void join_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation() {
+  public void join_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
+      throws TransactionException {
     // Arrange
 
     // Act
-    TwoPhaseConsensusCommit transaction = manager.join(ANY_TX_ID);
+    TwoPhaseConsensusCommit transaction =
+        (TwoPhaseConsensusCommit)
+            ((WrappedTwoPhaseCommitTransaction) manager.join(ANY_TX_ID)).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
@@ -161,24 +189,97 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
-  public void resume_CalledAfterSuspend_ReturnSameTransactionObjects() throws TransactionException {
+  public void resume_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
+    TwoPhaseCommitTransaction transaction1 = manager.begin(ANY_TX_ID);
 
     // Act
-    TwoPhaseConsensusCommit transaction1 = manager.join(ANY_TX_ID);
-    manager.suspend(transaction1);
-    TwoPhaseConsensusCommit transaction2 = manager.resume(ANY_TX_ID);
+    TwoPhaseCommitTransaction transaction2 = manager.resume(ANY_TX_ID);
 
     // Assert
     assertThat(transaction1).isEqualTo(transaction2);
   }
 
   @Test
-  public void resume_CalledWithoutSuspend_ThrowTransactionException() {
+  public void resume_CalledWithJoin_ReturnSameTransactionObject() throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction1 = manager.join(ANY_TX_ID);
+
+    // Act
+    TwoPhaseCommitTransaction transaction2 = manager.resume(ANY_TX_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void resume_CalledWithoutBeginOrJoin_ThrowIllegalStateException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(TransactionException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void resume_CalledWithBeginAndCommit_ThrowIllegalStateException()
+      throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = manager.begin(ANY_TX_ID);
+    transaction.prepare();
+    transaction.commit();
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void resume_CalledWithBeginAndCommit_CommitExceptionThrown_ReturnSameTransactionObject()
+      throws TransactionException {
+    // Arrange
+    doThrow(CommitException.class).when(commit).commitState(any());
+
+    TwoPhaseCommitTransaction transaction1 = manager.begin(ANY_TX_ID);
+    transaction1.prepare();
+    try {
+      transaction1.commit();
+    } catch (CommitException ignored) {
+      // expected
+    }
+
+    // Act
+    TwoPhaseCommitTransaction transaction2 = manager.resume(ANY_TX_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void resume_CalledWithBeginAndRollback_ThrowIllegalStateException()
+      throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = manager.begin(ANY_TX_ID);
+    transaction.prepare();
+    transaction.rollback();
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowIllegalStateException()
+      throws TransactionException {
+    // Arrange
+    doThrow(UnknownTransactionStatusException.class).when(commit).abort(any());
+
+    TwoPhaseCommitTransaction transaction1 = manager.begin(ANY_TX_ID);
+    try {
+      transaction1.rollback();
+    } catch (RollbackException ignored) {
+      // expected
+    }
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test

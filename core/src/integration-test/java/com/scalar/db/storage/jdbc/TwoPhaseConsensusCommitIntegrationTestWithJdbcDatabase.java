@@ -7,7 +7,7 @@ public class TwoPhaseConsensusCommitIntegrationTestWithJdbcDatabase
     extends TwoPhaseConsensusCommitIntegrationTestBase {
 
   @Override
-  protected Properties getProps(String testName) {
+  protected Properties getProps1(String testName) {
     return JdbcEnv.getProperties(testName);
   }
 }

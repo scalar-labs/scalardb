@@ -1,16 +1,21 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.transaction.common.WrappedDistributedTransaction;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,11 +56,14 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void begin_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolation() {
+  public void begin_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolation()
+      throws TransactionException {
     // Arrange
 
     // Act
-    ConsensusCommit transaction = manager.begin();
+    ConsensusCommit transaction =
+        (ConsensusCommit)
+            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
@@ -64,11 +72,14 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void begin_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation() {
+  public void begin_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
+      throws TransactionException {
     // Arrange
 
     // Act
-    ConsensusCommit transaction = manager.begin(ANY_TX_ID);
+    ConsensusCommit transaction =
+        (ConsensusCommit)
+            ((WrappedDistributedTransaction) manager.begin(ANY_TX_ID)).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
@@ -77,12 +88,17 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void begin_CalledTwice_ReturnRespectiveConsensusCommitWithSharedCommitAndRecovery() {
+  public void begin_CalledTwice_ReturnRespectiveConsensusCommitWithSharedCommitAndRecovery()
+      throws TransactionException {
     // Arrange
 
     // Act
-    ConsensusCommit transaction1 = manager.begin();
-    ConsensusCommit transaction2 = manager.begin();
+    ConsensusCommit transaction1 =
+        (ConsensusCommit)
+            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
+    ConsensusCommit transaction2 =
+        (ConsensusCommit)
+            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
@@ -102,7 +118,9 @@ public class ConsensusCommitManagerTest {
     // Arrange
 
     // Act
-    ConsensusCommit transaction = manager.start();
+    ConsensusCommit transaction =
+        (ConsensusCommit)
+            ((WrappedDistributedTransaction) manager.start()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
@@ -116,7 +134,9 @@ public class ConsensusCommitManagerTest {
     // Arrange
 
     // Act
-    ConsensusCommit transaction = manager.start(ANY_TX_ID);
+    ConsensusCommit transaction =
+        (ConsensusCommit)
+            ((WrappedDistributedTransaction) manager.start(ANY_TX_ID)).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
@@ -125,11 +145,16 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void start_SerializableGiven_ReturnConsensusCommitWithSomeTxIdAndSerializable() {
+  public void start_SerializableGiven_ReturnConsensusCommitWithSomeTxIdAndSerializable()
+      throws TransactionException {
     // Arrange
 
     // Act
-    ConsensusCommit transaction = manager.start(com.scalar.db.api.Isolation.SERIALIZABLE);
+    ConsensusCommit transaction =
+        (ConsensusCommit)
+            ((WrappedDistributedTransaction)
+                    manager.start(com.scalar.db.api.Isolation.SERIALIZABLE))
+                .getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
@@ -152,8 +177,12 @@ public class ConsensusCommitManagerTest {
     // Arrange
 
     // Act
-    ConsensusCommit transaction1 = manager.start();
-    ConsensusCommit transaction2 = manager.start();
+    ConsensusCommit transaction1 =
+        (ConsensusCommit)
+            ((WrappedDistributedTransaction) manager.start()).getOriginalTransaction();
+    ConsensusCommit transaction2 =
+        (ConsensusCommit)
+            ((WrappedDistributedTransaction) manager.start()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
@@ -165,6 +194,68 @@ public class ConsensusCommitManagerTest {
     assertThat(transaction1.getRecoveryHandler())
         .isEqualTo(transaction2.getRecoveryHandler())
         .isEqualTo(recovery);
+  }
+
+  @Test
+  public void resume_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
+
+    // Act
+    DistributedTransaction transaction2 = manager.resume(ANY_TX_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void resume_CalledWithoutBegin_ThrowIllegalStateException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void resume_CalledWithBeginAndCommit_ThrowIllegalStateException()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin(ANY_TX_ID);
+    transaction.commit();
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void resume_CalledWithBeginAndCommit_CommitExceptionThrown_ReturnSameTransactionObject()
+      throws TransactionException {
+    // Arrange
+    doThrow(CommitException.class).when(commit).commit(any());
+
+    DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
+    try {
+      transaction1.commit();
+    } catch (CommitException ignored) {
+      // expected
+    }
+
+    // Act
+    DistributedTransaction transaction2 = manager.resume(ANY_TX_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void resume_CalledWithBeginAndRollback_ThrowIllegalStateException()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin(ANY_TX_ID);
+    transaction.rollback();
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test

@@ -4,12 +4,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
@@ -29,6 +36,7 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
   private static final String ANY_ID = "id";
 
   @Mock private GrpcConfig config;
+  @Mock private DatabaseConfig databaseConfig;
   @Mock private TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionStub stub;
   @Mock private TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionBlockingStub blockingStub;
   @Mock private TableMetadataManager metadataManager;
@@ -40,10 +48,159 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    manager = new GrpcTwoPhaseCommitTransactionManager(config, stub, blockingStub, metadataManager);
+    manager =
+        new GrpcTwoPhaseCommitTransactionManager(
+            config, databaseConfig, stub, blockingStub, metadataManager);
     manager.with("namespace", "table");
     when(config.getDeadlineDurationMillis()).thenReturn(60000L);
     when(blockingStub.withDeadlineAfter(anyLong(), any())).thenReturn(blockingStub);
+  }
+
+  @Test
+  public void resume_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
+    // Arrange
+    GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
+    GrpcTwoPhaseCommitTransactionOnBidirectionalStream bidirectionalStream =
+        mock(GrpcTwoPhaseCommitTransactionOnBidirectionalStream.class);
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
+    when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
+
+    TwoPhaseCommitTransaction transaction1 = spiedManager.begin(ANY_ID);
+
+    // Act
+    TwoPhaseCommitTransaction transaction2 = spiedManager.resume(ANY_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void resume_CalledWithStart_ReturnSameTransactionObject() throws TransactionException {
+    // Arrange
+    GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
+    GrpcTwoPhaseCommitTransactionOnBidirectionalStream bidirectionalStream =
+        mock(GrpcTwoPhaseCommitTransactionOnBidirectionalStream.class);
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
+    when(bidirectionalStream.startTransaction(ANY_ID)).thenReturn(ANY_ID);
+
+    TwoPhaseCommitTransaction transaction1 = spiedManager.start(ANY_ID);
+
+    // Act
+    TwoPhaseCommitTransaction transaction2 = spiedManager.resume(ANY_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void resume_CalledWithJoin_ReturnSameTransactionObject() throws TransactionException {
+    // Arrange
+    GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
+    GrpcTwoPhaseCommitTransactionOnBidirectionalStream bidirectionalStream =
+        mock(GrpcTwoPhaseCommitTransactionOnBidirectionalStream.class);
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
+
+    TwoPhaseCommitTransaction transaction1 = spiedManager.join(ANY_ID);
+
+    // Act
+    TwoPhaseCommitTransaction transaction2 = spiedManager.resume(ANY_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void resume_CalledWithoutBeginOrStartOrJoin_ThrowIllegalStateException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void resume_CalledWithBeginAndCommit_ThrowIllegalStateException()
+      throws TransactionException {
+    // Arrange
+    GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
+    GrpcTwoPhaseCommitTransactionOnBidirectionalStream bidirectionalStream =
+        mock(GrpcTwoPhaseCommitTransactionOnBidirectionalStream.class);
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
+    when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
+
+    TwoPhaseCommitTransaction transaction = spiedManager.begin(ANY_ID);
+    transaction.prepare();
+    transaction.commit();
+
+    // Act Assert
+    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void resume_CalledWithBeginAndCommit_CommitExceptionThrown_ReturnSameTransactionObject()
+      throws TransactionException {
+    // Arrange
+    GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
+    GrpcTwoPhaseCommitTransactionOnBidirectionalStream bidirectionalStream =
+        mock(GrpcTwoPhaseCommitTransactionOnBidirectionalStream.class);
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
+    when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
+
+    doThrow(CommitException.class).when(bidirectionalStream).commit();
+
+    TwoPhaseCommitTransaction transaction1 = spiedManager.begin(ANY_ID);
+    transaction1.prepare();
+    try {
+      transaction1.commit();
+    } catch (CommitException ignored) {
+      // expected
+    }
+
+    // Act
+    TwoPhaseCommitTransaction transaction2 = spiedManager.resume(ANY_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void resume_CalledWithBeginAndRollback_ThrowIllegalStateException()
+      throws TransactionException {
+    // Arrange
+    GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
+    GrpcTwoPhaseCommitTransactionOnBidirectionalStream bidirectionalStream =
+        mock(GrpcTwoPhaseCommitTransactionOnBidirectionalStream.class);
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
+    when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
+
+    TwoPhaseCommitTransaction transaction = spiedManager.begin(ANY_ID);
+    transaction.prepare();
+    transaction.rollback();
+
+    // Act Assert
+    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowIllegalStateException()
+      throws TransactionException {
+    // Arrange
+    GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
+    GrpcTwoPhaseCommitTransactionOnBidirectionalStream bidirectionalStream =
+        mock(GrpcTwoPhaseCommitTransactionOnBidirectionalStream.class);
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
+    when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
+
+    doThrow(RollbackException.class).when(bidirectionalStream).rollback();
+
+    TwoPhaseCommitTransaction transaction1 = spiedManager.begin(ANY_ID);
+    try {
+      transaction1.rollback();
+    } catch (RollbackException ignored) {
+      // expected
+    }
+
+    // Act Assert
+    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test

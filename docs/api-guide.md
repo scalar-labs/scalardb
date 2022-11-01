@@ -305,6 +305,19 @@ DistributedTransaction transaction = manager.start("<transaction ID>");
 
 Note that you must guarantee uniqueness of the transaction ID in this case.
 
+### Resume a transaction
+
+You can resume a transaction you have already begun with specifying a transaction ID as follows:
+
+```java
+// Resume a transaction
+DistributedTransaction transaction = manager.resume("<transaction ID>");
+```
+
+It is helpful in a stateful application where a transaction spans multiple client requests.
+In that case, the application can begin a transaction in the first client request.
+And in the following client requests, it can resume the transaction with the `resume()` method.
+
 ### CRUD operations
 
 #### Key construction

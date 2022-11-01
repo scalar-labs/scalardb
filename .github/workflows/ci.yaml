@@ -182,6 +182,12 @@ jobs:
         with:
           arguments: integrationTestCosmos -Dscalardb.cosmos.uri=${{ secrets.COSMOS_URI }} -Dscalardb.cosmos.password=${{ secrets.COSMOS_PASSWORD }} -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}_
 
+      - name : Delete gradle daemon log files
+        if: always()
+#       Delete all files modified more than 3 days ago with the ".out.log" file extension located in the "/home/azureuser/.gradle/daemon"
+#       folder hierarchy. These files accumulate over time and can end up using a lot of disk space
+        run : find /home/azureuser/.gradle/daemon -name "*.out.log" -type f -mtime +3 -exec rm -vf {} +
+
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v3

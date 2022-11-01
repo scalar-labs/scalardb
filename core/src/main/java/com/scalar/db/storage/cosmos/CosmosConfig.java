@@ -24,7 +24,7 @@ public class CosmosConfig {
 
   public CosmosConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getProperties().getProperty(DatabaseConfig.STORAGE);
-    if (storage == null || !storage.equals("cosmos")) {
+    if (!"cosmos".equals(storage)) {
       throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be 'cosmos'");
     }
 

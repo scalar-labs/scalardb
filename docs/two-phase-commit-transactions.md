@@ -38,7 +38,7 @@ You don't need a special configuration for Two-phase Commit Transactions, so you
 This section explains how to execute Two-phase Commit Transactions.
 
 Like a well-known two-phase commit protocol, there are two roles, a coordinator and a participant, that collaboratively execute a single transaction.
-The coordinator process first starts a transaction, and the participant processes join the transaction after that.
+The coordinator process first begins a transaction, and the participant processes join the transaction.
 
 ### Get a TwoPhaseCommitTransactionManager instance
 
@@ -62,7 +62,7 @@ Or
 TwoPhaseCommitTransaction tx = manager.start();
 ```
 
-The process/application that starts the transaction acts as a coordinator, as mentioned.
+The process/application that begins the transaction acts as a coordinator, as mentioned.
 
 You can also begin/start a transaction by specifying a transaction ID as follows:
 ```java
@@ -84,12 +84,12 @@ tx.getId();
 
 ### Join the transaction (for participants)
 
-If you are a participant, you can join the transaction that has been started by the coordinator as follows:
+If you are a participant, you can join the transaction that has been begun by the coordinator as follows:
 ```java
 TwoPhaseCommitTransaction tx = manager.join("<transaction ID>")
 ```
 
-You need to specify the transaction ID associated with the transaction that the coordinator has started.
+You need to specify the transaction ID associated with the transaction that the coordinator has begun.
 
 ### CRUD operations for the transaction
 
@@ -234,23 +234,18 @@ When using an L3/L4 load balancer, you can use the same HTTP connection to send 
 When using an L7 load balancer, since requests in the same HTTP connection do not necessarily go to the same server, you need to use cookies or similar for routing requests to correct server.
 You can use session affinity (sticky session) in that case.
 
-#### Suspend and resume a transaction
+#### Resume a transaction
 
 Since services using Two-phase Commit Transactions exchange multiple requests/responses, you may need to execute a transaction across multiple endpoints/APIs.
-For such cases, you can suspend and resume a transaction object (a `TwoPhaseCommitTransaction` instance) as follows:
+For such cases, you can resume a transaction object (a `TwoPhaseCommitTransaction` instance) that you began or joined as follows:
 
 ```java
-// Join the transaction
+// Join (or begin) the transaction
 TwoPhaseCommitTransaction tx = manager.join("<transaction ID>");
-
-....
-
-// Suspend the transaction
-manager.suspend(tx);
 
 ...
 
-// Resume the suspended transaction by the trnasaction ID
+// Resume the transaction by the trnasaction ID
 TwoPhaseCommitTransaction tx1 = manager.resume("<transaction ID>")
 ```
 
@@ -274,7 +269,7 @@ interface ServiceB {
 }
 ```
 
-And, let's say a client calls `ServiceA.facadeEndpoint()` that starts a transaction that spans the two services (`ServiceA` and `ServiceB`) as follows:
+And, let's say a client calls `ServiceA.facadeEndpoint()` that begins a transaction that spans the two services (`ServiceA` and `ServiceB`) as follows:
 
 ```java
 public class ServiceAImpl implements ServiceA {
@@ -286,7 +281,7 @@ public class ServiceAImpl implements ServiceA {
 
   @Override
   public void facadeEndpoint() throws Exception {
-    TwoPhaseCommitTransaction tx = manager.start();
+    TwoPhaseCommitTransaction tx = manager.begin();
 
     try {
       ...
@@ -319,7 +314,7 @@ public class ServiceAImpl implements ServiceA {
 
 This facade endpoint in `ServiceA` calls multiple endpoints (`endpoint1()`, `endpoint2()`, `prepare()`, `commit()`, and `rollback()`) of `ServiceB`.
 And in Two-phase Commit Transactions, you need to use the same transaction object across the endpoints.
-For this situation, you can suspend and resume the transaction.
+For this situation, you can resume the transaction.
 The implementation of `ServiceB` is as follows:
 
 ```java
@@ -333,59 +328,39 @@ public class ServiceBImpl implements ServiceB {
   public void endpoint1(String txId) throws Exception {
     // First, you need to join the transaction
     TwoPhaseCommitTransaction tx = manager.join(txId);
-
-    ...
-
-    // Suspend the transaction object
-    manager.suspend(tx);
   }
 
   @Override
   public void endpoint2(String txId) throws Exception {
-    // You can resume the transaction suspended in endpoint1()
+    // You can resume the transaction that you joined in endpoint1()
     TwoPhaseCommitTransaction tx = manager.resume(txId);
-
-    ...
-
-    // Suspend the transaction object
-    manager.suspend(tx);
   }
 
   @Override
   public void prepare(String txId) throws Exception {
-    // You can resume the suspended transaction
+    // You can resume the transaction
     TwoPhaseCommitTransaction tx = manager.resume(txId);
 
     ...
 
     // Prepare
     tx.prepare();
-
-    ...
-
-    // Suspend the transaction object
-    manager.suspend(tx);
   }
 
   @Override
   public void commit(String txId) throws Exception {
-    // You can resume the suspended transaction
+    // You can resume the transaction
     TwoPhaseCommitTransaction tx = manager.resume(txId);
-    try {
-      ...
 
-      // Commit
-      tx.commit();
-    } catch (Exception e) {
-      // Suspend the transaction object (you need to suspend the transaction when commit fails
-      // because you need to rollback the transaction after that)
-      manager.suspend(tx);
-    }
+    ...
+
+    // Commit
+    tx.commit();
   }
 
   @Override
   public void rollback(String txId) throws Exception {
-    // You can resume the suspended transaction
+    // You can resume the transaction
     TwoPhaseCommitTransaction tx = manager.resume(txId);
 
     ...
@@ -396,7 +371,7 @@ public class ServiceBImpl implements ServiceB {
 }
 ```
 
-As you can see, by suspending and resuming the transaction, you can share the same transaction object across multiple endpoints in `ServiceB`.
+As you can see, by resuming the transaction, you can share the same transaction object across multiple endpoints in `ServiceB`.
 
 ## Further reading
 

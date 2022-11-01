@@ -1,13 +1,23 @@
 package com.scalar.db.util;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.Uninterruptibles;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.AbstractCollection;
+import java.util.AbstractMap;
+import java.util.AbstractSet;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -25,7 +35,9 @@ public class ActiveExpiringMap<K, V> {
     this.valueLifetimeMillis = valueLifetimeMillis;
     this.valueExpirationThreadIntervalMillis = valueExpirationThreadIntervalMillis;
     this.valueExpirationHandler = valueExpirationHandler;
-    startValueExpirationThread();
+    if (valueLifetimeMillis > 0) {
+      startValueExpirationThread();
+    }
   }
 
   private void startValueExpirationThread() {
@@ -81,12 +93,93 @@ public class ActiveExpiringMap<K, V> {
     return map.containsKey(key);
   }
 
+  public boolean containsValue(V value) {
+    return map.values().stream().map(ValueHolder::get).anyMatch(value::equals);
+  }
+
   public V remove(K key) {
     ValueHolder<V> prev = map.remove(key);
     if (prev == null) {
       return null;
     }
     return prev.get();
+  }
+
+  public Set<K> keySet() {
+    return map.keySet();
+  }
+
+  public Collection<V> values() {
+    Collection<ValueHolder<V>> values = map.values();
+    return new AbstractCollection<V>() {
+      @Override
+      public Iterator<V> iterator() {
+        return new Iterator<V>() {
+          private final Iterator<ValueHolder<V>> valueIterator = values.iterator();
+
+          @Override
+          public boolean hasNext() {
+            return valueIterator.hasNext();
+          }
+
+          @Override
+          public V next() {
+            ValueHolder<V> next = valueIterator.next();
+            return next.get();
+          }
+
+          @Override
+          public void remove() {
+            valueIterator.remove();
+          }
+        };
+      }
+
+      @Override
+      public int size() {
+        return values.size();
+      }
+    };
+  }
+
+  public Set<Map.Entry<K, V>> entrySet() {
+    return new AbstractSet<Entry<K, V>>() {
+      private final Set<Entry<K, ValueHolder<V>>> entries = map.entrySet();
+
+      @Override
+      public Iterator<Entry<K, V>> iterator() {
+        return new Iterator<Entry<K, V>>() {
+          private final Iterator<Entry<K, ValueHolder<V>>> entryIterator = entries.iterator();
+
+          @Override
+          public boolean hasNext() {
+            return entryIterator.hasNext();
+          }
+
+          @SuppressFBWarnings("SE_BAD_FIELD")
+          @Override
+          public Entry<K, V> next() {
+            Entry<K, ValueHolder<V>> next = entryIterator.next();
+            return new AbstractMap.SimpleEntry<K, V>(next.getKey(), next.getValue().get()) {
+              @Override
+              public V setValue(V value) {
+                throw new UnsupportedOperationException();
+              }
+            };
+          }
+
+          @Override
+          public void remove() {
+            entryIterator.remove();
+          }
+        };
+      }
+
+      @Override
+      public int size() {
+        return entries.size();
+      }
+    };
   }
 
   public void updateExpirationTime(K key) {
@@ -96,7 +189,14 @@ public class ActiveExpiringMap<K, V> {
     }
   }
 
-  private static class ValueHolder<V> {
+  @VisibleForTesting
+  @Nullable
+  ValueHolder<V> getValueHolder(K key) {
+    return map.get(key);
+  }
+
+  @VisibleForTesting
+  static class ValueHolder<V> {
     private final V value;
     private final long lifetimeMillis;
     private final AtomicLong lastUpdateTime = new AtomicLong();
@@ -117,6 +217,10 @@ public class ActiveExpiringMap<K, V> {
 
     public V get() {
       return value;
+    }
+
+    public long getLastUpdateTime() {
+      return lastUpdateTime.get();
     }
   }
 }

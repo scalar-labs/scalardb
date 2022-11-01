@@ -32,6 +32,8 @@ public class DynamoOperationCheckerTest {
   private static final String CKEY1 = "c1";
   private static final String COL1 = "v1";
   private static final String COL2 = "v2";
+  private static final String COL3 = "v3";
+  private static final String COL4 = "v4";
   @Mock private TableMetadataManager metadataManager;
   private DynamoOperationChecker operationChecker;
 
@@ -44,9 +46,13 @@ public class DynamoOperationCheckerTest {
             .addColumn(CKEY1, DataType.INT)
             .addColumn(COL1, DataType.INT)
             .addColumn(COL2, DataType.BOOLEAN)
+            .addColumn(COL3, DataType.TEXT)
+            .addColumn(COL4, DataType.BLOB)
             .addPartitionKey(PKEY1)
             .addClusteringKey(CKEY1)
             .addSecondaryIndex(COL1)
+            .addSecondaryIndex(COL3)
+            .addSecondaryIndex(COL4)
             .build();
     when(metadataManager.getTableMetadata(any())).thenReturn(tableMetadata);
     operationChecker = new DynamoOperationChecker(metadataManager);
@@ -78,6 +84,40 @@ public class DynamoOperationCheckerTest {
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void check_ForPutWithEmptyTextValueIndex_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofInt(PKEY1, 0))
+            .clusteringKey(Key.ofInt(CKEY1, 0))
+            .textValue(COL3, "")
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(put))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void check_ForPutWithEmptyBlobValueIndex_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofInt(PKEY1, 0))
+            .clusteringKey(Key.ofInt(CKEY1, 0))
+            .blobValue(COL4, new byte[0])
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(put))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

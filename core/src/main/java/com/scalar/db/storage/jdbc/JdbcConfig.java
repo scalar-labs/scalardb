@@ -81,7 +81,7 @@ public class JdbcConfig {
   public JdbcConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
     String transactionManager = databaseConfig.getTransactionManager();
-    if (!storage.equals("jdbc") && !transactionManager.equals("jdbc")) {
+    if (!"jdbc".equals(storage) && !"jdbc".equals(transactionManager)) {
       throw new IllegalArgumentException(
           DatabaseConfig.STORAGE
               + " or "

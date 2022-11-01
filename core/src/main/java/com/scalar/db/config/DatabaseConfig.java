@@ -30,6 +30,7 @@ public class DatabaseConfig {
   private String storage;
   private String transactionManager;
   private long metadataCacheExpirationTimeSecs;
+  private long activeTransactionManagementExpirationTimeMillis;
 
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
@@ -40,6 +41,8 @@ public class DatabaseConfig {
   public static final String TRANSACTION_MANAGER = PREFIX + "transaction_manager";
   public static final String METADATA_CACHE_EXPIRATION_TIME_SECS =
       PREFIX + "metadata.cache_expiration_time_secs";
+  public static final String ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS =
+      PREFIX + "active_transaction_management.expiration_time_millis";
 
   public DatabaseConfig(File propertiesFile) throws IOException {
     try (FileInputStream stream = new FileInputStream(propertiesFile)) {
@@ -82,6 +85,8 @@ public class DatabaseConfig {
     transactionManager = getString(getProperties(), TRANSACTION_MANAGER, "consensus-commit");
     metadataCacheExpirationTimeSecs =
         getLong(getProperties(), METADATA_CACHE_EXPIRATION_TIME_SECS, -1);
+    activeTransactionManagementExpirationTimeMillis =
+        getLong(getProperties(), ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS, 0);
   }
 
   public List<String> getContactPoints() {
@@ -110,5 +115,9 @@ public class DatabaseConfig {
 
   public long getMetadataCacheExpirationTimeSecs() {
     return metadataCacheExpirationTimeSecs;
+  }
+
+  public long getActiveTransactionManagementExpirationTimeMillis() {
+    return activeTransactionManagementExpirationTimeMillis;
   }
 }
