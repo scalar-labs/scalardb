@@ -64,14 +64,6 @@ public class ConsensusCommitAdminIntegrationTestWithDistributedTransactionAdminS
   }
 
   @Override
-  protected String getCoordinatorNamespace(String testName) {
-    String coordinatorNamespace =
-        ServerEnv.getServerProperties1(testName)
-            .getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
-    return coordinatorNamespace + "_" + testName;
-  }
-
-  @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
     Properties properties = ServerEnv.getServerProperties1(testName);
 

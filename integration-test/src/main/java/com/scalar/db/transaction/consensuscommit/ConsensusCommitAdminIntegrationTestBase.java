@@ -61,13 +61,6 @@ public abstract class ConsensusCommitAdminIntegrationTestBase
     return properties;
   }
 
-  @Override
-  protected String getCoordinatorNamespace(String testName) {
-    return new ConsensusCommitConfig(new DatabaseConfig(getProperties(testName)))
-        .getCoordinatorNamespace()
-        .orElse(Coordinator.NAMESPACE);
-  }
-
   @Test
   public void
       getTableMetadata_WhenIncludeMetadataIsEnabled_ShouldReturnCorrectMetadataWithTransactionMetadataColumns()

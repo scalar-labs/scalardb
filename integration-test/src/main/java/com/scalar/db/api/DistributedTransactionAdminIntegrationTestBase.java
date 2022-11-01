@@ -103,8 +103,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     return NAMESPACE3;
   }
 
-  protected abstract String getCoordinatorNamespace(String testName);
-
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
     for (String namespace : Arrays.asList(namespace1, namespace2)) {
@@ -626,12 +624,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     Set<String> namespaces = admin.getNamespaceNames();
 
     // Assert
-    if (hasCoordinatorTables()) {
-      assertThat(namespaces)
-          .containsOnly(namespace1, namespace2, getCoordinatorNamespace(TEST_NAME));
-    } else {
-      assertThat(namespaces).containsOnly(namespace1, namespace2);
-    }
+    assertThat(namespaces).containsOnly(namespace1, namespace2);
   }
 
   @Test
@@ -645,19 +638,10 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     admin.upgrade(getCreationOptions());
 
     // Assert
-    if (hasCoordinatorTables()) {
-      assertThat(admin.getNamespaceNames())
-          .containsOnly(namespace1, namespace2, getCoordinatorNamespace(TEST_NAME));
-    } else {
-      assertThat(admin.getNamespaceNames()).containsOnly(namespace1, namespace2);
-    }
+    assertThat(admin.getNamespaceNames()).containsOnly(namespace1, namespace2);
   }
 
   protected boolean isIndexOnBooleanColumnSupported() {
-    return true;
-  }
-
-  protected boolean hasCoordinatorTables() {
     return true;
   }
 }
