@@ -141,22 +141,33 @@ public class ParallelExecutor {
       String taskName,
       String transactionId)
       throws ExecutionException, CommitConflictException {
-    ExecutorService executorService = setupOrReuseParallelExecutionService(config);
+    lastParallelTaskTime.set(Instant.now());
 
-    CompletionService<Void> completionService = new ExecutorCompletionService<>(executorService);
-    tasks.forEach(
-        t ->
-            completionService.submit(
-                () -> {
-                  try {
-                    t.run();
-                  } catch (Exception e) {
-                    logger.warn(
-                        "failed to run a {} task. transaction ID: {}", taskName, transactionId, e);
-                    throw e;
-                  }
-                  return null;
-                }));
+    // This synchronization is needed for the following case without the synchronization
+    // - main thread gets `this.parallelExecutorService` from setupOrReuseParallelExecutionService()
+    // - monitor thread detects the idle timeout of the execution thread and shutdown the existing
+    //   `this.parallelExecutorService`
+    // - main thread submits tasks to the shutdown (old) `this.parallelExecutorService`. But the
+    //   operation is rejected as it's already shutdown
+    CompletionService<Void> completionService;
+    synchronized (this) {
+      ExecutorService executorService = setupOrReuseParallelExecutionService(config);
+
+      completionService = new ExecutorCompletionService<>(executorService);
+      tasks.forEach(
+          t ->
+              completionService.submit(
+                  () -> {
+                    try {
+                      t.run();
+                    } catch (Exception e) {
+                      logger.warn(
+                          "failed to run a {} task. transaction ID: {}", taskName, transactionId, e);
+                      throw e;
+                    }
+                    return null;
+                  }));
+    }
 
     if (!noWait) {
       Exception exception = null;
