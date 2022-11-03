@@ -54,6 +54,8 @@ subprojects {
         protobufPluginVersion = '0.8.17'
         shadowPluginVersion = '7.1.2'
         dockerPluginVersion = '0.25.0'
+        // Make JDK11+ use the same version as JDK8 uses
+        googleJavaFormatVersion = '1.7'
     }
 
     repositories {
