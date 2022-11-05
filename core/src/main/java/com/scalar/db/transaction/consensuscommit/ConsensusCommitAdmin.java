@@ -16,6 +16,7 @@ import com.scalar.db.service.StorageFactory;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -173,7 +174,9 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
-    return admin.getNamespaceNames();
+    return admin.getNamespaceNames().stream()
+        .filter(namespace -> !namespace.equals(coordinatorNamespace))
+        .collect(Collectors.toSet());
   }
 
   @Override

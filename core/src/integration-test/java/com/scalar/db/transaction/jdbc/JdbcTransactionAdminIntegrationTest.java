@@ -19,17 +19,7 @@ public class JdbcTransactionAdminIntegrationTest
   }
 
   @Override
-  protected boolean hasCoordinatorTables() {
-    return false;
-  }
-
-  @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new JdbcAdminTestUtils(JdbcEnv.getProperties(testName));
-  }
-
-  @Override
-  protected String getCoordinatorNamespace(String testName) {
-    throw new UnsupportedOperationException();
   }
 }
