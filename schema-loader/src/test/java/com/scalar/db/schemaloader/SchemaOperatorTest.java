@@ -411,4 +411,16 @@ public class SchemaOperatorTest {
     verifyNoMoreInteractions(transactionAdmin);
     verifyNoMoreInteractions(storageAdmin);
   }
+
+  @Test
+  public void upgrade_ShouldCallTransactionAdminProperly() throws Exception {
+    // Arrange
+
+    // Act
+    operator.upgrade(options);
+
+    // Assert
+    verify(transactionAdmin).upgrade(options);
+    verifyNoInteractions(storageAdmin);
+  }
 }

@@ -90,6 +90,14 @@ public class SchemaLoaderCommand implements Callable<Integer> {
                 + "It compares the provided table schema to the existing schema to decide which columns need to be added and which indexes need to be created or deleted",
         defaultValue = "false")
     boolean alterTables;
+
+    @Option(
+        names = {"--upgrade"},
+        description =
+            "Upgrades the Scalar DB environment to support the latest version of the Scalar DB API. Typically, you will be requested, as indicated on the release notes, to run this command after"
+                + " updating the Scalar DB version of your application environment.",
+        defaultValue = "false")
+    boolean upgrade;
   }
 
   @Override
@@ -105,6 +113,8 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       repairTables();
     } else if (mode.alterTables) {
       alterTables();
+    } else if (mode.upgrade) {
+      upgrade();
     }
     return 0;
   }
@@ -155,5 +165,13 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       options.put(DynamoAdmin.NO_SCALING, noScaling.toString());
     }
     SchemaLoader.alterTables(configPath, schemaFile, options);
+  }
+
+  private void upgrade() throws SchemaLoaderException {
+    Map<String, String> options = new HashMap<>();
+    if (noBackup != null) {
+      options.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
+    }
+    SchemaLoader.upgrade(configPath, options);
   }
 }
