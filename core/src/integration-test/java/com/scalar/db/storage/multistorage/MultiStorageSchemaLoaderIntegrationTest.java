@@ -60,7 +60,7 @@ public class MultiStorageSchemaLoaderIntegrationTest extends SchemaLoaderIntegra
   }
 
   @Override
-  protected void waitForKeyspacesTableCreation() {
+  protected void waitForNamespacesTableCreation() {
     // For Cassandra
     // After the keyspaces metadata table is created, since it is not readable right away using the
     // Cluster API of the Cassandra driver, we need to wait a bit.

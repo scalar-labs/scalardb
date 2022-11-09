@@ -414,7 +414,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Assert
     assertThat(exitCodeUpgrade).isZero();
-    waitForKeyspacesTableCreation();
+    waitForNamespacesTableCreation();
     assertThat(transactionAdmin.getNamespaceNames()).containsOnly(namespace1, namespace2);
   }
 
@@ -448,7 +448,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
     return SchemaLoader.mainInternal(args.toArray(new String[0]));
   }
 
-  protected void waitForKeyspacesTableCreation() {
+  protected void waitForNamespacesTableCreation() {
     // Do nothing
   }
 }
