@@ -349,4 +349,17 @@ public class SchemaLoaderCommandTest {
     Assertions.assertThat(exitCode).isEqualTo(1);
     schemaLoaderMockedStatic.verifyNoInteractions();
   }
+
+  @Test
+  public void call_WithProperArgumentsForUpgrading_ShouldCallUpgradeProperly() {
+    // Arrange
+    String configFile = "path_to_config_file";
+    Map<String, String> options = ImmutableMap.of(DynamoAdmin.NO_BACKUP, noBackup.toString());
+
+    // Act
+    commandLine.execute("--config", configFile, "--upgrade", "--no-backup");
+
+    // Assert
+    schemaLoaderMockedStatic.verify(() -> SchemaLoader.upgrade(Paths.get(configFile), options));
+  }
 }

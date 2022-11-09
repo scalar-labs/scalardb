@@ -707,4 +707,26 @@ public class SchemaLoaderTest {
     verify(parser).parse();
     verify(operator).alterTables(anyList(), anyMap());
   }
+
+  @Test
+  public void upgrade_WithConfigProperties_ShouldCallOperatorProperly() throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.upgrade(configProperties, options);
+
+    // Assert
+    verify(operator).upgrade(options);
+  }
+
+  @Test
+  public void upgrade_WithConfigFilePath_ShouldCallOperatorProperly() throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.upgrade(configFilePath, options);
+
+    // Assert
+    verify(operator).upgrade(options);
+  }
 }
