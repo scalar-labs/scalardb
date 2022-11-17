@@ -4,6 +4,7 @@ on:
   schedule:
     # UTC
     - cron: '0 20 * * *'
+  workflow_dispatch:
 
 env:
   TERM: dumb
@@ -11,8 +12,15 @@ jobs:
   docker:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        # TODO: Avoid specifying PATCH version to reduce maintenance effort...
+        target: [master, v3.4.7, v3.5.5, v3.6.2, v3.7.1]
+
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ matrix.target }}
 
       - name: Set up JDK 8
         uses: actions/setup-java@v3
