@@ -33,108 +33,6 @@ private static final long serialVersionUID = 0L;
   getUnknownFields() {
     return this.unknownFields;
   }
-  private TableMetadata(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
-    this();
-    if (extensionRegistry == null) {
-      throw new java.lang.NullPointerException();
-    }
-    int mutable_bitField0_ = 0;
-    com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
-    try {
-      boolean done = false;
-      while (!done) {
-        int tag = input.readTag();
-        switch (tag) {
-          case 0:
-            done = true;
-            break;
-          case 10: {
-            if (!((mutable_bitField0_ & 0x00000001) != 0)) {
-              columns_ = com.google.protobuf.MapField.newMapField(
-                  ColumnsDefaultEntryHolder.defaultEntry);
-              mutable_bitField0_ |= 0x00000001;
-            }
-            com.google.protobuf.MapEntry<java.lang.String, java.lang.Integer>
-            columns__ = input.readMessage(
-                ColumnsDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
-            columns_.getMutableMap().put(
-                columns__.getKey(), columns__.getValue());
-            break;
-          }
-          case 18: {
-            java.lang.String s = input.readStringRequireUtf8();
-            if (!((mutable_bitField0_ & 0x00000002) != 0)) {
-              partitionKeyNames_ = new com.google.protobuf.LazyStringArrayList();
-              mutable_bitField0_ |= 0x00000002;
-            }
-            partitionKeyNames_.add(s);
-            break;
-          }
-          case 26: {
-            java.lang.String s = input.readStringRequireUtf8();
-            if (!((mutable_bitField0_ & 0x00000004) != 0)) {
-              clusteringKeyNames_ = new com.google.protobuf.LazyStringArrayList();
-              mutable_bitField0_ |= 0x00000004;
-            }
-            clusteringKeyNames_.add(s);
-            break;
-          }
-          case 34: {
-            if (!((mutable_bitField0_ & 0x00000008) != 0)) {
-              clusteringOrders_ = com.google.protobuf.MapField.newMapField(
-                  ClusteringOrdersDefaultEntryHolder.defaultEntry);
-              mutable_bitField0_ |= 0x00000008;
-            }
-            com.google.protobuf.MapEntry<java.lang.String, java.lang.Integer>
-            clusteringOrders__ = input.readMessage(
-                ClusteringOrdersDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
-            clusteringOrders_.getMutableMap().put(
-                clusteringOrders__.getKey(), clusteringOrders__.getValue());
-            break;
-          }
-          case 42: {
-            java.lang.String s = input.readStringRequireUtf8();
-            if (!((mutable_bitField0_ & 0x00000010) != 0)) {
-              secondaryIndexNames_ = new com.google.protobuf.LazyStringArrayList();
-              mutable_bitField0_ |= 0x00000010;
-            }
-            secondaryIndexNames_.add(s);
-            break;
-          }
-          default: {
-            if (!parseUnknownField(
-                input, unknownFields, extensionRegistry, tag)) {
-              done = true;
-            }
-            break;
-          }
-        }
-      }
-    } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-      throw e.setUnfinishedMessage(this);
-    } catch (com.google.protobuf.UninitializedMessageException e) {
-      throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
-    } catch (java.io.IOException e) {
-      throw new com.google.protobuf.InvalidProtocolBufferException(
-          e).setUnfinishedMessage(this);
-    } finally {
-      if (((mutable_bitField0_ & 0x00000002) != 0)) {
-        partitionKeyNames_ = partitionKeyNames_.getUnmodifiableView();
-      }
-      if (((mutable_bitField0_ & 0x00000004) != 0)) {
-        clusteringKeyNames_ = clusteringKeyNames_.getUnmodifiableView();
-      }
-      if (((mutable_bitField0_ & 0x00000010) != 0)) {
-        secondaryIndexNames_ = secondaryIndexNames_.getUnmodifiableView();
-      }
-      this.unknownFields = unknownFields.build();
-      makeExtensionsImmutable();
-    }
-  }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
     return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TableMetadata_descriptor;
@@ -594,7 +492,7 @@ com.scalar.db.rpc.Order defaultValue) {
     for (int i = 0; i < secondaryIndexNames_.size(); i++) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 5, secondaryIndexNames_.getRaw(i));
     }
-    unknownFields.writeTo(output);
+    getUnknownFields().writeTo(output);
   }
 
   @java.lang.Override
@@ -647,7 +545,7 @@ com.scalar.db.rpc.Order defaultValue) {
       size += dataSize;
       size += 1 * getSecondaryIndexNamesList().size();
     }
-    size += unknownFields.getSerializedSize();
+    size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
   }
@@ -672,7 +570,7 @@ com.scalar.db.rpc.Order defaultValue) {
         other.internalGetClusteringOrders())) return false;
     if (!getSecondaryIndexNamesList()
         .equals(other.getSecondaryIndexNamesList())) return false;
-    if (!unknownFields.equals(other.unknownFields)) return false;
+    if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
 
@@ -703,7 +601,7 @@ com.scalar.db.rpc.Order defaultValue) {
       hash = (37 * hash) + SECONDARY_INDEX_NAMES_FIELD_NUMBER;
       hash = (53 * hash) + getSecondaryIndexNamesList().hashCode();
     }
-    hash = (29 * hash) + unknownFields.hashCode();
+    hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
   }
@@ -846,18 +744,13 @@ com.scalar.db.rpc.Order defaultValue) {
 
     // Construct using com.scalar.db.rpc.TableMetadata.newBuilder()
     private Builder() {
-      maybeForceBuilderInitialization();
+
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
       super(parent);
-      maybeForceBuilderInitialization();
-    }
-    private void maybeForceBuilderInitialization() {
-      if (com.google.protobuf.GeneratedMessageV3
-              .alwaysUseFieldBuilders) {
-      }
+
     }
     @java.lang.Override
     public Builder clear() {
@@ -998,7 +891,7 @@ com.scalar.db.rpc.Order defaultValue) {
         }
         onChanged();
       }
-      this.mergeUnknownFields(other.unknownFields);
+      this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
     }
@@ -1013,17 +906,64 @@ com.scalar.db.rpc.Order defaultValue) {
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      com.scalar.db.rpc.TableMetadata parsedMessage = null;
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
       try {
-        parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 10: {
+              com.google.protobuf.MapEntry<java.lang.String, java.lang.Integer>
+              columns__ = input.readMessage(
+                  ColumnsDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
+              internalGetMutableColumns().getMutableMap().put(
+                  columns__.getKey(), columns__.getValue());
+              break;
+            } // case 10
+            case 18: {
+              java.lang.String s = input.readStringRequireUtf8();
+              ensurePartitionKeyNamesIsMutable();
+              partitionKeyNames_.add(s);
+              break;
+            } // case 18
+            case 26: {
+              java.lang.String s = input.readStringRequireUtf8();
+              ensureClusteringKeyNamesIsMutable();
+              clusteringKeyNames_.add(s);
+              break;
+            } // case 26
+            case 34: {
+              com.google.protobuf.MapEntry<java.lang.String, java.lang.Integer>
+              clusteringOrders__ = input.readMessage(
+                  ClusteringOrdersDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
+              internalGetMutableClusteringOrders().getMutableMap().put(
+                  clusteringOrders__.getKey(), clusteringOrders__.getValue());
+              break;
+            } // case 34
+            case 42: {
+              java.lang.String s = input.readStringRequireUtf8();
+              ensureSecondaryIndexNamesIsMutable();
+              secondaryIndexNames_.add(s);
+              break;
+            } // case 42
+            default: {
+              if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                done = true; // was an endgroup tag
+              }
+              break;
+            } // default:
+          } // switch (tag)
+        } // while (!done)
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        parsedMessage = (com.scalar.db.rpc.TableMetadata) e.getUnfinishedMessage();
         throw e.unwrapIOException();
       } finally {
-        if (parsedMessage != null) {
-          mergeFrom(parsedMessage);
-        }
-      }
+        onChanged();
+      } // finally
       return this;
     }
     private int bitField0_;
@@ -1810,7 +1750,18 @@ com.scalar.db.rpc.Order defaultValue) {
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return new TableMetadata(input, extensionRegistry);
+      Builder builder = newBuilder();
+      try {
+        builder.mergeFrom(input, extensionRegistry);
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(builder.buildPartial());
+      } catch (com.google.protobuf.UninitializedMessageException e) {
+        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(e)
+            .setUnfinishedMessage(builder.buildPartial());
+      }
+      return builder.buildPartial();
     }
   };
 
