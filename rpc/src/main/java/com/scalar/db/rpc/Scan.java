@@ -35,142 +35,6 @@ private static final long serialVersionUID = 0L;
   getUnknownFields() {
     return this.unknownFields;
   }
-  private Scan(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
-    this();
-    if (extensionRegistry == null) {
-      throw new java.lang.NullPointerException();
-    }
-    int mutable_bitField0_ = 0;
-    com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
-    try {
-      boolean done = false;
-      while (!done) {
-        int tag = input.readTag();
-        switch (tag) {
-          case 0:
-            done = true;
-            break;
-          case 10: {
-            java.lang.String s = input.readStringRequireUtf8();
-
-            namespace_ = s;
-            break;
-          }
-          case 18: {
-            java.lang.String s = input.readStringRequireUtf8();
-
-            table_ = s;
-            break;
-          }
-          case 26: {
-            com.scalar.db.rpc.Key.Builder subBuilder = null;
-            if (partitionKey_ != null) {
-              subBuilder = partitionKey_.toBuilder();
-            }
-            partitionKey_ = input.readMessage(com.scalar.db.rpc.Key.parser(), extensionRegistry);
-            if (subBuilder != null) {
-              subBuilder.mergeFrom(partitionKey_);
-              partitionKey_ = subBuilder.buildPartial();
-            }
-
-            break;
-          }
-          case 32: {
-            int rawValue = input.readEnum();
-
-            consistency_ = rawValue;
-            break;
-          }
-          case 42: {
-            java.lang.String s = input.readStringRequireUtf8();
-            if (!((mutable_bitField0_ & 0x00000001) != 0)) {
-              projection_ = new com.google.protobuf.LazyStringArrayList();
-              mutable_bitField0_ |= 0x00000001;
-            }
-            projection_.add(s);
-            break;
-          }
-          case 50: {
-            com.scalar.db.rpc.Key.Builder subBuilder = null;
-            if (startClusteringKey_ != null) {
-              subBuilder = startClusteringKey_.toBuilder();
-            }
-            startClusteringKey_ = input.readMessage(com.scalar.db.rpc.Key.parser(), extensionRegistry);
-            if (subBuilder != null) {
-              subBuilder.mergeFrom(startClusteringKey_);
-              startClusteringKey_ = subBuilder.buildPartial();
-            }
-
-            break;
-          }
-          case 56: {
-
-            startInclusive_ = input.readBool();
-            break;
-          }
-          case 66: {
-            com.scalar.db.rpc.Key.Builder subBuilder = null;
-            if (endClusteringKey_ != null) {
-              subBuilder = endClusteringKey_.toBuilder();
-            }
-            endClusteringKey_ = input.readMessage(com.scalar.db.rpc.Key.parser(), extensionRegistry);
-            if (subBuilder != null) {
-              subBuilder.mergeFrom(endClusteringKey_);
-              endClusteringKey_ = subBuilder.buildPartial();
-            }
-
-            break;
-          }
-          case 72: {
-
-            endInclusive_ = input.readBool();
-            break;
-          }
-          case 82: {
-            if (!((mutable_bitField0_ & 0x00000002) != 0)) {
-              ordering_ = new java.util.ArrayList<com.scalar.db.rpc.Ordering>();
-              mutable_bitField0_ |= 0x00000002;
-            }
-            ordering_.add(
-                input.readMessage(com.scalar.db.rpc.Ordering.parser(), extensionRegistry));
-            break;
-          }
-          case 88: {
-
-            limit_ = input.readInt32();
-            break;
-          }
-          default: {
-            if (!parseUnknownField(
-                input, unknownFields, extensionRegistry, tag)) {
-              done = true;
-            }
-            break;
-          }
-        }
-      }
-    } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-      throw e.setUnfinishedMessage(this);
-    } catch (com.google.protobuf.UninitializedMessageException e) {
-      throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
-    } catch (java.io.IOException e) {
-      throw new com.google.protobuf.InvalidProtocolBufferException(
-          e).setUnfinishedMessage(this);
-    } finally {
-      if (((mutable_bitField0_ & 0x00000001) != 0)) {
-        projection_ = projection_.getUnmodifiableView();
-      }
-      if (((mutable_bitField0_ & 0x00000002) != 0)) {
-        ordering_ = java.util.Collections.unmodifiableList(ordering_);
-      }
-      this.unknownFields = unknownFields.build();
-      makeExtensionsImmutable();
-    }
-  }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
     return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Scan_descriptor;
@@ -512,7 +376,7 @@ private static final long serialVersionUID = 0L;
     if (limit_ != 0) {
       output.writeInt32(11, limit_);
     }
-    unknownFields.writeTo(output);
+    getUnknownFields().writeTo(output);
   }
 
   @java.lang.Override
@@ -567,7 +431,7 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeInt32Size(11, limit_);
     }
-    size += unknownFields.getSerializedSize();
+    size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
   }
@@ -612,7 +476,7 @@ private static final long serialVersionUID = 0L;
         .equals(other.getOrderingList())) return false;
     if (getLimit()
         != other.getLimit()) return false;
-    if (!unknownFields.equals(other.unknownFields)) return false;
+    if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
 
@@ -657,7 +521,7 @@ private static final long serialVersionUID = 0L;
     }
     hash = (37 * hash) + LIMIT_FIELD_NUMBER;
     hash = (53 * hash) + getLimit();
-    hash = (29 * hash) + unknownFields.hashCode();
+    hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
   }
@@ -774,19 +638,13 @@ private static final long serialVersionUID = 0L;
 
     // Construct using com.scalar.db.rpc.Scan.newBuilder()
     private Builder() {
-      maybeForceBuilderInitialization();
+
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
       super(parent);
-      maybeForceBuilderInitialization();
-    }
-    private void maybeForceBuilderInitialization() {
-      if (com.google.protobuf.GeneratedMessageV3
-              .alwaysUseFieldBuilders) {
-        getOrderingFieldBuilder();
-      }
+
     }
     @java.lang.Override
     public Builder clear() {
@@ -823,10 +681,11 @@ private static final long serialVersionUID = 0L;
 
       if (orderingBuilder_ == null) {
         ordering_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000002);
       } else {
+        ordering_ = null;
         orderingBuilder_.clear();
       }
+      bitField0_ = (bitField0_ & ~0x00000002);
       limit_ = 0;
 
       return this;
@@ -1004,7 +863,7 @@ private static final long serialVersionUID = 0L;
       if (other.getLimit() != 0) {
         setLimit(other.getLimit());
       }
-      this.mergeUnknownFields(other.unknownFields);
+      this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
     }
@@ -1019,17 +878,100 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      com.scalar.db.rpc.Scan parsedMessage = null;
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
       try {
-        parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 10: {
+              namespace_ = input.readStringRequireUtf8();
+
+              break;
+            } // case 10
+            case 18: {
+              table_ = input.readStringRequireUtf8();
+
+              break;
+            } // case 18
+            case 26: {
+              input.readMessage(
+                  getPartitionKeyFieldBuilder().getBuilder(),
+                  extensionRegistry);
+
+              break;
+            } // case 26
+            case 32: {
+              consistency_ = input.readEnum();
+
+              break;
+            } // case 32
+            case 42: {
+              java.lang.String s = input.readStringRequireUtf8();
+              ensureProjectionIsMutable();
+              projection_.add(s);
+              break;
+            } // case 42
+            case 50: {
+              input.readMessage(
+                  getStartClusteringKeyFieldBuilder().getBuilder(),
+                  extensionRegistry);
+
+              break;
+            } // case 50
+            case 56: {
+              startInclusive_ = input.readBool();
+
+              break;
+            } // case 56
+            case 66: {
+              input.readMessage(
+                  getEndClusteringKeyFieldBuilder().getBuilder(),
+                  extensionRegistry);
+
+              break;
+            } // case 66
+            case 72: {
+              endInclusive_ = input.readBool();
+
+              break;
+            } // case 72
+            case 82: {
+              com.scalar.db.rpc.Ordering m =
+                  input.readMessage(
+                      com.scalar.db.rpc.Ordering.parser(),
+                      extensionRegistry);
+              if (orderingBuilder_ == null) {
+                ensureOrderingIsMutable();
+                ordering_.add(m);
+              } else {
+                orderingBuilder_.addMessage(m);
+              }
+              break;
+            } // case 82
+            case 88: {
+              limit_ = input.readInt32();
+
+              break;
+            } // case 88
+            default: {
+              if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                done = true; // was an endgroup tag
+              }
+              break;
+            } // default:
+          } // switch (tag)
+        } // while (!done)
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        parsedMessage = (com.scalar.db.rpc.Scan) e.getUnfinishedMessage();
         throw e.unwrapIOException();
       } finally {
-        if (parsedMessage != null) {
-          mergeFrom(parsedMessage);
-        }
-      }
+        onChanged();
+      } // finally
       return this;
     }
     private int bitField0_;
@@ -2072,7 +2014,18 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return new Scan(input, extensionRegistry);
+      Builder builder = newBuilder();
+      try {
+        builder.mergeFrom(input, extensionRegistry);
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(builder.buildPartial());
+      } catch (com.google.protobuf.UninitializedMessageException e) {
+        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(e)
+            .setUnfinishedMessage(builder.buildPartial());
+      }
+      return builder.buildPartial();
     }
   };
 
