@@ -527,10 +527,6 @@ Instead of calling the `partitionKey()` method in the builder, you can call the 
 
 ```java
 // Create a Scan operation without a partition key
-Key partitionKey = Key.ofInt("c1", 10);
-Key startClusteringKey = Key.of("c2", "aaa", "c3", 100L);
-Key endClusteringKey = Key.of("c2", "aaa", "c3", 300L);
-
 Scan scan =
     Scan.newBuilder()
         .namespace("ns")
