@@ -130,6 +130,7 @@ public class SchemaOperatorTest {
     TableMetadata tableMetadata = mock(TableMetadata.class);
     when(tableSchema.getTableMetadata()).thenReturn(tableMetadata);
     when(transactionAdmin.tableExists("ns", "tb")).thenReturn(true);
+    when(transactionAdmin.getNamespaceTableNames("ns")).thenReturn(ImmutableSet.of());
 
     // Act
     operator.deleteTables(tableSchemaList);
@@ -137,7 +138,31 @@ public class SchemaOperatorTest {
     // Assert
     verify(transactionAdmin, times(3)).tableExists("ns", "tb");
     verify(transactionAdmin, times(3)).dropTable("ns", "tb");
+    verify(transactionAdmin).getNamespaceTableNames("ns");
     verify(transactionAdmin).dropNamespace("ns", true);
+  }
+
+  @Test
+  public void deleteTables_TableStillInNamespace_ShouldNotDropNamespace() throws Exception {
+    // Arrange
+    List<TableSchema> tableSchemaList = Arrays.asList(tableSchema, tableSchema, tableSchema);
+    when(tableSchema.getNamespace()).thenReturn("ns");
+    when(tableSchema.getOptions()).thenReturn(options);
+    when(tableSchema.isTransactionTable()).thenReturn(true);
+    when(tableSchema.getTable()).thenReturn("tb");
+    TableMetadata tableMetadata = mock(TableMetadata.class);
+    when(tableSchema.getTableMetadata()).thenReturn(tableMetadata);
+    when(transactionAdmin.tableExists("ns", "tb")).thenReturn(true);
+    when(transactionAdmin.getNamespaceTableNames("ns")).thenReturn(ImmutableSet.of("tbl"));
+
+    // Act
+    operator.deleteTables(tableSchemaList);
+
+    // Assert
+    verify(transactionAdmin, times(3)).tableExists("ns", "tb");
+    verify(transactionAdmin, times(3)).dropTable("ns", "tb");
+    verify(transactionAdmin).getNamespaceTableNames("ns");
+    verify(transactionAdmin, never()).dropNamespace("ns", true);
   }
 
   @Test
