@@ -145,7 +145,9 @@ public class SchemaOperator {
   private void dropNamespaces(Set<String> namespaces) throws SchemaLoaderException {
     for (String namespace : namespaces) {
       try {
-        storageAdmin.dropNamespace(namespace, true);
+        if (storageAdmin.getNamespaceTableNames(namespace).isEmpty()) {
+          storageAdmin.dropNamespace(namespace, true);
+        }
       } catch (ExecutionException e) {
         throw new SchemaLoaderException("Deleting the namespace " + namespace + " failed.", e);
       }
