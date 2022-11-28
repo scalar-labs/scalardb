@@ -24,7 +24,7 @@ subprojects {
         guavaVersion = '31.1-jre'
         slf4jVersion = '1.7.30'
         cassandraDriverVersion = '3.6.0'
-        azureCosmosVersion = '4.38.1'
+        azureCosmosVersion = '4.39.0'
         jooqVersion = '3.13.2'
         awssdkVersion = '2.17.69'
         commonsDbcp2Version = '2.8.0'
