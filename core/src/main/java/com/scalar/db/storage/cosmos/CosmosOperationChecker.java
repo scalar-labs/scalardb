@@ -6,9 +6,9 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.common.checker.OperationChecker;
 
 public class CosmosOperationChecker extends OperationChecker {
   public CosmosOperationChecker(TableMetadataManager metadataManager) {

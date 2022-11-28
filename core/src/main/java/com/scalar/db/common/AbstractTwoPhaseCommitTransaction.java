@@ -1,21 +1,21 @@
-package com.scalar.db.storage.common;
+package com.scalar.db.common;
 
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
 
-public abstract class AbstractDistributedStorage implements DistributedStorage {
+public abstract class AbstractTwoPhaseCommitTransaction implements TwoPhaseCommitTransaction {
 
   private Optional<String> namespace;
   private Optional<String> tableName;
 
-  public AbstractDistributedStorage() {
+  public AbstractTwoPhaseCommitTransaction() {
     namespace = Optional.empty();
     tableName = Optional.empty();
   }

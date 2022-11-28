@@ -1,7 +1,7 @@
-package com.scalar.db.transaction.common;
+package com.scalar.db.common;
 
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
@@ -10,12 +10,12 @@ import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
 
-public abstract class AbstractDistributedTransaction implements DistributedTransaction {
+public abstract class AbstractDistributedStorage implements DistributedStorage {
 
   private Optional<String> namespace;
   private Optional<String> tableName;
 
-  public AbstractDistributedTransaction() {
+  public AbstractDistributedStorage() {
     namespace = Optional.empty();
     tableName = Optional.empty();
   }
