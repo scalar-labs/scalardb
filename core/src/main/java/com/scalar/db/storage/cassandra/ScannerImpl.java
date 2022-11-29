@@ -6,7 +6,7 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
-import com.scalar.db.storage.common.ScannerIterator;
+import com.scalar.db.common.ScannerIterator;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
