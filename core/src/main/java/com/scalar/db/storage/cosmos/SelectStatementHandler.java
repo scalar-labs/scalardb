@@ -52,7 +52,7 @@ public class SelectStatementHandler extends StatementHandler {
    *
    * @param selection a {@code Selection} to execute
    * @return a {@code Scanner}
-   * @throws ExecutionException if the execution failed
+   * @throws ExecutionException if the execution fails
    */
   @Nonnull
   protected Scanner handle(Selection selection) throws ExecutionException {
