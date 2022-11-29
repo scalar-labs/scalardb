@@ -2,7 +2,7 @@ package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
-import com.scalar.db.storage.common.ScannerIterator;
+import com.scalar.db.common.ScannerIterator;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.Iterator;

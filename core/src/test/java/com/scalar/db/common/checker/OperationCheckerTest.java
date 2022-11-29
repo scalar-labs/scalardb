@@ -1,4 +1,4 @@
-package com.scalar.db.storage.common.checker;
+package com.scalar.db.common.checker;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

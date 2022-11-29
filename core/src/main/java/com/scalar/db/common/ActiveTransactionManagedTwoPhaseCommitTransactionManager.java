@@ -1,18 +1,20 @@
-package com.scalar.db.transaction.common;
+package com.scalar.db.common;
 
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.util.ActiveExpiringMap;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
@@ -20,17 +22,17 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class ActiveTransactionManagedTransactionManager
-    extends AbstractDistributedTransactionManager {
+public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
+    extends AbstractTwoPhaseCommitTransactionManager {
 
   private static final long TRANSACTION_EXPIRATION_INTERVAL_MILLIS = 1000;
 
   private static final Logger logger =
-      LoggerFactory.getLogger(ActiveTransactionManagedTransactionManager.class);
+      LoggerFactory.getLogger(AbstractTwoPhaseCommitTransactionManager.class);
 
-  private final ActiveExpiringMap<String, DistributedTransaction> activeTransactions;
+  private final ActiveExpiringMap<String, TwoPhaseCommitTransaction> activeTransactions;
 
-  public ActiveTransactionManagedTransactionManager(DatabaseConfig config) {
+  public ActiveTransactionManagedTwoPhaseCommitTransactionManager(DatabaseConfig config) {
     activeTransactions =
         new ActiveExpiringMap<>(
             config.getActiveTransactionManagementExpirationTimeMillis(),
@@ -45,7 +47,7 @@ public abstract class ActiveTransactionManagedTransactionManager
             });
   }
 
-  private void add(DistributedTransaction transaction) throws TransactionException {
+  private void add(ActiveTransaction transaction) throws TransactionException {
     if (activeTransactions.putIfAbsent(transaction.getId(), transaction) != null) {
       transaction.rollback();
       throw new IllegalStateException(
@@ -58,7 +60,7 @@ public abstract class ActiveTransactionManagedTransactionManager
   }
 
   @Override
-  public DistributedTransaction resume(String txId) {
+  public TwoPhaseCommitTransaction resume(String txId) {
     return activeTransactions
         .get(txId)
         .orElseThrow(
@@ -70,18 +72,18 @@ public abstract class ActiveTransactionManagedTransactionManager
   }
 
   @Override
-  protected DistributedTransaction activate(DistributedTransaction transaction)
+  protected TwoPhaseCommitTransaction activate(TwoPhaseCommitTransaction transaction)
       throws TransactionException {
     return new ActiveTransaction(super.activate(transaction));
   }
 
-  private class ActiveTransaction extends AbstractDistributedTransaction
-      implements WrappedDistributedTransaction {
+  private class ActiveTransaction extends AbstractTwoPhaseCommitTransaction
+      implements WrappedTwoPhaseCommitTransaction {
 
-    private final DistributedTransaction transaction;
+    private final TwoPhaseCommitTransaction transaction;
 
     @SuppressFBWarnings("EI_EXPOSE_REP2")
-    private ActiveTransaction(DistributedTransaction transaction) throws TransactionException {
+    private ActiveTransaction(TwoPhaseCommitTransaction transaction) throws TransactionException {
       this.transaction = transaction;
       add(this);
     }
@@ -127,6 +129,16 @@ public abstract class ActiveTransactionManagedTransactionManager
     }
 
     @Override
+    public void prepare() throws PreparationException {
+      transaction.prepare();
+    }
+
+    @Override
+    public void validate() throws ValidationException {
+      transaction.validate();
+    }
+
+    @Override
     public void commit() throws CommitException, UnknownTransactionStatusException {
       transaction.commit();
       remove(getId());
@@ -142,9 +154,9 @@ public abstract class ActiveTransactionManagedTransactionManager
     }
 
     @Override
-    public DistributedTransaction getOriginalTransaction() {
-      if (transaction instanceof WrappedDistributedTransaction) {
-        return ((WrappedDistributedTransaction) transaction).getOriginalTransaction();
+    public TwoPhaseCommitTransaction getOriginalTransaction() {
+      if (transaction instanceof WrappedTwoPhaseCommitTransaction) {
+        return ((WrappedTwoPhaseCommitTransaction) transaction).getOriginalTransaction();
       }
       return transaction;
     }

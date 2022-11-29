@@ -1,21 +1,21 @@
-package com.scalar.db.transaction.common;
+package com.scalar.db.common;
 
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
 
-public abstract class AbstractTwoPhaseCommitTransaction implements TwoPhaseCommitTransaction {
+public abstract class AbstractDistributedTransaction implements DistributedTransaction {
 
   private Optional<String> namespace;
   private Optional<String> tableName;
 
-  public AbstractTwoPhaseCommitTransaction() {
+  public AbstractDistributedTransaction() {
     namespace = Optional.empty();
     tableName = Optional.empty();
   }

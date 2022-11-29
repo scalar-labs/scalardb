@@ -5,7 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.azure.cosmos.models.FeedResponse;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
-import com.scalar.db.storage.common.ScannerIterator;
+import com.scalar.db.common.ScannerIterator;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Collections;

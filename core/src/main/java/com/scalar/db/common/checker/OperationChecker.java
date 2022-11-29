@@ -1,4 +1,4 @@
-package com.scalar.db.storage.common.checker;
+package com.scalar.db.common.checker;
 
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
