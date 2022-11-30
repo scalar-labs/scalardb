@@ -21,6 +21,7 @@ import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.jdbc.JdbcService;
@@ -391,22 +392,24 @@ public class JdbcTransactionManagerTest {
   }
 
   @Test
-  public void resume_CalledWithoutBegin_ThrowIllegalStateException() {
+  public void resume_CalledWithoutBegin_ThrowTransactionNotFoundException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
-  public void resume_CalledWithBeginAndCommit_ThrowIllegalStateException()
+  public void resume_CalledWithBeginAndCommit_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin(ANY_ID);
     transaction.commit();
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
@@ -430,19 +433,21 @@ public class JdbcTransactionManagerTest {
   }
 
   @Test
-  public void resume_CalledWithBeginAndRollback_ThrowIllegalStateException()
+  public void resume_CalledWithBeginAndRollback_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin(ANY_ID);
     transaction.rollback();
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
-  public void resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowIllegalStateException()
-      throws TransactionException, SQLException {
+  public void
+      resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowTransactionNotFoundException()
+          throws TransactionException, SQLException {
     // Arrange
     doThrow(SQLException.class).when(connection).rollback();
 
@@ -454,6 +459,7 @@ public class JdbcTransactionManagerTest {
     }
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 }

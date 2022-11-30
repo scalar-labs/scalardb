@@ -7,6 +7,7 @@ import com.scalar.db.api.Isolation;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -123,7 +124,7 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
-  public DistributedTransaction resume(String txId) throws TransactionException {
+  public DistributedTransaction resume(String txId) throws TransactionNotFoundException {
     return manager.resume(txId);
   }
 

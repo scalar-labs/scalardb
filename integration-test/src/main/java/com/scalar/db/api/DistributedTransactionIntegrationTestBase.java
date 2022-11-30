@@ -11,6 +11,7 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
@@ -916,15 +917,16 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
-  public void resume_WithoutBeginningTransaction_ShouldThrowIllegalStateException() {
+  public void resume_WithoutBeginningTransaction_ShouldThrowTransactionNotFoundException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume("txId")).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> manager.resume("txId"))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
-  public void resume_WithBeginningAndCommittingTransaction_ShouldThrowIllegalStateException()
+  public void resume_WithBeginningAndCommittingTransaction_ShouldThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin();
@@ -932,19 +934,20 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
     // Act Assert
     assertThatThrownBy(() -> manager.resume(transaction.getId()))
-        .isInstanceOf(IllegalStateException.class);
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
-  public void resume_WithBeginningAndRollingBackTransaction_ShouldThrowIllegalStateException()
-      throws TransactionException {
+  public void
+      resume_WithBeginningAndRollingBackTransaction_ShouldThrowTransactionNotFoundException()
+          throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin();
     transaction.rollback();
 
     // Act Assert
     assertThatThrownBy(() -> manager.resume(transaction.getId()))
-        .isInstanceOf(IllegalStateException.class);
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   private void populateRecords() throws TransactionException {

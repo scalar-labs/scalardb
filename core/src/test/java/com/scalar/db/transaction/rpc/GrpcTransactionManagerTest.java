@@ -18,6 +18,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.DistributedTransactionGrpc;
@@ -93,15 +94,16 @@ public class GrpcTransactionManagerTest {
   }
 
   @Test
-  public void resume_CalledWithoutBeginOrStart_ThrowIllegalStateException() {
+  public void resume_CalledWithoutBeginOrStart_ThrowTransactionNotFoundException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
-  public void resume_CalledWithBeginAndCommit_ThrowIllegalStateException()
+  public void resume_CalledWithBeginAndCommit_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
     GrpcTransactionManager spiedManager = spy(manager);
@@ -114,7 +116,8 @@ public class GrpcTransactionManagerTest {
     transaction.commit();
 
     // Act Assert
-    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> spiedManager.resume(ANY_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
@@ -144,7 +147,7 @@ public class GrpcTransactionManagerTest {
   }
 
   @Test
-  public void resume_CalledWithBeginAndRollback_ThrowIllegalStateException()
+  public void resume_CalledWithBeginAndRollback_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
     GrpcTransactionManager spiedManager = spy(manager);
@@ -157,12 +160,14 @@ public class GrpcTransactionManagerTest {
     transaction.rollback();
 
     // Act Assert
-    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> spiedManager.resume(ANY_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
-  public void resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowIllegalStateException()
-      throws TransactionException {
+  public void
+      resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowTransactionNotFoundException()
+          throws TransactionException {
     // Arrange
     GrpcTransactionManager spiedManager = spy(manager);
     GrpcTransactionOnBidirectionalStream bidirectionalStream =
@@ -180,7 +185,8 @@ public class GrpcTransactionManagerTest {
     }
 
     // Act Assert
-    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> spiedManager.resume(ANY_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test

@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import java.util.Optional;
 
 /**
@@ -116,9 +117,10 @@ public interface TwoPhaseCommitTransactionManager {
    *
    * @param txId the transaction ID
    * @return {@link TwoPhaseCommitTransaction}
-   * @throws TransactionException if resuming the transaction failed
+   * @throws TransactionNotFoundException if the transaction associated with the specified
+   *     transaction ID is not found
    */
-  TwoPhaseCommitTransaction resume(String txId) throws TransactionException;
+  TwoPhaseCommitTransaction resume(String txId) throws TransactionNotFoundException;
 
   /**
    * Returns the state of a given transaction.
