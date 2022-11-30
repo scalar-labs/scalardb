@@ -58,6 +58,36 @@ public class GrpcTransactionManagerTest {
   }
 
   @Test
+  public void begin_CalledTwiceWithSameTxId_ThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+    GrpcTransactionManager spiedManager = spy(manager);
+    GrpcTransactionOnBidirectionalStream bidirectionalStream =
+        mock(GrpcTransactionOnBidirectionalStream.class);
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
+    when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
+
+    // Act Assert
+    spiedManager.begin(ANY_ID);
+    assertThatThrownBy(() -> spiedManager.begin(ANY_ID)).isInstanceOf(TransactionException.class);
+  }
+
+  @Test
+  public void start_CalledTwiceWithSameTxId_ThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+    GrpcTransactionManager spiedManager = spy(manager);
+    GrpcTransactionOnBidirectionalStream bidirectionalStream =
+        mock(GrpcTransactionOnBidirectionalStream.class);
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
+    when(bidirectionalStream.startTransaction(ANY_ID)).thenReturn(ANY_ID);
+
+    // Act Assert
+    spiedManager.start(ANY_ID);
+    assertThatThrownBy(() -> spiedManager.start(ANY_ID)).isInstanceOf(TransactionException.class);
+  }
+
+  @Test
   public void resume_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
     GrpcTransactionManager spiedManager = spy(manager);

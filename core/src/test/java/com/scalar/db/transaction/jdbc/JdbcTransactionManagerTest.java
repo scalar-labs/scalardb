@@ -380,6 +380,26 @@ public class JdbcTransactionManagerTest {
   }
 
   @Test
+  public void begin_CalledTwiceWithSameTxId_ThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+
+    // Act Assert
+    manager.begin(ANY_ID);
+    assertThatThrownBy(() -> manager.begin(ANY_ID)).isInstanceOf(TransactionException.class);
+  }
+
+  @Test
+  public void start_CalledTwiceWithSameTxId_ThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+
+    // Act Assert
+    manager.start(ANY_ID);
+    assertThatThrownBy(() -> manager.start(ANY_ID)).isInstanceOf(TransactionException.class);
+  }
+
+  @Test
   public void resume_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
     DistributedTransaction transaction1 = manager.begin(ANY_ID);

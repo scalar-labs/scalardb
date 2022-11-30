@@ -114,6 +114,16 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
+  public void begin_CalledTwiceWithSameTxId_ThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+
+    // Act Assert
+    manager.begin(ANY_TX_ID);
+    assertThatThrownBy(() -> manager.begin(ANY_TX_ID)).isInstanceOf(TransactionException.class);
+  }
+
+  @Test
   public void start_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolation()
       throws TransactionException {
     // Arrange
@@ -195,6 +205,16 @@ public class ConsensusCommitManagerTest {
     assertThat(transaction1.getRecoveryHandler())
         .isEqualTo(transaction2.getRecoveryHandler())
         .isEqualTo(recovery);
+  }
+
+  @Test
+  public void start_CalledTwiceWithSameTxId_ThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+
+    // Act Assert
+    manager.start(ANY_TX_ID);
+    assertThatThrownBy(() -> manager.start(ANY_TX_ID)).isInstanceOf(TransactionException.class);
   }
 
   @Test

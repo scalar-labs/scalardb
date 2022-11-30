@@ -117,6 +117,16 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
+  public void begin_CalledTwiceWithSameTxId_ThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+
+    // Act Assert
+    manager.begin(ANY_TX_ID);
+    assertThatThrownBy(() -> manager.begin(ANY_TX_ID)).isInstanceOf(TransactionException.class);
+  }
+
+  @Test
   public void start_NoArgumentGiven_ReturnWithSomeTxIdAndSnapshotIsolation()
       throws TransactionException {
     // Arrange
@@ -174,6 +184,16 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
+  public void start_CalledTwiceWithSameTxId_ThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+
+    // Act Assert
+    manager.start(ANY_TX_ID);
+    assertThatThrownBy(() -> manager.start(ANY_TX_ID)).isInstanceOf(TransactionException.class);
+  }
+
+  @Test
   public void join_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
       throws TransactionException {
     // Arrange
@@ -187,6 +207,16 @@ public class TwoPhaseConsensusCommitManagerTest {
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
     assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
         .isEqualTo(Isolation.SNAPSHOT);
+  }
+
+  @Test
+  public void join_CalledAfterBeginWithSameTxId_ThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+
+    // Act Assert
+    manager.begin(ANY_TX_ID);
+    assertThatThrownBy(() -> manager.join(ANY_TX_ID)).isInstanceOf(TransactionException.class);
   }
 
   @Test
