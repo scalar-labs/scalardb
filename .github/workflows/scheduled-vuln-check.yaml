@@ -1,0 +1,50 @@
+name: Scheduled Vulnerability Check
+
+on:
+  schedule:
+    # UTC
+    - cron: '0 20 * * *'
+
+env:
+  TERM: dumb
+jobs:
+  call-vuln-check-for-master:
+    uses: ./.github/workflows/vuln-check.yaml
+    with:
+      target-ref: master
+    secrets:
+      CR_PAT: ${{ secrets.CR_PAT }}
+      SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
+
+  call-vuln-check-for-v3_4_7:
+    uses: ./.github/workflows/vuln-check.yaml
+    with:
+      target-ref: v3.4.7
+    secrets:
+      CR_PAT: ${{ secrets.CR_PAT }}
+      SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
+
+  call-vuln-check-for-v3_5_5:
+    uses: ./.github/workflows/vuln-check.yaml
+    with:
+      target-ref: v3.5.5
+    secrets:
+      CR_PAT: ${{ secrets.CR_PAT }}
+      SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
+
+  call-vuln-check-for-v3_6_2:
+    uses: ./.github/workflows/vuln-check.yaml
+    with:
+      target-ref: v3.6.2
+    secrets:
+      CR_PAT: ${{ secrets.CR_PAT }}
+      SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
+
+  call-vuln-check-for-v3_7_1:
+    uses: ./.github/workflows/vuln-check.yaml
+    with:
+      target-ref: v3.7.1
+    secrets:
+      CR_PAT: ${{ secrets.CR_PAT }}
+      SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
+
