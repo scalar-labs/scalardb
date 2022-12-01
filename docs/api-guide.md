@@ -546,7 +546,7 @@ Note that you can't specify clustering key boundaries and orderings in Scan with
 
 `Put` is an operation to put a record specified by a primary key.
 It behaves as an upsert operation for a record, i.e., updating the record if the record exists; otherwise, inserting the record.
-Note that when you update the existing record you need to read it using `Get` or `Scan` before `Put` operation.
+Note that when you update an existing record, you need to read it using a `Get` or a `Scan` before a `Put` operation.
 
 You need to create a Put object first, and then you can execute it with the `transaction.put()` method as follows:
 
@@ -586,7 +586,7 @@ Put put =
 #### Delete operation
 
 `Delete` is an operation to delete a record specified by a primary key.
-Note that when you delete a record you need to read it using `Get` or `Scan` before `Delete` operation.
+Note that when you delete a record, you need to read it using a `Get` or a `Scan` before a `Delete` operation.
 
 You need to create a Delete object first, and then you can execute it with the `transaction.delete()` method as follows:
 
