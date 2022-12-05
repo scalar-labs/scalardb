@@ -20,14 +20,18 @@ public interface Result {
    * Returns the partition {@link Key}
    *
    * @return an {@code Optional} with the partition {@code Key}
+   * @deprecated As of release 3.8.0. Will be removed in release 5.0.0
    */
+  @Deprecated
   Optional<Key> getPartitionKey();
 
   /**
    * Returns the clustering {@link Key}
    *
    * @return an {@code Optional} with the clustering {@code Key}
+   * @deprecated As of release 3.8.0. Will be removed in release 5.0.0
    */
+  @Deprecated
   Optional<Key> getClusteringKey();
 
   /**
