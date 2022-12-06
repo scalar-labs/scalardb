@@ -1,7 +1,7 @@
 package com.scalar.db.util;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.io.BigIntColumn;
@@ -18,16 +18,13 @@ import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
-import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.IntStream;
@@ -248,27 +245,10 @@ public final class TestUtils {
 
   /** Utility class used in testing to facilitate the comparison of {@link Result} */
   public static class ExpectedResult {
-    private final Optional<Key> partitionKey;
-    private final Optional<Key> clusteringKey;
-    private final Set<Column<?>> columns;
+    private final ImmutableSet<Column<?>> columns;
 
     private ExpectedResult(ExpectedResultBuilder builder) {
-      this.partitionKey = Optional.ofNullable(builder.partitionKey);
-      this.clusteringKey = Optional.ofNullable(builder.clusteringKey);
-      this.columns = new HashSet<>();
-      if (builder.nonKeyColumns != null) {
-        this.columns.addAll(builder.nonKeyColumns);
-      }
-      partitionKey.ifPresent(pk -> this.columns.addAll(pk.getColumns()));
-      clusteringKey.ifPresent(ck -> this.columns.addAll(ck.getColumns()));
-    }
-
-    public Optional<Key> getPartitionKey() {
-      return partitionKey;
-    }
-
-    public Optional<Key> getClusteringKey() {
-      return clusteringKey;
+      this.columns = ImmutableSet.copyOf(builder.columns);
     }
 
     @SuppressFBWarnings("EI_EXPOSE_REP")
@@ -283,20 +263,12 @@ public final class TestUtils {
      * @return true if this object is equal to the other
      */
     public boolean equalsResult(Result other) {
-      if (!this.getPartitionKey().equals(other.getPartitionKey())) {
-        return false;
-      }
-
-      if (!this.getClusteringKey().equals(other.getClusteringKey())) {
-        return false;
-      }
-
-      if (this.columns.size() != other.getColumns().keySet().size()) {
+      if (columns.size() != other.getColumns().size()) {
         return false;
       }
 
       // Columns ordering is not taken into account
-      for (Column<?> column : this.getColumns()) {
+      for (Column<?> column : columns) {
         if (!column.equals(other.getColumns().get(column.getName()))) {
           return false;
         }
@@ -307,33 +279,14 @@ public final class TestUtils {
 
     @Override
     public String toString() {
-      ToStringHelper toStringHelper = MoreObjects.toStringHelper(this);
-      partitionKey.ifPresent((pk) -> toStringHelper.addValue(pk.toString()));
-      clusteringKey.ifPresent((ck) -> toStringHelper.addValue(ck.toString()));
-      getColumns().forEach(c -> toStringHelper.add(c.getName(), c.getValueAsObject()));
-      return toStringHelper.toString();
+      return MoreObjects.toStringHelper(this).add("columns", columns).toString();
     }
 
     public static class ExpectedResultBuilder {
-      private Key partitionKey;
-      private Key clusteringKey;
-      private List<Column<?>> nonKeyColumns;
+      private final List<Column<?>> columns = new ArrayList<>();
 
-      public ExpectedResultBuilder() {}
-
-      public ExpectedResultBuilder partitionKey(Key partitionKey) {
-        this.partitionKey = partitionKey;
-        return this;
-      }
-
-      public ExpectedResultBuilder clusteringKey(Key clusteringKey) {
-        this.clusteringKey = clusteringKey;
-        return this;
-      }
-
-      @SuppressFBWarnings("EI_EXPOSE_REP2")
-      public ExpectedResultBuilder nonKeyColumns(List<Column<?>> nonKeyColumns) {
-        this.nonKeyColumns = nonKeyColumns;
+      public ExpectedResultBuilder column(Column<?> column) {
+        columns.add(column);
         return this;
       }
 
