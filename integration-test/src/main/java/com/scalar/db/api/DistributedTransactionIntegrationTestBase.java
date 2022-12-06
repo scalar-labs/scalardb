@@ -371,19 +371,17 @@ public abstract class DistributedTransactionIntegrationTestBase {
     List<ExpectedResult> expectedResults = new ArrayList<>();
     expectedResults.add(
         new ExpectedResultBuilder()
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
-            .nonKeyColumns(
-                ImmutableList.of(
-                    IntColumn.of(BALANCE, INITIAL_BALANCE), IntColumn.of(SOME_COLUMN, 2)))
+            .column(IntColumn.of(ACCOUNT_ID, 1))
+            .column(IntColumn.of(ACCOUNT_TYPE, 2))
+            .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
+            .column(IntColumn.of(SOME_COLUMN, 2))
             .build());
     expectedResults.add(
         new ExpectedResultBuilder()
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
-            .nonKeyColumns(
-                ImmutableList.of(
-                    IntColumn.of(BALANCE, INITIAL_BALANCE), IntColumn.of(SOME_COLUMN, 2)))
+            .column(IntColumn.of(ACCOUNT_ID, 2))
+            .column(IntColumn.of(ACCOUNT_TYPE, 1))
+            .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
+            .column(IntColumn.of(SOME_COLUMN, 2))
             .build());
 
     // Act
@@ -415,17 +413,14 @@ public abstract class DistributedTransactionIntegrationTestBase {
             i ->
                 IntStream.range(0, NUM_TYPES)
                     .forEach(
-                        j -> {
-                          ExpectedResultBuilder erBuilder =
-                              new ExpectedResultBuilder()
-                                  .partitionKey(Key.ofInt(ACCOUNT_ID, i))
-                                  .clusteringKey(Key.ofInt(ACCOUNT_TYPE, j))
-                                  .nonKeyColumns(
-                                      ImmutableList.of(
-                                          IntColumn.of(BALANCE, INITIAL_BALANCE),
-                                          IntColumn.of(SOME_COLUMN, i * j)));
-                          expectedResults.add(erBuilder.build());
-                        }));
+                        j ->
+                            expectedResults.add(
+                                new ExpectedResultBuilder()
+                                    .column(IntColumn.of(ACCOUNT_ID, i))
+                                    .column(IntColumn.of(ACCOUNT_TYPE, j))
+                                    .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
+                                    .column(IntColumn.of(SOME_COLUMN, i * j))
+                                    .build())));
     TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
   }
 
@@ -462,28 +457,28 @@ public abstract class DistributedTransactionIntegrationTestBase {
         results,
         ImmutableList.of(
             new ExpectedResultBuilder()
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
-                .nonKeyColumns(
-                    Arrays.asList(IntColumn.ofNull(BALANCE), IntColumn.ofNull(SOME_COLUMN)))
+                .column(IntColumn.of(ACCOUNT_ID, 1))
+                .column(IntColumn.of(ACCOUNT_TYPE, 1))
+                .column(IntColumn.ofNull(BALANCE))
+                .column(IntColumn.ofNull(SOME_COLUMN))
                 .build(),
             new ExpectedResultBuilder()
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
-                .nonKeyColumns(
-                    Arrays.asList(IntColumn.ofNull(BALANCE), IntColumn.ofNull(SOME_COLUMN)))
+                .column(IntColumn.of(ACCOUNT_ID, 1))
+                .column(IntColumn.of(ACCOUNT_TYPE, 2))
+                .column(IntColumn.ofNull(BALANCE))
+                .column(IntColumn.ofNull(SOME_COLUMN))
                 .build(),
             new ExpectedResultBuilder()
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
-                .nonKeyColumns(
-                    Arrays.asList(IntColumn.ofNull(BALANCE), IntColumn.ofNull(SOME_COLUMN)))
+                .column(IntColumn.of(ACCOUNT_ID, 2))
+                .column(IntColumn.of(ACCOUNT_TYPE, 1))
+                .column(IntColumn.ofNull(BALANCE))
+                .column(IntColumn.ofNull(SOME_COLUMN))
                 .build(),
             new ExpectedResultBuilder()
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .nonKeyColumns(
-                    Arrays.asList(IntColumn.ofNull(BALANCE), IntColumn.ofNull(SOME_COLUMN)))
+                .column(IntColumn.of(ACCOUNT_ID, 3))
+                .column(IntColumn.of(ACCOUNT_TYPE, 0))
+                .column(IntColumn.ofNull(BALANCE))
+                .column(IntColumn.ofNull(SOME_COLUMN))
                 .build()));
     assertThat(results).hasSize(2);
   }
@@ -507,14 +502,12 @@ public abstract class DistributedTransactionIntegrationTestBase {
             i ->
                 IntStream.range(0, NUM_TYPES)
                     .forEach(
-                        j -> {
-                          ExpectedResultBuilder erBuilder =
-                              new ExpectedResultBuilder()
-                                  .clusteringKey(Key.ofInt(ACCOUNT_TYPE, j))
-                                  .nonKeyColumns(
-                                      ImmutableList.of(IntColumn.of(BALANCE, INITIAL_BALANCE)));
-                          expectedResults.add(erBuilder.build());
-                        }));
+                        j ->
+                            expectedResults.add(
+                                new ExpectedResultBuilder()
+                                    .column(IntColumn.of(ACCOUNT_TYPE, j))
+                                    .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
+                                    .build())));
     TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
   }
 
@@ -893,9 +886,8 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Assert
     ExpectedResult expectedResult =
         new ExpectedResultBuilder()
-            .nonKeyColumns(
-                ImmutableList.of(
-                    IntColumn.of(BALANCE, INITIAL_BALANCE), IntColumn.ofNull(SOME_COLUMN)))
+            .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
+            .column(IntColumn.ofNull(SOME_COLUMN))
             .build();
     TestUtils.assertResultsContainsExactlyInAnyOrder(
         results, Collections.singletonList(expectedResult));
