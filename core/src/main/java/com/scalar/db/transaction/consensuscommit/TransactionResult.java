@@ -23,11 +23,15 @@ public class TransactionResult extends AbstractResult {
     this.result = checkNotNull(result);
   }
 
+  /** @deprecated As of release 3.8.0. Will be removed in release 5.0.0 */
+  @Deprecated
   @Override
   public Optional<Key> getPartitionKey() {
     return result.getPartitionKey();
   }
 
+  /** @deprecated As of release 3.8.0. Will be removed in release 5.0.0 */
+  @Deprecated
   @Override
   public Optional<Key> getClusteringKey() {
     return result.getClusteringKey();
