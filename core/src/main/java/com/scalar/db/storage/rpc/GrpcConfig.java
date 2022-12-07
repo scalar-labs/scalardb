@@ -30,6 +30,9 @@ public class GrpcConfig {
               + " should be 'grpc'");
     }
 
+    if (databaseConfig.getContactPoints().isEmpty()) {
+      throw new IllegalArgumentException(DatabaseConfig.CONTACT_POINTS + " is empty");
+    }
     host = databaseConfig.getContactPoints().get(0);
     port =
         databaseConfig.getContactPort() == 0
