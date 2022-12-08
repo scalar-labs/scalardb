@@ -138,4 +138,19 @@ public class DynamoConfigTest {
     assertThat(config.getSecretAccessKey()).isEqualTo(ANY_SECRET_ACCESS_ID);
     assertThat(config.getNamespacePrefix()).isEmpty();
   }
+
+  @Test
+  public void
+      constructor_PropertiesWithEmptyContactPointsGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.USERNAME, ANY_ACCESS_KEY_ID);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_SECRET_ACCESS_ID);
+    props.setProperty(DatabaseConfig.STORAGE, DYNAMO_STORAGE);
+    props.setProperty(DynamoConfig.TABLE_METADATA_NAMESPACE, ANY_TABLE_METADATA_NAMESPACE);
+
+    // Act Assert
+    assertThatThrownBy(() -> new DynamoConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
 }
