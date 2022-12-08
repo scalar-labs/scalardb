@@ -1436,11 +1436,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Assert
     assertThat(results.size()).isEqualTo(234);
     for (int i = 0; i < 234; i++) {
-      assertThat(results.get(i).getPartitionKey().isPresent()).isTrue();
-      assertThat(results.get(i).getClusteringKey().isPresent()).isTrue();
-
-      assertThat(results.get(i).getPartitionKey().get().get().get(0).getAsInt()).isEqualTo(1);
-      assertThat(results.get(i).getClusteringKey().get().get().get(0).getAsInt()).isEqualTo(i);
+      assertThat(results.get(i).getInt(COL_NAME1)).isEqualTo(1);
+      assertThat(results.get(i).getInt(COL_NAME4)).isEqualTo(i);
     }
   }
 
@@ -1461,19 +1458,16 @@ public abstract class DistributedStorageIntegrationTestBase {
             i ->
                 IntStream.range(0, 3)
                     .forEach(
-                        j -> {
-                          ExpectedResultBuilder erBuilder =
-                              new ExpectedResultBuilder()
-                                  .partitionKey(Key.ofInt(COL_NAME1, i))
-                                  .clusteringKey(Key.ofInt(COL_NAME4, j))
-                                  .nonKeyColumns(
-                                      ImmutableList.of(
-                                          TextColumn.of(COL_NAME2, Integer.toString(i + j)),
-                                          IntColumn.of(COL_NAME3, i + j),
-                                          BooleanColumn.of(COL_NAME5, j % 2 == 0),
-                                          BlobColumn.ofNull(COL_NAME6)));
-                          expectedResults.add(erBuilder.build());
-                        }));
+                        j ->
+                            expectedResults.add(
+                                new ExpectedResultBuilder()
+                                    .column(IntColumn.of(COL_NAME1, i))
+                                    .column(IntColumn.of(COL_NAME4, j))
+                                    .column(TextColumn.of(COL_NAME2, Integer.toString(i + j)))
+                                    .column(IntColumn.of(COL_NAME3, i + j))
+                                    .column(BooleanColumn.of(COL_NAME5, j % 2 == 0))
+                                    .column(BlobColumn.ofNull(COL_NAME6))
+                                    .build())));
     TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
   }
 
@@ -1498,44 +1492,36 @@ public abstract class DistributedStorageIntegrationTestBase {
         results,
         ImmutableList.of(
             new ExpectedResultBuilder()
-                .partitionKey(Key.ofInt(COL_NAME1, 1))
-                .clusteringKey(Key.ofInt(COL_NAME4, 1))
-                .nonKeyColumns(
-                    Arrays.asList(
-                        TextColumn.ofNull(COL_NAME2),
-                        IntColumn.ofNull(COL_NAME3),
-                        BooleanColumn.ofNull(COL_NAME5),
-                        BlobColumn.ofNull(COL_NAME6)))
+                .column(IntColumn.of(COL_NAME1, 1))
+                .column(IntColumn.of(COL_NAME4, 1))
+                .column(TextColumn.ofNull(COL_NAME2))
+                .column(IntColumn.ofNull(COL_NAME3))
+                .column(BooleanColumn.ofNull(COL_NAME5))
+                .column(BlobColumn.ofNull(COL_NAME6))
                 .build(),
             new ExpectedResultBuilder()
-                .partitionKey(Key.ofInt(COL_NAME1, 1))
-                .clusteringKey(Key.ofInt(COL_NAME4, 2))
-                .nonKeyColumns(
-                    Arrays.asList(
-                        TextColumn.ofNull(COL_NAME2),
-                        IntColumn.ofNull(COL_NAME3),
-                        BooleanColumn.ofNull(COL_NAME5),
-                        BlobColumn.ofNull(COL_NAME6)))
+                .column(IntColumn.of(COL_NAME1, 1))
+                .column(IntColumn.of(COL_NAME4, 2))
+                .column(TextColumn.ofNull(COL_NAME2))
+                .column(IntColumn.ofNull(COL_NAME3))
+                .column(BooleanColumn.ofNull(COL_NAME5))
+                .column(BlobColumn.ofNull(COL_NAME6))
                 .build(),
             new ExpectedResultBuilder()
-                .partitionKey(Key.ofInt(COL_NAME1, 2))
-                .clusteringKey(Key.ofInt(COL_NAME4, 1))
-                .nonKeyColumns(
-                    Arrays.asList(
-                        TextColumn.ofNull(COL_NAME2),
-                        IntColumn.ofNull(COL_NAME3),
-                        BooleanColumn.ofNull(COL_NAME5),
-                        BlobColumn.ofNull(COL_NAME6)))
+                .column(IntColumn.of(COL_NAME1, 2))
+                .column(IntColumn.of(COL_NAME4, 1))
+                .column(TextColumn.ofNull(COL_NAME2))
+                .column(IntColumn.ofNull(COL_NAME3))
+                .column(BooleanColumn.ofNull(COL_NAME5))
+                .column(BlobColumn.ofNull(COL_NAME6))
                 .build(),
             new ExpectedResultBuilder()
-                .partitionKey(Key.ofInt(COL_NAME1, 3))
-                .clusteringKey(Key.ofInt(COL_NAME4, 0))
-                .nonKeyColumns(
-                    Arrays.asList(
-                        TextColumn.ofNull(COL_NAME2),
-                        IntColumn.ofNull(COL_NAME3),
-                        BooleanColumn.ofNull(COL_NAME5),
-                        BlobColumn.ofNull(COL_NAME6)))
+                .column(IntColumn.of(COL_NAME1, 3))
+                .column(IntColumn.of(COL_NAME4, 0))
+                .column(TextColumn.ofNull(COL_NAME2))
+                .column(IntColumn.ofNull(COL_NAME3))
+                .column(BooleanColumn.ofNull(COL_NAME5))
+                .column(BlobColumn.ofNull(COL_NAME6))
                 .build()));
     assertThat(results).hasSize(2);
   }
@@ -1558,16 +1544,14 @@ public abstract class DistributedStorageIntegrationTestBase {
             i ->
                 IntStream.range(0, 3)
                     .forEach(
-                        j -> {
-                          ExpectedResultBuilder erBuilder =
-                              new ExpectedResultBuilder().partitionKey(Key.ofInt(COL_NAME1, i));
-                          erBuilder.nonKeyColumns(
-                              ImmutableList.of(
-                                  TextColumn.of(COL_NAME2, Integer.toString(i + j)),
-                                  IntColumn.of(COL_NAME3, i + j),
-                                  BlobColumn.ofNull(COL_NAME6)));
-                          expectedResults.add(erBuilder.build());
-                        }));
+                        j ->
+                            expectedResults.add(
+                                new ExpectedResultBuilder()
+                                    .column(IntColumn.of(COL_NAME1, i))
+                                    .column(TextColumn.of(COL_NAME2, Integer.toString(i + j)))
+                                    .column(IntColumn.of(COL_NAME3, i + j))
+                                    .column(BlobColumn.ofNull(COL_NAME6))
+                                    .build())));
     TestUtils.assertResultsContainsExactlyInAnyOrder(actualResults, expectedResults);
     actualResults.forEach(
         actualResult ->
@@ -1594,18 +1578,14 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Assert
     List<ExpectedResult> expectedResults = new ArrayList<>();
     for (int i = 0; i < 345; i++) {
-      Key partitionKey = new Key(COL_NAME1, i % 4);
-      Key clusteringKey = new Key(COL_NAME4, i);
       expectedResults.add(
           new ExpectedResultBuilder()
-              .partitionKey(partitionKey)
-              .clusteringKey(clusteringKey)
-              .nonKeyColumns(
-                  Arrays.asList(
-                      TextColumn.ofNull(COL_NAME2),
-                      IntColumn.ofNull(COL_NAME3),
-                      BooleanColumn.ofNull(COL_NAME5),
-                      BlobColumn.of(COL_NAME6, new byte[getLargeDataSizeInBytes()])))
+              .column(IntColumn.of(COL_NAME1, i % 4))
+              .column(IntColumn.of(COL_NAME4, i))
+              .column(TextColumn.ofNull(COL_NAME2))
+              .column(IntColumn.ofNull(COL_NAME3))
+              .column(BooleanColumn.ofNull(COL_NAME5))
+              .column(BlobColumn.of(COL_NAME6, new byte[getLargeDataSizeInBytes()]))
               .build());
     }
     TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
