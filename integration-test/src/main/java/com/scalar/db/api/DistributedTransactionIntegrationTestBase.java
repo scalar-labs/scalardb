@@ -38,15 +38,15 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedTransactionIntegrationTestBase {
 
-  private static final String NAMESPACE_BASE_NAME = "int_test_";
+  protected static final String NAMESPACE_BASE_NAME = "int_test_";
   protected static final String TABLE = "test_table";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String ACCOUNT_TYPE = "account_type";
   protected static final String BALANCE = "balance";
-  private static final String SOME_COLUMN = "some_column";
+  protected static final String SOME_COLUMN = "some_column";
   protected static final int INITIAL_BALANCE = 1000;
-  private static final int NUM_ACCOUNTS = 4;
-  private static final int NUM_TYPES = 4;
+  protected static final int NUM_ACCOUNTS = 4;
+  protected static final int NUM_TYPES = 4;
   protected static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
           .addColumn(ACCOUNT_ID, DataType.INT)
@@ -57,8 +57,8 @@ public abstract class DistributedTransactionIntegrationTestBase {
           .addClusteringKey(ACCOUNT_TYPE)
           .addSecondaryIndex(SOME_COLUMN)
           .build();
-  private DistributedTransactionAdmin admin;
-  private DistributedTransactionManager manager;
+  protected DistributedTransactionAdmin admin;
+  protected DistributedTransactionManager manager;
   protected String namespace;
 
   @BeforeAll
@@ -942,7 +942,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
         .isInstanceOf(TransactionNotFoundException.class);
   }
 
-  private void populateRecords() throws TransactionException {
+  protected void populateRecords() throws TransactionException {
     DistributedTransaction transaction = manager.start();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(
@@ -967,7 +967,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     transaction.commit();
   }
 
-  private void populateSingleRecord() throws TransactionException {
+  protected void populateSingleRecord() throws TransactionException {
     Put put =
         new Put(Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0))
             .forNamespace(namespace)
@@ -987,7 +987,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private List<Get> prepareGets() {
+  protected List<Get> prepareGets() {
     List<Get> gets = new ArrayList<>();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(i -> IntStream.range(0, NUM_TYPES).forEach(j -> gets.add(prepareGet(i, j))));
@@ -1004,14 +1004,14 @@ public abstract class DistributedTransactionIntegrationTestBase {
         .withEnd(new Key(ACCOUNT_TYPE, toType));
   }
 
-  private ScanAll prepareScanAll() {
+  protected ScanAll prepareScanAll() {
     return new ScanAll()
         .forNamespace(namespace)
         .forTable(TABLE)
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private Put preparePut(int id, int type) {
+  protected Put preparePut(int id, int type) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Put(partitionKey, clusteringKey)
@@ -1020,7 +1020,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private List<Put> preparePuts() {
+  protected List<Put> preparePuts() {
     List<Put> puts = new ArrayList<>();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(i -> IntStream.range(0, NUM_TYPES).forEach(j -> puts.add(preparePut(i, j))));
@@ -1028,7 +1028,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     return puts;
   }
 
-  private Delete prepareDelete(int id, int type) {
+  protected Delete prepareDelete(int id, int type) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Delete(partitionKey, clusteringKey)
@@ -1037,7 +1037,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private int getBalance(Result result) {
+  protected int getBalance(Result result) {
     Optional<Value<?>> balance = result.getValue(BALANCE);
     assertThat(balance).isPresent();
     return balance.get().getAsInt();
