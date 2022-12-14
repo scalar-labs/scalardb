@@ -38,16 +38,16 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
-  private static final String NAMESPACE_BASE_NAME = "int_test_";
+  protected static final String NAMESPACE_BASE_NAME = "int_test_";
   protected static final String TABLE_1 = "test_table1";
   protected static final String TABLE_2 = "test_table2";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String ACCOUNT_TYPE = "account_type";
   protected static final String BALANCE = "balance";
-  private static final String SOME_COLUMN = "some_column";
+  protected static final String SOME_COLUMN = "some_column";
   protected static final int INITIAL_BALANCE = 1000;
-  private static final int NUM_ACCOUNTS = 4;
-  private static final int NUM_TYPES = 4;
+  protected static final int NUM_ACCOUNTS = 4;
+  protected static final int NUM_TYPES = 4;
   protected static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
           .addColumn(ACCOUNT_ID, DataType.INT)
@@ -58,10 +58,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
           .addClusteringKey(ACCOUNT_TYPE)
           .addSecondaryIndex(SOME_COLUMN)
           .build();
-  private DistributedTransactionAdmin admin1;
-  private DistributedTransactionAdmin admin2;
-  private TwoPhaseCommitTransactionManager manager1;
-  private TwoPhaseCommitTransactionManager manager2;
+  protected DistributedTransactionAdmin admin1;
+  protected DistributedTransactionAdmin admin2;
+  protected TwoPhaseCommitTransactionManager manager1;
+  protected TwoPhaseCommitTransactionManager manager2;
 
   protected String namespace1;
   protected String namespace2;
@@ -1168,7 +1168,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         .isInstanceOf(TransactionNotFoundException.class);
   }
 
-  private void populateRecords(
+  protected void populateRecords(
       TwoPhaseCommitTransactionManager manager, String namespaceName, String tableName)
       throws TransactionException {
     TwoPhaseCommitTransaction transaction = manager.begin();
@@ -1197,7 +1197,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     transaction.commit();
   }
 
-  private void populateSingleRecord(String namespaceName, String tableName)
+  protected void populateSingleRecord(String namespaceName, String tableName)
       throws TransactionException {
     Put put =
         new Put(Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0))
@@ -1220,7 +1220,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private List<Get> prepareGets(String namespaceName, String tableName) {
+  protected List<Get> prepareGets(String namespaceName, String tableName) {
     List<Get> gets = new ArrayList<>();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(
@@ -1241,14 +1241,14 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         .withEnd(new Key(ACCOUNT_TYPE, toType));
   }
 
-  private ScanAll prepareScanAll(String namespaceName, String tableName) {
+  protected ScanAll prepareScanAll(String namespaceName, String tableName) {
     return new ScanAll()
         .forNamespace(namespaceName)
         .forTable(tableName)
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private Put preparePut(int id, int type, String namespaceName, String tableName) {
+  protected Put preparePut(int id, int type, String namespaceName, String tableName) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Put(partitionKey, clusteringKey)
@@ -1257,7 +1257,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private List<Put> preparePuts(String namespaceName, String tableName) {
+  protected List<Put> preparePuts(String namespaceName, String tableName) {
     List<Put> puts = new ArrayList<>();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(
@@ -1268,7 +1268,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     return puts;
   }
 
-  private Delete prepareDelete(int id, int type, String namespaceName, String tableName) {
+  protected Delete prepareDelete(int id, int type, String namespaceName, String tableName) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Delete(partitionKey, clusteringKey)
@@ -1277,7 +1277,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private int getBalance(Result result) {
+  protected int getBalance(Result result) {
     Optional<Value<?>> balance = result.getValue(BALANCE);
     assertThat(balance).isPresent();
     return balance.get().getAsInt();
