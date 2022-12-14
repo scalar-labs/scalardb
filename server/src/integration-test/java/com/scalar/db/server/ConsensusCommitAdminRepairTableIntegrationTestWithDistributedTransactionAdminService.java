@@ -18,7 +18,7 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithDistributedTransa
 
   @Override
   protected void initialize(String testName) throws IOException {
-    Properties properties = ServerEnv.getServerProperties1(testName);
+    Properties properties = ServerEnv.getServer1Properties(testName);
     if (properties != null) {
       // Add testName as a coordinator namespace suffix
       String coordinatorNamespace =
@@ -40,7 +40,10 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithDistributedTransa
 
   @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
-    Properties properties = ServerEnv.getServerProperties1(testName);
+    Properties properties = ServerEnv.getServer1Properties(testName);
+    if (properties == null) {
+      return null;
+    }
 
     // Add testName as a coordinator namespace suffix
     String coordinatorNamespace =
@@ -66,7 +69,7 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithDistributedTransa
 
   @Override
   protected Properties getProps(String testName) {
-    return ServerEnv.getClientProperties1(testName);
+    return ServerEnv.getClient1Properties(testName);
   }
 
   /** This test is disabled if {@link #isExternalServerUsed()} return true */
@@ -85,6 +88,14 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithDistributedTransa
   public void repairTableAndCoordinatorTable_ForTruncatedMetadataTable_ShouldRepairProperly()
       throws Exception {
     super.repairTableAndCoordinatorTable_ForTruncatedMetadataTable_ShouldRepairProperly();
+  }
+
+  /** This test is disabled if {@link #isExternalServerUsed()} return true */
+  @Override
+  @Test
+  @DisabledIf("isExternalServerUsed")
+  public void repairTable_ForCorruptedMetadataTable_ShouldRepairProperly() throws Exception {
+    super.repairTable_ForCorruptedMetadataTable_ShouldRepairProperly();
   }
 
   @SuppressWarnings("unused")

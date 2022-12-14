@@ -16,7 +16,7 @@ public class DistributedStorageAdminServiceRepairTableIntegrationTest
 
   @Override
   protected void initialize(String testName) throws IOException {
-    Properties properties = ServerEnv.getServerProperties1(testName);
+    Properties properties = ServerEnv.getServer1Properties(testName);
     if (properties != null) {
       server = new ScalarDbServer(properties);
       server.start();
@@ -27,12 +27,17 @@ public class DistributedStorageAdminServiceRepairTableIntegrationTest
 
   @Override
   protected Properties getProperties(String testName) {
-    return ServerEnv.getClientProperties1(testName);
+    return ServerEnv.getClient1Properties(testName);
   }
 
   @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
-    return new ServerAdminTestUtils(ServerEnv.getServerProperties1(testName));
+    Properties properties = ServerEnv.getServer1Properties(testName);
+    if (properties == null) {
+      return null;
+    }
+
+    return new ServerAdminTestUtils(properties);
   }
 
   @Override
@@ -58,6 +63,14 @@ public class DistributedStorageAdminServiceRepairTableIntegrationTest
   @DisabledIf("isExternalServerUsed")
   public void repairTable_ForTruncatedMetadataTable_ShouldRepairProperly() throws Exception {
     super.repairTable_ForTruncatedMetadataTable_ShouldRepairProperly();
+  }
+
+  /** This test is disabled if {@link #isExternalServerUsed()} return true */
+  @Override
+  @Test
+  @DisabledIf("isExternalServerUsed")
+  public void repairTable_ForCorruptedMetadataTable_ShouldRepairProperly() throws Exception {
+    super.repairTable_ForCorruptedMetadataTable_ShouldRepairProperly();
   }
 
   @SuppressWarnings("unused")
