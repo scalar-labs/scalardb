@@ -23,7 +23,7 @@ public class ConsensusCommitIntegrationTestWithDistributedTransactionService
 
   @Override
   protected void initialize(String testName) throws IOException {
-    Properties properties = ServerEnv.getServerProperties1(testName);
+    Properties properties = ServerEnv.getServer1Properties(testName);
     if (properties != null) {
       // Add testName as a coordinator namespace suffix
       String coordinatorNamespace =
@@ -50,7 +50,7 @@ public class ConsensusCommitIntegrationTestWithDistributedTransactionService
 
   @Override
   protected Properties getProps(String testName) {
-    return ServerEnv.getClientProperties1(testName);
+    return ServerEnv.getClient1Properties(testName);
   }
 
   @Override
