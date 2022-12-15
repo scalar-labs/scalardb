@@ -47,8 +47,8 @@ public class BatchHandler {
    * must be for the same partition.
    *
    * @param mutations a list of {@code Mutation}s to execute
-   * @throws RetriableExecutionException if it failed, but it can be retried
-   * @throws NoMutationException if at least one of conditional {@code Mutation}s failed because it
+   * @throws RetriableExecutionException if it fails, but it can be retried
+   * @throws NoMutationException if at least one of conditional {@code Mutation}s fails because it
    *     didn't meet the condition
    */
   public void handle(List<? extends Mutation> mutations)

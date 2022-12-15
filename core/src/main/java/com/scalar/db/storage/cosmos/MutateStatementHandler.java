@@ -27,7 +27,7 @@ public abstract class MutateStatementHandler extends StatementHandler {
    * Executes the specified {@code Mutation}
    *
    * @param mutation a {@code Mutation} to execute
-   * @throws ExecutionException if the execution failed
+   * @throws ExecutionException if the execution fails
    */
   public void handle(Mutation mutation) throws ExecutionException {
     try {

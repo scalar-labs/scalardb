@@ -46,7 +46,7 @@ public class TransactionTableMetadataManager {
    *
    * @param operation an operation
    * @return a table metadata. null if the table is not found.
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   public TransactionTableMetadata getTransactionTableMetadata(Operation operation)
       throws ExecutionException {
@@ -62,7 +62,7 @@ public class TransactionTableMetadataManager {
    * @param namespace a namespace
    * @param table a table
    * @return a table metadata. null if the table is not found.
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   public TransactionTableMetadata getTransactionTableMetadata(String namespace, String table)
       throws ExecutionException {

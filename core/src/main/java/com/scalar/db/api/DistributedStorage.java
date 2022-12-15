@@ -120,7 +120,7 @@ public interface DistributedStorage {
    *
    * @param get a {@code Get} command
    * @return an {@code Optional} with the returned result
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   Optional<Result> get(Get get) throws ExecutionException;
 
@@ -137,7 +137,7 @@ public interface DistributedStorage {
    *
    * @param scan a {@code Scan} or {@code ScanAll} command
    * @return {@link Scanner} to iterate results
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   Scanner scan(Scan scan) throws ExecutionException;
 
@@ -145,7 +145,7 @@ public interface DistributedStorage {
    * Inserts/Updates an entry to the storage with the specified {@link Put} command.
    *
    * @param put a {@code Put} command
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   void put(Put put) throws ExecutionException;
 
@@ -155,7 +155,7 @@ public interface DistributedStorage {
    * throw {@code MultiPartitionException}.
    *
    * @param puts a list of {@code Put} commands
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   void put(List<Put> puts) throws ExecutionException;
 
@@ -163,7 +163,7 @@ public interface DistributedStorage {
    * Deletes an entry from the storage with the specified {@link Delete} command.
    *
    * @param delete a {@code Delete} command
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   void delete(Delete delete) throws ExecutionException;
 
@@ -171,7 +171,7 @@ public interface DistributedStorage {
    * Deletes entries from the storage with the specified list of {@link Delete} commands.
    *
    * @param deletes a list of {@code Delete} commands
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   void delete(List<Delete> deletes) throws ExecutionException;
 
@@ -179,7 +179,7 @@ public interface DistributedStorage {
    * Mutates entries of the storage with the specified list of {@link Mutation} commands.
    *
    * @param mutations a list of {@code Mutation} commands
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   void mutate(List<? extends Mutation> mutations) throws ExecutionException;
 
