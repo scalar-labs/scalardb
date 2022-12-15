@@ -61,7 +61,7 @@ public class BatchHandler {
    * must be for the same partition.
    *
    * @param mutations a list of {@code Mutation}s to execute
-   * @throws NoMutationException if at least one of conditional {@code Mutation}s failed because it
+   * @throws NoMutationException if at least one of conditional {@code Mutation}s fails because it
    *     didn't meet the condition
    */
   public void handle(List<? extends Mutation> mutations) throws ExecutionException {

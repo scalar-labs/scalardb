@@ -235,7 +235,7 @@ public class CommitHandlerTest {
     doThrow(toThrow2)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    // assume that it will call Coordinator.getState() if Coordinator.putState() failed
+    // assume that it will call Coordinator.getState() if Coordinator.putState() fails
     doReturn(Optional.of(new Coordinator.State(ANY_ID, TransactionState.ABORTED)))
         .when(coordinator)
         .getState(ANY_ID);
@@ -264,7 +264,7 @@ public class CommitHandlerTest {
     doThrow(toThrow2)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    // assume that it will call Coordinator.getState() if Coordinator.putState() failed
+    // assume that it will call Coordinator.getState() if Coordinator.putState() fails
     doReturn(Optional.empty()).when(coordinator).getState(ANY_ID);
 
     // Act
@@ -291,7 +291,7 @@ public class CommitHandlerTest {
     doThrow(toThrow2)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    // assume that it will call Coordinator.getState() if Coordinator.putState() failed
+    // assume that it will call Coordinator.getState() if Coordinator.putState() fails
     doThrow(toThrow2).when(coordinator).getState(ANY_ID);
 
     // Act
@@ -347,7 +347,7 @@ public class CommitHandlerTest {
     doThrow(toThrow)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    // assume that it will call Coordinator.getState() if Coordinator.putState() failed
+    // assume that it will call Coordinator.getState() if Coordinator.putState() fails
     doReturn(Optional.of(new Coordinator.State(ANY_ID, TransactionState.COMMITTED)))
         .when(coordinator)
         .getState(ANY_ID);
@@ -377,7 +377,7 @@ public class CommitHandlerTest {
     doThrow(toThrow)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    // assume that it will call Coordinator.getState() if Coordinator.putState() failed
+    // assume that it will call Coordinator.getState() if Coordinator.putState() fails
     doReturn(Optional.of(new Coordinator.State(ANY_ID, TransactionState.ABORTED)))
         .when(coordinator)
         .getState(ANY_ID);
@@ -408,7 +408,7 @@ public class CommitHandlerTest {
     doThrow(toThrow)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    // assume that it will call Coordinator.getState() if Coordinator.putState() failed
+    // assume that it will call Coordinator.getState() if Coordinator.putState() fails
     doReturn(Optional.empty()).when(coordinator).getState(ANY_ID);
 
     // Act
@@ -437,7 +437,7 @@ public class CommitHandlerTest {
     doThrow(toThrow)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    // assume that it will call Coordinator.getState() if Coordinator.putState() failed
+    // assume that it will call Coordinator.getState() if Coordinator.putState() fails
     doThrow(toThrow).when(coordinator).getState(ANY_ID);
 
     // Act
