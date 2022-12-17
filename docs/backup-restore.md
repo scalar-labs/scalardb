@@ -27,15 +27,15 @@ That means that you need to create a consistent snapshot by dumping all tables i
 The ways to create transactional backups are different among each database product.
 We show some examples for some database products but you are requested to find the safe ways to a transactional backup from your databases at your own risk.
 
-#### MySQL
+#### MySQL (backup)
 
 Use the `mysqldump` command with `--single-transaction` option.
 
-#### PostgreSQL
+#### PostgreSQL (backup)
 
 Use the `pg_dump` command.
 
-#### Amazon RDS or Azure Database for MySQL/PostgreSQL
+#### Amazon RDS or Azure Database for MySQL/PostgreSQL (backup)
 
 You can restore to any point within the backup retention period with the automated backup feature.
 
