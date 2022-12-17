@@ -94,19 +94,19 @@ If you use PostgreSQL and `pg_dump` to create a backup file, use `psql` command 
 
 You can restore to any point within the backup retention period with the automated backup feature.
 
-### Cassandra
+### Cassandra (restore)
 
 You first need to stop all the nodes of a Cassandra cluster. Clean the directories (`data`, `commitlogs`, and `hints`) and place backups (snapshots) in each node. Then, start all the nodes.
 
 To avoid mistakes, it is recommended to use [Cassy](https://github.com/scalar-labs/cassy).
 Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups) for more details.
 
-### Cosmos DB
+### Cosmos DB (restore)
 
 You can follow the [azure official guide](https://docs.microsoft.com/en-us/azure/cosmos-db/restore-account-continuous-backup#restore-account-portal). After restoring backups. change the default consistencies of the restored databases to `STRONG`
 It is recommended to use the mid-time of paused duration as a restore point as we explained earlier.
 
-### DynamoDB
+### DynamoDB (restore)
 
 You can basically follow [the official doc](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/PointInTimeRecovery.Tutorial.html). However, a table can only be restored with an alias, so you need to restore a table with an alias and delete the original table and rename the alias to the original name to restore the same named tables.
 
