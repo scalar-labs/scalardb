@@ -5,19 +5,41 @@ This document sets out some guidelines for backing up and restoring the database
 
 ## Create Backup
 
-### For Transactional Databases
+In some cases, you may create a transactional backup of your databases online.
 
-#### JDBC databases
+In other cases, it is recommended to first make Scalar DB drain outstanding requests and stop accepting new requests and then make the backups (see [here](#transactionally-consistent-backups-during-pause-duration) for detail).
 
-You can take a backup with your favorite way for JDBC databases.
-One requirement for backup in Scalar DB on JDBC databases is that backups for all the Scalar DB managed tables (including the coordinator tables) need to be transactionally-consistent or automatically recoverable to a transactionally-consistent state.
+### Flowchart
+
+- :question: Use a single DB under Scalar DB?
+  - :question: The DB has transaction support?
+    - :arrow_right: You may use [online backup](#online-backup)
+- Otherwise
+  - :arrow_right: You may use [pause duration](#transactionally-consistent-backups-during-pause-duration)
+
+### Online Backup
+
+If you use a single DB under Scalar DB and it has transaction support, it could be possible to create backups even while Scalar DB continues to accept transactions.
+
+One requirement for backup in Scalar DB is that backups for all the Scalar DB managed tables (including the coordinator tables) need to be transactionally-consistent or automatically recoverable to a transactionally-consistent state.
 That means that you need to create a consistent snapshot by dumping all tables in a single transaction.
-For example, you can use the `mysqldump` command with `--single-transaction` option in MySQL and the `pg_dump` command in PostgreSQL to achieve that.
-Or when you use Amazon RDS (Relational Database Service) or Azure Database for MySQL/PostgreSQL, you can restore to any point within the backup retention period with the automated backup feature, which satisfies the requirement.
 
-### For Non-transactional Databases
+The ways to create transactional backups are different among each database product.
+We show some examples for some database products but you are requested to find the safe ways to a transactional backup from your databases at your own risk.
 
-#### Basic strategy to create a transactionally-consistent backup
+#### MySQL
+
+Use the `mysqldump` command with `--single-transaction` option.
+
+#### PostgreSQL
+
+Use the `pg_dump` command.
+
+#### Amazon RDS or Azure Database for MySQL/PostgreSQL
+
+You can restore to any point within the backup retention period with the automated backup feature.
+
+### Transactionally-consistent backups during pause duration
 
 One way to create a transactionally-consistent backup is to take a backup while Scalar DB cluster does not have outstanding transactions.
 If an underlying database supports a point-in-time snapshot/backup mechanism, you can take a snapshot during the period.
@@ -38,7 +60,7 @@ Cassandra has a built-in replication mechanism, so you do not always have to cre
 For example, if the replication factor is set to 3 and only the data of one of the nodes in a cluster is lost, you do not need a transactionally-consistent backup because the node can be recovered with a normal (transactionally-inconsistent) snapshot and the repair mechanism.
 However, if the quorum of nodes of a cluster loses their data, we need a transactionally-consistent backup to restore the cluster to a certain transactionally-consistent point.
 
-If you want to create a transactionally-consistent cluster-wide backup, pause the Scalar DB application (or Scalar DB Server) and take the snapshots of nodes as described in [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup), or stop the Cassandra cluster and take the copies of all the nodes' data, and start the cluster.
+If you want to create a transactionally-consistent cluster-wide backup, pause the Scalar DB application (or Scalar DB Server) and take the snapshots of nodes as described [here](#transactionally-consistent-backups-during-pause-duration), or stop the Cassandra cluster and take the copies of all the nodes' data, and start the cluster.
 
 To avoid mistakes, it is recommended to use [Cassy](https://github.com/scalar-labs/cassy).
 Cassy is also integrated with `scalar-admin` so it can issue a pause request to the Scalar DB application (or Scalar DB Server) of a Cassandra cluster.
@@ -47,12 +69,12 @@ Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getti
 **Cosmos DB**
 
 You must create a Cosmos DB account with a continuous backup policy enabled to use point-in-time restore (PITR) feature. Backups are created continuously after it is enabled.
-To specify a transactionally-consistent restore point, please pause the Scalar DB application of a Cosmos DB as described in [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup).
+To specify a transactionally-consistent restore point, please pause the Scalar DB application of a Cosmos DB as described [here](#transactionally-consistent-backups-during-pause-duration).
 
 **DynamoDB**
 
 You must enable the point-in-time recovery (PITR) feature for DynamoDB tables. If you use [Scalar DB Schema Loader](https://github.com/scalar-labs/scalardb/tree/master/schema-loader) for creating schema, it enables PITR feature for tables by default.
-To specify a transactionally-consistent restore point, please pause the Scalar DB application of a DynamoDB as described in [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup).
+To specify a transactionally-consistent restore point, please pause the Scalar DB application of a DynamoDB as described [here](#transactionally-consistent-backups-during-pause-duration).
 
 ## Restore Backup
 
