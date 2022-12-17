@@ -52,7 +52,11 @@ Note that when you use a point-in-time-restore/recovery mechanism, it is recomme
 Otherwise, the time you get as a paused duration might be too different from the time in which the pause was actually conducted, which could restore to a point where ongoing transactions exist.
 Also, it is recommended to pause a long enough time (e.g., 10 seconds) and use the mid-time of the paused duration as a restore point since clock synchronization cannot perfectly synchronize clocks between nodes.
 
-#### Database-specific ways to create a transactionally-consistent backup   
+#### Database-specific ways to create a transactionally-consistent backup
+
+**Databases with transaction support**
+
+See subsections in the [online backup](#online-backup).
 
 **Cassandra**
 
