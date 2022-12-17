@@ -79,11 +79,11 @@ To specify a transactionally-consistent restore point, please pause the ScalarDB
 
 ### MySQL (restore)
 
-If you use `mysqldump` to create a backup file, use `mysql` command to restore the file as specified [in the MySQL doc](https://dev.mysql.com/doc/mysql-backup-excerpt/8.0/en/reloading-sql-format-dumps.html).
+If you use MySQL and `mysqldump` to create a backup file, use `mysql` command to restore the file as specified [in the MySQL doc](https://dev.mysql.com/doc/mysql-backup-excerpt/8.0/en/reloading-sql-format-dumps.html).
 
 ### PostgreSQL (restore)
 
-If you use `pg_dump` to create a backup file, use `psql` command to restore the file as specified in [the PostgreSQL doc](https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-RESTORE).
+If you use PostgreSQL and `pg_dump` to create a backup file, use `psql` command to restore the file as specified in [the PostgreSQL doc](https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-RESTORE).
 
 ### Amazon RDS or Azure Database for MySQL/PostgreSQL (restore)
 
