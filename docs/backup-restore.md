@@ -35,6 +35,11 @@ Use the `mysqldump` command with `--single-transaction` option.
 
 Use the `pg_dump` command.
 
+#### SQLite (backup)
+
+Use the `.backup` command along with `.timeout`.
+See [this post](https://stackoverflow.com/questions/23164445/bash-sqlite3-backup-command), for example.
+
 #### Amazon RDS or Azure Database for MySQL/PostgreSQL (backup)
 
 You can restore to any point within the backup retention period with the automated backup feature.
