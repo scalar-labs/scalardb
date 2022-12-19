@@ -107,7 +107,8 @@ private static final long serialVersionUID = 0L;
 
     private int bitField0_;
     public static final int TRANSACTION_ID_FIELD_NUMBER = 1;
-    private volatile java.lang.Object transactionId_;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object transactionId_ = "";
     /**
      * <code>optional string transaction_id = 1;</code>
      * @return Whether the transactionId field is set.
@@ -344,8 +345,8 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public Builder clear() {
         super.clear();
+        bitField0_ = 0;
         transactionId_ = "";
-        bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
 
@@ -372,15 +373,19 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.scalar.db.rpc.TransactionRequest.BeginRequest buildPartial() {
         com.scalar.db.rpc.TransactionRequest.BeginRequest result = new com.scalar.db.rpc.TransactionRequest.BeginRequest(this);
+        if (bitField0_ != 0) { buildPartial0(result); }
+        onBuilt();
+        return result;
+      }
+
+      private void buildPartial0(com.scalar.db.rpc.TransactionRequest.BeginRequest result) {
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.transactionId_ = transactionId_;
           to_bitField0_ |= 0x00000001;
         }
-        result.transactionId_ = transactionId_;
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
+        result.bitField0_ |= to_bitField0_;
       }
 
       @java.lang.Override
@@ -428,8 +433,8 @@ private static final long serialVersionUID = 0L;
       public Builder mergeFrom(com.scalar.db.rpc.TransactionRequest.BeginRequest other) {
         if (other == com.scalar.db.rpc.TransactionRequest.BeginRequest.getDefaultInstance()) return this;
         if (other.hasTransactionId()) {
-          bitField0_ |= 0x00000001;
           transactionId_ = other.transactionId_;
+          bitField0_ |= 0x00000001;
           onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
@@ -528,11 +533,9 @@ private static final long serialVersionUID = 0L;
        */
       public Builder setTransactionId(
           java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+        if (value == null) { throw new NullPointerException(); }
         transactionId_ = value;
+        bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
@@ -541,8 +544,8 @@ private static final long serialVersionUID = 0L;
        * @return This builder for chaining.
        */
       public Builder clearTransactionId() {
-        bitField0_ = (bitField0_ & ~0x00000001);
         transactionId_ = getDefaultInstance().getTransactionId();
+        bitField0_ = (bitField0_ & ~0x00000001);
         onChanged();
         return this;
       }
@@ -553,12 +556,10 @@ private static final long serialVersionUID = 0L;
        */
       public Builder setTransactionIdBytes(
           com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-        bitField0_ |= 0x00000001;
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
         transactionId_ = value;
+        bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
@@ -690,7 +691,8 @@ private static final long serialVersionUID = 0L;
 
     private int bitField0_;
     public static final int TRANSACTION_ID_FIELD_NUMBER = 1;
-    private volatile java.lang.Object transactionId_;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object transactionId_ = "";
     /**
      * <code>optional string transaction_id = 1;</code>
      * @return Whether the transactionId field is set.
@@ -927,8 +929,8 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public Builder clear() {
         super.clear();
+        bitField0_ = 0;
         transactionId_ = "";
-        bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
 
@@ -955,15 +957,19 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.scalar.db.rpc.TransactionRequest.StartRequest buildPartial() {
         com.scalar.db.rpc.TransactionRequest.StartRequest result = new com.scalar.db.rpc.TransactionRequest.StartRequest(this);
+        if (bitField0_ != 0) { buildPartial0(result); }
+        onBuilt();
+        return result;
+      }
+
+      private void buildPartial0(com.scalar.db.rpc.TransactionRequest.StartRequest result) {
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.transactionId_ = transactionId_;
           to_bitField0_ |= 0x00000001;
         }
-        result.transactionId_ = transactionId_;
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
+        result.bitField0_ |= to_bitField0_;
       }
 
       @java.lang.Override
@@ -1011,8 +1017,8 @@ private static final long serialVersionUID = 0L;
       public Builder mergeFrom(com.scalar.db.rpc.TransactionRequest.StartRequest other) {
         if (other == com.scalar.db.rpc.TransactionRequest.StartRequest.getDefaultInstance()) return this;
         if (other.hasTransactionId()) {
-          bitField0_ |= 0x00000001;
           transactionId_ = other.transactionId_;
+          bitField0_ |= 0x00000001;
           onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
@@ -1111,11 +1117,9 @@ private static final long serialVersionUID = 0L;
        */
       public Builder setTransactionId(
           java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+        if (value == null) { throw new NullPointerException(); }
         transactionId_ = value;
+        bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
@@ -1124,8 +1128,8 @@ private static final long serialVersionUID = 0L;
        * @return This builder for chaining.
        */
       public Builder clearTransactionId() {
-        bitField0_ = (bitField0_ & ~0x00000001);
         transactionId_ = getDefaultInstance().getTransactionId();
+        bitField0_ = (bitField0_ & ~0x00000001);
         onChanged();
         return this;
       }
@@ -1136,12 +1140,10 @@ private static final long serialVersionUID = 0L;
        */
       public Builder setTransactionIdBytes(
           com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-        bitField0_ |= 0x00000001;
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
         transactionId_ = value;
+        bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
@@ -1291,7 +1293,7 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Override
     public com.scalar.db.rpc.GetOrBuilder getGetOrBuilder() {
-      return getGet();
+      return get_ == null ? com.scalar.db.rpc.Get.getDefaultInstance() : get_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -1487,10 +1489,10 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public Builder clear() {
         super.clear();
-        if (getBuilder_ == null) {
-          get_ = null;
-        } else {
-          get_ = null;
+        bitField0_ = 0;
+        get_ = null;
+        if (getBuilder_ != null) {
+          getBuilder_.dispose();
           getBuilder_ = null;
         }
         return this;
@@ -1519,13 +1521,18 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.scalar.db.rpc.TransactionRequest.GetRequest buildPartial() {
         com.scalar.db.rpc.TransactionRequest.GetRequest result = new com.scalar.db.rpc.TransactionRequest.GetRequest(this);
-        if (getBuilder_ == null) {
-          result.get_ = get_;
-        } else {
-          result.get_ = getBuilder_.build();
-        }
+        if (bitField0_ != 0) { buildPartial0(result); }
         onBuilt();
         return result;
+      }
+
+      private void buildPartial0(com.scalar.db.rpc.TransactionRequest.GetRequest result) {
+        int from_bitField0_ = bitField0_;
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.get_ = getBuilder_ == null
+              ? get_
+              : getBuilder_.build();
+        }
       }
 
       @java.lang.Override
@@ -1605,7 +1612,7 @@ private static final long serialVersionUID = 0L;
                 input.readMessage(
                     getGetFieldBuilder().getBuilder(),
                     extensionRegistry);
-
+                bitField0_ |= 0x00000001;
                 break;
               } // case 18
               default: {
@@ -1623,6 +1630,7 @@ private static final long serialVersionUID = 0L;
         } // finally
         return this;
       }
+      private int bitField0_;
 
       private com.scalar.db.rpc.Get get_;
       private com.google.protobuf.SingleFieldBuilderV3<
@@ -1632,7 +1640,7 @@ private static final long serialVersionUID = 0L;
        * @return Whether the get field is set.
        */
       public boolean hasGet() {
-        return getBuilder_ != null || get_ != null;
+        return ((bitField0_ & 0x00000001) != 0);
       }
       /**
        * <code>.rpc.Get get = 2;</code>
@@ -1654,11 +1662,11 @@ private static final long serialVersionUID = 0L;
             throw new NullPointerException();
           }
           get_ = value;
-          onChanged();
         } else {
           getBuilder_.setMessage(value);
         }
-
+        bitField0_ |= 0x00000001;
+        onChanged();
         return this;
       }
       /**
@@ -1668,11 +1676,11 @@ private static final long serialVersionUID = 0L;
           com.scalar.db.rpc.Get.Builder builderForValue) {
         if (getBuilder_ == null) {
           get_ = builderForValue.build();
-          onChanged();
         } else {
           getBuilder_.setMessage(builderForValue.build());
         }
-
+        bitField0_ |= 0x00000001;
+        onChanged();
         return this;
       }
       /**
@@ -1680,38 +1688,38 @@ private static final long serialVersionUID = 0L;
        */
       public Builder mergeGet(com.scalar.db.rpc.Get value) {
         if (getBuilder_ == null) {
-          if (get_ != null) {
-            get_ =
-              com.scalar.db.rpc.Get.newBuilder(get_).mergeFrom(value).buildPartial();
+          if (((bitField0_ & 0x00000001) != 0) &&
+            get_ != null &&
+            get_ != com.scalar.db.rpc.Get.getDefaultInstance()) {
+            getGetBuilder().mergeFrom(value);
           } else {
             get_ = value;
           }
-          onChanged();
         } else {
           getBuilder_.mergeFrom(value);
         }
-
+        bitField0_ |= 0x00000001;
+        onChanged();
         return this;
       }
       /**
        * <code>.rpc.Get get = 2;</code>
        */
       public Builder clearGet() {
-        if (getBuilder_ == null) {
-          get_ = null;
-          onChanged();
-        } else {
-          get_ = null;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        get_ = null;
+        if (getBuilder_ != null) {
+          getBuilder_.dispose();
           getBuilder_ = null;
         }
-
+        onChanged();
         return this;
       }
       /**
        * <code>.rpc.Get get = 2;</code>
        */
       public com.scalar.db.rpc.Get.Builder getGetBuilder() {
-        
+        bitField0_ |= 0x00000001;
         onChanged();
         return getGetFieldBuilder().getBuilder();
       }
@@ -1888,7 +1896,7 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Override
     public com.scalar.db.rpc.ScanOrBuilder getScanOrBuilder() {
-      return getScan();
+      return scan_ == null ? com.scalar.db.rpc.Scan.getDefaultInstance() : scan_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -2084,10 +2092,10 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public Builder clear() {
         super.clear();
-        if (scanBuilder_ == null) {
-          scan_ = null;
-        } else {
-          scan_ = null;
+        bitField0_ = 0;
+        scan_ = null;
+        if (scanBuilder_ != null) {
+          scanBuilder_.dispose();
           scanBuilder_ = null;
         }
         return this;
@@ -2116,13 +2124,18 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.scalar.db.rpc.TransactionRequest.ScanRequest buildPartial() {
         com.scalar.db.rpc.TransactionRequest.ScanRequest result = new com.scalar.db.rpc.TransactionRequest.ScanRequest(this);
-        if (scanBuilder_ == null) {
-          result.scan_ = scan_;
-        } else {
-          result.scan_ = scanBuilder_.build();
-        }
+        if (bitField0_ != 0) { buildPartial0(result); }
         onBuilt();
         return result;
+      }
+
+      private void buildPartial0(com.scalar.db.rpc.TransactionRequest.ScanRequest result) {
+        int from_bitField0_ = bitField0_;
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.scan_ = scanBuilder_ == null
+              ? scan_
+              : scanBuilder_.build();
+        }
       }
 
       @java.lang.Override
@@ -2202,7 +2215,7 @@ private static final long serialVersionUID = 0L;
                 input.readMessage(
                     getScanFieldBuilder().getBuilder(),
                     extensionRegistry);
-
+                bitField0_ |= 0x00000001;
                 break;
               } // case 18
               default: {
@@ -2220,6 +2233,7 @@ private static final long serialVersionUID = 0L;
         } // finally
         return this;
       }
+      private int bitField0_;
 
       private com.scalar.db.rpc.Scan scan_;
       private com.google.protobuf.SingleFieldBuilderV3<
@@ -2229,7 +2243,7 @@ private static final long serialVersionUID = 0L;
        * @return Whether the scan field is set.
        */
       public boolean hasScan() {
-        return scanBuilder_ != null || scan_ != null;
+        return ((bitField0_ & 0x00000001) != 0);
       }
       /**
        * <code>.rpc.Scan scan = 2;</code>
@@ -2251,11 +2265,11 @@ private static final long serialVersionUID = 0L;
             throw new NullPointerException();
           }
           scan_ = value;
-          onChanged();
         } else {
           scanBuilder_.setMessage(value);
         }
-
+        bitField0_ |= 0x00000001;
+        onChanged();
         return this;
       }
       /**
@@ -2265,11 +2279,11 @@ private static final long serialVersionUID = 0L;
           com.scalar.db.rpc.Scan.Builder builderForValue) {
         if (scanBuilder_ == null) {
           scan_ = builderForValue.build();
-          onChanged();
         } else {
           scanBuilder_.setMessage(builderForValue.build());
         }
-
+        bitField0_ |= 0x00000001;
+        onChanged();
         return this;
       }
       /**
@@ -2277,38 +2291,38 @@ private static final long serialVersionUID = 0L;
        */
       public Builder mergeScan(com.scalar.db.rpc.Scan value) {
         if (scanBuilder_ == null) {
-          if (scan_ != null) {
-            scan_ =
-              com.scalar.db.rpc.Scan.newBuilder(scan_).mergeFrom(value).buildPartial();
+          if (((bitField0_ & 0x00000001) != 0) &&
+            scan_ != null &&
+            scan_ != com.scalar.db.rpc.Scan.getDefaultInstance()) {
+            getScanBuilder().mergeFrom(value);
           } else {
             scan_ = value;
           }
-          onChanged();
         } else {
           scanBuilder_.mergeFrom(value);
         }
-
+        bitField0_ |= 0x00000001;
+        onChanged();
         return this;
       }
       /**
        * <code>.rpc.Scan scan = 2;</code>
        */
       public Builder clearScan() {
-        if (scanBuilder_ == null) {
-          scan_ = null;
-          onChanged();
-        } else {
-          scan_ = null;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        scan_ = null;
+        if (scanBuilder_ != null) {
+          scanBuilder_.dispose();
           scanBuilder_ = null;
         }
-
+        onChanged();
         return this;
       }
       /**
        * <code>.rpc.Scan scan = 2;</code>
        */
       public com.scalar.db.rpc.Scan.Builder getScanBuilder() {
-        
+        bitField0_ |= 0x00000001;
         onChanged();
         return getScanFieldBuilder().getBuilder();
       }
@@ -2473,6 +2487,7 @@ private static final long serialVersionUID = 0L;
     }
 
     public static final int MUTATIONS_FIELD_NUMBER = 2;
+    @SuppressWarnings("serial")
     private java.util.List<com.scalar.db.rpc.Mutation> mutations_;
     /**
      * <code>repeated .rpc.Mutation mutations = 2;</code>
@@ -2702,6 +2717,7 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public Builder clear() {
         super.clear();
+        bitField0_ = 0;
         if (mutationsBuilder_ == null) {
           mutations_ = java.util.Collections.emptyList();
         } else {
@@ -2735,7 +2751,13 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.scalar.db.rpc.TransactionRequest.MutateRequest buildPartial() {
         com.scalar.db.rpc.TransactionRequest.MutateRequest result = new com.scalar.db.rpc.TransactionRequest.MutateRequest(this);
-        int from_bitField0_ = bitField0_;
+        buildPartialRepeatedFields(result);
+        if (bitField0_ != 0) { buildPartial0(result); }
+        onBuilt();
+        return result;
+      }
+
+      private void buildPartialRepeatedFields(com.scalar.db.rpc.TransactionRequest.MutateRequest result) {
         if (mutationsBuilder_ == null) {
           if (((bitField0_ & 0x00000001) != 0)) {
             mutations_ = java.util.Collections.unmodifiableList(mutations_);
@@ -2745,8 +2767,10 @@ private static final long serialVersionUID = 0L;
         } else {
           result.mutations_ = mutationsBuilder_.build();
         }
-        onBuilt();
-        return result;
+      }
+
+      private void buildPartial0(com.scalar.db.rpc.TransactionRequest.MutateRequest result) {
+        int from_bitField0_ = bitField0_;
       }
 
       @java.lang.Override
@@ -4985,6 +5009,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       if (startRequestBuilder_ != null) {
         startRequestBuilder_.clear();
       }
@@ -5037,65 +5062,51 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.TransactionRequest buildPartial() {
       com.scalar.db.rpc.TransactionRequest result = new com.scalar.db.rpc.TransactionRequest(this);
-      if (requestCase_ == 1) {
-        if (startRequestBuilder_ == null) {
-          result.request_ = request_;
-        } else {
-          result.request_ = startRequestBuilder_.build();
-        }
-      }
-      if (requestCase_ == 2) {
-        if (getRequestBuilder_ == null) {
-          result.request_ = request_;
-        } else {
-          result.request_ = getRequestBuilder_.build();
-        }
-      }
-      if (requestCase_ == 3) {
-        if (scanRequestBuilder_ == null) {
-          result.request_ = request_;
-        } else {
-          result.request_ = scanRequestBuilder_.build();
-        }
-      }
-      if (requestCase_ == 4) {
-        if (mutateRequestBuilder_ == null) {
-          result.request_ = request_;
-        } else {
-          result.request_ = mutateRequestBuilder_.build();
-        }
-      }
-      if (requestCase_ == 5) {
-        if (commitRequestBuilder_ == null) {
-          result.request_ = request_;
-        } else {
-          result.request_ = commitRequestBuilder_.build();
-        }
-      }
-      if (requestCase_ == 6) {
-        if (abortRequestBuilder_ == null) {
-          result.request_ = request_;
-        } else {
-          result.request_ = abortRequestBuilder_.build();
-        }
-      }
-      if (requestCase_ == 7) {
-        if (beginRequestBuilder_ == null) {
-          result.request_ = request_;
-        } else {
-          result.request_ = beginRequestBuilder_.build();
-        }
-      }
-      if (requestCase_ == 8) {
-        if (rollbackRequestBuilder_ == null) {
-          result.request_ = request_;
-        } else {
-          result.request_ = rollbackRequestBuilder_.build();
-        }
-      }
-      result.requestCase_ = requestCase_;
+      if (bitField0_ != 0) { buildPartial0(result); }
+      buildPartialOneofs(result);
       onBuilt();
       return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.TransactionRequest result) {
+      int from_bitField0_ = bitField0_;
+    }
+
+    private void buildPartialOneofs(com.scalar.db.rpc.TransactionRequest result) {
+      result.requestCase_ = requestCase_;
+      result.request_ = this.request_;
+      if (requestCase_ == 1 &&
+          startRequestBuilder_ != null) {
+        result.request_ = startRequestBuilder_.build();
+      }
+      if (requestCase_ == 2 &&
+          getRequestBuilder_ != null) {
+        result.request_ = getRequestBuilder_.build();
+      }
+      if (requestCase_ == 3 &&
+          scanRequestBuilder_ != null) {
+        result.request_ = scanRequestBuilder_.build();
+      }
+      if (requestCase_ == 4 &&
+          mutateRequestBuilder_ != null) {
+        result.request_ = mutateRequestBuilder_.build();
+      }
+      if (requestCase_ == 5 &&
+          commitRequestBuilder_ != null) {
+        result.request_ = commitRequestBuilder_.build();
+      }
+      if (requestCase_ == 6 &&
+          abortRequestBuilder_ != null) {
+        result.request_ = abortRequestBuilder_.build();
+      }
+      if (requestCase_ == 7 &&
+          beginRequestBuilder_ != null) {
+        result.request_ = beginRequestBuilder_.build();
+      }
+      if (requestCase_ == 8 &&
+          rollbackRequestBuilder_ != null) {
+        result.request_ = rollbackRequestBuilder_.build();
+      }
     }
 
     @java.lang.Override
@@ -5291,6 +5302,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
+    private int bitField0_;
 
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TransactionRequest.StartRequest, com.scalar.db.rpc.TransactionRequest.StartRequest.Builder, com.scalar.db.rpc.TransactionRequest.StartRequestOrBuilder> startRequestBuilder_;
@@ -5430,7 +5442,7 @@ private static final long serialVersionUID = 0L;
         request_ = null;
       }
       requestCase_ = 1;
-      onChanged();;
+      onChanged();
       return startRequestBuilder_;
     }
 
@@ -5572,7 +5584,7 @@ private static final long serialVersionUID = 0L;
         request_ = null;
       }
       requestCase_ = 2;
-      onChanged();;
+      onChanged();
       return getRequestBuilder_;
     }
 
@@ -5714,7 +5726,7 @@ private static final long serialVersionUID = 0L;
         request_ = null;
       }
       requestCase_ = 3;
-      onChanged();;
+      onChanged();
       return scanRequestBuilder_;
     }
 
@@ -5856,7 +5868,7 @@ private static final long serialVersionUID = 0L;
         request_ = null;
       }
       requestCase_ = 4;
-      onChanged();;
+      onChanged();
       return mutateRequestBuilder_;
     }
 
@@ -5998,7 +6010,7 @@ private static final long serialVersionUID = 0L;
         request_ = null;
       }
       requestCase_ = 5;
-      onChanged();;
+      onChanged();
       return commitRequestBuilder_;
     }
 
@@ -6140,7 +6152,7 @@ private static final long serialVersionUID = 0L;
         request_ = null;
       }
       requestCase_ = 6;
-      onChanged();;
+      onChanged();
       return abortRequestBuilder_;
     }
 
@@ -6282,7 +6294,7 @@ private static final long serialVersionUID = 0L;
         request_ = null;
       }
       requestCase_ = 7;
-      onChanged();;
+      onChanged();
       return beginRequestBuilder_;
     }
 
@@ -6424,7 +6436,7 @@ private static final long serialVersionUID = 0L;
         request_ = null;
       }
       requestCase_ = 8;
-      onChanged();;
+      onChanged();
       return rollbackRequestBuilder_;
     }
     @java.lang.Override

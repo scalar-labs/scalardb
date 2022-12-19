@@ -45,6 +45,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int TABLE_NAMES_FIELD_NUMBER = 1;
+  @SuppressWarnings("serial")
   private com.google.protobuf.LazyStringList tableNames_;
   /**
    * <code>repeated string table_names = 1;</code>
@@ -273,6 +274,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       tableNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       bitField0_ = (bitField0_ & ~0x00000001);
       return this;
@@ -301,14 +303,22 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.GetNamespaceTableNamesResponse buildPartial() {
       com.scalar.db.rpc.GetNamespaceTableNamesResponse result = new com.scalar.db.rpc.GetNamespaceTableNamesResponse(this);
-      int from_bitField0_ = bitField0_;
+      buildPartialRepeatedFields(result);
+      if (bitField0_ != 0) { buildPartial0(result); }
+      onBuilt();
+      return result;
+    }
+
+    private void buildPartialRepeatedFields(com.scalar.db.rpc.GetNamespaceTableNamesResponse result) {
       if (((bitField0_ & 0x00000001) != 0)) {
         tableNames_ = tableNames_.getUnmodifiableView();
         bitField0_ = (bitField0_ & ~0x00000001);
       }
       result.tableNames_ = tableNames_;
-      onBuilt();
-      return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.GetNamespaceTableNamesResponse result) {
+      int from_bitField0_ = bitField0_;
     }
 
     @java.lang.Override
@@ -461,10 +471,8 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setTableNames(
         int index, java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureTableNamesIsMutable();
+      if (value == null) { throw new NullPointerException(); }
+      ensureTableNamesIsMutable();
       tableNames_.set(index, value);
       onChanged();
       return this;
@@ -476,10 +484,8 @@ private static final long serialVersionUID = 0L;
      */
     public Builder addTableNames(
         java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureTableNamesIsMutable();
+      if (value == null) { throw new NullPointerException(); }
+      ensureTableNamesIsMutable();
       tableNames_.add(value);
       onChanged();
       return this;
@@ -514,10 +520,8 @@ private static final long serialVersionUID = 0L;
      */
     public Builder addTableNamesBytes(
         com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
       ensureTableNamesIsMutable();
       tableNames_.add(value);
       onChanged();
