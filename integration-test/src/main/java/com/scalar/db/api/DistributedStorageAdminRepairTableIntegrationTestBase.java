@@ -105,12 +105,11 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
   @AfterEach
   protected void afterEach() throws Exception {
     dropTable();
+    admin.close();
   }
 
   @AfterAll
-  protected void afterAll() throws Exception {
-    admin.close();
-  }
+  protected void afterAll() throws Exception {}
 
   @Test
   public void repairTable_ForDeletedMetadataTable_ShouldRepairProperly() throws Exception {
