@@ -35,6 +35,12 @@ Use the `mysqldump` command with `--single-transaction` option.
 
 Use the `pg_dump` command.
 
+#### SQLite (backup)
+
+Use the [`.backup` command](https://www.sqlite.org/cli.html#special_commands_to_sqlite3_dot_commands_) along with `.timeout`.
+
+See also [this post](https://stackoverflow.com/questions/23164445/bash-sqlite3-backup-command), for example.
+
 #### Amazon RDS or Azure Database for MySQL/PostgreSQL (backup)
 
 You can restore to any point within the backup retention period with the automated backup feature.
@@ -89,6 +95,10 @@ If you use MySQL and `mysqldump` to create a backup file, use `mysql` command to
 ### PostgreSQL (restore)
 
 If you use PostgreSQL and `pg_dump` to create a backup file, use `psql` command to restore the file as specified in [the PostgreSQL doc](https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-RESTORE).
+
+### SQLite (restore)
+
+Use [`.restore` command](https://www.sqlite.org/cli.html#special_commands_to_sqlite3_dot_commands_).
 
 ### Amazon RDS or Azure Database for MySQL/PostgreSQL (restore)
 
