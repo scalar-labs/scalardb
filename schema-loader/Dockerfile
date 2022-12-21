@@ -1,4 +1,4 @@
-FROM ghcr.io/scalar-labs/jre8:1.1.8
+FROM ghcr.io/scalar-labs/jre8:1.1.9
 
 COPY scalardb-schema-loader-*.jar /app.jar
 
