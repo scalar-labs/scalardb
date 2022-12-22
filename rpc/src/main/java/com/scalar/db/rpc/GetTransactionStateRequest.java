@@ -45,7 +45,8 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int TRANSACTION_ID_FIELD_NUMBER = 1;
-  private volatile java.lang.Object transactionId_;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object transactionId_ = "";
   /**
    * <code>string transaction_id = 1;</code>
    * @return The transactionId.
@@ -269,8 +270,8 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       transactionId_ = "";
-
       return this;
     }
 
@@ -297,9 +298,16 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.GetTransactionStateRequest buildPartial() {
       com.scalar.db.rpc.GetTransactionStateRequest result = new com.scalar.db.rpc.GetTransactionStateRequest(this);
-      result.transactionId_ = transactionId_;
+      if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.GetTransactionStateRequest result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.transactionId_ = transactionId_;
+      }
     }
 
     @java.lang.Override
@@ -348,6 +356,7 @@ private static final long serialVersionUID = 0L;
       if (other == com.scalar.db.rpc.GetTransactionStateRequest.getDefaultInstance()) return this;
       if (!other.getTransactionId().isEmpty()) {
         transactionId_ = other.transactionId_;
+        bitField0_ |= 0x00000001;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -378,7 +387,7 @@ private static final long serialVersionUID = 0L;
               break;
             case 10: {
               transactionId_ = input.readStringRequireUtf8();
-
+              bitField0_ |= 0x00000001;
               break;
             } // case 10
             default: {
@@ -396,6 +405,7 @@ private static final long serialVersionUID = 0L;
       } // finally
       return this;
     }
+    private int bitField0_;
 
     private java.lang.Object transactionId_ = "";
     /**
@@ -438,11 +448,9 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setTransactionId(
         java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
+      if (value == null) { throw new NullPointerException(); }
       transactionId_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
@@ -451,8 +459,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearTransactionId() {
-      
       transactionId_ = getDefaultInstance().getTransactionId();
+      bitField0_ = (bitField0_ & ~0x00000001);
       onChanged();
       return this;
     }
@@ -463,12 +471,10 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setTransactionIdBytes(
         com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
       transactionId_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }

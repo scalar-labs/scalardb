@@ -67,11 +67,11 @@ private static final long serialVersionUID = 0L;
    */
   @java.lang.Override
   public com.scalar.db.rpc.ScanOrBuilder getScanOrBuilder() {
-    return getScan();
+    return scan_ == null ? com.scalar.db.rpc.Scan.getDefaultInstance() : scan_;
   }
 
   public static final int FETCH_COUNT_FIELD_NUMBER = 2;
-  private int fetchCount_;
+  private int fetchCount_ = 0;
   /**
    * <code>optional int32 fetch_count = 2;</code>
    * @return Whether the fetchCount field is set.
@@ -298,14 +298,13 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
-      if (scanBuilder_ == null) {
-        scan_ = null;
-      } else {
-        scan_ = null;
+      bitField0_ = 0;
+      scan_ = null;
+      if (scanBuilder_ != null) {
+        scanBuilder_.dispose();
         scanBuilder_ = null;
       }
       fetchCount_ = 0;
-      bitField0_ = (bitField0_ & ~0x00000001);
       return this;
     }
 
@@ -332,20 +331,24 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.ScanRequest buildPartial() {
       com.scalar.db.rpc.ScanRequest result = new com.scalar.db.rpc.ScanRequest(this);
+      if (bitField0_ != 0) { buildPartial0(result); }
+      onBuilt();
+      return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.ScanRequest result) {
       int from_bitField0_ = bitField0_;
-      int to_bitField0_ = 0;
-      if (scanBuilder_ == null) {
-        result.scan_ = scan_;
-      } else {
-        result.scan_ = scanBuilder_.build();
-      }
       if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.scan_ = scanBuilder_ == null
+            ? scan_
+            : scanBuilder_.build();
+      }
+      int to_bitField0_ = 0;
+      if (((from_bitField0_ & 0x00000002) != 0)) {
         result.fetchCount_ = fetchCount_;
         to_bitField0_ |= 0x00000001;
       }
-      result.bitField0_ = to_bitField0_;
-      onBuilt();
-      return result;
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -428,12 +431,12 @@ private static final long serialVersionUID = 0L;
               input.readMessage(
                   getScanFieldBuilder().getBuilder(),
                   extensionRegistry);
-
+              bitField0_ |= 0x00000001;
               break;
             } // case 10
             case 16: {
               fetchCount_ = input.readInt32();
-              bitField0_ |= 0x00000001;
+              bitField0_ |= 0x00000002;
               break;
             } // case 16
             default: {
@@ -461,7 +464,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the scan field is set.
      */
     public boolean hasScan() {
-      return scanBuilder_ != null || scan_ != null;
+      return ((bitField0_ & 0x00000001) != 0);
     }
     /**
      * <code>.rpc.Scan scan = 1;</code>
@@ -483,11 +486,11 @@ private static final long serialVersionUID = 0L;
           throw new NullPointerException();
         }
         scan_ = value;
-        onChanged();
       } else {
         scanBuilder_.setMessage(value);
       }
-
+      bitField0_ |= 0x00000001;
+      onChanged();
       return this;
     }
     /**
@@ -497,11 +500,11 @@ private static final long serialVersionUID = 0L;
         com.scalar.db.rpc.Scan.Builder builderForValue) {
       if (scanBuilder_ == null) {
         scan_ = builderForValue.build();
-        onChanged();
       } else {
         scanBuilder_.setMessage(builderForValue.build());
       }
-
+      bitField0_ |= 0x00000001;
+      onChanged();
       return this;
     }
     /**
@@ -509,38 +512,38 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeScan(com.scalar.db.rpc.Scan value) {
       if (scanBuilder_ == null) {
-        if (scan_ != null) {
-          scan_ =
-            com.scalar.db.rpc.Scan.newBuilder(scan_).mergeFrom(value).buildPartial();
+        if (((bitField0_ & 0x00000001) != 0) &&
+          scan_ != null &&
+          scan_ != com.scalar.db.rpc.Scan.getDefaultInstance()) {
+          getScanBuilder().mergeFrom(value);
         } else {
           scan_ = value;
         }
-        onChanged();
       } else {
         scanBuilder_.mergeFrom(value);
       }
-
+      bitField0_ |= 0x00000001;
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.Scan scan = 1;</code>
      */
     public Builder clearScan() {
-      if (scanBuilder_ == null) {
-        scan_ = null;
-        onChanged();
-      } else {
-        scan_ = null;
+      bitField0_ = (bitField0_ & ~0x00000001);
+      scan_ = null;
+      if (scanBuilder_ != null) {
+        scanBuilder_.dispose();
         scanBuilder_ = null;
       }
-
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.Scan scan = 1;</code>
      */
     public com.scalar.db.rpc.Scan.Builder getScanBuilder() {
-      
+      bitField0_ |= 0x00000001;
       onChanged();
       return getScanFieldBuilder().getBuilder();
     }
@@ -579,7 +582,7 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Override
     public boolean hasFetchCount() {
-      return ((bitField0_ & 0x00000001) != 0);
+      return ((bitField0_ & 0x00000002) != 0);
     }
     /**
      * <code>optional int32 fetch_count = 2;</code>
@@ -595,8 +598,9 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setFetchCount(int value) {
-      bitField0_ |= 0x00000001;
+      
       fetchCount_ = value;
+      bitField0_ |= 0x00000002;
       onChanged();
       return this;
     }
@@ -605,7 +609,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearFetchCount() {
-      bitField0_ = (bitField0_ & ~0x00000001);
+      bitField0_ = (bitField0_ & ~0x00000002);
       fetchCount_ = 0;
       onChanged();
       return this;
