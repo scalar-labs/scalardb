@@ -45,7 +45,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int STATE_FIELD_NUMBER = 1;
-  private int state_;
+  private int state_ = 0;
   /**
    * <code>.rpc.TransactionState state = 1;</code>
    * @return The enum numeric value on the wire for state.
@@ -58,8 +58,7 @@ private static final long serialVersionUID = 0L;
    * @return The state.
    */
   @java.lang.Override public com.scalar.db.rpc.TransactionState getState() {
-    @SuppressWarnings("deprecation")
-    com.scalar.db.rpc.TransactionState result = com.scalar.db.rpc.TransactionState.valueOf(state_);
+    com.scalar.db.rpc.TransactionState result = com.scalar.db.rpc.TransactionState.forNumber(state_);
     return result == null ? com.scalar.db.rpc.TransactionState.UNRECOGNIZED : result;
   }
 
@@ -250,8 +249,8 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       state_ = 0;
-
       return this;
     }
 
@@ -278,9 +277,16 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.GetTransactionStateResponse buildPartial() {
       com.scalar.db.rpc.GetTransactionStateResponse result = new com.scalar.db.rpc.GetTransactionStateResponse(this);
-      result.state_ = state_;
+      if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.GetTransactionStateResponse result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.state_ = state_;
+      }
     }
 
     @java.lang.Override
@@ -358,7 +364,7 @@ private static final long serialVersionUID = 0L;
               break;
             case 8: {
               state_ = input.readEnum();
-
+              bitField0_ |= 0x00000001;
               break;
             } // case 8
             default: {
@@ -376,6 +382,7 @@ private static final long serialVersionUID = 0L;
       } // finally
       return this;
     }
+    private int bitField0_;
 
     private int state_ = 0;
     /**
@@ -391,8 +398,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setStateValue(int value) {
-      
       state_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
@@ -402,8 +409,7 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Override
     public com.scalar.db.rpc.TransactionState getState() {
-      @SuppressWarnings("deprecation")
-      com.scalar.db.rpc.TransactionState result = com.scalar.db.rpc.TransactionState.valueOf(state_);
+      com.scalar.db.rpc.TransactionState result = com.scalar.db.rpc.TransactionState.forNumber(state_);
       return result == null ? com.scalar.db.rpc.TransactionState.UNRECOGNIZED : result;
     }
     /**
@@ -415,7 +421,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) {
         throw new NullPointerException();
       }
-      
+      bitField0_ |= 0x00000001;
       state_ = value.getNumber();
       onChanged();
       return this;
@@ -425,7 +431,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearState() {
-      
+      bitField0_ = (bitField0_ & ~0x00000001);
       state_ = 0;
       onChanged();
       return this;

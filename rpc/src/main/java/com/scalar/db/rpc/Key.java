@@ -46,6 +46,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int VALUE_FIELD_NUMBER = 1;
+  @SuppressWarnings("serial")
   private java.util.List<com.scalar.db.rpc.Value> value_;
   /**
    * <code>repeated .rpc.Value value = 1 [deprecated = true];</code>
@@ -86,6 +87,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int COLUMNS_FIELD_NUMBER = 2;
+  @SuppressWarnings("serial")
   private java.util.List<com.scalar.db.rpc.Column> columns_;
   /**
    * <code>repeated .rpc.Column columns = 2;</code>
@@ -328,6 +330,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       if (valueBuilder_ == null) {
         value_ = java.util.Collections.emptyList();
       } else {
@@ -368,7 +371,13 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.Key buildPartial() {
       com.scalar.db.rpc.Key result = new com.scalar.db.rpc.Key(this);
-      int from_bitField0_ = bitField0_;
+      buildPartialRepeatedFields(result);
+      if (bitField0_ != 0) { buildPartial0(result); }
+      onBuilt();
+      return result;
+    }
+
+    private void buildPartialRepeatedFields(com.scalar.db.rpc.Key result) {
       if (valueBuilder_ == null) {
         if (((bitField0_ & 0x00000001) != 0)) {
           value_ = java.util.Collections.unmodifiableList(value_);
@@ -387,8 +396,10 @@ private static final long serialVersionUID = 0L;
       } else {
         result.columns_ = columnsBuilder_.build();
       }
-      onBuilt();
-      return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.Key result) {
+      int from_bitField0_ = bitField0_;
     }
 
     @java.lang.Override
