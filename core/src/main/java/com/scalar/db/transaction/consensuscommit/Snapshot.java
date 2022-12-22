@@ -16,6 +16,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
@@ -186,7 +187,8 @@ public class Snapshot {
     return Optional.empty();
   }
 
-  public void to(MutationComposer composer) throws ExecutionException, CommitConflictException {
+  public void to(MutationComposer composer)
+      throws ExecutionException, PreparationConflictException {
     toSerializableWithExtraWrite(composer);
 
     for (Entry<Key, Put> entry : writeSet.entrySet()) {
@@ -265,7 +267,7 @@ public class Snapshot {
 
   @VisibleForTesting
   void toSerializableWithExtraWrite(MutationComposer composer)
-      throws ExecutionException, CommitConflictException {
+      throws ExecutionException, PreparationConflictException {
     if (isolation != Isolation.SERIALIZABLE || strategy != SerializableStrategy.EXTRA_WRITE) {
       return;
     }
@@ -415,8 +417,8 @@ public class Snapshot {
         || latestResult.get().getVersion() != result.get().getVersion();
   }
 
-  private void throwExceptionDueToPotentialAntiDependency() throws CommitConflictException {
-    throw new CommitConflictException(
+  private void throwExceptionDueToPotentialAntiDependency() throws PreparationConflictException {
+    throw new PreparationConflictException(
         "reading empty records might cause write skew anomaly so aborting the transaction for safety.");
   }
 
