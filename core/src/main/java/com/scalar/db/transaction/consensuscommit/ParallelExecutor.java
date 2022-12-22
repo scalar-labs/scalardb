@@ -4,7 +4,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.concurrent.CompletionService;
@@ -23,7 +23,7 @@ public class ParallelExecutor {
 
   @FunctionalInterface
   public interface ParallelExecutorTask {
-    void run() throws ExecutionException, CommitConflictException;
+    void run() throws ExecutionException, ValidationConflictException;
   }
 
   private final ConsensusCommitConfig config;
@@ -76,13 +76,13 @@ public class ParallelExecutor {
           stopOnError,
           "preparation",
           transactionId);
-    } catch (CommitConflictException ignored) {
-      // tasks for preparation should not throw CommitConflictException
+    } catch (ValidationConflictException ignored) {
+      // tasks for preparation should not throw ValidationConflictException
     }
   }
 
   public void validate(List<ParallelExecutorTask> tasks, String transactionId)
-      throws ExecutionException, CommitConflictException {
+      throws ExecutionException, ValidationConflictException {
     executeTasks(
         tasks, config.isParallelValidationEnabled(), false, true, "validation", transactionId);
   }
@@ -97,8 +97,8 @@ public class ParallelExecutor {
           false,
           "commitRecords",
           transactionId);
-    } catch (CommitConflictException ignored) {
-      // tasks for commit should not throw CommitConflictException
+    } catch (ValidationConflictException ignored) {
+      // tasks for commit should not throw ValidationConflictException
     }
   }
 
@@ -112,8 +112,8 @@ public class ParallelExecutor {
           false,
           "rollbackRecords",
           transactionId);
-    } catch (CommitConflictException ignored) {
-      // tasks for rollback should not throw CommitConflictException
+    } catch (ValidationConflictException ignored) {
+      // tasks for rollback should not throw ValidationConflictException
     }
   }
 
@@ -124,7 +124,7 @@ public class ParallelExecutor {
       boolean stopOnError,
       String taskName,
       String transactionId)
-      throws ExecutionException, CommitConflictException {
+      throws ExecutionException, ValidationConflictException {
     if (parallel) {
       executeTasksInParallel(tasks, noWait, stopOnError, taskName, transactionId);
     } else {
@@ -138,7 +138,7 @@ public class ParallelExecutor {
       boolean stopOnError,
       String taskName,
       String transactionId)
-      throws ExecutionException, CommitConflictException {
+      throws ExecutionException, ValidationConflictException {
     assert parallelExecutorService != null;
 
     CompletionService<Void> completionService =
@@ -171,11 +171,11 @@ public class ParallelExecutor {
             } else {
               throw (ExecutionException) e.getCause();
             }
-          } else if (e.getCause() instanceof CommitConflictException) {
+          } else if (e.getCause() instanceof ValidationConflictException) {
             if (!stopOnError) {
-              exception = (CommitConflictException) e.getCause();
+              exception = (ValidationConflictException) e.getCause();
             } else {
-              throw (CommitConflictException) e.getCause();
+              throw (ValidationConflictException) e.getCause();
             }
           } else if (e.getCause() instanceof RuntimeException) {
             throw (RuntimeException) e.getCause();
@@ -191,7 +191,7 @@ public class ParallelExecutor {
         if (exception instanceof ExecutionException) {
           throw (ExecutionException) exception;
         } else {
-          throw (CommitConflictException) exception;
+          throw (ValidationConflictException) exception;
         }
       }
     }
@@ -199,12 +199,12 @@ public class ParallelExecutor {
 
   private void executeTasksSerially(
       List<ParallelExecutorTask> tasks, boolean stopOnError, String taskName, String transactionId)
-      throws ExecutionException, CommitConflictException {
+      throws ExecutionException, ValidationConflictException {
     Exception exception = null;
     for (ParallelExecutorTask task : tasks) {
       try {
         task.run();
-      } catch (ExecutionException | CommitConflictException e) {
+      } catch (ExecutionException | ValidationConflictException e) {
         logger.warn("failed to run a {} task. transactionId: {}", taskName, transactionId, e);
 
         if (!stopOnError) {
@@ -219,7 +219,7 @@ public class ParallelExecutor {
       if (exception instanceof ExecutionException) {
         throw (ExecutionException) exception;
       } else {
-        throw (CommitConflictException) exception;
+        throw (ValidationConflictException) exception;
       }
     }
   }

@@ -13,6 +13,8 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
@@ -54,7 +56,17 @@ public class CommitHandler {
       throw new CommitException(e.getMessage(), e);
     }
 
-    preCommitValidation(snapshot, true);
+    try {
+      validate(snapshot);
+    } catch (ValidationException e) {
+      abort(snapshot.getId());
+      rollbackRecords(snapshot);
+      if (e instanceof ValidationConflictException) {
+        throw new CommitConflictException(e.getMessage(), e);
+      }
+      throw new CommitException(e.getMessage(), e);
+    }
+
     commitState(snapshot);
     commitRecords(snapshot);
   }
@@ -85,21 +97,12 @@ public class CommitHandler {
     parallelExecutor.prepare(tasks, snapshot.getId());
   }
 
-  public void preCommitValidation(Snapshot snapshot, boolean abortIfError)
-      throws CommitException, UnknownTransactionStatusException {
-    // pre-commit validation is executed when SERIALIZABLE with EXTRA_READ strategy is chosen.
+  public void validate(Snapshot snapshot) throws ValidationException {
     try {
+      // validation is executed when SERIALIZABLE with EXTRA_READ strategy is chosen.
       snapshot.toSerializableWithExtraRead(storage);
-    } catch (Exception e) {
-      logger.warn("pre-commit validation failed", e);
-      if (abortIfError) {
-        abort(snapshot.getId());
-        rollbackRecords(snapshot);
-      }
-      if (e instanceof CommitConflictException) {
-        throw (CommitConflictException) e;
-      }
-      throw new CommitException("pre-commit validation failed", e);
+    } catch (ExecutionException e) {
+      throw new ValidationException("validation failed", e);
     }
   }
 
