@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.common;
+package com.scalar.db.common;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;

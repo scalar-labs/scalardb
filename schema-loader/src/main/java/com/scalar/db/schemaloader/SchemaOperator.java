@@ -155,7 +155,9 @@ public class SchemaOperator implements AutoCloseable {
       try {
         // always use transactionAdmin since we are not sure this namespace is for transaction or
         // storage
-        transactionAdmin.dropNamespace(namespace, true);
+        if (transactionAdmin.getNamespaceTableNames(namespace).isEmpty()) {
+          transactionAdmin.dropNamespace(namespace, true);
+        }
       } catch (ExecutionException e) {
         throw new SchemaLoaderException("Deleting the namespace " + namespace + " failed.", e);
       }

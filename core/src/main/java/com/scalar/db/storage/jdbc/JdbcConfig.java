@@ -89,6 +89,9 @@ public class JdbcConfig {
               + " should be 'jdbc'");
     }
 
+    if (databaseConfig.getContactPoints().isEmpty()) {
+      throw new IllegalArgumentException(DatabaseConfig.CONTACT_POINTS + " is empty");
+    }
     jdbcUrl = databaseConfig.getContactPoints().get(0);
     username = databaseConfig.getUsername().orElse(null);
     password = databaseConfig.getPassword().orElse(null);

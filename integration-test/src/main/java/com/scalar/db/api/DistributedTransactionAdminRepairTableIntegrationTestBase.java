@@ -19,21 +19,21 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase {
 
-  private static final String TEST_NAME = "tx_admin_repair_table";
-  private static final String NAMESPACE = "int_test_" + TEST_NAME;
+  protected static final String TEST_NAME = "tx_admin_repair_table";
+  protected static final String NAMESPACE = "int_test_" + TEST_NAME;
 
-  private static final String TABLE = "test_table";
-  private static final String COL_NAME1 = "c1";
-  private static final String COL_NAME2 = "c2";
-  private static final String COL_NAME3 = "c3";
-  private static final String COL_NAME4 = "c4";
-  private static final String COL_NAME5 = "c5";
-  private static final String COL_NAME6 = "c6";
-  private static final String COL_NAME7 = "c7";
-  private static final String COL_NAME8 = "c8";
-  private static final String COL_NAME9 = "c9";
-  private static final String COL_NAME10 = "c10";
-  private static final String COL_NAME11 = "c11";
+  protected static final String TABLE = "test_table";
+  protected static final String COL_NAME1 = "c1";
+  protected static final String COL_NAME2 = "c2";
+  protected static final String COL_NAME3 = "c3";
+  protected static final String COL_NAME4 = "c4";
+  protected static final String COL_NAME5 = "c5";
+  protected static final String COL_NAME6 = "c6";
+  protected static final String COL_NAME7 = "c7";
+  protected static final String COL_NAME8 = "c8";
+  protected static final String COL_NAME9 = "c9";
+  protected static final String COL_NAME10 = "c10";
+  protected static final String COL_NAME11 = "c11";
 
   protected static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
@@ -106,12 +106,11 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
   @AfterEach
   protected void afterEach() throws Exception {
     dropTable();
+    admin.close();
   }
 
   @AfterAll
-  protected void afterAll() throws Exception {
-    admin.close();
-  }
+  protected void afterAll() throws Exception {}
 
   @Test
   public void repairTableAndCoordinatorTable_ForDeletedMetadataTable_ShouldRepairProperly()

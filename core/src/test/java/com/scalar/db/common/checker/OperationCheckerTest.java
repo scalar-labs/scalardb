@@ -1,4 +1,4 @@
-package com.scalar.db.storage.common.checker;
+package com.scalar.db.common.checker;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -537,7 +537,7 @@ public class OperationCheckerTest {
     Key startClusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     Key endClusteringKey = new Key(CKEY1, 2, CKEY2, "val9");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
-    int limit = -10;
+    int limit = 10;
     Scan scan =
         new Scan(partitionKey)
             .withStart(startClusteringKey)
@@ -562,7 +562,7 @@ public class OperationCheckerTest {
     Key startClusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     Key endClusteringKey = new Key(CKEY1, 2, CKEY2, "val9");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
-    int limit = -10;
+    int limit = 10;
     Scan scan =
         new Scan(partitionKey)
             .withStart(startClusteringKey)

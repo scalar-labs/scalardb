@@ -27,25 +27,25 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedTransactionAdminIntegrationTestBase {
 
-  private static final String TEST_NAME = "tx_admin";
-  private static final String NAMESPACE1 = "int_test_" + TEST_NAME + "1";
-  private static final String NAMESPACE2 = "int_test_" + TEST_NAME + "2";
-  private static final String NAMESPACE3 = "int_test_" + TEST_NAME + "3";
+  protected static final String TEST_NAME = "tx_admin";
+  protected static final String NAMESPACE1 = "int_test_" + TEST_NAME + "1";
+  protected static final String NAMESPACE2 = "int_test_" + TEST_NAME + "2";
+  protected static final String NAMESPACE3 = "int_test_" + TEST_NAME + "3";
   protected static final String TABLE1 = "test_table1";
-  private static final String TABLE2 = "test_table2";
-  private static final String TABLE3 = "test_table3";
-  private static final String TABLE4 = "test_table4";
-  private static final String COL_NAME1 = "c1";
-  private static final String COL_NAME2 = "c2";
-  private static final String COL_NAME3 = "c3";
-  private static final String COL_NAME4 = "c4";
-  private static final String COL_NAME5 = "c5";
-  private static final String COL_NAME6 = "c6";
-  private static final String COL_NAME7 = "c7";
-  private static final String COL_NAME8 = "c8";
-  private static final String COL_NAME9 = "c9";
-  private static final String COL_NAME10 = "c10";
-  private static final String COL_NAME11 = "c11";
+  protected static final String TABLE2 = "test_table2";
+  protected static final String TABLE3 = "test_table3";
+  protected static final String TABLE4 = "test_table4";
+  protected static final String COL_NAME1 = "c1";
+  protected static final String COL_NAME2 = "c2";
+  protected static final String COL_NAME3 = "c3";
+  protected static final String COL_NAME4 = "c4";
+  protected static final String COL_NAME5 = "c5";
+  protected static final String COL_NAME6 = "c6";
+  protected static final String COL_NAME7 = "c7";
+  protected static final String COL_NAME8 = "c8";
+  protected static final String COL_NAME9 = "c9";
+  protected static final String COL_NAME10 = "c10";
+  protected static final String COL_NAME11 = "c11";
 
   protected static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
@@ -67,12 +67,12 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
           .addSecondaryIndex(COL_NAME5)
           .addSecondaryIndex(COL_NAME6)
           .build();
-  private TransactionFactory transactionFactory;
-  private DistributedTransactionAdmin admin;
+  protected TransactionFactory transactionFactory;
+  protected DistributedTransactionAdmin admin;
 
-  private String namespace1;
-  private String namespace2;
-  private String namespace3;
+  protected String namespace1;
+  protected String namespace2;
+  protected String namespace3;
 
   @BeforeAll
   public void beforeAll() throws Exception {

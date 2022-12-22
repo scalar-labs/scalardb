@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import java.util.Optional;
 
 public interface DistributedTransactionManager {
@@ -55,7 +56,7 @@ public interface DistributedTransactionManager {
    * Begins a new transaction.
    *
    * @return {@link DistributedTransaction}
-   * @throws TransactionException if starting the transaction failed
+   * @throws TransactionException if beginning the transaction fails
    */
   DistributedTransaction begin() throws TransactionException;
 
@@ -66,7 +67,7 @@ public interface DistributedTransactionManager {
    *
    * @param txId an user-provided unique transaction ID
    * @return {@link DistributedTransaction}
-   * @throws TransactionException if starting the transaction failed
+   * @throws TransactionException if beginning the transaction fails
    */
   DistributedTransaction begin(String txId) throws TransactionException;
 
@@ -74,7 +75,7 @@ public interface DistributedTransactionManager {
    * Starts a new transaction. This method is an alias of {@link #begin()}.
    *
    * @return {@link DistributedTransaction}
-   * @throws TransactionException if starting the transaction failed
+   * @throws TransactionException if starting the transaction fails
    */
   default DistributedTransaction start() throws TransactionException {
     return begin();
@@ -86,7 +87,7 @@ public interface DistributedTransactionManager {
    *
    * @param txId an user-provided unique transaction ID
    * @return {@link DistributedTransaction}
-   * @throws TransactionException if starting the transaction failed
+   * @throws TransactionException if starting the transaction fails
    */
   default DistributedTransaction start(String txId) throws TransactionException {
     return begin(txId);
@@ -97,7 +98,7 @@ public interface DistributedTransactionManager {
    *
    * @param isolation an isolation level
    * @return {@link DistributedTransaction}
-   * @throws TransactionException if starting the transaction failed
+   * @throws TransactionException if starting the transaction fails
    * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
    */
   @Deprecated
@@ -111,7 +112,7 @@ public interface DistributedTransactionManager {
    * @param txId an user-provided unique transaction ID
    * @param isolation an isolation level
    * @return {@link DistributedTransaction}
-   * @throws TransactionException if starting the transaction failed
+   * @throws TransactionException if starting the transaction fails
    * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
    */
   @Deprecated
@@ -125,7 +126,7 @@ public interface DistributedTransactionManager {
    * @param isolation an isolation level
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
-   * @throws TransactionException if starting the transaction failed
+   * @throws TransactionException if starting the transaction fails
    * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
    */
   @Deprecated
@@ -138,7 +139,7 @@ public interface DistributedTransactionManager {
    *
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
-   * @throws TransactionException if starting the transaction failed
+   * @throws TransactionException if starting the transaction fails
    * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
    */
   @Deprecated
@@ -153,7 +154,7 @@ public interface DistributedTransactionManager {
    * @param txId an user-provided unique transaction ID
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
-   * @throws TransactionException if starting the transaction failed
+   * @throws TransactionException if starting the transaction fails
    * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
    */
   @Deprecated
@@ -170,7 +171,7 @@ public interface DistributedTransactionManager {
    * @param isolation an isolation level
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
-   * @throws TransactionException if starting the transaction failed
+   * @throws TransactionException if starting the transaction fails
    * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
    */
   @Deprecated
@@ -182,16 +183,17 @@ public interface DistributedTransactionManager {
    *
    * @param txId the transaction ID
    * @return {@link DistributedTransaction}
-   * @throws TransactionException if resuming the transaction failed
+   * @throws TransactionNotFoundException if the transaction associated with the specified
+   *     transaction ID is not found
    */
-  DistributedTransaction resume(String txId) throws TransactionException;
+  DistributedTransaction resume(String txId) throws TransactionNotFoundException;
 
   /**
    * Returns the state of a given transaction.
    *
    * @param txId a transaction ID
    * @return {@link TransactionState}
-   * @throws TransactionException if getting the state of a given transaction failed
+   * @throws TransactionException if getting the state of a given transaction fails
    */
   TransactionState getState(String txId) throws TransactionException;
 
@@ -200,7 +202,7 @@ public interface DistributedTransactionManager {
    *
    * @param txId a transaction ID
    * @return {@link TransactionState}
-   * @throws TransactionException if aborting the given transaction failed
+   * @throws TransactionException if rolling back the given transaction fails
    */
   TransactionState rollback(String txId) throws TransactionException;
 
@@ -209,7 +211,7 @@ public interface DistributedTransactionManager {
    *
    * @param txId a transaction ID
    * @return {@link TransactionState}
-   * @throws TransactionException if aborting the given transaction failed
+   * @throws TransactionException if aborting the given transaction fails
    */
   default TransactionState abort(String txId) throws TransactionException {
     return rollback(txId);

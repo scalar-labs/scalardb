@@ -236,7 +236,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
   }
 
   protected List<String> getCommandArgsForTableReparationWithCoordinator(
-      Path configFilePath, Path schemaFilePath) throws Exception {
+      Path configFilePath, Path schemaFilePath) {
     return ImmutableList.<String>builder()
         .addAll(getCommandArgsForTableReparation(configFilePath, schemaFilePath))
         .add("--coordinator")

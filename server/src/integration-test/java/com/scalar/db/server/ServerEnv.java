@@ -35,7 +35,7 @@ public final class ServerEnv {
 
   public ServerEnv() {}
 
-  public static Properties getServerProperties1(String testName) {
+  public static Properties getServer1Properties(String testName) {
     boolean externalServerUsed =
         Boolean.parseBoolean(
             System.getProperty(
@@ -67,8 +67,8 @@ public final class ServerEnv {
     return properties;
   }
 
-  public static Properties getServerProperties2(String testName) {
-    Properties properties = getServerProperties1(testName);
+  public static Properties getServer2Properties(String testName) {
+    Properties properties = getServer1Properties(testName);
     if (properties == null) {
       return null;
     }
@@ -77,7 +77,7 @@ public final class ServerEnv {
     return properties;
   }
 
-  public static Properties getClientProperties1(@SuppressWarnings("unused") String testName) {
+  public static Properties getClient1Properties(@SuppressWarnings("unused") String testName) {
     String contactPoints =
         System.getProperty(PROP_GRPC_CONTACT_POINTS_FOR_SERVER1, DEFAULT_GRPC_CONTACT_POINTS);
     String contactPort =
@@ -91,7 +91,7 @@ public final class ServerEnv {
     return properties;
   }
 
-  public static Properties getClientProperties2(@SuppressWarnings("unused") String testName) {
+  public static Properties getClient2Properties(@SuppressWarnings("unused") String testName) {
     String contactPoints =
         System.getProperty(PROP_GRPC_CONTACT_POINTS_FOR_SERVER2, DEFAULT_GRPC_CONTACT_POINTS);
     String contactPort =

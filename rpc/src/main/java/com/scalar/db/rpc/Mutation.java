@@ -36,133 +36,6 @@ private static final long serialVersionUID = 0L;
   getUnknownFields() {
     return this.unknownFields;
   }
-  private Mutation(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
-    this();
-    if (extensionRegistry == null) {
-      throw new java.lang.NullPointerException();
-    }
-    int mutable_bitField0_ = 0;
-    com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
-    try {
-      boolean done = false;
-      while (!done) {
-        int tag = input.readTag();
-        switch (tag) {
-          case 0:
-            done = true;
-            break;
-          case 10: {
-            java.lang.String s = input.readStringRequireUtf8();
-
-            namespace_ = s;
-            break;
-          }
-          case 18: {
-            java.lang.String s = input.readStringRequireUtf8();
-
-            table_ = s;
-            break;
-          }
-          case 26: {
-            com.scalar.db.rpc.Key.Builder subBuilder = null;
-            if (partitionKey_ != null) {
-              subBuilder = partitionKey_.toBuilder();
-            }
-            partitionKey_ = input.readMessage(com.scalar.db.rpc.Key.parser(), extensionRegistry);
-            if (subBuilder != null) {
-              subBuilder.mergeFrom(partitionKey_);
-              partitionKey_ = subBuilder.buildPartial();
-            }
-
-            break;
-          }
-          case 34: {
-            com.scalar.db.rpc.Key.Builder subBuilder = null;
-            if (clusteringKey_ != null) {
-              subBuilder = clusteringKey_.toBuilder();
-            }
-            clusteringKey_ = input.readMessage(com.scalar.db.rpc.Key.parser(), extensionRegistry);
-            if (subBuilder != null) {
-              subBuilder.mergeFrom(clusteringKey_);
-              clusteringKey_ = subBuilder.buildPartial();
-            }
-
-            break;
-          }
-          case 40: {
-            int rawValue = input.readEnum();
-
-            consistency_ = rawValue;
-            break;
-          }
-          case 50: {
-            com.scalar.db.rpc.MutateCondition.Builder subBuilder = null;
-            if (condition_ != null) {
-              subBuilder = condition_.toBuilder();
-            }
-            condition_ = input.readMessage(com.scalar.db.rpc.MutateCondition.parser(), extensionRegistry);
-            if (subBuilder != null) {
-              subBuilder.mergeFrom(condition_);
-              condition_ = subBuilder.buildPartial();
-            }
-
-            break;
-          }
-          case 56: {
-            int rawValue = input.readEnum();
-
-            type_ = rawValue;
-            break;
-          }
-          case 66: {
-            if (!((mutable_bitField0_ & 0x00000001) != 0)) {
-              value_ = new java.util.ArrayList<com.scalar.db.rpc.Value>();
-              mutable_bitField0_ |= 0x00000001;
-            }
-            value_.add(
-                input.readMessage(com.scalar.db.rpc.Value.parser(), extensionRegistry));
-            break;
-          }
-          case 74: {
-            if (!((mutable_bitField0_ & 0x00000002) != 0)) {
-              columns_ = new java.util.ArrayList<com.scalar.db.rpc.Column>();
-              mutable_bitField0_ |= 0x00000002;
-            }
-            columns_.add(
-                input.readMessage(com.scalar.db.rpc.Column.parser(), extensionRegistry));
-            break;
-          }
-          default: {
-            if (!parseUnknownField(
-                input, unknownFields, extensionRegistry, tag)) {
-              done = true;
-            }
-            break;
-          }
-        }
-      }
-    } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-      throw e.setUnfinishedMessage(this);
-    } catch (com.google.protobuf.UninitializedMessageException e) {
-      throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
-    } catch (java.io.IOException e) {
-      throw new com.google.protobuf.InvalidProtocolBufferException(
-          e).setUnfinishedMessage(this);
-    } finally {
-      if (((mutable_bitField0_ & 0x00000001) != 0)) {
-        value_ = java.util.Collections.unmodifiableList(value_);
-      }
-      if (((mutable_bitField0_ & 0x00000002) != 0)) {
-        columns_ = java.util.Collections.unmodifiableList(columns_);
-      }
-      this.unknownFields = unknownFields.build();
-      makeExtensionsImmutable();
-    }
-  }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
     return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Mutation_descriptor;
@@ -285,7 +158,8 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int NAMESPACE_FIELD_NUMBER = 1;
-  private volatile java.lang.Object namespace_;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object namespace_ = "";
   /**
    * <code>string namespace = 1;</code>
    * @return The namespace.
@@ -323,7 +197,8 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int TABLE_FIELD_NUMBER = 2;
-  private volatile java.lang.Object table_;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object table_ = "";
   /**
    * <code>string table = 2;</code>
    * @return The table.
@@ -383,7 +258,7 @@ private static final long serialVersionUID = 0L;
    */
   @java.lang.Override
   public com.scalar.db.rpc.KeyOrBuilder getPartitionKeyOrBuilder() {
-    return getPartitionKey();
+    return partitionKey_ == null ? com.scalar.db.rpc.Key.getDefaultInstance() : partitionKey_;
   }
 
   public static final int CLUSTERING_KEY_FIELD_NUMBER = 4;
@@ -409,11 +284,11 @@ private static final long serialVersionUID = 0L;
    */
   @java.lang.Override
   public com.scalar.db.rpc.KeyOrBuilder getClusteringKeyOrBuilder() {
-    return getClusteringKey();
+    return clusteringKey_ == null ? com.scalar.db.rpc.Key.getDefaultInstance() : clusteringKey_;
   }
 
   public static final int CONSISTENCY_FIELD_NUMBER = 5;
-  private int consistency_;
+  private int consistency_ = 0;
   /**
    * <code>.rpc.Consistency consistency = 5;</code>
    * @return The enum numeric value on the wire for consistency.
@@ -426,8 +301,7 @@ private static final long serialVersionUID = 0L;
    * @return The consistency.
    */
   @java.lang.Override public com.scalar.db.rpc.Consistency getConsistency() {
-    @SuppressWarnings("deprecation")
-    com.scalar.db.rpc.Consistency result = com.scalar.db.rpc.Consistency.valueOf(consistency_);
+    com.scalar.db.rpc.Consistency result = com.scalar.db.rpc.Consistency.forNumber(consistency_);
     return result == null ? com.scalar.db.rpc.Consistency.UNRECOGNIZED : result;
   }
 
@@ -454,11 +328,11 @@ private static final long serialVersionUID = 0L;
    */
   @java.lang.Override
   public com.scalar.db.rpc.MutateConditionOrBuilder getConditionOrBuilder() {
-    return getCondition();
+    return condition_ == null ? com.scalar.db.rpc.MutateCondition.getDefaultInstance() : condition_;
   }
 
   public static final int TYPE_FIELD_NUMBER = 7;
-  private int type_;
+  private int type_ = 0;
   /**
    * <code>.rpc.Mutation.Type type = 7;</code>
    * @return The enum numeric value on the wire for type.
@@ -471,12 +345,12 @@ private static final long serialVersionUID = 0L;
    * @return The type.
    */
   @java.lang.Override public com.scalar.db.rpc.Mutation.Type getType() {
-    @SuppressWarnings("deprecation")
-    com.scalar.db.rpc.Mutation.Type result = com.scalar.db.rpc.Mutation.Type.valueOf(type_);
+    com.scalar.db.rpc.Mutation.Type result = com.scalar.db.rpc.Mutation.Type.forNumber(type_);
     return result == null ? com.scalar.db.rpc.Mutation.Type.UNRECOGNIZED : result;
   }
 
   public static final int VALUE_FIELD_NUMBER = 8;
+  @SuppressWarnings("serial")
   private java.util.List<com.scalar.db.rpc.Value> value_;
   /**
    * <pre>
@@ -537,6 +411,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int COLUMNS_FIELD_NUMBER = 9;
+  @SuppressWarnings("serial")
   private java.util.List<com.scalar.db.rpc.Column> columns_;
   /**
    * <pre>
@@ -637,7 +512,7 @@ private static final long serialVersionUID = 0L;
     for (int i = 0; i < columns_.size(); i++) {
       output.writeMessage(9, columns_.get(i));
     }
-    unknownFields.writeTo(output);
+    getUnknownFields().writeTo(output);
   }
 
   @java.lang.Override
@@ -680,7 +555,7 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(9, columns_.get(i));
     }
-    size += unknownFields.getSerializedSize();
+    size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
   }
@@ -720,7 +595,7 @@ private static final long serialVersionUID = 0L;
         .equals(other.getValueList())) return false;
     if (!getColumnsList()
         .equals(other.getColumnsList())) return false;
-    if (!unknownFields.equals(other.unknownFields)) return false;
+    if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
 
@@ -759,7 +634,7 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + COLUMNS_FIELD_NUMBER;
       hash = (53 * hash) + getColumnsList().hashCode();
     }
-    hash = (29 * hash) + unknownFields.hashCode();
+    hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
   }
@@ -876,62 +751,51 @@ private static final long serialVersionUID = 0L;
 
     // Construct using com.scalar.db.rpc.Mutation.newBuilder()
     private Builder() {
-      maybeForceBuilderInitialization();
+
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
       super(parent);
-      maybeForceBuilderInitialization();
-    }
-    private void maybeForceBuilderInitialization() {
-      if (com.google.protobuf.GeneratedMessageV3
-              .alwaysUseFieldBuilders) {
-        getValueFieldBuilder();
-        getColumnsFieldBuilder();
-      }
+
     }
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       namespace_ = "";
-
       table_ = "";
-
-      if (partitionKeyBuilder_ == null) {
-        partitionKey_ = null;
-      } else {
-        partitionKey_ = null;
+      partitionKey_ = null;
+      if (partitionKeyBuilder_ != null) {
+        partitionKeyBuilder_.dispose();
         partitionKeyBuilder_ = null;
       }
-      if (clusteringKeyBuilder_ == null) {
-        clusteringKey_ = null;
-      } else {
-        clusteringKey_ = null;
+      clusteringKey_ = null;
+      if (clusteringKeyBuilder_ != null) {
+        clusteringKeyBuilder_.dispose();
         clusteringKeyBuilder_ = null;
       }
       consistency_ = 0;
-
-      if (conditionBuilder_ == null) {
-        condition_ = null;
-      } else {
-        condition_ = null;
+      condition_ = null;
+      if (conditionBuilder_ != null) {
+        conditionBuilder_.dispose();
         conditionBuilder_ = null;
       }
       type_ = 0;
-
       if (valueBuilder_ == null) {
         value_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000001);
       } else {
+        value_ = null;
         valueBuilder_.clear();
       }
+      bitField0_ = (bitField0_ & ~0x00000080);
       if (columnsBuilder_ == null) {
         columns_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000002);
       } else {
+        columns_ = null;
         columnsBuilder_.clear();
       }
+      bitField0_ = (bitField0_ & ~0x00000100);
       return this;
     }
 
@@ -958,46 +822,62 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.Mutation buildPartial() {
       com.scalar.db.rpc.Mutation result = new com.scalar.db.rpc.Mutation(this);
-      int from_bitField0_ = bitField0_;
-      result.namespace_ = namespace_;
-      result.table_ = table_;
-      if (partitionKeyBuilder_ == null) {
-        result.partitionKey_ = partitionKey_;
-      } else {
-        result.partitionKey_ = partitionKeyBuilder_.build();
-      }
-      if (clusteringKeyBuilder_ == null) {
-        result.clusteringKey_ = clusteringKey_;
-      } else {
-        result.clusteringKey_ = clusteringKeyBuilder_.build();
-      }
-      result.consistency_ = consistency_;
-      if (conditionBuilder_ == null) {
-        result.condition_ = condition_;
-      } else {
-        result.condition_ = conditionBuilder_.build();
-      }
-      result.type_ = type_;
+      buildPartialRepeatedFields(result);
+      if (bitField0_ != 0) { buildPartial0(result); }
+      onBuilt();
+      return result;
+    }
+
+    private void buildPartialRepeatedFields(com.scalar.db.rpc.Mutation result) {
       if (valueBuilder_ == null) {
-        if (((bitField0_ & 0x00000001) != 0)) {
+        if (((bitField0_ & 0x00000080) != 0)) {
           value_ = java.util.Collections.unmodifiableList(value_);
-          bitField0_ = (bitField0_ & ~0x00000001);
+          bitField0_ = (bitField0_ & ~0x00000080);
         }
         result.value_ = value_;
       } else {
         result.value_ = valueBuilder_.build();
       }
       if (columnsBuilder_ == null) {
-        if (((bitField0_ & 0x00000002) != 0)) {
+        if (((bitField0_ & 0x00000100) != 0)) {
           columns_ = java.util.Collections.unmodifiableList(columns_);
-          bitField0_ = (bitField0_ & ~0x00000002);
+          bitField0_ = (bitField0_ & ~0x00000100);
         }
         result.columns_ = columns_;
       } else {
         result.columns_ = columnsBuilder_.build();
       }
-      onBuilt();
-      return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.Mutation result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.namespace_ = namespace_;
+      }
+      if (((from_bitField0_ & 0x00000002) != 0)) {
+        result.table_ = table_;
+      }
+      if (((from_bitField0_ & 0x00000004) != 0)) {
+        result.partitionKey_ = partitionKeyBuilder_ == null
+            ? partitionKey_
+            : partitionKeyBuilder_.build();
+      }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.clusteringKey_ = clusteringKeyBuilder_ == null
+            ? clusteringKey_
+            : clusteringKeyBuilder_.build();
+      }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.consistency_ = consistency_;
+      }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.condition_ = conditionBuilder_ == null
+            ? condition_
+            : conditionBuilder_.build();
+      }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.type_ = type_;
+      }
     }
 
     @java.lang.Override
@@ -1046,10 +926,12 @@ private static final long serialVersionUID = 0L;
       if (other == com.scalar.db.rpc.Mutation.getDefaultInstance()) return this;
       if (!other.getNamespace().isEmpty()) {
         namespace_ = other.namespace_;
+        bitField0_ |= 0x00000001;
         onChanged();
       }
       if (!other.getTable().isEmpty()) {
         table_ = other.table_;
+        bitField0_ |= 0x00000002;
         onChanged();
       }
       if (other.hasPartitionKey()) {
@@ -1071,7 +953,7 @@ private static final long serialVersionUID = 0L;
         if (!other.value_.isEmpty()) {
           if (value_.isEmpty()) {
             value_ = other.value_;
-            bitField0_ = (bitField0_ & ~0x00000001);
+            bitField0_ = (bitField0_ & ~0x00000080);
           } else {
             ensureValueIsMutable();
             value_.addAll(other.value_);
@@ -1084,7 +966,7 @@ private static final long serialVersionUID = 0L;
             valueBuilder_.dispose();
             valueBuilder_ = null;
             value_ = other.value_;
-            bitField0_ = (bitField0_ & ~0x00000001);
+            bitField0_ = (bitField0_ & ~0x00000080);
             valueBuilder_ = 
               com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                  getValueFieldBuilder() : null;
@@ -1097,7 +979,7 @@ private static final long serialVersionUID = 0L;
         if (!other.columns_.isEmpty()) {
           if (columns_.isEmpty()) {
             columns_ = other.columns_;
-            bitField0_ = (bitField0_ & ~0x00000002);
+            bitField0_ = (bitField0_ & ~0x00000100);
           } else {
             ensureColumnsIsMutable();
             columns_.addAll(other.columns_);
@@ -1110,7 +992,7 @@ private static final long serialVersionUID = 0L;
             columnsBuilder_.dispose();
             columnsBuilder_ = null;
             columns_ = other.columns_;
-            bitField0_ = (bitField0_ & ~0x00000002);
+            bitField0_ = (bitField0_ & ~0x00000100);
             columnsBuilder_ = 
               com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                  getColumnsFieldBuilder() : null;
@@ -1119,7 +1001,7 @@ private static final long serialVersionUID = 0L;
           }
         }
       }
-      this.mergeUnknownFields(other.unknownFields);
+      this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
     }
@@ -1134,17 +1016,97 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      com.scalar.db.rpc.Mutation parsedMessage = null;
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
       try {
-        parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 10: {
+              namespace_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000001;
+              break;
+            } // case 10
+            case 18: {
+              table_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000002;
+              break;
+            } // case 18
+            case 26: {
+              input.readMessage(
+                  getPartitionKeyFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000004;
+              break;
+            } // case 26
+            case 34: {
+              input.readMessage(
+                  getClusteringKeyFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 34
+            case 40: {
+              consistency_ = input.readEnum();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 40
+            case 50: {
+              input.readMessage(
+                  getConditionFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 50
+            case 56: {
+              type_ = input.readEnum();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 56
+            case 66: {
+              com.scalar.db.rpc.Value m =
+                  input.readMessage(
+                      com.scalar.db.rpc.Value.parser(),
+                      extensionRegistry);
+              if (valueBuilder_ == null) {
+                ensureValueIsMutable();
+                value_.add(m);
+              } else {
+                valueBuilder_.addMessage(m);
+              }
+              break;
+            } // case 66
+            case 74: {
+              com.scalar.db.rpc.Column m =
+                  input.readMessage(
+                      com.scalar.db.rpc.Column.parser(),
+                      extensionRegistry);
+              if (columnsBuilder_ == null) {
+                ensureColumnsIsMutable();
+                columns_.add(m);
+              } else {
+                columnsBuilder_.addMessage(m);
+              }
+              break;
+            } // case 74
+            default: {
+              if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                done = true; // was an endgroup tag
+              }
+              break;
+            } // default:
+          } // switch (tag)
+        } // while (!done)
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        parsedMessage = (com.scalar.db.rpc.Mutation) e.getUnfinishedMessage();
         throw e.unwrapIOException();
       } finally {
-        if (parsedMessage != null) {
-          mergeFrom(parsedMessage);
-        }
-      }
+        onChanged();
+      } // finally
       return this;
     }
     private int bitField0_;
@@ -1190,11 +1152,9 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setNamespace(
         java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
+      if (value == null) { throw new NullPointerException(); }
       namespace_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
@@ -1203,8 +1163,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearNamespace() {
-      
       namespace_ = getDefaultInstance().getNamespace();
+      bitField0_ = (bitField0_ & ~0x00000001);
       onChanged();
       return this;
     }
@@ -1215,12 +1175,10 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setNamespaceBytes(
         com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
       namespace_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
@@ -1266,11 +1224,9 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setTable(
         java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
+      if (value == null) { throw new NullPointerException(); }
       table_ = value;
+      bitField0_ |= 0x00000002;
       onChanged();
       return this;
     }
@@ -1279,8 +1235,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearTable() {
-      
       table_ = getDefaultInstance().getTable();
+      bitField0_ = (bitField0_ & ~0x00000002);
       onChanged();
       return this;
     }
@@ -1291,12 +1247,10 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setTableBytes(
         com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
       table_ = value;
+      bitField0_ |= 0x00000002;
       onChanged();
       return this;
     }
@@ -1309,7 +1263,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the partitionKey field is set.
      */
     public boolean hasPartitionKey() {
-      return partitionKeyBuilder_ != null || partitionKey_ != null;
+      return ((bitField0_ & 0x00000004) != 0);
     }
     /**
      * <code>.rpc.Key partition_key = 3;</code>
@@ -1331,11 +1285,11 @@ private static final long serialVersionUID = 0L;
           throw new NullPointerException();
         }
         partitionKey_ = value;
-        onChanged();
       } else {
         partitionKeyBuilder_.setMessage(value);
       }
-
+      bitField0_ |= 0x00000004;
+      onChanged();
       return this;
     }
     /**
@@ -1345,11 +1299,11 @@ private static final long serialVersionUID = 0L;
         com.scalar.db.rpc.Key.Builder builderForValue) {
       if (partitionKeyBuilder_ == null) {
         partitionKey_ = builderForValue.build();
-        onChanged();
       } else {
         partitionKeyBuilder_.setMessage(builderForValue.build());
       }
-
+      bitField0_ |= 0x00000004;
+      onChanged();
       return this;
     }
     /**
@@ -1357,38 +1311,38 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergePartitionKey(com.scalar.db.rpc.Key value) {
       if (partitionKeyBuilder_ == null) {
-        if (partitionKey_ != null) {
-          partitionKey_ =
-            com.scalar.db.rpc.Key.newBuilder(partitionKey_).mergeFrom(value).buildPartial();
+        if (((bitField0_ & 0x00000004) != 0) &&
+          partitionKey_ != null &&
+          partitionKey_ != com.scalar.db.rpc.Key.getDefaultInstance()) {
+          getPartitionKeyBuilder().mergeFrom(value);
         } else {
           partitionKey_ = value;
         }
-        onChanged();
       } else {
         partitionKeyBuilder_.mergeFrom(value);
       }
-
+      bitField0_ |= 0x00000004;
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.Key partition_key = 3;</code>
      */
     public Builder clearPartitionKey() {
-      if (partitionKeyBuilder_ == null) {
-        partitionKey_ = null;
-        onChanged();
-      } else {
-        partitionKey_ = null;
+      bitField0_ = (bitField0_ & ~0x00000004);
+      partitionKey_ = null;
+      if (partitionKeyBuilder_ != null) {
+        partitionKeyBuilder_.dispose();
         partitionKeyBuilder_ = null;
       }
-
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.Key partition_key = 3;</code>
      */
     public com.scalar.db.rpc.Key.Builder getPartitionKeyBuilder() {
-      
+      bitField0_ |= 0x00000004;
       onChanged();
       return getPartitionKeyFieldBuilder().getBuilder();
     }
@@ -1428,7 +1382,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the clusteringKey field is set.
      */
     public boolean hasClusteringKey() {
-      return clusteringKeyBuilder_ != null || clusteringKey_ != null;
+      return ((bitField0_ & 0x00000008) != 0);
     }
     /**
      * <code>.rpc.Key clustering_key = 4;</code>
@@ -1450,11 +1404,11 @@ private static final long serialVersionUID = 0L;
           throw new NullPointerException();
         }
         clusteringKey_ = value;
-        onChanged();
       } else {
         clusteringKeyBuilder_.setMessage(value);
       }
-
+      bitField0_ |= 0x00000008;
+      onChanged();
       return this;
     }
     /**
@@ -1464,11 +1418,11 @@ private static final long serialVersionUID = 0L;
         com.scalar.db.rpc.Key.Builder builderForValue) {
       if (clusteringKeyBuilder_ == null) {
         clusteringKey_ = builderForValue.build();
-        onChanged();
       } else {
         clusteringKeyBuilder_.setMessage(builderForValue.build());
       }
-
+      bitField0_ |= 0x00000008;
+      onChanged();
       return this;
     }
     /**
@@ -1476,38 +1430,38 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeClusteringKey(com.scalar.db.rpc.Key value) {
       if (clusteringKeyBuilder_ == null) {
-        if (clusteringKey_ != null) {
-          clusteringKey_ =
-            com.scalar.db.rpc.Key.newBuilder(clusteringKey_).mergeFrom(value).buildPartial();
+        if (((bitField0_ & 0x00000008) != 0) &&
+          clusteringKey_ != null &&
+          clusteringKey_ != com.scalar.db.rpc.Key.getDefaultInstance()) {
+          getClusteringKeyBuilder().mergeFrom(value);
         } else {
           clusteringKey_ = value;
         }
-        onChanged();
       } else {
         clusteringKeyBuilder_.mergeFrom(value);
       }
-
+      bitField0_ |= 0x00000008;
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.Key clustering_key = 4;</code>
      */
     public Builder clearClusteringKey() {
-      if (clusteringKeyBuilder_ == null) {
-        clusteringKey_ = null;
-        onChanged();
-      } else {
-        clusteringKey_ = null;
+      bitField0_ = (bitField0_ & ~0x00000008);
+      clusteringKey_ = null;
+      if (clusteringKeyBuilder_ != null) {
+        clusteringKeyBuilder_.dispose();
         clusteringKeyBuilder_ = null;
       }
-
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.Key clustering_key = 4;</code>
      */
     public com.scalar.db.rpc.Key.Builder getClusteringKeyBuilder() {
-      
+      bitField0_ |= 0x00000008;
       onChanged();
       return getClusteringKeyFieldBuilder().getBuilder();
     }
@@ -1553,8 +1507,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setConsistencyValue(int value) {
-      
       consistency_ = value;
+      bitField0_ |= 0x00000010;
       onChanged();
       return this;
     }
@@ -1564,8 +1518,7 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Override
     public com.scalar.db.rpc.Consistency getConsistency() {
-      @SuppressWarnings("deprecation")
-      com.scalar.db.rpc.Consistency result = com.scalar.db.rpc.Consistency.valueOf(consistency_);
+      com.scalar.db.rpc.Consistency result = com.scalar.db.rpc.Consistency.forNumber(consistency_);
       return result == null ? com.scalar.db.rpc.Consistency.UNRECOGNIZED : result;
     }
     /**
@@ -1577,7 +1530,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) {
         throw new NullPointerException();
       }
-      
+      bitField0_ |= 0x00000010;
       consistency_ = value.getNumber();
       onChanged();
       return this;
@@ -1587,7 +1540,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearConsistency() {
-      
+      bitField0_ = (bitField0_ & ~0x00000010);
       consistency_ = 0;
       onChanged();
       return this;
@@ -1601,7 +1554,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the condition field is set.
      */
     public boolean hasCondition() {
-      return conditionBuilder_ != null || condition_ != null;
+      return ((bitField0_ & 0x00000020) != 0);
     }
     /**
      * <code>.rpc.MutateCondition condition = 6;</code>
@@ -1623,11 +1576,11 @@ private static final long serialVersionUID = 0L;
           throw new NullPointerException();
         }
         condition_ = value;
-        onChanged();
       } else {
         conditionBuilder_.setMessage(value);
       }
-
+      bitField0_ |= 0x00000020;
+      onChanged();
       return this;
     }
     /**
@@ -1637,11 +1590,11 @@ private static final long serialVersionUID = 0L;
         com.scalar.db.rpc.MutateCondition.Builder builderForValue) {
       if (conditionBuilder_ == null) {
         condition_ = builderForValue.build();
-        onChanged();
       } else {
         conditionBuilder_.setMessage(builderForValue.build());
       }
-
+      bitField0_ |= 0x00000020;
+      onChanged();
       return this;
     }
     /**
@@ -1649,38 +1602,38 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeCondition(com.scalar.db.rpc.MutateCondition value) {
       if (conditionBuilder_ == null) {
-        if (condition_ != null) {
-          condition_ =
-            com.scalar.db.rpc.MutateCondition.newBuilder(condition_).mergeFrom(value).buildPartial();
+        if (((bitField0_ & 0x00000020) != 0) &&
+          condition_ != null &&
+          condition_ != com.scalar.db.rpc.MutateCondition.getDefaultInstance()) {
+          getConditionBuilder().mergeFrom(value);
         } else {
           condition_ = value;
         }
-        onChanged();
       } else {
         conditionBuilder_.mergeFrom(value);
       }
-
+      bitField0_ |= 0x00000020;
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.MutateCondition condition = 6;</code>
      */
     public Builder clearCondition() {
-      if (conditionBuilder_ == null) {
-        condition_ = null;
-        onChanged();
-      } else {
-        condition_ = null;
+      bitField0_ = (bitField0_ & ~0x00000020);
+      condition_ = null;
+      if (conditionBuilder_ != null) {
+        conditionBuilder_.dispose();
         conditionBuilder_ = null;
       }
-
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.MutateCondition condition = 6;</code>
      */
     public com.scalar.db.rpc.MutateCondition.Builder getConditionBuilder() {
-      
+      bitField0_ |= 0x00000020;
       onChanged();
       return getConditionFieldBuilder().getBuilder();
     }
@@ -1726,8 +1679,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setTypeValue(int value) {
-      
       type_ = value;
+      bitField0_ |= 0x00000040;
       onChanged();
       return this;
     }
@@ -1737,8 +1690,7 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Override
     public com.scalar.db.rpc.Mutation.Type getType() {
-      @SuppressWarnings("deprecation")
-      com.scalar.db.rpc.Mutation.Type result = com.scalar.db.rpc.Mutation.Type.valueOf(type_);
+      com.scalar.db.rpc.Mutation.Type result = com.scalar.db.rpc.Mutation.Type.forNumber(type_);
       return result == null ? com.scalar.db.rpc.Mutation.Type.UNRECOGNIZED : result;
     }
     /**
@@ -1750,7 +1702,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) {
         throw new NullPointerException();
       }
-      
+      bitField0_ |= 0x00000040;
       type_ = value.getNumber();
       onChanged();
       return this;
@@ -1760,7 +1712,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearType() {
-      
+      bitField0_ = (bitField0_ & ~0x00000040);
       type_ = 0;
       onChanged();
       return this;
@@ -1769,9 +1721,9 @@ private static final long serialVersionUID = 0L;
     private java.util.List<com.scalar.db.rpc.Value> value_ =
       java.util.Collections.emptyList();
     private void ensureValueIsMutable() {
-      if (!((bitField0_ & 0x00000001) != 0)) {
+      if (!((bitField0_ & 0x00000080) != 0)) {
         value_ = new java.util.ArrayList<com.scalar.db.rpc.Value>(value_);
-        bitField0_ |= 0x00000001;
+        bitField0_ |= 0x00000080;
        }
     }
 
@@ -1965,7 +1917,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Deprecated public Builder clearValue() {
       if (valueBuilder_ == null) {
         value_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000001);
+        bitField0_ = (bitField0_ & ~0x00000080);
         onChanged();
       } else {
         valueBuilder_.clear();
@@ -2070,7 +2022,7 @@ private static final long serialVersionUID = 0L;
         valueBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
             com.scalar.db.rpc.Value, com.scalar.db.rpc.Value.Builder, com.scalar.db.rpc.ValueOrBuilder>(
                 value_,
-                ((bitField0_ & 0x00000001) != 0),
+                ((bitField0_ & 0x00000080) != 0),
                 getParentForChildren(),
                 isClean());
         value_ = null;
@@ -2081,9 +2033,9 @@ private static final long serialVersionUID = 0L;
     private java.util.List<com.scalar.db.rpc.Column> columns_ =
       java.util.Collections.emptyList();
     private void ensureColumnsIsMutable() {
-      if (!((bitField0_ & 0x00000002) != 0)) {
+      if (!((bitField0_ & 0x00000100) != 0)) {
         columns_ = new java.util.ArrayList<com.scalar.db.rpc.Column>(columns_);
-        bitField0_ |= 0x00000002;
+        bitField0_ |= 0x00000100;
        }
     }
 
@@ -2277,7 +2229,7 @@ private static final long serialVersionUID = 0L;
     public Builder clearColumns() {
       if (columnsBuilder_ == null) {
         columns_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000002);
+        bitField0_ = (bitField0_ & ~0x00000100);
         onChanged();
       } else {
         columnsBuilder_.clear();
@@ -2382,7 +2334,7 @@ private static final long serialVersionUID = 0L;
         columnsBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
             com.scalar.db.rpc.Column, com.scalar.db.rpc.Column.Builder, com.scalar.db.rpc.ColumnOrBuilder>(
                 columns_,
-                ((bitField0_ & 0x00000002) != 0),
+                ((bitField0_ & 0x00000100) != 0),
                 getParentForChildren(),
                 isClean());
         columns_ = null;
@@ -2422,7 +2374,18 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return new Mutation(input, extensionRegistry);
+      Builder builder = newBuilder();
+      try {
+        builder.mergeFrom(input, extensionRegistry);
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(builder.buildPartial());
+      } catch (com.google.protobuf.UninitializedMessageException e) {
+        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(e)
+            .setUnfinishedMessage(builder.buildPartial());
+      }
+      return builder.buildPartial();
     }
   };
 

@@ -1,4 +1,4 @@
-package com.scalar.db.storage.common.checker;
+package com.scalar.db.common.checker;
 
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;

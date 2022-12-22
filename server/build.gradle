@@ -48,10 +48,6 @@ dependencies {
     testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
     integrationTestScalarDbServerImplementation project(':integration-test')
     integrationTestScalarDbServerImplementation "org.apache.commons:commons-dbcp2:${commonsDbcp2Version}"
-    integrationTestScalarDbServerImplementation "mysql:mysql-connector-java:${mysqlDriverVersion}"
-    integrationTestScalarDbServerImplementation "org.postgresql:postgresql:${postgresqlDriverVersion}"
-    integrationTestScalarDbServerImplementation "com.oracle.database.jdbc:ojdbc8-production:${oracleDriverVersion}"
-    integrationTestScalarDbServerImplementation "com.microsoft.sqlserver:mssql-jdbc:${sqlserverDriverVersion}"
 
     // for SpotBugs
     compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
@@ -98,7 +94,7 @@ spotless {
         target 'src/*/java/**/*.java'
         importOrder()
         removeUnusedImports()
-        googleJavaFormat()
+        googleJavaFormat(googleJavaFormatVersion)
     }
 }
 

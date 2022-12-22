@@ -31,8 +31,8 @@ public abstract class MutateStatementHandler extends StatementHandler {
    *
    * @param operation {@link Mutation} operation
    * @return a {@code ResultSet}
-   * @throws RetriableExecutionException if the execution failed, but it can be retriable
-   * @throws ReadRepairableExecutionException if the execution partially failed, which can be
+   * @throws RetriableExecutionException if the execution fails, but it can be retriable
+   * @throws ReadRepairableExecutionException if the execution partially fails, which can be
    *     repaired by a following read
    */
   @Override

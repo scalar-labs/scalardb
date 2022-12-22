@@ -49,11 +49,15 @@ public class FilteredResult extends AbstractResult {
     containedColumnNames = builder.build();
   }
 
+  /** @deprecated As of release 3.8.0. Will be removed in release 5.0.0 */
+  @Deprecated
   @Override
   public Optional<Key> getPartitionKey() {
     return getKey(original.getPartitionKey());
   }
 
+  /** @deprecated As of release 3.8.0. Will be removed in release 5.0.0 */
+  @Deprecated
   @Override
   public Optional<Key> getClusteringKey() {
     return getKey(original.getClusteringKey());

@@ -28,6 +28,9 @@ public class CosmosConfig {
       throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be 'cosmos'");
     }
 
+    if (databaseConfig.getContactPoints().isEmpty()) {
+      throw new IllegalArgumentException(DatabaseConfig.CONTACT_POINTS + " is empty");
+    }
     endpoint = databaseConfig.getContactPoints().get(0);
     key = databaseConfig.getPassword().orElse(null);
 

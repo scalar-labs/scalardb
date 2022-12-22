@@ -1,4 +1,4 @@
-package com.scalar.db.storage.common;
+package com.scalar.db.common;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;

@@ -76,4 +76,16 @@ public class GrpcConfigTest {
     assertThatThrownBy(() -> new GrpcConfig(new DatabaseConfig(props)))
         .isInstanceOf(IllegalArgumentException.class);
   }
+
+  @Test
+  public void
+      constructor_PropertiesWithEmptyContactPointsGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.STORAGE, "grpc");
+
+    // Act
+    assertThatThrownBy(() -> new GrpcConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
 }

@@ -32,64 +32,6 @@ private static final long serialVersionUID = 0L;
   getUnknownFields() {
     return this.unknownFields;
   }
-  private MutateCondition(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
-    this();
-    if (extensionRegistry == null) {
-      throw new java.lang.NullPointerException();
-    }
-    int mutable_bitField0_ = 0;
-    com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
-    try {
-      boolean done = false;
-      while (!done) {
-        int tag = input.readTag();
-        switch (tag) {
-          case 0:
-            done = true;
-            break;
-          case 8: {
-            int rawValue = input.readEnum();
-
-            type_ = rawValue;
-            break;
-          }
-          case 18: {
-            if (!((mutable_bitField0_ & 0x00000001) != 0)) {
-              expressions_ = new java.util.ArrayList<com.scalar.db.rpc.ConditionalExpression>();
-              mutable_bitField0_ |= 0x00000001;
-            }
-            expressions_.add(
-                input.readMessage(com.scalar.db.rpc.ConditionalExpression.parser(), extensionRegistry));
-            break;
-          }
-          default: {
-            if (!parseUnknownField(
-                input, unknownFields, extensionRegistry, tag)) {
-              done = true;
-            }
-            break;
-          }
-        }
-      }
-    } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-      throw e.setUnfinishedMessage(this);
-    } catch (com.google.protobuf.UninitializedMessageException e) {
-      throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
-    } catch (java.io.IOException e) {
-      throw new com.google.protobuf.InvalidProtocolBufferException(
-          e).setUnfinishedMessage(this);
-    } finally {
-      if (((mutable_bitField0_ & 0x00000001) != 0)) {
-        expressions_ = java.util.Collections.unmodifiableList(expressions_);
-      }
-      this.unknownFields = unknownFields.build();
-      makeExtensionsImmutable();
-    }
-  }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
     return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_MutateCondition_descriptor;
@@ -239,7 +181,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int TYPE_FIELD_NUMBER = 1;
-  private int type_;
+  private int type_ = 0;
   /**
    * <code>.rpc.MutateCondition.Type type = 1;</code>
    * @return The enum numeric value on the wire for type.
@@ -252,12 +194,12 @@ private static final long serialVersionUID = 0L;
    * @return The type.
    */
   @java.lang.Override public com.scalar.db.rpc.MutateCondition.Type getType() {
-    @SuppressWarnings("deprecation")
-    com.scalar.db.rpc.MutateCondition.Type result = com.scalar.db.rpc.MutateCondition.Type.valueOf(type_);
+    com.scalar.db.rpc.MutateCondition.Type result = com.scalar.db.rpc.MutateCondition.Type.forNumber(type_);
     return result == null ? com.scalar.db.rpc.MutateCondition.Type.UNRECOGNIZED : result;
   }
 
   public static final int EXPRESSIONS_FIELD_NUMBER = 2;
+  @SuppressWarnings("serial")
   private java.util.List<com.scalar.db.rpc.ConditionalExpression> expressions_;
   /**
    * <code>repeated .rpc.ConditionalExpression expressions = 2;</code>
@@ -317,7 +259,7 @@ private static final long serialVersionUID = 0L;
     for (int i = 0; i < expressions_.size(); i++) {
       output.writeMessage(2, expressions_.get(i));
     }
-    unknownFields.writeTo(output);
+    getUnknownFields().writeTo(output);
   }
 
   @java.lang.Override
@@ -334,7 +276,7 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(2, expressions_.get(i));
     }
-    size += unknownFields.getSerializedSize();
+    size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
   }
@@ -352,7 +294,7 @@ private static final long serialVersionUID = 0L;
     if (type_ != other.type_) return false;
     if (!getExpressionsList()
         .equals(other.getExpressionsList())) return false;
-    if (!unknownFields.equals(other.unknownFields)) return false;
+    if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
 
@@ -369,7 +311,7 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + EXPRESSIONS_FIELD_NUMBER;
       hash = (53 * hash) + getExpressionsList().hashCode();
     }
-    hash = (29 * hash) + unknownFields.hashCode();
+    hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
   }
@@ -486,31 +428,26 @@ private static final long serialVersionUID = 0L;
 
     // Construct using com.scalar.db.rpc.MutateCondition.newBuilder()
     private Builder() {
-      maybeForceBuilderInitialization();
+
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
       super(parent);
-      maybeForceBuilderInitialization();
-    }
-    private void maybeForceBuilderInitialization() {
-      if (com.google.protobuf.GeneratedMessageV3
-              .alwaysUseFieldBuilders) {
-        getExpressionsFieldBuilder();
-      }
+
     }
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       type_ = 0;
-
       if (expressionsBuilder_ == null) {
         expressions_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000001);
       } else {
+        expressions_ = null;
         expressionsBuilder_.clear();
       }
+      bitField0_ = (bitField0_ & ~0x00000002);
       return this;
     }
 
@@ -537,19 +474,29 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.MutateCondition buildPartial() {
       com.scalar.db.rpc.MutateCondition result = new com.scalar.db.rpc.MutateCondition(this);
-      int from_bitField0_ = bitField0_;
-      result.type_ = type_;
+      buildPartialRepeatedFields(result);
+      if (bitField0_ != 0) { buildPartial0(result); }
+      onBuilt();
+      return result;
+    }
+
+    private void buildPartialRepeatedFields(com.scalar.db.rpc.MutateCondition result) {
       if (expressionsBuilder_ == null) {
-        if (((bitField0_ & 0x00000001) != 0)) {
+        if (((bitField0_ & 0x00000002) != 0)) {
           expressions_ = java.util.Collections.unmodifiableList(expressions_);
-          bitField0_ = (bitField0_ & ~0x00000001);
+          bitField0_ = (bitField0_ & ~0x00000002);
         }
         result.expressions_ = expressions_;
       } else {
         result.expressions_ = expressionsBuilder_.build();
       }
-      onBuilt();
-      return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.MutateCondition result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.type_ = type_;
+      }
     }
 
     @java.lang.Override
@@ -603,7 +550,7 @@ private static final long serialVersionUID = 0L;
         if (!other.expressions_.isEmpty()) {
           if (expressions_.isEmpty()) {
             expressions_ = other.expressions_;
-            bitField0_ = (bitField0_ & ~0x00000001);
+            bitField0_ = (bitField0_ & ~0x00000002);
           } else {
             ensureExpressionsIsMutable();
             expressions_.addAll(other.expressions_);
@@ -616,7 +563,7 @@ private static final long serialVersionUID = 0L;
             expressionsBuilder_.dispose();
             expressionsBuilder_ = null;
             expressions_ = other.expressions_;
-            bitField0_ = (bitField0_ & ~0x00000001);
+            bitField0_ = (bitField0_ & ~0x00000002);
             expressionsBuilder_ = 
               com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                  getExpressionsFieldBuilder() : null;
@@ -625,7 +572,7 @@ private static final long serialVersionUID = 0L;
           }
         }
       }
-      this.mergeUnknownFields(other.unknownFields);
+      this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
     }
@@ -640,17 +587,48 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      com.scalar.db.rpc.MutateCondition parsedMessage = null;
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
       try {
-        parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 8: {
+              type_ = input.readEnum();
+              bitField0_ |= 0x00000001;
+              break;
+            } // case 8
+            case 18: {
+              com.scalar.db.rpc.ConditionalExpression m =
+                  input.readMessage(
+                      com.scalar.db.rpc.ConditionalExpression.parser(),
+                      extensionRegistry);
+              if (expressionsBuilder_ == null) {
+                ensureExpressionsIsMutable();
+                expressions_.add(m);
+              } else {
+                expressionsBuilder_.addMessage(m);
+              }
+              break;
+            } // case 18
+            default: {
+              if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                done = true; // was an endgroup tag
+              }
+              break;
+            } // default:
+          } // switch (tag)
+        } // while (!done)
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        parsedMessage = (com.scalar.db.rpc.MutateCondition) e.getUnfinishedMessage();
         throw e.unwrapIOException();
       } finally {
-        if (parsedMessage != null) {
-          mergeFrom(parsedMessage);
-        }
-      }
+        onChanged();
+      } // finally
       return this;
     }
     private int bitField0_;
@@ -669,8 +647,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setTypeValue(int value) {
-      
       type_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
@@ -680,8 +658,7 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Override
     public com.scalar.db.rpc.MutateCondition.Type getType() {
-      @SuppressWarnings("deprecation")
-      com.scalar.db.rpc.MutateCondition.Type result = com.scalar.db.rpc.MutateCondition.Type.valueOf(type_);
+      com.scalar.db.rpc.MutateCondition.Type result = com.scalar.db.rpc.MutateCondition.Type.forNumber(type_);
       return result == null ? com.scalar.db.rpc.MutateCondition.Type.UNRECOGNIZED : result;
     }
     /**
@@ -693,7 +670,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) {
         throw new NullPointerException();
       }
-      
+      bitField0_ |= 0x00000001;
       type_ = value.getNumber();
       onChanged();
       return this;
@@ -703,7 +680,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearType() {
-      
+      bitField0_ = (bitField0_ & ~0x00000001);
       type_ = 0;
       onChanged();
       return this;
@@ -712,9 +689,9 @@ private static final long serialVersionUID = 0L;
     private java.util.List<com.scalar.db.rpc.ConditionalExpression> expressions_ =
       java.util.Collections.emptyList();
     private void ensureExpressionsIsMutable() {
-      if (!((bitField0_ & 0x00000001) != 0)) {
+      if (!((bitField0_ & 0x00000002) != 0)) {
         expressions_ = new java.util.ArrayList<com.scalar.db.rpc.ConditionalExpression>(expressions_);
-        bitField0_ |= 0x00000001;
+        bitField0_ |= 0x00000002;
        }
     }
 
@@ -864,7 +841,7 @@ private static final long serialVersionUID = 0L;
     public Builder clearExpressions() {
       if (expressionsBuilder_ == null) {
         expressions_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000001);
+        bitField0_ = (bitField0_ & ~0x00000002);
         onChanged();
       } else {
         expressionsBuilder_.clear();
@@ -941,7 +918,7 @@ private static final long serialVersionUID = 0L;
         expressionsBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
             com.scalar.db.rpc.ConditionalExpression, com.scalar.db.rpc.ConditionalExpression.Builder, com.scalar.db.rpc.ConditionalExpressionOrBuilder>(
                 expressions_,
-                ((bitField0_ & 0x00000001) != 0),
+                ((bitField0_ & 0x00000002) != 0),
                 getParentForChildren(),
                 isClean());
         expressions_ = null;
@@ -981,7 +958,18 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return new MutateCondition(input, extensionRegistry);
+      Builder builder = newBuilder();
+      try {
+        builder.mergeFrom(input, extensionRegistry);
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(builder.buildPartial());
+      } catch (com.google.protobuf.UninitializedMessageException e) {
+        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(e)
+            .setUnfinishedMessage(builder.buildPartial());
+      }
+      return builder.buildPartial();
     }
   };
 

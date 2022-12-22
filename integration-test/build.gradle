@@ -34,7 +34,7 @@ spotless {
         target 'src/*/java/**/*.java'
         importOrder()
         removeUnusedImports()
-        googleJavaFormat()
+        googleJavaFormat(googleJavaFormatVersion)
     }
 }
 

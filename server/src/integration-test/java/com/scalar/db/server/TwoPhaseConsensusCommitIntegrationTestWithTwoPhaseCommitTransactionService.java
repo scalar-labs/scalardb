@@ -24,8 +24,8 @@ public class TwoPhaseConsensusCommitIntegrationTestWithTwoPhaseCommitTransaction
 
   @Override
   protected void initialize(String testName) throws IOException {
-    Properties properties1 = ServerEnv.getServerProperties1(testName);
-    Properties properties2 = ServerEnv.getServerProperties2(testName);
+    Properties properties1 = ServerEnv.getServer1Properties(testName);
+    Properties properties2 = ServerEnv.getServer2Properties(testName);
     if (properties1 != null && properties2 != null) {
       server1 = new ScalarDbServer(modifyProperties(properties1, testName));
       server1.start();
@@ -58,12 +58,12 @@ public class TwoPhaseConsensusCommitIntegrationTestWithTwoPhaseCommitTransaction
 
   @Override
   protected Properties getProps1(String testName) {
-    return ServerEnv.getClientProperties1(testName);
+    return ServerEnv.getClient1Properties(testName);
   }
 
   @Override
   protected Properties getProps2(String testName) {
-    return ServerEnv.getClientProperties2(testName);
+    return ServerEnv.getClient2Properties(testName);
   }
 
   @Override

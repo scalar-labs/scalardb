@@ -11,11 +11,12 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.WrappedDistributedTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.transaction.common.WrappedDistributedTransaction;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -113,6 +114,16 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
+  public void begin_CalledTwiceWithSameTxId_ThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+
+    // Act Assert
+    manager.begin(ANY_TX_ID);
+    assertThatThrownBy(() -> manager.begin(ANY_TX_ID)).isInstanceOf(TransactionException.class);
+  }
+
+  @Test
   public void start_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolation()
       throws TransactionException {
     // Arrange
@@ -197,6 +208,16 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
+  public void start_CalledTwiceWithSameTxId_ThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+
+    // Act Assert
+    manager.start(ANY_TX_ID);
+    assertThatThrownBy(() -> manager.start(ANY_TX_ID)).isInstanceOf(TransactionException.class);
+  }
+
+  @Test
   public void resume_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
     DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
@@ -209,22 +230,24 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void resume_CalledWithoutBegin_ThrowIllegalStateException() {
+  public void resume_CalledWithoutBegin_ThrowTransactionNotFoundException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
-  public void resume_CalledWithBeginAndCommit_ThrowIllegalStateException()
+  public void resume_CalledWithBeginAndCommit_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.commit();
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
@@ -248,14 +271,15 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void resume_CalledWithBeginAndRollback_ThrowIllegalStateException()
+  public void resume_CalledWithBeginAndRollback_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.rollback();
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test

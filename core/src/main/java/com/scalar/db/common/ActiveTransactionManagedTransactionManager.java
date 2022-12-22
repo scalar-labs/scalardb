@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.common;
+package com.scalar.db.common;
 
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
@@ -12,6 +12,7 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.util.ActiveExpiringMap;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -48,7 +49,7 @@ public abstract class ActiveTransactionManagedTransactionManager
   private void add(DistributedTransaction transaction) throws TransactionException {
     if (activeTransactions.putIfAbsent(transaction.getId(), transaction) != null) {
       transaction.rollback();
-      throw new IllegalStateException(
+      throw new TransactionException(
           "The transaction already exists. transactionId: " + transaction.getId());
     }
   }
@@ -58,12 +59,12 @@ public abstract class ActiveTransactionManagedTransactionManager
   }
 
   @Override
-  public DistributedTransaction resume(String txId) {
+  public DistributedTransaction resume(String txId) throws TransactionNotFoundException {
     return activeTransactions
         .get(txId)
         .orElseThrow(
             () ->
-                new IllegalStateException(
+                new TransactionNotFoundException(
                     "A transaction associated with the specified transaction ID is not found. "
                         + "It might have been expired. transactionId: "
                         + txId));

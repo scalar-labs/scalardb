@@ -97,4 +97,17 @@ public class CosmosConfigTest {
     assertThat(config.getMetadataDatabase()).isPresent();
     assertThat(config.getMetadataDatabase().get()).isEqualTo(ANY_TABLE_METADATA_DATABASE);
   }
+
+  @Test
+  public void
+      constructor_PropertiesWithEmptyContactPointsGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_KEY);
+    props.setProperty(DatabaseConfig.STORAGE, COSMOS_STORAGE);
+
+    // Act
+    assertThatThrownBy(() -> new CosmosConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
 }

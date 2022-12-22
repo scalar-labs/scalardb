@@ -38,7 +38,14 @@ public class ParallelExecutor {
       parallelExecutorService =
           Executors.newFixedThreadPool(
               config.getParallelExecutorCount(),
-              new ThreadFactoryBuilder().setNameFormat("parallel-executor-%d").build());
+              // Make this thread factory create daemon threads not to block JVM termination. JVM
+              // shutdown hook is executed before terminating daemon threads. So, daemon threads
+              // created by this thread factory will be properly terminated after pre-termination
+              // operations are done if the operations are set in JVM shutdown hook.
+              new ThreadFactoryBuilder()
+                  .setNameFormat("parallel-executor-%d")
+                  .setDaemon(true)
+                  .build());
     } else {
       parallelExecutorService = null;
     }

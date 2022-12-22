@@ -30,115 +30,6 @@ private static final long serialVersionUID = 0L;
   getUnknownFields() {
     return this.unknownFields;
   }
-  private TwoPhaseCommitTransactionResponse(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
-    this();
-    if (extensionRegistry == null) {
-      throw new java.lang.NullPointerException();
-    }
-    com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
-    try {
-      boolean done = false;
-      while (!done) {
-        int tag = input.readTag();
-        switch (tag) {
-          case 0:
-            done = true;
-            break;
-          case 10: {
-            com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse.Builder subBuilder = null;
-            if (responseCase_ == 1) {
-              subBuilder = ((com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse) response_).toBuilder();
-            }
-            response_ =
-                input.readMessage(com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse.parser(), extensionRegistry);
-            if (subBuilder != null) {
-              subBuilder.mergeFrom((com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse) response_);
-              response_ = subBuilder.buildPartial();
-            }
-            responseCase_ = 1;
-            break;
-          }
-          case 18: {
-            com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.GetResponse.Builder subBuilder = null;
-            if (responseCase_ == 2) {
-              subBuilder = ((com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.GetResponse) response_).toBuilder();
-            }
-            response_ =
-                input.readMessage(com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.GetResponse.parser(), extensionRegistry);
-            if (subBuilder != null) {
-              subBuilder.mergeFrom((com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.GetResponse) response_);
-              response_ = subBuilder.buildPartial();
-            }
-            responseCase_ = 2;
-            break;
-          }
-          case 26: {
-            com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ScanResponse.Builder subBuilder = null;
-            if (responseCase_ == 3) {
-              subBuilder = ((com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ScanResponse) response_).toBuilder();
-            }
-            response_ =
-                input.readMessage(com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ScanResponse.parser(), extensionRegistry);
-            if (subBuilder != null) {
-              subBuilder.mergeFrom((com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ScanResponse) response_);
-              response_ = subBuilder.buildPartial();
-            }
-            responseCase_ = 3;
-            break;
-          }
-          case 34: {
-            com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.Builder subBuilder = null;
-            if (responseCase_ == 4) {
-              subBuilder = ((com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error) response_).toBuilder();
-            }
-            response_ =
-                input.readMessage(com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.parser(), extensionRegistry);
-            if (subBuilder != null) {
-              subBuilder.mergeFrom((com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error) response_);
-              response_ = subBuilder.buildPartial();
-            }
-            responseCase_ = 4;
-            break;
-          }
-          case 42: {
-            com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.BeginResponse.Builder subBuilder = null;
-            if (responseCase_ == 5) {
-              subBuilder = ((com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.BeginResponse) response_).toBuilder();
-            }
-            response_ =
-                input.readMessage(com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.BeginResponse.parser(), extensionRegistry);
-            if (subBuilder != null) {
-              subBuilder.mergeFrom((com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.BeginResponse) response_);
-              response_ = subBuilder.buildPartial();
-            }
-            responseCase_ = 5;
-            break;
-          }
-          default: {
-            if (!parseUnknownField(
-                input, unknownFields, extensionRegistry, tag)) {
-              done = true;
-            }
-            break;
-          }
-        }
-      }
-    } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-      throw e.setUnfinishedMessage(this);
-    } catch (com.google.protobuf.UninitializedMessageException e) {
-      throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
-    } catch (java.io.IOException e) {
-      throw new com.google.protobuf.InvalidProtocolBufferException(
-          e).setUnfinishedMessage(this);
-    } finally {
-      this.unknownFields = unknownFields.build();
-      makeExtensionsImmutable();
-    }
-  }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
     return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionResponse_descriptor;
@@ -196,51 +87,6 @@ private static final long serialVersionUID = 0L;
     getUnknownFields() {
       return this.unknownFields;
     }
-    private BeginResponse(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            case 10: {
-              java.lang.String s = input.readStringRequireUtf8();
-
-              transactionId_ = s;
-              break;
-            }
-            default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (com.google.protobuf.UninitializedMessageException e) {
-        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionResponse_BeginResponse_descriptor;
@@ -255,7 +101,8 @@ private static final long serialVersionUID = 0L;
     }
 
     public static final int TRANSACTION_ID_FIELD_NUMBER = 1;
-    private volatile java.lang.Object transactionId_;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object transactionId_ = "";
     /**
      * <code>string transaction_id = 1;</code>
      * @return The transactionId.
@@ -309,7 +156,7 @@ private static final long serialVersionUID = 0L;
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(transactionId_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 1, transactionId_);
       }
-      unknownFields.writeTo(output);
+      getUnknownFields().writeTo(output);
     }
 
     @java.lang.Override
@@ -321,7 +168,7 @@ private static final long serialVersionUID = 0L;
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(transactionId_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, transactionId_);
       }
-      size += unknownFields.getSerializedSize();
+      size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
       return size;
     }
@@ -338,7 +185,7 @@ private static final long serialVersionUID = 0L;
 
       if (!getTransactionId()
           .equals(other.getTransactionId())) return false;
-      if (!unknownFields.equals(other.unknownFields)) return false;
+      if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
 
@@ -351,7 +198,7 @@ private static final long serialVersionUID = 0L;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + TRANSACTION_ID_FIELD_NUMBER;
       hash = (53 * hash) + getTransactionId().hashCode();
-      hash = (29 * hash) + unknownFields.hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
     }
@@ -468,24 +315,19 @@ private static final long serialVersionUID = 0L;
 
       // Construct using com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.BeginResponse.newBuilder()
       private Builder() {
-        maybeForceBuilderInitialization();
+
       }
 
       private Builder(
           com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
         super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
-        }
+
       }
       @java.lang.Override
       public Builder clear() {
         super.clear();
+        bitField0_ = 0;
         transactionId_ = "";
-
         return this;
       }
 
@@ -512,9 +354,16 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.BeginResponse buildPartial() {
         com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.BeginResponse result = new com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.BeginResponse(this);
-        result.transactionId_ = transactionId_;
+        if (bitField0_ != 0) { buildPartial0(result); }
         onBuilt();
         return result;
+      }
+
+      private void buildPartial0(com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.BeginResponse result) {
+        int from_bitField0_ = bitField0_;
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.transactionId_ = transactionId_;
+        }
       }
 
       @java.lang.Override
@@ -563,9 +412,10 @@ private static final long serialVersionUID = 0L;
         if (other == com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.BeginResponse.getDefaultInstance()) return this;
         if (!other.getTransactionId().isEmpty()) {
           transactionId_ = other.transactionId_;
+          bitField0_ |= 0x00000001;
           onChanged();
         }
-        this.mergeUnknownFields(other.unknownFields);
+        this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
         return this;
       }
@@ -580,19 +430,38 @@ private static final long serialVersionUID = 0L;
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.BeginResponse parsedMessage = null;
+        if (extensionRegistry == null) {
+          throw new java.lang.NullPointerException();
+        }
         try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              case 10: {
+                transactionId_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000001;
+                break;
+              } // case 10
+              default: {
+                if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                  done = true; // was an endgroup tag
+                }
+                break;
+              } // default:
+            } // switch (tag)
+          } // while (!done)
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.BeginResponse) e.getUnfinishedMessage();
           throw e.unwrapIOException();
         } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
+          onChanged();
+        } // finally
         return this;
       }
+      private int bitField0_;
 
       private java.lang.Object transactionId_ = "";
       /**
@@ -635,11 +504,9 @@ private static final long serialVersionUID = 0L;
        */
       public Builder setTransactionId(
           java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  
+        if (value == null) { throw new NullPointerException(); }
         transactionId_ = value;
+        bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
@@ -648,8 +515,8 @@ private static final long serialVersionUID = 0L;
        * @return This builder for chaining.
        */
       public Builder clearTransactionId() {
-        
         transactionId_ = getDefaultInstance().getTransactionId();
+        bitField0_ = (bitField0_ & ~0x00000001);
         onChanged();
         return this;
       }
@@ -660,12 +527,10 @@ private static final long serialVersionUID = 0L;
        */
       public Builder setTransactionIdBytes(
           com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-        
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
         transactionId_ = value;
+        bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
@@ -702,7 +567,18 @@ private static final long serialVersionUID = 0L;
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new BeginResponse(input, extensionRegistry);
+        Builder builder = newBuilder();
+        try {
+          builder.mergeFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(builder.buildPartial());
+        } catch (com.google.protobuf.UninitializedMessageException e) {
+          throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(e)
+              .setUnfinishedMessage(builder.buildPartial());
+        }
+        return builder.buildPartial();
       }
     };
 
@@ -766,51 +642,6 @@ private static final long serialVersionUID = 0L;
     getUnknownFields() {
       return this.unknownFields;
     }
-    private StartResponse(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            case 10: {
-              java.lang.String s = input.readStringRequireUtf8();
-
-              transactionId_ = s;
-              break;
-            }
-            default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (com.google.protobuf.UninitializedMessageException e) {
-        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionResponse_StartResponse_descriptor;
@@ -825,7 +656,8 @@ private static final long serialVersionUID = 0L;
     }
 
     public static final int TRANSACTION_ID_FIELD_NUMBER = 1;
-    private volatile java.lang.Object transactionId_;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object transactionId_ = "";
     /**
      * <code>string transaction_id = 1;</code>
      * @return The transactionId.
@@ -879,7 +711,7 @@ private static final long serialVersionUID = 0L;
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(transactionId_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 1, transactionId_);
       }
-      unknownFields.writeTo(output);
+      getUnknownFields().writeTo(output);
     }
 
     @java.lang.Override
@@ -891,7 +723,7 @@ private static final long serialVersionUID = 0L;
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(transactionId_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, transactionId_);
       }
-      size += unknownFields.getSerializedSize();
+      size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
       return size;
     }
@@ -908,7 +740,7 @@ private static final long serialVersionUID = 0L;
 
       if (!getTransactionId()
           .equals(other.getTransactionId())) return false;
-      if (!unknownFields.equals(other.unknownFields)) return false;
+      if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
 
@@ -921,7 +753,7 @@ private static final long serialVersionUID = 0L;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + TRANSACTION_ID_FIELD_NUMBER;
       hash = (53 * hash) + getTransactionId().hashCode();
-      hash = (29 * hash) + unknownFields.hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
     }
@@ -1038,24 +870,19 @@ private static final long serialVersionUID = 0L;
 
       // Construct using com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse.newBuilder()
       private Builder() {
-        maybeForceBuilderInitialization();
+
       }
 
       private Builder(
           com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
         super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
-        }
+
       }
       @java.lang.Override
       public Builder clear() {
         super.clear();
+        bitField0_ = 0;
         transactionId_ = "";
-
         return this;
       }
 
@@ -1082,9 +909,16 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse buildPartial() {
         com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse result = new com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse(this);
-        result.transactionId_ = transactionId_;
+        if (bitField0_ != 0) { buildPartial0(result); }
         onBuilt();
         return result;
+      }
+
+      private void buildPartial0(com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse result) {
+        int from_bitField0_ = bitField0_;
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.transactionId_ = transactionId_;
+        }
       }
 
       @java.lang.Override
@@ -1133,9 +967,10 @@ private static final long serialVersionUID = 0L;
         if (other == com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse.getDefaultInstance()) return this;
         if (!other.getTransactionId().isEmpty()) {
           transactionId_ = other.transactionId_;
+          bitField0_ |= 0x00000001;
           onChanged();
         }
-        this.mergeUnknownFields(other.unknownFields);
+        this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
         return this;
       }
@@ -1150,19 +985,38 @@ private static final long serialVersionUID = 0L;
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse parsedMessage = null;
+        if (extensionRegistry == null) {
+          throw new java.lang.NullPointerException();
+        }
         try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              case 10: {
+                transactionId_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000001;
+                break;
+              } // case 10
+              default: {
+                if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                  done = true; // was an endgroup tag
+                }
+                break;
+              } // default:
+            } // switch (tag)
+          } // while (!done)
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse) e.getUnfinishedMessage();
           throw e.unwrapIOException();
         } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
+          onChanged();
+        } // finally
         return this;
       }
+      private int bitField0_;
 
       private java.lang.Object transactionId_ = "";
       /**
@@ -1205,11 +1059,9 @@ private static final long serialVersionUID = 0L;
        */
       public Builder setTransactionId(
           java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  
+        if (value == null) { throw new NullPointerException(); }
         transactionId_ = value;
+        bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
@@ -1218,8 +1070,8 @@ private static final long serialVersionUID = 0L;
        * @return This builder for chaining.
        */
       public Builder clearTransactionId() {
-        
         transactionId_ = getDefaultInstance().getTransactionId();
+        bitField0_ = (bitField0_ & ~0x00000001);
         onChanged();
         return this;
       }
@@ -1230,12 +1082,10 @@ private static final long serialVersionUID = 0L;
        */
       public Builder setTransactionIdBytes(
           com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-        
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
         transactionId_ = value;
+        bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
@@ -1272,7 +1122,18 @@ private static final long serialVersionUID = 0L;
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new StartResponse(input, extensionRegistry);
+        Builder builder = newBuilder();
+        try {
+          builder.mergeFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(builder.buildPartial());
+        } catch (com.google.protobuf.UninitializedMessageException e) {
+          throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(e)
+              .setUnfinishedMessage(builder.buildPartial());
+        }
+        return builder.buildPartial();
       }
     };
 
@@ -1338,58 +1199,6 @@ private static final long serialVersionUID = 0L;
     getUnknownFields() {
       return this.unknownFields;
     }
-    private GetResponse(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            case 10: {
-              com.scalar.db.rpc.Result.Builder subBuilder = null;
-              if (result_ != null) {
-                subBuilder = result_.toBuilder();
-              }
-              result_ = input.readMessage(com.scalar.db.rpc.Result.parser(), extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(result_);
-                result_ = subBuilder.buildPartial();
-              }
-
-              break;
-            }
-            default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (com.google.protobuf.UninitializedMessageException e) {
-        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionResponse_GetResponse_descriptor;
@@ -1426,7 +1235,7 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Override
     public com.scalar.db.rpc.ResultOrBuilder getResultOrBuilder() {
-      return getResult();
+      return result_ == null ? com.scalar.db.rpc.Result.getDefaultInstance() : result_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -1446,7 +1255,7 @@ private static final long serialVersionUID = 0L;
       if (result_ != null) {
         output.writeMessage(1, getResult());
       }
-      unknownFields.writeTo(output);
+      getUnknownFields().writeTo(output);
     }
 
     @java.lang.Override
@@ -1459,7 +1268,7 @@ private static final long serialVersionUID = 0L;
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(1, getResult());
       }
-      size += unknownFields.getSerializedSize();
+      size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
       return size;
     }
@@ -1479,7 +1288,7 @@ private static final long serialVersionUID = 0L;
         if (!getResult()
             .equals(other.getResult())) return false;
       }
-      if (!unknownFields.equals(other.unknownFields)) return false;
+      if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
 
@@ -1494,7 +1303,7 @@ private static final long serialVersionUID = 0L;
         hash = (37 * hash) + RESULT_FIELD_NUMBER;
         hash = (53 * hash) + getResult().hashCode();
       }
-      hash = (29 * hash) + unknownFields.hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
     }
@@ -1611,26 +1420,21 @@ private static final long serialVersionUID = 0L;
 
       // Construct using com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.GetResponse.newBuilder()
       private Builder() {
-        maybeForceBuilderInitialization();
+
       }
 
       private Builder(
           com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
         super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
-        }
+
       }
       @java.lang.Override
       public Builder clear() {
         super.clear();
-        if (resultBuilder_ == null) {
-          result_ = null;
-        } else {
-          result_ = null;
+        bitField0_ = 0;
+        result_ = null;
+        if (resultBuilder_ != null) {
+          resultBuilder_.dispose();
           resultBuilder_ = null;
         }
         return this;
@@ -1659,13 +1463,18 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.GetResponse buildPartial() {
         com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.GetResponse result = new com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.GetResponse(this);
-        if (resultBuilder_ == null) {
-          result.result_ = result_;
-        } else {
-          result.result_ = resultBuilder_.build();
-        }
+        if (bitField0_ != 0) { buildPartial0(result); }
         onBuilt();
         return result;
+      }
+
+      private void buildPartial0(com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.GetResponse result) {
+        int from_bitField0_ = bitField0_;
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.result_ = resultBuilder_ == null
+              ? result_
+              : resultBuilder_.build();
+        }
       }
 
       @java.lang.Override
@@ -1715,7 +1524,7 @@ private static final long serialVersionUID = 0L;
         if (other.hasResult()) {
           mergeResult(other.getResult());
         }
-        this.mergeUnknownFields(other.unknownFields);
+        this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
         return this;
       }
@@ -1730,19 +1539,40 @@ private static final long serialVersionUID = 0L;
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.GetResponse parsedMessage = null;
+        if (extensionRegistry == null) {
+          throw new java.lang.NullPointerException();
+        }
         try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              case 10: {
+                input.readMessage(
+                    getResultFieldBuilder().getBuilder(),
+                    extensionRegistry);
+                bitField0_ |= 0x00000001;
+                break;
+              } // case 10
+              default: {
+                if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                  done = true; // was an endgroup tag
+                }
+                break;
+              } // default:
+            } // switch (tag)
+          } // while (!done)
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.GetResponse) e.getUnfinishedMessage();
           throw e.unwrapIOException();
         } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
+          onChanged();
+        } // finally
         return this;
       }
+      private int bitField0_;
 
       private com.scalar.db.rpc.Result result_;
       private com.google.protobuf.SingleFieldBuilderV3<
@@ -1752,7 +1582,7 @@ private static final long serialVersionUID = 0L;
        * @return Whether the result field is set.
        */
       public boolean hasResult() {
-        return resultBuilder_ != null || result_ != null;
+        return ((bitField0_ & 0x00000001) != 0);
       }
       /**
        * <code>.rpc.Result result = 1;</code>
@@ -1774,11 +1604,11 @@ private static final long serialVersionUID = 0L;
             throw new NullPointerException();
           }
           result_ = value;
-          onChanged();
         } else {
           resultBuilder_.setMessage(value);
         }
-
+        bitField0_ |= 0x00000001;
+        onChanged();
         return this;
       }
       /**
@@ -1788,11 +1618,11 @@ private static final long serialVersionUID = 0L;
           com.scalar.db.rpc.Result.Builder builderForValue) {
         if (resultBuilder_ == null) {
           result_ = builderForValue.build();
-          onChanged();
         } else {
           resultBuilder_.setMessage(builderForValue.build());
         }
-
+        bitField0_ |= 0x00000001;
+        onChanged();
         return this;
       }
       /**
@@ -1800,38 +1630,38 @@ private static final long serialVersionUID = 0L;
        */
       public Builder mergeResult(com.scalar.db.rpc.Result value) {
         if (resultBuilder_ == null) {
-          if (result_ != null) {
-            result_ =
-              com.scalar.db.rpc.Result.newBuilder(result_).mergeFrom(value).buildPartial();
+          if (((bitField0_ & 0x00000001) != 0) &&
+            result_ != null &&
+            result_ != com.scalar.db.rpc.Result.getDefaultInstance()) {
+            getResultBuilder().mergeFrom(value);
           } else {
             result_ = value;
           }
-          onChanged();
         } else {
           resultBuilder_.mergeFrom(value);
         }
-
+        bitField0_ |= 0x00000001;
+        onChanged();
         return this;
       }
       /**
        * <code>.rpc.Result result = 1;</code>
        */
       public Builder clearResult() {
-        if (resultBuilder_ == null) {
-          result_ = null;
-          onChanged();
-        } else {
-          result_ = null;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        result_ = null;
+        if (resultBuilder_ != null) {
+          resultBuilder_.dispose();
           resultBuilder_ = null;
         }
-
+        onChanged();
         return this;
       }
       /**
        * <code>.rpc.Result result = 1;</code>
        */
       public com.scalar.db.rpc.Result.Builder getResultBuilder() {
-        
+        bitField0_ |= 0x00000001;
         onChanged();
         return getResultFieldBuilder().getBuilder();
       }
@@ -1895,7 +1725,18 @@ private static final long serialVersionUID = 0L;
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new GetResponse(input, extensionRegistry);
+        Builder builder = newBuilder();
+        try {
+          builder.mergeFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(builder.buildPartial());
+        } catch (com.google.protobuf.UninitializedMessageException e) {
+          throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(e)
+              .setUnfinishedMessage(builder.buildPartial());
+        }
+        return builder.buildPartial();
       }
     };
 
@@ -1971,58 +1812,6 @@ private static final long serialVersionUID = 0L;
     getUnknownFields() {
       return this.unknownFields;
     }
-    private ScanResponse(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            case 10: {
-              if (!((mutable_bitField0_ & 0x00000001) != 0)) {
-                results_ = new java.util.ArrayList<com.scalar.db.rpc.Result>();
-                mutable_bitField0_ |= 0x00000001;
-              }
-              results_.add(
-                  input.readMessage(com.scalar.db.rpc.Result.parser(), extensionRegistry));
-              break;
-            }
-            default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (com.google.protobuf.UninitializedMessageException e) {
-        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e).setUnfinishedMessage(this);
-      } finally {
-        if (((mutable_bitField0_ & 0x00000001) != 0)) {
-          results_ = java.util.Collections.unmodifiableList(results_);
-        }
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TwoPhaseCommitTransactionResponse_ScanResponse_descriptor;
@@ -2037,6 +1826,7 @@ private static final long serialVersionUID = 0L;
     }
 
     public static final int RESULTS_FIELD_NUMBER = 1;
+    @SuppressWarnings("serial")
     private java.util.List<com.scalar.db.rpc.Result> results_;
     /**
      * <code>repeated .rpc.Result results = 1;</code>
@@ -2093,7 +1883,7 @@ private static final long serialVersionUID = 0L;
       for (int i = 0; i < results_.size(); i++) {
         output.writeMessage(1, results_.get(i));
       }
-      unknownFields.writeTo(output);
+      getUnknownFields().writeTo(output);
     }
 
     @java.lang.Override
@@ -2106,7 +1896,7 @@ private static final long serialVersionUID = 0L;
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(1, results_.get(i));
       }
-      size += unknownFields.getSerializedSize();
+      size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
       return size;
     }
@@ -2123,7 +1913,7 @@ private static final long serialVersionUID = 0L;
 
       if (!getResultsList()
           .equals(other.getResultsList())) return false;
-      if (!unknownFields.equals(other.unknownFields)) return false;
+      if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
 
@@ -2138,7 +1928,7 @@ private static final long serialVersionUID = 0L;
         hash = (37 * hash) + RESULTS_FIELD_NUMBER;
         hash = (53 * hash) + getResultsList().hashCode();
       }
-      hash = (29 * hash) + unknownFields.hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
     }
@@ -2255,29 +2045,25 @@ private static final long serialVersionUID = 0L;
 
       // Construct using com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ScanResponse.newBuilder()
       private Builder() {
-        maybeForceBuilderInitialization();
+
       }
 
       private Builder(
           com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
         super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
-          getResultsFieldBuilder();
-        }
+
       }
       @java.lang.Override
       public Builder clear() {
         super.clear();
+        bitField0_ = 0;
         if (resultsBuilder_ == null) {
           results_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000001);
         } else {
+          results_ = null;
           resultsBuilder_.clear();
         }
+        bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
 
@@ -2304,7 +2090,13 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ScanResponse buildPartial() {
         com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ScanResponse result = new com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ScanResponse(this);
-        int from_bitField0_ = bitField0_;
+        buildPartialRepeatedFields(result);
+        if (bitField0_ != 0) { buildPartial0(result); }
+        onBuilt();
+        return result;
+      }
+
+      private void buildPartialRepeatedFields(com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ScanResponse result) {
         if (resultsBuilder_ == null) {
           if (((bitField0_ & 0x00000001) != 0)) {
             results_ = java.util.Collections.unmodifiableList(results_);
@@ -2314,8 +2106,10 @@ private static final long serialVersionUID = 0L;
         } else {
           result.results_ = resultsBuilder_.build();
         }
-        onBuilt();
-        return result;
+      }
+
+      private void buildPartial0(com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ScanResponse result) {
+        int from_bitField0_ = bitField0_;
       }
 
       @java.lang.Override
@@ -2388,7 +2182,7 @@ private static final long serialVersionUID = 0L;
             }
           }
         }
-        this.mergeUnknownFields(other.unknownFields);
+        this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
         return this;
       }
@@ -2403,17 +2197,43 @@ private static final long serialVersionUID = 0L;
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ScanResponse parsedMessage = null;
+        if (extensionRegistry == null) {
+          throw new java.lang.NullPointerException();
+        }
         try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              case 10: {
+                com.scalar.db.rpc.Result m =
+                    input.readMessage(
+                        com.scalar.db.rpc.Result.parser(),
+                        extensionRegistry);
+                if (resultsBuilder_ == null) {
+                  ensureResultsIsMutable();
+                  results_.add(m);
+                } else {
+                  resultsBuilder_.addMessage(m);
+                }
+                break;
+              } // case 10
+              default: {
+                if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                  done = true; // was an endgroup tag
+                }
+                break;
+              } // default:
+            } // switch (tag)
+          } // while (!done)
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ScanResponse) e.getUnfinishedMessage();
           throw e.unwrapIOException();
         } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
+          onChanged();
+        } // finally
         return this;
       }
       private int bitField0_;
@@ -2690,7 +2510,18 @@ private static final long serialVersionUID = 0L;
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ScanResponse(input, extensionRegistry);
+        Builder builder = newBuilder();
+        try {
+          builder.mergeFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(builder.buildPartial());
+        } catch (com.google.protobuf.UninitializedMessageException e) {
+          throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(e)
+              .setUnfinishedMessage(builder.buildPartial());
+        }
+        return builder.buildPartial();
       }
     };
 
@@ -2765,57 +2596,6 @@ private static final long serialVersionUID = 0L;
     public final com.google.protobuf.UnknownFieldSet
     getUnknownFields() {
       return this.unknownFields;
-    }
-    private Error(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            case 8: {
-              int rawValue = input.readEnum();
-
-              errorCode_ = rawValue;
-              break;
-            }
-            case 18: {
-              java.lang.String s = input.readStringRequireUtf8();
-
-              message_ = s;
-              break;
-            }
-            default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (com.google.protobuf.UninitializedMessageException e) {
-        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
@@ -2957,7 +2737,7 @@ private static final long serialVersionUID = 0L;
     }
 
     public static final int ERROR_CODE_FIELD_NUMBER = 1;
-    private int errorCode_;
+    private int errorCode_ = 0;
     /**
      * <code>.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode error_code = 1;</code>
      * @return The enum numeric value on the wire for errorCode.
@@ -2970,13 +2750,13 @@ private static final long serialVersionUID = 0L;
      * @return The errorCode.
      */
     @java.lang.Override public com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode getErrorCode() {
-      @SuppressWarnings("deprecation")
-      com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode result = com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode.valueOf(errorCode_);
+      com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode result = com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode.forNumber(errorCode_);
       return result == null ? com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode.UNRECOGNIZED : result;
     }
 
     public static final int MESSAGE_FIELD_NUMBER = 2;
-    private volatile java.lang.Object message_;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object message_ = "";
     /**
      * <code>string message = 2;</code>
      * @return The message.
@@ -3033,7 +2813,7 @@ private static final long serialVersionUID = 0L;
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(message_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, message_);
       }
-      unknownFields.writeTo(output);
+      getUnknownFields().writeTo(output);
     }
 
     @java.lang.Override
@@ -3049,7 +2829,7 @@ private static final long serialVersionUID = 0L;
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(message_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, message_);
       }
-      size += unknownFields.getSerializedSize();
+      size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
       return size;
     }
@@ -3067,7 +2847,7 @@ private static final long serialVersionUID = 0L;
       if (errorCode_ != other.errorCode_) return false;
       if (!getMessage()
           .equals(other.getMessage())) return false;
-      if (!unknownFields.equals(other.unknownFields)) return false;
+      if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
 
@@ -3082,7 +2862,7 @@ private static final long serialVersionUID = 0L;
       hash = (53 * hash) + errorCode_;
       hash = (37 * hash) + MESSAGE_FIELD_NUMBER;
       hash = (53 * hash) + getMessage().hashCode();
-      hash = (29 * hash) + unknownFields.hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
     }
@@ -3199,26 +2979,20 @@ private static final long serialVersionUID = 0L;
 
       // Construct using com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.newBuilder()
       private Builder() {
-        maybeForceBuilderInitialization();
+
       }
 
       private Builder(
           com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
         super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
-        }
+
       }
       @java.lang.Override
       public Builder clear() {
         super.clear();
+        bitField0_ = 0;
         errorCode_ = 0;
-
         message_ = "";
-
         return this;
       }
 
@@ -3245,10 +3019,19 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error buildPartial() {
         com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error result = new com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error(this);
-        result.errorCode_ = errorCode_;
-        result.message_ = message_;
+        if (bitField0_ != 0) { buildPartial0(result); }
         onBuilt();
         return result;
+      }
+
+      private void buildPartial0(com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error result) {
+        int from_bitField0_ = bitField0_;
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.errorCode_ = errorCode_;
+        }
+        if (((from_bitField0_ & 0x00000002) != 0)) {
+          result.message_ = message_;
+        }
       }
 
       @java.lang.Override
@@ -3300,9 +3083,10 @@ private static final long serialVersionUID = 0L;
         }
         if (!other.getMessage().isEmpty()) {
           message_ = other.message_;
+          bitField0_ |= 0x00000002;
           onChanged();
         }
-        this.mergeUnknownFields(other.unknownFields);
+        this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
         return this;
       }
@@ -3317,19 +3101,43 @@ private static final long serialVersionUID = 0L;
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error parsedMessage = null;
+        if (extensionRegistry == null) {
+          throw new java.lang.NullPointerException();
+        }
         try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              case 8: {
+                errorCode_ = input.readEnum();
+                bitField0_ |= 0x00000001;
+                break;
+              } // case 8
+              case 18: {
+                message_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000002;
+                break;
+              } // case 18
+              default: {
+                if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                  done = true; // was an endgroup tag
+                }
+                break;
+              } // default:
+            } // switch (tag)
+          } // while (!done)
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error) e.getUnfinishedMessage();
           throw e.unwrapIOException();
         } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
+          onChanged();
+        } // finally
         return this;
       }
+      private int bitField0_;
 
       private int errorCode_ = 0;
       /**
@@ -3345,8 +3153,8 @@ private static final long serialVersionUID = 0L;
        * @return This builder for chaining.
        */
       public Builder setErrorCodeValue(int value) {
-        
         errorCode_ = value;
+        bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
@@ -3356,8 +3164,7 @@ private static final long serialVersionUID = 0L;
        */
       @java.lang.Override
       public com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode getErrorCode() {
-        @SuppressWarnings("deprecation")
-        com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode result = com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode.valueOf(errorCode_);
+        com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode result = com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode.forNumber(errorCode_);
         return result == null ? com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode.UNRECOGNIZED : result;
       }
       /**
@@ -3369,7 +3176,7 @@ private static final long serialVersionUID = 0L;
         if (value == null) {
           throw new NullPointerException();
         }
-        
+        bitField0_ |= 0x00000001;
         errorCode_ = value.getNumber();
         onChanged();
         return this;
@@ -3379,7 +3186,7 @@ private static final long serialVersionUID = 0L;
        * @return This builder for chaining.
        */
       public Builder clearErrorCode() {
-        
+        bitField0_ = (bitField0_ & ~0x00000001);
         errorCode_ = 0;
         onChanged();
         return this;
@@ -3426,11 +3233,9 @@ private static final long serialVersionUID = 0L;
        */
       public Builder setMessage(
           java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  
+        if (value == null) { throw new NullPointerException(); }
         message_ = value;
+        bitField0_ |= 0x00000002;
         onChanged();
         return this;
       }
@@ -3439,8 +3244,8 @@ private static final long serialVersionUID = 0L;
        * @return This builder for chaining.
        */
       public Builder clearMessage() {
-        
         message_ = getDefaultInstance().getMessage();
+        bitField0_ = (bitField0_ & ~0x00000002);
         onChanged();
         return this;
       }
@@ -3451,12 +3256,10 @@ private static final long serialVersionUID = 0L;
        */
       public Builder setMessageBytes(
           com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-        
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
         message_ = value;
+        bitField0_ |= 0x00000002;
         onChanged();
         return this;
       }
@@ -3493,7 +3296,18 @@ private static final long serialVersionUID = 0L;
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new Error(input, extensionRegistry);
+        Builder builder = newBuilder();
+        try {
+          builder.mergeFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(builder.buildPartial());
+        } catch (com.google.protobuf.UninitializedMessageException e) {
+          throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(e)
+              .setUnfinishedMessage(builder.buildPartial());
+        }
+        return builder.buildPartial();
       }
     };
 
@@ -3744,7 +3558,7 @@ private static final long serialVersionUID = 0L;
     if (responseCase_ == 5) {
       output.writeMessage(5, (com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.BeginResponse) response_);
     }
-    unknownFields.writeTo(output);
+    getUnknownFields().writeTo(output);
   }
 
   @java.lang.Override
@@ -3773,7 +3587,7 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(5, (com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.BeginResponse) response_);
     }
-    size += unknownFields.getSerializedSize();
+    size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
   }
@@ -3813,7 +3627,7 @@ private static final long serialVersionUID = 0L;
       case 0:
       default:
     }
-    if (!unknownFields.equals(other.unknownFields)) return false;
+    if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
 
@@ -3848,7 +3662,7 @@ private static final long serialVersionUID = 0L;
       case 0:
       default:
     }
-    hash = (29 * hash) + unknownFields.hashCode();
+    hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
   }
@@ -3965,22 +3779,33 @@ private static final long serialVersionUID = 0L;
 
     // Construct using com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.newBuilder()
     private Builder() {
-      maybeForceBuilderInitialization();
+
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
       super(parent);
-      maybeForceBuilderInitialization();
-    }
-    private void maybeForceBuilderInitialization() {
-      if (com.google.protobuf.GeneratedMessageV3
-              .alwaysUseFieldBuilders) {
-      }
+
     }
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
+      if (startResponseBuilder_ != null) {
+        startResponseBuilder_.clear();
+      }
+      if (getResponseBuilder_ != null) {
+        getResponseBuilder_.clear();
+      }
+      if (scanResponseBuilder_ != null) {
+        scanResponseBuilder_.clear();
+      }
+      if (errorBuilder_ != null) {
+        errorBuilder_.clear();
+      }
+      if (beginResponseBuilder_ != null) {
+        beginResponseBuilder_.clear();
+      }
       responseCase_ = 0;
       response_ = null;
       return this;
@@ -4009,44 +3834,39 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.TwoPhaseCommitTransactionResponse buildPartial() {
       com.scalar.db.rpc.TwoPhaseCommitTransactionResponse result = new com.scalar.db.rpc.TwoPhaseCommitTransactionResponse(this);
-      if (responseCase_ == 1) {
-        if (startResponseBuilder_ == null) {
-          result.response_ = response_;
-        } else {
-          result.response_ = startResponseBuilder_.build();
-        }
-      }
-      if (responseCase_ == 2) {
-        if (getResponseBuilder_ == null) {
-          result.response_ = response_;
-        } else {
-          result.response_ = getResponseBuilder_.build();
-        }
-      }
-      if (responseCase_ == 3) {
-        if (scanResponseBuilder_ == null) {
-          result.response_ = response_;
-        } else {
-          result.response_ = scanResponseBuilder_.build();
-        }
-      }
-      if (responseCase_ == 4) {
-        if (errorBuilder_ == null) {
-          result.response_ = response_;
-        } else {
-          result.response_ = errorBuilder_.build();
-        }
-      }
-      if (responseCase_ == 5) {
-        if (beginResponseBuilder_ == null) {
-          result.response_ = response_;
-        } else {
-          result.response_ = beginResponseBuilder_.build();
-        }
-      }
-      result.responseCase_ = responseCase_;
+      if (bitField0_ != 0) { buildPartial0(result); }
+      buildPartialOneofs(result);
       onBuilt();
       return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.TwoPhaseCommitTransactionResponse result) {
+      int from_bitField0_ = bitField0_;
+    }
+
+    private void buildPartialOneofs(com.scalar.db.rpc.TwoPhaseCommitTransactionResponse result) {
+      result.responseCase_ = responseCase_;
+      result.response_ = this.response_;
+      if (responseCase_ == 1 &&
+          startResponseBuilder_ != null) {
+        result.response_ = startResponseBuilder_.build();
+      }
+      if (responseCase_ == 2 &&
+          getResponseBuilder_ != null) {
+        result.response_ = getResponseBuilder_.build();
+      }
+      if (responseCase_ == 3 &&
+          scanResponseBuilder_ != null) {
+        result.response_ = scanResponseBuilder_.build();
+      }
+      if (responseCase_ == 4 &&
+          errorBuilder_ != null) {
+        result.response_ = errorBuilder_.build();
+      }
+      if (responseCase_ == 5 &&
+          beginResponseBuilder_ != null) {
+        result.response_ = beginResponseBuilder_.build();
+      }
     }
 
     @java.lang.Override
@@ -4118,7 +3938,7 @@ private static final long serialVersionUID = 0L;
           break;
         }
       }
-      this.mergeUnknownFields(other.unknownFields);
+      this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
     }
@@ -4133,17 +3953,65 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      com.scalar.db.rpc.TwoPhaseCommitTransactionResponse parsedMessage = null;
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
       try {
-        parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 10: {
+              input.readMessage(
+                  getStartResponseFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              responseCase_ = 1;
+              break;
+            } // case 10
+            case 18: {
+              input.readMessage(
+                  getGetResponseFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              responseCase_ = 2;
+              break;
+            } // case 18
+            case 26: {
+              input.readMessage(
+                  getScanResponseFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              responseCase_ = 3;
+              break;
+            } // case 26
+            case 34: {
+              input.readMessage(
+                  getErrorFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              responseCase_ = 4;
+              break;
+            } // case 34
+            case 42: {
+              input.readMessage(
+                  getBeginResponseFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              responseCase_ = 5;
+              break;
+            } // case 42
+            default: {
+              if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                done = true; // was an endgroup tag
+              }
+              break;
+            } // default:
+          } // switch (tag)
+        } // while (!done)
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        parsedMessage = (com.scalar.db.rpc.TwoPhaseCommitTransactionResponse) e.getUnfinishedMessage();
         throw e.unwrapIOException();
       } finally {
-        if (parsedMessage != null) {
-          mergeFrom(parsedMessage);
-        }
-      }
+        onChanged();
+      } // finally
       return this;
     }
     private int responseCase_ = 0;
@@ -4161,6 +4029,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
+    private int bitField0_;
 
     private com.google.protobuf.SingleFieldBuilderV3<
         com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse, com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse.Builder, com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponseOrBuilder> startResponseBuilder_;
@@ -4300,7 +4169,7 @@ private static final long serialVersionUID = 0L;
         response_ = null;
       }
       responseCase_ = 1;
-      onChanged();;
+      onChanged();
       return startResponseBuilder_;
     }
 
@@ -4442,7 +4311,7 @@ private static final long serialVersionUID = 0L;
         response_ = null;
       }
       responseCase_ = 2;
-      onChanged();;
+      onChanged();
       return getResponseBuilder_;
     }
 
@@ -4584,7 +4453,7 @@ private static final long serialVersionUID = 0L;
         response_ = null;
       }
       responseCase_ = 3;
-      onChanged();;
+      onChanged();
       return scanResponseBuilder_;
     }
 
@@ -4726,7 +4595,7 @@ private static final long serialVersionUID = 0L;
         response_ = null;
       }
       responseCase_ = 4;
-      onChanged();;
+      onChanged();
       return errorBuilder_;
     }
 
@@ -4868,7 +4737,7 @@ private static final long serialVersionUID = 0L;
         response_ = null;
       }
       responseCase_ = 5;
-      onChanged();;
+      onChanged();
       return beginResponseBuilder_;
     }
     @java.lang.Override
@@ -4904,7 +4773,18 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return new TwoPhaseCommitTransactionResponse(input, extensionRegistry);
+      Builder builder = newBuilder();
+      try {
+        builder.mergeFrom(input, extensionRegistry);
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(builder.buildPartial());
+      } catch (com.google.protobuf.UninitializedMessageException e) {
+        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(e)
+            .setUnfinishedMessage(builder.buildPartial());
+      }
+      return builder.buildPartial();
     }
   };
 

@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.common;
+package com.scalar.db.common;
 
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
@@ -13,6 +13,7 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.util.ActiveExpiringMap;
@@ -50,7 +51,7 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
   private void add(ActiveTransaction transaction) throws TransactionException {
     if (activeTransactions.putIfAbsent(transaction.getId(), transaction) != null) {
       transaction.rollback();
-      throw new IllegalStateException(
+      throw new TransactionException(
           "The transaction already exists. transactionId: " + transaction.getId());
     }
   }
@@ -60,12 +61,12 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
   }
 
   @Override
-  public TwoPhaseCommitTransaction resume(String txId) {
+  public TwoPhaseCommitTransaction resume(String txId) throws TransactionNotFoundException {
     return activeTransactions
         .get(txId)
         .orElseThrow(
             () ->
-                new IllegalStateException(
+                new TransactionNotFoundException(
                     "A transaction associated with the specified transaction ID is not found. "
                         + "It might have been expired. transactionId: "
                         + txId));

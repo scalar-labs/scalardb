@@ -18,6 +18,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.GetTransactionStateRequest;
@@ -54,6 +55,36 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     manager.with("namespace", "table");
     when(config.getDeadlineDurationMillis()).thenReturn(60000L);
     when(blockingStub.withDeadlineAfter(anyLong(), any())).thenReturn(blockingStub);
+  }
+
+  @Test
+  public void begin_CalledTwiceWithSameTxId_ThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+    GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
+    GrpcTwoPhaseCommitTransactionOnBidirectionalStream bidirectionalStream =
+        mock(GrpcTwoPhaseCommitTransactionOnBidirectionalStream.class);
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
+    when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
+
+    // Act Assert
+    spiedManager.begin(ANY_ID);
+    assertThatThrownBy(() -> spiedManager.begin(ANY_ID)).isInstanceOf(TransactionException.class);
+  }
+
+  @Test
+  public void start_CalledTwiceWithSameTxId_ThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+    GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
+    GrpcTwoPhaseCommitTransactionOnBidirectionalStream bidirectionalStream =
+        mock(GrpcTwoPhaseCommitTransactionOnBidirectionalStream.class);
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
+    when(bidirectionalStream.startTransaction(ANY_ID)).thenReturn(ANY_ID);
+
+    // Act Assert
+    spiedManager.start(ANY_ID);
+    assertThatThrownBy(() -> spiedManager.start(ANY_ID)).isInstanceOf(TransactionException.class);
   }
 
   @Test
@@ -110,15 +141,16 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
   }
 
   @Test
-  public void resume_CalledWithoutBeginOrStartOrJoin_ThrowIllegalStateException() {
+  public void resume_CalledWithoutBeginOrStartOrJoin_ThrowTransactionNotFoundException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> manager.resume(ANY_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
-  public void resume_CalledWithBeginAndCommit_ThrowIllegalStateException()
+  public void resume_CalledWithBeginAndCommit_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
     GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
@@ -132,7 +164,8 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     transaction.commit();
 
     // Act Assert
-    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> spiedManager.resume(ANY_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
@@ -163,7 +196,7 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
   }
 
   @Test
-  public void resume_CalledWithBeginAndRollback_ThrowIllegalStateException()
+  public void resume_CalledWithBeginAndRollback_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
     GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
@@ -177,12 +210,14 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     transaction.rollback();
 
     // Act Assert
-    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> spiedManager.resume(ANY_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
-  public void resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowIllegalStateException()
-      throws TransactionException {
+  public void
+      resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowTransactionNotFoundException()
+          throws TransactionException {
     // Arrange
     GrpcTwoPhaseCommitTransactionManager spiedManager = spy(manager);
     GrpcTwoPhaseCommitTransactionOnBidirectionalStream bidirectionalStream =
@@ -200,7 +235,8 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
     }
 
     // Act Assert
-    assertThatThrownBy(() -> spiedManager.resume(ANY_ID)).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> spiedManager.resume(ANY_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
