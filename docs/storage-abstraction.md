@@ -357,6 +357,14 @@ You can get a table metadata as follows:
 TableMetadata tableMetadata = admin.getTableMetadata("ns", "tbl");
 ```
 
+### Get the names of namespaces
+
+You can get the names of namespaces created through Scalar DB as follows:
+
+```java
+Set<String> namespaceNames = admin.getNamespaceNames();
+```
+
 ### CRUD API
 
 #### Get a DistributedStorage instance

@@ -212,6 +212,14 @@ You can get a table metadata as follows:
 TableMetadata tableMetadata = admin.getTableMetadata("ns", "tbl");
 ```
 
+### Get the names of namespaces
+
+You can get the names of namespaces created through Scalar DB as follows: 
+
+```java
+Set<String> namespaceNames = admin.getNamespaceNames();
+```
+
 ### Operations for Coordinator tables
 
 Depending on the transaction manager type, you need to create coordinator tables to execute transactions. 
