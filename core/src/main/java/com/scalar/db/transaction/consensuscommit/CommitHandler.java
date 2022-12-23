@@ -67,7 +67,6 @@ public class CommitHandler {
     } catch (RetriableExecutionException e) {
       throw new PreparationConflictException("conflict happened when preparing records", e);
     } catch (ExecutionException e) {
-      logger.warn("preparing records failed", e);
       throw new PreparationException("preparing records failed", e);
     }
   }
