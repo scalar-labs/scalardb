@@ -21,9 +21,9 @@ import com.scalar.db.rpc.RollbackResponse;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionGrpc;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
+import com.scalar.db.storage.rpc.GrpcUtils;
 import com.scalar.db.util.ProtoUtils;
 import io.grpc.ManagedChannel;
-import io.grpc.netty.NettyChannelBuilder;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -46,8 +46,7 @@ public class GrpcTwoPhaseCommitTransactionManager
   public GrpcTwoPhaseCommitTransactionManager(DatabaseConfig databaseConfig) {
     super(databaseConfig);
     config = new GrpcConfig(databaseConfig);
-    channel =
-        NettyChannelBuilder.forAddress(config.getHost(), config.getPort()).usePlaintext().build();
+    channel = GrpcUtils.createChannel(config);
     stub = TwoPhaseCommitTransactionGrpc.newStub(channel);
     blockingStub = TwoPhaseCommitTransactionGrpc.newBlockingStub(channel);
     metadataManager =

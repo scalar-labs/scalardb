@@ -22,6 +22,7 @@ public class ConfigUtilsTest {
     assertThat(ConfigUtils.getString(properties, "name2", "def_value")).isEqualTo("value");
     assertThat(ConfigUtils.getString(properties, "name3", "def_value")).isEqualTo("def_value");
     assertThat(ConfigUtils.getString(properties, "name4", "def_value")).isEqualTo("def_value");
+    assertThat(ConfigUtils.getString(properties, "name5", null)).isNull();
   }
 
   @Test
@@ -40,6 +41,7 @@ public class ConfigUtilsTest {
     assertThat(ConfigUtils.getInt(properties, "name4", 10000)).isEqualTo(10000);
     assertThatThrownBy(() -> ConfigUtils.getInt(properties, "name5", 10000))
         .isInstanceOf(IllegalArgumentException.class);
+    assertThat(ConfigUtils.getInt(properties, "name6", null)).isNull();
   }
 
   @Test
@@ -58,6 +60,7 @@ public class ConfigUtilsTest {
     assertThat(ConfigUtils.getLong(properties, "name4", 10000)).isEqualTo(10000);
     assertThatThrownBy(() -> ConfigUtils.getLong(properties, "name5", 10000))
         .isInstanceOf(IllegalArgumentException.class);
+    assertThat(ConfigUtils.getLong(properties, "name6", null)).isNull();
   }
 
   @Test
@@ -78,6 +81,7 @@ public class ConfigUtilsTest {
     assertThat(ConfigUtils.getBoolean(properties, "name5", false)).isEqualTo(false);
     assertThatThrownBy(() -> ConfigUtils.getBoolean(properties, "name6", false))
         .isInstanceOf(IllegalArgumentException.class);
+    assertThat(ConfigUtils.getBoolean(properties, "name7", null)).isNull();
   }
 
   @Test
@@ -97,6 +101,7 @@ public class ConfigUtilsTest {
         .isEqualTo(new String[] {"xxx", "yyy", "zzz"});
     assertThat(ConfigUtils.getStringArray(properties, "name4", new String[] {"xxx", "yyy", "zzz"}))
         .isEqualTo(new String[] {"xxx", "yyy", "zzz"});
+    assertThat(ConfigUtils.getBoolean(properties, "name5", null)).isNull();
   }
 
   @Test
