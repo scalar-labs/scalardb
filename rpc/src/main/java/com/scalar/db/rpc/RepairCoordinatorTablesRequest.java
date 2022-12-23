@@ -67,6 +67,7 @@ private static final long serialVersionUID = 0L;
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "");
   }
+  @SuppressWarnings("serial")
   private com.google.protobuf.MapField<
       java.lang.String, java.lang.String> options_;
   private com.google.protobuf.MapField<java.lang.String, java.lang.String>
@@ -77,14 +78,12 @@ private static final long serialVersionUID = 0L;
     }
     return options_;
   }
-
   public int getOptionsCount() {
     return internalGetOptions().getMap().size();
   }
   /**
    * <code>map&lt;string, string&gt; options = 1;</code>
    */
-
   @java.lang.Override
   public boolean containsOptions(
       java.lang.String key) {
@@ -103,7 +102,6 @@ private static final long serialVersionUID = 0L;
    * <code>map&lt;string, string&gt; options = 1;</code>
    */
   @java.lang.Override
-
   public java.util.Map<java.lang.String, java.lang.String> getOptionsMap() {
     return internalGetOptions().getMap();
   }
@@ -111,10 +109,11 @@ private static final long serialVersionUID = 0L;
    * <code>map&lt;string, string&gt; options = 1;</code>
    */
   @java.lang.Override
-
-  public java.lang.String getOptionsOrDefault(
+  public /* nullable */
+java.lang.String getOptionsOrDefault(
       java.lang.String key,
-      java.lang.String defaultValue) {
+      /* nullable */
+java.lang.String defaultValue) {
     if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.String> map =
         internalGetOptions().getMap();
@@ -124,7 +123,6 @@ private static final long serialVersionUID = 0L;
    * <code>map&lt;string, string&gt; options = 1;</code>
    */
   @java.lang.Override
-
   public java.lang.String getOptionsOrThrow(
       java.lang.String key) {
     if (key == null) { throw new NullPointerException("map key"); }
@@ -357,6 +355,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       internalGetMutableOptions().clear();
       return this;
     }
@@ -384,11 +383,17 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.RepairCoordinatorTablesRequest buildPartial() {
       com.scalar.db.rpc.RepairCoordinatorTablesRequest result = new com.scalar.db.rpc.RepairCoordinatorTablesRequest(this);
-      int from_bitField0_ = bitField0_;
-      result.options_ = internalGetOptions();
-      result.options_.makeImmutable();
+      if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.RepairCoordinatorTablesRequest result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.options_ = internalGetOptions();
+        result.options_.makeImmutable();
+      }
     }
 
     @java.lang.Override
@@ -437,6 +442,7 @@ private static final long serialVersionUID = 0L;
       if (other == com.scalar.db.rpc.RepairCoordinatorTablesRequest.getDefaultInstance()) return this;
       internalGetMutableOptions().mergeFrom(
           other.internalGetOptions());
+      bitField0_ |= 0x00000001;
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -469,6 +475,7 @@ private static final long serialVersionUID = 0L;
                   OptionsDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
               internalGetMutableOptions().getMutableMap().put(
                   options__.getKey(), options__.getValue());
+              bitField0_ |= 0x00000001;
               break;
             } // case 10
             default: {
@@ -491,7 +498,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.MapField<
         java.lang.String, java.lang.String> options_;
     private com.google.protobuf.MapField<java.lang.String, java.lang.String>
-    internalGetOptions() {
+        internalGetOptions() {
       if (options_ == null) {
         return com.google.protobuf.MapField.emptyMapField(
             OptionsDefaultEntryHolder.defaultEntry);
@@ -499,8 +506,7 @@ private static final long serialVersionUID = 0L;
       return options_;
     }
     private com.google.protobuf.MapField<java.lang.String, java.lang.String>
-    internalGetMutableOptions() {
-      onChanged();;
+        internalGetMutableOptions() {
       if (options_ == null) {
         options_ = com.google.protobuf.MapField.newMapField(
             OptionsDefaultEntryHolder.defaultEntry);
@@ -508,16 +514,16 @@ private static final long serialVersionUID = 0L;
       if (!options_.isMutable()) {
         options_ = options_.copy();
       }
+      bitField0_ |= 0x00000001;
+      onChanged();
       return options_;
     }
-
     public int getOptionsCount() {
       return internalGetOptions().getMap().size();
     }
     /**
      * <code>map&lt;string, string&gt; options = 1;</code>
      */
-
     @java.lang.Override
     public boolean containsOptions(
         java.lang.String key) {
@@ -536,7 +542,6 @@ private static final long serialVersionUID = 0L;
      * <code>map&lt;string, string&gt; options = 1;</code>
      */
     @java.lang.Override
-
     public java.util.Map<java.lang.String, java.lang.String> getOptionsMap() {
       return internalGetOptions().getMap();
     }
@@ -544,10 +549,11 @@ private static final long serialVersionUID = 0L;
      * <code>map&lt;string, string&gt; options = 1;</code>
      */
     @java.lang.Override
-
-    public java.lang.String getOptionsOrDefault(
+    public /* nullable */
+java.lang.String getOptionsOrDefault(
         java.lang.String key,
-        java.lang.String defaultValue) {
+        /* nullable */
+java.lang.String defaultValue) {
       if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.String> map =
           internalGetOptions().getMap();
@@ -557,7 +563,6 @@ private static final long serialVersionUID = 0L;
      * <code>map&lt;string, string&gt; options = 1;</code>
      */
     @java.lang.Override
-
     public java.lang.String getOptionsOrThrow(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
@@ -568,8 +573,8 @@ private static final long serialVersionUID = 0L;
       }
       return map.get(key);
     }
-
     public Builder clearOptions() {
+      bitField0_ = (bitField0_ & ~0x00000001);
       internalGetMutableOptions().getMutableMap()
           .clear();
       return this;
@@ -577,7 +582,6 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>map&lt;string, string&gt; options = 1;</code>
      */
-
     public Builder removeOptions(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
@@ -590,7 +594,8 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Deprecated
     public java.util.Map<java.lang.String, java.lang.String>
-    getMutableOptions() {
+        getMutableOptions() {
+      bitField0_ |= 0x00000001;
       return internalGetMutableOptions().getMutableMap();
     }
     /**
@@ -600,22 +605,20 @@ private static final long serialVersionUID = 0L;
         java.lang.String key,
         java.lang.String value) {
       if (key == null) { throw new NullPointerException("map key"); }
-      if (value == null) {
-  throw new NullPointerException("map value");
-}
-
+      if (value == null) { throw new NullPointerException("map value"); }
       internalGetMutableOptions().getMutableMap()
           .put(key, value);
+      bitField0_ |= 0x00000001;
       return this;
     }
     /**
      * <code>map&lt;string, string&gt; options = 1;</code>
      */
-
     public Builder putAllOptions(
         java.util.Map<java.lang.String, java.lang.String> values) {
       internalGetMutableOptions().getMutableMap()
           .putAll(values);
+      bitField0_ |= 0x00000001;
       return this;
     }
     @java.lang.Override

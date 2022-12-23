@@ -58,7 +58,8 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int NAMESPACE_FIELD_NUMBER = 1;
-  private volatile java.lang.Object namespace_;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object namespace_ = "";
   /**
    * <code>string namespace = 1;</code>
    * @return The namespace.
@@ -96,7 +97,8 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int TABLE_FIELD_NUMBER = 2;
-  private volatile java.lang.Object table_;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object table_ = "";
   /**
    * <code>string table = 2;</code>
    * @return The table.
@@ -156,7 +158,7 @@ private static final long serialVersionUID = 0L;
    */
   @java.lang.Override
   public com.scalar.db.rpc.TableMetadataOrBuilder getTableMetadataOrBuilder() {
-    return getTableMetadata();
+    return tableMetadata_ == null ? com.scalar.db.rpc.TableMetadata.getDefaultInstance() : tableMetadata_;
   }
 
   public static final int OPTIONS_FIELD_NUMBER = 4;
@@ -171,6 +173,7 @@ private static final long serialVersionUID = 0L;
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "");
   }
+  @SuppressWarnings("serial")
   private com.google.protobuf.MapField<
       java.lang.String, java.lang.String> options_;
   private com.google.protobuf.MapField<java.lang.String, java.lang.String>
@@ -181,14 +184,12 @@ private static final long serialVersionUID = 0L;
     }
     return options_;
   }
-
   public int getOptionsCount() {
     return internalGetOptions().getMap().size();
   }
   /**
    * <code>map&lt;string, string&gt; options = 4;</code>
    */
-
   @java.lang.Override
   public boolean containsOptions(
       java.lang.String key) {
@@ -207,7 +208,6 @@ private static final long serialVersionUID = 0L;
    * <code>map&lt;string, string&gt; options = 4;</code>
    */
   @java.lang.Override
-
   public java.util.Map<java.lang.String, java.lang.String> getOptionsMap() {
     return internalGetOptions().getMap();
   }
@@ -215,10 +215,11 @@ private static final long serialVersionUID = 0L;
    * <code>map&lt;string, string&gt; options = 4;</code>
    */
   @java.lang.Override
-
-  public java.lang.String getOptionsOrDefault(
+  public /* nullable */
+java.lang.String getOptionsOrDefault(
       java.lang.String key,
-      java.lang.String defaultValue) {
+      /* nullable */
+java.lang.String defaultValue) {
     if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.String> map =
         internalGetOptions().getMap();
@@ -228,7 +229,6 @@ private static final long serialVersionUID = 0L;
    * <code>map&lt;string, string&gt; options = 4;</code>
    */
   @java.lang.Override
-
   public java.lang.String getOptionsOrThrow(
       java.lang.String key) {
     if (key == null) { throw new NullPointerException("map key"); }
@@ -497,14 +497,12 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       namespace_ = "";
-
       table_ = "";
-
-      if (tableMetadataBuilder_ == null) {
-        tableMetadata_ = null;
-      } else {
-        tableMetadata_ = null;
+      tableMetadata_ = null;
+      if (tableMetadataBuilder_ != null) {
+        tableMetadataBuilder_.dispose();
         tableMetadataBuilder_ = null;
       }
       internalGetMutableOptions().clear();
@@ -534,18 +532,28 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.RepairTableRequest buildPartial() {
       com.scalar.db.rpc.RepairTableRequest result = new com.scalar.db.rpc.RepairTableRequest(this);
-      int from_bitField0_ = bitField0_;
-      result.namespace_ = namespace_;
-      result.table_ = table_;
-      if (tableMetadataBuilder_ == null) {
-        result.tableMetadata_ = tableMetadata_;
-      } else {
-        result.tableMetadata_ = tableMetadataBuilder_.build();
-      }
-      result.options_ = internalGetOptions();
-      result.options_.makeImmutable();
+      if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.RepairTableRequest result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.namespace_ = namespace_;
+      }
+      if (((from_bitField0_ & 0x00000002) != 0)) {
+        result.table_ = table_;
+      }
+      if (((from_bitField0_ & 0x00000004) != 0)) {
+        result.tableMetadata_ = tableMetadataBuilder_ == null
+            ? tableMetadata_
+            : tableMetadataBuilder_.build();
+      }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.options_ = internalGetOptions();
+        result.options_.makeImmutable();
+      }
     }
 
     @java.lang.Override
@@ -594,10 +602,12 @@ private static final long serialVersionUID = 0L;
       if (other == com.scalar.db.rpc.RepairTableRequest.getDefaultInstance()) return this;
       if (!other.getNamespace().isEmpty()) {
         namespace_ = other.namespace_;
+        bitField0_ |= 0x00000001;
         onChanged();
       }
       if (!other.getTable().isEmpty()) {
         table_ = other.table_;
+        bitField0_ |= 0x00000002;
         onChanged();
       }
       if (other.hasTableMetadata()) {
@@ -605,6 +615,7 @@ private static final long serialVersionUID = 0L;
       }
       internalGetMutableOptions().mergeFrom(
           other.internalGetOptions());
+      bitField0_ |= 0x00000008;
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -633,19 +644,19 @@ private static final long serialVersionUID = 0L;
               break;
             case 10: {
               namespace_ = input.readStringRequireUtf8();
-
+              bitField0_ |= 0x00000001;
               break;
             } // case 10
             case 18: {
               table_ = input.readStringRequireUtf8();
-
+              bitField0_ |= 0x00000002;
               break;
             } // case 18
             case 26: {
               input.readMessage(
                   getTableMetadataFieldBuilder().getBuilder(),
                   extensionRegistry);
-
+              bitField0_ |= 0x00000004;
               break;
             } // case 26
             case 34: {
@@ -654,6 +665,7 @@ private static final long serialVersionUID = 0L;
                   OptionsDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
               internalGetMutableOptions().getMutableMap().put(
                   options__.getKey(), options__.getValue());
+              bitField0_ |= 0x00000008;
               break;
             } // case 34
             default: {
@@ -714,11 +726,9 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setNamespace(
         java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
+      if (value == null) { throw new NullPointerException(); }
       namespace_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
@@ -727,8 +737,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearNamespace() {
-      
       namespace_ = getDefaultInstance().getNamespace();
+      bitField0_ = (bitField0_ & ~0x00000001);
       onChanged();
       return this;
     }
@@ -739,12 +749,10 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setNamespaceBytes(
         com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
       namespace_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
@@ -790,11 +798,9 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setTable(
         java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
+      if (value == null) { throw new NullPointerException(); }
       table_ = value;
+      bitField0_ |= 0x00000002;
       onChanged();
       return this;
     }
@@ -803,8 +809,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearTable() {
-      
       table_ = getDefaultInstance().getTable();
+      bitField0_ = (bitField0_ & ~0x00000002);
       onChanged();
       return this;
     }
@@ -815,12 +821,10 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setTableBytes(
         com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
       table_ = value;
+      bitField0_ |= 0x00000002;
       onChanged();
       return this;
     }
@@ -833,7 +837,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the tableMetadata field is set.
      */
     public boolean hasTableMetadata() {
-      return tableMetadataBuilder_ != null || tableMetadata_ != null;
+      return ((bitField0_ & 0x00000004) != 0);
     }
     /**
      * <code>.rpc.TableMetadata table_metadata = 3;</code>
@@ -855,11 +859,11 @@ private static final long serialVersionUID = 0L;
           throw new NullPointerException();
         }
         tableMetadata_ = value;
-        onChanged();
       } else {
         tableMetadataBuilder_.setMessage(value);
       }
-
+      bitField0_ |= 0x00000004;
+      onChanged();
       return this;
     }
     /**
@@ -869,11 +873,11 @@ private static final long serialVersionUID = 0L;
         com.scalar.db.rpc.TableMetadata.Builder builderForValue) {
       if (tableMetadataBuilder_ == null) {
         tableMetadata_ = builderForValue.build();
-        onChanged();
       } else {
         tableMetadataBuilder_.setMessage(builderForValue.build());
       }
-
+      bitField0_ |= 0x00000004;
+      onChanged();
       return this;
     }
     /**
@@ -881,38 +885,38 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeTableMetadata(com.scalar.db.rpc.TableMetadata value) {
       if (tableMetadataBuilder_ == null) {
-        if (tableMetadata_ != null) {
-          tableMetadata_ =
-            com.scalar.db.rpc.TableMetadata.newBuilder(tableMetadata_).mergeFrom(value).buildPartial();
+        if (((bitField0_ & 0x00000004) != 0) &&
+          tableMetadata_ != null &&
+          tableMetadata_ != com.scalar.db.rpc.TableMetadata.getDefaultInstance()) {
+          getTableMetadataBuilder().mergeFrom(value);
         } else {
           tableMetadata_ = value;
         }
-        onChanged();
       } else {
         tableMetadataBuilder_.mergeFrom(value);
       }
-
+      bitField0_ |= 0x00000004;
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.TableMetadata table_metadata = 3;</code>
      */
     public Builder clearTableMetadata() {
-      if (tableMetadataBuilder_ == null) {
-        tableMetadata_ = null;
-        onChanged();
-      } else {
-        tableMetadata_ = null;
+      bitField0_ = (bitField0_ & ~0x00000004);
+      tableMetadata_ = null;
+      if (tableMetadataBuilder_ != null) {
+        tableMetadataBuilder_.dispose();
         tableMetadataBuilder_ = null;
       }
-
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.TableMetadata table_metadata = 3;</code>
      */
     public com.scalar.db.rpc.TableMetadata.Builder getTableMetadataBuilder() {
-      
+      bitField0_ |= 0x00000004;
       onChanged();
       return getTableMetadataFieldBuilder().getBuilder();
     }
@@ -947,7 +951,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.MapField<
         java.lang.String, java.lang.String> options_;
     private com.google.protobuf.MapField<java.lang.String, java.lang.String>
-    internalGetOptions() {
+        internalGetOptions() {
       if (options_ == null) {
         return com.google.protobuf.MapField.emptyMapField(
             OptionsDefaultEntryHolder.defaultEntry);
@@ -955,8 +959,7 @@ private static final long serialVersionUID = 0L;
       return options_;
     }
     private com.google.protobuf.MapField<java.lang.String, java.lang.String>
-    internalGetMutableOptions() {
-      onChanged();;
+        internalGetMutableOptions() {
       if (options_ == null) {
         options_ = com.google.protobuf.MapField.newMapField(
             OptionsDefaultEntryHolder.defaultEntry);
@@ -964,16 +967,16 @@ private static final long serialVersionUID = 0L;
       if (!options_.isMutable()) {
         options_ = options_.copy();
       }
+      bitField0_ |= 0x00000008;
+      onChanged();
       return options_;
     }
-
     public int getOptionsCount() {
       return internalGetOptions().getMap().size();
     }
     /**
      * <code>map&lt;string, string&gt; options = 4;</code>
      */
-
     @java.lang.Override
     public boolean containsOptions(
         java.lang.String key) {
@@ -992,7 +995,6 @@ private static final long serialVersionUID = 0L;
      * <code>map&lt;string, string&gt; options = 4;</code>
      */
     @java.lang.Override
-
     public java.util.Map<java.lang.String, java.lang.String> getOptionsMap() {
       return internalGetOptions().getMap();
     }
@@ -1000,10 +1002,11 @@ private static final long serialVersionUID = 0L;
      * <code>map&lt;string, string&gt; options = 4;</code>
      */
     @java.lang.Override
-
-    public java.lang.String getOptionsOrDefault(
+    public /* nullable */
+java.lang.String getOptionsOrDefault(
         java.lang.String key,
-        java.lang.String defaultValue) {
+        /* nullable */
+java.lang.String defaultValue) {
       if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.String> map =
           internalGetOptions().getMap();
@@ -1013,7 +1016,6 @@ private static final long serialVersionUID = 0L;
      * <code>map&lt;string, string&gt; options = 4;</code>
      */
     @java.lang.Override
-
     public java.lang.String getOptionsOrThrow(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
@@ -1024,8 +1026,8 @@ private static final long serialVersionUID = 0L;
       }
       return map.get(key);
     }
-
     public Builder clearOptions() {
+      bitField0_ = (bitField0_ & ~0x00000008);
       internalGetMutableOptions().getMutableMap()
           .clear();
       return this;
@@ -1033,7 +1035,6 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>map&lt;string, string&gt; options = 4;</code>
      */
-
     public Builder removeOptions(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
@@ -1046,7 +1047,8 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Deprecated
     public java.util.Map<java.lang.String, java.lang.String>
-    getMutableOptions() {
+        getMutableOptions() {
+      bitField0_ |= 0x00000008;
       return internalGetMutableOptions().getMutableMap();
     }
     /**
@@ -1056,22 +1058,20 @@ private static final long serialVersionUID = 0L;
         java.lang.String key,
         java.lang.String value) {
       if (key == null) { throw new NullPointerException("map key"); }
-      if (value == null) {
-  throw new NullPointerException("map value");
-}
-
+      if (value == null) { throw new NullPointerException("map value"); }
       internalGetMutableOptions().getMutableMap()
           .put(key, value);
+      bitField0_ |= 0x00000008;
       return this;
     }
     /**
      * <code>map&lt;string, string&gt; options = 4;</code>
      */
-
     public Builder putAllOptions(
         java.util.Map<java.lang.String, java.lang.String> values) {
       internalGetMutableOptions().getMutableMap()
           .putAll(values);
+      bitField0_ |= 0x00000008;
       return this;
     }
     @java.lang.Override
