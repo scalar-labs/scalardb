@@ -27,7 +27,6 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.WrappedDistributedTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -2219,9 +2218,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     Throwable thrown = catchThrowable(transaction1::commit);
 
     // Assert
-    assertThat(thrown)
-        .isInstanceOf(CommitConflictException.class)
-        .hasCauseInstanceOf(NoMutationException.class);
+    assertThat(thrown).isInstanceOf(CommitConflictException.class);
     transaction = manager.begin();
     Optional<Result> result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     transaction.commit();
@@ -2260,9 +2257,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     Throwable thrown = catchThrowable(transaction1::commit);
 
     // Assert
-    assertThat(thrown)
-        .isInstanceOf(CommitConflictException.class)
-        .hasCauseInstanceOf(NoMutationException.class);
+    assertThat(thrown).isInstanceOf(CommitConflictException.class);
     transaction = manager.begin();
     Optional<Result> result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     transaction.commit();

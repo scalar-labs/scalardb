@@ -168,9 +168,7 @@ public class CommitHandlerTest {
     doNothing().when(handler).rollbackRecords(any(Snapshot.class));
 
     // Act
-    assertThatThrownBy(() -> handler.commit(snapshot))
-        .isInstanceOf(CommitConflictException.class)
-        .hasCause(toThrow);
+    assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitConflictException.class);
 
     // Assert
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
@@ -190,9 +188,7 @@ public class CommitHandlerTest {
     doNothing().when(handler).rollbackRecords(any(Snapshot.class));
 
     // Act
-    assertThatThrownBy(() -> handler.commit(snapshot))
-        .isInstanceOf(CommitConflictException.class)
-        .hasCause(toThrow);
+    assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitConflictException.class);
 
     // Assert
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
@@ -212,9 +208,7 @@ public class CommitHandlerTest {
     doNothing().when(handler).rollbackRecords(any(Snapshot.class));
 
     // Act
-    assertThatThrownBy(() -> handler.commit(snapshot))
-        .isInstanceOf(CommitException.class)
-        .hasCause(toThrow);
+    assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
 
     // Assert
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
