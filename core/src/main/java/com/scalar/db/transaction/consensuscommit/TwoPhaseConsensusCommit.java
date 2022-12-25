@@ -14,7 +14,6 @@ import com.scalar.db.common.AbstractTwoPhaseCommitTransaction;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -126,14 +125,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   @Override
   public void prepare() throws PreparationException {
     try {
-      commit.prepare(crud.getSnapshot(), false);
-    } catch (CommitConflictException e) {
-      throw new PreparationConflictException("prepare failed", e);
-    } catch (CommitException e) {
-      throw new PreparationException("prepare failed", e);
-    } catch (UnknownTransactionStatusException e) {
-      // Should not be reached here because CommitHandler.prepare() with abortIfError=false won't
-      // throw UnknownTransactionStatusException
+      commit.prepare(crud.getSnapshot());
     } finally {
       needRollback = true;
     }

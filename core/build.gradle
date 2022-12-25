@@ -97,6 +97,7 @@ dependencies {
     implementation "org.postgresql:postgresql:${postgresqlDriverVersion}"
     implementation "com.oracle.database.jdbc:ojdbc8:${oracleDriverVersion}"
     implementation "com.microsoft.sqlserver:mssql-jdbc:${sqlserverDriverVersion}"
+    implementation "org.apache.commons:commons-text:${commonsTextVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
@@ -105,6 +106,7 @@ dependencies {
     testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
     testImplementation "org.apache.commons:commons-lang3:${commonsLangVersion}"
     testImplementation "org.slf4j:slf4j-simple:${slf4jVersion}"
+    testImplementation "com.github.stefanbirkner:system-lambda:${stefanbirknerSystemLambdaVersion}"
     testImplementation project(':integration-test')
 
     // for SpotBugs
