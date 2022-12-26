@@ -28,7 +28,6 @@ import com.scalar.db.util.ThrowableSupplier;
 import io.grpc.ManagedChannel;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
-import io.grpc.netty.NettyChannelBuilder;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -49,8 +48,7 @@ public class GrpcAdmin implements DistributedStorageAdmin {
   @Inject
   public GrpcAdmin(DatabaseConfig databaseConfig) {
     config = new GrpcConfig(databaseConfig);
-    channel =
-        NettyChannelBuilder.forAddress(config.getHost(), config.getPort()).usePlaintext().build();
+    channel = GrpcUtils.createChannel(config);
     stub = DistributedStorageAdminGrpc.newBlockingStub(channel);
   }
 
