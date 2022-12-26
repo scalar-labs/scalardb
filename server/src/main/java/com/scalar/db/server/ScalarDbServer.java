@@ -106,6 +106,9 @@ public class ScalarDbServer implements Callable<Integer> {
               + "\" to 'jdbc'");
     }
 
+    config.getGrpcMaxInboundMessageSize().ifPresent(builder::maxInboundMessageSize);
+    config.getGrpcMaxInboundMetadataSize().ifPresent(builder::maxInboundMetadataSize);
+
     server = builder.build().start();
 
     logger.info("Scalar DB Server started, listening on {}", config.getPort());
