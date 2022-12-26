@@ -50,7 +50,8 @@ public final class ConfigUtils {
     try {
       return Integer.parseInt(value);
     } catch (NumberFormatException ignored) {
-      throw new IllegalArgumentException("the specified value of '" + name + "' is not a number");
+      throw new IllegalArgumentException(
+          "the specified value of '" + name + "' is not a number. value: " + value);
     }
   }
 
@@ -62,7 +63,8 @@ public final class ConfigUtils {
     try {
       return Integer.parseInt(value);
     } catch (NumberFormatException ignored) {
-      throw new IllegalArgumentException("the specified value of '" + name + "' is not a number");
+      throw new IllegalArgumentException(
+          "the specified value of '" + name + "' is not a number. value: " + value);
     }
   }
 
@@ -74,7 +76,8 @@ public final class ConfigUtils {
     try {
       return Long.parseLong(value);
     } catch (NumberFormatException ignored) {
-      throw new IllegalArgumentException("the specified value of '" + name + "' is not a number");
+      throw new IllegalArgumentException(
+          "the specified value of '" + name + "' is not a number. value: " + value);
     }
   }
 
@@ -86,7 +89,8 @@ public final class ConfigUtils {
     try {
       return Long.parseLong(value);
     } catch (NumberFormatException ignored) {
-      throw new IllegalArgumentException("the specified value of '" + name + "' is not a number");
+      throw new IllegalArgumentException(
+          "the specified value of '" + name + "' is not a number. value: " + value);
     }
   }
 
@@ -100,7 +104,7 @@ public final class ConfigUtils {
       return Boolean.parseBoolean(value);
     } else {
       throw new IllegalArgumentException(
-          "the specified value of '" + name + "' is not a boolean value");
+          "the specified value of '" + name + "' is not a boolean value. value: " + value);
     }
   }
 
@@ -114,7 +118,7 @@ public final class ConfigUtils {
       return Boolean.parseBoolean(value);
     } else {
       throw new IllegalArgumentException(
-          "the specified value of '" + name + "' is not a boolean value");
+          "the specified value of '" + name + "' is not a boolean value. value: " + value);
     }
   }
 
