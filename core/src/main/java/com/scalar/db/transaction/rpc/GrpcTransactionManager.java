@@ -17,6 +17,7 @@ import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
+import com.scalar.db.storage.rpc.GrpcUtils;
 import com.scalar.db.transaction.common.AbstractDistributedTransactionManager;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableSupplier;
@@ -25,7 +26,6 @@ import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
 import io.grpc.ManagedChannel;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
-import io.grpc.netty.NettyChannelBuilder;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
@@ -57,8 +57,7 @@ public class GrpcTransactionManager extends AbstractDistributedTransactionManage
   @Inject
   public GrpcTransactionManager(DatabaseConfig databaseConfig) {
     config = new GrpcConfig(databaseConfig);
-    channel =
-        NettyChannelBuilder.forAddress(config.getHost(), config.getPort()).usePlaintext().build();
+    channel = GrpcUtils.createChannel(config);
     stub = DistributedTransactionGrpc.newStub(channel);
     blockingStub = DistributedTransactionGrpc.newBlockingStub(channel);
     metadataManager =

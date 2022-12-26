@@ -29,12 +29,12 @@ import com.scalar.db.rpc.TruncateCoordinatorTablesRequest;
 import com.scalar.db.rpc.TruncateTableRequest;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
+import com.scalar.db.storage.rpc.GrpcUtils;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableSupplier;
 import io.grpc.ManagedChannel;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
-import io.grpc.netty.NettyChannelBuilder;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -55,8 +55,7 @@ public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
   @Inject
   public GrpcTransactionAdmin(DatabaseConfig databaseConfig) {
     config = new GrpcConfig(databaseConfig);
-    channel =
-        NettyChannelBuilder.forAddress(config.getHost(), config.getPort()).usePlaintext().build();
+    channel = GrpcUtils.createChannel(config);
     stub = DistributedTransactionAdminGrpc.newBlockingStub(channel);
   }
 
