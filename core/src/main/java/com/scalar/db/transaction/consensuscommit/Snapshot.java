@@ -14,9 +14,9 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
+import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
@@ -310,7 +310,7 @@ public class Snapshot {
 
   @VisibleForTesting
   void toSerializableWithExtraRead(DistributedStorage storage)
-      throws ExecutionException, CommitConflictException {
+      throws ExecutionException, ValidationConflictException {
     if (!isExtraReadEnabled()) {
       return;
     }
@@ -422,15 +422,15 @@ public class Snapshot {
         "reading empty records might cause write skew anomaly so aborting the transaction for safety.");
   }
 
-  private void throwExceptionDueToAntiDependency() throws CommitConflictException {
-    throw new CommitConflictException("Anti-dependency found. Aborting the transaction.");
+  private void throwExceptionDueToAntiDependency() throws ValidationConflictException {
+    throw new ValidationConflictException("Anti-dependency found. Aborting the transaction.");
   }
 
   private boolean isExtraReadEnabled() {
     return isolation == Isolation.SERIALIZABLE && strategy == SerializableStrategy.EXTRA_READ;
   }
 
-  public boolean isPreCommitValidationRequired() {
+  public boolean isValidationRequired() {
     return isExtraReadEnabled();
   }
 
