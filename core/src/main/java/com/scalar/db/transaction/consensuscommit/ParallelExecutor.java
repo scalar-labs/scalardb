@@ -76,8 +76,9 @@ public class ParallelExecutor {
           stopOnError,
           "preparation",
           transactionId);
-    } catch (ValidationConflictException ignored) {
-      // tasks for preparation should not throw ValidationConflictException
+    } catch (ValidationConflictException e) {
+      throw new AssertionError(
+          "tasks for preparation should not throw ValidationConflictException", e);
     }
   }
 
@@ -97,8 +98,8 @@ public class ParallelExecutor {
           false,
           "commitRecords",
           transactionId);
-    } catch (ValidationConflictException ignored) {
-      // tasks for commit should not throw ValidationConflictException
+    } catch (ValidationConflictException e) {
+      throw new AssertionError("tasks for commit should not throw ValidationConflictException", e);
     }
   }
 
@@ -112,8 +113,9 @@ public class ParallelExecutor {
           false,
           "rollbackRecords",
           transactionId);
-    } catch (ValidationConflictException ignored) {
-      // tasks for rollback should not throw ValidationConflictException
+    } catch (ValidationConflictException e) {
+      throw new AssertionError(
+          "tasks for rollback should not throw ValidationConflictException", e);
     }
   }
 
