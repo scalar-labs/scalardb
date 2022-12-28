@@ -19,7 +19,7 @@ The following is the decision tree to decide what approach you should take.
 
 ### Online Backup
 
-If you use a single DB under Scalar DB and it has transaction support, it could be possible to create backups even while Scalar DB continues to accept transactions.
+If you use ScalarDB on a single DB with transaction support, you can create backups for the DB even while Scalar DB continues to accept transactions.
 
 One requirement for backup in Scalar DB is that backups for all the Scalar DB managed tables (including the coordinator tables) need to be transactionally-consistent or automatically recoverable to a transactionally-consistent state.
 That means that you need to create a consistent snapshot by dumping all tables in a single transaction.
