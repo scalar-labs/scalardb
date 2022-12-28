@@ -12,7 +12,7 @@ In other cases, it is recommended to first make Scalar DB drain outstanding requ
 The following is the decision tree to decide what approach you should take.
 
 - :question: Use a single DB under Scalar DB?
-  - :question: The DB has transaction support?
+  - :question: Does the DB have transaction support?
     - :arrow_right: You may use [online backup](#online-backup)
 - Otherwise
   - :arrow_right: You may use [pause duration](#transactionally-consistent-backups-during-pause-duration)
