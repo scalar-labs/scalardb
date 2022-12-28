@@ -7,7 +7,6 @@ This document sets out some guidelines for backing up and restoring the database
 
 The way to create a backup varies on what database you use and whether or not you use multiple databases.
 
-In other cases, it is recommended to first make Scalar DB drain outstanding requests and stop accepting new requests and then make the backups (see [here](#transactionally-consistent-backups-during-pause-duration) for detail).
 
 The following is the decision tree to decide what approach you should take.
 
