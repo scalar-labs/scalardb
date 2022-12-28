@@ -25,7 +25,7 @@ One requirement for backup in Scalar DB is that backups for all the Scalar DB ma
 That means that you need to create a consistent snapshot by dumping all tables in a single transaction.
 
 The ways to create transactional backups are different among each database product.
-We show some examples for some database products but you are requested to find the safe ways to a transactional backup from your databases at your own risk.
+We show examples for some database products, but you are requested to find safe ways for a transactional backup from your databases at your own risk.
 
 #### MySQL (backup)
 
