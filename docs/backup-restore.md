@@ -53,10 +53,6 @@ Also, it is recommended to pause a long enough time (e.g., 10 seconds) and use t
 
 #### Database-specific ways to create a transactionally-consistent backup
 
-**Databases with transaction support**
-
-See subsections in the [online backup](#online-backup).
-
 **Cassandra**
 
 Cassandra has a built-in replication mechanism, so you do not always have to create a transactionally-consistent backup.
