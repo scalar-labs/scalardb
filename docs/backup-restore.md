@@ -9,7 +9,7 @@ In some cases, you may create a transactional backup of your databases online.
 
 In other cases, it is recommended to first make Scalar DB drain outstanding requests and stop accepting new requests and then make the backups (see [here](#transactionally-consistent-backups-during-pause-duration) for detail).
 
-### Flowchart
+The following is the decision tree to decide what approach you should take.
 
 - :question: Use a single DB under Scalar DB?
   - :question: The DB has transaction support?
