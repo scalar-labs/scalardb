@@ -88,7 +88,7 @@ If you use `mysqldump` to create a backup file, use `mysql` command to restore t
 
 ### PostgreSQL (restore)
 
-If you use PostgreSQL and `pg_dump` to create a backup file, use `psql` command to restore the file as specified in [the PostgreSQL doc](https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-RESTORE).
+If you use `pg_dump` to create a backup file, use `psql` command to restore the file as specified in [the PostgreSQL doc](https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-RESTORE).
 
 ### Amazon RDS or Azure Database for MySQL/PostgreSQL (restore)
 
