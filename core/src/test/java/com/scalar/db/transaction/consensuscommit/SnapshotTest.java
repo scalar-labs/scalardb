@@ -26,8 +26,9 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.PreparationConflictException;
+import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
@@ -489,7 +490,7 @@ public class SnapshotTest {
 
   @Test
   public void to_PrepareMutationComposerGivenAndSnapshotIsolationSet_ShouldCallComposerProperly()
-      throws CommitConflictException, ExecutionException {
+      throws PreparationConflictException, ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
@@ -512,7 +513,7 @@ public class SnapshotTest {
   @Test
   public void
       to_PrepareMutationComposerGivenAndSerializableWithExtraWriteIsolationSet_ShouldCallComposerProperly()
-          throws CommitConflictException, ExecutionException {
+          throws PreparationConflictException, ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Put put = preparePut();
@@ -534,7 +535,7 @@ public class SnapshotTest {
 
   @Test
   public void to_CommitMutationComposerGiven_ShouldCallComposerProperly()
-      throws CommitConflictException, ExecutionException {
+      throws PreparationConflictException, ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
@@ -556,7 +557,7 @@ public class SnapshotTest {
   @Test
   public void
       to_CommitMutationComposerGivenAndSerializableWithExtraWriteIsolationSet_ShouldCallComposerProperly()
-          throws CommitConflictException, ExecutionException {
+          throws PreparationConflictException, ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Put put = preparePut();
@@ -580,7 +581,7 @@ public class SnapshotTest {
 
   @Test
   public void to_RollbackMutationComposerGiven_ShouldCallComposerProperly()
-      throws CommitConflictException, ExecutionException {
+      throws PreparationConflictException, ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
@@ -603,7 +604,7 @@ public class SnapshotTest {
   @Test
   public void
       to_RollbackMutationComposerGivenAndSerializableWithExtraWriteIsolationSet_ShouldCallComposerProperly()
-          throws CommitConflictException, ExecutionException {
+          throws PreparationConflictException, ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Put put = preparePut();
@@ -654,7 +655,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      toSerializableWithExtraWrite_UnmutatedReadSetForNonExistingExists_ShouldThrowCommitConflictException() {
+      toSerializableWithExtraWrite_UnmutatedReadSetForNonExistingExists_ShouldNotThrowAnyException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Get get = prepareAnotherGet();
@@ -677,7 +678,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      toSerializableWithExtraWrite_ScanSetAndWriteSetExist_ShouldThrowCommitConflictException() {
+      toSerializableWithExtraWrite_ScanSetAndWriteSetExist_ShouldThrowPreparationConflictException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Scan scan = prepareScan();
@@ -690,7 +691,7 @@ public class SnapshotTest {
     Throwable thrown = catchThrowable(() -> snapshot.toSerializableWithExtraWrite(prepareComposer));
 
     // Assert
-    assertThat(thrown).isInstanceOf(CommitConflictException.class);
+    assertThat(thrown).isInstanceOf(PreparationConflictException.class);
   }
 
   @Test
@@ -717,7 +718,7 @@ public class SnapshotTest {
   }
 
   @Test
-  public void toSerializableWithExtraRead_ReadSetUpdated_ShouldThrowCommitConflictException()
+  public void toSerializableWithExtraRead_ReadSetUpdated_ShouldThrowValidationConflictException()
       throws ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
@@ -734,14 +735,14 @@ public class SnapshotTest {
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
-        .isInstanceOf(CommitConflictException.class);
+        .isInstanceOf(ValidationConflictException.class);
 
     // Assert
     verify(storage).get(getWithProjections);
   }
 
   @Test
-  public void toSerializableWithExtraRead_ReadSetExtended_ShouldThrowCommitConflictException()
+  public void toSerializableWithExtraRead_ReadSetExtended_ShouldThrowValidationConflictException()
       throws ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
@@ -757,7 +758,7 @@ public class SnapshotTest {
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
-        .isInstanceOf(CommitConflictException.class);
+        .isInstanceOf(ValidationConflictException.class);
 
     // Assert
     verify(storage).get(getWithProjections);
@@ -792,7 +793,7 @@ public class SnapshotTest {
   }
 
   @Test
-  public void toSerializableWithExtraRead_ScanSetUpdated_ShouldProcessWithoutExceptions()
+  public void toSerializableWithExtraRead_ScanSetUpdated_ShouldThrowValidationConflictException()
       throws ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
@@ -816,14 +817,14 @@ public class SnapshotTest {
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
-        .isInstanceOf(CommitConflictException.class);
+        .isInstanceOf(ValidationConflictException.class);
 
     // Assert
     verify(storage).scan(scanWithProjections);
   }
 
   @Test
-  public void toSerializableWithExtraRead_ScanSetExtended_ShouldThrowCommitConflictException()
+  public void toSerializableWithExtraRead_ScanSetExtended_ShouldThrowValidationConflictException()
       throws ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
@@ -844,7 +845,7 @@ public class SnapshotTest {
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
-        .isInstanceOf(CommitConflictException.class);
+        .isInstanceOf(ValidationConflictException.class);
 
     // Assert
     verify(storage).scan(scanWithProjections);

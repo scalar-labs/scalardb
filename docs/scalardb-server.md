@@ -43,6 +43,12 @@ scalar.db.server.port=60051
 # Prometheus exporter port. Use 8080 if this is not given. Prometheus exporter will not be started if a negative number is given.
 scalar.db.server.prometheus_exporter_port=8080
 
+# The maximum message size allowed to be received. If not specified, use the gRPC default value.
+scalar.db.server.grpc.max_inbound_message_size=
+
+# The maximum size of metadata allowed to be received. If not specified, use the gRPC default value.
+scalar.db.server.grpc.max_inbound_metadata_size=
+
 #
 # Underlying storage/database configurations
 #
@@ -143,6 +149,12 @@ scalar.db.transaction_manager=grpc
 
 # The deadline duration for gRPC connections. The default is 60000 milliseconds (60 seconds)
 scalar.db.grpc.deadline_duration_millis=60000
+
+# The maximum message size allowed for a single gRPC frame. If not specified, use the gRPC default value.
+scalar.db.grpc.max_inbound_message_size=
+
+# The maximum size of metadata allowed to be received. If not specified, use the gRPC default value.
+scalar.db.grpc.max_inbound_metadata_size=
 ```
 
 ## Further reading

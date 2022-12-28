@@ -11,14 +11,11 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.common.AbstractTwoPhaseCommitTransaction;
-import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
@@ -126,14 +123,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   @Override
   public void prepare() throws PreparationException {
     try {
-      commit.prepare(crud.getSnapshot(), false);
-    } catch (CommitConflictException e) {
-      throw new PreparationConflictException("prepare failed", e);
-    } catch (CommitException e) {
-      throw new PreparationException("prepare failed", e);
-    } catch (UnknownTransactionStatusException e) {
-      // Should not be reached here because CommitHandler.prepare() with abortIfError=false won't
-      // throw UnknownTransactionStatusException
+      commit.prepare(crud.getSnapshot());
     } finally {
       needRollback = true;
     }
@@ -141,22 +131,13 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
   @Override
   public void validate() throws ValidationException {
-    try {
-      commit.preCommitValidation(crud.getSnapshot(), false);
-      validated = true;
-    } catch (CommitConflictException e) {
-      throw new ValidationConflictException("validation failed", e);
-    } catch (CommitException e) {
-      throw new ValidationException("validation failed", e);
-    } catch (UnknownTransactionStatusException e) {
-      // Should not be reached here because CommitHandler.prepare() with abortIfError=false won't
-      // throw UnknownTransactionStatusException
-    }
+    commit.validate(crud.getSnapshot());
+    validated = true;
   }
 
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
-    if (crud.getSnapshot().isPreCommitValidationRequired() && !validated) {
+    if (crud.getSnapshot().isValidationRequired() && !validated) {
       throw new IllegalStateException(
           "The transaction is not validated."
               + " When using the EXTRA_READ serializable strategy, you need to call validate()"
