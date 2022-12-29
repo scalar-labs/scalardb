@@ -16,7 +16,7 @@ The following is the decision tree to decide what approach you should take.
 - Otherwise
   - :arrow_right: use [backup with explicit pausing](#backup-with-explicit-pausing)
 
-### Online Backup
+### Backup without explicit pausing
 
 If you use ScalarDB on a single DB with transaction support, you can create backups for the DB even while Scalar DB continues to accept transactions.
 
