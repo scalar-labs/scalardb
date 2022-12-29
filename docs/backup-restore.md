@@ -38,7 +38,7 @@ Use the `pg_dump` command.
 
 You can restore to any point within the backup retention period with the automated backup feature.
 
-### Transactionally-consistent backups during pause duration
+### Backup with explicit pausing
 
 One way to create a transactionally-consistent backup is to take a backup while Scalar DB cluster does not have outstanding transactions.
 If an underlying database supports a point-in-time snapshot/backup mechanism, you can take a snapshot during the period.
