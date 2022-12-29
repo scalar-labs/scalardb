@@ -12,7 +12,7 @@ The following is the decision tree to decide what approach you should take.
 
 - :question: Do you use a single DB under Scalar DB?
   - :question: Does the DB have transaction support?
-    - :arrow_right: You may use [online backup](#online-backup)
+    - :arrow_right: use [backup without explicit pausing](#backup-without-explicit-pausing)
 - Otherwise
   - :arrow_right: You may use [pause duration](#transactionally-consistent-backups-during-pause-duration)
 
