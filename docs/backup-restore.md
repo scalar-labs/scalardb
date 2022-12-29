@@ -14,7 +14,7 @@ The following is the decision tree to decide what approach you should take.
   - :question: Does the DB have transaction support?
     - :arrow_right: use [backup without explicit pausing](#backup-without-explicit-pausing)
 - Otherwise
-  - :arrow_right: You may use [pause duration](#transactionally-consistent-backups-during-pause-duration)
+  - :arrow_right: use [backup with explicit pausing](#backup-with-explicit-pausing)
 
 ### Online Backup
 
