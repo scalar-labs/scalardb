@@ -17,12 +17,14 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -196,6 +198,25 @@ public abstract class DynamoAdminTestBase {
     assertThat(actualRequest.tableName()).isEqualTo(getFullMetadataTableName());
     assertThat(actualRequest.key()).isEqualTo(expectedKey);
     assertThat(actualRequest.consistentRead()).isTrue();
+  }
+
+  @Test
+  public void namespaceExists_ShouldPerformExactMatch() throws ExecutionException {
+    // Arrange
+    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
+    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
+    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
+    when(listTablesResponse.tableNames())
+        .thenReturn(
+            ImmutableList.<String>builder()
+                .add(getFullTableName())
+                .build());
+
+    // Act
+    // Assert
+    assertThat(admin.namespaceExists(NAMESPACE)).isTrue();
+    // compare with namespace prefix
+    assertThat(admin.namespaceExists(NAMESPACE.substring(0, NAMESPACE.length() - 1))).isFalse();
   }
 
   @Test
