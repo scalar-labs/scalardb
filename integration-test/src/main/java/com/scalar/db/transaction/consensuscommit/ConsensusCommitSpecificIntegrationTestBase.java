@@ -24,7 +24,7 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.common.WrappedDistributedTransaction;
+import com.scalar.db.common.DecoratedDistributedTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -521,7 +521,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -598,7 +598,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -889,7 +889,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -957,7 +957,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
