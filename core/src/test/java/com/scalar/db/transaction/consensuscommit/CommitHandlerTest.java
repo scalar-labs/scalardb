@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -21,6 +20,7 @@ import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Key;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -162,8 +162,7 @@ public class CommitHandlerTest {
       throws ExecutionException, CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
-    ExecutionException toThrow = mock(NoMutationException.class);
-    doThrow(toThrow).when(storage).mutate(anyList());
+    doThrow(NoMutationException.class).when(storage).mutate(anyList());
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
     doNothing().when(handler).rollbackRecords(any(Snapshot.class));
 
@@ -182,8 +181,7 @@ public class CommitHandlerTest {
       throws ExecutionException, CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
-    ExecutionException toThrow = mock(RetriableExecutionException.class);
-    doThrow(toThrow).when(storage).mutate(anyList());
+    doThrow(RetriableExecutionException.class).when(storage).mutate(anyList());
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
     doNothing().when(handler).rollbackRecords(any(Snapshot.class));
 
@@ -202,8 +200,7 @@ public class CommitHandlerTest {
       throws ExecutionException, CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
-    ExecutionException toThrow = mock(ExecutionException.class);
-    doThrow(toThrow).when(storage).mutate(anyList());
+    doThrow(ExecutionException.class).when(storage).mutate(anyList());
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
     doNothing().when(handler).rollbackRecords(any(Snapshot.class));
 
@@ -219,17 +216,14 @@ public class CommitHandlerTest {
 
   @Test
   public void
-      commit_ExceptionThrownInPrepareRecordsAndFailedInCoordinatorAbortThenAbortedReturnedInGetState_ShouldRollbackRecords()
+      commit_ExceptionThrownInPrepareRecordsAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenAbortedReturnedInGetState_ShouldRollbackRecords()
           throws ExecutionException, CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
-    ExecutionException toThrow1 = mock(ExecutionException.class);
-    CoordinatorException toThrow2 = mock(CoordinatorException.class);
-    doThrow(toThrow1).when(storage).mutate(anyList());
-    doThrow(toThrow2)
+    doThrow(ExecutionException.class).when(storage).mutate(anyList());
+    doThrow(CoordinatorConflictException.class)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    // assume that it will call Coordinator.getState() if Coordinator.putState() fails
     doReturn(Optional.of(new Coordinator.State(ANY_ID, TransactionState.ABORTED)))
         .when(coordinator)
         .getState(ANY_ID);
@@ -248,17 +242,14 @@ public class CommitHandlerTest {
 
   @Test
   public void
-      commit_ExceptionThrownInPrepareRecordsAndFailedInCoordinatorAbortThenNothingReturnedInGetState_ShouldThrowUnknown()
+      commit_ExceptionThrownInPrepareRecordsAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenNothingReturnedInGetState_ShouldThrowUnknown()
           throws ExecutionException, CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
-    ExecutionException toThrow1 = mock(ExecutionException.class);
-    CoordinatorException toThrow2 = mock(CoordinatorException.class);
-    doThrow(toThrow1).when(storage).mutate(anyList());
-    doThrow(toThrow2)
+    doThrow(ExecutionException.class).when(storage).mutate(anyList());
+    doThrow(CoordinatorConflictException.class)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    // assume that it will call Coordinator.getState() if Coordinator.putState() fails
     doReturn(Optional.empty()).when(coordinator).getState(ANY_ID);
 
     // Act
@@ -275,18 +266,15 @@ public class CommitHandlerTest {
 
   @Test
   public void
-      commit_ExceptionThrownInPrepareRecordsAndFailedInCoordinatorAbortThenExceptionThrownInGetState_ShouldThrowUnknown()
+      commit_ExceptionThrownInPrepareRecordsAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenExceptionThrownInGetState_ShouldThrowUnknown()
           throws ExecutionException, CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
-    ExecutionException toThrow1 = mock(ExecutionException.class);
-    CoordinatorException toThrow2 = mock(CoordinatorException.class);
-    doThrow(toThrow1).when(storage).mutate(anyList());
-    doThrow(toThrow2)
+    doThrow(ExecutionException.class).when(storage).mutate(anyList());
+    doThrow(CoordinatorConflictException.class)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    // assume that it will call Coordinator.getState() if Coordinator.putState() fails
-    doThrow(toThrow2).when(coordinator).getState(ANY_ID);
+    doThrow(CoordinatorException.class).when(coordinator).getState(ANY_ID);
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot))
@@ -302,46 +290,177 @@ public class CommitHandlerTest {
 
   @Test
   public void
-      commit_ExceptionThrownInCoordinatorCommitAndSucceededInCoordinatorAbort_ShouldRollbackRecords()
+      commit_ExceptionThrownInPrepareRecordsAndCoordinatorExceptionThrownInCoordinatorAbort_ShouldThrowUnknown()
           throws ExecutionException, CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
-    CoordinatorException toThrow = mock(CoordinatorException.class);
-    doNothing().when(storage).mutate(anyList());
-    doThrow(toThrow)
+    doThrow(ExecutionException.class).when(storage).mutate(anyList());
+    doThrow(CoordinatorException.class)
         .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    doNothing().when(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    doNothing().when(handler).rollbackRecords(any(Snapshot.class));
+        .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot))
-        .isInstanceOf(CommitException.class)
-        .hasCause(toThrow);
+        .isInstanceOf(UnknownTransactionStatusException.class);
 
     // Assert
-    verify(storage, times(2)).mutate(anyList());
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+    verify(coordinator, never())
+        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+    verify(handler, never()).rollbackRecords(snapshot);
+  }
+
+  @Test
+  public void commit_ValidationConflictExceptionThrownInValidation_ShouldAbortAndRollbackRecords()
+      throws ExecutionException, CoordinatorException, ValidationConflictException {
+    // Arrange
+    Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
+    doNothing().when(storage).mutate(anyList());
+    doThrow(ValidationConflictException.class).when(snapshot).toSerializableWithExtraRead(storage);
+    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+    doNothing().when(handler).rollbackRecords(any(Snapshot.class));
+
+    // Act
+    assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
+
+    // Assert
+    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+    verify(coordinator, never())
+        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+    verify(handler).rollbackRecords(snapshot);
+  }
+
+  @Test
+  public void commit_ExceptionThrownInValidation_ShouldAbortAndRollbackRecords()
+      throws ExecutionException, CoordinatorException, ValidationConflictException {
+    // Arrange
+    Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
+    doNothing().when(storage).mutate(anyList());
+    doThrow(ExecutionException.class).when(snapshot).toSerializableWithExtraRead(storage);
+    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+    doNothing().when(handler).rollbackRecords(any(Snapshot.class));
+
+    // Act
+    assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
+
+    // Assert
+    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+    verify(coordinator, never())
+        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
   }
 
   @Test
   public void
-      commit_ExceptionThrownInCoordinatorCommitAndAbortAndCommittedReturnedInGetState_ShouldCommitRecords()
-          throws ExecutionException, CommitException, UnknownTransactionStatusException,
-              CoordinatorException {
+      commit_ExceptionThrownInValidationAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenAbortedReturnedInGetState_ShouldRollbackRecords()
+          throws ExecutionException, CoordinatorException, ValidationConflictException {
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
-    CoordinatorException toThrow = mock(CoordinatorException.class);
+    Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
-    doThrow(toThrow)
-        .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    doThrow(toThrow)
+    doThrow(ExecutionException.class).when(snapshot).toSerializableWithExtraRead(storage);
+    doThrow(CoordinatorConflictException.class)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    // assume that it will call Coordinator.getState() if Coordinator.putState() fails
+    doReturn(Optional.of(new Coordinator.State(ANY_ID, TransactionState.ABORTED)))
+        .when(coordinator)
+        .getState(ANY_ID);
+    doNothing().when(handler).rollbackRecords(any(Snapshot.class));
+
+    // Act
+    assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
+
+    // Assert
+    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+    verify(coordinator, never())
+        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+    verify(coordinator).getState(ANY_ID);
+    verify(handler).rollbackRecords(snapshot);
+  }
+
+  @Test
+  public void
+      commit_ExceptionThrownInValidationAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenNothingReturnedInGetState_ShouldThrowUnknown()
+          throws ExecutionException, CoordinatorException, ValidationConflictException {
+    // Arrange
+    Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
+    doNothing().when(storage).mutate(anyList());
+    doThrow(ExecutionException.class).when(snapshot).toSerializableWithExtraRead(storage);
+    doThrow(CoordinatorConflictException.class)
+        .when(coordinator)
+        .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+    doReturn(Optional.empty()).when(coordinator).getState(ANY_ID);
+
+    // Act
+    assertThatThrownBy(() -> handler.commit(snapshot))
+        .isInstanceOf(UnknownTransactionStatusException.class);
+
+    // Assert
+    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+    verify(coordinator, never())
+        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+    verify(coordinator).getState(ANY_ID);
+    verify(handler, never()).rollbackRecords(snapshot);
+  }
+
+  @Test
+  public void
+      commit_ExceptionThrownInValidationAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenExceptionThrownInGetState_ShouldThrowUnknown()
+          throws ExecutionException, CoordinatorException, ValidationConflictException {
+    // Arrange
+    Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
+    doNothing().when(storage).mutate(anyList());
+    doThrow(ExecutionException.class).when(snapshot).toSerializableWithExtraRead(storage);
+    doThrow(CoordinatorConflictException.class)
+        .when(coordinator)
+        .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+    doThrow(CoordinatorException.class).when(coordinator).getState(ANY_ID);
+
+    // Act
+    assertThatThrownBy(() -> handler.commit(snapshot))
+        .isInstanceOf(UnknownTransactionStatusException.class);
+
+    // Assert
+    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+    verify(coordinator, never())
+        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+    verify(coordinator).getState(ANY_ID);
+    verify(handler, never()).rollbackRecords(snapshot);
+  }
+
+  @Test
+  public void
+      commit_ExceptionThrownInValidationAndCoordinatorExceptionThrownInCoordinatorAbort_ShouldThrowUnknown()
+          throws ExecutionException, CoordinatorException, ValidationConflictException {
+    // Arrange
+    Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
+    doNothing().when(storage).mutate(anyList());
+    doThrow(ExecutionException.class).when(snapshot).toSerializableWithExtraRead(storage);
+    doThrow(CoordinatorException.class)
+        .when(coordinator)
+        .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+
+    // Act
+    assertThatThrownBy(() -> handler.commit(snapshot))
+        .isInstanceOf(UnknownTransactionStatusException.class);
+
+    // Assert
+    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+    verify(coordinator, never())
+        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+    verify(handler, never()).rollbackRecords(snapshot);
+  }
+
+  @Test
+  public void
+      commit_CoordinatorConflictExceptionThrownInCoordinatorCommitAndThenCommittedReturnedInGetState_ShouldBeIgnored()
+          throws ExecutionException, CoordinatorException, CommitException,
+              UnknownTransactionStatusException {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    doNothing().when(storage).mutate(anyList());
+    doThrow(CoordinatorConflictException.class)
+        .when(coordinator)
+        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     doReturn(Optional.of(new Coordinator.State(ANY_ID, TransactionState.COMMITTED)))
         .when(coordinator)
         .getState(ANY_ID);
@@ -352,30 +471,23 @@ public class CommitHandlerTest {
     // Assert
     verify(storage, times(4)).mutate(anyList());
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(coordinator).getState(ANY_ID);
     verify(handler, never()).rollbackRecords(snapshot);
   }
 
   @Test
   public void
-      commit_ExceptionThrownInCoordinatorCommitAndAbortAndAbortedReturnedInGetState_ShouldRollbackRecords()
+      commit_CoordinatorConflictExceptionThrownInCoordinatorCommitAndThenAbortedReturnedInGetState_ShouldRollbackRecords()
           throws ExecutionException, CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
-    CoordinatorException toThrow = mock(CoordinatorException.class);
     doNothing().when(storage).mutate(anyList());
-    doThrow(toThrow)
+    doThrow(CoordinatorConflictException.class)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    doThrow(toThrow)
-        .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    // assume that it will call Coordinator.getState() if Coordinator.putState() fails
     doReturn(Optional.of(new Coordinator.State(ANY_ID, TransactionState.ABORTED)))
         .when(coordinator)
         .getState(ANY_ID);
-    doNothing().when(handler).rollbackRecords(any(Snapshot.class));
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
@@ -383,26 +495,20 @@ public class CommitHandlerTest {
     // Assert
     verify(storage, times(2)).mutate(anyList());
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(coordinator).getState(ANY_ID);
     verify(handler).rollbackRecords(snapshot);
   }
 
   @Test
   public void
-      commit_ExceptionThrownInCoordinatorCommitAndAbortAndNothingReturnedInGetState_ShouldThrowUnknown()
+      commit_CoordinatorConflictExceptionThrownInCoordinatorCommitAndThenNothingReturnedInGetState_ShouldThrowUnknown()
           throws ExecutionException, CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
-    CoordinatorException toThrow = mock(CoordinatorException.class);
     doNothing().when(storage).mutate(anyList());
-    doThrow(toThrow)
+    doThrow(CoordinatorConflictException.class)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    doThrow(toThrow)
-        .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    // assume that it will call Coordinator.getState() if Coordinator.putState() fails
     doReturn(Optional.empty()).when(coordinator).getState(ANY_ID);
 
     // Act
@@ -412,27 +518,21 @@ public class CommitHandlerTest {
     // Assert
     verify(storage, times(2)).mutate(anyList());
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(coordinator).getState(ANY_ID);
     verify(handler, never()).rollbackRecords(snapshot);
   }
 
   @Test
   public void
-      commit_ExceptionThrownInCoordinatorCommitAndAbortAndExceptionThrownInGetState_ShouldThrowUnknown()
+      commit_CoordinatorConflictExceptionThrownInCoordinatorCommitAndThenExceptionThrownInGetState_ShouldThrowUnknown()
           throws ExecutionException, CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
-    CoordinatorException toThrow = mock(CoordinatorException.class);
     doNothing().when(storage).mutate(anyList());
-    doThrow(toThrow)
+    doThrow(CoordinatorConflictException.class)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    doThrow(toThrow)
-        .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    // assume that it will call Coordinator.getState() if Coordinator.putState() fails
-    doThrow(toThrow).when(coordinator).getState(ANY_ID);
+    doThrow(CoordinatorException.class).when(coordinator).getState(ANY_ID);
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot))
@@ -441,30 +541,27 @@ public class CommitHandlerTest {
     // Assert
     verify(storage, times(2)).mutate(anyList());
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(coordinator).getState(ANY_ID);
     verify(handler, never()).rollbackRecords(snapshot);
   }
 
   @Test
-  public void commit_ExceptionThrownInCommitRecords_ShouldBeIgnored()
-      throws ExecutionException, CommitException, UnknownTransactionStatusException,
-          CoordinatorException {
+  public void commit_ExceptionThrownInCoordinatorCommit_ShouldThrowUnknown()
+      throws ExecutionException, CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
-    ExecutionException toThrow = mock(ExecutionException.class);
-    doNothing().doNothing().doThrow(toThrow).when(storage).mutate(anyList());
-    doNothing()
+    doNothing().when(storage).mutate(anyList());
+    doThrow(CoordinatorException.class)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
 
     // Act
-    handler.commit(snapshot);
+    assertThatThrownBy(() -> handler.commit(snapshot))
+        .isInstanceOf(UnknownTransactionStatusException.class);
 
     // Assert
-    verify(storage, times(4)).mutate(anyList());
+    verify(storage, times(2)).mutate(anyList());
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(coordinator, never()).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(handler, never()).rollbackRecords(snapshot);
   }
 }

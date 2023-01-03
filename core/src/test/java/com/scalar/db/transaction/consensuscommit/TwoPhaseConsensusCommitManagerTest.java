@@ -304,7 +304,7 @@ public class TwoPhaseConsensusCommitManagerTest {
       resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowTransactionNotFoundException()
           throws TransactionException {
     // Arrange
-    doThrow(UnknownTransactionStatusException.class).when(commit).abort(any());
+    doThrow(UnknownTransactionStatusException.class).when(commit).abortState(any());
 
     TwoPhaseCommitTransaction transaction1 = manager.begin(ANY_TX_ID);
     try {
@@ -361,7 +361,7 @@ public class TwoPhaseConsensusCommitManagerTest {
       throws UnknownTransactionStatusException {
     // Arrange
     TransactionState expected = TransactionState.ABORTED;
-    when(commit.abort(ANY_TX_ID)).thenReturn(expected);
+    when(commit.abortState(ANY_TX_ID)).thenReturn(expected);
 
     // Act
     TransactionState actual = manager.rollback(ANY_TX_ID);
@@ -375,7 +375,7 @@ public class TwoPhaseConsensusCommitManagerTest {
       throws UnknownTransactionStatusException {
     // Arrange
     TransactionState expected = TransactionState.COMMITTED;
-    when(commit.abort(ANY_TX_ID)).thenReturn(expected);
+    when(commit.abortState(ANY_TX_ID)).thenReturn(expected);
 
     // Act
     TransactionState actual = manager.rollback(ANY_TX_ID);
@@ -388,7 +388,7 @@ public class TwoPhaseConsensusCommitManagerTest {
   public void rollback_CommitHandlerThrowsUnknownTransactionStatusException_ShouldReturnUnknown()
       throws UnknownTransactionStatusException {
     // Arrange
-    when(commit.abort(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
+    when(commit.abortState(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
 
     // Act
     TransactionState actual = manager.rollback(ANY_TX_ID);
@@ -401,7 +401,7 @@ public class TwoPhaseConsensusCommitManagerTest {
   public void abort_CommitHandlerReturnsAborted_ShouldReturnTheState() throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.ABORTED;
-    when(commit.abort(ANY_TX_ID)).thenReturn(expected);
+    when(commit.abortState(ANY_TX_ID)).thenReturn(expected);
 
     // Act
     TransactionState actual = manager.abort(ANY_TX_ID);
@@ -415,7 +415,7 @@ public class TwoPhaseConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.COMMITTED;
-    when(commit.abort(ANY_TX_ID)).thenReturn(expected);
+    when(commit.abortState(ANY_TX_ID)).thenReturn(expected);
 
     // Act
     TransactionState actual = manager.abort(ANY_TX_ID);
@@ -428,7 +428,7 @@ public class TwoPhaseConsensusCommitManagerTest {
   public void abort_CommitHandlerThrowsUnknownTransactionStatusException_ShouldReturnUnknown()
       throws TransactionException {
     // Arrange
-    when(commit.abort(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
+    when(commit.abortState(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
 
     // Act
     TransactionState actual = manager.abort(ANY_TX_ID);
