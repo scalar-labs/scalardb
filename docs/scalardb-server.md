@@ -27,6 +27,12 @@ $ ./gradlew installDist
 
 Of course, you can archive the jar and libraries by `./gradlew distZip` and so on.
 
+Also, you can build a Docker image from the source as follows.
+
+```shell
+$ ./gradlew :server:docker
+```
+
 ## Configure Scalar DB Server
 
 You need a property file holding the configuration for Scalar DB Server. 
