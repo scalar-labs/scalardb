@@ -19,6 +19,7 @@ import com.scalar.db.exception.transaction.ValidationException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 import javax.annotation.Nullable;
 
 public abstract class AbstractTwoPhaseCommitTransactionManager
@@ -27,9 +28,14 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
   private Optional<String> namespace;
   private Optional<String> tableName;
 
+  private final List<TwoPhaseCommitTransactionDecorator> transactionDecorators =
+      new CopyOnWriteArrayList<>();
+
   public AbstractTwoPhaseCommitTransactionManager() {
     namespace = Optional.empty();
     tableName = Optional.empty();
+
+    addTransactionDecorator(StateManagedTransaction::new);
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
@@ -68,9 +74,17 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
     return tableName;
   }
 
-  protected TwoPhaseCommitTransaction activate(TwoPhaseCommitTransaction transaction)
+  protected TwoPhaseCommitTransaction decorate(TwoPhaseCommitTransaction transaction)
       throws TransactionException {
-    return new StateManagedTransaction(transaction);
+    TwoPhaseCommitTransaction decorated = transaction;
+    for (TwoPhaseCommitTransactionDecorator transactionDecorator : transactionDecorators) {
+      decorated = transactionDecorator.decorate(decorated);
+    }
+    return decorated;
+  }
+
+  public void addTransactionDecorator(TwoPhaseCommitTransactionDecorator transactionDecorator) {
+    transactionDecorators.add(transactionDecorator);
   }
 
   /**
@@ -80,7 +94,7 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
    */
   @VisibleForTesting
   static class StateManagedTransaction extends AbstractTwoPhaseCommitTransaction
-      implements WrappedTwoPhaseCommitTransaction {
+      implements DecoratedTwoPhaseCommitTransaction {
 
     private enum Status {
       ACTIVE,
@@ -208,8 +222,8 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
 
     @Override
     public TwoPhaseCommitTransaction getOriginalTransaction() {
-      if (transaction instanceof WrappedTwoPhaseCommitTransaction) {
-        return ((WrappedTwoPhaseCommitTransaction) transaction).getOriginalTransaction();
+      if (transaction instanceof DecoratedTwoPhaseCommitTransaction) {
+        return ((DecoratedTwoPhaseCommitTransaction) transaction).getOriginalTransaction();
       }
       return transaction;
     }

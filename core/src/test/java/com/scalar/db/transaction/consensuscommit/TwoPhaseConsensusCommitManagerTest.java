@@ -11,7 +11,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
-import com.scalar.db.common.WrappedTwoPhaseCommitTransaction;
+import com.scalar.db.common.DecoratedTwoPhaseCommitTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.RollbackException;
@@ -67,7 +67,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act
     TwoPhaseConsensusCommit transaction =
         (TwoPhaseConsensusCommit)
-            ((WrappedTwoPhaseCommitTransaction) manager.begin()).getOriginalTransaction();
+            ((DecoratedTwoPhaseCommitTransaction) manager.begin()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
@@ -83,7 +83,8 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act
     TwoPhaseConsensusCommit transaction =
         (TwoPhaseConsensusCommit)
-            ((WrappedTwoPhaseCommitTransaction) manager.begin(ANY_TX_ID)).getOriginalTransaction();
+            ((DecoratedTwoPhaseCommitTransaction) manager.begin(ANY_TX_ID))
+                .getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
@@ -99,10 +100,10 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act
     TwoPhaseConsensusCommit transaction1 =
         (TwoPhaseConsensusCommit)
-            ((WrappedTwoPhaseCommitTransaction) manager.begin()).getOriginalTransaction();
+            ((DecoratedTwoPhaseCommitTransaction) manager.begin()).getOriginalTransaction();
     TwoPhaseConsensusCommit transaction2 =
         (TwoPhaseConsensusCommit)
-            ((WrappedTwoPhaseCommitTransaction) manager.begin()).getOriginalTransaction();
+            ((DecoratedTwoPhaseCommitTransaction) manager.begin()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
@@ -134,7 +135,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act
     TwoPhaseConsensusCommit transaction =
         (TwoPhaseConsensusCommit)
-            ((WrappedTwoPhaseCommitTransaction) manager.start()).getOriginalTransaction();
+            ((DecoratedTwoPhaseCommitTransaction) manager.start()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
@@ -150,7 +151,8 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act
     TwoPhaseConsensusCommit transaction =
         (TwoPhaseConsensusCommit)
-            ((WrappedTwoPhaseCommitTransaction) manager.start(ANY_TX_ID)).getOriginalTransaction();
+            ((DecoratedTwoPhaseCommitTransaction) manager.start(ANY_TX_ID))
+                .getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
@@ -166,10 +168,10 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act
     TwoPhaseConsensusCommit transaction1 =
         (TwoPhaseConsensusCommit)
-            ((WrappedTwoPhaseCommitTransaction) manager.start()).getOriginalTransaction();
+            ((DecoratedTwoPhaseCommitTransaction) manager.start()).getOriginalTransaction();
     TwoPhaseConsensusCommit transaction2 =
         (TwoPhaseConsensusCommit)
-            ((WrappedTwoPhaseCommitTransaction) manager.start()).getOriginalTransaction();
+            ((DecoratedTwoPhaseCommitTransaction) manager.start()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
@@ -201,7 +203,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act
     TwoPhaseConsensusCommit transaction =
         (TwoPhaseConsensusCommit)
-            ((WrappedTwoPhaseCommitTransaction) manager.join(ANY_TX_ID)).getOriginalTransaction();
+            ((DecoratedTwoPhaseCommitTransaction) manager.join(ANY_TX_ID)).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);

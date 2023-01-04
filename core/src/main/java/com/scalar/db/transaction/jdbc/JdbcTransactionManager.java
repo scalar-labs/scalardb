@@ -6,7 +6,7 @@ import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.common.ActiveTransactionManagedTransactionManager;
+import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
@@ -25,7 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class JdbcTransactionManager extends ActiveTransactionManagedTransactionManager {
+public class JdbcTransactionManager extends ActiveTransactionManagedDistributedTransactionManager {
   private static final Logger logger = LoggerFactory.getLogger(JdbcTransactionManager.class);
 
   private final BasicDataSource dataSource;
@@ -79,7 +79,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedTransactionM
           new JdbcTransaction(txId, jdbcService, dataSource.getConnection(), rdbEngine);
       getNamespace().ifPresent(transaction::withNamespace);
       getTable().ifPresent(transaction::withTable);
-      return activate(transaction);
+      return decorate(transaction);
     } catch (SQLException e) {
       throw new TransactionException("failed to start the transaction", e);
     }

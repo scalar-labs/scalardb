@@ -21,17 +21,17 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class ActiveTransactionManagedTransactionManager
+public abstract class ActiveTransactionManagedDistributedTransactionManager
     extends AbstractDistributedTransactionManager {
 
   private static final long TRANSACTION_EXPIRATION_INTERVAL_MILLIS = 1000;
 
   private static final Logger logger =
-      LoggerFactory.getLogger(ActiveTransactionManagedTransactionManager.class);
+      LoggerFactory.getLogger(ActiveTransactionManagedDistributedTransactionManager.class);
 
   private final ActiveExpiringMap<String, DistributedTransaction> activeTransactions;
 
-  public ActiveTransactionManagedTransactionManager(DatabaseConfig config) {
+  public ActiveTransactionManagedDistributedTransactionManager(DatabaseConfig config) {
     activeTransactions =
         new ActiveExpiringMap<>(
             config.getActiveTransactionManagementExpirationTimeMillis(),
@@ -71,13 +71,13 @@ public abstract class ActiveTransactionManagedTransactionManager
   }
 
   @Override
-  protected DistributedTransaction activate(DistributedTransaction transaction)
+  protected DistributedTransaction decorate(DistributedTransaction transaction)
       throws TransactionException {
-    return new ActiveTransaction(super.activate(transaction));
+    return new ActiveTransaction(super.decorate(transaction));
   }
 
   private class ActiveTransaction extends AbstractDistributedTransaction
-      implements WrappedDistributedTransaction {
+      implements DecoratedDistributedTransaction {
 
     private final DistributedTransaction transaction;
 
@@ -144,8 +144,8 @@ public abstract class ActiveTransactionManagedTransactionManager
 
     @Override
     public DistributedTransaction getOriginalTransaction() {
-      if (transaction instanceof WrappedDistributedTransaction) {
-        return ((WrappedDistributedTransaction) transaction).getOriginalTransaction();
+      if (transaction instanceof DecoratedDistributedTransaction) {
+        return ((DecoratedDistributedTransaction) transaction).getOriginalTransaction();
       }
       return transaction;
     }
