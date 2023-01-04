@@ -17,7 +17,7 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
-import com.scalar.db.common.WrappedTwoPhaseCommitTransaction;
+import com.scalar.db.common.DecoratedTwoPhaseCommitTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -498,7 +498,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
     TwoPhaseConsensusCommit transaction =
         (TwoPhaseConsensusCommit)
-            ((WrappedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
+            ((DecoratedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -577,7 +577,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
     TwoPhaseConsensusCommit transaction =
         (TwoPhaseConsensusCommit)
-            ((WrappedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
+            ((DecoratedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -878,7 +878,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
     TwoPhaseConsensusCommit transaction =
         (TwoPhaseConsensusCommit)
-            ((WrappedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
+            ((DecoratedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -951,7 +951,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
     TwoPhaseConsensusCommit transaction =
         (TwoPhaseConsensusCommit)
-            ((WrappedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
+            ((DecoratedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->

@@ -8,7 +8,7 @@ import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.common.ActiveTransactionManagedTransactionManager;
+import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -37,7 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class GrpcTransactionManager extends ActiveTransactionManagedTransactionManager {
+public class GrpcTransactionManager extends ActiveTransactionManagedDistributedTransactionManager {
   private static final Logger logger = LoggerFactory.getLogger(GrpcTransactionManager.class);
 
   static final Retry.ExceptionFactory<TransactionException> EXCEPTION_FACTORY =
@@ -102,7 +102,7 @@ public class GrpcTransactionManager extends ActiveTransactionManagedTransactionM
           GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
           getTable().ifPresent(transaction::withTable);
-          return activate(transaction);
+          return decorate(transaction);
         },
         EXCEPTION_FACTORY);
   }
@@ -125,7 +125,7 @@ public class GrpcTransactionManager extends ActiveTransactionManagedTransactionM
           GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
           getTable().ifPresent(transaction::withTable);
-          return activate(transaction);
+          return decorate(transaction);
         },
         EXCEPTION_FACTORY);
   }

@@ -73,13 +73,13 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
   }
 
   @Override
-  protected TwoPhaseCommitTransaction activate(TwoPhaseCommitTransaction transaction)
+  protected TwoPhaseCommitTransaction decorate(TwoPhaseCommitTransaction transaction)
       throws TransactionException {
-    return new ActiveTransaction(super.activate(transaction));
+    return new ActiveTransaction(super.decorate(transaction));
   }
 
   private class ActiveTransaction extends AbstractTwoPhaseCommitTransaction
-      implements WrappedTwoPhaseCommitTransaction {
+      implements DecoratedTwoPhaseCommitTransaction {
 
     private final TwoPhaseCommitTransaction transaction;
 
@@ -156,8 +156,8 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
 
     @Override
     public TwoPhaseCommitTransaction getOriginalTransaction() {
-      if (transaction instanceof WrappedTwoPhaseCommitTransaction) {
-        return ((WrappedTwoPhaseCommitTransaction) transaction).getOriginalTransaction();
+      if (transaction instanceof DecoratedTwoPhaseCommitTransaction) {
+        return ((DecoratedTwoPhaseCommitTransaction) transaction).getOriginalTransaction();
       }
       return transaction;
     }
