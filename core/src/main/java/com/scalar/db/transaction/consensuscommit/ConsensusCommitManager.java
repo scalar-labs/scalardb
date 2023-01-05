@@ -205,7 +205,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
   public TransactionState rollback(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     try {
-      return commit.abort(txId);
+      return commit.abortState(txId);
     } catch (UnknownTransactionStatusException ignored) {
       return TransactionState.UNKNOWN;
     }
