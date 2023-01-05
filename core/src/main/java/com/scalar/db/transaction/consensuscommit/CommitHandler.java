@@ -48,7 +48,7 @@ public class CommitHandler {
     try {
       prepare(snapshot);
     } catch (PreparationException e) {
-      abort(snapshot.getId());
+      abortState(snapshot.getId());
       rollbackRecords(snapshot);
       if (e instanceof PreparationConflictException) {
         throw new CommitConflictException(e.getMessage(), e);
@@ -59,7 +59,7 @@ public class CommitHandler {
     try {
       validate(snapshot);
     } catch (ValidationException e) {
-      abort(snapshot.getId());
+      abortState(snapshot.getId());
       rollbackRecords(snapshot);
       if (e instanceof ValidationConflictException) {
         throw new CommitConflictException(e.getMessage(), e);
@@ -110,21 +110,32 @@ public class CommitHandler {
       throws CommitException, UnknownTransactionStatusException {
     String id = snapshot.getId();
     try {
-      commitState(snapshot.getId());
-    } catch (CoordinatorException e) {
-      TransactionState state = abort(id);
-      if (state.equals(TransactionState.ABORTED)) {
-        rollbackRecords(snapshot);
-        throw new CommitException(
-            "committing state in coordinator failed. the transaction is aborted", e);
+      Coordinator.State state = new Coordinator.State(id, TransactionState.COMMITTED);
+      coordinator.putState(state);
+      logger.debug(
+          "transaction {} is committed successfully at {}", id, System.currentTimeMillis());
+    } catch (CoordinatorConflictException e) {
+      try {
+        Optional<Coordinator.State> s = coordinator.getState(id);
+        if (s.isPresent()) {
+          TransactionState state = s.get().getState();
+          if (state.equals(TransactionState.ABORTED)) {
+            rollbackRecords(snapshot);
+            throw new CommitException(
+                "committing state in coordinator failed. the transaction is aborted", e);
+          }
+        } else {
+          throw new UnknownTransactionStatusException(
+              "committing state failed with NoMutationException but the coordinator status doesn't exist",
+              e,
+              id);
+        }
+      } catch (CoordinatorException e1) {
+        throw new UnknownTransactionStatusException("can't get the state", e1, id);
       }
+    } catch (CoordinatorException e) {
+      throw new UnknownTransactionStatusException("coordinator status is unknown", e, id);
     }
-    logger.debug("transaction {} is committed successfully at {}", id, System.currentTimeMillis());
-  }
-
-  private void commitState(String id) throws CoordinatorException {
-    Coordinator.State state = new Coordinator.State(id, TransactionState.COMMITTED);
-    coordinator.putState(state);
   }
 
   public void commitRecords(Snapshot snapshot) {
@@ -145,28 +156,28 @@ public class CommitHandler {
     }
   }
 
-  public TransactionState abort(String id) throws UnknownTransactionStatusException {
+  public TransactionState abortState(String id) throws UnknownTransactionStatusException {
     try {
-      abortState(id);
+      Coordinator.State state = new Coordinator.State(id, TransactionState.ABORTED);
+      coordinator.putState(state);
       return TransactionState.ABORTED;
-    } catch (CoordinatorException e) {
+    } catch (CoordinatorConflictException e) {
       try {
         Optional<Coordinator.State> state = coordinator.getState(id);
         if (state.isPresent()) {
           // successfully COMMITTED or ABORTED
           return state.get().getState();
         }
-        logger.warn("coordinator status for {} doesn't exist", id);
+        throw new UnknownTransactionStatusException(
+            "aborting state failed with NoMutationException but the coordinator status doesn't exist",
+            e,
+            id);
       } catch (CoordinatorException e1) {
-        logger.warn("can't get the state", e1);
+        throw new UnknownTransactionStatusException("can't get the state", e1, id);
       }
+    } catch (CoordinatorException e) {
       throw new UnknownTransactionStatusException("coordinator status is unknown", e, id);
     }
-  }
-
-  private void abortState(String id) throws CoordinatorException {
-    Coordinator.State state = new Coordinator.State(id, TransactionState.ABORTED);
-    coordinator.putState(state);
   }
 
   public void rollbackRecords(Snapshot snapshot) {
