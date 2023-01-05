@@ -11,7 +11,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.common.WrappedDistributedTransaction;
+import com.scalar.db.common.DecoratedDistributedTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -64,7 +64,7 @@ public class ConsensusCommitManagerTest {
     // Act
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
@@ -80,7 +80,7 @@ public class ConsensusCommitManagerTest {
     // Act
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((WrappedDistributedTransaction) manager.begin(ANY_TX_ID)).getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.begin(ANY_TX_ID)).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
@@ -96,10 +96,10 @@ public class ConsensusCommitManagerTest {
     // Act
     ConsensusCommit transaction1 =
         (ConsensusCommit)
-            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
     ConsensusCommit transaction2 =
         (ConsensusCommit)
-            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
@@ -131,7 +131,7 @@ public class ConsensusCommitManagerTest {
     // Act
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((WrappedDistributedTransaction) manager.start()).getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.start()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
@@ -147,7 +147,7 @@ public class ConsensusCommitManagerTest {
     // Act
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((WrappedDistributedTransaction) manager.start(ANY_TX_ID)).getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.start(ANY_TX_ID)).getOriginalTransaction();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
@@ -163,7 +163,7 @@ public class ConsensusCommitManagerTest {
     // Act
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((WrappedDistributedTransaction)
+            ((DecoratedDistributedTransaction)
                     manager.start(com.scalar.db.api.Isolation.SERIALIZABLE))
                 .getOriginalTransaction();
 
@@ -190,10 +190,10 @@ public class ConsensusCommitManagerTest {
     // Act
     ConsensusCommit transaction1 =
         (ConsensusCommit)
-            ((WrappedDistributedTransaction) manager.start()).getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.start()).getOriginalTransaction();
     ConsensusCommit transaction2 =
         (ConsensusCommit)
-            ((WrappedDistributedTransaction) manager.start()).getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.start()).getOriginalTransaction();
 
     // Assert
     assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());

@@ -143,7 +143,7 @@ public class TwoPhaseConsensusCommitManager
         new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator);
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
-    return activate(transaction);
+    return decorate(transaction);
   }
 
   @Override
