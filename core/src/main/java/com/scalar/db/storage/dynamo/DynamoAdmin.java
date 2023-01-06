@@ -1137,7 +1137,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         List<String> tableNames = listTablesResponse.tableNames();
         Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
         for (String tableName : tableNames) {
-          if (tableName.startsWith(namespace.prefixed())) {
+          if (tableName.startsWith(namespace.prefixed() + ".")) {
             namespaceExists = true;
             break;
           }
