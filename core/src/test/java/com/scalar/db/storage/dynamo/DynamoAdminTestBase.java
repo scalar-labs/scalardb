@@ -17,14 +17,12 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -208,10 +206,7 @@ public abstract class DynamoAdminTestBase {
     when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
     when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
     when(listTablesResponse.tableNames())
-        .thenReturn(
-            ImmutableList.<String>builder()
-                .add(getFullTableName())
-                .build());
+        .thenReturn(ImmutableList.<String>builder().add(getFullTableName()).build());
 
     // Act
     // Assert
