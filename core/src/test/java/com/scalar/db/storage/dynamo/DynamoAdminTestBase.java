@@ -200,6 +200,7 @@ public abstract class DynamoAdminTestBase {
     assertThat(actualRequest.consistentRead()).isTrue();
   }
 
+  // https://github.com/scalar-labs/scalardb/issues/784
   @Test
   public void namespaceExists_ShouldPerformExactMatch() throws ExecutionException {
     // Arrange
