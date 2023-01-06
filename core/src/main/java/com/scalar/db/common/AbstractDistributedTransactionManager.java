@@ -17,6 +17,7 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 import javax.annotation.Nullable;
 
 public abstract class AbstractDistributedTransactionManager
@@ -25,9 +26,14 @@ public abstract class AbstractDistributedTransactionManager
   private Optional<String> namespace;
   private Optional<String> tableName;
 
+  private final List<DistributedTransactionDecorator> transactionDecorators =
+      new CopyOnWriteArrayList<>();
+
   public AbstractDistributedTransactionManager() {
     namespace = Optional.empty();
     tableName = Optional.empty();
+
+    addTransactionDecorator(StateManagedTransaction::new);
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
@@ -66,9 +72,17 @@ public abstract class AbstractDistributedTransactionManager
     return tableName;
   }
 
-  protected DistributedTransaction activate(DistributedTransaction transaction)
+  protected DistributedTransaction decorate(DistributedTransaction transaction)
       throws TransactionException {
-    return new StateManagedTransaction(transaction);
+    DistributedTransaction decorated = transaction;
+    for (DistributedTransactionDecorator transactionDecorator : transactionDecorators) {
+      decorated = transactionDecorator.decorate(decorated);
+    }
+    return decorated;
+  }
+
+  public void addTransactionDecorator(DistributedTransactionDecorator transactionDecorator) {
+    transactionDecorators.add(transactionDecorator);
   }
 
   /**
@@ -78,7 +92,7 @@ public abstract class AbstractDistributedTransactionManager
    */
   @VisibleForTesting
   static class StateManagedTransaction extends AbstractDistributedTransaction
-      implements WrappedDistributedTransaction {
+      implements DecoratedDistributedTransaction {
 
     private enum Status {
       ACTIVE,
@@ -177,8 +191,8 @@ public abstract class AbstractDistributedTransactionManager
 
     @Override
     public DistributedTransaction getOriginalTransaction() {
-      if (transaction instanceof WrappedDistributedTransaction) {
-        return ((WrappedDistributedTransaction) transaction).getOriginalTransaction();
+      if (transaction instanceof DecoratedDistributedTransaction) {
+        return ((DecoratedDistributedTransaction) transaction).getOriginalTransaction();
       }
       return transaction;
     }
