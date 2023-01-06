@@ -335,7 +335,7 @@ public class TwoPhaseConsensusCommitTest {
     transaction.rollback();
 
     // Assert
-    verify(commit).abort(snapshot.getId());
+    verify(commit).abortState(snapshot.getId());
     verify(commit).rollbackRecords(snapshot);
   }
 
@@ -354,7 +354,7 @@ public class TwoPhaseConsensusCommitTest {
     transaction.rollback();
 
     // Assert
-    verify(commit).abort(snapshot.getId());
+    verify(commit).abortState(snapshot.getId());
     verify(commit).rollbackRecords(snapshot);
   }
 
@@ -376,7 +376,7 @@ public class TwoPhaseConsensusCommitTest {
     transaction.rollback();
 
     // Assert
-    verify(commit, never()).abort(snapshot.getId());
+    verify(commit, never()).abortState(snapshot.getId());
     verify(commit, never()).rollbackRecords(snapshot);
   }
 

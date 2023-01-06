@@ -89,7 +89,7 @@ public class GrpcTwoPhaseCommitTransactionManager
               new GrpcTwoPhaseCommitTransaction(transactionId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
           getTable().ifPresent(transaction::withTable);
-          return activate(transaction);
+          return decorate(transaction);
         },
         EXCEPTION_FACTORY);
   }
@@ -114,7 +114,7 @@ public class GrpcTwoPhaseCommitTransactionManager
               new GrpcTwoPhaseCommitTransaction(transactionId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
           getTable().ifPresent(transaction::withTable);
-          return activate(transaction);
+          return decorate(transaction);
         },
         EXCEPTION_FACTORY);
   }
@@ -129,7 +129,7 @@ public class GrpcTwoPhaseCommitTransactionManager
               new GrpcTwoPhaseCommitTransaction(txId, stream);
           getNamespace().ifPresent(transaction::withNamespace);
           getTable().ifPresent(transaction::withTable);
-          return activate(transaction);
+          return decorate(transaction);
         },
         EXCEPTION_FACTORY);
   }

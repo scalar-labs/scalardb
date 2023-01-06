@@ -143,7 +143,7 @@ public class TwoPhaseConsensusCommitManager
         new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator);
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
-    return activate(transaction);
+    return decorate(transaction);
   }
 
   @Override
@@ -165,7 +165,7 @@ public class TwoPhaseConsensusCommitManager
   public TransactionState rollback(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     try {
-      return commit.abort(txId);
+      return commit.abortState(txId);
     } catch (UnknownTransactionStatusException ignored) {
       return TransactionState.UNKNOWN;
     }

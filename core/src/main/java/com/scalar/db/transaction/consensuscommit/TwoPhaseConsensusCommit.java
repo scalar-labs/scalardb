@@ -166,7 +166,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
     if (isCoordinator) {
       try {
-        commit.abort(crud.getSnapshot().getId());
+        commit.abortState(crud.getSnapshot().getId());
       } catch (UnknownTransactionStatusException e) {
         throw new RollbackException("rollback failed", e);
       }
