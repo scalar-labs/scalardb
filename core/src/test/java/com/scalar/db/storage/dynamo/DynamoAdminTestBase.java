@@ -198,6 +198,23 @@ public abstract class DynamoAdminTestBase {
     assertThat(actualRequest.consistentRead()).isTrue();
   }
 
+  // https://github.com/scalar-labs/scalardb/issues/784
+  @Test
+  public void namespaceExists_ShouldPerformExactMatch() throws ExecutionException {
+    // Arrange
+    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
+    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
+    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
+    when(listTablesResponse.tableNames())
+        .thenReturn(ImmutableList.<String>builder().add(getFullTableName()).build());
+
+    // Act
+    // Assert
+    assertThat(admin.namespaceExists(NAMESPACE)).isTrue();
+    // compare with namespace prefix
+    assertThat(admin.namespaceExists(NAMESPACE.substring(0, NAMESPACE.length() - 1))).isFalse();
+  }
+
   @Test
   public void dropNamespace_ShouldDropAllTablesInNamespace() throws ExecutionException {
     // Arrange
