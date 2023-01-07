@@ -1,10 +1,13 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 class RdbEngineOracle extends RdbEngineStrategy {
 
@@ -16,6 +19,17 @@ class RdbEngineOracle extends RdbEngineStrategy {
     protected void createNamespaceExecute(Connection connection, String fullNamespace) throws SQLException {
         execute(connection, "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"");
         execute(connection, "ALTER USER " + fullNamespace + " quota unlimited on USERS");
+    }
+
+    @Override
+    String createTableInternalPrimaryKeyClause(boolean hasDescClusteringOrder, TableMetadata metadata) {
+        return "PRIMARY KEY ("
+                   + Stream.concat(
+                metadata.getPartitionKeyNames().stream(),
+                metadata.getClusteringKeyNames().stream())
+                         .map(this::enclose)
+                         .collect(Collectors.joining(","))
+                   + ")) ROWDEPENDENCIES";  // add ROWDEPENDENCIES to the table to improve the performance
     }
 
     @Override

@@ -157,34 +157,9 @@ abstract class RdbEngineStrategy {
                       enclose(columnName) + " " + getVendorDbColumnType(metadata, columnName))
               .collect(Collectors.joining(","));
 
-      boolean hasDescClusteringOrder = hasDescClusteringOrder(metadata);
-
       // Add primary key definition
-      if (hasDescClusteringOrder
-              && (rdbEngine == RdbEngine.MYSQL || rdbEngine == RdbEngine.SQL_SERVER)) {
-         // For MySQL and SQL Server, specify the clustering orders in the primary key definition
-         createTableStatement +=
-             ", PRIMARY KEY ("
-                 + Stream.concat(
-                     metadata.getPartitionKeyNames().stream().map(c -> enclose(c) + " ASC"),
-                     metadata.getClusteringKeyNames().stream()
-                         .map(c -> enclose(c) + " " + metadata.getClusteringOrder(c)))
-                       .collect(Collectors.joining(","))
-                 + "))";
-      } else {
-         createTableStatement +=
-             ", PRIMARY KEY ("
-                 + Stream.concat(
-                     metadata.getPartitionKeyNames().stream(),
-                     metadata.getClusteringKeyNames().stream())
-                       .map(this::enclose)
-                       .collect(Collectors.joining(","))
-                 + "))";
-      }
-      if (rdbEngine == RdbEngine.ORACLE) {
-         // For Oracle Database, add ROWDEPENDENCIES to the table to improve the performance
-         createTableStatement += " ROWDEPENDENCIES";
-      }
+      boolean hasDescClusteringOrder = hasDescClusteringOrder(metadata);
+      createTableStatement += ", " + createTableInternalPrimaryKeyClause(hasDescClusteringOrder, metadata);
       execute(connection, createTableStatement);
 
       if (rdbEngine == RdbEngine.ORACLE) {
@@ -215,6 +190,8 @@ abstract class RdbEngineStrategy {
          execute(connection, createUniqueIndexStatement);
       }
    }
+
+   abstract String createTableInternalPrimaryKeyClause(boolean hasDescClusteringOrder, TableMetadata metadata);
 
    private void createIndex(
        Connection connection, String schema, String table, TableMetadata metadata)
@@ -983,7 +960,7 @@ abstract class RdbEngineStrategy {
       }
    }
 
-   private String enclose(String name) {
+   protected String enclose(String name) {
       return QueryUtils.enclose(name, rdbEngine);
    }
 

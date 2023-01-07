@@ -1,10 +1,13 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 class RdbEnginePostgresql extends RdbEngineStrategy {
 
@@ -15,6 +18,17 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
     @Override
     protected void createNamespaceExecute(Connection connection, String fullNamespace) throws SQLException {
         execute(connection, "CREATE SCHEMA " + fullNamespace);
+    }
+
+    @Override
+    String createTableInternalPrimaryKeyClause(boolean hasDescClusteringOrder, TableMetadata metadata) {
+        return "PRIMARY KEY ("
+                   + Stream.concat(
+                metadata.getPartitionKeyNames().stream(),
+                metadata.getClusteringKeyNames().stream())
+                         .map(this::enclose)
+                         .collect(Collectors.joining(","))
+                   + "))";
     }
 
     @Override
