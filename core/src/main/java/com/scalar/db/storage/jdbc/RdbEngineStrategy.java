@@ -1,5 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.storage.jdbc.JdbcAdmin.METADATA_SCHEMA;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.METADATA_TABLE;
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
@@ -36,8 +38,6 @@ import org.slf4j.LoggerFactory;
 
 
 abstract class RdbEngineStrategy {
-   public static final String METADATA_SCHEMA = "scalardb";
-   public static final String METADATA_TABLE = "metadata";
    @VisibleForTesting static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
    @VisibleForTesting static final String METADATA_COL_COLUMN_NAME = "column_name";
    @VisibleForTesting static final String METADATA_COL_DATA_TYPE = "data_type";
