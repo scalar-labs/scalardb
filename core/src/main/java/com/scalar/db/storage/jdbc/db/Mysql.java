@@ -2,37 +2,28 @@ package com.scalar.db.storage.jdbc.db;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import org.apache.commons.dbcp2.BasicDataSource;
 
-public class PostgresqlAdmin extends JdbcAdmin {
-
-    public PostgresqlAdmin(DatabaseConfig databaseConfig) {
-        super(databaseConfig);
-    }
-
-    protected PostgresqlAdmin(BasicDataSource dataSource, JdbcConfig config) {
-        super(dataSource, config);
-    }
+public class Mysql implements RdbEngineStrategy {
 
     @Override
-    protected String getDataTypeForEngine(DataType scalarDbDataType) {
+    public String getDataTypeForEngine(DataType scalarDbDataType) {
         switch (scalarDbDataType) {
             case BIGINT:
                 return "BIGINT";
             case BLOB:
-                return "BYTEA";
+                return "LONGBLOB";
             case BOOLEAN:
                 return "BOOLEAN";
             case DOUBLE:
-                return "DOUBLE PRECISION";
             case FLOAT:
-                return "FLOAT";
+                return "DOUBLE";
             case INT:
                 return "INT";
             case TEXT:
-                return "TEXT";
+                return "LONGTEXT";
             default:
                 assert false;
                 return null;

@@ -16,6 +16,8 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.jdbc.db.Mysql;
+import com.scalar.db.storage.jdbc.db.Postgresql;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
@@ -75,13 +77,15 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private static final String INDEX_NAME_PREFIX = "index";
 
   private final BasicDataSource dataSource;
-  private final RdbEngine rdbEngine;
+  private final RdbEngineStrategy rdbEngineSt;
+  private final RdbEngine rdbEngine; // TODO remove in favor of RdbEngineStrategy
   private final String metadataSchema;
 
   @Inject
   public JdbcAdmin(DatabaseConfig databaseConfig) {
     JdbcConfig config = new JdbcConfig(databaseConfig);
     dataSource = JdbcUtils.initDataSourceForAdmin(config);
+    rdbEngineSt = JdbcUtils.getRdbEngineStrategy(config.getJdbcUrl());
     rdbEngine = JdbcUtils.getRdbEngine(config.getJdbcUrl());
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
@@ -89,6 +93,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcAdmin(BasicDataSource dataSource, JdbcConfig config) {
     this.dataSource = dataSource;
+    rdbEngineSt = JdbcUtils.getRdbEngineStrategy(config.getJdbcUrl());
     rdbEngine = JdbcUtils.getRdbEngine(config.getJdbcUrl());
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
@@ -98,6 +103,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   JdbcAdmin(BasicDataSource dataSource, RdbEngine rdbEngine, JdbcConfig config) {
     this.dataSource = dataSource;
     this.rdbEngine = rdbEngine;
+    rdbEngineSt = JdbcUtils.getRdbEngineStrategyFromRdbEngine(rdbEngine);
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
 
@@ -345,10 +351,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       default:
         throw new UnsupportedOperationException("rdb engine not supported");
     }
-  }
-
-  protected String getDataTypeForEngine(DataType dataType) {
-    throw new UnsupportedOperationException("TODO");
   }
 
   private String getTextType(int charLength) {
@@ -713,7 +715,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                 metadata.getSecondaryIndexNames()));
     DataType scalarDbColumnType = metadata.getColumnDataType(columnName);
 
-    String dataType = getDataTypeForEngine(scalarDbColumnType);
+    String dataType = rdbEngineSt.getDataTypeForEngine(scalarDbColumnType);
     if (keysAndIndexes.contains(columnName)) {
       ImmutableMap<DataType, String> typeNameMapForKey = DATA_TYPE_MAPPING_FOR_KEY.get(rdbEngine);
       assert typeNameMapForKey != null;
@@ -775,7 +777,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return;
     }
 
-    String regularColumnType = getDataTypeForEngine(indexType);
+    String regularColumnType = rdbEngineSt.getDataTypeForEngine(indexType);
 
     String alterColumnStatement =
         getAlterColumnTypeStatement(namespace, table, columnName, regularColumnType);

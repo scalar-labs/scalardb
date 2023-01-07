@@ -2,22 +2,14 @@ package com.scalar.db.storage.jdbc.db;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import org.apache.commons.dbcp2.BasicDataSource;
 
-public class SqlServerAdmin extends JdbcAdmin {
-
-    public SqlServerAdmin(DatabaseConfig databaseConfig) {
-        super(databaseConfig);
-    }
-
-    protected SqlServerAdmin(BasicDataSource dataSource, JdbcConfig config) {
-        super(dataSource, config);
-    }
+public class SqlServer implements RdbEngineStrategy {
 
     @Override
-    protected String getDataTypeForEngine(DataType scalarDbDataType) {
+    public String getDataTypeForEngine(DataType scalarDbDataType) {
         switch (scalarDbDataType) {
             case BIGINT:
                 return "BIGINT";
