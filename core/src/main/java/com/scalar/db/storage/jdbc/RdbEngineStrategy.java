@@ -36,7 +36,7 @@ import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
+@SuppressFBWarnings({"OBL_UNSATISFIED_OBLIGATION", "SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"})
 abstract class RdbEngineStrategy {
    @VisibleForTesting static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
    @VisibleForTesting static final String METADATA_COL_COLUMN_NAME = "column_name";

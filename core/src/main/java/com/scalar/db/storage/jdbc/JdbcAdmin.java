@@ -13,7 +13,6 @@ import javax.annotation.concurrent.ThreadSafe;
 import java.util.Map;
 import java.util.Set;
 
-@SuppressFBWarnings({"OBL_UNSATISFIED_OBLIGATION", "SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"})
 @ThreadSafe
 public class JdbcAdmin implements DistributedStorageAdmin {
   public static final String METADATA_SCHEMA = "scalardb";
