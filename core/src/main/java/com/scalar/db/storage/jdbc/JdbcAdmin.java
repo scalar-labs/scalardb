@@ -1,6 +1,5 @@
 package com.scalar.db.storage.jdbc;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
@@ -20,64 +19,64 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public static final String METADATA_SCHEMA = "scalardb";
   public static final String METADATA_TABLE = "metadata";
 
-  private final RdbEngineStrategy rdbEngineSt;
+  private final RdbEngineStrategy rdbEngine;
 
   @Inject
   public JdbcAdmin(DatabaseConfig databaseConfig) {
-    rdbEngineSt = RdbEngineStrategy.create(databaseConfig);
+    rdbEngine = RdbEngineStrategy.create(databaseConfig);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcAdmin(BasicDataSource dataSource, JdbcConfig config) {
-    rdbEngineSt = RdbEngineStrategy.create(dataSource, config);
+    rdbEngine = RdbEngineStrategy.create(dataSource, config);
   }
 
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
-    rdbEngineSt.createNamespace(namespace, options);
+    rdbEngine.createNamespace(namespace, options);
   }
 
   @Override
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    rdbEngineSt.createTable(namespace, table, metadata, options);
+    rdbEngine.createTable(namespace, table, metadata, options);
   }
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
-    rdbEngineSt.dropTable(namespace, table);
+    rdbEngine.dropTable(namespace, table);
   }
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
-    rdbEngineSt.dropNamespace(namespace);
+    rdbEngine.dropNamespace(namespace);
   }
 
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
-    rdbEngineSt.truncateTable(namespace, table);
+    rdbEngine.truncateTable(namespace, table);
   }
 
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
-    return rdbEngineSt.getTableMetadata(namespace, table);
+    return rdbEngine.getTableMetadata(namespace, table);
   }
 
   @Override
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
-    return rdbEngineSt.getNamespaceTableNames(namespace);
+    return rdbEngine.getNamespaceTableNames(namespace);
   }
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    return rdbEngineSt.namespaceExists(namespace);
+    return rdbEngine.namespaceExists(namespace);
   }
 
   @Override
   public void close() {
-    rdbEngineSt.close();
+    rdbEngine.close();
 
   }
 
@@ -85,14 +84,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void createIndex(
       String namespace, String table, String columnName, Map<String, String> options)
       throws ExecutionException {
-    rdbEngineSt.createIndex(namespace, table, columnName, options);
+    rdbEngine.createIndex(namespace, table, columnName, options);
   }
 
 
   @Override
   public void dropIndex(String namespace, String table, String columnName)
       throws ExecutionException {
-    rdbEngineSt.dropIndex(namespace, table, columnName);
+    rdbEngine.dropIndex(namespace, table, columnName);
   }
 
 
@@ -100,13 +99,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    rdbEngineSt.repairTable(namespace, table, metadata, options);
+    rdbEngine.repairTable(namespace, table, metadata, options);
   }
 
   @Override
   public void addNewColumnToTable(
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {
-    rdbEngineSt.addNewColumnToTable(namespace, table, columnName, columnType);
+    rdbEngine.addNewColumnToTable(namespace, table, columnName, columnType);
   }
 }
