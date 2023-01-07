@@ -97,17 +97,18 @@ abstract class RdbEngineStrategy {
       RdbEngine rdbEngine = JdbcUtils.getRdbEngine(config.getJdbcUrl());
       String metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
 
-      String jdbcUrl = config.getJdbcUrl();
-      if (jdbcUrl.startsWith("jdbc:mysql:")) {
-         return new RdbEngineMysql(dataSource, rdbEngine, metadataSchema);
-      } else if (jdbcUrl.startsWith("jdbc:postgresql:")) {
-         return new RdbEnginePostgresql(dataSource, rdbEngine, metadataSchema);
-      } else if (jdbcUrl.startsWith("jdbc:oracle:")) {
-         return new RdbEngineOracle(dataSource, rdbEngine, metadataSchema);
-      } else if (jdbcUrl.startsWith("jdbc:sqlserver:")) {
-         return new RdbEngineSqlServer(dataSource, rdbEngine, metadataSchema);
-      } else {
-         throw new IllegalArgumentException("the rdb engine is not supported: " + jdbcUrl);
+      switch (config.getRdbEngine()) {
+         case MYSQL:
+            return new RdbEngineMysql(dataSource, rdbEngine, metadataSchema);
+         case POSTGRESQL:
+            return new RdbEnginePostgresql(dataSource, rdbEngine, metadataSchema);
+         case ORACLE:
+            return new RdbEngineOracle(dataSource, rdbEngine, metadataSchema);
+         case SQL_SERVER:
+            return new RdbEngineSqlServer(dataSource, rdbEngine, metadataSchema);
+         default:
+            assert false;
+            return null;
       }
    }
 
