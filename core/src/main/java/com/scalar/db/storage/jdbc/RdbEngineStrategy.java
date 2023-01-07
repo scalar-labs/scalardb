@@ -116,19 +116,13 @@ abstract class RdbEngineStrategy {
        throws ExecutionException {
       String fullNamespace = enclose(namespace);
       try (Connection connection = dataSource.getConnection()) {
-         if (rdbEngine == RdbEngine.ORACLE) {
-            execute(connection, "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"");
-            execute(connection, "ALTER USER " + fullNamespace + " quota unlimited on USERS");
-         } else if (rdbEngine == RdbEngine.MYSQL) {
-            execute(
-                connection, "CREATE SCHEMA " + fullNamespace + " character set utf8 COLLATE utf8_bin");
-         } else {
-            execute(connection, "CREATE SCHEMA " + fullNamespace);
-         }
+         createNamespaceExecute(connection, fullNamespace);
       } catch (SQLException e) {
          throw new ExecutionException("creating the schema failed", e);
       }
    }
+
+   abstract protected void createNamespaceExecute(Connection connection, String fullNamespace) throws SQLException;
 
    void createTable(
        String namespace, String table, TableMetadata metadata, Map<String, String> options)
@@ -983,7 +977,7 @@ abstract class RdbEngineStrategy {
       execute(connection, updateStatement);
    }
 
-   private void execute(Connection connection, String sql) throws SQLException {
+   protected void execute(Connection connection, String sql) throws SQLException {
       try (Statement stmt = connection.createStatement()) {
          stmt.execute(sql);
       }

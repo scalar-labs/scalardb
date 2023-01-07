@@ -3,10 +3,19 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.io.DataType;
 import org.apache.commons.dbcp2.BasicDataSource;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+
 class RdbEngineOracle extends RdbEngineStrategy {
 
     RdbEngineOracle(BasicDataSource dataSource, RdbEngine rdbEngine, String metadataSchema) {
         super(dataSource, rdbEngine, metadataSchema);
+    }
+
+    @Override
+    protected void createNamespaceExecute(Connection connection, String fullNamespace) throws SQLException {
+        execute(connection, "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"");
+        execute(connection, "ALTER USER " + fullNamespace + " quota unlimited on USERS");
     }
 
     @Override
