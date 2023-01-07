@@ -1,15 +1,11 @@
-package com.scalar.db.storage.jdbc.db;
+package com.scalar.db.storage.jdbc;
 
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.jdbc.JdbcConfig;
-import com.scalar.db.storage.jdbc.RdbEngineStrategy;
-import org.apache.commons.dbcp2.BasicDataSource;
 
-public class SqlServer extends RdbEngineStrategy {
+class RdbEngineSqlServer extends RdbEngineStrategy {
 
     @Override
-    public String getDataTypeForEngine(DataType scalarDbDataType) {
+    String getDataTypeForEngine(DataType scalarDbDataType) {
         switch (scalarDbDataType) {
             case BIGINT:
                 return "BIGINT";

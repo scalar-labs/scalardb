@@ -16,8 +16,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.jdbc.db.Mysql;
-import com.scalar.db.storage.jdbc.db.Postgresql;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;

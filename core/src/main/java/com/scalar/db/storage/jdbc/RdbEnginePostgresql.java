@@ -1,12 +1,11 @@
-package com.scalar.db.storage.jdbc.db;
+package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 
-public class Postgresql extends RdbEngineStrategy {
+class RdbEnginePostgresql extends RdbEngineStrategy {
 
     @Override
-    public String getDataTypeForEngine(DataType scalarDbDataType) {
+    String getDataTypeForEngine(DataType scalarDbDataType) {
         switch (scalarDbDataType) {
             case BIGINT:
                 return "BIGINT";

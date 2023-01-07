@@ -3,10 +3,6 @@ package com.scalar.db.storage.jdbc;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-import com.scalar.db.storage.jdbc.db.Mysql;
-import com.scalar.db.storage.jdbc.db.Oracle;
-import com.scalar.db.storage.jdbc.db.Postgresql;
-import com.scalar.db.storage.jdbc.db.SqlServer;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 public final class JdbcUtils {
@@ -29,13 +25,13 @@ public final class JdbcUtils {
 
   public static RdbEngineStrategy getRdbEngineStrategy(String jdbcUrl) {
     if (jdbcUrl.startsWith("jdbc:mysql:")) {
-      return new Mysql();
+      return new RdbEngineMysql();
     } else if (jdbcUrl.startsWith("jdbc:postgresql:")) {
-      return new Postgresql();
+      return new RdbEnginePostgresql();
     } else if (jdbcUrl.startsWith("jdbc:oracle:")) {
-      return new Oracle();
+      return new RdbEngineOracle();
     } else if (jdbcUrl.startsWith("jdbc:sqlserver:")) {
-      return new SqlServer();
+      return new RdbEngineSqlServer();
     } else {
       throw new IllegalArgumentException("the rdb engine is not supported: " + jdbcUrl);
     }
@@ -45,13 +41,13 @@ public final class JdbcUtils {
   public static RdbEngineStrategy getRdbEngineStrategyFromRdbEngine(RdbEngine rdbEngine) {
     switch (rdbEngine) {
       case MYSQL:
-        return new Mysql();
+        return new RdbEngineMysql();
       case POSTGRESQL:
-        return new Postgresql();
+        return new RdbEnginePostgresql();
       case ORACLE:
-        return new Oracle();
+        return new RdbEngineOracle();
       case SQL_SERVER:
-        return new SqlServer();
+        return new RdbEngineSqlServer();
       default:
         assert false;
         return null;
