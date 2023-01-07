@@ -50,53 +50,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String METADATA_COL_INDEXED = "indexed";
   @VisibleForTesting static final String METADATA_COL_ORDINAL_POSITION = "ordinal_position";
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
-  private static final ImmutableMap<RdbEngine, ImmutableMap<DataType, String>> DATA_TYPE_MAPPING =
-      ImmutableMap.<RdbEngine, ImmutableMap<DataType, String>>builder()
-          .put(
-              RdbEngine.MYSQL,
-              ImmutableMap.<DataType, String>builder()
-                  .put(DataType.INT, "INT")
-                  .put(DataType.BIGINT, "BIGINT")
-                  .put(DataType.TEXT, "LONGTEXT")
-                  .put(DataType.FLOAT, "DOUBLE")
-                  .put(DataType.DOUBLE, "DOUBLE")
-                  .put(DataType.BOOLEAN, "BOOLEAN")
-                  .put(DataType.BLOB, "LONGBLOB")
-                  .build())
-          .put(
-              RdbEngine.POSTGRESQL,
-              ImmutableMap.<DataType, String>builder()
-                  .put(DataType.INT, "INT")
-                  .put(DataType.BIGINT, "BIGINT")
-                  .put(DataType.TEXT, "TEXT")
-                  .put(DataType.FLOAT, "FLOAT")
-                  .put(DataType.DOUBLE, "DOUBLE PRECISION")
-                  .put(DataType.BOOLEAN, "BOOLEAN")
-                  .put(DataType.BLOB, "BYTEA")
-                  .build())
-          .put(
-              RdbEngine.ORACLE,
-              ImmutableMap.<DataType, String>builder()
-                  .put(DataType.INT, "INT")
-                  .put(DataType.BIGINT, "NUMBER(19)")
-                  .put(DataType.TEXT, "VARCHAR2(4000)")
-                  .put(DataType.FLOAT, "BINARY_FLOAT")
-                  .put(DataType.DOUBLE, "BINARY_DOUBLE")
-                  .put(DataType.BOOLEAN, "NUMBER(1)")
-                  .put(DataType.BLOB, "RAW(2000)")
-                  .build())
-          .put(
-              RdbEngine.SQL_SERVER,
-              ImmutableMap.<DataType, String>builder()
-                  .put(DataType.INT, "INT")
-                  .put(DataType.BIGINT, "BIGINT")
-                  .put(DataType.TEXT, "VARCHAR(8000) COLLATE Latin1_General_BIN")
-                  .put(DataType.FLOAT, "FLOAT(24)")
-                  .put(DataType.DOUBLE, "FLOAT")
-                  .put(DataType.BOOLEAN, "BIT")
-                  .put(DataType.BLOB, "VARBINARY(8000)")
-                  .build())
-          .build();
   private static final ImmutableMap<RdbEngine, ImmutableMap<DataType, String>>
       DATA_TYPE_MAPPING_FOR_KEY =
           ImmutableMap.<RdbEngine, ImmutableMap<DataType, String>>builder()
@@ -392,6 +345,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       default:
         throw new UnsupportedOperationException("rdb engine not supported");
     }
+  }
+
+  protected String getDataTypeForEngine(DataType dataType) {
+    throw new UnsupportedOperationException("TODO");
   }
 
   private String getTextType(int charLength) {
@@ -756,17 +713,15 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                 metadata.getSecondaryIndexNames()));
     DataType scalarDbColumnType = metadata.getColumnDataType(columnName);
 
-    ImmutableMap<DataType, String> typeNameMap = DATA_TYPE_MAPPING.get(rdbEngine);
-    assert typeNameMap != null;
-
+    String dataType = getDataTypeForEngine(scalarDbColumnType);
     if (keysAndIndexes.contains(columnName)) {
       ImmutableMap<DataType, String> typeNameMapForKey = DATA_TYPE_MAPPING_FOR_KEY.get(rdbEngine);
       assert typeNameMapForKey != null;
 
       return typeNameMapForKey.getOrDefault(
-          scalarDbColumnType, typeNameMap.get(scalarDbColumnType));
+          scalarDbColumnType, dataType);
     } else {
-      return typeNameMap.get(scalarDbColumnType);
+      return dataType;
     }
   }
 
@@ -820,9 +775,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return;
     }
 
-    ImmutableMap<DataType, String> typeMappingForColumns = DATA_TYPE_MAPPING.get(rdbEngine);
-    assert typeMappingForColumns != null;
-    String regularColumnType = typeMappingForColumns.get(indexType);
+    String regularColumnType = getDataTypeForEngine(indexType);
 
     String alterColumnStatement =
         getAlterColumnTypeStatement(namespace, table, columnName, regularColumnType);
