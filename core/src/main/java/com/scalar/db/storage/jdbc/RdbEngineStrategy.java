@@ -112,14 +112,6 @@ abstract class RdbEngineStrategy {
       }
    }
 
-   @SuppressFBWarnings("EI_EXPOSE_REP2")
-   @VisibleForTesting
-   RdbEngineStrategy(BasicDataSource dataSource, RdbEngine rdbEngine, JdbcConfig config) {
-      this.dataSource = dataSource;
-      this.rdbEngine = rdbEngine;
-      metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
-   }
-
    void createNamespace(String namespace, Map<String, String> options)
        throws ExecutionException {
       String fullNamespace = enclose(namespace);
