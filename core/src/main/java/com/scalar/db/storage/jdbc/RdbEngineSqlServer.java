@@ -42,6 +42,11 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
     }
 
     @Override
+    void createTableInternalExecuteAfterCreateTable(boolean hasDescClusteringOrder, Connection connection, String schema, String table, TableMetadata metadata) {
+        // do nothing
+    }
+
+    @Override
     String getDataTypeForEngine(DataType scalarDbDataType) {
         switch (scalarDbDataType) {
             case BIGINT:

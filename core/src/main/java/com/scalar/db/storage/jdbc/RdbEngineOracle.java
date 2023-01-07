@@ -9,6 +9,9 @@ import java.sql.SQLException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
+import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
+
 class RdbEngineOracle extends RdbEngineStrategy {
 
     RdbEngineOracle(BasicDataSource dataSource, RdbEngine rdbEngine, String metadataSchema) {
@@ -30,6 +33,34 @@ class RdbEngineOracle extends RdbEngineStrategy {
                          .map(this::enclose)
                          .collect(Collectors.joining(","))
                    + ")) ROWDEPENDENCIES";  // add ROWDEPENDENCIES to the table to improve the performance
+    }
+
+    @Override
+    void createTableInternalExecuteAfterCreateTable(boolean hasDescClusteringOrder, Connection connection, String schema, String table, TableMetadata metadata) throws SQLException {
+        // Set INITRANS to 3 and MAXTRANS to 255 for the table to improve the
+        // performance
+        String alterTableStatement =
+            "ALTER TABLE "
+                + enclosedFullTableName(schema, table, RdbEngine.ORACLE)
+                + " INITRANS 3 MAXTRANS 255";
+        execute(connection, alterTableStatement);
+
+        if (hasDescClusteringOrder) {
+            // Create a unique index for the clustering orders
+            String createUniqueIndexStatement =
+                "CREATE UNIQUE INDEX "
+                    + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
+                    + " ON "
+                    + enclosedFullTableName(schema, table, RdbEngine.ORACLE)
+                    + " ("
+                    + Stream.concat(
+                        metadata.getPartitionKeyNames().stream().map(c -> enclose(c) + " ASC"),
+                        metadata.getClusteringKeyNames().stream()
+                            .map(c -> enclose(c) + " " + metadata.getClusteringOrder(c)))
+                          .collect(Collectors.joining(","))
+                    + ")";
+            execute(connection, createUniqueIndexStatement);
+        }
     }
 
     @Override

@@ -162,36 +162,11 @@ abstract class RdbEngineStrategy {
       createTableStatement += ", " + createTableInternalPrimaryKeyClause(hasDescClusteringOrder, metadata);
       execute(connection, createTableStatement);
 
-      if (rdbEngine == RdbEngine.ORACLE) {
-         // For Oracle Database, set INITRANS to 3 and MAXTRANS to 255 for the table to improve the
-         // performance
-         String alterTableStatement =
-             "ALTER TABLE "
-                 + enclosedFullTableName(schema, table, rdbEngine)
-                 + " INITRANS 3 MAXTRANS 255";
-         execute(connection, alterTableStatement);
-      }
-
-      if (hasDescClusteringOrder
-              && (rdbEngine == RdbEngine.POSTGRESQL || rdbEngine == RdbEngine.ORACLE)) {
-         // For PostgreSQL and Oracle, create a unique index for the clustering orders
-         String createUniqueIndexStatement =
-             "CREATE UNIQUE INDEX "
-                 + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
-                 + " ON "
-                 + enclosedFullTableName(schema, table, rdbEngine)
-                 + " ("
-                 + Stream.concat(
-                     metadata.getPartitionKeyNames().stream().map(c -> enclose(c) + " ASC"),
-                     metadata.getClusteringKeyNames().stream()
-                         .map(c -> enclose(c) + " " + metadata.getClusteringOrder(c)))
-                       .collect(Collectors.joining(","))
-                 + ")";
-         execute(connection, createUniqueIndexStatement);
-      }
+      createTableInternalExecuteAfterCreateTable(hasDescClusteringOrder, connection, schema, table, metadata);
    }
 
    abstract String createTableInternalPrimaryKeyClause(boolean hasDescClusteringOrder, TableMetadata metadata);
+   abstract void createTableInternalExecuteAfterCreateTable(boolean hasDescClusteringOrder, Connection connection, String schema, String table, TableMetadata metadata) throws SQLException;
 
    private void createIndex(
        Connection connection, String schema, String table, TableMetadata metadata)
