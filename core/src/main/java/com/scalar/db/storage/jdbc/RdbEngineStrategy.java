@@ -94,7 +94,7 @@ abstract class RdbEngineStrategy {
 
    @SuppressFBWarnings("EI_EXPOSE_REP2")
    static RdbEngineStrategy create(BasicDataSource dataSource, JdbcConfig config) {
-      RdbEngine rdbEngine = JdbcUtils.getRdbEngine(config.getJdbcUrl());
+      RdbEngine rdbEngine = config.getRdbEngine();
       String metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
 
       switch (config.getRdbEngine()) {

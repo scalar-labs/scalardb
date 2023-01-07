@@ -32,13 +32,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     rdbEngineSt = RdbEngineStrategy.create(dataSource, config);
   }
 
-  // TODO remove
-  @SuppressFBWarnings("EI_EXPOSE_REP2")
-  @VisibleForTesting
-  JdbcAdmin(BasicDataSource dataSource, RdbEngine rdbEngine, JdbcConfig config) {
-    rdbEngineSt = RdbEngineStrategy.create(dataSource, config);
-  }
-
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
