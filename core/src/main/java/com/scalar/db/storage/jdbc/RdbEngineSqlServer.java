@@ -1,8 +1,13 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.io.DataType;
+import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEngineSqlServer extends RdbEngineStrategy {
+
+    RdbEngineSqlServer(BasicDataSource dataSource, RdbEngine rdbEngine, String metadataSchema) {
+        super(dataSource, rdbEngine, metadataSchema);
+    }
 
     @Override
     String getDataTypeForEngine(DataType scalarDbDataType) {

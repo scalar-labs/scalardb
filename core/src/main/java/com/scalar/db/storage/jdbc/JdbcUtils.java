@@ -23,37 +23,6 @@ public final class JdbcUtils {
     }
   }
 
-  public static RdbEngineStrategy getRdbEngineStrategy(String jdbcUrl) {
-    if (jdbcUrl.startsWith("jdbc:mysql:")) {
-      return new RdbEngineMysql();
-    } else if (jdbcUrl.startsWith("jdbc:postgresql:")) {
-      return new RdbEnginePostgresql();
-    } else if (jdbcUrl.startsWith("jdbc:oracle:")) {
-      return new RdbEngineOracle();
-    } else if (jdbcUrl.startsWith("jdbc:sqlserver:")) {
-      return new RdbEngineSqlServer();
-    } else {
-      throw new IllegalArgumentException("the rdb engine is not supported: " + jdbcUrl);
-    }
-  }
-
-  // TODO remove
-  public static RdbEngineStrategy getRdbEngineStrategyFromRdbEngine(RdbEngine rdbEngine) {
-    switch (rdbEngine) {
-      case MYSQL:
-        return new RdbEngineMysql();
-      case POSTGRESQL:
-        return new RdbEnginePostgresql();
-      case ORACLE:
-        return new RdbEngineOracle();
-      case SQL_SERVER:
-        return new RdbEngineSqlServer();
-      default:
-        assert false;
-        return null;
-    }
-  }
-
   public static BasicDataSource initDataSource(JdbcConfig config) {
     return initDataSource(config, false);
   }

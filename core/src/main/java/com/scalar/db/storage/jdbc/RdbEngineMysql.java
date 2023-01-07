@@ -2,8 +2,13 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
+import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEngineMysql extends RdbEngineStrategy {
+
+    RdbEngineMysql(BasicDataSource dataSource, RdbEngine rdbEngine, String metadataSchema) {
+        super(dataSource, rdbEngine, metadataSchema);
+    }
 
     @Override
     String getDataTypeForEngine(DataType scalarDbDataType) {

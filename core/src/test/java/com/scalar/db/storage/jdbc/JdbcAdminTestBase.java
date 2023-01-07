@@ -1904,12 +1904,12 @@ public abstract class JdbcAdminTestBase {
       }
       GetColumnsResultSetMocker.Row currentRow = rows.get(row);
       ResultSet mock = (ResultSet) invocation.getMock();
-      when(mock.getString(JdbcAdmin.METADATA_COL_COLUMN_NAME)).thenReturn(currentRow.columnName);
-      when(mock.getString(JdbcAdmin.METADATA_COL_DATA_TYPE)).thenReturn(currentRow.dataType);
-      when(mock.getString(JdbcAdmin.METADATA_COL_KEY_TYPE)).thenReturn(currentRow.keyType);
-      when(mock.getString(JdbcAdmin.METADATA_COL_CLUSTERING_ORDER))
+      when(mock.getString(RdbEngineStrategy.METADATA_COL_COLUMN_NAME)).thenReturn(currentRow.columnName);
+      when(mock.getString(RdbEngineStrategy.METADATA_COL_DATA_TYPE)).thenReturn(currentRow.dataType);
+      when(mock.getString(RdbEngineStrategy.METADATA_COL_KEY_TYPE)).thenReturn(currentRow.keyType);
+      when(mock.getString(RdbEngineStrategy.METADATA_COL_CLUSTERING_ORDER))
           .thenReturn(currentRow.clusteringOrder);
-      when(mock.getBoolean(JdbcAdmin.METADATA_COL_INDEXED)).thenReturn(currentRow.indexed);
+      when(mock.getBoolean(RdbEngineStrategy.METADATA_COL_INDEXED)).thenReturn(currentRow.indexed);
       return true;
     }
 
@@ -1954,7 +1954,7 @@ public abstract class JdbcAdminTestBase {
       }
       GetTablesNamesResultSetMocker.Row currentRow = rows.get(row);
       ResultSet mock = (ResultSet) invocation.getMock();
-      when(mock.getString(JdbcAdmin.METADATA_COL_FULL_TABLE_NAME))
+      when(mock.getString(RdbEngineStrategy.METADATA_COL_FULL_TABLE_NAME))
           .thenReturn(currentRow.fullTableName);
       return true;
     }
