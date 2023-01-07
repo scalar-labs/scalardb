@@ -25,7 +25,7 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  String createTableInternalPrimaryKeyClause(
+  protected String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata) {
     return "PRIMARY KEY ("
         + Stream.concat(
@@ -36,7 +36,7 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  void createTableInternalExecuteAfterCreateTable(
+  protected void createTableInternalExecuteAfterCreateTable(
       boolean hasDescClusteringOrder,
       Connection connection,
       String schema,
@@ -70,7 +70,7 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  String getDataTypeForEngine(DataType scalarDbDataType) {
+  protected String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {
       case BIGINT:
         return "NUMBER(19)";

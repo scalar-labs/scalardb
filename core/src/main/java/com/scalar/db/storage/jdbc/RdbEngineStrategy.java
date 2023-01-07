@@ -72,7 +72,7 @@ abstract class RdbEngineStrategy {
   private final RdbEngine rdbEngine; // TODO remove in favor of RdbEngineStrategy
   private final String metadataSchema;
 
-  abstract String getDataTypeForEngine(DataType dataType);
+  protected abstract String getDataTypeForEngine(DataType dataType);
 
   protected RdbEngineStrategy(
       BasicDataSource dataSource, RdbEngine rdbEngine, String metadataSchema) {
@@ -162,10 +162,10 @@ abstract class RdbEngineStrategy {
         hasDescClusteringOrder, connection, schema, table, metadata);
   }
 
-  abstract String createTableInternalPrimaryKeyClause(
+  protected abstract String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata);
 
-  abstract void createTableInternalExecuteAfterCreateTable(
+  protected abstract void createTableInternalExecuteAfterCreateTable(
       boolean hasDescClusteringOrder,
       Connection connection,
       String schema,
