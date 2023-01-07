@@ -7,11 +7,10 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.apache.commons.dbcp2.BasicDataSource;
-
-import javax.annotation.concurrent.ThreadSafe;
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.concurrent.ThreadSafe;
+import org.apache.commons.dbcp2.BasicDataSource;
 
 @ThreadSafe
 public class JdbcAdmin implements DistributedStorageAdmin {
@@ -76,7 +75,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @Override
   public void close() {
     rdbEngine.close();
-
   }
 
   @Override
@@ -86,13 +84,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     rdbEngine.createIndex(namespace, table, columnName, options);
   }
 
-
   @Override
   public void dropIndex(String namespace, String table, String columnName)
       throws ExecutionException {
     rdbEngine.dropIndex(namespace, table, columnName);
   }
-
 
   @Override
   public void repairTable(

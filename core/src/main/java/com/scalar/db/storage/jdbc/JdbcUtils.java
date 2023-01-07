@@ -2,7 +2,6 @@ package com.scalar.db.storage.jdbc;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-
 import org.apache.commons.dbcp2.BasicDataSource;
 
 public final class JdbcUtils {
