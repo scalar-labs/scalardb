@@ -222,7 +222,7 @@ public class JdbcConfig {
     return adminConnectionPoolMaxTotal;
   }
 
-  RdbEngine getRdbEngine() {
+  public RdbEngine getRdbEngine() {
     if (jdbcUrl.startsWith("jdbc:mysql:")) {
       return RdbEngine.MYSQL;
     } else if (jdbcUrl.startsWith("jdbc:postgresql:")) {

@@ -8,21 +8,6 @@ import org.apache.commons.dbcp2.BasicDataSource;
 public final class JdbcUtils {
   private JdbcUtils() {}
 
-  // TODO remove in favor of getRdbEngineStrategy
-  public static RdbEngine getRdbEngine(String jdbcUrl) {
-    if (jdbcUrl.startsWith("jdbc:mysql:")) {
-      return RdbEngine.MYSQL;
-    } else if (jdbcUrl.startsWith("jdbc:postgresql:")) {
-      return RdbEngine.POSTGRESQL;
-    } else if (jdbcUrl.startsWith("jdbc:oracle:")) {
-      return RdbEngine.ORACLE;
-    } else if (jdbcUrl.startsWith("jdbc:sqlserver:")) {
-      return RdbEngine.SQL_SERVER;
-    } else {
-      throw new IllegalArgumentException("the rdb engine is not supported: " + jdbcUrl);
-    }
-  }
-
   public static BasicDataSource initDataSource(JdbcConfig config) {
     return initDataSource(config, false);
   }
