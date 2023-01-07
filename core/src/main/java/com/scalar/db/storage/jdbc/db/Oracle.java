@@ -6,7 +6,7 @@ import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import org.apache.commons.dbcp2.BasicDataSource;
 
-public class Oracle implements RdbEngineStrategy {
+public class Oracle extends RdbEngineStrategy {
 
     @Override
     public String getDataTypeForEngine(DataType scalarDbDataType) {

@@ -6,7 +6,7 @@ import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import org.apache.commons.dbcp2.BasicDataSource;
 
-public class Mysql implements RdbEngineStrategy {
+public class Mysql extends RdbEngineStrategy {
 
     @Override
     public String getDataTypeForEngine(DataType scalarDbDataType) {

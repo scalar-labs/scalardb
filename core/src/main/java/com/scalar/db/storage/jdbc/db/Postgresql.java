@@ -3,7 +3,7 @@ package com.scalar.db.storage.jdbc.db;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 
-public class Postgresql implements RdbEngineStrategy {
+public class Postgresql extends RdbEngineStrategy {
 
     @Override
     public String getDataTypeForEngine(DataType scalarDbDataType) {
