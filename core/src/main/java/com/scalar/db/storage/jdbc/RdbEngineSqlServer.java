@@ -1,14 +1,13 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
+
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.dbcp2.BasicDataSource;
-
-import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
 
 class RdbEngineSqlServer extends RdbEngineStrategy {
 

@@ -1911,10 +1911,8 @@ public abstract class JdbcAdminTestBase {
       }
       GetColumnsResultSetMocker.Row currentRow = rows.get(row);
       ResultSet mock = (ResultSet) invocation.getMock();
-      when(mock.getString(JdbcAdmin.METADATA_COL_COLUMN_NAME))
-          .thenReturn(currentRow.columnName);
-      when(mock.getString(JdbcAdmin.METADATA_COL_DATA_TYPE))
-          .thenReturn(currentRow.dataType);
+      when(mock.getString(JdbcAdmin.METADATA_COL_COLUMN_NAME)).thenReturn(currentRow.columnName);
+      when(mock.getString(JdbcAdmin.METADATA_COL_DATA_TYPE)).thenReturn(currentRow.dataType);
       when(mock.getString(JdbcAdmin.METADATA_COL_KEY_TYPE)).thenReturn(currentRow.keyType);
       when(mock.getString(JdbcAdmin.METADATA_COL_CLUSTERING_ORDER))
           .thenReturn(currentRow.clusteringOrder);

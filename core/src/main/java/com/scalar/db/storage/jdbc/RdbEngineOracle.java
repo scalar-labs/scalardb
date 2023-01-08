@@ -11,10 +11,6 @@ import java.sql.SQLException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.scalar.db.storage.jdbc.query.Query;
-import com.scalar.db.storage.jdbc.query.QueryUtils;
-import org.apache.commons.dbcp2.BasicDataSource;
-
 class RdbEngineOracle extends RdbEngineStrategy {
 
   @Override

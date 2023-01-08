@@ -1,17 +1,5 @@
 package com.scalar.db.storage.jdbc;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.inject.Inject;
-import com.scalar.db.api.DistributedStorageAdmin;
-import com.scalar.db.api.TableMetadata;
-import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.io.DataType;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.util.Map;
-import java.util.Set;
-import javax.annotation.concurrent.ThreadSafe;
-import org.apache.commons.dbcp2.BasicDataSource;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.METADATA_SCHEMA;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.METADATA_TABLE;
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
@@ -21,6 +9,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import com.google.inject.Inject;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
@@ -42,6 +32,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.ThreadSafe;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,8 +43,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public static final String METADATA_SCHEMA = "scalardb";
   public static final String METADATA_TABLE = "metadata";
 
-  @VisibleForTesting
-  static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
+  @VisibleForTesting static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
   @VisibleForTesting static final String METADATA_COL_COLUMN_NAME = "column_name";
   @VisibleForTesting static final String METADATA_COL_DATA_TYPE = "data_type";
   @VisibleForTesting static final String METADATA_COL_KEY_TYPE = "key_type";
@@ -63,26 +53,26 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
   private static final ImmutableMap<RdbEngine, ImmutableMap<DataType, String>>
       DATA_TYPE_MAPPING_FOR_KEY =
-      ImmutableMap.<RdbEngine, ImmutableMap<DataType, String>>builder()
-          .put(
-              RdbEngine.MYSQL,
-              ImmutableMap.<DataType, String>builder()
-                  .put(DataType.TEXT, "VARCHAR(64)")
-                  .put(DataType.BLOB, "VARBINARY(64)")
-                  .build())
-          .put(
-              RdbEngine.POSTGRESQL,
-              ImmutableMap.<DataType, String>builder()
-                  .put(DataType.TEXT, "VARCHAR(10485760)")
-                  .build())
-          .put(
-              RdbEngine.ORACLE,
-              ImmutableMap.<DataType, String>builder()
-                  .put(DataType.TEXT, "VARCHAR2(64)")
-                  .put(DataType.BLOB, "RAW(64)")
-                  .build())
-          .put(RdbEngine.SQL_SERVER, ImmutableMap.<DataType, String>builder().build())
-          .build();
+          ImmutableMap.<RdbEngine, ImmutableMap<DataType, String>>builder()
+              .put(
+                  RdbEngine.MYSQL,
+                  ImmutableMap.<DataType, String>builder()
+                      .put(DataType.TEXT, "VARCHAR(64)")
+                      .put(DataType.BLOB, "VARBINARY(64)")
+                      .build())
+              .put(
+                  RdbEngine.POSTGRESQL,
+                  ImmutableMap.<DataType, String>builder()
+                      .put(DataType.TEXT, "VARCHAR(10485760)")
+                      .build())
+              .put(
+                  RdbEngine.ORACLE,
+                  ImmutableMap.<DataType, String>builder()
+                      .put(DataType.TEXT, "VARCHAR2(64)")
+                      .put(DataType.BLOB, "RAW(64)")
+                      .build())
+              .put(RdbEngine.SQL_SERVER, ImmutableMap.<DataType, String>builder().build())
+              .build();
   private static final String INDEX_NAME_PREFIX = "index";
 
   private final RdbEngineStrategy rdbEngine;
@@ -411,12 +401,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   private String getDeleteTableMetadataStatement(String schema, String table) {
     return "DELETE FROM "
-               + encloseFullTableName(metadataSchema, METADATA_TABLE)
-               + " WHERE "
-               + enclose(METADATA_COL_FULL_TABLE_NAME)
-               + " = '"
-               + getFullTableName(schema, table)
-               + "'";
+        + encloseFullTableName(metadataSchema, METADATA_TABLE)
+        + " WHERE "
+        + enclose(METADATA_COL_FULL_TABLE_NAME)
+        + " = '"
+        + getFullTableName(schema, table)
+        + "'";
   }
 
   private void deleteMetadataSchemaAndTableIfEmpty(Connection connection) throws SQLException {
@@ -433,7 +423,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + " FROM "
             + encloseFullTableName(metadataSchema, METADATA_TABLE);
     try (Statement statement = connection.createStatement();
-         ResultSet results = statement.executeQuery(selectAllTables)) {
+        ResultSet results = statement.executeQuery(selectAllTables)) {
       return !results.next();
     }
   }
@@ -493,8 +483,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     boolean tableExists = false;
 
     try (Connection connection = dataSource.getConnection();
-         PreparedStatement preparedStatement =
-             connection.prepareStatement(getSelectColumnsStatement())) {
+        PreparedStatement preparedStatement =
+            connection.prepareStatement(getSelectColumnsStatement())) {
       preparedStatement.setString(1, getFullTableName(namespace, table));
 
       try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -542,22 +532,22 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   private String getSelectColumnsStatement() {
     return "SELECT "
-               + enclose(METADATA_COL_COLUMN_NAME)
-               + ","
-               + enclose(METADATA_COL_DATA_TYPE)
-               + ","
-               + enclose(METADATA_COL_KEY_TYPE)
-               + ","
-               + enclose(METADATA_COL_CLUSTERING_ORDER)
-               + ","
-               + enclose(METADATA_COL_INDEXED)
-               + " FROM "
-               + encloseFullTableName(metadataSchema, METADATA_TABLE)
-               + " WHERE "
-               + enclose(METADATA_COL_FULL_TABLE_NAME)
-               + "=? ORDER BY "
-               + enclose(METADATA_COL_ORDINAL_POSITION)
-               + " ASC";
+        + enclose(METADATA_COL_COLUMN_NAME)
+        + ","
+        + enclose(METADATA_COL_DATA_TYPE)
+        + ","
+        + enclose(METADATA_COL_KEY_TYPE)
+        + ","
+        + enclose(METADATA_COL_CLUSTERING_ORDER)
+        + ","
+        + enclose(METADATA_COL_INDEXED)
+        + " FROM "
+        + encloseFullTableName(metadataSchema, METADATA_TABLE)
+        + " WHERE "
+        + enclose(METADATA_COL_FULL_TABLE_NAME)
+        + "=? ORDER BY "
+        + enclose(METADATA_COL_ORDINAL_POSITION)
+        + " ASC";
   }
 
   @Override
@@ -571,8 +561,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + enclose(METADATA_COL_FULL_TABLE_NAME)
             + " LIKE ?";
     try (Connection connection = dataSource.getConnection();
-         PreparedStatement preparedStatement =
-             connection.prepareStatement(selectTablesOfNamespaceStatement)) {
+        PreparedStatement preparedStatement =
+            connection.prepareStatement(selectTablesOfNamespaceStatement)) {
       String prefix = namespace + ".";
       preparedStatement.setString(1, prefix + "%");
       try (ResultSet results = preparedStatement.executeQuery()) {
@@ -587,10 +577,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     } catch (SQLException e) {
       // An exception will be thrown if the metadata table does not exist when executing the select
       // query
-      if ((rdbEngineType == RdbEngine.MYSQL && (e.getErrorCode() == 1049 || e.getErrorCode() == 1146))
-              || (rdbEngineType == RdbEngine.POSTGRESQL && "42P01".equals(e.getSQLState()))
-              || (rdbEngineType == RdbEngine.ORACLE && e.getErrorCode() == 942)
-              || (rdbEngineType == RdbEngine.SQL_SERVER && e.getErrorCode() == 208)) {
+      if ((rdbEngineType == RdbEngine.MYSQL
+              && (e.getErrorCode() == 1049 || e.getErrorCode() == 1146))
+          || (rdbEngineType == RdbEngine.POSTGRESQL && "42P01".equals(e.getSQLState()))
+          || (rdbEngineType == RdbEngine.ORACLE && e.getErrorCode() == 942)
+          || (rdbEngineType == RdbEngine.SQL_SERVER && e.getErrorCode() == 208)) {
         return Collections.emptySet();
       }
       throw new ExecutionException("retrieving the namespace table names failed", e);
@@ -624,8 +615,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         break;
     }
     try (Connection connection = dataSource.getConnection();
-         PreparedStatement preparedStatement =
-             connection.prepareStatement(namespaceExistsStatement)) {
+        PreparedStatement preparedStatement =
+            connection.prepareStatement(namespaceExistsStatement)) {
       preparedStatement.setString(1, namespace);
       return preparedStatement.executeQuery().next();
     } catch (SQLException e) {
@@ -660,7 +651,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
     String dataType = rdbEngine.getDataTypeForEngine(scalarDbColumnType);
     if (keysAndIndexes.contains(columnName)) {
-      ImmutableMap<DataType, String> typeNameMapForKey = DATA_TYPE_MAPPING_FOR_KEY.get(rdbEngineType);
+      ImmutableMap<DataType, String> typeNameMapForKey =
+          DATA_TYPE_MAPPING_FOR_KEY.get(rdbEngineType);
       assert typeNameMapForKey != null;
 
       return typeNameMapForKey.getOrDefault(scalarDbColumnType, dataType);
@@ -671,7 +663,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   private boolean hasDescClusteringOrder(TableMetadata metadata) {
     return metadata.getClusteringKeyNames().stream()
-               .anyMatch(c -> metadata.getClusteringOrder(c) == Order.DESC);
+        .anyMatch(c -> metadata.getClusteringOrder(c) == Order.DESC);
   }
 
   @Override
@@ -692,7 +684,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       Connection connection, String namespace, String table, String columnName)
       throws ExecutionException, SQLException {
     DataType indexType = getTableMetadata(namespace, table).getColumnDataType(columnName);
-    ImmutableMap<DataType, String> typeMappingForIndexes = DATA_TYPE_MAPPING_FOR_KEY.get(rdbEngineType);
+    ImmutableMap<DataType, String> typeMappingForIndexes =
+        DATA_TYPE_MAPPING_FOR_KEY.get(rdbEngineType);
     assert typeMappingForIndexes != null;
 
     String indexedColumnType = typeMappingForIndexes.get(indexType);
@@ -710,7 +703,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       Connection connection, String namespace, String table, String columnName)
       throws ExecutionException, SQLException {
     DataType indexType = getTableMetadata(namespace, table).getColumnDataType(columnName);
-    ImmutableMap<DataType, String> typeMappingForIndexes = DATA_TYPE_MAPPING_FOR_KEY.get(rdbEngineType);
+    ImmutableMap<DataType, String> typeMappingForIndexes =
+        DATA_TYPE_MAPPING_FOR_KEY.get(rdbEngineType);
     assert typeMappingForIndexes != null;
 
     if (typeMappingForIndexes.get(indexType) == null) {
@@ -801,10 +795,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     } catch (SQLException e) {
       // An exception will be thrown if the table does not exist when executing the select
       // query
-      if ((rdbEngineType == RdbEngine.MYSQL && (e.getErrorCode() == 1049 || e.getErrorCode() == 1146))
-              || (rdbEngineType == RdbEngine.POSTGRESQL && "42P01".equals(e.getSQLState()))
-              || (rdbEngineType == RdbEngine.ORACLE && e.getErrorCode() == 942)
-              || (rdbEngineType == RdbEngine.SQL_SERVER && e.getErrorCode() == 208)) {
+      if ((rdbEngineType == RdbEngine.MYSQL
+              && (e.getErrorCode() == 1049 || e.getErrorCode() == 1146))
+          || (rdbEngineType == RdbEngine.POSTGRESQL && "42P01".equals(e.getSQLState()))
+          || (rdbEngineType == RdbEngine.ORACLE && e.getErrorCode() == 942)
+          || (rdbEngineType == RdbEngine.SQL_SERVER && e.getErrorCode() == 208)) {
         return false;
       }
       throw new ExecutionException(
