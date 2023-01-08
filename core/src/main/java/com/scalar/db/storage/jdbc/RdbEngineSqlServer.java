@@ -8,11 +8,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.dbcp2.BasicDataSource;
 
-class RdbEngineSqlServer extends RdbEngineStrategy {
+import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
 
-  RdbEngineSqlServer(BasicDataSource dataSource, RdbEngine rdbEngine, String metadataSchema) {
-    super(dataSource, rdbEngine, metadataSchema);
-  }
+class RdbEngineSqlServer extends RdbEngineStrategy {
 
   @Override
   protected void createNamespaceExecute(Connection connection, String fullNamespace)
@@ -50,6 +48,11 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
       String table,
       TableMetadata metadata) {
     // do nothing
+  }
+
+  @Override
+  protected RdbEngine getRdbEngine() {
+    return RdbEngine.SQL_SERVER;
   }
 
   @Override

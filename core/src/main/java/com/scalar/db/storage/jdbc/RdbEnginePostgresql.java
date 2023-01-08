@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
@@ -12,10 +13,6 @@ import java.util.stream.Stream;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEnginePostgresql extends RdbEngineStrategy {
-
-  RdbEnginePostgresql(BasicDataSource dataSource, RdbEngine rdbEngine, String metadataSchema) {
-    super(dataSource, rdbEngine, metadataSchema);
-  }
 
   @Override
   protected void createNamespaceExecute(Connection connection, String fullNamespace)
@@ -58,6 +55,11 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
               + ")";
       execute(connection, createUniqueIndexStatement);
     }
+  }
+
+  @Override
+  protected RdbEngine getRdbEngine() {
+    return RdbEngine.POSTGRESQL;
   }
 
   @Override

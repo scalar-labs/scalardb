@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
@@ -9,13 +10,12 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import com.scalar.db.storage.jdbc.query.Query;
+import com.scalar.db.storage.jdbc.query.QueryUtils;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEngineOracle extends RdbEngineStrategy {
-
-  RdbEngineOracle(BasicDataSource dataSource, RdbEngine rdbEngine, String metadataSchema) {
-    super(dataSource, rdbEngine, metadataSchema);
-  }
 
   @Override
   protected void createNamespaceExecute(Connection connection, String fullNamespace)
@@ -67,6 +67,11 @@ class RdbEngineOracle extends RdbEngineStrategy {
               + ")";
       execute(connection, createUniqueIndexStatement);
     }
+  }
+
+  @Override
+  protected RdbEngine getRdbEngine() {
+    return RdbEngine.ORACLE;
   }
 
   @Override
