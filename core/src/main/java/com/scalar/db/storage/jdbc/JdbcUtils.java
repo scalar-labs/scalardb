@@ -76,38 +76,4 @@ public final class JdbcUtils {
     dataSource.setMaxTotal(config.getAdminConnectionPoolMaxTotal());
     return dataSource;
   }
-
-  public static boolean isConflictError(SQLException e, RdbEngine rdbEngine) {
-    switch (rdbEngine) {
-      case MYSQL:
-        if (e.getErrorCode() == 1213 || e.getErrorCode() == 1205) {
-          // Deadlock found when trying to get lock or Lock wait timeout exceeded
-          return true;
-        }
-        break;
-      case POSTGRESQL:
-        if (e.getSQLState().equals("40001") || e.getSQLState().equals("40P01")) {
-          // Serialization error happened or Dead lock found
-          return true;
-        }
-        break;
-      case ORACLE:
-        if (e.getErrorCode() == 8177 || e.getErrorCode() == 60) {
-          // ORA-08177: can't serialize access for this transaction
-          // ORA-00060: deadlock detected while waiting for resource
-          return true;
-        }
-        break;
-      case SQL_SERVER:
-        if (e.getErrorCode() == 1205) {
-          // Transaction was deadlocked on lock resources with another process and has been chosen
-          // as the deadlock victim
-          return true;
-        }
-        break;
-      default:
-        break;
-    }
-    return false;
-  }
 }

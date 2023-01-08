@@ -72,13 +72,18 @@ class RdbEngineOracle extends RdbEngineStrategy {
     return RdbEngine.ORACLE;
   }
 
-  protected RdbEngineErrorType interpretSqlException(SQLException e) {
+  @Override
+  public RdbEngineErrorType interpretSqlException(SQLException e) {
     if (e.getErrorCode() == 942) {
       return RdbEngineErrorType.UNDEFINED_OBJECT;
     } else if (e.getErrorCode() == 1920) {
       return RdbEngineErrorType.DUPLICATE_OBJECT;
     } else if (e.getErrorCode() == 955) {
       return RdbEngineErrorType.DUPLICATE_OBJECT;
+    } else if (e.getErrorCode() == 8177 || e.getErrorCode() == 60) {
+      // ORA-08177: can't serialize access for this transaction
+      // ORA-00060: deadlock detected while waiting for resource
+      return RdbEngineErrorType.CONFLICT;
     } else {
       return RdbEngineErrorType.UNKNOWN;
     }

@@ -17,6 +17,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy.RdbEngineErrorType;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -41,7 +42,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
 
   private final BasicDataSource dataSource;
   private final BasicDataSource tableMetadataDataSource;
-  private final RdbEngine rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
   private final JdbcService jdbcService;
 
   @Inject
@@ -49,7 +50,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     JdbcConfig config = new JdbcConfig(databaseConfig);
 
     dataSource = JdbcUtils.initDataSource(config);
-    rdbEngine = config.getRdbEngine();
+    rdbEngine = RdbEngineStrategy.create(config);
 
     tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config);
     TableMetadataManager tableMetadataManager =
@@ -58,7 +59,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
             databaseConfig.getMetadataCacheExpirationTimeSecs());
 
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
-    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine.getRdbEngine());
     jdbcService = new JdbcService(tableMetadataManager, operationChecker, queryBuilder);
   }
 
@@ -66,12 +67,12 @@ public class JdbcDatabase extends AbstractDistributedStorage {
   JdbcDatabase(
       BasicDataSource dataSource,
       BasicDataSource tableMetadataDataSource,
-      RdbEngine rdbEngine,
+      RdbEngine rdbEngineType,
       JdbcService jdbcService) {
     this.dataSource = dataSource;
     this.tableMetadataDataSource = tableMetadataDataSource;
     this.jdbcService = jdbcService;
-    this.rdbEngine = rdbEngine;
+    this.rdbEngine = RdbEngineStrategy.create(rdbEngineType);
   }
 
   @Override
@@ -182,7 +183,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       } catch (SQLException sqlException) {
         throw new ExecutionException("failed to rollback", sqlException);
       }
-      if (JdbcUtils.isConflictError(e, rdbEngine)) {
+      if (rdbEngine.interpretSqlException(e) == RdbEngineErrorType.CONFLICT) {
         // Since a mutate operation executes multiple put/delete operations in a transaction,
         // conflicts can happen. Throw RetriableExecutionException in that case.
         throw new RetriableExecutionException("conflict happened in a mutate operation", e);

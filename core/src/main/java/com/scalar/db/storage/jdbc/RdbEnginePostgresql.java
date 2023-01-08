@@ -63,9 +63,13 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
     return RdbEngine.POSTGRESQL;
   }
 
-  protected RdbEngineErrorType interpretSqlException(SQLException e) {
+  @Override
+  public RdbEngineErrorType interpretSqlException(SQLException e) {
     if ("42P01".equals(e.getSQLState())) {
       return RdbEngineErrorType.UNDEFINED_OBJECT;
+    } else if (e.getSQLState().equals("40001") || e.getSQLState().equals("40P01")) {
+      // Serialization error happened or Dead lock found
+      return RdbEngineErrorType.CONFLICT;
     } else {
       return RdbEngineErrorType.UNKNOWN;
     }

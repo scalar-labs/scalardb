@@ -6,23 +6,29 @@ import com.scalar.db.storage.jdbc.query.QueryUtils;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-abstract class RdbEngineStrategy {
+public abstract class RdbEngineStrategy {
 
   /** Abstracted errors from each RDB engine. */
-  protected enum RdbEngineErrorType {
+  public enum RdbEngineErrorType {
     /** Schema, table, column, ... already exists. */
     DUPLICATE_OBJECT,
     /** Schema, table, column, ... are undefined. */
     UNDEFINED_OBJECT,
+    /** Serialization error or deadlock found. */
+    CONFLICT,
 
     /** Mainly used when an error from each RDB engine cannot be interpreted. */
     UNKNOWN,
   }
 
-  protected abstract RdbEngineErrorType interpretSqlException(SQLException e);
+  public abstract RdbEngineErrorType interpretSqlException(SQLException e);
 
-  static RdbEngineStrategy create(JdbcConfig config) {
-    switch (config.getRdbEngine()) {
+  public static RdbEngineStrategy create(JdbcConfig config) {
+    return create(config.getRdbEngine());
+  }
+
+  public static RdbEngineStrategy create(RdbEngine rdbEngine) {
+    switch (rdbEngine) {
       case MYSQL:
         return new RdbEngineMysql();
       case POSTGRESQL:

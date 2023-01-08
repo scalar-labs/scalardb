@@ -54,9 +54,13 @@ class RdbEngineMysql extends RdbEngineStrategy {
     return RdbEngine.MYSQL;
   }
 
-  protected RdbEngineErrorType interpretSqlException(SQLException e) {
+  @Override
+  public RdbEngineErrorType interpretSqlException(SQLException e) {
     if (e.getErrorCode() == 1049 || e.getErrorCode() == 1146) {
       return RdbEngineErrorType.UNDEFINED_OBJECT;
+    } else if (e.getErrorCode() == 1213 || e.getErrorCode() == 1205) {
+      // Deadlock found when trying to get lock or Lock wait timeout exceeded
+      return RdbEngineErrorType.CONFLICT;
     } else {
       return RdbEngineErrorType.UNKNOWN;
     }

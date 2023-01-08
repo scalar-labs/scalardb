@@ -54,11 +54,16 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
     return RdbEngine.SQL_SERVER;
   }
 
-  protected RdbEngineErrorType interpretSqlException(SQLException e) {
+  @Override
+  public RdbEngineErrorType interpretSqlException(SQLException e) {
     if (e.getErrorCode() == 208) {
       return RdbEngineErrorType.UNDEFINED_OBJECT;
     } else if (e.getErrorCode() == 2714) {
       return RdbEngineErrorType.DUPLICATE_OBJECT;
+    } else if (e.getErrorCode() == 1205) {
+      // Transaction was deadlocked on lock resources with another process and has been chosen
+      // as the deadlock victim
+      return RdbEngineErrorType.CONFLICT;
     } else {
       return RdbEngineErrorType.UNKNOWN;
     }
