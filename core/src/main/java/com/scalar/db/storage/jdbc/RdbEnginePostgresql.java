@@ -6,6 +6,8 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
@@ -30,6 +32,7 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
         + "))";
   }
 
+  @SuppressFBWarnings({"SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"})
   @Override
   protected void createTableInternalExecuteAfterCreateTable(
       boolean hasDescClusteringOrder,
