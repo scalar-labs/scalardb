@@ -1,7 +1,5 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.storage.jdbc.JdbcAdmin.METADATA_SCHEMA;
-import static com.scalar.db.storage.jdbc.JdbcAdmin.METADATA_TABLE;
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
