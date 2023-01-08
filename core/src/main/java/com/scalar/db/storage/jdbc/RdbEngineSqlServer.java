@@ -54,6 +54,16 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
     return RdbEngine.SQL_SERVER;
   }
 
+  protected RdbEngineErrorType interpretSqlException(SQLException e) {
+    if (e.getErrorCode() == 208) {
+      return RdbEngineErrorType.UNDEFINED_OBJECT;
+    } else if (e.getErrorCode() == 2714) {
+      return RdbEngineErrorType.DUPLICATE_OBJECT;
+    } else {
+      return RdbEngineErrorType.UNKNOWN;
+    }
+  }
+
   @Override
   protected String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {

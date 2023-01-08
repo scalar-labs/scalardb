@@ -16,6 +16,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy.RdbEngineErrorType;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
@@ -193,7 +194,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           execute(connection, "CREATE SCHEMA " + enclose(metadataSchema));
         } catch (SQLException e) {
           // Suppress the exception thrown when the schema already exists
-          if (e.getErrorCode() != 2714) {
+          if (rdbEngine.interpretSqlException(e) != RdbEngineErrorType.DUPLICATE_OBJECT) {
             throw e;
           }
         }
@@ -205,7 +206,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               connection, "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"");
         } catch (SQLException e) {
           // Suppress the exception thrown when the user already exists
-          if (e.getErrorCode() != 1920) {
+          if (rdbEngine.interpretSqlException(e) != RdbEngineErrorType.DUPLICATE_OBJECT) {
             throw e;
           }
         }
@@ -260,21 +261,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         execute(connection, createTableIfNotExistsStatement);
         break;
       case SQL_SERVER:
-        try {
-          execute(connection, createTableStatement);
-        } catch (SQLException e) {
-          // Suppress the exception thrown when the table already exists
-          if (e.getErrorCode() != 2714) {
-            throw e;
-          }
-        }
-        break;
       case ORACLE:
         try {
           execute(connection, createTableStatement);
         } catch (SQLException e) {
           // Suppress the exception thrown when the table already exists
-          if (e.getErrorCode() != 955) {
+          if (rdbEngine.interpretSqlException(e) != RdbEngineErrorType.DUPLICATE_OBJECT) {
             throw e;
           }
         }
@@ -575,11 +567,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     } catch (SQLException e) {
       // An exception will be thrown if the metadata table does not exist when executing the select
       // query
-      if ((rdbEngineType == RdbEngine.MYSQL
-              && (e.getErrorCode() == 1049 || e.getErrorCode() == 1146))
-          || (rdbEngineType == RdbEngine.POSTGRESQL && "42P01".equals(e.getSQLState()))
-          || (rdbEngineType == RdbEngine.ORACLE && e.getErrorCode() == 942)
-          || (rdbEngineType == RdbEngine.SQL_SERVER && e.getErrorCode() == 208)) {
+      if (rdbEngine.interpretSqlException(e) == RdbEngineErrorType.UNDEFINED_OBJECT) {
         return Collections.emptySet();
       }
       throw new ExecutionException("retrieving the namespace table names failed", e);
@@ -793,11 +781,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     } catch (SQLException e) {
       // An exception will be thrown if the table does not exist when executing the select
       // query
-      if ((rdbEngineType == RdbEngine.MYSQL
-              && (e.getErrorCode() == 1049 || e.getErrorCode() == 1146))
-          || (rdbEngineType == RdbEngine.POSTGRESQL && "42P01".equals(e.getSQLState()))
-          || (rdbEngineType == RdbEngine.ORACLE && e.getErrorCode() == 942)
-          || (rdbEngineType == RdbEngine.SQL_SERVER && e.getErrorCode() == 208)) {
+      if (rdbEngine.interpretSqlException(e) == RdbEngineErrorType.UNDEFINED_OBJECT) {
         return false;
       }
       throw new ExecutionException(

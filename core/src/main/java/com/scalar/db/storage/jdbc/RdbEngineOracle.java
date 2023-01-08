@@ -72,6 +72,18 @@ class RdbEngineOracle extends RdbEngineStrategy {
     return RdbEngine.ORACLE;
   }
 
+  protected RdbEngineErrorType interpretSqlException(SQLException e) {
+    if (e.getErrorCode() == 942) {
+      return RdbEngineErrorType.UNDEFINED_OBJECT;
+    } else if (e.getErrorCode() == 1920) {
+      return RdbEngineErrorType.DUPLICATE_OBJECT;
+    } else if (e.getErrorCode() == 955) {
+      return RdbEngineErrorType.DUPLICATE_OBJECT;
+    } else {
+      return RdbEngineErrorType.UNKNOWN;
+    }
+  }
+
   @Override
   protected String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {

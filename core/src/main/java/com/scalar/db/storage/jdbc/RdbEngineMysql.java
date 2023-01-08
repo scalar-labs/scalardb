@@ -54,6 +54,14 @@ class RdbEngineMysql extends RdbEngineStrategy {
     return RdbEngine.MYSQL;
   }
 
+  protected RdbEngineErrorType interpretSqlException(SQLException e) {
+    if (e.getErrorCode() == 1049 || e.getErrorCode() == 1146) {
+      return RdbEngineErrorType.UNDEFINED_OBJECT;
+    } else {
+      return RdbEngineErrorType.UNKNOWN;
+    }
+  }
+
   @Override
   protected String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {

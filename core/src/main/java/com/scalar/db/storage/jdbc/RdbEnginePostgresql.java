@@ -63,6 +63,14 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
     return RdbEngine.POSTGRESQL;
   }
 
+  protected RdbEngineErrorType interpretSqlException(SQLException e) {
+    if ("42P01".equals(e.getSQLState())) {
+      return RdbEngineErrorType.UNDEFINED_OBJECT;
+    } else {
+      return RdbEngineErrorType.UNKNOWN;
+    }
+  }
+
   @Override
   protected String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {

@@ -8,6 +8,19 @@ import java.sql.SQLException;
 
 abstract class RdbEngineStrategy {
 
+  /** Abstracted errors from each RDB engine. */
+  protected enum RdbEngineErrorType {
+    /** Schema, table, column, ... already exists. */
+    DUPLICATE_OBJECT,
+    /** Schema, table, column, ... are undefined. */
+    UNDEFINED_OBJECT,
+
+    /** Mainly used when an error from each RDB engine cannot be interpreted. */
+    UNKNOWN,
+  }
+
+  protected abstract RdbEngineErrorType interpretSqlException(SQLException e);
+
   static RdbEngineStrategy create(JdbcConfig config) {
     switch (config.getRdbEngine()) {
       case MYSQL:
