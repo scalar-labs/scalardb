@@ -176,40 +176,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   private void createMetadataSchemaAndTableIfNotExists(Connection connection) throws SQLException {
-    createMetadataSchemaIfNotExists(connection);
+    rdbEngine.createMetadataSchemaIfNotExists(connection, metadataSchema);
     createMetadataTableIfNotExists(connection);
-  }
-
-  private void createMetadataSchemaIfNotExists(Connection connection) throws SQLException {
-    switch (rdbEngineType) {
-      case MYSQL:
-      case POSTGRESQL:
-        execute(connection, "CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema));
-        break;
-      case SQL_SERVER:
-        try {
-          execute(connection, "CREATE SCHEMA " + enclose(metadataSchema));
-        } catch (SQLException e) {
-          // Suppress the exception thrown when the schema already exists
-          if (!rdbEngine.isDuplicateSchemaError(e)) {
-            throw e;
-          }
-        }
-
-        break;
-      case ORACLE:
-        try {
-          execute(
-              connection, "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"");
-        } catch (SQLException e) {
-          // Suppress the exception thrown when the user already exists
-          if (!rdbEngine.isDuplicateUserError(e)) {
-            throw e;
-          }
-        }
-        execute(connection, "ALTER USER " + enclose(metadataSchema) + " quota unlimited on USERS");
-        break;
-    }
   }
 
   private void createMetadataTableIfNotExists(Connection connection) throws SQLException {

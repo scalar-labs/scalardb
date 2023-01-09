@@ -77,6 +77,8 @@ public abstract class RdbEngineStrategy {
       TableMetadata metadata)
       throws SQLException;
 
+  abstract void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema) throws SQLException;
+
   protected String enclose(String name) {
     return QueryUtils.enclose(name, getRdbEngine());
   }

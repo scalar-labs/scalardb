@@ -67,6 +67,20 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
+  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema) throws SQLException {
+    try {
+      execute(
+          connection, "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"");
+    } catch (SQLException e) {
+      // Suppress the exception thrown when the user already exists
+      if (!isDuplicateUserError(e)) {
+        throw e;
+      }
+    }
+    execute(connection, "ALTER USER " + enclose(metadataSchema) + " quota unlimited on USERS");
+  }
+
+  @Override
   public RdbEngine getRdbEngine() {
     return RdbEngine.ORACLE;
   }

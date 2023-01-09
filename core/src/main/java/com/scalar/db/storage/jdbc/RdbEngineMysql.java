@@ -50,6 +50,11 @@ class RdbEngineMysql extends RdbEngineStrategy {
   }
 
   @Override
+  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema) throws SQLException {
+    execute(connection, "CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema));
+  }
+
+  @Override
   boolean isDuplicateUserError(SQLException e) {
     throw new UnsupportedOperationException();
   }

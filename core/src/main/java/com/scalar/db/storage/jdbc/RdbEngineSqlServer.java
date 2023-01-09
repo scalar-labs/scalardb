@@ -50,6 +50,18 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
+  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema) throws SQLException {
+    try {
+      execute(connection, "CREATE SCHEMA " + enclose(metadataSchema));
+    } catch (SQLException e) {
+      // Suppress the exception thrown when the schema already exists
+      if (!isDuplicateSchemaError(e)) {
+        throw e;
+      }
+    }
+  }
+
+  @Override
   boolean isDuplicateUserError(SQLException e) {
     throw new UnsupportedOperationException();
   }
