@@ -93,6 +93,16 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
+  String namespaceExistsStatement() {
+    return
+        "SELECT 1 FROM "
+            + encloseFullTableName("sys", "schemas")
+            + " WHERE "
+            + enclose("name")
+            + " = ?";
+  }
+
+  @Override
   boolean isDuplicateUserError(SQLException e) {
     throw new UnsupportedOperationException();
   }

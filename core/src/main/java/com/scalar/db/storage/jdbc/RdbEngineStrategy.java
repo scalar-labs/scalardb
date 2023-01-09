@@ -92,6 +92,8 @@ public abstract class RdbEngineStrategy {
 
   abstract void dropNamespace(BasicDataSource dataSource, String namespace) throws ExecutionException;
 
+  abstract String namespaceExistsStatement();
+
   protected String enclose(String name) {
     return QueryUtils.enclose(name, getRdbEngine());
   }

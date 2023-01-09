@@ -474,30 +474,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    String namespaceExistsStatement = "";
-    switch (rdbEngineType) {
-      case POSTGRESQL:
-      case MYSQL:
-        namespaceExistsStatement =
-            "SELECT 1 FROM "
-                + encloseFullTableName("information_schema", "schemata")
-                + " WHERE "
-                + enclose("schema_name")
-                + " = ?";
-        break;
-      case ORACLE:
-        namespaceExistsStatement =
-            "SELECT 1 FROM " + enclose("ALL_USERS") + " WHERE " + enclose("USERNAME") + " = ?";
-        break;
-      case SQL_SERVER:
-        namespaceExistsStatement =
-            "SELECT 1 FROM "
-                + encloseFullTableName("sys", "schemas")
-                + " WHERE "
-                + enclose("name")
-                + " = ?";
-        break;
-    }
+    String namespaceExistsStatement = rdbEngine.namespaceExistsStatement();
     try (Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =
             connection.prepareStatement(namespaceExistsStatement)) {

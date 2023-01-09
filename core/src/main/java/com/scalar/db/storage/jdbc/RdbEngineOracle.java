@@ -112,6 +112,12 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
+  String namespaceExistsStatement() {
+    return
+        "SELECT 1 FROM " + enclose("ALL_USERS") + " WHERE " + enclose("USERNAME") + " = ?";
+  }
+
+  @Override
   public RdbEngine getRdbEngine() {
     return RdbEngine.ORACLE;
   }

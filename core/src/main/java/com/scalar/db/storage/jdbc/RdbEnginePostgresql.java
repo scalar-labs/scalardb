@@ -89,6 +89,16 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
   }
 
   @Override
+  String namespaceExistsStatement() {
+    return
+        "SELECT 1 FROM "
+            + encloseFullTableName("information_schema", "schemata")
+            + " WHERE "
+            + enclose("schema_name")
+            + " = ?";
+  }
+
+  @Override
   boolean isDuplicateUserError(SQLException e) {
     throw new UnsupportedOperationException();
   }
