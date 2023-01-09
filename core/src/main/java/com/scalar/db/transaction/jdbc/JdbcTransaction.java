@@ -188,14 +188,14 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   }
 
   private CrudException createCrudException(SQLException e, String message) {
-    if (rdbEngine.interpretSqlException(e) == RdbEngineErrorType.CONFLICT) {
+    if (rdbEngine.isConflictError(e)) {
       return new CrudConflictException("conflict happened; try restarting transaction", e);
     }
     return new CrudException(message, e);
   }
 
   private CommitException createCommitException(SQLException e) {
-    if (rdbEngine.interpretSqlException(e) == RdbEngineErrorType.CONFLICT) {
+    if (rdbEngine.isConflictError(e)) {
       return new CommitConflictException("conflict happened; try restarting transaction", e);
     }
     return new CommitException("failed to commit", e);

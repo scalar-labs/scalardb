@@ -73,22 +73,39 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  public RdbEngineErrorType interpretSqlException(SQLException e) {
-    if (e.getErrorCode() == 942) {
-      return RdbEngineErrorType.UNDEFINED_OBJECT;
-    } else if (e.getErrorCode() == 1920) {
-      return RdbEngineErrorType.DUPLICATE_OBJECT;
-    } else if (e.getErrorCode() == 955) {
-      return RdbEngineErrorType.DUPLICATE_OBJECT;
-    } else if (e.getErrorCode() == 8177 || e.getErrorCode() == 60) {
-      // ORA-08177: can't serialize access for this transaction
-      // ORA-00060: deadlock detected while waiting for resource
-      return RdbEngineErrorType.CONFLICT;
-    } else if (e.getSQLState().equals("23000")) {
-      return RdbEngineErrorType.DUPLICATE_KEY;
-    } else {
-      return RdbEngineErrorType.UNKNOWN;
-    }
+  boolean isDuplicateUserError(SQLException e) {
+    // ORA-01920: user name 'string' conflicts with another user or role name
+    return e.getErrorCode() == 1920;
+  }
+
+  @Override
+  boolean isDuplicateSchemaError(SQLException e) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  boolean isDuplicateTableError(SQLException e) {
+    // ORA-00955: name is already used by an existing object
+    return e.getErrorCode() == 955;
+  }
+
+  @Override
+  boolean isDuplicateKeyError(SQLException e) {
+    // Integrity constraint violation
+    return e.getSQLState().equals("23000");
+  }
+
+  @Override
+  boolean isUndefinedTableError(SQLException e) {
+    // ORA-00942: Table or view does not exist
+    return e.getErrorCode() == 942;
+  }
+
+  @Override
+  public boolean isConflictError(SQLException e) {
+    // ORA-08177: can't serialize access for this transaction
+    // ORA-00060: deadlock detected while waiting for resource
+    return e.getErrorCode() == 8177 || e.getErrorCode() == 60;
   }
 
   @Override

@@ -194,7 +194,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           execute(connection, "CREATE SCHEMA " + enclose(metadataSchema));
         } catch (SQLException e) {
           // Suppress the exception thrown when the schema already exists
-          if (rdbEngine.interpretSqlException(e) != RdbEngineErrorType.DUPLICATE_OBJECT) {
+          if (!rdbEngine.isDuplicateSchemaError(e)) {
             throw e;
           }
         }
@@ -206,7 +206,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               connection, "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"");
         } catch (SQLException e) {
           // Suppress the exception thrown when the user already exists
-          if (rdbEngine.interpretSqlException(e) != RdbEngineErrorType.DUPLICATE_OBJECT) {
+          if (!rdbEngine.isDuplicateUserError(e)) {
             throw e;
           }
         }
@@ -266,7 +266,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           execute(connection, createTableStatement);
         } catch (SQLException e) {
           // Suppress the exception thrown when the table already exists
-          if (rdbEngine.interpretSqlException(e) != RdbEngineErrorType.DUPLICATE_OBJECT) {
+          if (!rdbEngine.isDuplicateTableError(e)) {
             throw e;
           }
         }
@@ -567,7 +567,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     } catch (SQLException e) {
       // An exception will be thrown if the metadata table does not exist when executing the select
       // query
-      if (rdbEngine.interpretSqlException(e) == RdbEngineErrorType.UNDEFINED_OBJECT) {
+      if (!rdbEngine.isDuplicateTableError(e)) {
         return Collections.emptySet();
       }
       throw new ExecutionException("retrieving the namespace table names failed", e);
@@ -781,7 +781,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     } catch (SQLException e) {
       // An exception will be thrown if the table does not exist when executing the select
       // query
-      if (rdbEngine.interpretSqlException(e) == RdbEngineErrorType.UNDEFINED_OBJECT) {
+      if (rdbEngine.isUndefinedTableError(e)) {
         return false;
       }
       throw new ExecutionException(

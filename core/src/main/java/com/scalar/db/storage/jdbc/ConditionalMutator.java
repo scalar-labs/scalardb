@@ -104,7 +104,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
     } catch (SQLException e) {
       // ignore the duplicate key error
       // "23000" is for MySQL/Oracle/SQL Server and "23505" is for PostgreSQL
-      if (rdbEngine.interpretSqlException(e) != RdbEngineStrategy.RdbEngineErrorType.DUPLICATE_KEY) {
+      if (!rdbEngine.isDuplicateKeyError(e)) {
         sqlException = e;
       }
     }

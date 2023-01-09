@@ -4,6 +4,8 @@ import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
 
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
+import org.jooq.SQL;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
@@ -50,25 +52,42 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
-  public RdbEngine getRdbEngine() {
-    return RdbEngine.SQL_SERVER;
+  boolean isDuplicateUserError(SQLException e) {
+    throw new UnsupportedOperationException();
   }
 
   @Override
-  public RdbEngineErrorType interpretSqlException(SQLException e) {
-    if (e.getErrorCode() == 208) {
-      return RdbEngineErrorType.UNDEFINED_OBJECT;
-    } else if (e.getErrorCode() == 2714) {
-      return RdbEngineErrorType.DUPLICATE_OBJECT;
-    } else if (e.getErrorCode() == 1205) {
-      // Transaction was deadlocked on lock resources with another process and has been chosen
-      // as the deadlock victim
-      return RdbEngineErrorType.CONFLICT;
-    } else if (e.getSQLState().equals("23000")) {
-      return RdbEngineErrorType.DUPLICATE_KEY;
-    } else {
-      return RdbEngineErrorType.UNKNOWN;
-    }
+  boolean isDuplicateSchemaError(SQLException e) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  boolean isDuplicateTableError(SQLException e) {
+    // 2714: There is already an object named '%.*ls' in the database.
+    return e.getErrorCode() == 2714;
+  }
+
+  @Override
+  boolean isDuplicateKeyError(SQLException e) {
+    // 23000: Integrity constraint violation
+    return e.getSQLState().equals("23000");
+  }
+
+  @Override
+  boolean isUndefinedTableError(SQLException e) {
+    // 208: Invalid object name '%.*ls'.
+    return e.getErrorCode() == 208;
+  }
+
+  @Override
+  public boolean isConflictError(SQLException e) {
+    // 1205: Transaction (Process ID %d) was deadlocked on %.*ls resources with another process and has been chosen as the deadlock victim. Rerun the transaction.
+    return e.getErrorCode() == 1205;
+  }
+
+  @Override
+  public RdbEngine getRdbEngine() {
+    return RdbEngine.SQL_SERVER;
   }
 
   @Override

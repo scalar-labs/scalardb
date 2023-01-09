@@ -183,7 +183,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       } catch (SQLException sqlException) {
         throw new ExecutionException("failed to rollback", sqlException);
       }
-      if (rdbEngine.interpretSqlException(e) == RdbEngineErrorType.CONFLICT) {
+      if (rdbEngine.isConflictError(e)) {
         // Since a mutate operation executes multiple put/delete operations in a transaction,
         // conflicts can happen. Throw RetriableExecutionException in that case.
         throw new RetriableExecutionException("conflict happened in a mutate operation", e);
