@@ -56,7 +56,8 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
 
   @Override
   boolean isDuplicateSchemaError(SQLException e) {
-    throw new UnsupportedOperationException();
+    // 2714: There is already an object named '%.*ls' in the database.
+    return e.getErrorCode() == 2714;
   }
 
   @Override
