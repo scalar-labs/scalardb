@@ -80,4 +80,7 @@ public abstract class RdbEngineStrategy {
   protected String enclose(String name) {
     return QueryUtils.enclose(name, getRdbEngine());
   }
+  protected String encloseFullTableName(String schema, String table) {
+    return enclose(schema) + "." + enclose(table);
+  }
 }

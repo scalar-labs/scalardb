@@ -1,6 +1,5 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -16,7 +15,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.jdbc.query.QueryUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -124,7 +122,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       Connection connection, String schema, String table, TableMetadata metadata)
       throws SQLException {
     String createTableStatement =
-        "CREATE TABLE " + enclosedFullTableName(schema, table, rdbEngineType) + "(";
+        "CREATE TABLE " + encloseFullTableName(schema, table) + "(";
     // Order the columns for their creation by (partition keys >> clustering keys >> other columns)
     LinkedHashSet<String> sortedColumnNames =
         Sets.newLinkedHashSet(
@@ -920,6 +918,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   private String encloseFullTableName(String schema, String table) {
-    return enclosedFullTableName(schema, table, rdbEngineType);
+    return rdbEngine.encloseFullTableName(schema, table);
   }
 }

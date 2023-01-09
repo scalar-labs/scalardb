@@ -1,7 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.api.TableMetadata;
@@ -46,7 +45,7 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
           "CREATE UNIQUE INDEX "
               + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
               + " ON "
-              + enclosedFullTableName(schema, table, RdbEngine.POSTGRESQL)
+              + encloseFullTableName(schema, table)
               + " ("
               + Stream.concat(
                       metadata.getPartitionKeyNames().stream().map(c -> enclose(c) + " ASC"),
