@@ -12,7 +12,7 @@ public class JdbcDatabaseIntegrationTest extends DistributedStorageIntegrationTe
   protected Properties getProperties(String testName) {
     Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
-    rdbEngine = config.getRdbEngine();
+    rdbEngine = RdbEngineStrategy.create(config).getRdbEngine();
     return JdbcEnv.getProperties(testName);
   }
 

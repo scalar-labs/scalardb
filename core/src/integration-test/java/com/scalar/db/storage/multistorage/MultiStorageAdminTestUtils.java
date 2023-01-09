@@ -4,10 +4,7 @@ import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.jdbc.JdbcAdmin;
-import com.scalar.db.storage.jdbc.JdbcConfig;
-import com.scalar.db.storage.jdbc.JdbcUtils;
-import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.*;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
 import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -29,7 +26,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
 
     jdbcConfig = new JdbcConfig(new DatabaseConfig(jdbcProperties));
     jdbcMetadataSchema = jdbcConfig.getTableMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
-    rdbEngine = jdbcConfig.getRdbEngine();
+    rdbEngine = RdbEngineStrategy.create(jdbcConfig).getRdbEngine();
   }
 
   @Override

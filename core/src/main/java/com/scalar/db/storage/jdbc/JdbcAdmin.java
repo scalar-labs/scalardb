@@ -566,7 +566,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     } catch (SQLException e) {
       // An exception will be thrown if the metadata table does not exist when executing the select
       // query
-      if (!rdbEngine.isDuplicateTableError(e)) {
+      if (!rdbEngine.isUndefinedTableError(e)) {
         return Collections.emptySet();
       }
       throw new ExecutionException("retrieving the namespace table names failed", e);
