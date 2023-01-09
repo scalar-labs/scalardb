@@ -68,7 +68,7 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  protected RdbEngine getRdbEngine() {
+  public RdbEngine getRdbEngine() {
     return RdbEngine.ORACLE;
   }
 

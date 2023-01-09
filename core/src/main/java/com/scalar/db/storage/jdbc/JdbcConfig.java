@@ -221,18 +221,4 @@ public class JdbcConfig {
   public int getAdminConnectionPoolMaxTotal() {
     return adminConnectionPoolMaxTotal;
   }
-
-  public RdbEngine getRdbEngine() {
-    if (jdbcUrl.startsWith("jdbc:mysql:")) {
-      return RdbEngine.MYSQL;
-    } else if (jdbcUrl.startsWith("jdbc:postgresql:")) {
-      return RdbEngine.POSTGRESQL;
-    } else if (jdbcUrl.startsWith("jdbc:oracle:")) {
-      return RdbEngine.ORACLE;
-    } else if (jdbcUrl.startsWith("jdbc:sqlserver:")) {
-      return RdbEngine.SQL_SERVER;
-    } else {
-      throw new IllegalArgumentException("the rdb engine is not supported: " + jdbcUrl);
-    }
-  }
 }

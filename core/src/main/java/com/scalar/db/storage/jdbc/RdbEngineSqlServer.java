@@ -50,7 +50,7 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
-  protected RdbEngine getRdbEngine() {
+  public RdbEngine getRdbEngine() {
     return RdbEngine.SQL_SERVER;
   }
 

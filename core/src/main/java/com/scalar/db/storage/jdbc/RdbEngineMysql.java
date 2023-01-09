@@ -50,7 +50,7 @@ class RdbEngineMysql extends RdbEngineStrategy {
   }
 
   @Override
-  protected RdbEngine getRdbEngine() {
+  public RdbEngine getRdbEngine() {
     return RdbEngine.MYSQL;
   }
 

@@ -59,7 +59,7 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
   }
 
   @Override
-  protected RdbEngine getRdbEngine() {
+  public RdbEngine getRdbEngine() {
     return RdbEngine.POSTGRESQL;
   }
 
