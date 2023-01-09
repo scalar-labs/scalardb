@@ -65,6 +65,8 @@ public abstract class RdbEngineStrategy {
 
   abstract String getTextType(int charLength);
 
+  abstract String computeBooleanValue(boolean value);
+
   protected abstract void createNamespaceExecute(Connection connection, String fullNamespace)
       throws SQLException;
 

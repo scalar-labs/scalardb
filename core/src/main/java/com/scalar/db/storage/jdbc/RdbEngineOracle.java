@@ -160,4 +160,9 @@ class RdbEngineOracle extends RdbEngineStrategy {
   String getTextType(int charLength) {
     return String.format("VARCHAR2(%s)", charLength);
   }
+
+  @Override
+  String computeBooleanValue(boolean value) {
+    return value ? "1" : "0";
+  }
 }

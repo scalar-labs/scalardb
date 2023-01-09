@@ -280,13 +280,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   private String computeBooleanValue(boolean value) {
-    switch (rdbEngineType) {
-      case ORACLE:
-      case SQL_SERVER:
-        return value ? "1" : "0";
-      default:
-        return value ? "true" : "false";
-    }
+    return rdbEngine.computeBooleanValue(value);
   }
 
   @Override

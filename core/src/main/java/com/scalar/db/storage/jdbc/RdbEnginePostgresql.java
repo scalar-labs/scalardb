@@ -135,4 +135,9 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
   String getTextType(int charLength) {
     return String.format("VARCHAR(%s)", charLength);
   }
+
+  @Override
+  String computeBooleanValue(boolean value) {
+    return value ? "true" : "false";
+  }
 }
