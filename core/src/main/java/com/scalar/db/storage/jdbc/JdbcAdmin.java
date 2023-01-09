@@ -326,7 +326,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void deleteMetadataSchemaAndTableIfEmpty(Connection connection) throws SQLException {
     if (isMetadataTableEmpty(connection)) {
       deleteMetadataTable(connection);
-      deleteMetadataSchema(connection);
+      rdbEngine.deleteMetadataSchema(connection, metadataSchema);
     }
   }
 
@@ -347,17 +347,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         "DROP TABLE " + encloseFullTableName(metadataSchema, METADATA_TABLE);
 
     execute(connection, dropTableStatement);
-  }
-
-  private void deleteMetadataSchema(Connection connection) throws SQLException {
-    String dropStatement;
-    if (rdbEngineType == RdbEngine.ORACLE) {
-      dropStatement = "DROP USER " + enclose(metadataSchema);
-    } else {
-      dropStatement = "DROP SCHEMA " + enclose(metadataSchema);
-    }
-
-    execute(connection, dropStatement);
   }
 
   @Override

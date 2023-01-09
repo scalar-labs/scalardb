@@ -93,6 +93,11 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
+  void deleteMetadataSchema(Connection connection, String metadataSchema) throws SQLException {
+    execute(connection, "DROP USER " + enclose(metadataSchema));
+  }
+
+  @Override
   public RdbEngine getRdbEngine() {
     return RdbEngine.ORACLE;
   }

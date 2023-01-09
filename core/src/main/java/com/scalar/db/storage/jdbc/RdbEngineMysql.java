@@ -62,6 +62,11 @@ class RdbEngineMysql extends RdbEngineStrategy {
   }
 
   @Override
+  void deleteMetadataSchema(Connection connection, String metadataSchema) throws SQLException {
+    execute(connection, "DROP SCHEMA " + enclose(metadataSchema));
+  }
+
+  @Override
   boolean isDuplicateUserError(SQLException e) {
     throw new UnsupportedOperationException();
   }
