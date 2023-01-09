@@ -225,18 +225,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   private String getBooleanType() {
-    switch (rdbEngineType) {
-      case MYSQL:
-      case POSTGRESQL:
-        return "BOOLEAN";
-      case SQL_SERVER:
-        return "BIT";
-      case ORACLE:
-        return "NUMBER(1)";
-      default:
-        throw new UnsupportedOperationException(
-            String.format("The rdb engine %s is not supported", rdbEngineType));
-    }
+    return rdbEngine.getDataTypeForEngine(DataType.BOOLEAN);
   }
 
   private void insertMetadataColumn(
