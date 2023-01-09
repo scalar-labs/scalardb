@@ -9,13 +9,16 @@ import java.sql.SQLException;
 public abstract class RdbEngineStrategy {
 
   abstract boolean isDuplicateUserError(SQLException e);
+
   abstract boolean isDuplicateSchemaError(SQLException e);
+
   abstract boolean isDuplicateTableError(SQLException e);
+
   abstract boolean isDuplicateKeyError(SQLException e);
+
   abstract boolean isUndefinedTableError(SQLException e);
   /** Serialization error or deadlock found. */
   public abstract boolean isConflictError(SQLException e);
-
 
   public static RdbEngineStrategy create(JdbcConfig config) {
     return create(config.getJdbcUrl());

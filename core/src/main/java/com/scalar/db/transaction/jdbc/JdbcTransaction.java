@@ -16,17 +16,14 @@ import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.storage.jdbc.RdbEngineStrategy.RdbEngineErrorType;
 import com.scalar.db.storage.jdbc.JdbcService;
-import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.NotThreadSafe;
-
-import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

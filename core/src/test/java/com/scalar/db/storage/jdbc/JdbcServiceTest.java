@@ -62,7 +62,9 @@ public class JdbcServiceTest {
   @Mock private InsertQuery.Builder insertQueryBuilder;
   @Mock private InsertQuery insertQuery;
 
-  @Mock(answer = Answers.RETURNS_DEEP_STUBS) private Connection connection;
+  @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+  private Connection connection;
+
   @Mock private PreparedStatement preparedStatement;
   @Mock private ResultSet resultSet;
   @Mock private SQLException sqlException;
@@ -83,7 +85,6 @@ public class JdbcServiceTest {
                 .addPartitionKey("p1")
                 .build());
     when(connection.getMetaData().getURL()).thenReturn("jdbc:mysql://localhost:3306/");
-
   }
 
   @Test

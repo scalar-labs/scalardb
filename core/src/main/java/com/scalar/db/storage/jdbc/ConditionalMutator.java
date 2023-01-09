@@ -44,7 +44,8 @@ public class ConditionalMutator implements MutationConditionVisitor {
       Mutation mutation,
       TableMetadata tableMetadata,
       Connection connection,
-      QueryBuilder queryBuilder) throws SQLException {
+      QueryBuilder queryBuilder)
+      throws SQLException {
     assert mutation.getCondition().isPresent();
     this.mutation = mutation;
     this.tableMetadata = tableMetadata;

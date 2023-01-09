@@ -4,8 +4,6 @@ import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
 
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
-import org.jooq.SQL;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
@@ -81,7 +79,8 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
 
   @Override
   public boolean isConflictError(SQLException e) {
-    // 1205: Transaction (Process ID %d) was deadlocked on %.*ls resources with another process and has been chosen as the deadlock victim. Rerun the transaction.
+    // 1205: Transaction (Process ID %d) was deadlocked on %.*ls resources with another process and
+    // has been chosen as the deadlock victim. Rerun the transaction.
     return e.getErrorCode() == 1205;
   }
 

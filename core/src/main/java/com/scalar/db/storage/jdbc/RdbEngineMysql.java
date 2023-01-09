@@ -6,7 +6,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 

@@ -17,7 +17,6 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
-import com.scalar.db.storage.jdbc.RdbEngineStrategy.RdbEngineErrorType;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import java.sql.Connection;
 import java.sql.SQLException;

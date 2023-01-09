@@ -56,9 +56,8 @@ public abstract class JdbcAdminTestBase {
   private JdbcAdmin createJdbcAdminFor(RdbEngine rdbEngine) {
     // Arrange
     RdbEngineStrategy st = RdbEngineStrategy.create(rdbEngine);
-    try(MockedStatic<RdbEngineStrategy> mocked = mockStatic(RdbEngineStrategy.class)) {
-      mocked.when(() -> RdbEngineStrategy.create(any(JdbcConfig.class)))
-          .thenReturn(st);
+    try (MockedStatic<RdbEngineStrategy> mocked = mockStatic(RdbEngineStrategy.class)) {
+      mocked.when(() -> RdbEngineStrategy.create(any(JdbcConfig.class))).thenReturn(st);
       return new JdbcAdmin(dataSource, config);
     }
   }

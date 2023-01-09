@@ -72,7 +72,8 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
   public DistributedTransaction begin(String txId) throws TransactionException {
     try {
       JdbcTransaction transaction =
-          new JdbcTransaction(txId, jdbcService, dataSource.getConnection(), rdbEngine.getRdbEngine());
+          new JdbcTransaction(
+              txId, jdbcService, dataSource.getConnection(), rdbEngine.getRdbEngine());
       getNamespace().ifPresent(transaction::withNamespace);
       getTable().ifPresent(transaction::withTable);
       return decorate(transaction);
