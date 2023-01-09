@@ -70,6 +70,8 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
     } else if (e.getSQLState().equals("40001") || e.getSQLState().equals("40P01")) {
       // Serialization error happened or Dead lock found
       return RdbEngineErrorType.CONFLICT;
+    } else if (e.getSQLState().equals("23505")) {
+      return RdbEngineErrorType.DUPLICATE_KEY;
     } else {
       return RdbEngineErrorType.UNKNOWN;
     }

@@ -16,6 +16,8 @@ public abstract class RdbEngineStrategy {
     UNDEFINED_OBJECT,
     /** Serialization error or deadlock found. */
     CONFLICT,
+    /** Duplicate key. */
+    DUPLICATE_KEY,
 
     /** Mainly used when an error from each RDB engine cannot be interpreted. */
     UNKNOWN,
@@ -25,6 +27,11 @@ public abstract class RdbEngineStrategy {
 
   public static RdbEngineStrategy create(JdbcConfig config) {
     return create(config.getJdbcUrl());
+  }
+
+  public static RdbEngineStrategy create(Connection connection) throws SQLException {
+    String jdbcUrl = connection.getMetaData().getURL();
+    return RdbEngineStrategy.create(jdbcUrl);
   }
 
   public static RdbEngineStrategy create(RdbEngine rdbEngine) {

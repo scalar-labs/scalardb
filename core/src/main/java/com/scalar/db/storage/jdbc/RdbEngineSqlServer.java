@@ -64,6 +64,8 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
       // Transaction was deadlocked on lock resources with another process and has been chosen
       // as the deadlock victim
       return RdbEngineErrorType.CONFLICT;
+    } else if (e.getSQLState().equals("23000")) {
+      return RdbEngineErrorType.DUPLICATE_KEY;
     } else {
       return RdbEngineErrorType.UNKNOWN;
     }

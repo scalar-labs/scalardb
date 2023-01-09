@@ -84,6 +84,8 @@ class RdbEngineOracle extends RdbEngineStrategy {
       // ORA-08177: can't serialize access for this transaction
       // ORA-00060: deadlock detected while waiting for resource
       return RdbEngineErrorType.CONFLICT;
+    } else if (e.getSQLState().equals("23000")) {
+      return RdbEngineErrorType.DUPLICATE_KEY;
     } else {
       return RdbEngineErrorType.UNKNOWN;
     }

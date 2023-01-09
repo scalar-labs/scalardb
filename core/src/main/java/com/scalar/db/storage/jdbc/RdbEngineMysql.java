@@ -61,6 +61,8 @@ class RdbEngineMysql extends RdbEngineStrategy {
     } else if (e.getErrorCode() == 1213 || e.getErrorCode() == 1205) {
       // Deadlock found when trying to get lock or Lock wait timeout exceeded
       return RdbEngineErrorType.CONFLICT;
+    } else if (e.getSQLState().equals("23000")) {
+      return RdbEngineErrorType.DUPLICATE_KEY;
     } else {
       return RdbEngineErrorType.UNKNOWN;
     }
