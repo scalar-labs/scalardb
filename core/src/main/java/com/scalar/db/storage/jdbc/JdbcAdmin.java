@@ -217,28 +217,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + enclose(METADATA_COL_COLUMN_NAME)
             + "))";
 
-    String createTableIfNotExistsStatement;
-    switch (rdbEngineType) {
-      case POSTGRESQL:
-      case MYSQL:
-        createTableIfNotExistsStatement =
-            createTableStatement.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS");
-        execute(connection, createTableIfNotExistsStatement);
-        break;
-      case SQL_SERVER:
-      case ORACLE:
-        try {
-          execute(connection, createTableStatement);
-        } catch (SQLException e) {
-          // Suppress the exception thrown when the table already exists
-          if (!rdbEngine.isDuplicateTableError(e)) {
-            throw e;
-          }
-        }
-        break;
-      default:
-        throw new UnsupportedOperationException("rdb engine not supported");
-    }
+    rdbEngine.createMetadataTableIfNotExistsExecute(connection, createTableStatement);
   }
 
   private String getTextType(int charLength) {

@@ -67,6 +67,18 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
+  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement) throws SQLException {
+    try {
+      execute(connection, createTableStatement);
+    } catch (SQLException e) {
+      // Suppress the exception thrown when the table already exists
+      if (!isDuplicateTableError(e)) {
+        throw e;
+      }
+    }
+  }
+
+  @Override
   void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema) throws SQLException {
     try {
       execute(

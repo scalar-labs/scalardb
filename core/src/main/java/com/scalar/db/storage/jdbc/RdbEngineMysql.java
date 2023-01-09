@@ -50,6 +50,13 @@ class RdbEngineMysql extends RdbEngineStrategy {
   }
 
   @Override
+  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement) throws SQLException {
+    String createTableIfNotExistsStatement =
+        createTableStatement.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS");
+    execute(connection, createTableIfNotExistsStatement);
+  }
+
+  @Override
   void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema) throws SQLException {
     execute(connection, "CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema));
   }
