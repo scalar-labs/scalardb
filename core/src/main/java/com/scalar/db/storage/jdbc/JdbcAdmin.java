@@ -916,7 +916,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   private String enclose(String name) {
-    return QueryUtils.enclose(name, rdbEngineType);
+    return rdbEngine.enclose(name);
   }
 
   private String encloseFullTableName(String schema, String table) {
