@@ -155,4 +155,9 @@ class RdbEngineOracle extends RdbEngineStrategy {
         return null;
     }
   }
+
+  @Override
+  String getTextType(int charLength) {
+    return String.format("VARCHAR2(%s)", charLength);
+  }
 }

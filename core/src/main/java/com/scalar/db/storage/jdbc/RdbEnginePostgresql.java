@@ -130,4 +130,9 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
         return null;
     }
   }
+
+  @Override
+  String getTextType(int charLength) {
+    return String.format("VARCHAR(%s)", charLength);
+  }
 }

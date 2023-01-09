@@ -132,4 +132,9 @@ class RdbEngineMysql extends RdbEngineStrategy {
         return null;
     }
   }
+
+  @Override
+  String getTextType(int charLength) {
+    return String.format("VARCHAR(%s)", charLength);
+  }
 }

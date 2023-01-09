@@ -221,10 +221,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   private String getTextType(int charLength) {
-    if (rdbEngineType == RdbEngine.ORACLE) {
-      return String.format("VARCHAR2(%s)", charLength);
-    }
-    return String.format("VARCHAR(%s)", charLength);
+    return rdbEngine.getTextType(charLength);
   }
 
   private String getBooleanType() {
