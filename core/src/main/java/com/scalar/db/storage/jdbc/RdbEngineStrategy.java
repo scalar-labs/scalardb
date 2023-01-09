@@ -1,8 +1,11 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
+import org.apache.commons.dbcp2.BasicDataSource;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -86,6 +89,8 @@ public abstract class RdbEngineStrategy {
   abstract void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema) throws SQLException;
 
   abstract void deleteMetadataSchema(Connection connection, String metadataSchema) throws SQLException;
+
+  abstract void dropNamespace(BasicDataSource dataSource, String namespace) throws ExecutionException;
 
   protected String enclose(String name) {
     return QueryUtils.enclose(name, getRdbEngine());

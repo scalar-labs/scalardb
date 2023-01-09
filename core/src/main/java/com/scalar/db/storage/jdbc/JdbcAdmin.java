@@ -351,22 +351,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
-    String dropStatement;
-    if (rdbEngineType == RdbEngine.ORACLE) {
-      dropStatement = "DROP USER " + enclose(namespace);
-    } else {
-      dropStatement = "DROP SCHEMA " + enclose(namespace);
-    }
-
-    try (Connection connection = dataSource.getConnection()) {
-      execute(connection, dropStatement);
-    } catch (SQLException e) {
-      throw new ExecutionException(
-          String.format(
-              "error dropping the %s %s",
-              rdbEngineType == RdbEngine.ORACLE ? "user" : "schema", namespace),
-          e);
-    }
+    rdbEngine.dropNamespace(dataSource, namespace);
   }
 
   @Override

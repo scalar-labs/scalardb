@@ -4,8 +4,11 @@ import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.commons.dbcp2.BasicDataSource;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
@@ -95,6 +98,17 @@ class RdbEngineOracle extends RdbEngineStrategy {
   @Override
   void deleteMetadataSchema(Connection connection, String metadataSchema) throws SQLException {
     execute(connection, "DROP USER " + enclose(metadataSchema));
+  }
+
+  @Override
+  void dropNamespace(BasicDataSource dataSource, String namespace) throws ExecutionException {
+    try (Connection connection = dataSource.getConnection()) {
+      execute(connection, "DROP USER " + enclose(namespace));
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          String.format("error dropping the user %s", namespace),
+          e);
+    }
   }
 
   @Override
