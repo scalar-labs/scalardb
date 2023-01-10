@@ -29,7 +29,7 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
   private static final Logger logger =
       LoggerFactory.getLogger(ActiveTransactionManagedDistributedTransactionManager.class);
 
-  private final ActiveExpiringMap<String, DistributedTransaction> activeTransactions;
+  private final ActiveExpiringMap<String, ActiveTransaction> activeTransactions;
 
   public ActiveTransactionManagedDistributedTransactionManager(DatabaseConfig config) {
     activeTransactions =
@@ -40,13 +40,13 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
               logger.warn("the transaction is expired. transactionId: {}", t.getId());
               try {
                 t.rollback();
-              } catch (RollbackException e) {
+              } catch (Exception e) {
                 logger.warn("rollback failed", e);
               }
             });
   }
 
-  private void add(DistributedTransaction transaction) throws TransactionException {
+  private void add(ActiveTransaction transaction) throws TransactionException {
     if (activeTransactions.putIfAbsent(transaction.getId(), transaction) != null) {
       transaction.rollback();
       throw new TransactionException(
@@ -93,48 +93,48 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
     }
 
     @Override
-    public Optional<Result> get(Get get) throws CrudException {
+    public synchronized Optional<Result> get(Get get) throws CrudException {
       return transaction.get(get);
     }
 
     @Override
-    public List<Result> scan(Scan scan) throws CrudException {
+    public synchronized List<Result> scan(Scan scan) throws CrudException {
       return transaction.scan(scan);
     }
 
     @Override
-    public void put(Put put) throws CrudException {
+    public synchronized void put(Put put) throws CrudException {
       transaction.put(put);
     }
 
     @Override
-    public void put(List<Put> puts) throws CrudException {
+    public synchronized void put(List<Put> puts) throws CrudException {
       transaction.put(puts);
     }
 
     @Override
-    public void delete(Delete delete) throws CrudException {
+    public synchronized void delete(Delete delete) throws CrudException {
       transaction.delete(delete);
     }
 
     @Override
-    public void delete(List<Delete> deletes) throws CrudException {
+    public synchronized void delete(List<Delete> deletes) throws CrudException {
       transaction.delete(deletes);
     }
 
     @Override
-    public void mutate(List<? extends Mutation> mutations) throws CrudException {
+    public synchronized void mutate(List<? extends Mutation> mutations) throws CrudException {
       transaction.mutate(mutations);
     }
 
     @Override
-    public void commit() throws CommitException, UnknownTransactionStatusException {
+    public synchronized void commit() throws CommitException, UnknownTransactionStatusException {
       transaction.commit();
       remove(getId());
     }
 
     @Override
-    public void rollback() throws RollbackException {
+    public synchronized void rollback() throws RollbackException {
       try {
         transaction.rollback();
       } finally {
