@@ -182,6 +182,18 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
+  protected String getDataTypeForKey(DataType dataType) {
+    switch (dataType) {
+      case TEXT:
+        return "VARCHAR2(64)";
+      case BLOB:
+        return "RAW(64)";
+      default:
+        return null;
+    }
+  }
+
+  @Override
   String getTextType(int charLength) {
     return String.format("VARCHAR2(%s)", charLength);
   }

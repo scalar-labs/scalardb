@@ -161,6 +161,16 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
   }
 
   @Override
+  protected String getDataTypeForKey(DataType dataType) {
+    switch (dataType) {
+      case TEXT:
+        return "VARCHAR(10485760)";
+      default:
+        return null;
+    }
+  }
+
+  @Override
   String getTextType(int charLength) {
     return String.format("VARCHAR(%s)", charLength);
   }

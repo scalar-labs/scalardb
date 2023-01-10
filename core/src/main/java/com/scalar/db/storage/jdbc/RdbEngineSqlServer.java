@@ -167,6 +167,12 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
+  protected String getDataTypeForKey(DataType dataType) {
+    // PostgreSQL does not require any change in column data types when making indices.
+    return null;
+  }
+
+  @Override
   String getTextType(int charLength) {
     return String.format("VARCHAR(%s)", charLength);
   }

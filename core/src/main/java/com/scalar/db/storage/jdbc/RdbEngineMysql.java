@@ -163,6 +163,18 @@ class RdbEngineMysql extends RdbEngineStrategy {
   }
 
   @Override
+  protected String getDataTypeForKey(DataType dataType) {
+    switch (dataType) {
+      case TEXT:
+        return "VARCHAR(64)";
+      case BLOB:
+        return "VARBINARY(64)";
+      default:
+        return null;
+    }
+  }
+
+  @Override
   String getTextType(int charLength) {
     return String.format("VARCHAR(%s)", charLength);
   }

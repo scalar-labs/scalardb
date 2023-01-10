@@ -66,6 +66,8 @@ public abstract class RdbEngineStrategy {
 
   protected abstract String getDataTypeForEngine(DataType dataType);
 
+  protected abstract String getDataTypeForKey(DataType dataType);
+
   abstract String getTextType(int charLength);
 
   abstract String computeBooleanValue(boolean value);

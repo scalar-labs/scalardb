@@ -21,11 +21,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -47,28 +43,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String METADATA_COL_INDEXED = "indexed";
   @VisibleForTesting static final String METADATA_COL_ORDINAL_POSITION = "ordinal_position";
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
-  private static final ImmutableMap<RdbEngine, ImmutableMap<DataType, String>>
-      DATA_TYPE_MAPPING_FOR_KEY =
-          ImmutableMap.<RdbEngine, ImmutableMap<DataType, String>>builder()
-              .put(
-                  RdbEngine.MYSQL,
-                  ImmutableMap.<DataType, String>builder()
-                      .put(DataType.TEXT, "VARCHAR(64)")
-                      .put(DataType.BLOB, "VARBINARY(64)")
-                      .build())
-              .put(
-                  RdbEngine.POSTGRESQL,
-                  ImmutableMap.<DataType, String>builder()
-                      .put(DataType.TEXT, "VARCHAR(10485760)")
-                      .build())
-              .put(
-                  RdbEngine.ORACLE,
-                  ImmutableMap.<DataType, String>builder()
-                      .put(DataType.TEXT, "VARCHAR2(64)")
-                      .put(DataType.BLOB, "RAW(64)")
-                      .build())
-              .put(RdbEngine.SQL_SERVER, ImmutableMap.<DataType, String>builder().build())
-              .build();
   private static final String INDEX_NAME_PREFIX = "index";
 
   private final RdbEngineStrategy rdbEngine;
@@ -512,11 +486,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
     String dataType = rdbEngine.getDataTypeForEngine(scalarDbColumnType);
     if (keysAndIndexes.contains(columnName)) {
-      ImmutableMap<DataType, String> typeNameMapForKey =
-          DATA_TYPE_MAPPING_FOR_KEY.get(rdbEngineType);
-      assert typeNameMapForKey != null;
-
-      return typeNameMapForKey.getOrDefault(scalarDbColumnType, dataType);
+      String indexDataType = rdbEngine.getDataTypeForKey(scalarDbColumnType);
+      return Optional.ofNullable(indexDataType).orElse(dataType);
     } else {
       return dataType;
     }
@@ -545,11 +516,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       Connection connection, String namespace, String table, String columnName)
       throws ExecutionException, SQLException {
     DataType indexType = getTableMetadata(namespace, table).getColumnDataType(columnName);
-    ImmutableMap<DataType, String> typeMappingForIndexes =
-        DATA_TYPE_MAPPING_FOR_KEY.get(rdbEngineType);
-    assert typeMappingForIndexes != null;
-
-    String indexedColumnType = typeMappingForIndexes.get(indexType);
+    String indexedColumnType = rdbEngine.getDataTypeForKey(indexType);
     if (indexedColumnType == null) {
       // The column type does not need to be altered to be compatible with being secondary index
       return;
@@ -564,11 +531,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       Connection connection, String namespace, String table, String columnName)
       throws ExecutionException, SQLException {
     DataType indexType = getTableMetadata(namespace, table).getColumnDataType(columnName);
-    ImmutableMap<DataType, String> typeMappingForIndexes =
-        DATA_TYPE_MAPPING_FOR_KEY.get(rdbEngineType);
-    assert typeMappingForIndexes != null;
-
-    if (typeMappingForIndexes.get(indexType) == null) {
+    if (rdbEngine.getDataTypeForKey(indexType) == null) {
       // The column type is already the type for a regular column. It was not altered to be
       // compatible with being a secondary index, so no alteration is necessary.
       return;
