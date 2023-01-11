@@ -3,7 +3,6 @@ package com.scalar.db.storage.jdbc;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -515,70 +514,29 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void alterToIndexColumnTypeIfNecessary(
       Connection connection, String namespace, String table, String columnName)
       throws ExecutionException, SQLException {
-    DataType columnType = getTableMetadata(namespace, table).getColumnDataType(columnName);
-    String columnTypeForKey = rdbEngine.getDataTypeForKey(columnType);
+    DataType indexType = getTableMetadata(namespace, table).getColumnDataType(columnName);
+    String columnTypeForKey = rdbEngine.getDataTypeForKey(indexType);
     if (columnTypeForKey == null) {
       // The column type does not need to be altered to be compatible with being secondary index
       return;
     }
 
-    rdbEngine.alterToIndexColumnTypeIfNecessary(connection, namespace, table, columnName, columnTypeForKey);
+    rdbEngine.alterColumnType(connection, namespace, table, columnName, columnTypeForKey);
   }
 
   private void alterToRegularColumnTypeIfNecessary(
       Connection connection, String namespace, String table, String columnName)
       throws ExecutionException, SQLException {
     DataType indexType = getTableMetadata(namespace, table).getColumnDataType(columnName);
-    if (rdbEngine.getDataTypeForKey(indexType) == null) {
+    String columnTypeForKey = rdbEngine.getDataTypeForKey(indexType);
+    if (columnTypeForKey == null) {
       // The column type is already the type for a regular column. It was not altered to be
       // compatible with being a secondary index, so no alteration is necessary.
       return;
     }
 
-    String regularColumnType = rdbEngine.getDataTypeForEngine(indexType);
-
-    String alterColumnStatement =
-        getAlterColumnTypeStatement(namespace, table, columnName, regularColumnType);
-
-    execute(connection, alterColumnStatement);
-  }
-
-  private String getAlterColumnTypeStatement(
-      String namespace, String table, String columnName, String newType) {
-    String alterColumnStatement;
-    switch (rdbEngineType) {
-      case MYSQL:
-        alterColumnStatement =
-            "ALTER TABLE "
-                + encloseFullTableName(namespace, table)
-                + " MODIFY"
-                + enclose(columnName)
-                + " "
-                + newType;
-        break;
-      case POSTGRESQL:
-        alterColumnStatement =
-            "ALTER TABLE "
-                + encloseFullTableName(namespace, table)
-                + " ALTER COLUMN"
-                + enclose(columnName)
-                + " TYPE "
-                + newType;
-        break;
-      case ORACLE:
-        alterColumnStatement =
-            "ALTER TABLE "
-                + encloseFullTableName(namespace, table)
-                + " MODIFY ( "
-                + enclose(columnName)
-                + " "
-                + newType
-                + " )";
-        break;
-      default:
-        throw new AssertionError();
-    }
-    return alterColumnStatement;
+    String columnType = rdbEngine.getDataTypeForEngine(indexType);
+    rdbEngine.alterColumnType(connection, namespace, table, columnName, columnType);
   }
 
   @Override

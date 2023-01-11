@@ -96,7 +96,7 @@ public abstract class RdbEngineStrategy {
 
   abstract String namespaceExistsStatement();
 
-  abstract void alterToIndexColumnTypeIfNecessary(Connection connection, String namespace, String table, String columnName, String columnTypeForKey) throws SQLException;
+  abstract void alterColumnType(Connection connection, String namespace, String table, String columnName, String columnType) throws SQLException;
 
   protected String enclose(String name) {
     return QueryUtils.enclose(name, getRdbEngine());

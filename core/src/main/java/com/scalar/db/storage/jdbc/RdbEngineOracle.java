@@ -118,14 +118,14 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  void alterToIndexColumnTypeIfNecessary(Connection connection, String namespace, String table, String columnName, String columnTypeForKey) throws SQLException {
+  void alterColumnType(Connection connection, String namespace, String table, String columnName, String columnType) throws SQLException {
     String alterColumnStatement =
         "ALTER TABLE "
             + encloseFullTableName(namespace, table)
             + " MODIFY ( "
             + enclose(columnName)
             + " "
-            + columnTypeForKey
+            + columnType
             + " )";
     execute(connection, alterColumnStatement);
   }
