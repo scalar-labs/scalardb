@@ -22,45 +22,6 @@ public abstract class RdbEngineStrategy {
   /** Serialization error or deadlock found. */
   public abstract boolean isConflictError(SQLException e);
 
-  public static RdbEngineStrategy create(JdbcConfig config) {
-    return create(config.getJdbcUrl());
-  }
-
-  public static RdbEngineStrategy create(Connection connection) throws SQLException {
-    String jdbcUrl = connection.getMetaData().getURL();
-    return RdbEngineStrategy.create(jdbcUrl);
-  }
-
-  public static RdbEngineStrategy create(RdbEngine rdbEngine) {
-    switch (rdbEngine) {
-      case MYSQL:
-        return new RdbEngineMysql();
-      case POSTGRESQL:
-        return new RdbEnginePostgresql();
-      case ORACLE:
-        return new RdbEngineOracle();
-      case SQL_SERVER:
-        return new RdbEngineSqlServer();
-      default:
-        assert false;
-        return null;
-    }
-  }
-
-  static RdbEngineStrategy create(String jdbcUrl) {
-    if (jdbcUrl.startsWith("jdbc:mysql:")) {
-      return new RdbEngineMysql();
-    } else if (jdbcUrl.startsWith("jdbc:postgresql:")) {
-      return new RdbEnginePostgresql();
-    } else if (jdbcUrl.startsWith("jdbc:oracle:")) {
-      return new RdbEngineOracle();
-    } else if (jdbcUrl.startsWith("jdbc:sqlserver:")) {
-      return new RdbEngineSqlServer();
-    } else {
-      throw new IllegalArgumentException("the rdb engine is not supported: " + jdbcUrl);
-    }
-  }
-
   public abstract RdbEngine getRdbEngine();
 
   protected abstract String getDataTypeForEngine(DataType dataType);

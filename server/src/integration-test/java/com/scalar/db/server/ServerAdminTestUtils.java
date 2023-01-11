@@ -26,7 +26,7 @@ public class ServerAdminTestUtils extends AdminTestUtils {
     config = new JdbcConfig(new DatabaseConfig(jdbcStorageProperties));
     metadataNamespace = config.getTableMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
     metadataTable = JdbcAdmin.METADATA_TABLE;
-    rdbEngine = RdbEngineStrategy.create(config).getRdbEngine();
+    rdbEngine = RdbEngineFactory.create(config).getRdbEngine();
   }
 
   @Override

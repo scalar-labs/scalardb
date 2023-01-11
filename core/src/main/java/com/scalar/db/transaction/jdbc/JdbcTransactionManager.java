@@ -35,7 +35,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
     JdbcConfig config = new JdbcConfig(databaseConfig);
 
     dataSource = JdbcUtils.initDataSource(config, true);
-    rdbEngine = RdbEngineStrategy.create(config);
+    rdbEngine = RdbEngineFactory.create(config);
 
     tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config);
     TableMetadataManager tableMetadataManager =
@@ -58,7 +58,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
     super(databaseConfig);
     this.dataSource = dataSource;
     this.tableMetadataDataSource = tableMetadataDataSource;
-    this.rdbEngine = RdbEngineStrategy.create(rdbEngine);
+    this.rdbEngine = RdbEngineFactory.create(rdbEngine);
     this.jdbcService = jdbcService;
   }
 

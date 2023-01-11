@@ -51,7 +51,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
     this.tableMetadata = tableMetadata;
     this.connection = connection;
     this.queryBuilder = queryBuilder;
-    rdbEngine = RdbEngineStrategy.create(connection);
+    rdbEngine = RdbEngineFactory.create(connection);
   }
 
   public boolean mutate() throws SQLException {
