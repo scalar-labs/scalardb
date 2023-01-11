@@ -117,6 +117,12 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
   }
 
   @Override
+  void dropIndexExecute(Connection connection, String schema, String table, String indexName) throws SQLException {
+    String dropIndexStatement = "DROP INDEX " + enclose(schema) + "." + enclose(indexName);
+    execute(connection, dropIndexStatement);
+  }
+
+  @Override
   boolean isDuplicateUserError(SQLException e) {
     throw new UnsupportedOperationException();
   }

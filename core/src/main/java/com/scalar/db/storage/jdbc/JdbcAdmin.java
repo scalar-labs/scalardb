@@ -642,25 +642,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void dropIndex(Connection connection, String schema, String table, String indexedColumn)
       throws SQLException {
     String indexName = getIndexName(schema, table, indexedColumn);
-
-    String dropIndexStatement;
-    switch (rdbEngineType) {
-      case MYSQL:
-      case SQL_SERVER:
-        dropIndexStatement =
-            "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
-        break;
-      case POSTGRESQL:
-        dropIndexStatement = "DROP INDEX " + enclose(schema) + "." + enclose(indexName);
-        break;
-      case ORACLE:
-        dropIndexStatement = "DROP INDEX " + enclose(indexName);
-        break;
-      default:
-        throw new AssertionError();
-    }
-
-    execute(connection, dropIndexStatement);
+    rdbEngine.dropIndexExecute(connection, schema, table, indexName);
   }
 
   private String getIndexName(String schema, String table, String indexedColumn) {

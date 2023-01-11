@@ -100,6 +100,9 @@ public abstract class RdbEngineStrategy {
 
   abstract void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName) throws SQLException;
 
+  abstract void dropIndexExecute(Connection connection, String schema, String table, String indexName)
+      throws SQLException;
+
   protected String enclose(String name) {
     return QueryUtils.enclose(name, getRdbEngine());
   }

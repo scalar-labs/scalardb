@@ -109,6 +109,13 @@ class RdbEngineMysql extends RdbEngineStrategy {
   }
 
   @Override
+  void dropIndexExecute(Connection connection, String schema, String table, String indexName) throws SQLException {
+    String dropIndexStatement =
+        "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
+    execute(connection, dropIndexStatement);
+  }
+
+  @Override
   boolean isDuplicateUserError(SQLException e) {
     throw new UnsupportedOperationException();
   }
