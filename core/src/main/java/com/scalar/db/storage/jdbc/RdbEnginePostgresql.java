@@ -99,6 +99,18 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
   }
 
   @Override
+  void alterToIndexColumnTypeIfNecessary(Connection connection, String namespace, String table, String columnName, String columnTypeForKey) throws SQLException {
+    String alterColumnStatement =
+        "ALTER TABLE "
+            + encloseFullTableName(namespace, table)
+            + " ALTER COLUMN"
+            + enclose(columnName)
+            + " TYPE "
+            + columnTypeForKey;
+    execute(connection, alterColumnStatement);
+  }
+
+  @Override
   boolean isDuplicateUserError(SQLException e) {
     throw new UnsupportedOperationException();
   }

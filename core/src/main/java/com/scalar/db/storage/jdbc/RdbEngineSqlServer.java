@@ -103,6 +103,12 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
+  void alterToIndexColumnTypeIfNecessary(Connection connection, String namespace, String table, String columnName, String columnTypeForKey) throws SQLException {
+    // SQLServer does not require changes in column data types when making indices.
+    throw new AssertionError();
+  }
+
+  @Override
   boolean isDuplicateUserError(SQLException e) {
     throw new UnsupportedOperationException();
   }

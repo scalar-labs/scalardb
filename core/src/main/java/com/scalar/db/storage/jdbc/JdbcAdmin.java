@@ -515,16 +515,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void alterToIndexColumnTypeIfNecessary(
       Connection connection, String namespace, String table, String columnName)
       throws ExecutionException, SQLException {
-    DataType indexType = getTableMetadata(namespace, table).getColumnDataType(columnName);
-    String indexedColumnType = rdbEngine.getDataTypeForKey(indexType);
-    if (indexedColumnType == null) {
+    DataType columnType = getTableMetadata(namespace, table).getColumnDataType(columnName);
+    String columnTypeForKey = rdbEngine.getDataTypeForKey(columnType);
+    if (columnTypeForKey == null) {
       // The column type does not need to be altered to be compatible with being secondary index
       return;
     }
-    String alterColumnStatement =
-        getAlterColumnTypeStatement(namespace, table, columnName, indexedColumnType);
 
-    execute(connection, alterColumnStatement);
+    rdbEngine.alterToIndexColumnTypeIfNecessary(connection, namespace, table, columnName, columnTypeForKey);
   }
 
   private void alterToRegularColumnTypeIfNecessary(
