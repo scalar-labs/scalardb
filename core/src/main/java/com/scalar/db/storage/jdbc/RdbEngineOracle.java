@@ -142,6 +142,16 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
+  public String enclose(String name) {
+    return "\"" + name + "\"";
+  }
+
+  @Override
+  public String encloseFullTableName(String schema, String table) {
+    return enclose(schema) + "." + enclose(table);
+  }
+
+  @Override
   public RdbEngine getRdbEngine() {
     return RdbEngine.ORACLE;
   }

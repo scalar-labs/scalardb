@@ -3,7 +3,6 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.jdbc.query.QueryUtils;
 import java.sql.Connection;
 import java.sql.SQLException;
 import org.apache.commons.dbcp2.BasicDataSource;
@@ -70,11 +69,13 @@ public abstract class RdbEngineStrategy {
   abstract void dropIndexExecute(
       Connection connection, String schema, String table, String indexName) throws SQLException;
 
-  protected String enclose(String name) {
-    return QueryUtils.enclose(name, getRdbEngine());
-  }
+  /**
+   * Enclose the target (schema, table or column) to use reserved words and special characters.
+   *
+   * @param name The target name to enclose
+   * @return An enclosed string of the target name
+   */
+  public abstract String enclose(String name);
 
-  protected String encloseFullTableName(String schema, String table) {
-    return enclose(schema) + "." + enclose(table);
-  }
+  public abstract String encloseFullTableName(String schema, String table);
 }

@@ -1,11 +1,9 @@
 package com.scalar.db.storage.multistorage;
 
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.jdbc.*;
-import com.scalar.db.storage.jdbc.query.QueryUtils;
 import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
@@ -18,7 +16,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
 
   private final JdbcConfig jdbcConfig;
   private final String jdbcMetadataSchema;
-  private final RdbEngine rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
 
   public MultiStorageAdminTestUtils(Properties cassandraProperties, Properties jdbcProperties) {
     // Cassandra has the coordinator tables
@@ -26,7 +24,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
 
     jdbcConfig = new JdbcConfig(new DatabaseConfig(jdbcProperties));
     jdbcMetadataSchema = jdbcConfig.getTableMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
-    rdbEngine = RdbEngineFactory.create(jdbcConfig).getRdbEngine();
+    rdbEngine = RdbEngineFactory.create(jdbcConfig);
   }
 
   @Override
@@ -36,13 +34,13 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     // for JDBC
     execute(
         "DROP TABLE "
-            + enclosedFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE, rdbEngine));
+            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE));
 
     String dropNamespaceStatement;
-    if (rdbEngine == RdbEngine.ORACLE) {
-      dropNamespaceStatement = "DROP USER " + QueryUtils.enclose(jdbcMetadataSchema, rdbEngine);
+    if (rdbEngine.getRdbEngine() == RdbEngine.ORACLE) {
+      dropNamespaceStatement = "DROP USER " + rdbEngine.enclose(jdbcMetadataSchema);
     } else {
-      dropNamespaceStatement = "DROP SCHEMA " + QueryUtils.enclose(jdbcMetadataSchema, rdbEngine);
+      dropNamespaceStatement = "DROP SCHEMA " + rdbEngine.enclose(jdbcMetadataSchema);
     }
     execute(dropNamespaceStatement);
   }
@@ -54,7 +52,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     // for JDBC
     String truncateTableStatement =
         "TRUNCATE TABLE "
-            + enclosedFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE, rdbEngine);
+            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE);
     execute(truncateTableStatement);
   }
 
@@ -66,7 +64,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     // for JDBC
     String insertCorruptedMetadataStatement =
         "INSERT INTO "
-            + enclosedFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE, rdbEngine)
+            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE)
             + " VALUES ('"
             + getFullTableName(namespace, table)
             + "','corrupted','corrupted','corrupted','corrupted','0','0')";

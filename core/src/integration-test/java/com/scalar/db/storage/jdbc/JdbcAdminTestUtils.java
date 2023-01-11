@@ -1,10 +1,8 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.jdbc.query.QueryUtils;
 import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
@@ -17,25 +15,25 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
 
   private final JdbcConfig config;
   private final String metadataSchema;
-  private final RdbEngine rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
 
   public JdbcAdminTestUtils(Properties properties) {
     super(properties);
     config = new JdbcConfig(new DatabaseConfig(properties));
     metadataSchema = config.getTableMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
-    rdbEngine = RdbEngineFactory.create(config).getRdbEngine();
+    rdbEngine = RdbEngineFactory.create(config);
   }
 
   @Override
   public void dropMetadataTable() throws SQLException {
     execute(
-        "DROP TABLE " + enclosedFullTableName(metadataSchema, JdbcAdmin.METADATA_TABLE, rdbEngine));
+        "DROP TABLE " + rdbEngine.encloseFullTableName(metadataSchema, JdbcAdmin.METADATA_TABLE));
 
     String dropNamespaceStatement;
-    if (rdbEngine == RdbEngine.ORACLE) {
-      dropNamespaceStatement = "DROP USER " + QueryUtils.enclose(metadataSchema, rdbEngine);
+    if (rdbEngine.getRdbEngine() == RdbEngine.ORACLE) {
+      dropNamespaceStatement = "DROP USER " + rdbEngine.enclose(metadataSchema);
     } else {
-      dropNamespaceStatement = "DROP SCHEMA " + QueryUtils.enclose(metadataSchema, rdbEngine);
+      dropNamespaceStatement = "DROP SCHEMA " + rdbEngine.enclose(metadataSchema);
     }
     execute(dropNamespaceStatement);
   }
@@ -44,7 +42,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   public void truncateMetadataTable() throws Exception {
     String truncateTableStatement =
         "TRUNCATE TABLE "
-            + enclosedFullTableName(metadataSchema, JdbcAdmin.METADATA_TABLE, rdbEngine);
+            + rdbEngine.encloseFullTableName(metadataSchema, JdbcAdmin.METADATA_TABLE);
     execute(truncateTableStatement);
   }
 
@@ -53,7 +51,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   public void corruptMetadata(String namespace, String table) throws Exception {
     String insertCorruptedMetadataStatement =
         "INSERT INTO "
-            + enclosedFullTableName(metadataSchema, JdbcAdmin.METADATA_TABLE, rdbEngine)
+            + rdbEngine.encloseFullTableName(metadataSchema, JdbcAdmin.METADATA_TABLE)
             + " VALUES ('"
             + getFullTableName(namespace, table)
             + "','corrupted','corrupted','corrupted','corrupted','0','0')";
