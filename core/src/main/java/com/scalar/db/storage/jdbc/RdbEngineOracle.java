@@ -7,12 +7,11 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.apache.commons.dbcp2.BasicDataSource;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEngineOracle extends RdbEngineStrategy {
 
@@ -46,9 +45,7 @@ class RdbEngineOracle extends RdbEngineStrategy {
     // Set INITRANS to 3 and MAXTRANS to 255 for the table to improve the
     // performance
     String alterTableStatement =
-        "ALTER TABLE "
-            + encloseFullTableName(schema, table)
-            + " INITRANS 3 MAXTRANS 255";
+        "ALTER TABLE " + encloseFullTableName(schema, table) + " INITRANS 3 MAXTRANS 255";
     execute(connection, alterTableStatement);
 
     if (hasDescClusteringOrder) {
@@ -70,7 +67,8 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement) throws SQLException {
+  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement)
+      throws SQLException {
     try {
       execute(connection, createTableStatement);
     } catch (SQLException e) {
@@ -82,10 +80,10 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema) throws SQLException {
+  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
+      throws SQLException {
     try {
-      execute(
-          connection, "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"");
+      execute(connection, "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"");
     } catch (SQLException e) {
       // Suppress the exception thrown when the user already exists
       if (!isDuplicateUserError(e)) {
@@ -105,20 +103,19 @@ class RdbEngineOracle extends RdbEngineStrategy {
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, "DROP USER " + enclose(namespace));
     } catch (SQLException e) {
-      throw new ExecutionException(
-          String.format("error dropping the user %s", namespace),
-          e);
+      throw new ExecutionException(String.format("error dropping the user %s", namespace), e);
     }
   }
 
   @Override
   String namespaceExistsStatement() {
-    return
-        "SELECT 1 FROM " + enclose("ALL_USERS") + " WHERE " + enclose("USERNAME") + " = ?";
+    return "SELECT 1 FROM " + enclose("ALL_USERS") + " WHERE " + enclose("USERNAME") + " = ?";
   }
 
   @Override
-  void alterColumnType(Connection connection, String namespace, String table, String columnName, String columnType) throws SQLException {
+  void alterColumnType(
+      Connection connection, String namespace, String table, String columnName, String columnType)
+      throws SQLException {
     String alterColumnStatement =
         "ALTER TABLE "
             + encloseFullTableName(namespace, table)
@@ -131,13 +128,15 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName) throws SQLException {
+  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
+      throws SQLException {
     String tableExistsStatement = "SELECT 1 FROM " + fullTableName + " FETCH FIRST 1 ROWS ONLY";
     execute(connection, tableExistsStatement);
   }
 
   @Override
-  void dropIndexExecute(Connection connection, String schema, String table, String indexName) throws SQLException {
+  void dropIndexExecute(Connection connection, String schema, String table, String indexName)
+      throws SQLException {
     String dropIndexStatement = "DROP INDEX " + enclose(indexName);
     execute(connection, dropIndexStatement);
   }

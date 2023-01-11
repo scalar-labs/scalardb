@@ -7,12 +7,11 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.apache.commons.dbcp2.BasicDataSource;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEnginePostgresql extends RdbEngineStrategy {
 
@@ -61,14 +60,16 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
   }
 
   @Override
-  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement) throws SQLException {
+  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement)
+      throws SQLException {
     String createTableIfNotExistsStatement =
         createTableStatement.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS");
     execute(connection, createTableIfNotExistsStatement);
   }
 
   @Override
-  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema) throws SQLException {
+  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
+      throws SQLException {
     execute(connection, "CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema));
   }
 
@@ -82,24 +83,23 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, "DROP SCHEMA " + enclose(namespace));
     } catch (SQLException e) {
-      throw new ExecutionException(
-          String.format("error dropping the schema %s", namespace),
-          e);
+      throw new ExecutionException(String.format("error dropping the schema %s", namespace), e);
     }
   }
 
   @Override
   String namespaceExistsStatement() {
-    return
-        "SELECT 1 FROM "
-            + encloseFullTableName("information_schema", "schemata")
-            + " WHERE "
-            + enclose("schema_name")
-            + " = ?";
+    return "SELECT 1 FROM "
+        + encloseFullTableName("information_schema", "schemata")
+        + " WHERE "
+        + enclose("schema_name")
+        + " = ?";
   }
 
   @Override
-  void alterColumnType(Connection connection, String namespace, String table, String columnName, String columnType) throws SQLException {
+  void alterColumnType(
+      Connection connection, String namespace, String table, String columnName, String columnType)
+      throws SQLException {
     String alterColumnStatement =
         "ALTER TABLE "
             + encloseFullTableName(namespace, table)
@@ -111,13 +111,15 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
   }
 
   @Override
-  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName) throws SQLException {
+  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
+      throws SQLException {
     String tableExistsStatement = "SELECT 1 FROM " + fullTableName + " LIMIT 1";
     execute(connection, tableExistsStatement);
   }
 
   @Override
-  void dropIndexExecute(Connection connection, String schema, String table, String indexName) throws SQLException {
+  void dropIndexExecute(Connection connection, String schema, String table, String indexName)
+      throws SQLException {
     String dropIndexStatement = "DROP INDEX " + enclose(schema) + "." + enclose(indexName);
     execute(connection, dropIndexStatement);
   }

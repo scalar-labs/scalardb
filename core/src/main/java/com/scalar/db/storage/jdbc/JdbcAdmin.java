@@ -91,8 +91,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void createTableInternal(
       Connection connection, String schema, String table, TableMetadata metadata)
       throws SQLException {
-    String createTableStatement =
-        "CREATE TABLE " + encloseFullTableName(schema, table) + "(";
+    String createTableStatement = "CREATE TABLE " + encloseFullTableName(schema, table) + "(";
     // Order the columns for their creation by (partition keys >> clustering keys >> other columns)
     LinkedHashSet<String> sortedColumnNames =
         Sets.newLinkedHashSet(

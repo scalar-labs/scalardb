@@ -5,12 +5,11 @@ import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import org.apache.commons.dbcp2.BasicDataSource;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEngineSqlServer extends RdbEngineStrategy {
 
@@ -53,7 +52,8 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
-  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement) throws SQLException {
+  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement)
+      throws SQLException {
     try {
       execute(connection, createTableStatement);
     } catch (SQLException e) {
@@ -65,7 +65,8 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
-  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema) throws SQLException {
+  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
+      throws SQLException {
     try {
       execute(connection, "CREATE SCHEMA " + enclose(metadataSchema));
     } catch (SQLException e) {
@@ -86,36 +87,37 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, "DROP SCHEMA " + enclose(namespace));
     } catch (SQLException e) {
-      throw new ExecutionException(
-          String.format("error dropping the schema %s", namespace),
-          e);
+      throw new ExecutionException(String.format("error dropping the schema %s", namespace), e);
     }
   }
 
   @Override
   String namespaceExistsStatement() {
-    return
-        "SELECT 1 FROM "
-            + encloseFullTableName("sys", "schemas")
-            + " WHERE "
-            + enclose("name")
-            + " = ?";
+    return "SELECT 1 FROM "
+        + encloseFullTableName("sys", "schemas")
+        + " WHERE "
+        + enclose("name")
+        + " = ?";
   }
 
   @Override
-  void alterColumnType(Connection connection, String namespace, String table, String columnName, String columnType) throws SQLException {
+  void alterColumnType(
+      Connection connection, String namespace, String table, String columnName, String columnType)
+      throws SQLException {
     // SQLServer does not require changes in column data types when making indices.
     throw new AssertionError();
   }
 
   @Override
-  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName) throws SQLException {
+  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
+      throws SQLException {
     String tableExistsStatement = "SELECT TOP 1 1 FROM " + fullTableName;
     execute(connection, tableExistsStatement);
   }
 
   @Override
-  void dropIndexExecute(Connection connection, String schema, String table, String indexName) throws SQLException {
+  void dropIndexExecute(Connection connection, String schema, String table, String indexName)
+      throws SQLException {
     String dropIndexStatement =
         "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
     execute(connection, dropIndexStatement);

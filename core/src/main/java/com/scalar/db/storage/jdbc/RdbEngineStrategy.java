@@ -4,10 +4,9 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
-import org.apache.commons.dbcp2.BasicDataSource;
-
 import java.sql.Connection;
 import java.sql.SQLException;
+import org.apache.commons.dbcp2.BasicDataSource;
 
 public abstract class RdbEngineStrategy {
 
@@ -86,26 +85,34 @@ public abstract class RdbEngineStrategy {
       TableMetadata metadata)
       throws SQLException;
 
-  abstract void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement) throws SQLException;
+  abstract void createMetadataTableIfNotExistsExecute(
+      Connection connection, String createTableStatement) throws SQLException;
 
-  abstract void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema) throws SQLException;
+  abstract void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
+      throws SQLException;
 
-  abstract void deleteMetadataSchema(Connection connection, String metadataSchema) throws SQLException;
+  abstract void deleteMetadataSchema(Connection connection, String metadataSchema)
+      throws SQLException;
 
-  abstract void dropNamespace(BasicDataSource dataSource, String namespace) throws ExecutionException;
+  abstract void dropNamespace(BasicDataSource dataSource, String namespace)
+      throws ExecutionException;
 
   abstract String namespaceExistsStatement();
 
-  abstract void alterColumnType(Connection connection, String namespace, String table, String columnName, String columnType) throws SQLException;
-
-  abstract void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName) throws SQLException;
-
-  abstract void dropIndexExecute(Connection connection, String schema, String table, String indexName)
+  abstract void alterColumnType(
+      Connection connection, String namespace, String table, String columnName, String columnType)
       throws SQLException;
+
+  abstract void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
+      throws SQLException;
+
+  abstract void dropIndexExecute(
+      Connection connection, String schema, String table, String indexName) throws SQLException;
 
   protected String enclose(String name) {
     return QueryUtils.enclose(name, getRdbEngine());
   }
+
   protected String encloseFullTableName(String schema, String table) {
     return enclose(schema) + "." + enclose(table);
   }
