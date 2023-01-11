@@ -131,6 +131,12 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
+  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName) throws SQLException {
+    String tableExistsStatement = "SELECT 1 FROM " + fullTableName + " FETCH FIRST 1 ROWS ONLY";
+    execute(connection, tableExistsStatement);
+  }
+
+  @Override
   public RdbEngine getRdbEngine() {
     return RdbEngine.ORACLE;
   }

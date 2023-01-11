@@ -554,23 +554,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private boolean tableExistsInternal(Connection connection, String namespace, String table)
       throws ExecutionException {
     String fullTableName = encloseFullTableName(namespace, table);
-    String tableExistsStatement;
-    switch (rdbEngineType) {
-      case POSTGRESQL:
-      case MYSQL:
-        tableExistsStatement = "SELECT 1 FROM " + fullTableName + " LIMIT 1";
-        break;
-      case ORACLE:
-        tableExistsStatement = "SELECT 1 FROM " + fullTableName + " FETCH FIRST 1 ROWS ONLY";
-        break;
-      case SQL_SERVER:
-        tableExistsStatement = "SELECT TOP 1 1 FROM " + fullTableName;
-        break;
-      default:
-        throw new AssertionError();
-    }
     try {
-      execute(connection, tableExistsStatement);
+      rdbEngine.tableExistsInternalExecuteTableCheck(connection, fullTableName);
       return true;
     } catch (SQLException e) {
       // An exception will be thrown if the table does not exist when executing the select

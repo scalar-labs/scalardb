@@ -98,6 +98,8 @@ public abstract class RdbEngineStrategy {
 
   abstract void alterColumnType(Connection connection, String namespace, String table, String columnName, String columnType) throws SQLException;
 
+  abstract void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName) throws SQLException;
+
   protected String enclose(String name) {
     return QueryUtils.enclose(name, getRdbEngine());
   }

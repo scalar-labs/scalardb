@@ -103,6 +103,12 @@ class RdbEngineMysql extends RdbEngineStrategy {
   }
 
   @Override
+  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName) throws SQLException {
+    String tableExistsStatement = "SELECT 1 FROM " + fullTableName + " LIMIT 1";
+    execute(connection, tableExistsStatement);
+  }
+
+  @Override
   boolean isDuplicateUserError(SQLException e) {
     throw new UnsupportedOperationException();
   }

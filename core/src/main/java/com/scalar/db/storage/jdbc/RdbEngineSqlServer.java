@@ -109,6 +109,12 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
+  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName) throws SQLException {
+    String tableExistsStatement = "SELECT TOP 1 1 FROM " + fullTableName;
+    execute(connection, tableExistsStatement);
+  }
+
+  @Override
   boolean isDuplicateUserError(SQLException e) {
     throw new UnsupportedOperationException();
   }
