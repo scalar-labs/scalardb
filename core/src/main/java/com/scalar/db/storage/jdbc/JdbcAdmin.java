@@ -46,7 +46,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   private final RdbEngineStrategy rdbEngine;
   private final BasicDataSource dataSource;
-  private final RdbEngine rdbEngineType; // TODO remove in favor of RdbEngineStrategy
   private final String metadataSchema;
 
   @Inject
@@ -54,7 +53,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     JdbcConfig config = new JdbcConfig(databaseConfig);
     rdbEngine = RdbEngineStrategy.create(config);
     dataSource = JdbcUtils.initDataSourceForAdmin(config);
-    rdbEngineType = rdbEngine.getRdbEngine();
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
 
@@ -62,7 +60,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public JdbcAdmin(BasicDataSource dataSource, JdbcConfig config) {
     rdbEngine = RdbEngineStrategy.create(config);
     this.dataSource = dataSource;
-    rdbEngineType = rdbEngine.getRdbEngine();
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
 
