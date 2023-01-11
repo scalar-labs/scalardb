@@ -7,7 +7,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import org.apache.commons.dbcp2.BasicDataSource;
 
-public abstract class RdbEngineStrategy {
+public interface RdbEngineStrategy {
 
   abstract boolean isDuplicateUserError(SQLException e);
 
@@ -23,21 +23,21 @@ public abstract class RdbEngineStrategy {
 
   public abstract RdbEngine getRdbEngine();
 
-  protected abstract String getDataTypeForEngine(DataType dataType);
+  abstract String getDataTypeForEngine(DataType dataType);
 
-  protected abstract String getDataTypeForKey(DataType dataType);
+  abstract String getDataTypeForKey(DataType dataType);
 
   abstract String getTextType(int charLength);
 
   abstract String computeBooleanValue(boolean value);
 
-  protected abstract void createNamespaceExecute(Connection connection, String fullNamespace)
+  abstract void createNamespaceExecute(Connection connection, String fullNamespace)
       throws SQLException;
 
-  protected abstract String createTableInternalPrimaryKeyClause(
+  abstract String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata);
 
-  protected abstract void createTableInternalExecuteAfterCreateTable(
+  abstract void createTableInternalExecuteAfterCreateTable(
       boolean hasDescClusteringOrder,
       Connection connection,
       String schema,

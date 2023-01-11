@@ -13,16 +13,16 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.dbcp2.BasicDataSource;
 
-class RdbEnginePostgresql extends RdbEngineStrategy {
+class RdbEnginePostgresql implements RdbEngineStrategy {
 
   @Override
-  protected void createNamespaceExecute(Connection connection, String fullNamespace)
+  public void createNamespaceExecute(Connection connection, String fullNamespace)
       throws SQLException {
     execute(connection, "CREATE SCHEMA " + fullNamespace);
   }
 
   @Override
-  protected String createTableInternalPrimaryKeyClause(
+  public String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata) {
     return "PRIMARY KEY ("
         + Stream.concat(
@@ -34,7 +34,7 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
 
   @SuppressFBWarnings({"SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"})
   @Override
-  protected void createTableInternalExecuteAfterCreateTable(
+  public void createTableInternalExecuteAfterCreateTable(
       boolean hasDescClusteringOrder,
       Connection connection,
       String schema,
@@ -60,26 +60,28 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
   }
 
   @Override
-  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement)
-      throws SQLException {
+  public void createMetadataTableIfNotExistsExecute(
+      Connection connection, String createTableStatement) throws SQLException {
     String createTableIfNotExistsStatement =
         createTableStatement.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS");
     execute(connection, createTableIfNotExistsStatement);
   }
 
   @Override
-  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
+  public void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
       throws SQLException {
     execute(connection, "CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema));
   }
 
   @Override
-  void deleteMetadataSchema(Connection connection, String metadataSchema) throws SQLException {
+  public void deleteMetadataSchema(Connection connection, String metadataSchema)
+      throws SQLException {
     execute(connection, "DROP SCHEMA " + enclose(metadataSchema));
   }
 
   @Override
-  void dropNamespace(BasicDataSource dataSource, String namespace) throws ExecutionException {
+  public void dropNamespace(BasicDataSource dataSource, String namespace)
+      throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, "DROP SCHEMA " + enclose(namespace));
     } catch (SQLException e) {
@@ -88,7 +90,7 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
   }
 
   @Override
-  String namespaceExistsStatement() {
+  public String namespaceExistsStatement() {
     return "SELECT 1 FROM "
         + encloseFullTableName("information_schema", "schemata")
         + " WHERE "
@@ -97,7 +99,7 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
   }
 
   @Override
-  void alterColumnType(
+  public void alterColumnType(
       Connection connection, String namespace, String table, String columnName, String columnType)
       throws SQLException {
     String alterColumnStatement =
@@ -111,42 +113,42 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
   }
 
   @Override
-  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
+  public void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
       throws SQLException {
     String tableExistsStatement = "SELECT 1 FROM " + fullTableName + " LIMIT 1";
     execute(connection, tableExistsStatement);
   }
 
   @Override
-  void dropIndexExecute(Connection connection, String schema, String table, String indexName)
+  public void dropIndexExecute(Connection connection, String schema, String table, String indexName)
       throws SQLException {
     String dropIndexStatement = "DROP INDEX " + enclose(schema) + "." + enclose(indexName);
     execute(connection, dropIndexStatement);
   }
 
   @Override
-  boolean isDuplicateUserError(SQLException e) {
+  public boolean isDuplicateUserError(SQLException e) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  boolean isDuplicateSchemaError(SQLException e) {
+  public boolean isDuplicateSchemaError(SQLException e) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  boolean isDuplicateTableError(SQLException e) {
+  public boolean isDuplicateTableError(SQLException e) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  boolean isDuplicateKeyError(SQLException e) {
+  public boolean isDuplicateKeyError(SQLException e) {
     // 23505: unique_violation
     return e.getSQLState().equals("23505");
   }
 
   @Override
-  boolean isUndefinedTableError(SQLException e) {
+  public boolean isUndefinedTableError(SQLException e) {
     // 42P01: undefined_table
     return e.getSQLState().equals("42P01");
   }
@@ -174,7 +176,7 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
   }
 
   @Override
-  protected String getDataTypeForEngine(DataType scalarDbDataType) {
+  public String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {
       case BIGINT:
         return "BIGINT";
@@ -197,7 +199,7 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
   }
 
   @Override
-  protected String getDataTypeForKey(DataType dataType) {
+  public String getDataTypeForKey(DataType dataType) {
     switch (dataType) {
       case TEXT:
         return "VARCHAR(10485760)";
@@ -207,12 +209,12 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
   }
 
   @Override
-  String getTextType(int charLength) {
+  public String getTextType(int charLength) {
     return String.format("VARCHAR(%s)", charLength);
   }
 
   @Override
-  String computeBooleanValue(boolean value) {
+  public String computeBooleanValue(boolean value) {
     return value ? "true" : "false";
   }
 }

@@ -13,17 +13,17 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.dbcp2.BasicDataSource;
 
-class RdbEngineOracle extends RdbEngineStrategy {
+class RdbEngineOracle implements RdbEngineStrategy {
 
   @Override
-  protected void createNamespaceExecute(Connection connection, String fullNamespace)
+  public void createNamespaceExecute(Connection connection, String fullNamespace)
       throws SQLException {
     execute(connection, "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"");
     execute(connection, "ALTER USER " + fullNamespace + " quota unlimited on USERS");
   }
 
   @Override
-  protected String createTableInternalPrimaryKeyClause(
+  public String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata) {
     return "PRIMARY KEY ("
         + Stream.concat(
@@ -35,7 +35,7 @@ class RdbEngineOracle extends RdbEngineStrategy {
 
   @SuppressFBWarnings({"SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"})
   @Override
-  protected void createTableInternalExecuteAfterCreateTable(
+  public void createTableInternalExecuteAfterCreateTable(
       boolean hasDescClusteringOrder,
       Connection connection,
       String schema,
@@ -67,8 +67,8 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement)
-      throws SQLException {
+  public void createMetadataTableIfNotExistsExecute(
+      Connection connection, String createTableStatement) throws SQLException {
     try {
       execute(connection, createTableStatement);
     } catch (SQLException e) {
@@ -80,7 +80,7 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
+  public void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
       throws SQLException {
     try {
       execute(connection, "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"");
@@ -94,12 +94,14 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  void deleteMetadataSchema(Connection connection, String metadataSchema) throws SQLException {
+  public void deleteMetadataSchema(Connection connection, String metadataSchema)
+      throws SQLException {
     execute(connection, "DROP USER " + enclose(metadataSchema));
   }
 
   @Override
-  void dropNamespace(BasicDataSource dataSource, String namespace) throws ExecutionException {
+  public void dropNamespace(BasicDataSource dataSource, String namespace)
+      throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, "DROP USER " + enclose(namespace));
     } catch (SQLException e) {
@@ -108,12 +110,12 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  String namespaceExistsStatement() {
+  public String namespaceExistsStatement() {
     return "SELECT 1 FROM " + enclose("ALL_USERS") + " WHERE " + enclose("USERNAME") + " = ?";
   }
 
   @Override
-  void alterColumnType(
+  public void alterColumnType(
       Connection connection, String namespace, String table, String columnName, String columnType)
       throws SQLException {
     String alterColumnStatement =
@@ -128,14 +130,14 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
+  public void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
       throws SQLException {
     String tableExistsStatement = "SELECT 1 FROM " + fullTableName + " FETCH FIRST 1 ROWS ONLY";
     execute(connection, tableExistsStatement);
   }
 
   @Override
-  void dropIndexExecute(Connection connection, String schema, String table, String indexName)
+  public void dropIndexExecute(Connection connection, String schema, String table, String indexName)
       throws SQLException {
     String dropIndexStatement = "DROP INDEX " + enclose(indexName);
     execute(connection, dropIndexStatement);
@@ -157,30 +159,30 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  boolean isDuplicateUserError(SQLException e) {
+  public boolean isDuplicateUserError(SQLException e) {
     // ORA-01920: user name 'string' conflicts with another user or role name
     return e.getErrorCode() == 1920;
   }
 
   @Override
-  boolean isDuplicateSchemaError(SQLException e) {
+  public boolean isDuplicateSchemaError(SQLException e) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  boolean isDuplicateTableError(SQLException e) {
+  public boolean isDuplicateTableError(SQLException e) {
     // ORA-00955: name is already used by an existing object
     return e.getErrorCode() == 955;
   }
 
   @Override
-  boolean isDuplicateKeyError(SQLException e) {
+  public boolean isDuplicateKeyError(SQLException e) {
     // Integrity constraint violation
     return e.getSQLState().equals("23000");
   }
 
   @Override
-  boolean isUndefinedTableError(SQLException e) {
+  public boolean isUndefinedTableError(SQLException e) {
     // ORA-00942: Table or view does not exist
     return e.getErrorCode() == 942;
   }
@@ -193,7 +195,7 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  protected String getDataTypeForEngine(DataType scalarDbDataType) {
+  public String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {
       case BIGINT:
         return "NUMBER(19)";
@@ -216,7 +218,7 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  protected String getDataTypeForKey(DataType dataType) {
+  public String getDataTypeForKey(DataType dataType) {
     switch (dataType) {
       case TEXT:
         return "VARCHAR2(64)";
@@ -228,12 +230,12 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  String getTextType(int charLength) {
+  public String getTextType(int charLength) {
     return String.format("VARCHAR2(%s)", charLength);
   }
 
   @Override
-  String computeBooleanValue(boolean value) {
+  public String computeBooleanValue(boolean value) {
     return value ? "1" : "0";
   }
 }
