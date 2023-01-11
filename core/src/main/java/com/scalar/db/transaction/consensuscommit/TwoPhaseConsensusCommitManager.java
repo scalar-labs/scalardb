@@ -116,7 +116,7 @@ public class TwoPhaseConsensusCommitManager
   @VisibleForTesting
   TwoPhaseCommitTransaction begin(String txId, Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
-    return createNewTransaction(txId, true, isolation, strategy);
+    return createNewTransaction(txId, isolation, strategy);
   }
 
   @Override
@@ -128,19 +128,17 @@ public class TwoPhaseConsensusCommitManager
   @VisibleForTesting
   TwoPhaseCommitTransaction join(String txId, Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
-    return createNewTransaction(txId, false, isolation, strategy);
+    return createNewTransaction(txId, isolation, strategy);
   }
 
   private TwoPhaseCommitTransaction createNewTransaction(
-      String txId, boolean isCoordinator, Isolation isolation, SerializableStrategy strategy)
-      throws TransactionException {
+      String txId, Isolation isolation, SerializableStrategy strategy) throws TransactionException {
     Snapshot snapshot =
         new Snapshot(txId, isolation, strategy, tableMetadataManager, parallelExecutor);
     CrudHandler crud =
         new CrudHandler(storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled);
 
-    TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator);
+    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
     return decorate(transaction);
