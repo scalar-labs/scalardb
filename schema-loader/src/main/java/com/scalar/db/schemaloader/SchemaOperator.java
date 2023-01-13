@@ -42,7 +42,8 @@ public class SchemaOperator implements AutoCloseable {
     this(StorageFactory.create(properties), TransactionFactory.create(properties));
   }
 
-  private SchemaOperator(StorageFactory storageFactory, TransactionFactory transactionFactory) {
+  @VisibleForTesting
+  SchemaOperator(StorageFactory storageFactory, TransactionFactory transactionFactory) {
     storageAdmin =
         Suppliers.memoize(
             () -> {
