@@ -51,7 +51,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
 
   @Option(
       names = {"-c", "--config"},
-      description = "Path to the config file of Scalar DB",
+      description = "Path to the config file of ScalarDB",
       required = true)
   private Path configPath;
 
