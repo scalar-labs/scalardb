@@ -9,35 +9,34 @@ import org.apache.commons.dbcp2.BasicDataSource;
 
 public interface RdbEngineStrategy {
 
-  abstract boolean isDuplicateUserError(SQLException e);
+  boolean isDuplicateUserError(SQLException e);
 
-  abstract boolean isDuplicateSchemaError(SQLException e);
+  boolean isDuplicateSchemaError(SQLException e);
 
-  abstract boolean isDuplicateTableError(SQLException e);
+  boolean isDuplicateTableError(SQLException e);
 
-  abstract boolean isDuplicateKeyError(SQLException e);
+  boolean isDuplicateKeyError(SQLException e);
 
-  abstract boolean isUndefinedTableError(SQLException e);
+  boolean isUndefinedTableError(SQLException e);
   /** Serialization error or deadlock found. */
-  public abstract boolean isConflictError(SQLException e);
+  boolean isConflictError(SQLException e);
 
-  public abstract RdbEngine getRdbEngine();
+  RdbEngine getRdbEngine();
 
-  abstract String getDataTypeForEngine(DataType dataType);
+  String getDataTypeForEngine(DataType dataType);
 
-  abstract String getDataTypeForKey(DataType dataType);
+  String getDataTypeForKey(DataType dataType);
 
-  abstract String getTextType(int charLength);
+  String getTextType(int charLength);
 
-  abstract String computeBooleanValue(boolean value);
+  String computeBooleanValue(boolean value);
 
-  abstract void createNamespaceExecute(Connection connection, String fullNamespace)
-      throws SQLException;
+  void createNamespaceExecute(Connection connection, String fullNamespace) throws SQLException;
 
-  abstract String createTableInternalPrimaryKeyClause(
+  String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata);
 
-  abstract void createTableInternalExecuteAfterCreateTable(
+  void createTableInternalExecuteAfterCreateTable(
       boolean hasDescClusteringOrder,
       Connection connection,
       String schema,
@@ -45,29 +44,27 @@ public interface RdbEngineStrategy {
       TableMetadata metadata)
       throws SQLException;
 
-  abstract void createMetadataTableIfNotExistsExecute(
-      Connection connection, String createTableStatement) throws SQLException;
-
-  abstract void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
+  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement)
       throws SQLException;
 
-  abstract void deleteMetadataSchema(Connection connection, String metadataSchema)
+  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
       throws SQLException;
 
-  abstract void dropNamespace(BasicDataSource dataSource, String namespace)
-      throws ExecutionException;
+  void deleteMetadataSchema(Connection connection, String metadataSchema) throws SQLException;
 
-  abstract String namespaceExistsStatement();
+  void dropNamespace(BasicDataSource dataSource, String namespace) throws ExecutionException;
 
-  abstract void alterColumnType(
+  String namespaceExistsStatement();
+
+  void alterColumnType(
       Connection connection, String namespace, String table, String columnName, String columnType)
       throws SQLException;
 
-  abstract void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
+  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
       throws SQLException;
 
-  abstract void dropIndexExecute(
-      Connection connection, String schema, String table, String indexName) throws SQLException;
+  void dropIndexExecute(Connection connection, String schema, String table, String indexName)
+      throws SQLException;
 
   /**
    * Enclose the target (schema, table or column) to use reserved words and special characters.
@@ -75,7 +72,7 @@ public interface RdbEngineStrategy {
    * @param name The target name to enclose
    * @return An enclosed string of the target name
    */
-  public abstract String enclose(String name);
+  String enclose(String name);
 
-  public abstract String encloseFullTableName(String schema, String table);
+  String encloseFullTableName(String schema, String table);
 }
