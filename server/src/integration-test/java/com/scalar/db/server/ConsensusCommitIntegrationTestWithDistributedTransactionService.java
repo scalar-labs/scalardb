@@ -32,10 +32,6 @@ public class ConsensusCommitIntegrationTestWithDistributedTransactionService
       properties.setProperty(
           ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
 
-      // Async commit can cause unexpected lazy recoveries, which can fail the tests. So we disable
-      // it for now.
-      properties.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
-
       server = new ScalarDbServer(properties);
       server.start();
 

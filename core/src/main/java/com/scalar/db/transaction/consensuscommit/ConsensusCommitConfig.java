@@ -101,7 +101,7 @@ public class ConsensusCommitConfig {
         getBoolean(
             databaseConfig.getProperties(), PARALLEL_ROLLBACK_ENABLED, parallelCommitEnabled);
 
-    asyncCommitEnabled = getBoolean(databaseConfig.getProperties(), ASYNC_COMMIT_ENABLED, true);
+    asyncCommitEnabled = getBoolean(databaseConfig.getProperties(), ASYNC_COMMIT_ENABLED, false);
     asyncRollbackEnabled =
         getBoolean(databaseConfig.getProperties(), ASYNC_ROLLBACK_ENABLED, asyncCommitEnabled);
     isIncludeMetadataEnabled =
