@@ -36,7 +36,7 @@ public class SimpleSelectQuery implements SelectQuery {
 
   SimpleSelectQuery(Builder builder) {
     projections = builder.projections;
-    rdbEngine = RdbEngineFactory.create(builder.rdbEngine);
+    rdbEngine = builder.rdbEngine;
     schema = builder.schema;
     table = builder.table;
     tableMetadata = builder.tableMetadata;

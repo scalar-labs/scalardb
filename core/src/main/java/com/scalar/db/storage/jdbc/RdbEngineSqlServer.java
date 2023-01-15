@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.scalar.db.storage.jdbc.query.MergeQuery;
+import com.scalar.db.storage.jdbc.query.SelectQuery;
+import com.scalar.db.storage.jdbc.query.SelectWithTop;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import org.apache.commons.dbcp2.BasicDataSource;
 
@@ -173,6 +175,11 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   @Override
   public String encloseFullTableName(String schema, String table) {
     return enclose(schema) + "." + enclose(table);
+  }
+
+  @Override
+  public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
+    return new SelectWithTop(builder, limit);
   }
 
   @Override

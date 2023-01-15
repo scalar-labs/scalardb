@@ -7,6 +7,8 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
+import com.scalar.db.storage.jdbc.query.SelectQuery;
+import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
@@ -154,6 +156,11 @@ class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public String encloseFullTableName(String schema, String table) {
     return enclose(schema) + "." + enclose(table);
+  }
+
+  @Override
+  public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
+    return new SelectWithFetchFirstNRowsOnly(builder, limit);
   }
 
   @Override
