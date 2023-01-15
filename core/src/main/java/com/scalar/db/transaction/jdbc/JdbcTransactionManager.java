@@ -73,7 +73,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
     try {
       JdbcTransaction transaction =
           new JdbcTransaction(
-              txId, jdbcService, dataSource.getConnection(), rdbEngine.getRdbEngine());
+              txId, jdbcService, dataSource.getConnection(), rdbEngine);
       getNamespace().ifPresent(transaction::withNamespace);
       getTable().ifPresent(transaction::withTable);
       return decorate(transaction);
