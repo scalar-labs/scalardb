@@ -27,6 +27,8 @@ public interface RdbEngineStrategy {
 
   String getDataTypeForKey(DataType dataType);
 
+  int getSqlTypes(DataType dataType);
+
   String getTextType(int charLength);
 
   String computeBooleanValue(boolean value);

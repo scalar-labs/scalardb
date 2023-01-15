@@ -9,6 +9,7 @@ import com.scalar.db.io.DataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.dbcp2.BasicDataSource;
@@ -226,6 +227,28 @@ class RdbEngineOracle implements RdbEngineStrategy {
         return "RAW(64)";
       default:
         return null;
+    }
+  }
+
+  @Override
+  public int getSqlTypes(DataType dataType) {
+    switch (dataType) {
+      case BOOLEAN:
+        return Types.BIT;
+      case INT:
+        return Types.INTEGER;
+      case BIGINT:
+        return Types.BIGINT;
+      case FLOAT:
+        return Types.FLOAT;
+      case DOUBLE:
+        return Types.DOUBLE;
+      case TEXT:
+        return Types.VARCHAR;
+      case BLOB:
+        return Types.BLOB;
+      default:
+        throw new AssertionError();
     }
   }
 
