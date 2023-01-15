@@ -6,6 +6,8 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
+import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -169,6 +171,11 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   @Override
   public String encloseFullTableName(String schema, String table) {
     return enclose(schema) + "." + enclose(table);
+  }
+
+  @Override
+  public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
+    return new InsertOnConflictDoUpdateQuery(builder);
   }
 
   @Override

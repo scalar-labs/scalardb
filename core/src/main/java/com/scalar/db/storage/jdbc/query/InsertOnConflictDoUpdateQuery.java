@@ -25,8 +25,8 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
   private final Optional<Key> clusteringKey;
   private final Map<String, Column<?>> columns;
 
-  InsertOnConflictDoUpdateQuery(Builder builder) {
-    rdbEngine = RdbEngineFactory.create(builder.rdbEngine);
+  public InsertOnConflictDoUpdateQuery(Builder builder) {
+    rdbEngine = builder.rdbEngine;
     schema = builder.schema;
     table = builder.table;
     tableMetadata = builder.tableMetadata;

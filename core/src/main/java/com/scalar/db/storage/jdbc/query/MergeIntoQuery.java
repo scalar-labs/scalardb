@@ -26,7 +26,7 @@ public class MergeIntoQuery implements UpsertQuery {
   private final Map<String, Column<?>> columns;
 
   public MergeIntoQuery(Builder builder) {
-    rdbEngine = RdbEngineFactory.create(builder.rdbEngine);
+    rdbEngine = builder.rdbEngine;
     schema = builder.schema;
     table = builder.table;
     tableMetadata = builder.tableMetadata;

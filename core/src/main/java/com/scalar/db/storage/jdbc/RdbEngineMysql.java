@@ -10,6 +10,9 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
+import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEngineMysql implements RdbEngineStrategy {
@@ -129,6 +132,10 @@ class RdbEngineMysql implements RdbEngineStrategy {
   public String encloseFullTableName(String schema, String table) {
     return enclose(schema) + "." + enclose(table);
   }
+
+  @Override
+  public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
+    return new InsertOnDuplicateKeyUpdateQuery(builder);  }
 
   @Override
   public boolean isDuplicateUserError(SQLException e) {

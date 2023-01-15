@@ -4,6 +4,8 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.RdbEngineFactory;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import java.util.Optional;
@@ -11,7 +13,7 @@ import java.util.Optional;
 public interface UpsertQuery extends Query {
 
   class Builder {
-    final RdbEngine rdbEngine;
+    final RdbEngineStrategy rdbEngine;
     final String schema;
     final String table;
     final TableMetadata tableMetadata;
@@ -20,7 +22,7 @@ public interface UpsertQuery extends Query {
     Map<String, Column<?>> columns;
 
     Builder(RdbEngine rdbEngine, String schema, String table, TableMetadata tableMetadata) {
-      this.rdbEngine = rdbEngine;
+      this.rdbEngine = RdbEngineFactory.create(rdbEngine);
       this.schema = schema;
       this.table = table;
       this.tableMetadata = tableMetadata;
@@ -36,18 +38,7 @@ public interface UpsertQuery extends Query {
     }
 
     public UpsertQuery build() {
-      switch (rdbEngine) {
-        case MYSQL:
-          return new InsertOnDuplicateKeyUpdateQuery(this);
-        case POSTGRESQL:
-          return new InsertOnConflictDoUpdateQuery(this);
-        case ORACLE:
-          return new MergeIntoQuery(this);
-        case SQL_SERVER:
-          return new MergeQuery(this);
-        default:
-          throw new AssertionError("invalid rdb engine: " + rdbEngine);
-      }
+      return rdbEngine.buildUpsertQuery(this);
     }
   }
 }

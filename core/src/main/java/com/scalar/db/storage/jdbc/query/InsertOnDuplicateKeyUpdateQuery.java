@@ -25,8 +25,8 @@ public class InsertOnDuplicateKeyUpdateQuery implements UpsertQuery {
   private final Optional<Key> clusteringKey;
   private final Map<String, Column<?>> columns;
 
-  InsertOnDuplicateKeyUpdateQuery(Builder builder) {
-    rdbEngine = RdbEngineFactory.create(builder.rdbEngine);
+  public InsertOnDuplicateKeyUpdateQuery(Builder builder) {
+    rdbEngine = builder.rdbEngine;
     schema = builder.schema;
     table = builder.table;
     tableMetadata = builder.tableMetadata;

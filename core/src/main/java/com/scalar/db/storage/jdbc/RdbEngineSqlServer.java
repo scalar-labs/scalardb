@@ -10,6 +10,9 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import com.scalar.db.storage.jdbc.query.MergeQuery;
+import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEngineSqlServer implements RdbEngineStrategy {
@@ -170,6 +173,11 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   @Override
   public String encloseFullTableName(String schema, String table) {
     return enclose(schema) + "." + enclose(table);
+  }
+
+  @Override
+  public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
+    return new MergeQuery(builder);
   }
 
   @Override
