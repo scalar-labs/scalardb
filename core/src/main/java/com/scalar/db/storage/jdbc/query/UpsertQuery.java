@@ -21,8 +21,8 @@ public interface UpsertQuery extends Query {
     Optional<Key> clusteringKey;
     Map<String, Column<?>> columns;
 
-    Builder(RdbEngine rdbEngine, String schema, String table, TableMetadata tableMetadata) {
-      this.rdbEngine = RdbEngineFactory.create(rdbEngine);
+    Builder(RdbEngineStrategy rdbEngine, String schema, String table, TableMetadata tableMetadata) {
+      this.rdbEngine = rdbEngine;
       this.schema = schema;
       this.table = table;
       this.tableMetadata = tableMetadata;

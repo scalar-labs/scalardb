@@ -34,7 +34,7 @@ public class UpdateQuery implements Query {
   private final List<ConditionalExpression> otherConditions;
 
   private UpdateQuery(Builder builder) {
-    rdbEngine = RdbEngineFactory.create(builder.rdbEngine);
+    rdbEngine = builder.rdbEngine;
     schema = builder.schema;
     table = builder.table;
     tableMetadata = builder.tableMetadata;
@@ -105,7 +105,7 @@ public class UpdateQuery implements Query {
   }
 
   public static class Builder {
-    private final RdbEngine rdbEngine;
+    private final RdbEngineStrategy rdbEngine;
     private final String schema;
     private final String table;
     private final TableMetadata tableMetadata;
@@ -114,7 +114,7 @@ public class UpdateQuery implements Query {
     private Optional<Key> clusteringKey;
     private Map<String, Column<?>> columns;
 
-    Builder(RdbEngine rdbEngine, String schema, String table, TableMetadata tableMetadata) {
+    Builder(RdbEngineStrategy rdbEngine, String schema, String table, TableMetadata tableMetadata) {
       this.rdbEngine = rdbEngine;
       this.schema = schema;
       this.table = table;

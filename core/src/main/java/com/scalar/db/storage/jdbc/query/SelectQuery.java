@@ -33,8 +33,8 @@ public interface SelectQuery extends Query {
     Optional<String> indexedColumn = Optional.empty();
     boolean isConditionalQuery;
 
-    Builder(RdbEngine rdbEngine, List<String> projections) {
-      this.rdbEngine = RdbEngineFactory.create(rdbEngine);
+    Builder(RdbEngineStrategy rdbEngine, List<String> projections) {
+      this.rdbEngine = rdbEngine;
       this.projections = projections;
     }
 
