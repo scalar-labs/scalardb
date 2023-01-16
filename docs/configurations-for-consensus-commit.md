@@ -30,5 +30,5 @@ The Performance related configurations for Consensus Commit are as follows:
 | scalar.db.consensus_commit.parallel_validation.enabled  | Whether or not the validation phase (in `EXTRA_READ`) is executed in parallel. | The value of `scalar.db.consensus_commit.parallel_commit.enabled` |
 | scalar.db.consensus_commit.parallel_commit.enabled      | Whether or not the commit phase is executed in parallel.                       | true                                                              |
 | scalar.db.consensus_commit.parallel_rollback.enabled    | Whether or not the rollback phase is executed in parallel.                     | The value of `scalar.db.consensus_commit.parallel_commit.enabled` |
-| scalar.db.consensus_commit.async_commit.enabled         | Whether or not the commit phase is executed asynchronously.                    | true                                                              |
+| scalar.db.consensus_commit.async_commit.enabled         | Whether or not the commit phase is executed asynchronously.                    | false                                                             |
 | scalar.db.consensus_commit.async_rollback.enabled       | Whether or not the rollback phase is executed asynchronously.                  | The value of `scalar.db.consensus_commit.async_commit.enabled`    |
