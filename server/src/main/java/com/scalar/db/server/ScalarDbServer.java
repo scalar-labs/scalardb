@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
-@Command(name = "scalardb-server", description = "Starts Scalar DB Server.")
+@Command(name = "scalardb-server", description = "Starts ScalarDB Server.")
 public class ScalarDbServer implements Callable<Integer> {
   private static final Logger logger = LoggerFactory.getLogger(ScalarDbServer.class);
   private static final long MAX_WAIT_TIME_MILLIS = 60000; // 60 seconds
@@ -112,7 +112,7 @@ public class ScalarDbServer implements Callable<Integer> {
 
     server = builder.build().start();
 
-    logger.info("Scalar DB Server started, listening on {}", config.getPort());
+    logger.info("ScalarDB Server started, listening on {}", config.getPort());
   }
 
   public void addShutdownHook() {

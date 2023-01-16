@@ -91,7 +91,7 @@ public class SchemaLoader {
   /**
    * Creates tables defined in the schema file.
    *
-   * @param configProperties Scalar DB config properties.
+   * @param configProperties ScalarDB config properties.
    * @param schemaFilePath path to schema file.
    * @param options specific options for creating tables.
    * @param createCoordinatorTables create coordinator tables or not.
@@ -111,7 +111,7 @@ public class SchemaLoader {
   /**
    * Creates tables defined in the schema file.
    *
-   * @param configFilePath path to Scalar DB config file.
+   * @param configFilePath path to ScalarDB config file.
    * @param schemaFilePath path to schema file.
    * @param options specific options for creating tables.
    * @param createCoordinatorTables create coordinator tables or not.
@@ -131,7 +131,7 @@ public class SchemaLoader {
   /**
    * Creates tables defined in the schema.
    *
-   * @param configProperties Scalar DB config properties.
+   * @param configProperties ScalarDB config properties.
    * @param serializedSchemaJson serialized json string schema.
    * @param options specific options for creating tables.
    * @param createCoordinatorTables create coordinator tables or not.
@@ -151,7 +151,7 @@ public class SchemaLoader {
   /**
    * Creates tables defined in the schema.
    *
-   * @param configFilePath path to Scalar DB config file.
+   * @param configFilePath path to ScalarDB config file.
    * @param serializedSchemaJson serialized json string schema.
    * @param options specific options for creating tables.
    * @param createCoordinatorTables create coordinator tables or not.
@@ -171,7 +171,7 @@ public class SchemaLoader {
   /**
    * Creates tables defined in the schema file.
    *
-   * @param config Scalar DB config.
+   * @param config ScalarDB config.
    * @param schema schema definition.
    * @param options specific options for creating tables.
    * @param createCoordinatorTables create coordinator tables or not.
@@ -198,7 +198,7 @@ public class SchemaLoader {
   /**
    * Delete tables defined in the schema file.
    *
-   * @param configProperties Scalar DB config properties.
+   * @param configProperties ScalarDB config properties.
    * @param schemaFilePath path to schema json file.
    * @param deleteCoordinatorTables delete coordinator tables or not.
    * @throws SchemaLoaderException thrown when deleting tables fails.
@@ -214,7 +214,7 @@ public class SchemaLoader {
   /**
    * Delete tables defined in the schema file.
    *
-   * @param configFilePath path to Scalar DB config file.
+   * @param configFilePath path to ScalarDB config file.
    * @param schemaFilePath path to schema json file.
    * @param deleteCoordinatorTables delete coordinator tables or not.
    * @throws SchemaLoaderException thrown when deleting tables fails.
@@ -230,7 +230,7 @@ public class SchemaLoader {
   /**
    * Delete tables defined in the schema.
    *
-   * @param configProperties Scalar DB config properties.
+   * @param configProperties ScalarDB config properties.
    * @param serializedSchemaJson serialized json string schema.
    * @param deleteCoordinatorTables delete coordinator tables or not.
    * @throws SchemaLoaderException thrown when deleting tables fails.
@@ -248,7 +248,7 @@ public class SchemaLoader {
   /**
    * Delete tables defined in the schema.
    *
-   * @param configFilePath path to Scalar DB config file.
+   * @param configFilePath path to ScalarDB config file.
    * @param serializedSchemaJson serialized json string schema.
    * @param deleteCoordinatorTables delete coordinator tables or not.
    * @throws SchemaLoaderException thrown when deleting tables fails.
@@ -264,7 +264,7 @@ public class SchemaLoader {
   /**
    * Delete tables defined in the schema.
    *
-   * @param config Scalar DB config.
+   * @param config ScalarDB config.
    * @param schema schema definition.
    * @param deleteCoordinatorTables delete coordinator tables or not.
    * @throws SchemaLoaderException thrown when deleting tables fails.
@@ -287,7 +287,7 @@ public class SchemaLoader {
   /**
    * Repair tables defined in the schema.
    *
-   * @param configProperties Scalar DB config properties
+   * @param configProperties ScalarDB config properties
    * @param serializedSchemaJson serialized json string schema.
    * @param options specific options for repairing tables.
    * @param repairCoordinatorTable repair coordinator tables or not.
@@ -307,7 +307,7 @@ public class SchemaLoader {
   /**
    * Repair tables defined in the schema file.
    *
-   * @param configProperties Scalar DB properties.
+   * @param configProperties ScalarDB properties.
    * @param schemaPath path to the schema file.
    * @param options specific options for repairing tables.
    * @param repairCoordinatorTable repair coordinator tables or not.
@@ -327,7 +327,7 @@ public class SchemaLoader {
   /**
    * Repair tables defined in the schema.
    *
-   * @param configPath path to the Scalar DB config.
+   * @param configPath path to the ScalarDB config.
    * @param serializedSchemaJson serialized json string schema.
    * @param options specific options for repairing tables.
    * @param repairCoordinatorTable repair coordinator tables or not.
@@ -347,7 +347,7 @@ public class SchemaLoader {
   /**
    * Repair tables defined in the schema file.
    *
-   * @param configPath path to the Scalar DB config.
+   * @param configPath path to the ScalarDB config.
    * @param schemaPath path to the schema file.
    * @param options specific options for repairing tables.
    * @param repairCoordinatorTable repair coordinator tables or not.
@@ -364,7 +364,7 @@ public class SchemaLoader {
   /**
    * Repair tables defined in the schema file.
    *
-   * @param config Scalar DB config
+   * @param config ScalarDB config
    * @param schema schema.
    * @param options specific options for repairing tables.
    * @param repairCoordinatorTable repair coordinator tables or not.
@@ -401,7 +401,7 @@ public class SchemaLoader {
    * which columns should be added and which secondary indexes should be created or deleted. Only
    * the tables with differences will be altered.
    *
-   * @param configProperties Scalar DB config properties
+   * @param configProperties ScalarDB config properties
    * @param serializedSchemaJson serialized json string schema.
    * @param indexCreationOptions specific options for index creation.
    * @throws SchemaLoaderException thrown when altering tables fails.
@@ -429,7 +429,7 @@ public class SchemaLoader {
    * which columns should be added and which secondary indexes should be created or deleted. Only
    * the tables with differences will be altered.
    *
-   * @param configProperties Scalar DB properties.
+   * @param configProperties ScalarDB properties.
    * @param schemaPath path to the schema file.
    * @param indexCreationOptions specific options for index creation.
    * @throws SchemaLoaderException thrown when altering tables fails.
@@ -455,7 +455,7 @@ public class SchemaLoader {
    * which columns should be added and which secondary indexes should be created or deleted. Only
    * the tables with differences will be altered.
    *
-   * @param configPath path to the Scalar DB config.
+   * @param configPath path to the ScalarDB config.
    * @param serializedSchemaJson serialized json string schema.
    * @param indexCreationOptions specific options for index creation.
    * @throws SchemaLoaderException thrown when altering tables fails.
@@ -481,7 +481,7 @@ public class SchemaLoader {
    * which columns should be added and which secondary indexes should be created or deleted. Only
    * the tables with differences will be altered.
    *
-   * @param configPath path to the Scalar DB config.
+   * @param configPath path to the ScalarDB config.
    * @param schemaPath path to the schema file.
    * @param indexCreationOptions specific options for index creation.
    * @throws SchemaLoaderException thrown when altering tables fails.
