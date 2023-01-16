@@ -37,7 +37,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
             + rdbEngine.encloseFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE));
 
     String dropNamespaceStatement;
-    if (rdbEngine.getRdbEngine() == RdbEngine.ORACLE) {
+    if (rdbEngine instanceof RdbEngineOracle) {
       dropNamespaceStatement = "DROP USER " + rdbEngine.enclose(jdbcMetadataSchema);
     } else {
       dropNamespaceStatement = "DROP SCHEMA " + rdbEngine.enclose(jdbcMetadataSchema);

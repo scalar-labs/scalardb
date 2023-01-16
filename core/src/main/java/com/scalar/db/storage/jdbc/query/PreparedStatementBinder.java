@@ -2,8 +2,6 @@ package com.scalar.db.storage.jdbc.query;
 
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.*;
-import com.scalar.db.storage.jdbc.RdbEngine;
-import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.PreparedStatement;
@@ -22,10 +20,12 @@ public class PreparedStatementBinder implements ColumnVisitor {
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public PreparedStatementBinder(
-      PreparedStatement preparedStatement, TableMetadata tableMetadata, RdbEngine rdbEngine) {
+      PreparedStatement preparedStatement,
+      TableMetadata tableMetadata,
+      RdbEngineStrategy rdbEngine) {
     this.preparedStatement = preparedStatement;
     this.tableMetadata = tableMetadata;
-    this.rdbEngine = RdbEngineFactory.create(rdbEngine);
+    this.rdbEngine = rdbEngine;
   }
 
   public void throwSQLExceptionIfOccurred() throws SQLException {

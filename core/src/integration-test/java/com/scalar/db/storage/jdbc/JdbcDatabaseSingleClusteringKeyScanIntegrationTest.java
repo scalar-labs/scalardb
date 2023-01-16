@@ -10,19 +10,19 @@ import java.util.Random;
 public class JdbcDatabaseSingleClusteringKeyScanIntegrationTest
     extends DistributedStorageSingleClusteringKeyScanIntegrationTestBase {
 
-  private RdbEngine rdbEngine;
+  private RdbEngineStrategy rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {
     Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
-    rdbEngine = RdbEngineFactory.create(config).getRdbEngine();
+    rdbEngine = RdbEngineFactory.create(config);
     return properties;
   }
 
   @Override
   protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
-    if (rdbEngine == RdbEngine.ORACLE) {
+    if (rdbEngine instanceof RdbEngineOracle) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getRandomOracleDoubleValue(random, columnName);
       }
@@ -32,7 +32,7 @@ public class JdbcDatabaseSingleClusteringKeyScanIntegrationTest
 
   @Override
   protected Value<?> getMinValue(String columnName, DataType dataType) {
-    if (rdbEngine == RdbEngine.ORACLE) {
+    if (rdbEngine instanceof RdbEngineOracle) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getMinOracleDoubleValue(columnName);
       }
@@ -42,12 +42,12 @@ public class JdbcDatabaseSingleClusteringKeyScanIntegrationTest
 
   @Override
   protected Value<?> getMaxValue(String columnName, DataType dataType) {
-    if (rdbEngine == RdbEngine.ORACLE) {
+    if (rdbEngine instanceof RdbEngineOracle) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getMaxOracleDoubleValue(columnName);
       }
     }
-    if (rdbEngine == RdbEngine.SQL_SERVER) {
+    if (rdbEngine instanceof RdbEngineSqlServer) {
       if (dataType == DataType.TEXT) {
         return JdbcTestUtils.getMaxSqlServerTextValue(columnName);
       }

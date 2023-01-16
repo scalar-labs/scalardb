@@ -66,12 +66,12 @@ public class JdbcDatabase extends AbstractDistributedStorage {
   JdbcDatabase(
       BasicDataSource dataSource,
       BasicDataSource tableMetadataDataSource,
-      RdbEngine rdbEngineType,
+      RdbEngineStrategy rdbEngine,
       JdbcService jdbcService) {
     this.dataSource = dataSource;
     this.tableMetadataDataSource = tableMetadataDataSource;
     this.jdbcService = jdbcService;
-    this.rdbEngine = RdbEngineFactory.create(rdbEngineType);
+    this.rdbEngine = rdbEngine;
   }
 
   @Override

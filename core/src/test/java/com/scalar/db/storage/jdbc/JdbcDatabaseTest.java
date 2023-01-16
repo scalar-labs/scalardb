@@ -52,7 +52,11 @@ public class JdbcDatabaseTest {
     when(dataSource.getConnection()).thenReturn(connection);
 
     jdbcDatabase =
-        new JdbcDatabase(dataSource, tableMetadataDataSource, RdbEngine.MYSQL, jdbcService);
+        new JdbcDatabase(
+            dataSource,
+            tableMetadataDataSource,
+            RdbEngine.createRdbEngineStrategy(RdbEngine.MYSQL),
+            jdbcService);
   }
 
   @Test

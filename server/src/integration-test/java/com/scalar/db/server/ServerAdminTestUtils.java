@@ -32,7 +32,7 @@ public class ServerAdminTestUtils extends AdminTestUtils {
     execute("DROP TABLE " + rdbEngine.encloseFullTableName(metadataNamespace, metadataTable));
 
     String dropNamespaceStatement;
-    if (rdbEngine.getRdbEngine() == RdbEngine.ORACLE) {
+    if (rdbEngine instanceof RdbEngineOracle) {
       dropNamespaceStatement = "DROP USER " + rdbEngine.enclose(metadataNamespace);
     } else {
       dropNamespaceStatement = "DROP SCHEMA " + rdbEngine.enclose(metadataNamespace);

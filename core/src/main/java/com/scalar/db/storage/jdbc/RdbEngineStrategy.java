@@ -3,11 +3,10 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import java.sql.Connection;
-import java.sql.SQLException;
-
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import java.sql.Connection;
+import java.sql.SQLException;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 public interface RdbEngineStrategy {
@@ -23,8 +22,6 @@ public interface RdbEngineStrategy {
   boolean isUndefinedTableError(SQLException e);
   /** Serialization error or deadlock found. */
   boolean isConflictError(SQLException e);
-
-  RdbEngine getRdbEngine();
 
   String getDataTypeForEngine(DataType dataType);
 

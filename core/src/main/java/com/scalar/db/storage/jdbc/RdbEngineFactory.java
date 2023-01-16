@@ -14,22 +14,6 @@ public class RdbEngineFactory {
     return create(jdbcUrl);
   }
 
-  public static RdbEngineStrategy create(RdbEngine rdbEngine) {
-    switch (rdbEngine) {
-      case MYSQL:
-        return new RdbEngineMysql();
-      case POSTGRESQL:
-        return new RdbEnginePostgresql();
-      case ORACLE:
-        return new RdbEngineOracle();
-      case SQL_SERVER:
-        return new RdbEngineSqlServer();
-      default:
-        assert false;
-        return null;
-    }
-  }
-
   static RdbEngineStrategy create(String jdbcUrl) {
     if (jdbcUrl.startsWith("jdbc:mysql:")) {
       return new RdbEngineMysql();

@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.dbcp2.BasicDataSource;
 
-class RdbEngineOracle implements RdbEngineStrategy {
+public class RdbEngineOracle implements RdbEngineStrategy {
 
   @Override
   public void createNamespaceExecute(Connection connection, String fullNamespace)
@@ -166,11 +166,6 @@ class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
     return new MergeIntoQuery(builder);
-  }
-
-  @Override
-  public RdbEngine getRdbEngine() {
-    return RdbEngine.ORACLE;
   }
 
   @Override

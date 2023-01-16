@@ -53,12 +53,12 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
       DatabaseConfig databaseConfig,
       BasicDataSource dataSource,
       BasicDataSource tableMetadataDataSource,
-      RdbEngine rdbEngine,
+      RdbEngineStrategy rdbEngine,
       JdbcService jdbcService) {
     super(databaseConfig);
     this.dataSource = dataSource;
     this.tableMetadataDataSource = tableMetadataDataSource;
-    this.rdbEngine = RdbEngineFactory.create(rdbEngine);
+    this.rdbEngine = rdbEngine;
     this.jdbcService = jdbcService;
   }
 
@@ -72,8 +72,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
   public DistributedTransaction begin(String txId) throws TransactionException {
     try {
       JdbcTransaction transaction =
-          new JdbcTransaction(
-              txId, jdbcService, dataSource.getConnection(), rdbEngine);
+          new JdbcTransaction(txId, jdbcService, dataSource.getConnection(), rdbEngine);
       getNamespace().ifPresent(transaction::withNamespace);
       getTable().ifPresent(transaction::withTable);
       return decorate(transaction);

@@ -3,7 +3,6 @@ package com.scalar.db.storage.jdbc.query;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -82,7 +81,7 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
   @Override
   public void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder =
-        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine.getRdbEngine());
+        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine);
 
     for (Column<?> column : partitionKey.getColumns()) {
       column.accept(binder);

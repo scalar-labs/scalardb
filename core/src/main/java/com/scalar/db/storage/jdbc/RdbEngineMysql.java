@@ -5,16 +5,15 @@ import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
+import com.scalar.db.storage.jdbc.query.SelectQuery;
+import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
+import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
-import com.scalar.db.storage.jdbc.query.SelectQuery;
-import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
-import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEngineMysql implements RdbEngineStrategy {
@@ -142,7 +141,8 @@ class RdbEngineMysql implements RdbEngineStrategy {
 
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
-    return new InsertOnDuplicateKeyUpdateQuery(builder);  }
+    return new InsertOnDuplicateKeyUpdateQuery(builder);
+  }
 
   @Override
   public boolean isDuplicateUserError(SQLException e) {
@@ -187,11 +187,6 @@ class RdbEngineMysql implements RdbEngineStrategy {
     // Message: Lock wait timeout exceeded; try restarting transaction
 
     return e.getErrorCode() == 1213 || e.getErrorCode() == 1205;
-  }
-
-  @Override
-  public RdbEngine getRdbEngine() {
-    return RdbEngine.MYSQL;
   }
 
   @Override

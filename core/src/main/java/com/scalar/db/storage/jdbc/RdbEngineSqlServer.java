@@ -5,16 +5,15 @@ import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.jdbc.query.MergeQuery;
+import com.scalar.db.storage.jdbc.query.SelectQuery;
+import com.scalar.db.storage.jdbc.query.SelectWithTop;
+import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import com.scalar.db.storage.jdbc.query.MergeQuery;
-import com.scalar.db.storage.jdbc.query.SelectQuery;
-import com.scalar.db.storage.jdbc.query.SelectWithTop;
-import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEngineSqlServer implements RdbEngineStrategy {
@@ -185,11 +184,6 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
     return new MergeQuery(builder);
-  }
-
-  @Override
-  public RdbEngine getRdbEngine() {
-    return RdbEngine.SQL_SERVER;
   }
 
   @Override

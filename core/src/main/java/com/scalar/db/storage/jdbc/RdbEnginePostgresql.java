@@ -186,11 +186,6 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   }
 
   @Override
-  public RdbEngine getRdbEngine() {
-    return RdbEngine.POSTGRESQL;
-  }
-
-  @Override
   public String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {
       case BIGINT:
