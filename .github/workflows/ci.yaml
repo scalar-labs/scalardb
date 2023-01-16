@@ -76,12 +76,12 @@ jobs:
           java-version: '8'
           distribution: 'temurin'
 
-      - name: Dockerfile Lint for Scalar DB Server
+      - name: Dockerfile Lint for ScalarDB Server
         uses: gradle/gradle-build-action@v2
         with:
           arguments: :server:dockerfileLint
 
-      - name: Dockerfile Lint for Scalar DB Schema Loader
+      - name: Dockerfile Lint for ScalarDB Schema Loader
         if: always()
         uses: gradle/gradle-build-action@v2
         with:

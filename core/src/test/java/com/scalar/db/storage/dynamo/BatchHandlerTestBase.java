@@ -93,7 +93,7 @@ public abstract class BatchHandlerTestBase {
   public void handle_TooManyOperationsGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     List<Put> mutations = new ArrayList<>();
-    IntStream.range(0, 26).forEach(i -> mutations.add(preparePut()));
+    IntStream.range(0, 101).forEach(i -> mutations.add(preparePut()));
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(mutations))

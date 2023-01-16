@@ -7,8 +7,8 @@ publishing {
             artifactId = 'scalardb-integration-test'
             from components.java
             pom {
-                name = 'Scalar DB Integration test'
-                description = 'Integration tests for Scalar DB'
+                name = 'ScalarDB Integration test'
+                description = 'Integration tests for ScalarDB'
                 url = 'https://github.com/scalar-labs/scalardb'
                 licenses {
                     license {

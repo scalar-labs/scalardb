@@ -1,9 +1,9 @@
 # Two-phase Commit Transactions
 
-Scalar DB also supports two-phase commit style transactions called *Two-phase Commit Transactions*.
+ScalarDB also supports two-phase commit style transactions called *Two-phase Commit Transactions*.
 With Two-phase Commit Transactions, you can execute a transaction that spans multiple processes/applications (e.g., Microservices).
 
-This document briefly explains how to execute Two-phase Commit Transactions in Scalar DB.
+This document briefly explains how to execute Two-phase Commit Transactions in ScalarDB.
 
 ## Configuration
 
@@ -28,10 +28,10 @@ scalar.db.storage=cassandra
 
 Please see [Getting Started](getting-started.md) for configurations of other databases/storages.
 
-### Scalar DB Server
+### ScalarDB Server
 
-You can also execute Two-phase Commit Transactions through the Scalar DB Server.
-You don't need a special configuration for Two-phase Commit Transactions, so you can follow [the Scalar DB Server document](scalardb-server.md) to use it.
+You can also execute Two-phase Commit Transactions through the ScalarDB Server.
+You don't need a special configuration for Two-phase Commit Transactions, so you can follow [the ScalarDB Server document](scalardb-server.md) to use it.
 
 ## How to execute Two-phase Commit Transactions
 

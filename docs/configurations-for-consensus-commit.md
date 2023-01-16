@@ -1,6 +1,6 @@
 # Configurations for Consensus Commit
 
-Consensus Commit transaction manager is the default transaction manager type in Scalar DB.
+Consensus Commit transaction manager is the default transaction manager type in ScalarDB.
 If you don't specify the `scalar.db.transaction_manager` property, or you specify `consensus-commit` for the property as follows, the Consensus Commit transaction manager is used.
 
 ```properties
