@@ -1,5 +1,10 @@
 package com.scalar.db.storage.jdbc;
 
+/**
+ * Test-only enum mainly used like `@EnumSource(RdbEngine.class)`. Branching by this enum leads to
+ * low cohesion, so use {@link RdbEngineFactory} to create {@link RdbEngineStrategy} subclasses
+ * instead.
+ */
 public enum RdbEngine {
   MYSQL,
   POSTGRESQL,
