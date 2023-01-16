@@ -57,16 +57,16 @@ public class BatchHandler {
   }
 
   /**
-   * Execute the specified list of {@link Mutation}s in batch. All the {@link Mutation}s in the list
-   * must be for the same partition.
+   * Executes the specified list of {@link Mutation}s in batch. All the {@link Mutation}s in the
+   * list must be for the same partition.
    *
    * @param mutations a list of {@code Mutation}s to execute
    * @throws NoMutationException if at least one of conditional {@code Mutation}s fails because it
    *     didn't meet the condition
    */
   public void handle(List<? extends Mutation> mutations) throws ExecutionException {
-    if (mutations.size() > 25) {
-      throw new IllegalArgumentException("DynamoDB cannot batch more than 25 mutations at once.");
+    if (mutations.size() > 100) {
+      throw new IllegalArgumentException("DynamoDB cannot batch more than 100 mutations at once.");
     }
 
     TableMetadata tableMetadata = metadataManager.getTableMetadata(mutations.get(0));
