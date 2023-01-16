@@ -119,7 +119,7 @@ dependencies {
 }
 
 javadoc {
-    title = "Scalar DB"
+    title = "ScalarDB"
 }
 
 

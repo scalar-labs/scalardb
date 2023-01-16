@@ -59,7 +59,7 @@ dependencies {
 }
 
 javadoc {
-    title = "Scalar DB Server"
+    title = "ScalarDB Server"
 }
 
 application {
@@ -79,7 +79,7 @@ task dockerfileLint(type: Exec) {
 
 task integrationTestScalarDbServer(type: Test) {
     useJUnitPlatform()
-    description = 'Runs the integration tests for the Scalar DB Server.'
+    description = 'Runs the integration tests for the ScalarDB Server.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestScalarDbServer.output.classesDirs
     classpath = sourceSets.integrationTestScalarDbServer.runtimeClasspath
