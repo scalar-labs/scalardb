@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc.query;
 
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Objects;
 
@@ -14,6 +15,7 @@ public final class QueryBuilder {
 
   private final RdbEngineStrategy rdbEngine;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public QueryBuilder(RdbEngineStrategy rdbEngine) {
     this.rdbEngine = Objects.requireNonNull(rdbEngine);
   }

@@ -4,6 +4,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -24,6 +25,7 @@ public class MergeQuery implements UpsertQuery {
   private final Optional<Key> clusteringKey;
   private final Map<String, Column<?>> columns;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public MergeQuery(Builder builder) {
     rdbEngine = builder.rdbEngine;
     schema = builder.schema;
