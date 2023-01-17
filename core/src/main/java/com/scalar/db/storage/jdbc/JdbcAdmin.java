@@ -632,7 +632,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   /**
-   * Get the vendor DB data type that is equivalent to the Scalar DB data type
+   * Get the vendor DB data type that is equivalent to the ScalarDB data type
    *
    * @param metadata a table metadata
    * @param columnName a column name

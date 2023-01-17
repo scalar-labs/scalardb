@@ -1,6 +1,6 @@
 # Java API Guide
 
-Scalar DB Java API is mainly composed of Administrative API and Transactional API.
+ScalarDB Java API is mainly composed of Administrative API and Transactional API.
 This guide briefly explains what kind of APIs exist and how to use them.
 
 * [Administrative API](#administrative-api)
@@ -8,7 +8,7 @@ This guide briefly explains what kind of APIs exist and how to use them.
 
 ## Administrative API
 
-This section explains how to execute administrative operations with Administrative API in Scalar DB.
+This section explains how to execute administrative operations with Administrative API in ScalarDB.
 You can execute administrative operations programmatically as follows, but you can also execute those operations through [Schema Loader](schema-loader.md).
 
 ### Get a DistributedTransactionAdmin instance
@@ -102,7 +102,7 @@ TableMetadata tableMetadata =
 
 Here you define columns, a partition key, a clustering key including clustering orders, and secondary indexes of a table.
 
-Please see [Scalar DB design document - Data Model](design.md#data-model) for the details of the Scalar DB Data Model.
+Please see [ScalarDB design document - Data Model](design.md#data-model) for the details of the ScalarDB Data Model.
 
 And then, you can create a table as follows: 
 
@@ -258,7 +258,7 @@ admin.dropCoordinatorTables(ifExist);
 
 ## Transactional API
 
-This section explains how to execute transactional operations with Transactional API in Scalar DB.
+This section explains how to execute transactional operations with Transactional API in ScalarDB.
 
 ### Get a DistributedTransactionManager instance
 
@@ -676,7 +676,7 @@ Or
 transaction.abort();
 ```
 
-Please see [Handle Exceptions](#handle-exceptions) for the details of how to handle exceptions in Scalar DB.
+Please see [Handle Exceptions](#handle-exceptions) for the details of how to handle exceptions in ScalarDB.
 
 ## Transactional operations for Two-phase Commit Transaction
 
@@ -684,11 +684,11 @@ Please see [Two-phase Commit Transactions](two-phase-commit-transactions.md).
 
 ## Handle Exceptions
 
-Handling exceptions correctly in Scalar DB is very important.
+Handling exceptions correctly in ScalarDB is very important.
 If you mishandle exceptions, your data could become inconsistent.
-This document explains how to handle exceptions properly in Scalar DB.
+This document explains how to handle exceptions properly in ScalarDB.
 
-Let's look at the following example code to see how to handle exceptions in Scalar DB.
+Let's look at the following example code to see how to handle exceptions in ScalarDB.
 
 ```java
 public class Sample {
@@ -800,4 +800,4 @@ scalar.db.consensus_commit.include_metadata.enabled=true
 * [Getting started](getting-started.md)
 * [Multi-storage Transactions](multi-storage-transactions.md)
 * [Two-phase Commit Transactions](two-phase-commit-transactions.md)
-* [Scalar DB Server](scalardb-server.md)
+* [ScalarDB Server](scalardb-server.md)

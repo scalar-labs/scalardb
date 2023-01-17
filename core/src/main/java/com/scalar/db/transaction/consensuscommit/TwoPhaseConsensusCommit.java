@@ -31,7 +31,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private final CrudHandler crud;
   private final CommitHandler commit;
   private final RecoveryHandler recovery;
-  private final boolean isCoordinator;
 
   private boolean validated;
   private boolean needRollback;
@@ -40,12 +39,10 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private Runnable beforeRecoveryHook = () -> {};
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public TwoPhaseConsensusCommit(
-      CrudHandler crud, CommitHandler commit, RecoveryHandler recovery, boolean isCoordinator) {
+  public TwoPhaseConsensusCommit(CrudHandler crud, CommitHandler commit, RecoveryHandler recovery) {
     this.crud = crud;
     this.commit = commit;
     this.recovery = recovery;
-    this.isCoordinator = isCoordinator;
   }
 
   @Override
@@ -144,15 +141,13 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
               + " before calling commit()");
     }
 
-    if (isCoordinator) {
-      try {
-        commit.commitState(crud.getSnapshot());
-      } catch (Exception e) {
-        // no need to rollback because the transaction has already been rolled back
-        needRollback = false;
+    try {
+      commit.commitState(crud.getSnapshot());
+    } catch (CommitException | UnknownTransactionStatusException e) {
+      // no need to rollback because the transaction has already been rolled back
+      needRollback = false;
 
-        throw e;
-      }
+      throw e;
     }
 
     commit.commitRecords(crud.getSnapshot());
@@ -164,12 +159,10 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
       return;
     }
 
-    if (isCoordinator) {
-      try {
-        commit.abortState(crud.getSnapshot().getId());
-      } catch (UnknownTransactionStatusException e) {
-        throw new RollbackException("rollback failed", e);
-      }
+    try {
+      commit.abortState(crud.getSnapshot().getId());
+    } catch (UnknownTransactionStatusException e) {
+      throw new RollbackException("rollback failed", e);
     }
 
     commit.rollbackRecords(crud.getSnapshot());

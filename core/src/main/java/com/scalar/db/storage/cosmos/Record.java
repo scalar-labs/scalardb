@@ -7,7 +7,7 @@ import java.util.Objects;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
- * A record class that Cosmos DB uses for storing a document based on Scalar DB data model.
+ * A record class that Cosmos DB uses for storing a document based on ScalarDB data model.
  *
  * @author Yuji Ito
  */
