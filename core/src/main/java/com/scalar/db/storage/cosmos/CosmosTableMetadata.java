@@ -10,7 +10,7 @@ import java.util.Set;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
- * A metadata class for a table of Scalar DB to know the type of each column
+ * A metadata class for a table of ScalarDB to know the type of each column
  *
  * @author Yuji Ito
  */

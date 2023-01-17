@@ -26,8 +26,8 @@ public class ConsensusCommitConfigTest {
     assertThat(config.isParallelValidationEnabled()).isTrue();
     assertThat(config.isParallelCommitEnabled()).isTrue();
     assertThat(config.isParallelRollbackEnabled()).isTrue();
-    assertThat(config.isAsyncCommitEnabled()).isTrue();
-    assertThat(config.isAsyncRollbackEnabled()).isTrue();
+    assertThat(config.isAsyncCommitEnabled()).isFalse();
+    assertThat(config.isAsyncRollbackEnabled()).isFalse();
     assertThat(config.isIncludeMetadataEnabled()).isFalse();
   }
 
@@ -153,15 +153,15 @@ public class ConsensusCommitConfigTest {
   public void constructor_AsyncExecutionRelatedPropertiesGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
-    props.setProperty(ConsensusCommitConfig.ASYNC_ROLLBACK_ENABLED, "false");
+    props.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "true");
+    props.setProperty(ConsensusCommitConfig.ASYNC_ROLLBACK_ENABLED, "true");
 
     // Act
     ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.isAsyncCommitEnabled()).isFalse();
-    assertThat(config.isAsyncRollbackEnabled()).isFalse();
+    assertThat(config.isAsyncCommitEnabled()).isTrue();
+    assertThat(config.isAsyncRollbackEnabled()).isTrue();
   }
 
   @Test
