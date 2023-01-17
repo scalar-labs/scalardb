@@ -29,7 +29,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
 
     jdbcConfig = new JdbcConfig(new DatabaseConfig(jdbcProperties));
     jdbcMetadataSchema = jdbcConfig.getTableMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
-    rdbEngine = JdbcUtils.getRdbEngine(jdbcConfig.getJdbcUrl());
+    rdbEngine = jdbcConfig.getRdbEngine();
   }
 
   @Override

@@ -59,6 +59,13 @@ public abstract class JdbcAdminTestBase {
     tableMetadataSchemaName = getTableMetadataSchemaConfig().orElse("scalardb");
   }
 
+  private JdbcAdmin createJdbcAdminFor(RdbEngine rdbEngine) {
+    // Arrange
+    when(config.getRdbEngine()).thenReturn(rdbEngine);
+
+    return new JdbcAdmin(dataSource, config);
+  }
+
   /**
    * This sets the {@link JdbcConfig#TABLE_METADATA_SCHEMA} value that will be used to run the
    * tests.
@@ -135,7 +142,7 @@ public abstract class JdbcAdminTestBase {
     when(connection.prepareStatement(any())).thenReturn(selectStatement);
     when(dataSource.getConnection()).thenReturn(connection);
 
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
     TableMetadata actualMetadata = admin.getTableMetadata(namespace, table);
@@ -202,7 +209,7 @@ public abstract class JdbcAdminTestBase {
       throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
     List<Statement> mockedStatements = new ArrayList<>();
 
     for (int i = 0; i < expectedSqlStatements.length; i++) {
@@ -422,7 +429,7 @@ public abstract class JdbcAdminTestBase {
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
 
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
     admin.createTable(namespace, table, metadata, new HashMap<>());
@@ -634,7 +641,7 @@ public abstract class JdbcAdminTestBase {
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
 
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
     admin.createTable(namespace, table, metadata, new HashMap<>());
@@ -679,7 +686,7 @@ public abstract class JdbcAdminTestBase {
     // Arrange
     String namespace = "my_ns";
     String table = "foo_table";
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     Statement truncateTableStatement = mock(Statement.class);
     when(connection.createStatement()).thenReturn(truncateTableStatement);
@@ -774,7 +781,7 @@ public abstract class JdbcAdminTestBase {
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
 
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
     admin.dropTable(namespace, table);
@@ -870,7 +877,7 @@ public abstract class JdbcAdminTestBase {
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
 
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
     admin.dropTable(namespace, table);
@@ -909,7 +916,7 @@ public abstract class JdbcAdminTestBase {
       RdbEngine rdbEngine, String expectedDropSchemaStatement) throws Exception {
     // Arrange
     String namespace = "my_ns";
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     Connection connection = mock(Connection.class);
     Statement dropSchemaStatement = mock(Statement.class);
@@ -982,7 +989,7 @@ public abstract class JdbcAdminTestBase {
     when(connection.prepareStatement(any())).thenReturn(preparedStatement);
     when(dataSource.getConnection()).thenReturn(connection);
 
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
     Set<String> actualTableNames = admin.getNamespaceTableNames(namespace);
@@ -1024,7 +1031,7 @@ public abstract class JdbcAdminTestBase {
       RdbEngine rdbEngine, String expectedSelectStatement) throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     Connection connection = mock(Connection.class);
     PreparedStatement selectStatement = mock(PreparedStatement.class);
@@ -1113,7 +1120,7 @@ public abstract class JdbcAdminTestBase {
     String namespace = "my_ns";
     String table = "my_tbl";
     String indexColumn = "my_column";
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
@@ -1204,7 +1211,7 @@ public abstract class JdbcAdminTestBase {
     String namespace = "my_ns";
     String table = "my_tbl";
     String indexColumn = "my_column";
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
@@ -1304,7 +1311,7 @@ public abstract class JdbcAdminTestBase {
     String namespace = "my_ns";
     String table = "my_tbl";
     String indexColumn = "my_column";
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
         mockResultSet(
@@ -1391,7 +1398,7 @@ public abstract class JdbcAdminTestBase {
     String namespace = "my_ns";
     String table = "my_tbl";
     String indexColumn = "my_column";
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
         mockResultSet(
@@ -1526,7 +1533,7 @@ public abstract class JdbcAdminTestBase {
     }
     when(mockedStatements.get(1).execute(anyString())).thenThrow(sqlException);
 
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
     admin.repairTable(namespace, table, metadata, new HashMap<>());
@@ -1617,7 +1624,7 @@ public abstract class JdbcAdminTestBase {
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
 
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
     admin.repairTable(namespace, table, metadata, new HashMap<>());
@@ -1671,7 +1678,7 @@ public abstract class JdbcAdminTestBase {
     when(connection.createStatement()).thenReturn(checkTableExistStatement);
     when(dataSource.getConnection()).thenReturn(connection);
 
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
     SQLException sqlException = mock(SQLException.class);
     if (rdbEngine == RdbEngine.MYSQL) {
       when(sqlException.getErrorCode()).thenReturn(1049);
@@ -1752,7 +1759,7 @@ public abstract class JdbcAdminTestBase {
     when(selectStatement.executeQuery()).thenReturn(resultSet);
     when(connection.prepareStatement(any())).thenReturn(selectStatement);
     when(dataSource.getConnection()).thenReturn(connection);
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
     // Act Assert
@@ -1873,7 +1880,7 @@ public abstract class JdbcAdminTestBase {
             expectedStatements.subList(1, expectedStatements.size()).toArray(new Statement[0]));
 
     when(dataSource.getConnection()).thenReturn(connection);
-    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
     admin.addNewColumnToTable(namespace, table, newColumn, DataType.INT);

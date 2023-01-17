@@ -39,7 +39,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
     JdbcConfig config = new JdbcConfig(databaseConfig);
 
     dataSource = JdbcUtils.initDataSource(config, true);
-    rdbEngine = JdbcUtils.getRdbEngine(config.getJdbcUrl());
+    rdbEngine = config.getRdbEngine();
 
     tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config);
     TableMetadataManager tableMetadataManager =
