@@ -1,5 +1,6 @@
 package com.scalar.db.api;
 
+import com.scalar.db.exception.transaction.RetriableTransactionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import java.util.Optional;
@@ -65,9 +66,11 @@ public interface TwoPhaseCommitTransactionManager {
    * Begins a new transaction. This method is assumed to be called by a coordinator process.
    *
    * @return {@link DistributedTransaction}
+   * @throws RetriableTransactionException if something retriable situation happens. You can retry
+   *     the same transaction from the beginning in this case
    * @throws TransactionException if beginning the transaction fails
    */
-  TwoPhaseCommitTransaction begin() throws TransactionException;
+  TwoPhaseCommitTransaction begin() throws RetriableTransactionException, TransactionException;;
 
   /**
    * Begins a new transaction with the specified transaction ID. It is users' responsibility to
@@ -76,17 +79,23 @@ public interface TwoPhaseCommitTransactionManager {
    *
    * @param txId an user-provided unique transaction ID
    * @return {@link DistributedTransaction}
+   * @throws RetriableTransactionException if something retriable situation happens. You can retry
+   *     the same transaction from the beginning in this case
    * @throws TransactionException if beginning the transaction fails
    */
-  TwoPhaseCommitTransaction begin(String txId) throws TransactionException;
+  TwoPhaseCommitTransaction begin(String txId)
+      throws RetriableTransactionException, TransactionException;;
 
   /**
    * Starts a new transaction. This method is an alias of {@link #begin()}.
    *
    * @return {@link DistributedTransaction}
+   * @throws RetriableTransactionException if something retriable situation happens. You can retry
+   *     the same transaction from the beginning in this case
    * @throws TransactionException if starting the transaction fails
    */
-  default TwoPhaseCommitTransaction start() throws TransactionException {
+  default TwoPhaseCommitTransaction start()
+      throws RetriableTransactionException, TransactionException {
     return begin();
   }
 
@@ -96,9 +105,12 @@ public interface TwoPhaseCommitTransactionManager {
    *
    * @param txId an user-provided unique transaction ID
    * @return {@link DistributedTransaction}
+   * @throws RetriableTransactionException if something retriable situation happens. You can retry
+   *     the same transaction from the beginning in this case
    * @throws TransactionException if starting the transaction fails
    */
-  default TwoPhaseCommitTransaction start(String txId) throws TransactionException {
+  default TwoPhaseCommitTransaction start(String txId)
+      throws RetriableTransactionException, TransactionException {
     return begin(txId);
   }
 
@@ -108,9 +120,12 @@ public interface TwoPhaseCommitTransactionManager {
    *
    * @param txId the transaction ID
    * @return {@link TwoPhaseCommitTransaction}
+   * @throws RetriableTransactionException if something retriable situation happens. You can retry
+   *     the same transaction from the beginning in this case
    * @throws TransactionException if participating the transaction fails
    */
-  TwoPhaseCommitTransaction join(String txId) throws TransactionException;
+  TwoPhaseCommitTransaction join(String txId)
+      throws RetriableTransactionException, TransactionException;
 
   /**
    * Resumes an ongoing transaction associated with the specified transaction ID.
@@ -118,9 +133,12 @@ public interface TwoPhaseCommitTransactionManager {
    * @param txId the transaction ID
    * @return {@link TwoPhaseCommitTransaction}
    * @throws TransactionNotFoundException if the transaction associated with the specified
-   *     transaction ID is not found
+   *     transaction ID is not found. You can retry the same transaction from the beginning in this
+   *     case
+   * @throws TransactionException if resuming the transaction fails
    */
-  TwoPhaseCommitTransaction resume(String txId) throws TransactionNotFoundException;
+  TwoPhaseCommitTransaction resume(String txId)
+      throws TransactionNotFoundException, TransactionException;
 
   /**
    * Returns the state of a given transaction.

@@ -1,5 +1,6 @@
 package com.scalar.db.api;
 
+import com.scalar.db.exception.transaction.RetriableTransactionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import java.util.Optional;
@@ -56,9 +57,11 @@ public interface DistributedTransactionManager {
    * Begins a new transaction.
    *
    * @return {@link DistributedTransaction}
+   * @throws RetriableTransactionException if something retriable situation happens. You can retry
+   *     the same transaction from the beginning in this case
    * @throws TransactionException if beginning the transaction fails
    */
-  DistributedTransaction begin() throws TransactionException;
+  DistributedTransaction begin() throws RetriableTransactionException, TransactionException;
 
   /**
    * Begins a new transaction with the specified transaction ID. It is users' responsibility to
@@ -67,17 +70,23 @@ public interface DistributedTransactionManager {
    *
    * @param txId an user-provided unique transaction ID
    * @return {@link DistributedTransaction}
+   * @throws RetriableTransactionException if something retriable situation happens. You can retry
+   *     the same transaction from the beginning in this case
    * @throws TransactionException if beginning the transaction fails
    */
-  DistributedTransaction begin(String txId) throws TransactionException;
+  DistributedTransaction begin(String txId)
+      throws RetriableTransactionException, TransactionException;
 
   /**
    * Starts a new transaction. This method is an alias of {@link #begin()}.
    *
    * @return {@link DistributedTransaction}
+   * @throws RetriableTransactionException if something retriable situation happens. You can retry
+   *     the same transaction from the beginning in this case
    * @throws TransactionException if starting the transaction fails
    */
-  default DistributedTransaction start() throws TransactionException {
+  default DistributedTransaction start()
+      throws RetriableTransactionException, TransactionException {
     return begin();
   }
 
@@ -87,9 +96,12 @@ public interface DistributedTransactionManager {
    *
    * @param txId an user-provided unique transaction ID
    * @return {@link DistributedTransaction}
+   * @throws RetriableTransactionException if something retriable situation happens. You can retry
+   *     the same transaction from the beginning in this case
    * @throws TransactionException if starting the transaction fails
    */
-  default DistributedTransaction start(String txId) throws TransactionException {
+  default DistributedTransaction start(String txId)
+      throws RetriableTransactionException, TransactionException {
     return begin(txId);
   }
 
@@ -184,9 +196,12 @@ public interface DistributedTransactionManager {
    * @param txId the transaction ID
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction associated with the specified
-   *     transaction ID is not found
+   *     transaction ID is not found. You can retry the same transaction from the beginning in this
+   *     case
+   * @throws TransactionException if resuming the transaction fails
    */
-  DistributedTransaction resume(String txId) throws TransactionNotFoundException;
+  DistributedTransaction resume(String txId)
+      throws TransactionNotFoundException, TransactionException;
 
   /**
    * Returns the state of a given transaction.
