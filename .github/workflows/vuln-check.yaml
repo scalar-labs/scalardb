@@ -61,7 +61,7 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
-          timeout: '30m'
+          timeout: '60m'
 
       - name: Post Trivy vulnerability check failure for ScalarDB Server to Slack
         if: failure()
@@ -92,7 +92,7 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
-          timeout: '30m'
+          timeout: '60m'
 
       - name: Post Trivy vulnerability check failure for ScalarDB Schema Loader to Slack
         if: failure()
