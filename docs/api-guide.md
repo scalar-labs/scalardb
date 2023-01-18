@@ -267,13 +267,13 @@ You can get it in the following way:
 
 ```java
 TransactionFactory transactionFactory = TransactionFactory.create("<configuration file path>");
-DistributedTransactionManager manager = transactionFactory.getTransactionManager();
+DistributedTransactionManager transactionManager = transactionFactory.getTransactionManager();
 ```
 
 Once you have executed all transactional operations, you should close the `DistributedTransactionManager` instance as follows:
 
 ```java
-manager.close();
+transactionManager.close();
 ```
 
 ### Begin/Start a transaction
@@ -283,24 +283,24 @@ You can begin/start a transaction as follows:
 
 ```java
 // Begin a transaction
-DistributedTransaction transaction = manager.begin();
+DistributedTransaction transaction = transactionManager.begin();
 
 Or
 
 // Start a transaction
-DistributedTransaction transaction = manager.start();
+DistributedTransaction transaction = transactionManager.start();
 ```
 
 You can also begin/start a transaction with specifying a transaction ID as follows:
 
 ```java
 // Begin a transaction with specifying a transaction ID
-DistributedTransaction transaction = manager.begin("<transaction ID>");
+DistributedTransaction transaction = transactionManager.begin("<transaction ID>");
 
 Or
 
 // Start a transaction with specifying a transaction ID
-DistributedTransaction transaction = manager.start("<transaction ID>");
+DistributedTransaction transaction = transactionManager.start("<transaction ID>");
 ```
 
 Note that you must guarantee uniqueness of the transaction ID in this case.
@@ -311,7 +311,7 @@ You can resume a transaction you have already begun with specifying a transactio
 
 ```java
 // Resume a transaction
-DistributedTransaction transaction = manager.resume("<transaction ID>");
+DistributedTransaction transaction = transactionManager.resume("<transaction ID>");
 ```
 
 It is helpful in a stateful application where a transaction spans multiple client requests.
@@ -678,10 +678,6 @@ transaction.abort();
 
 Please see [Handle Exceptions](#handle-exceptions) for the details of how to handle exceptions in ScalarDB.
 
-## Transactional operations for Two-phase Commit Transaction
-
-Please see [Two-phase Commit Transactions](two-phase-commit-transactions.md).
-
 ## Handle Exceptions
 
 Handling exceptions correctly in ScalarDB is very important.
@@ -694,7 +690,7 @@ Let's look at the following example code to see how to handle exceptions in Scal
 public class Sample {
   public static void main(String[] args) throws IOException, InterruptedException {
     TransactionFactory factory = TransactionFactory.create("<configuration file path>");
-    DistributedTransactionManager manager = factory.getTransactionManager();
+    DistributedTransactionManager transactionManager = factory.getTransactionManager();
 
     int retryCount = 0;
 
@@ -708,14 +704,14 @@ public class Sample {
         TimeUnit.MILLISECONDS.sleep(100);
       }
 
-      // Start a transaction
+      // Begin a transaction
       DistributedTransaction tx;
       try {
-        tx = manager.start();
+        tx = transactionManager.begin();
       } catch (TransactionException e) {
-        // If starting a transaction fails, it indicates some failure happens during a transaction,
-        // so you should cancel the transaction or retry the transaction after the failure/error is
-        // fixed
+        // If starting a transaction fails, it indicates some failure happens during the
+        // transaction, so you should cancel the transaction or retry the transaction after the
+        // failure/error is fixed
         return;
       }
 
@@ -729,21 +725,21 @@ public class Sample {
         // Commit the transaction
         tx.commit();
       } catch (CrudConflictException | CommitConflictException e) {
-        // If you catch CrudConflictException or CommitConflictException, it indicates conflicts 
-        // happen during a transaction so that you can retry the transaction
+        // If you catch CrudConflictException or CommitConflictException, it indicates a conflict 
+        // occurs during the transaction so that you can retry the transaction from the beginning
         try {
-          tx.abort();
-        } catch (AbortException ex) {
-          // Aborting the transaction fails. You can log it here
+          tx.rollback();
+        } catch (RollbackException ex) {
+          // Rolling back the transaction fails. You can log it here
         }
         retryCount++;
       } catch (CrudException | CommitException e) {
         // If you catch CrudException or CommitException, it indicates some failure happens, so you
         // should cancel the transaction or retry the transaction after the failure/error is fixed
         try {
-          tx.abort();
-        } catch (AbortException ex) {
-          // Aborting the transaction fails. You can log it here
+          tx.rollback();
+        } catch (RollbackException ex) {
+          // Rolling back the transaction fails. You can log it here
         }
         return;
       } catch (UnknownTransactionStatusException e) {
@@ -760,28 +756,20 @@ public class Sample {
 
 The APIs for CRUD operations (`get()`/`scan()`/`put()`/`delete()`/`mutate()`) could throw `CrudException` and `CrudConflictException`.
 If you catch `CrudException`, it indicates some failure (e.g., database failure and network error) happens during a transaction, so you should cancel the transaction or retry the transaction after the failure/error is fixed.
-If you catch `CrudConflictException`, it indicates conflicts happen during a transaction so that you can retry the transaction, preferably with well-adjusted exponential backoff based on your application and environment.
+If you catch `CrudConflictException`, it indicates a conflict occurs during the transaction so that you can retry the transaction from the beginning, preferably with well-adjusted exponential backoff based on your application and environment.
 The sample code retries three times maximum and sleeps 100 milliseconds before retrying the transaction.
 
 Also, the `commit()` API could throw `CommitException`, `CommitConflictException`, and `UnknownTransactionStatusException`.
 If you catch `CommitException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure/error is fixed.
-If you catch `CommitConflictException`, like the `CrudConflictException` case, you can retry the transaction.
+If you catch `CommitConflictException`, like the `CrudConflictException` case, you can retry the transaction from the beginning.
 If you catch `UnknownTransactionStatusException`, you are not sure if the transaction succeeds or not.
 In such a case, you need to check if the transaction is committed successfully or not and retry it if it fails.
 How to identify a transaction status is delegated to users.
 You may want to create a transaction status table and update it transactionally with other application data so that you can get the status of a transaction from the status table.
 
-### For Two-phase Commit Transactions
+## Transactional operations for Two-phase Commit Transaction
 
-You need to handle more exceptions when you use [Two-phase Commit Transactions](two-phase-commit-transactions.md) because you additionally need to call the `prepare()` API (and the `validate()` API when required).
-
-The `prepare()` API could throw `PreparationException` and `PreparationConflictException`.
-If you catch `PreparationException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure/error is fixed.
-If you catch `PreparationConflictException`, like the `CrudConflictException` case, you can retry the transaction.
-
-Also, the `validate()` API could throw `ValidationException` and `ValidationConflictException`.
-If you catch `ValidationException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure/error is fixed.
-If you catch `ValidationConflictException`, like the `CrudConflictException` case, you can retry the transaction.
+Please see [Two-phase Commit Transactions](two-phase-commit-transactions.md).
 
 ## Investigate Consensus Commit transactions errors
 

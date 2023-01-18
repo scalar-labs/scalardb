@@ -118,7 +118,8 @@ public interface TwoPhaseCommitTransactionManager {
    * @param txId the transaction ID
    * @return {@link TwoPhaseCommitTransaction}
    * @throws TransactionNotFoundException if the transaction associated with the specified
-   *     transaction ID is not found
+   *     transaction ID is not found. You can retry the same transaction from the beginning in this
+   *     case
    */
   TwoPhaseCommitTransaction resume(String txId) throws TransactionNotFoundException;
 
