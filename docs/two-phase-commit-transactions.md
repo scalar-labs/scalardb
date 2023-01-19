@@ -1,9 +1,9 @@
 # Two-phase Commit Transactions
 
-Scalar DB also supports two-phase commit style transactions called *Two-phase Commit Transactions*.
+ScalarDB also supports two-phase commit style transactions called *Two-phase Commit Transactions*.
 With Two-phase Commit Transactions, you can execute a transaction that spans multiple processes/applications (e.g., Microservices).
 
-This document briefly explains how to execute Two-phase Commit Transactions in Scalar DB.
+This document briefly explains how to execute Two-phase Commit Transactions in ScalarDB.
 
 ## Configuration
 
@@ -28,10 +28,10 @@ scalar.db.storage=cassandra
 
 Please see [Getting Started](getting-started.md) for configurations of other databases/storages.
 
-### Scalar DB Server
+### ScalarDB Server
 
-You can also execute Two-phase Commit Transactions through the Scalar DB Server.
-You don't need a special configuration for Two-phase Commit Transactions, so you can follow [the Scalar DB Server document](scalardb-server.md) to use it.
+You can also execute Two-phase Commit Transactions through the ScalarDB Server.
+You don't need a special configuration for Two-phase Commit Transactions, so you can follow [the ScalarDB Server document](scalardb-server.md) to use it.
 
 ## How to execute Two-phase Commit Transactions
 
@@ -147,7 +147,7 @@ tx.put(toPut);
 
 After finishing CRUD operations, you need to commit the transaction.
 Like a well-known two-phase commit protocol, there are two phases: prepare and commit phases.
-You first need to prepare the transaction in all the coordinator/participant processes, then you need to call in the order of coordinator's `commit()` and the participants' `commit()` as follows:
+You first need to prepare the transaction in all the coordinator/participant processes, and then you need to commit the transaction in all the coordinator/participant processes as follows:
 ```java
 TwoPhaseCommitTransaction tx = ...
 
@@ -170,10 +170,8 @@ try {
 ```
 
 If an error happens, you need to call `rollback()` (or `abort()`) in all the coordinator/participant processes.
-Note that you need to call it in the coordinator process first, and then call it in the participant processes in parallel.
 
-You can call `prepare()` in the coordinator/participant processes in parallel.
-Similarly, you can also call `commit()` in the participant processes in parallel.
+You can call `prepare()`, `commit()`, `rollback()` in the coordinator/participant processes in parallel for better performance.
 
 #### Validate the transaction
 
@@ -192,7 +190,7 @@ tx.commit();
 ...
 ```
 
-Similar to `prepare()`, you can call `validate()` in the coordinator/participant processes in parallel.
+Similar to `prepare()`, you can call `validate()` in the coordinator/participant processes in parallel for better performance.
 
 Currently, you need to call `validate()` when you use the `Consensus Commit` transaction manager with `EXTRA_READ` serializable strategy in `SERIALIZABLE` isolation level.
 In other cases, `validate()` does nothing.

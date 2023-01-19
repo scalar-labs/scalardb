@@ -93,10 +93,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     properties.setProperty(
         ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + TEST_NAME);
 
-    // Async commit can cause unexpected lazy recoveries, which can fail the tests. So we disable it
-    // for now.
-    properties.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
-
     StorageFactory factory = StorageFactory.create(properties);
     admin = factory.getStorageAdmin();
     databaseConfig = new DatabaseConfig(properties);

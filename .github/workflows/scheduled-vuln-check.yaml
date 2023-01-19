@@ -16,7 +16,7 @@ jobs:
       CR_PAT: ${{ secrets.CR_PAT }}
       SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
 
-  call-vuln-check-for-v3_4_9:
+  call-vuln-check-for-v3_4:
     uses: ./.github/workflows/vuln-check.yaml
     with:
       target-ref: v3.4.9
@@ -24,7 +24,7 @@ jobs:
       CR_PAT: ${{ secrets.CR_PAT }}
       SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
 
-  call-vuln-check-for-v3_5_7:
+  call-vuln-check-for-v3_5:
     uses: ./.github/workflows/vuln-check.yaml
     with:
       target-ref: v3.5.7
@@ -32,7 +32,7 @@ jobs:
       CR_PAT: ${{ secrets.CR_PAT }}
       SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
 
-  call-vuln-check-for-v3_6_4:
+  call-vuln-check-for-v3_6:
     uses: ./.github/workflows/vuln-check.yaml
     with:
       target-ref: v3.6.4
@@ -40,7 +40,7 @@ jobs:
       CR_PAT: ${{ secrets.CR_PAT }}
       SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
 
-  call-vuln-check-for-v3_7_3:
+  call-vuln-check-for-v3_7:
     uses: ./.github/workflows/vuln-check.yaml
     with:
       target-ref: v3.7.3
@@ -48,3 +48,10 @@ jobs:
       CR_PAT: ${{ secrets.CR_PAT }}
       SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
 
+  call-vuln-check-for-v3_8:
+    uses: ./.github/workflows/vuln-check.yaml
+    with:
+      target-ref: v3.8.0
+    secrets:
+      CR_PAT: ${{ secrets.CR_PAT }}
+      SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}

@@ -1,6 +1,6 @@
 # Multi-storage Transactions
 
-Scalar DB transactions can span multiple storages/databases while preserving ACID property with a
+ScalarDB transactions can span multiple storages/databases while preserving ACID property with a
 feature called *Multi-storage Transactions*. This documentation explains the feature briefly.
 
 ## How Multi-storage Transactions works
