@@ -17,8 +17,8 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.storage.jdbc.JdbcService;
-import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
@@ -39,14 +39,14 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   private final String txId;
   private final JdbcService jdbcService;
   private final Connection connection;
-  private final RdbEngine rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
 
   JdbcTransaction(
-      String txId, JdbcService jdbcService, Connection connection, RdbEngine rdbEngine) {
+      String txId, JdbcService jdbcService, Connection connection, RdbEngine rdbEngineType) {
     this.txId = txId;
     this.jdbcService = jdbcService;
     this.connection = connection;
-    this.rdbEngine = rdbEngine;
+    this.rdbEngine = RdbEngineStrategy.create(rdbEngineType);
   }
 
   @Override
@@ -185,14 +185,14 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   }
 
   private CrudException createCrudException(SQLException e, String message) {
-    if (JdbcUtils.isConflictError(e, rdbEngine)) {
+    if (rdbEngine.isConflictError(e)) {
       return new CrudConflictException("conflict happened; try restarting transaction", e);
     }
     return new CrudException(message, e);
   }
 
   private CommitException createCommitException(SQLException e) {
-    if (JdbcUtils.isConflictError(e, rdbEngine)) {
+    if (rdbEngine.isConflictError(e)) {
       return new CommitConflictException("conflict happened; try restarting transaction", e);
     }
     return new CommitException("failed to commit", e);

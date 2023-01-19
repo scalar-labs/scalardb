@@ -68,8 +68,44 @@ class RdbEngineOracle extends RdbEngineStrategy {
   }
 
   @Override
-  protected RdbEngine getRdbEngine() {
+  public RdbEngine getRdbEngine() {
     return RdbEngine.ORACLE;
+  }
+
+  @Override
+  boolean isDuplicateUserError(SQLException e) {
+    // ORA-01920: user name 'string' conflicts with another user or role name
+    return e.getErrorCode() == 1920;
+  }
+
+  @Override
+  boolean isDuplicateSchemaError(SQLException e) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  boolean isDuplicateTableError(SQLException e) {
+    // ORA-00955: name is already used by an existing object
+    return e.getErrorCode() == 955;
+  }
+
+  @Override
+  boolean isDuplicateKeyError(SQLException e) {
+    // Integrity constraint violation
+    return e.getSQLState().equals("23000");
+  }
+
+  @Override
+  boolean isUndefinedTableError(SQLException e) {
+    // ORA-00942: Table or view does not exist
+    return e.getErrorCode() == 942;
+  }
+
+  @Override
+  public boolean isConflictError(SQLException e) {
+    // ORA-08177: can't serialize access for this transaction
+    // ORA-00060: deadlock detected while waiting for resource
+    return e.getErrorCode() == 8177 || e.getErrorCode() == 60;
   }
 
   @Override

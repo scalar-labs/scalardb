@@ -23,7 +23,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
     super(properties);
     config = new JdbcConfig(new DatabaseConfig(properties));
     metadataSchema = config.getTableMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
-    rdbEngine = config.getRdbEngine();
+    rdbEngine = RdbEngineStrategy.create(config).getRdbEngine();
   }
 
   @Override

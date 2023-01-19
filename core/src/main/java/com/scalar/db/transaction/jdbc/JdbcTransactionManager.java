@@ -16,6 +16,7 @@ import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import java.sql.SQLException;
 import java.util.UUID;
@@ -30,7 +31,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
 
   private final BasicDataSource dataSource;
   private final BasicDataSource tableMetadataDataSource;
-  private final RdbEngine rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
   private final JdbcService jdbcService;
 
   @Inject
@@ -39,7 +40,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
     JdbcConfig config = new JdbcConfig(databaseConfig);
 
     dataSource = JdbcUtils.initDataSource(config, true);
-    rdbEngine = config.getRdbEngine();
+    rdbEngine = RdbEngineStrategy.create(config);
 
     tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config);
     TableMetadataManager tableMetadataManager =
@@ -48,7 +49,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
             databaseConfig.getMetadataCacheExpirationTimeSecs());
 
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
-    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine.getRdbEngine());
     jdbcService = new JdbcService(tableMetadataManager, operationChecker, queryBuilder);
   }
 
@@ -62,7 +63,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
     super(databaseConfig);
     this.dataSource = dataSource;
     this.tableMetadataDataSource = tableMetadataDataSource;
-    this.rdbEngine = rdbEngine;
+    this.rdbEngine = RdbEngineStrategy.create(rdbEngine);
     this.jdbcService = jdbcService;
   }
 
@@ -76,7 +77,8 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
   public DistributedTransaction begin(String txId) throws TransactionException {
     try {
       JdbcTransaction transaction =
-          new JdbcTransaction(txId, jdbcService, dataSource.getConnection(), rdbEngine);
+          new JdbcTransaction(
+              txId, jdbcService, dataSource.getConnection(), rdbEngine.getRdbEngine());
       getNamespace().ifPresent(transaction::withNamespace);
       getTable().ifPresent(transaction::withTable);
       return decorate(transaction);

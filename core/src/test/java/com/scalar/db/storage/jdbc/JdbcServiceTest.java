@@ -39,6 +39,7 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -62,7 +63,9 @@ public class JdbcServiceTest {
   @Mock private InsertQuery.Builder insertQueryBuilder;
   @Mock private InsertQuery insertQuery;
 
-  @Mock private Connection connection;
+  @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+  private Connection connection;
+
   @Mock private PreparedStatement preparedStatement;
   @Mock private ResultSet resultSet;
   @Mock private SQLException sqlException;
@@ -82,6 +85,7 @@ public class JdbcServiceTest {
                 .addColumn("v1", DataType.TEXT)
                 .addPartitionKey("p1")
                 .build());
+    when(connection.getMetaData().getURL()).thenReturn("jdbc:mysql://localhost:3306/");
   }
 
   @Test
