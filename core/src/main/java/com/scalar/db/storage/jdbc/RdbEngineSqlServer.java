@@ -50,7 +50,43 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
-  protected RdbEngine getRdbEngine() {
+  boolean isDuplicateUserError(SQLException e) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  boolean isDuplicateSchemaError(SQLException e) {
+    // 2714: There is already an object named '%.*ls' in the database.
+    return e.getErrorCode() == 2714;
+  }
+
+  @Override
+  boolean isDuplicateTableError(SQLException e) {
+    // 2714: There is already an object named '%.*ls' in the database.
+    return e.getErrorCode() == 2714;
+  }
+
+  @Override
+  boolean isDuplicateKeyError(SQLException e) {
+    // 23000: Integrity constraint violation
+    return e.getSQLState().equals("23000");
+  }
+
+  @Override
+  boolean isUndefinedTableError(SQLException e) {
+    // 208: Invalid object name '%.*ls'.
+    return e.getErrorCode() == 208;
+  }
+
+  @Override
+  public boolean isConflictError(SQLException e) {
+    // 1205: Transaction (Process ID %d) was deadlocked on %.*ls resources with another process and
+    // has been chosen as the deadlock victim. Rerun the transaction.
+    return e.getErrorCode() == 1205;
+  }
+
+  @Override
+  public RdbEngine getRdbEngine() {
     return RdbEngine.SQL_SERVER;
   }
 
