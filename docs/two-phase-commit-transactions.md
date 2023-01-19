@@ -223,7 +223,7 @@ public class Sample {
       try {
         tx = transactionManager.begin();
       } catch (TransactionException e) {
-        // If starting a transaction fails, it indicates some failure happens during the
+        // If beginning a transaction fails, it indicates some failure happens during the
         // transaction, so you should cancel the transaction or retry the transaction after the
         // failure/error is fixed
         return;
