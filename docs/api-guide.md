@@ -695,9 +695,9 @@ public class Sample {
     int retryCount = 0;
 
     while (true) {
-      if (retryCount > 0) {
+      if (retryCount++ > 0) {
         // Retry the transaction three times maximum in this sample code
-        if (retryCount == 3) {
+        if (retryCount >= 3) {
           return;
         }
         // Sleep 100 milliseconds before retrying the transaction in this sample code
@@ -709,7 +709,7 @@ public class Sample {
       try {
         tx = transactionManager.begin();
       } catch (TransactionException e) {
-        // If beginning a transaction fails, it indicates some failure happens during the
+        // If beginning a transaction failed, it indicates some failure happens during the
         // transaction, so you should cancel the transaction or retry the transaction after the
         // failure/error is fixed
         return;
@@ -731,16 +731,15 @@ public class Sample {
         try {
           tx.rollback();
         } catch (RollbackException ex) {
-          // Rolling back the transaction fails. You can log it here
+          // Rolling back the transaction failed. You can log it here
         }
-        retryCount++;
       } catch (CrudException | CommitException e) {
         // If you catch CrudException or CommitException, it indicates some failure happens, so you
         // should cancel the transaction or retry the transaction after the failure/error is fixed
         try {
           tx.rollback();
         } catch (RollbackException ex) {
-          // Rolling back the transaction fails. You can log it here
+          // Rolling back the transaction failed. You can log it here
         }
         return;
       } catch (UnknownTransactionStatusException e) {
