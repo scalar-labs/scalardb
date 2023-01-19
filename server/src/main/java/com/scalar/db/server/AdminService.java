@@ -4,7 +4,6 @@ import com.google.protobuf.Empty;
 import com.scalar.admin.rpc.AdminGrpc;
 import com.scalar.admin.rpc.CheckPausedResponse;
 import com.scalar.admin.rpc.PauseRequest;
-import com.scalar.admin.rpc.StatsResponse;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.util.concurrent.TimeUnit;
@@ -61,13 +60,6 @@ public class AdminService extends AdminGrpc.AdminImplBase {
     gateKeeper.open();
     logger.warn("Unpaused");
     responseObserver.onNext(Empty.getDefaultInstance());
-    responseObserver.onCompleted();
-  }
-
-  @Override
-  public void stats(Empty request, StreamObserver<StatsResponse> responseObserver) {
-    // returns empty for now
-    responseObserver.onNext(StatsResponse.newBuilder().setStats("{}").build());
     responseObserver.onCompleted();
   }
 
