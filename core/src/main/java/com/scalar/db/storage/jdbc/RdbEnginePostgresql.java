@@ -59,7 +59,41 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
   }
 
   @Override
-  protected RdbEngine getRdbEngine() {
+  boolean isDuplicateUserError(SQLException e) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  boolean isDuplicateSchemaError(SQLException e) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  boolean isDuplicateTableError(SQLException e) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  boolean isDuplicateKeyError(SQLException e) {
+    // 23505: unique_violation
+    return e.getSQLState().equals("23505");
+  }
+
+  @Override
+  boolean isUndefinedTableError(SQLException e) {
+    // 42P01: undefined_table
+    return e.getSQLState().equals("42P01");
+  }
+
+  @Override
+  public boolean isConflictError(SQLException e) {
+    // 40001: serialization_failure
+    // 40P01: deadlock_detected
+    return e.getSQLState().equals("40001") || e.getSQLState().equals("40P01");
+  }
+
+  @Override
+  public RdbEngine getRdbEngine() {
     return RdbEngine.POSTGRESQL;
   }
 

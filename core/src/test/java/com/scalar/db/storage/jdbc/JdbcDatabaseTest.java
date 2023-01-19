@@ -50,6 +50,7 @@ public class JdbcDatabaseTest {
 
     // Arrange
     when(dataSource.getConnection()).thenReturn(connection);
+
     jdbcDatabase =
         new JdbcDatabase(dataSource, tableMetadataDataSource, RdbEngine.MYSQL, jdbcService);
   }
