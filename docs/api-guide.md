@@ -725,8 +725,9 @@ public class Sample {
         // Commit the transaction
         tx.commit();
       } catch (CrudConflictException | CommitConflictException e) {
-        // If you catch CrudConflictException or CommitConflictException, it indicates a conflict 
-        // occurs during the transaction so that you can retry the transaction from the beginning
+        // If you catch CrudConflictException or CommitConflictException, it indicates a transaction
+        // conflict occurs during the transaction so that you can retry the transaction from the
+        // beginning
         try {
           tx.rollback();
         } catch (RollbackException ex) {
@@ -756,7 +757,7 @@ public class Sample {
 
 The APIs for CRUD operations (`get()`/`scan()`/`put()`/`delete()`/`mutate()`) could throw `CrudException` and `CrudConflictException`.
 If you catch `CrudException`, it indicates some failure (e.g., database failure and network error) happens during a transaction, so you should cancel the transaction or retry the transaction after the failure/error is fixed.
-If you catch `CrudConflictException`, it indicates a conflict occurs during the transaction so that you can retry the transaction from the beginning, preferably with well-adjusted exponential backoff based on your application and environment.
+If you catch `CrudConflictException`, it indicates a transaction conflict occurs during the transaction so that you can retry the transaction from the beginning, preferably with well-adjusted exponential backoff based on your application and environment.
 The sample code retries three times maximum and sleeps 100 milliseconds before retrying the transaction.
 
 Also, the `commit()` API could throw `CommitException`, `CommitConflictException`, and `UnknownTransactionStatusException`.

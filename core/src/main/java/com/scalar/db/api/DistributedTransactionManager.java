@@ -184,8 +184,7 @@ public interface DistributedTransactionManager {
    * @param txId the transaction ID
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction associated with the specified
-   *     transaction ID is not found. You can retry the same transaction from the beginning in this
-   *     case
+   *     transaction ID is not found. You can retry the transaction from the beginning in this case
    */
   DistributedTransaction resume(String txId) throws TransactionNotFoundException;
 

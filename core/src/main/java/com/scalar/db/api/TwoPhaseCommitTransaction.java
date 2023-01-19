@@ -73,8 +73,8 @@ public interface TwoPhaseCommitTransaction extends TransactionCrudOperable {
   /**
    * Prepares a transaction.
    *
-   * @throws PreparationConflictException if conflicts happened. You can retry the same transaction
-   *     from the beginning in this case
+   * @throws PreparationConflictException if a transaction conflict occurs. You can retry the
+   *     transaction from the beginning in this case
    * @throws PreparationException if the operation fails
    */
   void prepare() throws PreparationConflictException, PreparationException;
@@ -83,8 +83,8 @@ public interface TwoPhaseCommitTransaction extends TransactionCrudOperable {
    * Validates a transaction. Depending on the concurrency control algorithm, you need a validation
    * phase for a transaction.
    *
-   * @throws ValidationConflictException if conflicts happened. You can retry the same transaction
-   *     from the beginning in this case
+   * @throws ValidationConflictException if a transaction conflict occurs. You can retry the
+   *     transaction from the beginning in this case
    * @throws ValidationException if the operation fails
    */
   void validate() throws ValidationConflictException, ValidationException;
@@ -92,8 +92,8 @@ public interface TwoPhaseCommitTransaction extends TransactionCrudOperable {
   /**
    * Commits a transaction.
    *
-   * @throws CommitConflictException if conflicts happened. You can retry the same transaction from
-   *     the beginning in this case
+   * @throws CommitConflictException if a transaction conflict occurs. You can retry the transaction
+   *     from the beginning in this case
    * @throws CommitException if the operation fails
    * @throws UnknownTransactionStatusException if the status of the commit is unknown
    */
