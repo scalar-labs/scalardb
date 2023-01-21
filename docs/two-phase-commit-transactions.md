@@ -46,7 +46,7 @@ First, you need to get a `TwoPhaseCommitTransactionManager` instance to execute 
 You can use `TransactionFactory` to get a `TwoPhaseCommitTransactionManager` instance as follows:
 ```java
 TransactionFactory factory = TransactionFactory.create("<configuration file path>");
-TwoPhaseCommitTransactionManager manager = factory.getTwoPhaseCommitTransactionManager();
+TwoPhaseCommitTransactionManager transactionManager = factory.getTwoPhaseCommitTransactionManager();
 ```
 
 ### Begin/Start a transaction (for coordinator)
@@ -54,12 +54,12 @@ TwoPhaseCommitTransactionManager manager = factory.getTwoPhaseCommitTransactionM
 You can begin/start a transaction as follows:
 ```java
 // Begin a transaction
-TwoPhaseCommitTransaction tx = manager.begin();
+TwoPhaseCommitTransaction tx = transactionManager.begin();
 
 Or
 
 // Start a transaction
-TwoPhaseCommitTransaction tx = manager.start();
+TwoPhaseCommitTransaction tx = transactionManager.start();
 ```
 
 The process/application that begins the transaction acts as a coordinator, as mentioned.
@@ -67,12 +67,12 @@ The process/application that begins the transaction acts as a coordinator, as me
 You can also begin/start a transaction by specifying a transaction ID as follows:
 ```java
 // Begin a transaction with specifying a transaction ID
-TwoPhaseCommitTransaction tx = manager.begin("<transaction ID>");
+TwoPhaseCommitTransaction tx = transactionManager.begin("<transaction ID>");
 
 Or
 
 // Start a transaction with specifying a transaction ID
-TwoPhaseCommitTransaction tx = manager.start("<transaction ID>");
+TwoPhaseCommitTransaction tx = transactionManager.start("<transaction ID>");
 ```
 
 Note that you must guarantee uniqueness of the transaction ID in this case.
@@ -86,7 +86,7 @@ tx.getId();
 
 If you are a participant, you can join the transaction that has been begun by the coordinator as follows:
 ```java
-TwoPhaseCommitTransaction tx = manager.join("<transaction ID>")
+TwoPhaseCommitTransaction tx = transactionManager.join("<transaction ID>")
 ```
 
 You need to specify the transaction ID associated with the transaction that the coordinator has begun.
@@ -195,6 +195,111 @@ Similar to `prepare()`, you can call `validate()` in the coordinator/participant
 Currently, you need to call `validate()` when you use the `Consensus Commit` transaction manager with `EXTRA_READ` serializable strategy in `SERIALIZABLE` isolation level.
 In other cases, `validate()` does nothing.
 
+### Handle Exceptions
+
+Let's look at the following example code to see how to handle exceptions in Two-phase commit transactions.
+
+```java
+public class Sample {
+  public static void main(String[] args) throws IOException, InterruptedException {
+    TransactionFactory factory = TransactionFactory.create("<configuration file path>");
+    TwoPhaseCommitTransactionManager transactionManager =
+        factory.getTwoPhaseCommitTransactionManager();
+
+    int retryCount = 0;
+
+    while (true) {
+      if (retryCount++ > 0) {
+        // Retry the transaction three times maximum in this sample code
+        if (retryCount >= 3) {
+          return;
+        }
+        // Sleep 100 milliseconds before retrying the transaction in this sample code
+        TimeUnit.MILLISECONDS.sleep(100);
+      }
+
+      // Begin a transaction
+      TwoPhaseCommitTransaction tx;
+      try {
+        tx = transactionManager.begin();
+      } catch (TransactionException e) {
+        // If beginning a transaction failed, it indicates some failure happens during the
+        // transaction, so you should cancel the transaction or retry the transaction after the
+        // failure/error is fixed
+        return;
+      }
+
+      try {
+        // Execute CRUD operations in the transaction
+        Optional<Result> result = tx.get(...);
+        List<Result> results = tx.scan(...);
+        tx.put(...);
+        tx.delete(...);
+
+        // Prepare the transaction
+        tx.prepare();
+
+        // validate the transaction
+        tx.validate();
+
+        // Commit the transaction
+        tx.commit();
+      } catch (CrudConflictException
+          | PreparationConflictException
+          | ValidationConflictException
+          | CommitConflictException e) {
+        // If you catch CrudConflictException or PreparationConflictException or
+        // ValidationConflictException or CommitConflictException, it indicates a transaction
+        // conflict occurs during the transaction so that you can retry the transaction from the
+        // beginning
+        try {
+          tx.rollback();
+        } catch (RollbackException ex) {
+          // Rolling back the transaction failed. You can log it here
+        }
+      } catch (CrudException | PreparationException | ValidationException | CommitException e) {
+        // If you catch CrudException or PreparationException or ValidationException or
+        // CommitException, it indicates some failure happens, so you should cancel the transaction
+        // or retry the transaction after the failure/error is fixed
+        try {
+          tx.rollback();
+        } catch (RollbackException ex) {
+          // Rolling back the transaction failed. You can log it here
+        }
+        return;
+      } catch (UnknownTransactionStatusException e) {
+        // If you catch `UnknownTransactionStatusException` when committing the transaction, you are
+        // not sure if the transaction succeeds or not. In such a case, you need to check if the
+        // transaction is committed successfully or not and retry it if it failed. How to identify a
+        // transaction status is delegated to users
+        return;
+      }
+    }
+  }
+}
+```
+
+The APIs for CRUD operations (`get()`/`scan()`/`put()`/`delete()`/`mutate()`) could throw `CrudException` and `CrudConflictException`.
+If you catch `CrudException`, it indicates some failure (e.g., database failure and network error) happens during a transaction, so you should cancel the transaction or retry the transaction after the failure/error is fixed.
+If you catch `CrudConflictException`, it indicates a transaction conflict occurs during the transaction so that you can retry the transaction from the beginning, preferably with well-adjusted exponential backoff based on your application and environment.
+The sample code retries three times maximum and sleeps 100 milliseconds before retrying the transaction.
+
+The `prepare()` API could throw `PreparationException` and `PreparationConflictException`.
+If you catch `PreparationException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure/error is fixed.
+If you catch `PreparationConflictException`, like the `CrudConflictException` case, you can retry the transaction from the beginning.
+
+The `validate()` API could throw `ValidationException` and `ValidationConflictException`.
+If you catch `ValidationException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure/error is fixed.
+If you catch `ValidationConflictException`, like the `CrudConflictException` case, you can retry the transaction from the beginning.
+
+The `commit()` API could throw `CommitException`, `CommitConflictException`, and `UnknownTransactionStatusException`.
+If you catch `CommitException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure/error is fixed.
+If you catch `CommitConflictException`, like the `CrudConflictException` case, you can retry the transaction from the beginning.
+If you catch `UnknownTransactionStatusException`, you are not sure if the transaction succeeds or not.
+In such a case, you need to check if the transaction is committed successfully or not and retry it if it fails.
+How to identify a transaction status is delegated to users.
+You may want to create a transaction status table and update it transactionally with other application data so that you can get the status of a transaction from the status table.
+
 ### Request Routing in Two-phase Commit Transactions
 
 Services using Two-phase Commit Transactions usually execute a transaction by exchanging multiple requests and responses as follows:
@@ -239,12 +344,12 @@ For such cases, you can resume a transaction object (a `TwoPhaseCommitTransactio
 
 ```java
 // Join (or begin) the transaction
-TwoPhaseCommitTransaction tx = manager.join("<transaction ID>");
+TwoPhaseCommitTransaction tx = transactionManager.join("<transaction ID>");
 
 ...
 
 // Resume the transaction by the trnasaction ID
-TwoPhaseCommitTransaction tx1 = manager.resume("<transaction ID>")
+TwoPhaseCommitTransaction tx1 = transactionManager.resume("<transaction ID>")
 ```
 
 For example, let's say you have two services that have the following endpoints:
@@ -272,14 +377,14 @@ And, let's say a client calls `ServiceA.facadeEndpoint()` that begins a transact
 ```java
 public class ServiceAImpl implements ServiceA {
 
-  private TwoPhaseCommitTransactionManager manager = ...;
+  private TwoPhaseCommitTransactionManager transactionManager = ...;
   private ServiceB serviceB = ...;
 
   ...
 
   @Override
   public void facadeEndpoint() throws Exception {
-    TwoPhaseCommitTransaction tx = manager.begin();
+    TwoPhaseCommitTransaction tx = transactionManager.begin();
 
     try {
       ...
@@ -318,26 +423,26 @@ The implementation of `ServiceB` is as follows:
 ```java
 public class ServiceBImpl implements ServiceB {
 
-  private TwoPhaseCommitTransactionManager manager = ...;
+  private TwoPhaseCommitTransactionManager transactionManager = ...;
 
   ...
 
   @Override
   public void endpoint1(String txId) throws Exception {
     // First, you need to join the transaction
-    TwoPhaseCommitTransaction tx = manager.join(txId);
+    TwoPhaseCommitTransaction tx = transactionManager.join(txId);
   }
 
   @Override
   public void endpoint2(String txId) throws Exception {
     // You can resume the transaction that you joined in endpoint1()
-    TwoPhaseCommitTransaction tx = manager.resume(txId);
+    TwoPhaseCommitTransaction tx = transactionManager.resume(txId);
   }
 
   @Override
   public void prepare(String txId) throws Exception {
     // You can resume the transaction
-    TwoPhaseCommitTransaction tx = manager.resume(txId);
+    TwoPhaseCommitTransaction tx = transactionManager.resume(txId);
 
     ...
 
@@ -348,7 +453,7 @@ public class ServiceBImpl implements ServiceB {
   @Override
   public void commit(String txId) throws Exception {
     // You can resume the transaction
-    TwoPhaseCommitTransaction tx = manager.resume(txId);
+    TwoPhaseCommitTransaction tx = transactionManager.resume(txId);
 
     ...
 
@@ -359,7 +464,7 @@ public class ServiceBImpl implements ServiceB {
   @Override
   public void rollback(String txId) throws Exception {
     // You can resume the transaction
-    TwoPhaseCommitTransaction tx = manager.resume(txId);
+    TwoPhaseCommitTransaction tx = transactionManager.resume(txId);
 
     ...
 
