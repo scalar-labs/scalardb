@@ -95,17 +95,15 @@ class RdbEngineMysql implements RdbEngineStrategy {
   }
 
   @Override
-  public void alterColumnType(
-      Connection connection, String namespace, String table, String columnName, String columnType)
-      throws SQLException {
-    String alterColumnStatement =
+  public String alterColumnTypeSql(
+      String namespace, String table, String columnName, String columnType) {
+    return
         "ALTER TABLE "
             + encloseFullTableName(namespace, table)
             + " MODIFY"
             + enclose(columnName)
             + " "
             + columnType;
-    execute(connection, alterColumnStatement);
   }
 
   @Override

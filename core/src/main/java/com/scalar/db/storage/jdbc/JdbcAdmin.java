@@ -549,7 +549,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return;
     }
 
-    rdbEngine.alterColumnType(connection, namespace, table, columnName, columnTypeForKey);
+    String sql = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnTypeForKey);
+    execute(connection, sql);
   }
 
   private void alterToRegularColumnTypeIfNecessary(
@@ -564,7 +565,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     String columnType = rdbEngine.getDataTypeForEngine(indexType);
-    rdbEngine.alterColumnType(connection, namespace, table, columnName, columnType);
+    String sql = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
+    execute(connection, sql);
   }
 
   @Override

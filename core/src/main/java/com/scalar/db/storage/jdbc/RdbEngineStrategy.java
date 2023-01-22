@@ -7,7 +7,6 @@ import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
 import java.sql.SQLException;
-import org.apache.commons.dbcp2.BasicDataSource;
 
 /**
  * An interface to hide the difference between underlying JDBC SQL engines in SQL dialects, error codes, and so on.
@@ -62,9 +61,7 @@ public interface RdbEngineStrategy {
 
   String namespaceExistsStatement();
 
-  void alterColumnType(
-      Connection connection, String namespace, String table, String columnName, String columnType)
-      throws SQLException;
+  String alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
   void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
       throws SQLException;
