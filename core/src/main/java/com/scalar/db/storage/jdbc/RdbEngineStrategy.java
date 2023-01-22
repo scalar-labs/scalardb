@@ -38,13 +38,11 @@ public interface RdbEngineStrategy {
   String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata);
 
-  void createTableInternalExecuteAfterCreateTable(
+  String[] createTableInternalSqlsAfterCreateTable(
       boolean hasDescClusteringOrder,
-      Connection connection,
       String schema,
       String table,
-      TableMetadata metadata)
-      throws SQLException;
+      TableMetadata metadata);
 
   void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement)
       throws SQLException;

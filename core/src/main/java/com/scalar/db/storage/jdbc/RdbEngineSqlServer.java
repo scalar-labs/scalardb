@@ -46,13 +46,13 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   }
 
   @Override
-  public void createTableInternalExecuteAfterCreateTable(
+  public String[] createTableInternalSqlsAfterCreateTable(
       boolean hasDescClusteringOrder,
-      Connection connection,
       String schema,
       String table,
       TableMetadata metadata) {
     // do nothing
+    return new String[0];
   }
 
   @Override

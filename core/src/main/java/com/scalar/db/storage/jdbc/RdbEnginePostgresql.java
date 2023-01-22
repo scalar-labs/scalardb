@@ -14,6 +14,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.dbcp2.BasicDataSource;
@@ -36,18 +37,17 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
         + "))";
   }
 
-  @SuppressFBWarnings({"SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"})
   @Override
-  public void createTableInternalExecuteAfterCreateTable(
+  public String[] createTableInternalSqlsAfterCreateTable(
       boolean hasDescClusteringOrder,
-      Connection connection,
       String schema,
       String table,
-      TableMetadata metadata)
-      throws SQLException {
+      TableMetadata metadata) {
+    ArrayList<String> sqls = new ArrayList<>();
+
     if (hasDescClusteringOrder) {
       // Create a unique index for the clustering orders
-      String createUniqueIndexStatement =
+      sqls.add(
           "CREATE UNIQUE INDEX "
               + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
               + " ON "
@@ -58,9 +58,10 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
                       metadata.getClusteringKeyNames().stream()
                           .map(c -> enclose(c) + " " + metadata.getClusteringOrder(c)))
                   .collect(Collectors.joining(","))
-              + ")";
-      execute(connection, createUniqueIndexStatement);
+              + ")");
     }
+
+    return sqls.toArray(new String[0]);
   }
 
   @Override

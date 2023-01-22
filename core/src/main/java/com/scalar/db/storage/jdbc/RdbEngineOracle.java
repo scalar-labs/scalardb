@@ -14,6 +14,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.dbcp2.BasicDataSource;
@@ -39,24 +40,23 @@ public class RdbEngineOracle implements RdbEngineStrategy {
         + ")) ROWDEPENDENCIES"; // add ROWDEPENDENCIES to the table to improve the performance
   }
 
-  @SuppressFBWarnings({"SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"})
   @Override
-  public void createTableInternalExecuteAfterCreateTable(
+  public String[] createTableInternalSqlsAfterCreateTable(
       boolean hasDescClusteringOrder,
-      Connection connection,
       String schema,
       String table,
       TableMetadata metadata)
-      throws SQLException {
+  {
+    ArrayList<String> sqls = new ArrayList<>();
+
     // Set INITRANS to 3 and MAXTRANS to 255 for the table to improve the
     // performance
-    String alterTableStatement =
-        "ALTER TABLE " + encloseFullTableName(schema, table) + " INITRANS 3 MAXTRANS 255";
-    execute(connection, alterTableStatement);
+    sqls.add(
+        "ALTER TABLE " + encloseFullTableName(schema, table) + " INITRANS 3 MAXTRANS 255");
 
     if (hasDescClusteringOrder) {
       // Create a unique index for the clustering orders
-      String createUniqueIndexStatement =
+      sqls.add(
           "CREATE UNIQUE INDEX "
               + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
               + " ON "
@@ -67,9 +67,10 @@ public class RdbEngineOracle implements RdbEngineStrategy {
                       metadata.getClusteringKeyNames().stream()
                           .map(c -> enclose(c) + " " + metadata.getClusteringOrder(c)))
                   .collect(Collectors.joining(","))
-              + ")";
-      execute(connection, createUniqueIndexStatement);
+              + ")");
     }
+
+    return sqls.toArray(new String[0]);
   }
 
   @Override
