@@ -113,8 +113,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         ", " + rdbEngine.createTableInternalPrimaryKeyClause(hasDescClusteringOrder, metadata);
     execute(connection, createTableStatement);
 
-    rdbEngine.createTableInternalSqlsAfterCreateTable(
+    String[] sqls = rdbEngine.createTableInternalSqlsAfterCreateTable(
         hasDescClusteringOrder, schema, table, metadata);
+    execute(connection, sqls);
   }
 
   private void createIndex(
