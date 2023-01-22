@@ -71,9 +71,8 @@ class RdbEngineMysql implements RdbEngineStrategy {
   }
 
   @Override
-  public void deleteMetadataSchema(Connection connection, String metadataSchema)
-      throws SQLException {
-    execute(connection, "DROP SCHEMA " + enclose(metadataSchema));
+  public String deleteMetadataSchemaSql(String metadataSchema) {
+    return "DROP SCHEMA " + enclose(metadataSchema);
   }
 
   @Override

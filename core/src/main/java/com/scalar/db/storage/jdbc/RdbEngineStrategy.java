@@ -54,7 +54,7 @@ public interface RdbEngineStrategy {
 
   boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e);
 
-  void deleteMetadataSchema(Connection connection, String metadataSchema) throws SQLException;
+  String deleteMetadataSchemaSql(String metadataSchema);
 
   void dropNamespace(BasicDataSource dataSource, String namespace) throws ExecutionException;
 

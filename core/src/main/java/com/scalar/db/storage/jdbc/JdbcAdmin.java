@@ -318,7 +318,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void deleteMetadataSchemaAndTableIfEmpty(Connection connection) throws SQLException {
     if (isMetadataTableEmpty(connection)) {
       deleteMetadataTable(connection);
-      rdbEngine.deleteMetadataSchema(connection, metadataSchema);
+      deleteMetadataSchema(connection);
     }
   }
 
@@ -339,6 +339,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         "DROP TABLE " + encloseFullTableName(metadataSchema, METADATA_TABLE);
 
     execute(connection, dropTableStatement);
+  }
+
+  private void deleteMetadataSchema(Connection connection) throws SQLException {
+    String sql = rdbEngine.deleteMetadataSchemaSql(metadataSchema);
+    execute(connection, sql);
   }
 
   @Override
