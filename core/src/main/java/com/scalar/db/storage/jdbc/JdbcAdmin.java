@@ -146,8 +146,22 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   private void createMetadataSchemaAndTableIfNotExists(Connection connection) throws SQLException {
-    rdbEngine.createMetadataSchemaIfNotExists(connection, metadataSchema);
+    createMetadataSchemaIfNotExists(connection);
     createMetadataTableIfNotExists(connection);
+  }
+
+  private void createMetadataSchemaIfNotExists(Connection connection) throws SQLException {
+    String[] sqls = rdbEngine.createMetadataSchemaIfNotExistsSql(metadataSchema);
+    try {
+      for (String sql : sqls) {
+        execute(connection, sql);
+      }
+    } catch (SQLException e) {
+      // Suppress exceptions indicating the duplicate metadata schema
+      if (!rdbEngine.isCreateMetadataSchemaDuplicateSchemaError(e)) {
+        throw e;
+      }
+    }
   }
 
   private void createMetadataTableIfNotExists(Connection connection) throws SQLException {
@@ -187,7 +201,15 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + enclose(METADATA_COL_COLUMN_NAME)
             + "))";
 
-    rdbEngine.createMetadataTableIfNotExistsExecute(connection, createTableStatement);
+    String stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
+    try {
+      execute(connection, stmt);
+    } catch (SQLException e) {
+      // Suppress the exception thrown when the table already exists
+      if (!rdbEngine.isDuplicateTableError(e)) {
+        throw e;
+      }
+    }
   }
 
   private String getTextType(int charLength) {

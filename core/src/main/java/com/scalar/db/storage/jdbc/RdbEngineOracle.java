@@ -74,30 +74,21 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
-  public void createMetadataTableIfNotExistsExecute(
-      Connection connection, String createTableStatement) throws SQLException {
-    try {
-      execute(connection, createTableStatement);
-    } catch (SQLException e) {
-      // Suppress the exception thrown when the table already exists
-      if (!isDuplicateTableError(e)) {
-        throw e;
-      }
-    }
+  public String tryAddIfNotExistsToCreateTableSql(String createTableSql) {
+    return createTableSql;
   }
 
   @Override
-  public void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
-      throws SQLException {
-    try {
-      execute(connection, "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"");
-    } catch (SQLException e) {
-      // Suppress the exception thrown when the user already exists
-      if (!isDuplicateUserError(e)) {
-        throw e;
-      }
-    }
-    execute(connection, "ALTER USER " + enclose(metadataSchema) + " quota unlimited on USERS");
+  public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
+    return new String[]{
+        "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"",
+        "ALTER USER " + enclose(metadataSchema) + " quota unlimited on USERS",
+    };
+  }
+
+  @Override
+  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+    return isDuplicateUserError(e);
   }
 
   @Override

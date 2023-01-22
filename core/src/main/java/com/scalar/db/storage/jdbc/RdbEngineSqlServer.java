@@ -56,29 +56,18 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   }
 
   @Override
-  public void createMetadataTableIfNotExistsExecute(
-      Connection connection, String createTableStatement) throws SQLException {
-    try {
-      execute(connection, createTableStatement);
-    } catch (SQLException e) {
-      // Suppress the exception thrown when the table already exists
-      if (!isDuplicateTableError(e)) {
-        throw e;
-      }
-    }
+  public String tryAddIfNotExistsToCreateTableSql(String createTableSql) {
+    return createTableSql;
   }
 
   @Override
-  public void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
-      throws SQLException {
-    try {
-      execute(connection, "CREATE SCHEMA " + enclose(metadataSchema));
-    } catch (SQLException e) {
-      // Suppress the exception thrown when the schema already exists
-      if (!isDuplicateSchemaError(e)) {
-        throw e;
-      }
-    }
+  public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
+    return new String[]{"CREATE SCHEMA " + enclose(metadataSchema)};
+  }
+
+  @Override
+  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+    return isDuplicateSchemaError(e);
   }
 
   @Override

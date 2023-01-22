@@ -44,11 +44,11 @@ public interface RdbEngineStrategy {
       String table,
       TableMetadata metadata);
 
-  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement)
-      throws SQLException;
+  String tryAddIfNotExistsToCreateTableSql(String createTableSql);
 
-  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
-      throws SQLException;
+  String[] createMetadataSchemaIfNotExistsSql(String metadataSchema);
+
+  boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e);
 
   void deleteMetadataSchema(Connection connection, String metadataSchema) throws SQLException;
 
