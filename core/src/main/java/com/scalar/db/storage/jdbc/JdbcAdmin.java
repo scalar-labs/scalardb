@@ -68,9 +68,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     String fullNamespace = enclose(namespace);
     try (Connection connection = dataSource.getConnection()) {
-      for (String sql : rdbEngine.createNamespaceExecuteSqls(fullNamespace)) {
-        execute(connection, sql);
-      }
+      execute(connection, rdbEngine.createNamespaceExecuteSqls(fullNamespace));
     } catch (SQLException e) {
       throw new ExecutionException("creating the schema failed", e);
     }
@@ -154,9 +152,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void createMetadataSchemaIfNotExists(Connection connection) throws SQLException {
     String[] sqls = rdbEngine.createMetadataSchemaIfNotExistsSql(metadataSchema);
     try {
-      for (String sql : sqls) {
-        execute(connection, sql);
-      }
+      execute(connection, sqls);
     } catch (SQLException e) {
       // Suppress exceptions indicating the duplicate metadata schema
       if (!rdbEngine.isCreateMetadataSchemaDuplicateSchemaError(e)) {
@@ -707,6 +703,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   static void execute(Connection connection, String sql) throws SQLException {
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(sql);
+    }
+  }
+
+  static void execute(Connection connection, String[] sqls) throws SQLException {
+    for (String sql : sqls) {
+      execute(connection, sql);
     }
   }
 
