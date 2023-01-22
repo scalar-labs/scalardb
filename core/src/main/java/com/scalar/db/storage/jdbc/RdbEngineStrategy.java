@@ -56,7 +56,9 @@ public interface RdbEngineStrategy {
 
   String deleteMetadataSchemaSql(String metadataSchema);
 
-  void dropNamespace(BasicDataSource dataSource, String namespace) throws ExecutionException;
+  String dropNamespaceSql(String namespace);
+
+  void dropNamespaceTranslateSQLException(SQLException e, String namespace) throws ExecutionException;
 
   String namespaceExistsStatement();
 

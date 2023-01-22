@@ -76,13 +76,13 @@ class RdbEngineMysql implements RdbEngineStrategy {
   }
 
   @Override
-  public void dropNamespace(BasicDataSource dataSource, String namespace)
-      throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      execute(connection, "DROP SCHEMA " + enclose(namespace));
-    } catch (SQLException e) {
-      throw new ExecutionException(String.format("error dropping the schema %s", namespace), e);
-    }
+  public String dropNamespaceSql(String namespace) {
+    return "DROP SCHEMA " + enclose(namespace);
+  }
+
+  @Override
+  public void dropNamespaceTranslateSQLException(SQLException e, String namespace) throws ExecutionException {
+    throw new ExecutionException(String.format("error dropping the schema %s", namespace), e);
   }
 
   @Override

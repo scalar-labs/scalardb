@@ -97,13 +97,13 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
-  public void dropNamespace(BasicDataSource dataSource, String namespace)
-      throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      execute(connection, "DROP USER " + enclose(namespace));
-    } catch (SQLException e) {
-      throw new ExecutionException(String.format("error dropping the user %s", namespace), e);
-    }
+  public String dropNamespaceSql(String namespace) {
+    return "DROP USER " + enclose(namespace);
+  }
+
+  @Override
+  public void dropNamespaceTranslateSQLException(SQLException e, String namespace) throws ExecutionException {
+    throw new ExecutionException(String.format("error dropping the user %s", namespace), e);
   }
 
   @Override

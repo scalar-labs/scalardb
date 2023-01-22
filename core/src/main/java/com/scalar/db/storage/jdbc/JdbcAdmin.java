@@ -348,7 +348,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
-    rdbEngine.dropNamespace(dataSource, namespace);
+    try (Connection connection = dataSource.getConnection()) {
+      execute(connection, rdbEngine.dropNamespaceSql(namespace));
+    } catch (SQLException e) {
+      rdbEngine.dropNamespaceTranslateSQLException(e, namespace);
+    }
   }
 
   @Override
