@@ -5,12 +5,11 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
-
 import java.sql.SQLException;
 
 /**
- * An interface to hide the difference between underlying JDBC SQL engines in SQL dialects, error codes, and so on.
- * It's NOT responsible for actually connecting to underlying engines.
+ * An interface to hide the difference between underlying JDBC SQL engines in SQL dialects, error
+ * codes, and so on. It's NOT responsible for actually connecting to underlying engines.
  */
 public interface RdbEngineStrategy {
 
@@ -42,10 +41,7 @@ public interface RdbEngineStrategy {
       boolean hasDescClusteringOrder, TableMetadata metadata);
 
   String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDescClusteringOrder,
-      String schema,
-      String table,
-      TableMetadata metadata);
+      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata);
 
   String tryAddIfNotExistsToCreateTableSql(String createTableSql);
 
@@ -57,7 +53,8 @@ public interface RdbEngineStrategy {
 
   String dropNamespaceSql(String namespace);
 
-  void dropNamespaceTranslateSQLException(SQLException e, String namespace) throws ExecutionException;
+  void dropNamespaceTranslateSQLException(SQLException e, String namespace)
+      throws ExecutionException;
 
   String namespaceExistsStatement();
 

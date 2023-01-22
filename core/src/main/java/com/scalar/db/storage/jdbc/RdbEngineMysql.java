@@ -1,7 +1,5 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
-
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -9,7 +7,6 @@ import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
-
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
@@ -19,7 +16,7 @@ class RdbEngineMysql implements RdbEngineStrategy {
 
   @Override
   public String[] createNamespaceExecuteSqls(String fullNamespace) {
-    return new String[]{"CREATE SCHEMA " + fullNamespace + " character set utf8 COLLATE utf8_bin"};
+    return new String[] {"CREATE SCHEMA " + fullNamespace + " character set utf8 COLLATE utf8_bin"};
   }
 
   @Override
@@ -46,12 +43,9 @@ class RdbEngineMysql implements RdbEngineStrategy {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDescClusteringOrder,
-      String schema,
-      String table,
-      TableMetadata metadata) {
+      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata) {
     // do nothing
-    return new String[]{};
+    return new String[] {};
   }
 
   @Override
@@ -61,7 +55,7 @@ class RdbEngineMysql implements RdbEngineStrategy {
 
   @Override
   public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
-    return new String[]{"CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema)};
+    return new String[] {"CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema)};
   }
 
   @Override
@@ -80,7 +74,8 @@ class RdbEngineMysql implements RdbEngineStrategy {
   }
 
   @Override
-  public void dropNamespaceTranslateSQLException(SQLException e, String namespace) throws ExecutionException {
+  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
+      throws ExecutionException {
     throw new ExecutionException(String.format("error dropping the schema %s", namespace), e);
   }
 
@@ -96,13 +91,12 @@ class RdbEngineMysql implements RdbEngineStrategy {
   @Override
   public String alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
-    return
-        "ALTER TABLE "
-            + encloseFullTableName(namespace, table)
-            + " MODIFY"
-            + enclose(columnName)
-            + " "
-            + columnType;
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, table)
+        + " MODIFY"
+        + enclose(columnName)
+        + " "
+        + columnType;
   }
 
   @Override
@@ -112,8 +106,7 @@ class RdbEngineMysql implements RdbEngineStrategy {
 
   @Override
   public String dropIndexSql(String schema, String table, String indexName) {
-    return
-        "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
+    return "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
   }
 
   @Override

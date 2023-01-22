@@ -1,6 +1,5 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.api.TableMetadata;
@@ -10,7 +9,6 @@ import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
-
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -21,7 +19,7 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
 
   @Override
   public String[] createNamespaceExecuteSqls(String fullNamespace) {
-    return new String[]{"CREATE SCHEMA " + fullNamespace};
+    return new String[] {"CREATE SCHEMA " + fullNamespace};
   }
 
   @Override
@@ -37,10 +35,7 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDescClusteringOrder,
-      String schema,
-      String table,
-      TableMetadata metadata) {
+      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata) {
     ArrayList<String> sqls = new ArrayList<>();
 
     if (hasDescClusteringOrder) {
@@ -69,7 +64,7 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
 
   @Override
   public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
-    return new String[]{"CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema)};
+    return new String[] {"CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema)};
   }
 
   @Override
@@ -88,7 +83,8 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   }
 
   @Override
-  public void dropNamespaceTranslateSQLException(SQLException e, String namespace) throws ExecutionException {
+  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
+      throws ExecutionException {
     throw new ExecutionException(String.format("error dropping the schema %s", namespace), e);
   }
 
@@ -104,13 +100,12 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   @Override
   public String alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
-    return
-        "ALTER TABLE "
-            + encloseFullTableName(namespace, table)
-            + " ALTER COLUMN"
-            + enclose(columnName)
-            + " TYPE "
-            + columnType;
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, table)
+        + " ALTER COLUMN"
+        + enclose(columnName)
+        + " TYPE "
+        + columnType;
   }
 
   @Override

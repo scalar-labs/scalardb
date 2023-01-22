@@ -1,6 +1,5 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.api.TableMetadata;
@@ -10,7 +9,6 @@ import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
-
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -21,9 +19,9 @@ public class RdbEngineOracle implements RdbEngineStrategy {
 
   @Override
   public String[] createNamespaceExecuteSqls(String fullNamespace) {
-    return new String[]{
-        "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"",
-        "ALTER USER " + fullNamespace + " quota unlimited on USERS",
+    return new String[] {
+      "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"",
+      "ALTER USER " + fullNamespace + " quota unlimited on USERS",
     };
   }
 
@@ -40,17 +38,12 @@ public class RdbEngineOracle implements RdbEngineStrategy {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDescClusteringOrder,
-      String schema,
-      String table,
-      TableMetadata metadata)
-  {
+      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata) {
     ArrayList<String> sqls = new ArrayList<>();
 
     // Set INITRANS to 3 and MAXTRANS to 255 for the table to improve the
     // performance
-    sqls.add(
-        "ALTER TABLE " + encloseFullTableName(schema, table) + " INITRANS 3 MAXTRANS 255");
+    sqls.add("ALTER TABLE " + encloseFullTableName(schema, table) + " INITRANS 3 MAXTRANS 255");
 
     if (hasDescClusteringOrder) {
       // Create a unique index for the clustering orders
@@ -78,9 +71,9 @@ public class RdbEngineOracle implements RdbEngineStrategy {
 
   @Override
   public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
-    return new String[]{
-        "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"",
-        "ALTER USER " + enclose(metadataSchema) + " quota unlimited on USERS",
+    return new String[] {
+      "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"",
+      "ALTER USER " + enclose(metadataSchema) + " quota unlimited on USERS",
     };
   }
 
@@ -100,7 +93,8 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
-  public void dropNamespaceTranslateSQLException(SQLException e, String namespace) throws ExecutionException {
+  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
+      throws ExecutionException {
     throw new ExecutionException(String.format("error dropping the user %s", namespace), e);
   }
 
@@ -112,14 +106,13 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public String alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
-    return
-        "ALTER TABLE "
-            + encloseFullTableName(namespace, table)
-            + " MODIFY ( "
-            + enclose(columnName)
-            + " "
-            + columnType
-            + " )";
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, table)
+        + " MODIFY ( "
+        + enclose(columnName)
+        + " "
+        + columnType
+        + " )";
   }
 
   @Override
