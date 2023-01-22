@@ -21,10 +21,11 @@ import org.apache.commons.dbcp2.BasicDataSource;
 public class RdbEngineOracle implements RdbEngineStrategy {
 
   @Override
-  public void createNamespaceExecute(Connection connection, String fullNamespace)
-      throws SQLException {
-    execute(connection, "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"");
-    execute(connection, "ALTER USER " + fullNamespace + " quota unlimited on USERS");
+  public String[] createNamespaceExecuteSqls(String fullNamespace) {
+    return new String[]{
+        "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"",
+        "ALTER USER " + fullNamespace + " quota unlimited on USERS",
+    };
   }
 
   @Override

@@ -19,9 +19,8 @@ import org.apache.commons.dbcp2.BasicDataSource;
 class RdbEngineSqlServer implements RdbEngineStrategy {
 
   @Override
-  public void createNamespaceExecute(Connection connection, String fullNamespace)
-      throws SQLException {
-    execute(connection, "CREATE SCHEMA " + fullNamespace);
+  public String[] createNamespaceExecuteSqls(String fullNamespace) {
+    return new String[]{"CREATE SCHEMA " + fullNamespace};
   }
 
   @Override

@@ -68,7 +68,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     String fullNamespace = enclose(namespace);
     try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.createNamespaceExecute(connection, fullNamespace);
+      for (String sql : rdbEngine.createNamespaceExecuteSqls(fullNamespace)) {
+        execute(connection, sql);
+      }
     } catch (SQLException e) {
       throw new ExecutionException("creating the schema failed", e);
     }
