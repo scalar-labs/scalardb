@@ -584,8 +584,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private boolean tableExistsInternal(Connection connection, String namespace, String table)
       throws ExecutionException {
     String fullTableName = encloseFullTableName(namespace, table);
+    String sql = rdbEngine.tableExistsInternalTableCheckSql(fullTableName);
     try {
-      rdbEngine.tableExistsInternalExecuteTableCheck(connection, fullTableName);
+      execute(connection, sql);
       return true;
     } catch (SQLException e) {
       // An exception will be thrown if the table does not exist when executing the select
@@ -672,7 +673,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void dropIndex(Connection connection, String schema, String table, String indexedColumn)
       throws SQLException {
     String indexName = getIndexName(schema, table, indexedColumn);
-    rdbEngine.dropIndexExecute(connection, schema, table, indexName);
+    String sql = rdbEngine.dropIndexSql(schema, table, indexName);
+    execute(connection, sql);
   }
 
   private String getIndexName(String schema, String table, String indexedColumn) {

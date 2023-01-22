@@ -5,7 +5,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
-import java.sql.Connection;
+
 import java.sql.SQLException;
 
 /**
@@ -63,11 +63,9 @@ public interface RdbEngineStrategy {
 
   String alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
-  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
-      throws SQLException;
+  String tableExistsInternalTableCheckSql(String fullTableName);
 
-  void dropIndexExecute(Connection connection, String schema, String table, String indexName)
-      throws SQLException;
+  String dropIndexSql(String schema, String table, String indexName);
 
   /**
    * Enclose the target (schema, table or column) to use reserved words and special characters.

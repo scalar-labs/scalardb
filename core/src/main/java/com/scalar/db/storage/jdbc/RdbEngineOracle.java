@@ -10,14 +10,12 @@ import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.sql.Connection;
+
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.dbcp2.BasicDataSource;
 
 public class RdbEngineOracle implements RdbEngineStrategy {
 
@@ -125,17 +123,13 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
-  public void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
-      throws SQLException {
-    String tableExistsStatement = "SELECT 1 FROM " + fullTableName + " FETCH FIRST 1 ROWS ONLY";
-    execute(connection, tableExistsStatement);
+  public String tableExistsInternalTableCheckSql(String fullTableName) {
+    return "SELECT 1 FROM " + fullTableName + " FETCH FIRST 1 ROWS ONLY";
   }
 
   @Override
-  public void dropIndexExecute(Connection connection, String schema, String table, String indexName)
-      throws SQLException {
-    String dropIndexStatement = "DROP INDEX " + enclose(indexName);
-    execute(connection, dropIndexStatement);
+  public String dropIndexSql(String schema, String table, String indexName) {
+    return "DROP INDEX " + enclose(indexName);
   }
 
   @Override
