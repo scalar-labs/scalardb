@@ -3,7 +3,7 @@ name: Scheduled Vulnerability Check
 on:
   schedule:
     # UTC
-    - cron: '0 20 * * *'
+    - cron: '0 20 * * MON,THU'
 
 env:
   TERM: dumb
