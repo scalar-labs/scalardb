@@ -16,7 +16,7 @@ public class GrpcConfig {
   public static final String MAX_INBOUND_MESSAGE_SIZE = PREFIX + "max_inbound_message_size";
   public static final String MAX_INBOUND_METADATA_SIZE = PREFIX + "max_inbound_metadata_size";
 
-  public static final int DEFAULT_SCALAR_DB_SERVER_PORT = 60051;
+  public static final int DEFAULT_SERVER_PORT = 60051;
   public static final long DEFAULT_DEADLINE_DURATION_MILLIS = 60000; // 60 seconds
 
   private final String host;
@@ -43,7 +43,7 @@ public class GrpcConfig {
     host = databaseConfig.getContactPoints().get(0);
     port =
         databaseConfig.getContactPort() == 0
-            ? DEFAULT_SCALAR_DB_SERVER_PORT
+            ? DEFAULT_SERVER_PORT
             : databaseConfig.getContactPort();
 
     deadlineDurationMillis =

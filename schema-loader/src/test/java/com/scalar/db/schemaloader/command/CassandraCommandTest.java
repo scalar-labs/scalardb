@@ -336,6 +336,6 @@ public class CassandraCommandTest extends StorageSpecificCommandTestBase {
     // Assert
     Assertions.assertThat(exitCode).isEqualTo(ExitCode.USAGE);
     Assertions.assertThat(stringWriter.toString())
-        .contains("Missing required option '--schema-file=<schemaFile>'");
+        .contains("Missing required option: '--schema-file=<schemaFile>'");
   }
 }

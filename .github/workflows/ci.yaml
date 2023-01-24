@@ -76,12 +76,12 @@ jobs:
           java-version: '8'
           distribution: 'temurin'
 
-      - name: Dockerfile Lint for Scalar DB Server
+      - name: Dockerfile Lint for ScalarDB Server
         uses: gradle/gradle-build-action@v2
         with:
           arguments: :server:dockerfileLint
 
-      - name: Dockerfile Lint for Scalar DB Schema Loader
+      - name: Dockerfile Lint for ScalarDB Schema Loader
         if: always()
         uses: gradle/gradle-build-action@v2
         with:
@@ -318,7 +318,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433 -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19
 
       - name: Upload Gradle test reports
         if: always()

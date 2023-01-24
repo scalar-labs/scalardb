@@ -65,7 +65,7 @@ If applicable, add screenshots to help explain your problem.
 
  - OS: [e.g. masOS Monterey 12.5]
  - Java Version: [e.g. 1.8.0_202]
- - Scalar DB Version: [e.g. 3.7.0]
+ - ScalarDB Version: [e.g. 3.7.0]
 
 **Additional context**
 

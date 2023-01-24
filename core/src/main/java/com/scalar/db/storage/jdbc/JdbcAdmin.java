@@ -20,7 +20,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -464,7 +469,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   /**
-   * Get the vendor DB data type that is equivalent to the Scalar DB data type
+   * Get the vendor DB data type that is equivalent to the ScalarDB data type
    *
    * @param metadata a table metadata
    * @param columnName a column name
