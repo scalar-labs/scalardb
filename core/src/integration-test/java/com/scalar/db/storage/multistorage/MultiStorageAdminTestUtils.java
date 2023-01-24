@@ -9,7 +9,6 @@ import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
-import com.scalar.db.storage.jdbc.query.QueryUtils;
 import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
