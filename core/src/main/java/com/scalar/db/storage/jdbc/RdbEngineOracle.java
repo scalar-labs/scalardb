@@ -1,16 +1,17 @@
 package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEngineOracle extends RdbEngineStrategy {
 
@@ -44,9 +45,7 @@ class RdbEngineOracle extends RdbEngineStrategy {
     // Set INITRANS to 3 and MAXTRANS to 255 for the table to improve the
     // performance
     String alterTableStatement =
-        "ALTER TABLE "
-            + enclosedFullTableName(schema, table, RdbEngine.ORACLE)
-            + " INITRANS 3 MAXTRANS 255";
+        "ALTER TABLE " + encloseFullTableName(schema, table) + " INITRANS 3 MAXTRANS 255";
     execute(connection, alterTableStatement);
 
     if (hasDescClusteringOrder) {
@@ -55,7 +54,7 @@ class RdbEngineOracle extends RdbEngineStrategy {
           "CREATE UNIQUE INDEX "
               + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
               + " ON "
-              + enclosedFullTableName(schema, table, RdbEngine.ORACLE)
+              + encloseFullTableName(schema, table)
               + " ("
               + Stream.concat(
                       metadata.getPartitionKeyNames().stream().map(c -> enclose(c) + " ASC"),
@@ -65,6 +64,81 @@ class RdbEngineOracle extends RdbEngineStrategy {
               + ")";
       execute(connection, createUniqueIndexStatement);
     }
+  }
+
+  @Override
+  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement)
+      throws SQLException {
+    try {
+      execute(connection, createTableStatement);
+    } catch (SQLException e) {
+      // Suppress the exception thrown when the table already exists
+      if (!isDuplicateTableError(e)) {
+        throw e;
+      }
+    }
+  }
+
+  @Override
+  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
+      throws SQLException {
+    try {
+      execute(connection, "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"");
+    } catch (SQLException e) {
+      // Suppress the exception thrown when the user already exists
+      if (!isDuplicateUserError(e)) {
+        throw e;
+      }
+    }
+    execute(connection, "ALTER USER " + enclose(metadataSchema) + " quota unlimited on USERS");
+  }
+
+  @Override
+  void deleteMetadataSchema(Connection connection, String metadataSchema) throws SQLException {
+    execute(connection, "DROP USER " + enclose(metadataSchema));
+  }
+
+  @Override
+  void dropNamespace(BasicDataSource dataSource, String namespace) throws ExecutionException {
+    try (Connection connection = dataSource.getConnection()) {
+      execute(connection, "DROP USER " + enclose(namespace));
+    } catch (SQLException e) {
+      throw new ExecutionException(String.format("error dropping the user %s", namespace), e);
+    }
+  }
+
+  @Override
+  String namespaceExistsStatement() {
+    return "SELECT 1 FROM " + enclose("ALL_USERS") + " WHERE " + enclose("USERNAME") + " = ?";
+  }
+
+  @Override
+  void alterColumnType(
+      Connection connection, String namespace, String table, String columnName, String columnType)
+      throws SQLException {
+    String alterColumnStatement =
+        "ALTER TABLE "
+            + encloseFullTableName(namespace, table)
+            + " MODIFY ( "
+            + enclose(columnName)
+            + " "
+            + columnType
+            + " )";
+    execute(connection, alterColumnStatement);
+  }
+
+  @Override
+  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
+      throws SQLException {
+    String tableExistsStatement = "SELECT 1 FROM " + fullTableName + " FETCH FIRST 1 ROWS ONLY";
+    execute(connection, tableExistsStatement);
+  }
+
+  @Override
+  void dropIndexExecute(Connection connection, String schema, String table, String indexName)
+      throws SQLException {
+    String dropIndexStatement = "DROP INDEX " + enclose(indexName);
+    execute(connection, dropIndexStatement);
   }
 
   @Override
@@ -129,5 +203,27 @@ class RdbEngineOracle extends RdbEngineStrategy {
         assert false;
         return null;
     }
+  }
+
+  @Override
+  protected String getDataTypeForKey(DataType dataType) {
+    switch (dataType) {
+      case TEXT:
+        return "VARCHAR2(64)";
+      case BLOB:
+        return "RAW(64)";
+      default:
+        return null;
+    }
+  }
+
+  @Override
+  String getTextType(int charLength) {
+    return String.format("VARCHAR2(%s)", charLength);
+  }
+
+  @Override
+  String computeBooleanValue(boolean value) {
+    return value ? "1" : "0";
   }
 }

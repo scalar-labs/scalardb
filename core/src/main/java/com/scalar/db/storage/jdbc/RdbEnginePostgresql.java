@@ -1,16 +1,17 @@
 package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEnginePostgresql extends RdbEngineStrategy {
 
@@ -46,7 +47,7 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
           "CREATE UNIQUE INDEX "
               + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
               + " ON "
-              + enclosedFullTableName(schema, table, RdbEngine.POSTGRESQL)
+              + encloseFullTableName(schema, table)
               + " ("
               + Stream.concat(
                       metadata.getPartitionKeyNames().stream().map(c -> enclose(c) + " ASC"),
@@ -56,6 +57,71 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
               + ")";
       execute(connection, createUniqueIndexStatement);
     }
+  }
+
+  @Override
+  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement)
+      throws SQLException {
+    String createTableIfNotExistsStatement =
+        createTableStatement.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS");
+    execute(connection, createTableIfNotExistsStatement);
+  }
+
+  @Override
+  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
+      throws SQLException {
+    execute(connection, "CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema));
+  }
+
+  @Override
+  void deleteMetadataSchema(Connection connection, String metadataSchema) throws SQLException {
+    execute(connection, "DROP SCHEMA " + enclose(metadataSchema));
+  }
+
+  @Override
+  void dropNamespace(BasicDataSource dataSource, String namespace) throws ExecutionException {
+    try (Connection connection = dataSource.getConnection()) {
+      execute(connection, "DROP SCHEMA " + enclose(namespace));
+    } catch (SQLException e) {
+      throw new ExecutionException(String.format("error dropping the schema %s", namespace), e);
+    }
+  }
+
+  @Override
+  String namespaceExistsStatement() {
+    return "SELECT 1 FROM "
+        + encloseFullTableName("information_schema", "schemata")
+        + " WHERE "
+        + enclose("schema_name")
+        + " = ?";
+  }
+
+  @Override
+  void alterColumnType(
+      Connection connection, String namespace, String table, String columnName, String columnType)
+      throws SQLException {
+    String alterColumnStatement =
+        "ALTER TABLE "
+            + encloseFullTableName(namespace, table)
+            + " ALTER COLUMN"
+            + enclose(columnName)
+            + " TYPE "
+            + columnType;
+    execute(connection, alterColumnStatement);
+  }
+
+  @Override
+  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
+      throws SQLException {
+    String tableExistsStatement = "SELECT 1 FROM " + fullTableName + " LIMIT 1";
+    execute(connection, tableExistsStatement);
+  }
+
+  @Override
+  void dropIndexExecute(Connection connection, String schema, String table, String indexName)
+      throws SQLException {
+    String dropIndexStatement = "DROP INDEX " + enclose(schema) + "." + enclose(indexName);
+    execute(connection, dropIndexStatement);
   }
 
   @Override
@@ -118,5 +184,25 @@ class RdbEnginePostgresql extends RdbEngineStrategy {
         assert false;
         return null;
     }
+  }
+
+  @Override
+  protected String getDataTypeForKey(DataType dataType) {
+    switch (dataType) {
+      case TEXT:
+        return "VARCHAR(10485760)";
+      default:
+        return null;
+    }
+  }
+
+  @Override
+  String getTextType(int charLength) {
+    return String.format("VARCHAR(%s)", charLength);
+  }
+
+  @Override
+  String computeBooleanValue(boolean value) {
+    return value ? "true" : "false";
   }
 }

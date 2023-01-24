@@ -3,11 +3,13 @@ package com.scalar.db.storage.jdbc;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
 
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEngineMysql extends RdbEngineStrategy {
 
@@ -47,6 +49,72 @@ class RdbEngineMysql extends RdbEngineStrategy {
       String table,
       TableMetadata metadata) {
     // do nothing
+  }
+
+  @Override
+  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement)
+      throws SQLException {
+    String createTableIfNotExistsStatement =
+        createTableStatement.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS");
+    execute(connection, createTableIfNotExistsStatement);
+  }
+
+  @Override
+  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
+      throws SQLException {
+    execute(connection, "CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema));
+  }
+
+  @Override
+  void deleteMetadataSchema(Connection connection, String metadataSchema) throws SQLException {
+    execute(connection, "DROP SCHEMA " + enclose(metadataSchema));
+  }
+
+  @Override
+  void dropNamespace(BasicDataSource dataSource, String namespace) throws ExecutionException {
+    try (Connection connection = dataSource.getConnection()) {
+      execute(connection, "DROP SCHEMA " + enclose(namespace));
+    } catch (SQLException e) {
+      throw new ExecutionException(String.format("error dropping the schema %s", namespace), e);
+    }
+  }
+
+  @Override
+  String namespaceExistsStatement() {
+    return "SELECT 1 FROM "
+        + encloseFullTableName("information_schema", "schemata")
+        + " WHERE "
+        + enclose("schema_name")
+        + " = ?";
+  }
+
+  @Override
+  void alterColumnType(
+      Connection connection, String namespace, String table, String columnName, String columnType)
+      throws SQLException {
+    String alterColumnStatement =
+        "ALTER TABLE "
+            + encloseFullTableName(namespace, table)
+            + " MODIFY"
+            + enclose(columnName)
+            + " "
+            + columnType;
+    execute(connection, alterColumnStatement);
+  }
+
+  @Override
+  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
+      throws SQLException {
+    String tableExistsStatement = "SELECT 1 FROM " + fullTableName + " LIMIT 1";
+    execute(connection, tableExistsStatement);
+  }
+
+  @Override
+  void dropIndexExecute(Connection connection, String schema, String table, String indexName)
+      throws SQLException {
+    String dropIndexStatement =
+        "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
+    execute(connection, dropIndexStatement);
   }
 
   @Override
@@ -119,5 +187,27 @@ class RdbEngineMysql extends RdbEngineStrategy {
         assert false;
         return null;
     }
+  }
+
+  @Override
+  protected String getDataTypeForKey(DataType dataType) {
+    switch (dataType) {
+      case TEXT:
+        return "VARCHAR(64)";
+      case BLOB:
+        return "VARBINARY(64)";
+      default:
+        return null;
+    }
+  }
+
+  @Override
+  String getTextType(int charLength) {
+    return String.format("VARCHAR(%s)", charLength);
+  }
+
+  @Override
+  String computeBooleanValue(boolean value) {
+    return value ? "true" : "false";
   }
 }

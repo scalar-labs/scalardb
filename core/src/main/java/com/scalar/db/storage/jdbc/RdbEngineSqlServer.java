@@ -3,11 +3,13 @@ package com.scalar.db.storage.jdbc;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
 
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEngineSqlServer extends RdbEngineStrategy {
 
@@ -47,6 +49,78 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
       String table,
       TableMetadata metadata) {
     // do nothing
+  }
+
+  @Override
+  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement)
+      throws SQLException {
+    try {
+      execute(connection, createTableStatement);
+    } catch (SQLException e) {
+      // Suppress the exception thrown when the table already exists
+      if (!isDuplicateTableError(e)) {
+        throw e;
+      }
+    }
+  }
+
+  @Override
+  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
+      throws SQLException {
+    try {
+      execute(connection, "CREATE SCHEMA " + enclose(metadataSchema));
+    } catch (SQLException e) {
+      // Suppress the exception thrown when the schema already exists
+      if (!isDuplicateSchemaError(e)) {
+        throw e;
+      }
+    }
+  }
+
+  @Override
+  void deleteMetadataSchema(Connection connection, String metadataSchema) throws SQLException {
+    execute(connection, "DROP SCHEMA " + enclose(metadataSchema));
+  }
+
+  @Override
+  void dropNamespace(BasicDataSource dataSource, String namespace) throws ExecutionException {
+    try (Connection connection = dataSource.getConnection()) {
+      execute(connection, "DROP SCHEMA " + enclose(namespace));
+    } catch (SQLException e) {
+      throw new ExecutionException(String.format("error dropping the schema %s", namespace), e);
+    }
+  }
+
+  @Override
+  String namespaceExistsStatement() {
+    return "SELECT 1 FROM "
+        + encloseFullTableName("sys", "schemas")
+        + " WHERE "
+        + enclose("name")
+        + " = ?";
+  }
+
+  @Override
+  void alterColumnType(
+      Connection connection, String namespace, String table, String columnName, String columnType)
+      throws SQLException {
+    // SQLServer does not require changes in column data types when making indices.
+    throw new AssertionError();
+  }
+
+  @Override
+  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
+      throws SQLException {
+    String tableExistsStatement = "SELECT TOP 1 1 FROM " + fullTableName;
+    execute(connection, tableExistsStatement);
+  }
+
+  @Override
+  void dropIndexExecute(Connection connection, String schema, String table, String indexName)
+      throws SQLException {
+    String dropIndexStatement =
+        "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
+    execute(connection, dropIndexStatement);
   }
 
   @Override
@@ -111,5 +185,21 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
         assert false;
         return null;
     }
+  }
+
+  @Override
+  protected String getDataTypeForKey(DataType dataType) {
+    // PostgreSQL does not require any change in column data types when making indices.
+    return null;
+  }
+
+  @Override
+  String getTextType(int charLength) {
+    return String.format("VARCHAR(%s)", charLength);
+  }
+
+  @Override
+  String computeBooleanValue(boolean value) {
+    return value ? "1" : "0";
   }
 }
