@@ -16,7 +16,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
   protected Properties getProperties(String testName) {
     Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
-    rdbEngine = RdbEngineStrategy.create(config).getRdbEngine();
+    rdbEngine = RdbEngineFactory.create(config).getRdbEngine();
     return properties;
   }
 

@@ -11,16 +11,16 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.dbcp2.BasicDataSource;
 
-class RdbEngineSqlServer extends RdbEngineStrategy {
+class RdbEngineSqlServer implements RdbEngineStrategy {
 
   @Override
-  protected void createNamespaceExecute(Connection connection, String fullNamespace)
+  public void createNamespaceExecute(Connection connection, String fullNamespace)
       throws SQLException {
     execute(connection, "CREATE SCHEMA " + fullNamespace);
   }
 
   @Override
-  protected String createTableInternalPrimaryKeyClause(
+  public String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata) {
     if (hasDescClusteringOrder) {
       return "PRIMARY KEY ("
@@ -42,7 +42,7 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
-  protected void createTableInternalExecuteAfterCreateTable(
+  public void createTableInternalExecuteAfterCreateTable(
       boolean hasDescClusteringOrder,
       Connection connection,
       String schema,
@@ -52,8 +52,8 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
-  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement)
-      throws SQLException {
+  public void createMetadataTableIfNotExistsExecute(
+      Connection connection, String createTableStatement) throws SQLException {
     try {
       execute(connection, createTableStatement);
     } catch (SQLException e) {
@@ -65,7 +65,7 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
-  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
+  public void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
       throws SQLException {
     try {
       execute(connection, "CREATE SCHEMA " + enclose(metadataSchema));
@@ -78,12 +78,14 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
-  void deleteMetadataSchema(Connection connection, String metadataSchema) throws SQLException {
+  public void deleteMetadataSchema(Connection connection, String metadataSchema)
+      throws SQLException {
     execute(connection, "DROP SCHEMA " + enclose(metadataSchema));
   }
 
   @Override
-  void dropNamespace(BasicDataSource dataSource, String namespace) throws ExecutionException {
+  public void dropNamespace(BasicDataSource dataSource, String namespace)
+      throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, "DROP SCHEMA " + enclose(namespace));
     } catch (SQLException e) {
@@ -92,7 +94,7 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
-  String namespaceExistsStatement() {
+  public String namespaceExistsStatement() {
     return "SELECT 1 FROM "
         + encloseFullTableName("sys", "schemas")
         + " WHERE "
@@ -101,7 +103,7 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
-  void alterColumnType(
+  public void alterColumnType(
       Connection connection, String namespace, String table, String columnName, String columnType)
       throws SQLException {
     // SQLServer does not require changes in column data types when making indices.
@@ -109,14 +111,14 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
-  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
+  public void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
       throws SQLException {
     String tableExistsStatement = "SELECT TOP 1 1 FROM " + fullTableName;
     execute(connection, tableExistsStatement);
   }
 
   @Override
-  void dropIndexExecute(Connection connection, String schema, String table, String indexName)
+  public void dropIndexExecute(Connection connection, String schema, String table, String indexName)
       throws SQLException {
     String dropIndexStatement =
         "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
@@ -124,30 +126,30 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
-  boolean isDuplicateUserError(SQLException e) {
+  public boolean isDuplicateUserError(SQLException e) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  boolean isDuplicateSchemaError(SQLException e) {
+  public boolean isDuplicateSchemaError(SQLException e) {
     // 2714: There is already an object named '%.*ls' in the database.
     return e.getErrorCode() == 2714;
   }
 
   @Override
-  boolean isDuplicateTableError(SQLException e) {
+  public boolean isDuplicateTableError(SQLException e) {
     // 2714: There is already an object named '%.*ls' in the database.
     return e.getErrorCode() == 2714;
   }
 
   @Override
-  boolean isDuplicateKeyError(SQLException e) {
+  public boolean isDuplicateKeyError(SQLException e) {
     // 23000: Integrity constraint violation
     return e.getSQLState().equals("23000");
   }
 
   @Override
-  boolean isUndefinedTableError(SQLException e) {
+  public boolean isUndefinedTableError(SQLException e) {
     // 208: Invalid object name '%.*ls'.
     return e.getErrorCode() == 208;
   }
@@ -160,12 +162,17 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
+  public String enclose(String name) {
+    return "[" + name + "]";
+  }
+
+  @Override
   public RdbEngine getRdbEngine() {
     return RdbEngine.SQL_SERVER;
   }
 
   @Override
-  protected String getDataTypeForEngine(DataType scalarDbDataType) {
+  public String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {
       case BIGINT:
         return "BIGINT";
@@ -188,18 +195,18 @@ class RdbEngineSqlServer extends RdbEngineStrategy {
   }
 
   @Override
-  protected String getDataTypeForKey(DataType dataType) {
+  public String getDataTypeForKey(DataType dataType) {
     // PostgreSQL does not require any change in column data types when making indices.
     return null;
   }
 
   @Override
-  String getTextType(int charLength) {
+  public String getTextType(int charLength) {
     return String.format("VARCHAR(%s)", charLength);
   }
 
   @Override
-  String computeBooleanValue(boolean value) {
+  public String computeBooleanValue(boolean value) {
     return value ? "1" : "0";
   }
 }

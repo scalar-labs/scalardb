@@ -49,7 +49,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     JdbcConfig config = new JdbcConfig(databaseConfig);
 
     dataSource = JdbcUtils.initDataSource(config);
-    rdbEngine = RdbEngineStrategy.create(config);
+    rdbEngine = RdbEngineFactory.create(config);
 
     tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config);
     TableMetadataManager tableMetadataManager =
@@ -71,7 +71,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     this.dataSource = dataSource;
     this.tableMetadataDataSource = tableMetadataDataSource;
     this.jdbcService = jdbcService;
-    this.rdbEngine = RdbEngineStrategy.create(rdbEngineType);
+    this.rdbEngine = RdbEngineFactory.create(rdbEngineType);
   }
 
   @Override

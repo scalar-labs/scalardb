@@ -1,12 +1,10 @@
 package com.scalar.db.storage.jdbc.query;
 
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
-
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.RdbEngineFactory;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -19,7 +17,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
 
-  private final RdbEngine rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
   private final String schema;
   private final String table;
   private final TableMetadata tableMetadata;
@@ -28,7 +26,7 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
   private final Map<String, Column<?>> columns;
 
   InsertOnConflictDoUpdateQuery(Builder builder) {
-    rdbEngine = builder.rdbEngine;
+    rdbEngine = RdbEngineFactory.create(builder.rdbEngine);
     schema = builder.schema;
     table = builder.table;
     tableMetadata = builder.tableMetadata;
@@ -40,7 +38,7 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
   @Override
   public String sql() {
     return "INSERT INTO "
-        + enclosedFullTableName(schema, table, rdbEngine)
+        + rdbEngine.encloseFullTableName(schema, table)
         + " "
         + makeValuesSqlString()
         + " "
@@ -54,7 +52,7 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
     names.addAll(columns.keySet());
 
     return "("
-        + names.stream().map(n -> enclose(n, rdbEngine)).collect(Collectors.joining(","))
+        + names.stream().map(rdbEngine::enclose).collect(Collectors.joining(","))
         + ") VALUES ("
         + names.stream().map(n -> "?").collect(Collectors.joining(","))
         + ")";
@@ -67,14 +65,13 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
 
     StringBuilder sql = new StringBuilder();
     sql.append("ON CONFLICT (")
-        .append(
-            primaryKeys.stream().map(k -> enclose(k, rdbEngine)).collect(Collectors.joining(",")))
+        .append(primaryKeys.stream().map(rdbEngine::enclose).collect(Collectors.joining(",")))
         .append(") DO ");
     if (!columns.isEmpty()) {
       sql.append("UPDATE SET ")
           .append(
               columns.keySet().stream()
-                  .map(n -> enclose(n, rdbEngine) + "=?")
+                  .map(n -> rdbEngine.enclose(n) + "=?")
                   .collect(Collectors.joining(",")));
     } else {
       sql.append("NOTHING");
@@ -85,7 +82,7 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
   @Override
   public void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder =
-        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine);
+        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine.getRdbEngine());
 
     for (Column<?> column : partitionKey.getColumns()) {
       column.accept(binder);

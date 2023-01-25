@@ -11,16 +11,16 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.dbcp2.BasicDataSource;
 
-class RdbEngineMysql extends RdbEngineStrategy {
+class RdbEngineMysql implements RdbEngineStrategy {
 
   @Override
-  protected void createNamespaceExecute(Connection connection, String fullNamespace)
+  public void createNamespaceExecute(Connection connection, String fullNamespace)
       throws SQLException {
     execute(connection, "CREATE SCHEMA " + fullNamespace + " character set utf8 COLLATE utf8_bin");
   }
 
   @Override
-  protected String createTableInternalPrimaryKeyClause(
+  public String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata) {
     if (hasDescClusteringOrder) {
       return "PRIMARY KEY ("
@@ -42,7 +42,7 @@ class RdbEngineMysql extends RdbEngineStrategy {
   }
 
   @Override
-  protected void createTableInternalExecuteAfterCreateTable(
+  public void createTableInternalExecuteAfterCreateTable(
       boolean hasDescClusteringOrder,
       Connection connection,
       String schema,
@@ -52,26 +52,28 @@ class RdbEngineMysql extends RdbEngineStrategy {
   }
 
   @Override
-  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement)
-      throws SQLException {
+  public void createMetadataTableIfNotExistsExecute(
+      Connection connection, String createTableStatement) throws SQLException {
     String createTableIfNotExistsStatement =
         createTableStatement.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS");
     execute(connection, createTableIfNotExistsStatement);
   }
 
   @Override
-  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
+  public void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
       throws SQLException {
     execute(connection, "CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema));
   }
 
   @Override
-  void deleteMetadataSchema(Connection connection, String metadataSchema) throws SQLException {
+  public void deleteMetadataSchema(Connection connection, String metadataSchema)
+      throws SQLException {
     execute(connection, "DROP SCHEMA " + enclose(metadataSchema));
   }
 
   @Override
-  void dropNamespace(BasicDataSource dataSource, String namespace) throws ExecutionException {
+  public void dropNamespace(BasicDataSource dataSource, String namespace)
+      throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, "DROP SCHEMA " + enclose(namespace));
     } catch (SQLException e) {
@@ -80,7 +82,7 @@ class RdbEngineMysql extends RdbEngineStrategy {
   }
 
   @Override
-  String namespaceExistsStatement() {
+  public String namespaceExistsStatement() {
     return "SELECT 1 FROM "
         + encloseFullTableName("information_schema", "schemata")
         + " WHERE "
@@ -89,7 +91,7 @@ class RdbEngineMysql extends RdbEngineStrategy {
   }
 
   @Override
-  void alterColumnType(
+  public void alterColumnType(
       Connection connection, String namespace, String table, String columnName, String columnType)
       throws SQLException {
     String alterColumnStatement =
@@ -103,14 +105,14 @@ class RdbEngineMysql extends RdbEngineStrategy {
   }
 
   @Override
-  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
+  public void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
       throws SQLException {
     String tableExistsStatement = "SELECT 1 FROM " + fullTableName + " LIMIT 1";
     execute(connection, tableExistsStatement);
   }
 
   @Override
-  void dropIndexExecute(Connection connection, String schema, String table, String indexName)
+  public void dropIndexExecute(Connection connection, String schema, String table, String indexName)
       throws SQLException {
     String dropIndexStatement =
         "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
@@ -118,22 +120,27 @@ class RdbEngineMysql extends RdbEngineStrategy {
   }
 
   @Override
-  boolean isDuplicateUserError(SQLException e) {
+  public String enclose(String name) {
+    return "`" + name + "`";
+  }
+
+  @Override
+  public boolean isDuplicateUserError(SQLException e) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  boolean isDuplicateSchemaError(SQLException e) {
+  public boolean isDuplicateSchemaError(SQLException e) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  boolean isDuplicateTableError(SQLException e) {
+  public boolean isDuplicateTableError(SQLException e) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  boolean isDuplicateKeyError(SQLException e) {
+  public boolean isDuplicateKeyError(SQLException e) {
     // Error number: 1022; Symbol: ER_DUP_KEY; SQLSTATE: 23000
     // Message: Can't write; duplicate key in table '%s'
     // etc... See: <https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html>
@@ -141,7 +148,7 @@ class RdbEngineMysql extends RdbEngineStrategy {
   }
 
   @Override
-  boolean isUndefinedTableError(SQLException e) {
+  public boolean isUndefinedTableError(SQLException e) {
     // Error number: 1049; Symbol: ER_BAD_DB_ERROR; SQLSTATE: 42000
     // Message: Unknown database '%s'
 
@@ -168,7 +175,7 @@ class RdbEngineMysql extends RdbEngineStrategy {
   }
 
   @Override
-  protected String getDataTypeForEngine(DataType scalarDbDataType) {
+  public String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {
       case BIGINT:
         return "BIGINT";
@@ -190,7 +197,7 @@ class RdbEngineMysql extends RdbEngineStrategy {
   }
 
   @Override
-  protected String getDataTypeForKey(DataType dataType) {
+  public String getDataTypeForKey(DataType dataType) {
     switch (dataType) {
       case TEXT:
         return "VARCHAR(64)";
@@ -202,12 +209,12 @@ class RdbEngineMysql extends RdbEngineStrategy {
   }
 
   @Override
-  String getTextType(int charLength) {
+  public String getTextType(int charLength) {
     return String.format("VARCHAR(%s)", charLength);
   }
 
   @Override
-  String computeBooleanValue(boolean value) {
+  public String computeBooleanValue(boolean value) {
     return value ? "true" : "false";
   }
 }
