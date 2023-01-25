@@ -29,7 +29,7 @@ dependencies {
 }
 
 javadoc {
-    title = "Scalar DB Schema Loader"
+    title = "ScalarDB Schema Loader"
 }
 
 docker {

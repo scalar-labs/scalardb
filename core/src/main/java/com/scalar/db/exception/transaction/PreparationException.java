@@ -1,5 +1,6 @@
 package com.scalar.db.exception.transaction;
 
+/** An exception thrown when preparing a transaction fails. */
 public class PreparationException extends TransactionException {
 
   public PreparationException(String message) {

@@ -7,8 +7,8 @@ publishing {
             artifactId = 'scalardb-rpc'
             from components.java
             pom {
-                name = 'Scalar DB RPC'
-                description = 'Scalar DB RPC libraries'
+                name = 'ScalarDB RPC'
+                description = 'ScalarDB RPC libraries'
                 url = 'https://github.com/scalar-labs/scalardb'
                 licenses {
                     license {

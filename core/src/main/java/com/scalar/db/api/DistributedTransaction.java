@@ -69,8 +69,8 @@ public interface DistributedTransaction extends TransactionCrudOperable {
   /**
    * Commits a transaction.
    *
-   * @throws CommitConflictException if conflicts happened. You can retry the transaction in this
-   *     case
+   * @throws CommitConflictException if a transaction conflict occurs, You can retry the transaction
+   *     from the beginning in this case
    * @throws CommitException if the operation fails
    * @throws UnknownTransactionStatusException if the status of the commit is unknown
    */

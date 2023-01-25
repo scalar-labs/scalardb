@@ -1,7 +1,7 @@
 # Storage abstraction
 
-Scalar DB is middleware on top of existing storage/database systems and provides storage/database-agnostic ACID transactions on top of the systems.
-One of the keys to achieving the storage/database-agnostic ACID transactions is a storage abstraction that Scalar DB provides.
+ScalarDB is middleware on top of existing storage/database systems and provides storage/database-agnostic ACID transactions on top of the systems.
+One of the keys to achieving the storage/database-agnostic ACID transactions is a storage abstraction that ScalarDB provides.
 The storage abstraction defines [a data model](design.md#data-model) and APIs (Storage API) that issue operations on the basis of the data model.
 Although you use the [Transaction API](api-guide.md) in most cases, you can also directly use the Storage API.
 There are a few benefits of using the Storage API.
@@ -12,13 +12,13 @@ However, directly using the Storage API or mixing the Transaction API and the St
 For example, since the Storage API cannot provide transaction capability, it could cause data inconsistencies/anomalies when failures occur during the execution of the operations.
 Therefore, you should be very careful about using the Storage API, and please use it only if you know exactly what you are doing.
 
-In this document, we explain how to use the Storage API for users who are experts in Scalar DB.
+In this document, we explain how to use the Storage API for users who are experts in ScalarDB.
 
 ## Storage API Example
 
 This section explains how the Storage API can be used in a simple electronic money example application.
 
-### Scalar DB configuration
+### ScalarDB configuration
 
 The configuration is the same as when you use the ACID transaction manager.
 Please see [Getting Started](getting-started.md) for the details of the configuration.
@@ -27,7 +27,7 @@ From here, we assume that the configuration file **scalardb.properties** exists.
 
 ### Set up database schema
 
-First, you need to define how the data will be organized (a.k.a database schema) in the application with Scalar DB database schema.
+First, you need to define how the data will be organized (a.k.a database schema) in the application with ScalarDB database schema.
 Here is a database schema for the sample application.
 You can create a JSON file emoney-storage.json with the JSON below.
 
@@ -247,7 +247,7 @@ TableMetadata tableMetadata =
 
 Here you define columns, a partition key, a clustering key including clustering orders, and secondary indexes of a table.
 
-Please see [Scalar DB design document - Data Model](design.md#data-model) for the details of the Scalar DB Data Model.
+Please see [ScalarDB design document - Data Model](design.md#data-model) for the details of the ScalarDB Data Model.
 
 And then, you can create a table as follows:
 
@@ -747,5 +747,5 @@ And if you specify multiple conditions in a Mutate operation, the operation is e
 * [Java API Guide](api-guide.md)
 * [Design document](design.md)
 * [Getting started](getting-started.md)
-* [Scalar DB Server](scalardb-server.md)
+* [ScalarDB Server](scalardb-server.md)
 * [Schema Loader](schema-loader.md)
