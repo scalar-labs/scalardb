@@ -4,7 +4,11 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 /** Factory class of subclasses of {@link RdbEngineStrategy} */
-public class RdbEngineFactory {
+public final class RdbEngineFactory {
+  private RdbEngineFactory() {
+    throw new AssertionError();
+  }
+
   public static RdbEngineStrategy create(JdbcConfig config) {
     return create(config.getJdbcUrl());
   }
