@@ -1,12 +1,10 @@
 package com.scalar.db.storage.jdbc.query;
 
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
-
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.RdbEngineFactory;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -19,7 +17,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class MergeIntoQuery implements UpsertQuery {
 
-  private final RdbEngine rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
   private final String schema;
   private final String table;
   private final TableMetadata tableMetadata;
@@ -28,7 +26,7 @@ public class MergeIntoQuery implements UpsertQuery {
   private final Map<String, Column<?>> columns;
 
   public MergeIntoQuery(Builder builder) {
-    rdbEngine = builder.rdbEngine;
+    rdbEngine = RdbEngineFactory.create(builder.rdbEngine);
     schema = builder.schema;
     table = builder.table;
     tableMetadata = builder.tableMetadata;
@@ -40,16 +38,16 @@ public class MergeIntoQuery implements UpsertQuery {
   @Override
   public String sql() {
     List<String> enclosedKeyNames = new ArrayList<>();
-    partitionKey.forEach(v -> enclosedKeyNames.add(enclose(v.getName(), rdbEngine)));
+    partitionKey.forEach(v -> enclosedKeyNames.add(rdbEngine.enclose(v.getName())));
     clusteringKey.ifPresent(
-        k -> k.forEach(v -> enclosedKeyNames.add(enclose(v.getName(), rdbEngine))));
+        k -> k.forEach(v -> enclosedKeyNames.add(rdbEngine.enclose(v.getName()))));
 
     List<String> enclosedValueNames =
-        columns.keySet().stream().map(n -> enclose(n, rdbEngine)).collect(Collectors.toList());
+        columns.keySet().stream().map(rdbEngine::enclose).collect(Collectors.toList());
 
     StringBuilder sql = new StringBuilder();
     sql.append("MERGE INTO ")
-        .append(enclosedFullTableName(schema, table, rdbEngine))
+        .append(rdbEngine.encloseFullTableName(schema, table))
         .append(" t1 USING (SELECT ")
         .append(makeUsingSelectSqlString(enclosedKeyNames))
         .append(" FROM DUAL) t2 ON (")
@@ -92,7 +90,7 @@ public class MergeIntoQuery implements UpsertQuery {
   @Override
   public void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder =
-        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine);
+        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine.getRdbEngine());
 
     // For the USING SELECT statement
     for (Column<?> column : partitionKey.getColumns()) {

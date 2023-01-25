@@ -1,12 +1,11 @@
 package com.scalar.db.storage.jdbc.query;
 
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
-
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.RdbEngineFactory;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -20,7 +19,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class InsertQuery implements Query {
 
-  private final RdbEngine rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
   private final String schema;
   private final String table;
   private final TableMetadata tableMetadata;
@@ -29,7 +28,7 @@ public class InsertQuery implements Query {
   private final Map<String, Column<?>> columns;
 
   private InsertQuery(Builder builder) {
-    rdbEngine = builder.rdbEngine;
+    rdbEngine = RdbEngineFactory.create(builder.rdbEngine);
     schema = builder.schema;
     table = builder.table;
     tableMetadata = builder.tableMetadata;
@@ -41,7 +40,7 @@ public class InsertQuery implements Query {
   @Override
   public String sql() {
     return "INSERT INTO "
-        + enclosedFullTableName(schema, table, rdbEngine)
+        + rdbEngine.encloseFullTableName(schema, table)
         + " "
         + makeValuesSqlString();
   }
@@ -52,7 +51,7 @@ public class InsertQuery implements Query {
     clusteringKey.ifPresent(k -> k.forEach(v -> names.add(v.getName())));
     names.addAll(columns.keySet());
     return "("
-        + names.stream().map(n -> enclose(n, rdbEngine)).collect(Collectors.joining(","))
+        + names.stream().map(rdbEngine::enclose).collect(Collectors.joining(","))
         + ") VALUES ("
         + names.stream().map(n -> "?").collect(Collectors.joining(","))
         + ")";
@@ -61,7 +60,7 @@ public class InsertQuery implements Query {
   @Override
   public void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder =
-        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine);
+        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine.getRdbEngine());
 
     for (Column<?> column : partitionKey.getColumns()) {
       column.accept(binder);

@@ -56,14 +56,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @Inject
   public JdbcAdmin(DatabaseConfig databaseConfig) {
     JdbcConfig config = new JdbcConfig(databaseConfig);
-    rdbEngine = RdbEngineStrategy.create(config);
+    rdbEngine = RdbEngineFactory.create(config);
     dataSource = JdbcUtils.initDataSourceForAdmin(config);
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcAdmin(BasicDataSource dataSource, JdbcConfig config) {
-    rdbEngine = RdbEngineStrategy.create(config);
+    rdbEngine = RdbEngineFactory.create(config);
     this.dataSource = dataSource;
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }

@@ -16,6 +16,7 @@ import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import java.sql.SQLException;
@@ -40,7 +41,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
     JdbcConfig config = new JdbcConfig(databaseConfig);
 
     dataSource = JdbcUtils.initDataSource(config, true);
-    rdbEngine = RdbEngineStrategy.create(config);
+    rdbEngine = RdbEngineFactory.create(config);
 
     tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config);
     TableMetadataManager tableMetadataManager =
@@ -63,7 +64,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
     super(databaseConfig);
     this.dataSource = dataSource;
     this.tableMetadataDataSource = tableMetadataDataSource;
-    this.rdbEngine = RdbEngineStrategy.create(rdbEngine);
+    this.rdbEngine = RdbEngineFactory.create(rdbEngine);
     this.jdbcService = jdbcService;
   }
 

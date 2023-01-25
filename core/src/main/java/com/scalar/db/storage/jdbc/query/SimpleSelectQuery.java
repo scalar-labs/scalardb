@@ -1,13 +1,11 @@
 package com.scalar.db.storage.jdbc.query;
 
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
-
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.RdbEngineFactory;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -20,7 +18,7 @@ import javax.annotation.concurrent.ThreadSafe;
 public class SimpleSelectQuery implements SelectQuery {
 
   private final List<String> projections;
-  private final RdbEngine rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
   private final String schema;
   private final String table;
   private final TableMetadata tableMetadata;
@@ -38,7 +36,7 @@ public class SimpleSelectQuery implements SelectQuery {
 
   SimpleSelectQuery(Builder builder) {
     projections = builder.projections;
-    rdbEngine = builder.rdbEngine;
+    rdbEngine = RdbEngineFactory.create(builder.rdbEngine);
     schema = builder.schema;
     table = builder.table;
     tableMetadata = builder.tableMetadata;
@@ -61,7 +59,7 @@ public class SimpleSelectQuery implements SelectQuery {
         "SELECT "
             + projectionSqlString()
             + " FROM "
-            + enclosedFullTableName(schema, table, rdbEngine);
+            + rdbEngine.encloseFullTableName(schema, table);
     if (isConditionalQuery) {
       sql += " WHERE " + conditionSqlString();
     }
@@ -74,21 +72,21 @@ public class SimpleSelectQuery implements SelectQuery {
     if (projections.isEmpty()) {
       return "*";
     }
-    return projections.stream().map(p -> enclose(p, rdbEngine)).collect(Collectors.joining(","));
+    return projections.stream().map(rdbEngine::enclose).collect(Collectors.joining(","));
   }
 
   private String conditionSqlString() {
     List<String> conditions = new ArrayList<>();
     partitionKey.ifPresent(
-        k -> k.forEach(v -> conditions.add(enclose(v.getName(), rdbEngine) + "=?")));
+        k -> k.forEach(v -> conditions.add(rdbEngine.enclose(v.getName()) + "=?")));
     clusteringKey.ifPresent(
-        k -> k.forEach(v -> conditions.add(enclose(v.getName(), rdbEngine) + "=?")));
+        k -> k.forEach(v -> conditions.add(rdbEngine.enclose(v.getName()) + "=?")));
     commonClusteringKey.ifPresent(
-        k -> k.forEach(v -> conditions.add(enclose(v.getName(), rdbEngine) + "=?")));
+        k -> k.forEach(v -> conditions.add(rdbEngine.enclose(v.getName()) + "=?")));
     startColumn.ifPresent(
-        c -> conditions.add(enclose(c.getName(), rdbEngine) + (startInclusive ? ">=?" : ">?")));
+        c -> conditions.add(rdbEngine.enclose(c.getName()) + (startInclusive ? ">=?" : ">?")));
     endColumn.ifPresent(
-        c -> conditions.add(enclose(c.getName(), rdbEngine) + (endInclusive ? "<=?" : "<?")));
+        c -> conditions.add(rdbEngine.enclose(c.getName()) + (endInclusive ? "<=?" : "<?")));
     return String.join(" AND ", conditions);
   }
 
@@ -126,14 +124,14 @@ public class SimpleSelectQuery implements SelectQuery {
 
     return " ORDER BY "
         + orderingList.stream()
-            .map(o -> enclose(o.getColumnName(), rdbEngine) + " " + o.getOrder())
+            .map(o -> rdbEngine.enclose(o.getColumnName()) + " " + o.getOrder())
             .collect(Collectors.joining(","));
   }
 
   @Override
   public void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder =
-        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine);
+        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine.getRdbEngine());
     if (partitionKey.isPresent()) {
       for (Column<?> column : partitionKey.get().getColumns()) {
         column.accept(binder);
