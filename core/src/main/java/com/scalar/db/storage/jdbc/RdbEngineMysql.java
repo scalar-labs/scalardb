@@ -125,11 +125,6 @@ class RdbEngineMysql implements RdbEngineStrategy {
   }
 
   @Override
-  public String encloseFullTableName(String schema, String table) {
-    return enclose(schema) + "." + enclose(table);
-  }
-
-  @Override
   public boolean isDuplicateUserError(SQLException e) {
     throw new UnsupportedOperationException();
   }

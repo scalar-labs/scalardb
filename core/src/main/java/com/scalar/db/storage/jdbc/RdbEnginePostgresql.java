@@ -166,11 +166,6 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   }
 
   @Override
-  public String encloseFullTableName(String schema, String table) {
-    return enclose(schema) + "." + enclose(table);
-  }
-
-  @Override
   public RdbEngine getRdbEngine() {
     return RdbEngine.POSTGRESQL;
   }
