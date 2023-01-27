@@ -5,8 +5,13 @@ import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.jdbc.query.MergeQuery;
+import com.scalar.db.storage.jdbc.query.SelectQuery;
+import com.scalar.db.storage.jdbc.query.SelectWithTop;
+import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.dbcp2.BasicDataSource;
@@ -167,8 +172,13 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   }
 
   @Override
-  public RdbEngine getRdbEngine() {
-    return RdbEngine.SQL_SERVER;
+  public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
+    return new SelectWithTop(builder, limit);
+  }
+
+  @Override
+  public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
+    return new MergeQuery(builder);
   }
 
   @Override
@@ -198,6 +208,28 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   public String getDataTypeForKey(DataType dataType) {
     // PostgreSQL does not require any change in column data types when making indices.
     return null;
+  }
+
+  @Override
+  public int getSqlTypes(DataType dataType) {
+    switch (dataType) {
+      case BOOLEAN:
+        return Types.BOOLEAN;
+      case INT:
+        return Types.INTEGER;
+      case BIGINT:
+        return Types.BIGINT;
+      case FLOAT:
+        return Types.FLOAT;
+      case DOUBLE:
+        return Types.DOUBLE;
+      case TEXT:
+        return Types.VARCHAR;
+      case BLOB:
+        return Types.BLOB;
+      default:
+        throw new AssertionError();
+    }
   }
 
   @Override

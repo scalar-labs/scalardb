@@ -4,7 +4,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -36,7 +35,7 @@ public class SimpleSelectQuery implements SelectQuery {
 
   SimpleSelectQuery(Builder builder) {
     projections = builder.projections;
-    rdbEngine = RdbEngineFactory.create(builder.rdbEngine);
+    rdbEngine = builder.rdbEngine;
     schema = builder.schema;
     table = builder.table;
     tableMetadata = builder.tableMetadata;
@@ -131,7 +130,7 @@ public class SimpleSelectQuery implements SelectQuery {
   @Override
   public void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder =
-        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine.getRdbEngine());
+        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine);
     if (partitionKey.isPresent()) {
       for (Column<?> column : partitionKey.get().getColumns()) {
         column.accept(binder);

@@ -3,8 +3,8 @@ package com.scalar.db.storage.jdbc.query;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -25,8 +25,9 @@ public class MergeIntoQuery implements UpsertQuery {
   private final Optional<Key> clusteringKey;
   private final Map<String, Column<?>> columns;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public MergeIntoQuery(Builder builder) {
-    rdbEngine = RdbEngineFactory.create(builder.rdbEngine);
+    rdbEngine = builder.rdbEngine;
     schema = builder.schema;
     table = builder.table;
     tableMetadata = builder.tableMetadata;
@@ -90,7 +91,7 @@ public class MergeIntoQuery implements UpsertQuery {
   @Override
   public void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder =
-        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine.getRdbEngine());
+        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine);
 
     // For the USING SELECT statement
     for (Column<?> column : partitionKey.getColumns()) {

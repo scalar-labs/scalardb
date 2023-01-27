@@ -30,7 +30,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
         "DROP TABLE " + rdbEngine.encloseFullTableName(metadataSchema, JdbcAdmin.METADATA_TABLE));
 
     String dropNamespaceStatement;
-    if (rdbEngine.getRdbEngine() == RdbEngine.ORACLE) {
+    if (rdbEngine instanceof RdbEngineOracle) {
       dropNamespaceStatement = "DROP USER " + rdbEngine.enclose(metadataSchema);
     } else {
       dropNamespaceStatement = "DROP SCHEMA " + rdbEngine.enclose(metadataSchema);

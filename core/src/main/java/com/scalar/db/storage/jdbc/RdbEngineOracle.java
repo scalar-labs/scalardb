@@ -6,14 +6,19 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
+import com.scalar.db.storage.jdbc.query.SelectQuery;
+import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
+import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.dbcp2.BasicDataSource;
 
-class RdbEngineOracle implements RdbEngineStrategy {
+public class RdbEngineOracle implements RdbEngineStrategy {
 
   @Override
   public void createNamespaceExecute(Connection connection, String fullNamespace)
@@ -149,8 +154,13 @@ class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
-  public RdbEngine getRdbEngine() {
-    return RdbEngine.ORACLE;
+  public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
+    return new SelectWithFetchFirstNRowsOnly(builder, limit);
+  }
+
+  @Override
+  public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
+    return new MergeIntoQuery(builder);
   }
 
   @Override
@@ -221,6 +231,28 @@ class RdbEngineOracle implements RdbEngineStrategy {
         return "RAW(64)";
       default:
         return null;
+    }
+  }
+
+  @Override
+  public int getSqlTypes(DataType dataType) {
+    switch (dataType) {
+      case BOOLEAN:
+        return Types.BIT;
+      case INT:
+        return Types.INTEGER;
+      case BIGINT:
+        return Types.BIGINT;
+      case FLOAT:
+        return Types.FLOAT;
+      case DOUBLE:
+        return Types.DOUBLE;
+      case TEXT:
+        return Types.VARCHAR;
+      case BLOB:
+        return Types.BLOB;
+      default:
+        throw new AssertionError();
     }
   }
 
