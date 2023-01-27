@@ -83,10 +83,6 @@ public abstract class TwoPhaseConsensusCommitIntegrationTestBase
         properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
     properties.setProperty(
         ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
-
-    // Async commit can cause unexpected lazy recoveries, which can fail the tests. So we disable
-    // it for now.
-    properties.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
   }
 
   protected abstract Properties getProps1(String testName);

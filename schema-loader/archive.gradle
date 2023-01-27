@@ -7,8 +7,8 @@ publishing {
             artifactId = 'scalardb-schema-loader'
             from components.java
             pom {
-                name = 'Scalar DB Schema Loader'
-                description = 'A tool for schema creation and schema deletion in Scalar DB'
+                name = 'ScalarDB Schema Loader'
+                description = 'A tool for schema creation and schema deletion in ScalarDB'
                 url = 'https://github.com/scalar-labs/scalardb'
                 licenses {
                     license {

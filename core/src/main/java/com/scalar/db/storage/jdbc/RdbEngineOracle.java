@@ -131,11 +131,6 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
-  public String encloseFullTableName(String schema, String table) {
-    return enclose(schema) + "." + enclose(table);
-  }
-
-  @Override
   public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
     return new SelectWithFetchFirstNRowsOnly(builder, limit);
   }

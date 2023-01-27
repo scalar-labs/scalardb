@@ -1,7 +1,15 @@
 package com.scalar.db.storage.jdbc.query;
 
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.*;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.ColumnVisitor;
+import com.scalar.db.io.DataType;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.PreparedStatement;

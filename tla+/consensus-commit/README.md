@@ -1,4 +1,4 @@
-## TLA+ verification of the Consensus Commit protocol in Scalar DB
+## TLA+ verification of the Consensus Commit protocol in ScalarDB
 
 ## Overview of the protocol
 

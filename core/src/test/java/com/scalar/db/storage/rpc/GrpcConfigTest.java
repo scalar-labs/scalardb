@@ -44,7 +44,7 @@ public class GrpcConfigTest {
 
     // Assert
     assertThat(config.getHost()).isEqualTo(ANY_HOST);
-    assertThat(config.getPort()).isEqualTo(GrpcConfig.DEFAULT_SCALAR_DB_SERVER_PORT);
+    assertThat(config.getPort()).isEqualTo(GrpcConfig.DEFAULT_SERVER_PORT);
     assertThat(config.getDeadlineDurationMillis())
         .isEqualTo(GrpcConfig.DEFAULT_DEADLINE_DURATION_MILLIS);
   }

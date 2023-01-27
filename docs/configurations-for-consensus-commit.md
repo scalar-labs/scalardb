@@ -1,6 +1,6 @@
 # Configurations for Consensus Commit
 
-Consensus Commit transaction manager is the default transaction manager type in Scalar DB.
+Consensus Commit transaction manager is the default transaction manager type in ScalarDB.
 If you don't specify the `scalar.db.transaction_manager` property, or you specify `consensus-commit` for the property as follows, the Consensus Commit transaction manager is used.
 
 ```properties
@@ -30,5 +30,5 @@ The Performance related configurations for Consensus Commit are as follows:
 | scalar.db.consensus_commit.parallel_validation.enabled  | Whether or not the validation phase (in `EXTRA_READ`) is executed in parallel. | The value of `scalar.db.consensus_commit.parallel_commit.enabled` |
 | scalar.db.consensus_commit.parallel_commit.enabled      | Whether or not the commit phase is executed in parallel.                       | true                                                              |
 | scalar.db.consensus_commit.parallel_rollback.enabled    | Whether or not the rollback phase is executed in parallel.                     | The value of `scalar.db.consensus_commit.parallel_commit.enabled` |
-| scalar.db.consensus_commit.async_commit.enabled         | Whether or not the commit phase is executed asynchronously.                    | true                                                              |
+| scalar.db.consensus_commit.async_commit.enabled         | Whether or not the commit phase is executed asynchronously.                    | false                                                             |
 | scalar.db.consensus_commit.async_rollback.enabled       | Whether or not the rollback phase is executed asynchronously.                  | The value of `scalar.db.consensus_commit.async_commit.enabled`    |

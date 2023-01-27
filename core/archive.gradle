@@ -7,7 +7,7 @@ publishing {
             artifactId = 'scalardb'
             from components.java
             pom {
-                name = 'Scalar DB'
+                name = 'ScalarDB'
                 description = 'A universal transaction manager that achieves database-agnostic transactions and distributed transactions that span multiple databases'
                 url = 'https://github.com/scalar-labs/scalardb'
                 licenses {

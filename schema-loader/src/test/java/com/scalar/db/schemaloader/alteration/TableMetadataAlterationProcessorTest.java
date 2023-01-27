@@ -1,6 +1,8 @@
 package com.scalar.db.schemaloader.alteration;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.entry;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;

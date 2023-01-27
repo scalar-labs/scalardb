@@ -1,17 +1,17 @@
-# Getting Started with Scalar DB on Cosmos DB
+# Getting Started with ScalarDB on Cosmos DB
 
 ## Overview
-This document briefly explains how you can get started with Scalar DB on Cosmos DB with a simple electronic money application.
+This document briefly explains how you can get started with ScalarDB on Cosmos DB with a simple electronic money application.
 
 ## Install prerequisites
 
-Scalar DB is written in Java. So the following software is required to run it.
+ScalarDB is written in Java. So the following software is required to run it.
 
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (or OpenJDK 8)
 * Other libraries used from the above are automatically installed through gradle
 
 ## Cosmos DB setup
-You also need to set up a Cosmos DB account to get started with Scalar DB on Cosmos DB.
+You also need to set up a Cosmos DB account to get started with ScalarDB on Cosmos DB.
 
 This section explains how to set up [Azure Cosmos DB](https://docs.microsoft.com/en-us/azure/cosmos-db/introduction) with Azure portal.
 1. Select **Azure Cosmos DB** service from the services on Azure portal.
@@ -31,9 +31,9 @@ This section explains how to set up [Azure Cosmos DB](https://docs.microsoft.com
         
 From here, we assume Oracle JDK 8 is properly installed in your local environment and the Azure Cosmos DB account is properly configured in Azure.
 
-## Configure Scalar DB
+## Configure ScalarDB
     
-The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for Scalar DB. You need to update `contact_points` and `password` with your Cosmos DB URI and Cosmos DB key respectively, and `storage` with `cosmos`.
+The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for ScalarDB. You need to update `contact_points` and `password` with your Cosmos DB URI and Cosmos DB key respectively, and `storage` with `cosmos`.
     
 ```properties
 # The Cosmos DB URI
@@ -50,4 +50,4 @@ scalar.db.cosmos.table_metadata.database=
 ```
 Note that you can use a primary key or a secondary key for `<COSMOS_DB_KEY>`.
 
-Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md) to run the application.
+Please follow [Getting Started with ScalarDB](getting-started-with-scalardb.md) to run the application.

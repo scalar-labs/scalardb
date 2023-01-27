@@ -1,12 +1,12 @@
-# Scalar DB Schema Loader
+# ScalarDB Schema Loader
 
-Scalar DB has its own data model and schema, that maps to the implementation specific data model and schema.
+ScalarDB has its own data model and schema, that maps to the implementation specific data model and schema.
 Also, it stores internal metadata (e.g., transaction ID, record version, transaction status) for managing transaction logs and statuses when you use the Consensus Commit transaction manager.
-It is a little hard for application developers to manage the schema mapping and metadata for transactions, so we offer a tool called Scalar DB Schema Loader for creating schema without requiring much knowledge about those.
+It is a little hard for application developers to manage the schema mapping and metadata for transactions, so we offer a tool called ScalarDB Schema Loader for creating schema without requiring much knowledge about those.
 
 There are two ways to specify general CLI options in Schema Loader:
-  - Pass a Scalar DB configuration file and database/storage-specific options additionally.
-  - Pass the options without a Scalar DB configuration (Deprecated).
+  - Pass a ScalarDB configuration file and database/storage-specific options additionally.
+  - Pass the options without a ScalarDB configuration (Deprecated).
 
 Note that this tool supports only basic options to create/delete/repair/alter a table. If you want
 to use the advanced features of a database, please alter your tables with a database specific tool after creating them with this tool.
@@ -15,7 +15,7 @@ to use the advanced features of a database, please alter your tables with a data
 
 ## Install
 
-The release versions of `schema-loader` can be downloaded from [releases](https://github.com/scalar-labs/scalardb/releases) page of Scalar DB.
+The release versions of `schema-loader` can be downloaded from [releases](https://github.com/scalar-labs/scalardb/releases) page of ScalarDB.
 
 ## Build
 
@@ -56,7 +56,7 @@ Create/Delete schemas in the storage defined in the config file
                         which columns need to be added and which indexes need
                         to be created or deleted
   -c, --config=<configPath>
-                      Path to the config file of Scalar DB
+                      Path to the config file of ScalarDB
       --compaction-strategy=<compactionStrategy>
                       The compaction strategy, must be LCS, STCS or TWCS
                         (supported in Cassandra)
@@ -425,11 +425,11 @@ So, please set an appropriate value depending on the database implementations. P
 
 By default, the schema loader enables auto-scaling of RU for all tables: RU is scaled in or out between 10% and 100% of a specified RU depending on a workload. For example, if you specify `-r 10000`, RU of each table is scaled in or out between 1000 and 10000. Note that auto-scaling of Cosmos DB is enabled only when you set more than or equal to 4000 RU.
 
-## Data type mapping between Scalar DB and the other databases
+## Data type mapping between ScalarDB and the other databases
 
-Here are the supported data types in Scalar DB and their mapping to the data types of other databases.
+Here are the supported data types in ScalarDB and their mapping to the data types of other databases.
 
-| Scalar DB | Cassandra | Cosmos DB      | DynamoDB | MySQL    | PostgreSQL       | Oracle         | SQL Server      |
+| ScalarDB | Cassandra | Cosmos DB      | DynamoDB | MySQL    | PostgreSQL       | Oracle         | SQL Server      |
 |-----------|-----------|----------------|----------|----------|------------------|----------------|-----------------|
 | BOOLEAN   | boolean   | boolean (JSON) | BOOL     | boolean  | boolean          | number(1)      | bit             |
 | INT       | int       | number (JSON)  | N        | int      | int              | int            | int             |
@@ -446,7 +446,7 @@ However, the following types in JDBC databases are converted differently when th
 | TEXT     | VARCHAR(64)   | VARCHAR(10485760) | VARCHAR2(64) |
 | BLOB     | VARBINARY(64) |                   | RAW(64)      |
 
-The value range of `BIGINT` in Scalar DB is from -2^53 to 2^53 regardless of the underlying database.
+The value range of `BIGINT` in ScalarDB is from -2^53 to 2^53 regardless of the underlying database.
 
 If this data type mapping doesn't match your application, please alter the tables to change the data types after creating them with this tool.
 
@@ -468,7 +468,7 @@ dependencies {
 ### Create, alter, repair and delete
 
 You can create, alter, delete and repair tables that are defined in the schema using SchemaLoader by
-simply passing Scalar DB configuration file, schema, and additional options if needed as shown
+simply passing ScalarDB configuration file, schema, and additional options if needed as shown
 below.
 
 ```java
@@ -531,7 +531,7 @@ SchemaLoader.repairTables(configFilePath, serializedSchemaJson, tableReparationO
 SchemaLoader.unload(configFilePath, serializedSchemaJson, deleteCoordinatorTables);
 ```
 
-For Scalar DB configuration, a `Properties` object can be used as well.
+For ScalarDB configuration, a `Properties` object can be used as well.
 
 ```java
 // Create tables

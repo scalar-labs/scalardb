@@ -72,7 +72,9 @@ public interface RdbEngineStrategy {
    */
   String enclose(String name);
 
-  String encloseFullTableName(String schema, String table);
+  default String encloseFullTableName(String schema, String table) {
+    return enclose(schema) + "." + enclose(table);
+  }
 
   SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit);
 
