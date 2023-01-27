@@ -17,8 +17,6 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.storage.jdbc.JdbcService;
-import com.scalar.db.storage.jdbc.RdbEngine;
-import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -43,11 +41,11 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   private final RdbEngineStrategy rdbEngine;
 
   JdbcTransaction(
-      String txId, JdbcService jdbcService, Connection connection, RdbEngine rdbEngineType) {
+      String txId, JdbcService jdbcService, Connection connection, RdbEngineStrategy rdbEngine) {
     this.txId = txId;
     this.jdbcService = jdbcService;
     this.connection = connection;
-    this.rdbEngine = RdbEngineFactory.create(rdbEngineType);
+    this.rdbEngine = rdbEngine;
   }
 
   @Override

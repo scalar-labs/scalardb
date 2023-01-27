@@ -6,9 +6,14 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
+import com.scalar.db.storage.jdbc.query.SelectQuery;
+import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
+import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.dbcp2.BasicDataSource;
@@ -166,8 +171,13 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   }
 
   @Override
-  public RdbEngine getRdbEngine() {
-    return RdbEngine.POSTGRESQL;
+  public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
+    return new SelectWithLimitQuery(builder, limit);
+  }
+
+  @Override
+  public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
+    return new InsertOnConflictDoUpdateQuery(builder);
   }
 
   @Override
@@ -200,6 +210,28 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
         return "VARCHAR(10485760)";
       default:
         return null;
+    }
+  }
+
+  @Override
+  public int getSqlTypes(DataType dataType) {
+    switch (dataType) {
+      case BOOLEAN:
+        return Types.BOOLEAN;
+      case INT:
+        return Types.INTEGER;
+      case BIGINT:
+        return Types.BIGINT;
+      case FLOAT:
+        return Types.FLOAT;
+      case DOUBLE:
+        return Types.DOUBLE;
+      case TEXT:
+        return Types.VARCHAR;
+      case BLOB:
+        return Types.VARBINARY;
+      default:
+        throw new AssertionError();
     }
   }
 

@@ -3,6 +3,8 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.jdbc.query.SelectQuery;
+import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
 import java.sql.SQLException;
 import org.apache.commons.dbcp2.BasicDataSource;
@@ -21,11 +23,11 @@ public interface RdbEngineStrategy {
   /** Serialization error or deadlock found. */
   boolean isConflictError(SQLException e);
 
-  RdbEngine getRdbEngine();
-
   String getDataTypeForEngine(DataType dataType);
 
   String getDataTypeForKey(DataType dataType);
+
+  int getSqlTypes(DataType dataType);
 
   String getTextType(int charLength);
 
@@ -77,4 +79,8 @@ public interface RdbEngineStrategy {
   default String encloseFullTableName(String schema, String table) {
     return enclose(schema) + "." + enclose(table);
   }
+
+  SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit);
+
+  UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder);
 }
