@@ -7,8 +7,6 @@ import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.jdbc.RdbEngine;
-import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.PreparedStatement;
@@ -31,7 +29,7 @@ public class DeleteQuery implements Query {
   private final List<ConditionalExpression> otherConditions;
 
   private DeleteQuery(Builder builder) {
-    rdbEngine = RdbEngineFactory.create(builder.rdbEngine);
+    rdbEngine = builder.rdbEngine;
     schema = builder.schema;
     table = builder.table;
     tableMetadata = builder.tableMetadata;
@@ -63,7 +61,7 @@ public class DeleteQuery implements Query {
   @Override
   public void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder =
-        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine.getRdbEngine());
+        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine);
 
     for (Column<?> column : partitionKey.getColumns()) {
       column.accept(binder);
@@ -88,7 +86,7 @@ public class DeleteQuery implements Query {
   }
 
   public static class Builder {
-    private final RdbEngine rdbEngine;
+    private final RdbEngineStrategy rdbEngine;
     private final String schema;
     private final String table;
     private final TableMetadata tableMetadata;
@@ -96,7 +94,7 @@ public class DeleteQuery implements Query {
     private Optional<Key> clusteringKey;
     private List<ConditionalExpression> otherConditions;
 
-    Builder(RdbEngine rdbEngine, String schema, String table, TableMetadata tableMetadata) {
+    Builder(RdbEngineStrategy rdbEngine, String schema, String table, TableMetadata tableMetadata) {
       this.rdbEngine = rdbEngine;
       this.schema = schema;
       this.table = table;

@@ -58,7 +58,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
             databaseConfig.getMetadataCacheExpirationTimeSecs());
 
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
-    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine.getRdbEngine());
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
     jdbcService = new JdbcService(tableMetadataManager, operationChecker, queryBuilder);
   }
 
@@ -66,12 +66,12 @@ public class JdbcDatabase extends AbstractDistributedStorage {
   JdbcDatabase(
       BasicDataSource dataSource,
       BasicDataSource tableMetadataDataSource,
-      RdbEngine rdbEngineType,
+      RdbEngineStrategy rdbEngine,
       JdbcService jdbcService) {
     this.dataSource = dataSource;
     this.tableMetadataDataSource = tableMetadataDataSource;
     this.jdbcService = jdbcService;
-    this.rdbEngine = RdbEngineFactory.create(rdbEngineType);
+    this.rdbEngine = rdbEngine;
   }
 
   @Override

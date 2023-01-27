@@ -15,7 +15,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.storage.jdbc.RdbEngine;
-import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -54,8 +53,8 @@ public class QueryBuilderTest {
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
   public void selectQueryTest(RdbEngine rdbEngineType) throws SQLException {
-    QueryBuilder queryBuilder = new QueryBuilder(rdbEngineType);
-    RdbEngineStrategy rdbEngine = RdbEngineFactory.create(rdbEngineType);
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
     SelectQuery query;
     PreparedStatement preparedStatement;
@@ -320,8 +319,8 @@ public class QueryBuilderTest {
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
   public void selectQueryWithIndexedColumnTest(RdbEngine rdbEngineType) throws SQLException {
-    QueryBuilder queryBuilder = new QueryBuilder(rdbEngineType);
-    RdbEngineStrategy rdbEngine = RdbEngineFactory.create(rdbEngineType);
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
     SelectQuery query;
     PreparedStatement preparedStatement;
@@ -375,8 +374,8 @@ public class QueryBuilderTest {
   @EnumSource(RdbEngine.class)
   public void selectQueryWithTableWithoutClusteringKeyTest(RdbEngine rdbEngineType)
       throws SQLException {
-    QueryBuilder queryBuilder = new QueryBuilder(rdbEngineType);
-    RdbEngineStrategy rdbEngine = RdbEngineFactory.create(rdbEngineType);
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
     TableMetadata tableMetadataWithoutClusteringKey =
         TableMetadata.newBuilder()
@@ -427,8 +426,8 @@ public class QueryBuilderTest {
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
   public void insertQueryTest(RdbEngine rdbEngineType) throws SQLException {
-    QueryBuilder queryBuilder = new QueryBuilder(rdbEngineType);
-    RdbEngineStrategy rdbEngine = RdbEngineFactory.create(rdbEngineType);
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
     InsertQuery query;
     PreparedStatement preparedStatement;
@@ -521,8 +520,8 @@ public class QueryBuilderTest {
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
   public void updateQueryTest(RdbEngine rdbEngineType) throws SQLException {
-    QueryBuilder queryBuilder = new QueryBuilder(rdbEngineType);
-    RdbEngineStrategy rdbEngine = RdbEngineFactory.create(rdbEngineType);
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
     UpdateQuery query;
     PreparedStatement preparedStatement;
@@ -685,8 +684,8 @@ public class QueryBuilderTest {
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
   public void deleteQueryTest(RdbEngine rdbEngineType) throws SQLException {
-    QueryBuilder queryBuilder = new QueryBuilder(rdbEngineType);
-    RdbEngineStrategy rdbEngine = RdbEngineFactory.create(rdbEngineType);
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
     DeleteQuery query;
     PreparedStatement preparedStatement;
@@ -797,8 +796,8 @@ public class QueryBuilderTest {
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
   public void upsertQueryTest(RdbEngine rdbEngineType) throws SQLException {
-    QueryBuilder queryBuilder = new QueryBuilder(rdbEngineType);
-    RdbEngineStrategy rdbEngine = RdbEngineFactory.create(rdbEngineType);
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
     String expectedQuery;
     UpsertQuery query;
@@ -1091,8 +1090,8 @@ public class QueryBuilderTest {
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
   public void upsertQueryWithoutValuesTest(RdbEngine rdbEngineType) throws SQLException {
-    QueryBuilder queryBuilder = new QueryBuilder(rdbEngineType);
-    RdbEngineStrategy rdbEngine = RdbEngineFactory.create(rdbEngineType);
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
     String expectedQuery;
     UpsertQuery query;

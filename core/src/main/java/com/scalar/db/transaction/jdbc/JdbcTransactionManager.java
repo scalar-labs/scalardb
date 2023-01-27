@@ -15,7 +15,6 @@ import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.JdbcUtils;
-import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
@@ -50,7 +49,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
             databaseConfig.getMetadataCacheExpirationTimeSecs());
 
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
-    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine.getRdbEngine());
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
     jdbcService = new JdbcService(tableMetadataManager, operationChecker, queryBuilder);
   }
 
@@ -59,12 +58,12 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
       DatabaseConfig databaseConfig,
       BasicDataSource dataSource,
       BasicDataSource tableMetadataDataSource,
-      RdbEngine rdbEngine,
+      RdbEngineStrategy rdbEngine,
       JdbcService jdbcService) {
     super(databaseConfig);
     this.dataSource = dataSource;
     this.tableMetadataDataSource = tableMetadataDataSource;
-    this.rdbEngine = RdbEngineFactory.create(rdbEngine);
+    this.rdbEngine = rdbEngine;
     this.jdbcService = jdbcService;
   }
 
@@ -78,8 +77,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
   public DistributedTransaction begin(String txId) throws TransactionException {
     try {
       JdbcTransaction transaction =
-          new JdbcTransaction(
-              txId, jdbcService, dataSource.getConnection(), rdbEngine.getRdbEngine());
+          new JdbcTransaction(txId, jdbcService, dataSource.getConnection(), rdbEngine);
       getNamespace().ifPresent(transaction::withNamespace);
       getTable().ifPresent(transaction::withTable);
       return decorate(transaction);

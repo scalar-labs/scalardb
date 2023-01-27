@@ -59,7 +59,11 @@ public class JdbcTransactionManagerTest {
     when(dataSource.getConnection()).thenReturn(connection);
     manager =
         new JdbcTransactionManager(
-            databaseConfig, dataSource, tableMetadataDataSource, RdbEngine.MYSQL, jdbcService);
+            databaseConfig,
+            dataSource,
+            tableMetadataDataSource,
+            RdbEngine.createRdbEngineStrategy(RdbEngine.MYSQL),
+            jdbcService);
   }
 
   @Test

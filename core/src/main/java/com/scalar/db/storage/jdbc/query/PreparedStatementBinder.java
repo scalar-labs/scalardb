@@ -5,15 +5,15 @@ import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.ColumnVisitor;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
-import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Types;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
@@ -21,14 +21,16 @@ public class PreparedStatementBinder implements ColumnVisitor {
 
   private final PreparedStatement preparedStatement;
   private final TableMetadata tableMetadata;
-  private final RdbEngine rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
 
   private int index = 1;
   private SQLException sqlException;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public PreparedStatementBinder(
-      PreparedStatement preparedStatement, TableMetadata tableMetadata, RdbEngine rdbEngine) {
+      PreparedStatement preparedStatement,
+      TableMetadata tableMetadata,
+      RdbEngineStrategy rdbEngine) {
     this.preparedStatement = preparedStatement;
     this.tableMetadata = tableMetadata;
     this.rdbEngine = rdbEngine;
@@ -132,29 +134,7 @@ public class PreparedStatementBinder implements ColumnVisitor {
   }
 
   private int getSqlType(String name) {
-    switch (tableMetadata.getColumnDataType(name)) {
-      case BOOLEAN:
-        if (rdbEngine == RdbEngine.ORACLE) {
-          return Types.BIT;
-        }
-        return Types.BOOLEAN;
-      case INT:
-        return Types.INTEGER;
-      case BIGINT:
-        return Types.BIGINT;
-      case FLOAT:
-        return Types.FLOAT;
-      case DOUBLE:
-        return Types.DOUBLE;
-      case TEXT:
-        return Types.VARCHAR;
-      case BLOB:
-        if (rdbEngine == RdbEngine.POSTGRESQL) {
-          return Types.VARBINARY;
-        }
-        return Types.BLOB;
-      default:
-        throw new AssertionError();
-    }
+    DataType dataType = tableMetadata.getColumnDataType(name);
+    return rdbEngine.getSqlTypes(dataType);
   }
 }
