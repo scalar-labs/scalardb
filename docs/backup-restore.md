@@ -44,7 +44,7 @@ One way to create a transactionally-consistent backup is to take a backup while 
 If an underlying database supports a point-in-time snapshot/backup mechanism, you can take a snapshot during the period.
 If an underlying database supports a point-in-time restore/recovery mechanism, you can set a restore point to a time (preferably the mid-time) in the period.
 
-To easily make ScalarDB drain outstanding requests and stop accepting new requests to create a pause duration, it is recommended to use [ScalarDB Server](https://github.com/scalar-labs/scalardb/tree/master/server) (which implements `scalar-admin` interface) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your ScalarDB applications.
+To easily make ScalarDB drain outstanding requests and stop accepting new requests to create a pause duration, it is recommended to use [ScalarDB Server](scalardb-server.md) (which implements `scalar-admin` interface) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your ScalarDB applications.
 With [scalar-admin client tool](https://github.com/scalar-labs/scalar-admin/tree/main/java#scalar-admin-client-tool), you can pause nodes/servers/applications that implement the scalar-admin interface without losing ongoing transactions.
 
 Note that when you use a point-in-time-restore/recovery mechanism, it is recommended to minimize the clock drifts between clients and servers by using clock synchronization such as NTP.
@@ -72,7 +72,7 @@ To specify a transactionally-consistent restore point, please pause the ScalarDB
 
 **DynamoDB**
 
-You must enable the point-in-time recovery (PITR) feature for DynamoDB tables. If you use [ScalarDB Schema Loader](https://github.com/scalar-labs/scalardb/tree/master/schema-loader) for creating schema, it enables PITR feature for tables by default.
+You must enable the point-in-time recovery (PITR) feature for DynamoDB tables. If you use [ScalarDB Schema Loader](schema-loader.md) for creating schema, it enables PITR feature for tables by default.
 To specify a transactionally-consistent restore point, please pause the ScalarDB application of a DynamoDB as described [here](#transactionally-consistent-backups-during-pause-duration).
 
 ## Restore Backup
