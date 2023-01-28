@@ -1,0 +1,13 @@
+{
+  "emoney.account": {
+    "transaction": true,
+    "partition-key": [
+      "id"
+    ],
+    "clustering-key": [],
+    "columns": {
+      "id": "TEXT",
+      "balance": "INT"
+    }
+  }
+}
