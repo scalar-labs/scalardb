@@ -27,6 +27,8 @@ public final class RdbEngineFactory {
       return new RdbEngineOracle();
     } else if (jdbcUrl.startsWith("jdbc:sqlserver:")) {
       return new RdbEngineSqlServer();
+    } else if (jdbcUrl.startsWith("jdbc:sqlite:")) {
+      return new RdbEngineSqlite();
     } else {
       throw new IllegalArgumentException("the rdb engine is not supported: " + jdbcUrl);
     }
