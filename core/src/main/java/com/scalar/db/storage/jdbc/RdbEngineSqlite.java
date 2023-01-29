@@ -8,6 +8,10 @@ import com.scalar.db.storage.jdbc.query.UpsertQuery;
 
 import java.sql.SQLException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
 /**
  * Namespace: Added to table prefix like `\<namespace\>_\<table name\>`.
  */
@@ -34,7 +38,16 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public boolean isUndefinedTableError(SQLException e) {
-    return false;
+    // Error code: SQLITE_ERROR (1)
+    // Message: SQL error or missing database (no such table: XXX)
+
+    // NOTE: SQLite has limited variety of error codes.
+    // We might have to check the error message in unit tests.
+    // xerial/sqlite-jdbc contains a native SQLite library in JAR,
+    // (<https://github.com/xerial/sqlite-jdbc#sqlite-jdbc-driver>)
+    // so unit testing would assure the error message assertions.
+
+    return e.getErrorCode() == 1 && e.getMessage().contains("(no such table:");
   }
 
   @Override
