@@ -3,10 +3,15 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
+import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 
 import java.sql.SQLException;
+import java.sql.Types;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,22 +23,22 @@ import org.slf4j.LoggerFactory;
 public class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
   public boolean isDuplicateUserError(SQLException e) {
-    return false;
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public boolean isDuplicateSchemaError(SQLException e) {
-    return false;
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public boolean isDuplicateTableError(SQLException e) {
-    return false;
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public boolean isDuplicateKeyError(SQLException e) {
-    return false;
+    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -52,12 +57,29 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public boolean isConflictError(SQLException e) {
-    return false;
+    throw new UnsupportedOperationException();
   }
 
   @Override
-  public String getDataTypeForEngine(DataType dataType) {
-    return null;
+  public String getDataTypeForEngine(DataType scalarDbDataType) {
+    switch (scalarDbDataType) {
+      case BOOLEAN:
+        return "BOOLEAN";
+      case INT:
+        return "INT";
+      case BIGINT:
+        return "BIGINT";
+      case FLOAT:
+        return "FLOAT";
+      case DOUBLE:
+        return "DOUBLE";
+      case TEXT:
+        return "TEXT";
+      case BLOB:
+        return "BLOB";
+      default:
+        throw new AssertionError();
+    }
   }
 
   @Override
@@ -67,17 +89,34 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public int getSqlTypes(DataType dataType) {
-    return 0;
+    switch (dataType) {
+      case BOOLEAN:
+        return Types.BOOLEAN;
+      case INT:
+        return Types.INTEGER;
+      case BIGINT:
+        return Types.BIGINT;
+      case FLOAT:
+        return Types.FLOAT;
+      case DOUBLE:
+        return Types.DOUBLE;
+      case TEXT:
+        return Types.VARCHAR;
+      case BLOB:
+        return Types.BLOB;
+      default:
+        throw new AssertionError();
+    }
   }
 
   @Override
   public String getTextType(int charLength) {
-    return null;
+    return "TEXT";
   }
 
   @Override
   public String computeBooleanValue(boolean value) {
-    return null;
+    return value ? "TRUE" : "FALSE";
   }
 
   @Override
@@ -87,14 +126,25 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
     return new String[0];
   }
 
+  /**
+   * @param hasDescClusteringOrder Ignored. SQLite cannot handle key order.
+   *                              @see <a href="https://www.sqlite.org/syntax/table-constraint.html">table-constraint</a>
+   */
   @Override
   public String createTableInternalPrimaryKeyClause(boolean hasDescClusteringOrder, TableMetadata metadata) {
-    return null;
+    return "PRIMARY KEY ("
+               + Stream.concat(
+            metadata.getPartitionKeyNames().stream(),
+            metadata.getClusteringKeyNames().stream())
+                     .map(this::enclose)
+                     .collect(Collectors.joining(","))
+               + "))";
   }
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata) {
-    return new String[0];
+    // do nothing
+    return new String[] {};
   }
 
   @Override
@@ -104,27 +154,31 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
+    // Do nothing. Namespace is just a table prefix in the SQLite implementation.
     return new String[0];
   }
 
   @Override
   public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+    // Namespace is never created
     return false;
   }
 
   @Override
   public String deleteMetadataSchemaSql(String metadataSchema) {
+    // Do nothing. Namespace is just a table prefix in the SQLite implementation.
     return null;
   }
 
   @Override
   public String dropNamespaceSql(String namespace) {
+    // Do nothing. Namespace is just a table prefix in the SQLite implementation.
     return null;
   }
 
   @Override
   public void dropNamespaceTranslateSQLException(SQLException e, String namespace) throws ExecutionException {
-
+    throw new AssertionError("dropNamespace never happen in SQLite implementation");
   }
 
   @Override
@@ -138,17 +192,18 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public String alterColumnTypeSql(String namespace, String table, String columnName, String columnType) {
-    return null;
+    throw new AssertionError("SQLite does not require changes in column data types when making indices.");
   }
 
   @Override
   public String tableExistsInternalTableCheckSql(String fullTableName) {
-    return null;
+    return "SELECT 1 FROM " + fullTableName + " LIMIT 1";
   }
 
   @Override
   public String dropIndexSql(String schema, String table, String indexName) {
-    return null;
+    // TODO SQLite cannot scope an index name to a table. Consider adding <namespace>_ prefix to index names.
+    return "DROP INDEX " + enclose(indexName);
   }
 
   @Override
@@ -163,11 +218,11 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
-    return null;
+    return new SelectWithLimitQuery(builder, limit);
   }
 
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
-    return null;
+    return new InsertOnDuplicateKeyUpdateQuery(builder);
   }
 }

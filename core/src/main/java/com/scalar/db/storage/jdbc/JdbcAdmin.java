@@ -715,6 +715,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   static void execute(Connection connection, String sql) throws SQLException {
+    if (sql == null) { return; }
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(sql);
     }
