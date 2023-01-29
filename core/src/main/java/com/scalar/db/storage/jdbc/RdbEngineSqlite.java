@@ -120,7 +120,7 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
                + enclose("type")
                + " = \"table\" AND "
                + enclose("tbl_name")
-               + " LIKE ?_%";
+               + " LIKE ?";
   }
 
   @Override
