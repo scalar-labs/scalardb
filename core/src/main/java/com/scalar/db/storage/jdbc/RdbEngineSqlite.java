@@ -86,7 +86,7 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public String tryAddIfNotExistsToCreateTableSql(String createTableSql) {
-    return null;
+    return createTableSql.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS");
   }
 
   @Override
