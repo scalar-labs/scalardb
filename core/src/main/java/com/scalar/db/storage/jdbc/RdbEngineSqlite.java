@@ -8,6 +8,9 @@ import com.scalar.db.storage.jdbc.query.UpsertQuery;
 
 import java.sql.SQLException;
 
+/**
+ * Namespace: Added to table prefix like `\<namespace\>_\<table name\>`.
+ */
 public class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
   public boolean isDuplicateUserError(SQLException e) {
@@ -66,6 +69,8 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public String[] createNamespaceExecuteSqls(String fullNamespace) {
+    // In SQLite storage, namespace will be added to table names as prefix along with underscore
+    // separator.
     return new String[0];
   }
 
@@ -111,7 +116,11 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public String namespaceExistsStatement() {
-    return null;
+    return "SELECT 1 FROM sqlite_master WHERE "
+               + enclose("type")
+               + " = \"table\" AND "
+               + enclose("tbl_name")
+               + " LIKE ?_%";
   }
 
   @Override
@@ -131,12 +140,12 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public String enclose(String name) {
-    return null;
+    return "\"" + name + "\"";
   }
 
   @Override
   public String encloseFullTableName(String schema, String table) {
-    return RdbEngineStrategy.super.encloseFullTableName(schema, table);
+    return schema + "_" + table;
   }
 
   @Override
