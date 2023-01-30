@@ -1,0 +1,8 @@
+repos:
+- repo: https://github.com/jguttman94/pre-commit-gradle
+  rev: efaf1704425cc50df91d63920e8353d9d081a622
+  hooks:
+  - id: gradle-task
+    args: [-w, -o, spotlessApply]
+    verbose: true
+
