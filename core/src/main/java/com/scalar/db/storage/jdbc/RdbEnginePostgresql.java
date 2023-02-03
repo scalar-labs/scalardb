@@ -119,16 +119,6 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   }
 
   @Override
-  public boolean isDuplicateUserError(SQLException e) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean isDuplicateSchemaError(SQLException e) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public boolean isDuplicateTableError(SQLException e) {
     throw new UnsupportedOperationException();
   }

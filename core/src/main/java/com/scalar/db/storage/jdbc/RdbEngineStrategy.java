@@ -13,10 +13,6 @@ import java.sql.SQLException;
  */
 public interface RdbEngineStrategy {
 
-  boolean isDuplicateUserError(SQLException e);
-
-  boolean isDuplicateSchemaError(SQLException e);
-
   boolean isDuplicateTableError(SQLException e);
 
   boolean isDuplicateKeyError(SQLException e);

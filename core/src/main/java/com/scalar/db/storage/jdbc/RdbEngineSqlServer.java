@@ -60,7 +60,8 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
 
   @Override
   public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
-    return isDuplicateSchemaError(e);
+    // 2714: There is already an object named '%.*ls' in the database.
+    return e.getErrorCode() == 2714;
   }
 
   @Override
@@ -103,17 +104,6 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   @Override
   public String dropIndexSql(String schema, String table, String indexName) {
     return "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
-  }
-
-  @Override
-  public boolean isDuplicateUserError(SQLException e) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean isDuplicateSchemaError(SQLException e) {
-    // 2714: There is already an object named '%.*ls' in the database.
-    return e.getErrorCode() == 2714;
   }
 
   @Override
