@@ -65,7 +65,7 @@ scalar.db.contact_points=localhost
 # Port number for all the contact points. Default port number for each database is used if empty.
 #scalar.db.contact_port=
 
-# Credential information to access the database. For Cosmos DB, username isn't used. For DynamoDB, AWS_ACCESS_KEY_ID is specified by the username and AWS_ACCESS_SECRET_KEY is specified by the password.
+# Credential information to access the database. For Cosmos DB for NoSQL, username isn't used. For DynamoDB, AWS_ACCESS_KEY_ID is specified by the username and AWS_ACCESS_SECRET_KEY is specified by the password.
 scalar.db.username=cassandra
 scalar.db.password=cassandra
 
