@@ -31,7 +31,7 @@ public interface RdbEngineStrategy {
 
   String computeBooleanValue(boolean value);
 
-  String[] createNamespaceExecuteSqls(String fullNamespace);
+  String[] createNamespaceSqls(String fullNamespace);
 
   String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata);
