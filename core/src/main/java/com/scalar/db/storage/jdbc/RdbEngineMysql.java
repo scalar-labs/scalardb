@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 class RdbEngineMysql implements RdbEngineStrategy {
 
   @Override
-  public String[] createNamespaceExecuteSqls(String fullNamespace) {
+  public String[] createNamespaceSqls(String fullNamespace) {
     return new String[] {"CREATE SCHEMA " + fullNamespace + " character set utf8 COLLATE utf8_bin"};
   }
 

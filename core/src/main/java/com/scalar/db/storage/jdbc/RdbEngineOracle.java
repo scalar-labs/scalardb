@@ -18,7 +18,7 @@ import java.util.stream.Stream;
 public class RdbEngineOracle implements RdbEngineStrategy {
 
   @Override
-  public String[] createNamespaceExecuteSqls(String fullNamespace) {
+  public String[] createNamespaceSqls(String fullNamespace) {
     return new String[] {
       "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"",
       "ALTER USER " + fullNamespace + " quota unlimited on USERS",

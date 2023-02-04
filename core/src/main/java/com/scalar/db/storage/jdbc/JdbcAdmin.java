@@ -73,7 +73,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     String fullNamespace = enclose(namespace);
     try (Connection connection = dataSource.getConnection()) {
-      execute(connection, rdbEngine.createNamespaceExecuteSqls(fullNamespace));
+      execute(connection, rdbEngine.createNamespaceSqls(fullNamespace));
     } catch (SQLException e) {
       throw new ExecutionException("creating the schema failed", e);
     }
