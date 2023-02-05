@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
 
 
 /**
- * Namespace: Added to table prefix like `\<namespace\>_\<table name\>`.
+ * Namespace: Added to table prefix like `${namespace}_${tableName}`.
  */
 public class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
