@@ -9,7 +9,8 @@ repositories {
 mainClassName = "sample.ElectronicMoneyMain"
 
 dependencies {
-    implementation 'com.scalar-labs:scalardb:3.8.0'
+    // implementation 'com.scalar-labs:scalardb:3.8.0'
+    implementation(fileTree(dir: '../../core/build/libs', include: ['scalardb-4.0.0-SNAPSHOT-all.jar']))
 }
 
 sourceCompatibility = 1.8 
