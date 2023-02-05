@@ -1,6 +1,8 @@
 plugins {
     id 'com.github.spotbugs-base' version "${spotbugsPluginVersion}"
     id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
+    id 'java'
 }
 
 sourceSets {
