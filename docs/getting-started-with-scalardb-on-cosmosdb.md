@@ -13,7 +13,7 @@ ScalarDB is written in Java. So the following software is required to run it.
 ## Cosmos DB for NoSQL setup
 You also need to set up a Cosmos DB for NoSQL account to get started with ScalarDB on Cosmos DB for NoSQL.
 
-1. Create Cosmos DB for NoSQL account according to the official document [Create an Azure Cosmos DB account](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/quickstart-portal#create-account)
+1. Create a Cosmos DB for NoSQL account according to the official document [Create an Azure Cosmos DB account](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/quickstart-portal#create-account)
 1. Configure the **default consistency level** to **STRONG** according to the official document [Configure the default consistency level](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/how-to-manage-consistency#configure-the-default-consistency-level)
 
 From here, we assume Oracle JDK 8 is properly installed in your local environment and the Azure Cosmos DB for NoSQL account is properly configured in Azure.
