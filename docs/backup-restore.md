@@ -65,10 +65,10 @@ To avoid mistakes, it is recommended to use [Cassy](https://github.com/scalar-la
 Cassy is also integrated with `scalar-admin` so it can issue a pause request to the ScalarDB application (or ScalarDB Server) of a Cassandra cluster.
 Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups) for more details.
 
-**Cosmos DB**
+**Cosmos DB for NoSQL**
 
-You must create a Cosmos DB account with a continuous backup policy enabled to use point-in-time restore (PITR) feature. Backups are created continuously after it is enabled.
-To specify a transactionally-consistent restore point, please pause the ScalarDB application of a Cosmos DB as described [here](#transactionally-consistent-backups-during-pause-duration).
+You must create a Cosmos DB for NoSQL account with a continuous backup policy enabled to use point-in-time restore (PITR) feature. Backups are created continuously after it is enabled.
+To specify a transactionally-consistent restore point, please pause the ScalarDB application of a Cosmos DB for NoSQL as described [here](#transactionally-consistent-backups-during-pause-duration).
 
 **DynamoDB**
 
@@ -96,7 +96,7 @@ You first need to stop all the nodes of a Cassandra cluster. Clean the directori
 To avoid mistakes, it is recommended to use [Cassy](https://github.com/scalar-labs/cassy).
 Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups) for more details.
 
-### Cosmos DB (restore)
+### Cosmos DB for NoSQL (restore)
 
 You can follow the [azure official guide](https://docs.microsoft.com/en-us/azure/cosmos-db/restore-account-continuous-backup#restore-account-portal). After restoring backups. change the default consistencies of the restored databases to `STRONG`
 It is recommended to use the mid-time of paused duration as a restore point as we explained earlier.

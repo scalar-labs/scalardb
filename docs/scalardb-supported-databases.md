@@ -2,7 +2,7 @@
 
 ScalarDB supports the following databases and the databases that are compatible with those databases.
 * Cassandra
-* Cosmos DB
+* Cosmos DB for NoSQL
 * DynamoDB
 * MySQL
 * PostgreSQL
@@ -13,7 +13,7 @@ ScalarDB supports the following databases and the databases that are compatible 
 
 ## Compatibility matrix
 
-| ScalarDB Version | Cassandra 3.11 | Cassandra 3.0    | Cassandra 2.2   | Cosmos DB | DynamoDB  | MySQL 8.0  | MySQL 5.7  | PostgreSQL 14 | PostgreSQL 13 | PostgreSQL 12 | Oracle 21.3.0-xe   | Oracle 18.4.0-xe | SQL Server 2022 | SQL Server 2019 | SQL Server 2017 | Amazon Aurora MySQL 3 (MySQL 8) | Amazon Aurora MySQL 2 (MySQL 5.7) |  Amazon Aurora PostgreSQL 14 |  Amazon Aurora PostgreSQL 13 | Amazon Aurora PostgreSQL 12 |
+| ScalarDB Version | Cassandra 3.11 | Cassandra 3.0    | Cassandra 2.2   | Cosmos DB for NoSQL | DynamoDB  | MySQL 8.0  | MySQL 5.7  | PostgreSQL 14 | PostgreSQL 13 | PostgreSQL 12 | Oracle 21.3.0-xe   | Oracle 18.4.0-xe | SQL Server 2022 | SQL Server 2019 | SQL Server 2017 | Amazon Aurora MySQL 3 (MySQL 8) | Amazon Aurora MySQL 2 (MySQL 5.7) |  Amazon Aurora PostgreSQL 14 |  Amazon Aurora PostgreSQL 13 | Amazon Aurora PostgreSQL 12 |
 |:------------------|:---------------|:-----------------|:----------------|:----------|:----------|:-----------|:-----------|:--------------|:--------------|:--------------|:-------------------|:-----------------|:----------------|:----------------|:----------------|:-----------------------------|:-------------------------------|:--------------------------|:--------------------------|:-------------------------|
 | ScalarDB 3.7 |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |
 | ScalarDB 3.6 |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |
