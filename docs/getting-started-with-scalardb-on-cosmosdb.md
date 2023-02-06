@@ -13,23 +13,10 @@ ScalarDB is written in Java. So the following software is required to run it.
 ## Cosmos DB for NoSQL setup
 You also need to set up a Cosmos DB for NoSQL account to get started with ScalarDB on Cosmos DB for NoSQL.
 
-This section explains how to set up [Azure Cosmos DB](https://docs.microsoft.com/en-us/azure/cosmos-db/introduction) with Azure portal.
-1. Select **Azure Cosmos DB** service from the services on Azure portal.
-2. Select **Add**
-3. On the **Create Azure Cosmos DB Account** page, enter the basic settings for the new **Azure Cosmos DB** account.
-    * Create new or choose the existing **Resource Group**
-    * Enter the Cosmos DB **Account Name**
-    * Choose **API** as `Core (SQL)`
-    * Choose **Location**
-    * Select **Review + create**. You can skip the **Network** and **Tags** sections.
-    * Review the account settings, and then select **Create**.
-    *  Wait some time for **Azure Cosmos DB** account creation.
- 4. Select **Go to resource** to go to the Azure Cosmos DB account page.
- 5. Select **Default consistency** from the left navigation on your Azure Cosmos DB account page.
-    * Change `Consistency Level` from `SESSION` to `STRONG`.
-    * Select **Save**
-        
-From here, we assume Oracle JDK 8 is properly installed in your local environment and the Azure Cosmos DB account is properly configured in Azure.
+1. Create a Cosmos DB for NoSQL account according to the official document [Create an Azure Cosmos DB account](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/quickstart-portal#create-account)
+1. Configure the **default consistency level** to **STRONG** according to the official document [Configure the default consistency level](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/how-to-manage-consistency#configure-the-default-consistency-level)
+
+From here, we assume Oracle JDK 8 is properly installed in your local environment and the Azure Cosmos DB for NoSQL account is properly configured in Azure.
 
 ## Configure ScalarDB
     
