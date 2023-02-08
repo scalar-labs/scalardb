@@ -168,7 +168,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void createMetadataTableIfNotExists(Connection connection) throws SQLException {
+  @VisibleForTesting
+  void createMetadataTableIfNotExists(Connection connection) throws SQLException {
     String createTableStatement =
         "CREATE TABLE "
             + encloseFullTableName(metadataSchema, METADATA_TABLE)
