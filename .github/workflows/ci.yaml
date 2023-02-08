@@ -64,7 +64,7 @@ jobs:
           name: gradle_spotbugs_reports
           path: /tmp/gradle_spotbugs_reports
 
-  docker:
+  dockerfile-lint:
     runs-on: ubuntu-latest
 
     steps:
