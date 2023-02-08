@@ -120,7 +120,8 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
 
   @Override
   public boolean isDuplicateTableError(SQLException e) {
-    throw new UnsupportedOperationException();
+    // 42P07: duplicate_table
+    return e.getSQLState().equals("42P07");
   }
 
   @Override
