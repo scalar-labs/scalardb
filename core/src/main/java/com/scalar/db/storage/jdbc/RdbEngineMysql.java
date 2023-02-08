@@ -126,7 +126,9 @@ class RdbEngineMysql implements RdbEngineStrategy {
 
   @Override
   public boolean isDuplicateTableError(SQLException e) {
-    throw new UnsupportedOperationException();
+    // Error number: 1050; Symbol: ER_TABLE_EXISTS_ERROR; SQLSTATE: 42S01
+    // Message: Table '%s' already exists
+    return e.getErrorCode() == 1050;
   }
 
   @Override
