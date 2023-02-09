@@ -1,7 +1,5 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
-
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -9,19 +7,16 @@ import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEngineMysql implements RdbEngineStrategy {
 
   @Override
-  public void createNamespaceExecute(Connection connection, String fullNamespace)
-      throws SQLException {
-    execute(connection, "CREATE SCHEMA " + fullNamespace + " character set utf8 COLLATE utf8_bin");
+  public String[] createNamespaceSqls(String fullNamespace) {
+    return new String[] {"CREATE SCHEMA " + fullNamespace + " character set utf8 COLLATE utf8_bin"};
   }
 
   @Override
@@ -47,43 +42,41 @@ class RdbEngineMysql implements RdbEngineStrategy {
   }
 
   @Override
-  public void createTableInternalExecuteAfterCreateTable(
-      boolean hasDescClusteringOrder,
-      Connection connection,
-      String schema,
-      String table,
-      TableMetadata metadata) {
+  public String[] createTableInternalSqlsAfterCreateTable(
+      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata) {
     // do nothing
+    return new String[] {};
   }
 
   @Override
-  public void createMetadataTableIfNotExistsExecute(
-      Connection connection, String createTableStatement) throws SQLException {
-    String createTableIfNotExistsStatement =
-        createTableStatement.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS");
-    execute(connection, createTableIfNotExistsStatement);
+  public String tryAddIfNotExistsToCreateTableSql(String createTableSql) {
+    return createTableSql.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS");
   }
 
   @Override
-  public void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
-      throws SQLException {
-    execute(connection, "CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema));
+  public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
+    return new String[] {"CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema)};
   }
 
   @Override
-  public void deleteMetadataSchema(Connection connection, String metadataSchema)
-      throws SQLException {
-    execute(connection, "DROP SCHEMA " + enclose(metadataSchema));
+  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+    return false;
   }
 
   @Override
-  public void dropNamespace(BasicDataSource dataSource, String namespace)
+  public String deleteMetadataSchemaSql(String metadataSchema) {
+    return "DROP SCHEMA " + enclose(metadataSchema);
+  }
+
+  @Override
+  public String dropNamespaceSql(String namespace) {
+    return "DROP SCHEMA " + enclose(namespace);
+  }
+
+  @Override
+  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      execute(connection, "DROP SCHEMA " + enclose(namespace));
-    } catch (SQLException e) {
-      throw new ExecutionException(String.format("error dropping the schema %s", namespace), e);
-    }
+    throw new ExecutionException(String.format("error dropping the schema %s", namespace), e);
   }
 
   @Override
@@ -96,32 +89,24 @@ class RdbEngineMysql implements RdbEngineStrategy {
   }
 
   @Override
-  public void alterColumnType(
-      Connection connection, String namespace, String table, String columnName, String columnType)
-      throws SQLException {
-    String alterColumnStatement =
-        "ALTER TABLE "
-            + encloseFullTableName(namespace, table)
-            + " MODIFY"
-            + enclose(columnName)
-            + " "
-            + columnType;
-    execute(connection, alterColumnStatement);
+  public String alterColumnTypeSql(
+      String namespace, String table, String columnName, String columnType) {
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, table)
+        + " MODIFY"
+        + enclose(columnName)
+        + " "
+        + columnType;
   }
 
   @Override
-  public void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
-      throws SQLException {
-    String tableExistsStatement = "SELECT 1 FROM " + fullTableName + " LIMIT 1";
-    execute(connection, tableExistsStatement);
+  public String tableExistsInternalTableCheckSql(String fullTableName) {
+    return "SELECT 1 FROM " + fullTableName + " LIMIT 1";
   }
 
   @Override
-  public void dropIndexExecute(Connection connection, String schema, String table, String indexName)
-      throws SQLException {
-    String dropIndexStatement =
-        "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
-    execute(connection, dropIndexStatement);
+  public String dropIndexSql(String schema, String table, String indexName) {
+    return "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
   }
 
   @Override
@@ -140,18 +125,10 @@ class RdbEngineMysql implements RdbEngineStrategy {
   }
 
   @Override
-  public boolean isDuplicateUserError(SQLException e) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean isDuplicateSchemaError(SQLException e) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public boolean isDuplicateTableError(SQLException e) {
-    throw new UnsupportedOperationException();
+    // Error number: 1050; Symbol: ER_TABLE_EXISTS_ERROR; SQLSTATE: 42S01
+    // Message: Table '%s' already exists
+    return e.getErrorCode() == 1050;
   }
 
   @Override

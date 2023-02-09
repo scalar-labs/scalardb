@@ -73,7 +73,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     String fullNamespace = enclose(namespace);
     try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.createNamespaceExecute(connection, fullNamespace);
+      execute(connection, rdbEngine.createNamespaceSqls(fullNamespace));
     } catch (SQLException e) {
       throw new ExecutionException("creating the schema failed", e);
     }
@@ -118,8 +118,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         ", " + rdbEngine.createTableInternalPrimaryKeyClause(hasDescClusteringOrder, metadata);
     execute(connection, createTableStatement);
 
-    rdbEngine.createTableInternalExecuteAfterCreateTable(
-        hasDescClusteringOrder, connection, schema, table, metadata);
+    String[] sqls =
+        rdbEngine.createTableInternalSqlsAfterCreateTable(
+            hasDescClusteringOrder, schema, table, metadata);
+    execute(connection, sqls);
   }
 
   private void createIndex(
@@ -150,11 +152,24 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   private void createMetadataSchemaAndTableIfNotExists(Connection connection) throws SQLException {
-    rdbEngine.createMetadataSchemaIfNotExists(connection, metadataSchema);
+    createMetadataSchemaIfNotExists(connection);
     createMetadataTableIfNotExists(connection);
   }
 
-  private void createMetadataTableIfNotExists(Connection connection) throws SQLException {
+  private void createMetadataSchemaIfNotExists(Connection connection) throws SQLException {
+    String[] sqls = rdbEngine.createMetadataSchemaIfNotExistsSql(metadataSchema);
+    try {
+      execute(connection, sqls);
+    } catch (SQLException e) {
+      // Suppress exceptions indicating the duplicate metadata schema
+      if (!rdbEngine.isCreateMetadataSchemaDuplicateSchemaError(e)) {
+        throw e;
+      }
+    }
+  }
+
+  @VisibleForTesting
+  void createMetadataTableIfNotExists(Connection connection) throws SQLException {
     String createTableStatement =
         "CREATE TABLE "
             + encloseFullTableName(metadataSchema, METADATA_TABLE)
@@ -191,7 +206,15 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + enclose(METADATA_COL_COLUMN_NAME)
             + "))";
 
-    rdbEngine.createMetadataTableIfNotExistsExecute(connection, createTableStatement);
+    String stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
+    try {
+      execute(connection, stmt);
+    } catch (SQLException e) {
+      // Suppress the exception thrown when the table already exists
+      if (!rdbEngine.isDuplicateTableError(e)) {
+        throw e;
+      }
+    }
   }
 
   private String getTextType(int charLength) {
@@ -300,7 +323,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void deleteMetadataSchemaAndTableIfEmpty(Connection connection) throws SQLException {
     if (isMetadataTableEmpty(connection)) {
       deleteMetadataTable(connection);
-      rdbEngine.deleteMetadataSchema(connection, metadataSchema);
+      deleteMetadataSchema(connection);
     }
   }
 
@@ -323,9 +346,18 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     execute(connection, dropTableStatement);
   }
 
+  private void deleteMetadataSchema(Connection connection) throws SQLException {
+    String sql = rdbEngine.deleteMetadataSchemaSql(metadataSchema);
+    execute(connection, sql);
+  }
+
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
-    rdbEngine.dropNamespace(dataSource, namespace);
+    try (Connection connection = dataSource.getConnection()) {
+      execute(connection, rdbEngine.dropNamespaceSql(namespace));
+    } catch (SQLException e) {
+      rdbEngine.dropNamespaceTranslateSQLException(e, namespace);
+    }
   }
 
   @Override
@@ -522,7 +554,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return;
     }
 
-    rdbEngine.alterColumnType(connection, namespace, table, columnName, columnTypeForKey);
+    String sql = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnTypeForKey);
+    execute(connection, sql);
   }
 
   private void alterToRegularColumnTypeIfNecessary(
@@ -537,7 +570,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     String columnType = rdbEngine.getDataTypeForEngine(indexType);
-    rdbEngine.alterColumnType(connection, namespace, table, columnName, columnType);
+    String sql = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
+    execute(connection, sql);
   }
 
   @Override
@@ -555,8 +589,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private boolean tableExistsInternal(Connection connection, String namespace, String table)
       throws ExecutionException {
     String fullTableName = encloseFullTableName(namespace, table);
+    String sql = rdbEngine.tableExistsInternalTableCheckSql(fullTableName);
     try {
-      rdbEngine.tableExistsInternalExecuteTableCheck(connection, fullTableName);
+      execute(connection, sql);
       return true;
     } catch (SQLException e) {
       // An exception will be thrown if the table does not exist when executing the select
@@ -643,7 +678,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void dropIndex(Connection connection, String schema, String table, String indexedColumn)
       throws SQLException {
     String indexName = getIndexName(schema, table, indexedColumn);
-    rdbEngine.dropIndexExecute(connection, schema, table, indexName);
+    String sql = rdbEngine.dropIndexSql(schema, table, indexName);
+    execute(connection, sql);
   }
 
   private String getIndexName(String schema, String table, String indexedColumn) {
@@ -675,6 +711,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   static void execute(Connection connection, String sql) throws SQLException {
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(sql);
+    }
+  }
+
+  static void execute(Connection connection, String[] sqls) throws SQLException {
+    for (String sql : sqls) {
+      execute(connection, sql);
     }
   }
 
