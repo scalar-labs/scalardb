@@ -7,30 +7,13 @@ import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
-
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
-/**
- * Namespace: Added to table prefix like `${namespace}_${tableName}`.
- */
+/** Namespace: Added to table prefix like `${namespace}_${tableName}`. */
 public class RdbEngineSqlite implements RdbEngineStrategy {
-  @Override
-  public boolean isDuplicateUserError(SQLException e) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean isDuplicateSchemaError(SQLException e) {
-    throw new UnsupportedOperationException();
-  }
-
   @Override
   public boolean isDuplicateTableError(SQLException e) {
     throw new UnsupportedOperationException();
@@ -120,7 +103,7 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   }
 
   @Override
-  public String[] createNamespaceExecuteSqls(String fullNamespace) {
+  public String[] createNamespaceSqls(String fullNamespace) {
     // In SQLite storage, namespace will be added to table names as prefix along with underscore
     // separator.
     return new String[0];
@@ -128,21 +111,22 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   /**
    * @param hasDescClusteringOrder Ignored. SQLite cannot handle key order.
-   *                              @see <a href="https://www.sqlite.org/syntax/table-constraint.html">table-constraint</a>
+   * @see <a href="https://www.sqlite.org/syntax/table-constraint.html">table-constraint</a>
    */
   @Override
-  public String createTableInternalPrimaryKeyClause(boolean hasDescClusteringOrder, TableMetadata metadata) {
+  public String createTableInternalPrimaryKeyClause(
+      boolean hasDescClusteringOrder, TableMetadata metadata) {
     return "PRIMARY KEY ("
-               + Stream.concat(
-            metadata.getPartitionKeyNames().stream(),
-            metadata.getClusteringKeyNames().stream())
-                     .map(this::enclose)
-                     .collect(Collectors.joining(","))
-               + "))";
+        + Stream.concat(
+                metadata.getPartitionKeyNames().stream(), metadata.getClusteringKeyNames().stream())
+            .map(this::enclose)
+            .collect(Collectors.joining(","))
+        + "))";
   }
 
   @Override
-  public String[] createTableInternalSqlsAfterCreateTable(boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata) {
+  public String[] createTableInternalSqlsAfterCreateTable(
+      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata) {
     // do nothing
     return new String[] {};
   }
@@ -177,22 +161,25 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   }
 
   @Override
-  public void dropNamespaceTranslateSQLException(SQLException e, String namespace) throws ExecutionException {
+  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
+      throws ExecutionException {
     throw new AssertionError("dropNamespace never happen in SQLite implementation");
   }
 
   @Override
   public String namespaceExistsStatement() {
     return "SELECT 1 FROM sqlite_master WHERE "
-               + enclose("type")
-               + " = \"table\" AND "
-               + enclose("tbl_name")
-               + " LIKE ?";
+        + enclose("type")
+        + " = \"table\" AND "
+        + enclose("tbl_name")
+        + " LIKE ?";
   }
 
   @Override
-  public String alterColumnTypeSql(String namespace, String table, String columnName, String columnType) {
-    throw new AssertionError("SQLite does not require changes in column data types when making indices.");
+  public String alterColumnTypeSql(
+      String namespace, String table, String columnName, String columnType) {
+    throw new AssertionError(
+        "SQLite does not require changes in column data types when making indices.");
   }
 
   @Override
@@ -202,7 +189,8 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public String dropIndexSql(String schema, String table, String indexName) {
-    // TODO SQLite cannot scope an index name to a table. Consider adding <namespace>_ prefix to index names.
+    // TODO SQLite cannot scope an index name to a table. Consider adding <namespace>_ prefix to
+    // index names.
     return "DROP INDEX " + enclose(indexName);
   }
 

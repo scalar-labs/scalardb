@@ -13,10 +13,6 @@ import java.sql.SQLException;
  */
 public interface RdbEngineStrategy {
 
-  boolean isDuplicateUserError(SQLException e);
-
-  boolean isDuplicateSchemaError(SQLException e);
-
   boolean isDuplicateTableError(SQLException e);
 
   boolean isDuplicateKeyError(SQLException e);
@@ -35,7 +31,7 @@ public interface RdbEngineStrategy {
 
   String computeBooleanValue(boolean value);
 
-  String[] createNamespaceExecuteSqls(String fullNamespace);
+  String[] createNamespaceSqls(String fullNamespace);
 
   String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata);

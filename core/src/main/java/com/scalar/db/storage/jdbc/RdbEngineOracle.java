@@ -18,7 +18,7 @@ import java.util.stream.Stream;
 public class RdbEngineOracle implements RdbEngineStrategy {
 
   @Override
-  public String[] createNamespaceExecuteSqls(String fullNamespace) {
+  public String[] createNamespaceSqls(String fullNamespace) {
     return new String[] {
       "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"",
       "ALTER USER " + fullNamespace + " quota unlimited on USERS",
@@ -79,7 +79,8 @@ public class RdbEngineOracle implements RdbEngineStrategy {
 
   @Override
   public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
-    return isDuplicateUserError(e);
+    // ORA-01920: user name 'string' conflicts with another user or role name
+    return e.getErrorCode() == 1920;
   }
 
   @Override
@@ -138,17 +139,6 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
     return new MergeIntoQuery(builder);
-  }
-
-  @Override
-  public boolean isDuplicateUserError(SQLException e) {
-    // ORA-01920: user name 'string' conflicts with another user or role name
-    return e.getErrorCode() == 1920;
-  }
-
-  @Override
-  public boolean isDuplicateSchemaError(SQLException e) {
-    throw new UnsupportedOperationException();
   }
 
   @Override

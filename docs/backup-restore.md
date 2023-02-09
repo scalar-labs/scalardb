@@ -34,6 +34,12 @@ Use the `mysqldump` command with `--single-transaction` option.
 
 Use the `pg_dump` command.
 
+#### SQLite (backup)
+
+Use the [`.backup` command](https://www.sqlite.org/cli.html#special_commands_to_sqlite3_dot_commands_) along with `.timeout`.
+
+See also [this post](https://stackoverflow.com/questions/23164445/bash-sqlite3-backup-command), for example.
+
 #### Amazon RDS or Azure Database for MySQL/PostgreSQL (backup)
 
 You can restore to any point within the backup retention period with the automated backup feature.
@@ -65,10 +71,10 @@ To avoid mistakes, it is recommended to use [Cassy](https://github.com/scalar-la
 Cassy is also integrated with `scalar-admin` so it can issue a pause request to the ScalarDB application (or ScalarDB Server) of a Cassandra cluster.
 Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups) for more details.
 
-**Cosmos DB**
+**Cosmos DB for NoSQL**
 
-You must create a Cosmos DB account with a continuous backup policy enabled to use point-in-time restore (PITR) feature. Backups are created continuously after it is enabled.
-To specify a transactionally-consistent restore point, please pause the ScalarDB application of a Cosmos DB as described [here](#transactionally-consistent-backups-during-pause-duration).
+You must create a Cosmos DB for NoSQL account with a continuous backup policy enabled to use point-in-time restore (PITR) feature. Backups are created continuously after it is enabled.
+To specify a transactionally-consistent restore point, please pause the ScalarDB application of a Cosmos DB for NoSQL as described [here](#transactionally-consistent-backups-during-pause-duration).
 
 **DynamoDB**
 
@@ -79,11 +85,15 @@ To specify a transactionally-consistent restore point, please pause the ScalarDB
 
 ### MySQL (restore)
 
-If you use `mysqldump` to create a backup file, use `mysql` command to restore the file as specified [in the MySQL doc](https://dev.mysql.com/doc/mysql-backup-excerpt/8.0/en/reloading-sql-format-dumps.html).
+If you use MySQL and `mysqldump` to create a backup file, use `mysql` command to restore the file as specified [in the MySQL doc](https://dev.mysql.com/doc/mysql-backup-excerpt/8.0/en/reloading-sql-format-dumps.html).
 
 ### PostgreSQL (restore)
 
-If you use `pg_dump` to create a backup file, use `psql` command to restore the file as specified in [the PostgreSQL doc](https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-RESTORE).
+If you use PostgreSQL and `pg_dump` to create a backup file, use `psql` command to restore the file as specified in [the PostgreSQL doc](https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-RESTORE).
+
+### SQLite (restore)
+
+Use [`.restore` command](https://www.sqlite.org/cli.html#special_commands_to_sqlite3_dot_commands_).
 
 ### Amazon RDS or Azure Database for MySQL/PostgreSQL (restore)
 
@@ -96,7 +106,7 @@ You first need to stop all the nodes of a Cassandra cluster. Clean the directori
 To avoid mistakes, it is recommended to use [Cassy](https://github.com/scalar-labs/cassy).
 Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups) for more details.
 
-### Cosmos DB (restore)
+### Cosmos DB for NoSQL (restore)
 
 You can follow the [azure official guide](https://docs.microsoft.com/en-us/azure/cosmos-db/restore-account-continuous-backup#restore-account-portal). After restoring backups. change the default consistencies of the restored databases to `STRONG`
 It is recommended to use the mid-time of paused duration as a restore point as we explained earlier.

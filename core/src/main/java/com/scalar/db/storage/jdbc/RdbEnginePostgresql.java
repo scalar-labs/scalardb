@@ -18,7 +18,7 @@ import java.util.stream.Stream;
 class RdbEnginePostgresql implements RdbEngineStrategy {
 
   @Override
-  public String[] createNamespaceExecuteSqls(String fullNamespace) {
+  public String[] createNamespaceSqls(String fullNamespace) {
     return new String[] {"CREATE SCHEMA " + fullNamespace};
   }
 
@@ -119,18 +119,9 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   }
 
   @Override
-  public boolean isDuplicateUserError(SQLException e) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean isDuplicateSchemaError(SQLException e) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public boolean isDuplicateTableError(SQLException e) {
-    throw new UnsupportedOperationException();
+    // 42P07: duplicate_table
+    return e.getSQLState().equals("42P07");
   }
 
   @Override

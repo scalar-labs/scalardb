@@ -62,7 +62,7 @@ Range scan is only supported for clustering-key access within the same partition
 
 ### Storage
 
-As of writing this, ScalarDB supports Cassandra and Cosmos DB as a storage implementation. More correctly for Cassandra, it supports Cassandra java-driver API. Thus Cassandra java-driver compatible storage systems, such as ScyllaDB, can potentially also be used. The storage abstraction assumes the following features/properties, which most recent distributed storages have:
+As of writing this, ScalarDB supports Cassandra and Cosmos DB for NoSQL as a storage implementation. More correctly for Cassandra, it supports Cassandra java-driver API. Thus Cassandra java-driver compatible storage systems, such as ScyllaDB, can potentially also be used. The storage abstraction assumes the following features/properties, which most recent distributed storages have:
 
 - Atomic CRUD operations (each single-record operation needs to be atomic)
 - Sequential consistency support

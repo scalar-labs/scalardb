@@ -33,7 +33,7 @@ jobs:
 
       - name: Login to GitHub Container Registry
         if: always()
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -50,7 +50,7 @@ jobs:
         id: version
         run: |
           VERSION=$(gradle :core:properties -q | grep "version:" | awk '{print $2}')
-          echo ::set-output name=version::${VERSION}
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Run Trivy vulnerability scanner for ScalarDB Server
         if: always()

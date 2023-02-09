@@ -54,12 +54,12 @@ With the options, we can set storage adapter specific configurations.
 
 Currently, we can set the following options for the storage adapters:
 
-For Cosmos DB:
+For Cosmos DB for NoSQL:
 
-| name       | value                              | default |
-|------------|------------------------------------|---------|
-| ru         | Base resource unit                 | 400     |
-| no-scaling | Disable auto-scaling for Cosmos DB | false   |
+| name       | value                                        | default |
+|------------|----------------------------------------------|---------|
+| ru         | Base resource unit                           | 400     |
+| no-scaling | Disable auto-scaling for Cosmos DB for NoSQL | false   |
 
 For DynamoDB:
 
@@ -146,7 +146,7 @@ admin.addNewColumnToTable("ns", "tbl", "c6", DataType.INT)
 
 This should be executed with significant consideration as the execution time may vary greatly
 depending on the underlying storage. Please plan accordingly especially if the database runs in production:
-- For Cosmos and Dynamo DB: this operation is almost instantaneous as the table
+- For Cosmos DB for NoSQL and DynamoDB: this operation is almost instantaneous as the table
      schema is not modified. Only the table metadata stored in a separated table are updated.
 - For Cassandra: adding a column will only update the schema metadata and do not modify existing 
   schema records. The cluster topology is the main factor for the execution time. Since the schema 

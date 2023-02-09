@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 class RdbEngineMysql implements RdbEngineStrategy {
 
   @Override
-  public String[] createNamespaceExecuteSqls(String fullNamespace) {
+  public String[] createNamespaceSqls(String fullNamespace) {
     return new String[] {"CREATE SCHEMA " + fullNamespace + " character set utf8 COLLATE utf8_bin"};
   }
 
@@ -125,18 +125,10 @@ class RdbEngineMysql implements RdbEngineStrategy {
   }
 
   @Override
-  public boolean isDuplicateUserError(SQLException e) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean isDuplicateSchemaError(SQLException e) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public boolean isDuplicateTableError(SQLException e) {
-    throw new UnsupportedOperationException();
+    // Error number: 1050; Symbol: ER_TABLE_EXISTS_ERROR; SQLSTATE: 42S01
+    // Message: Table '%s' already exists
+    return e.getErrorCode() == 1050;
   }
 
   @Override

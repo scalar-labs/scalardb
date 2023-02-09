@@ -73,7 +73,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     String fullNamespace = enclose(namespace);
     try (Connection connection = dataSource.getConnection()) {
-      execute(connection, rdbEngine.createNamespaceExecuteSqls(fullNamespace));
+      execute(connection, rdbEngine.createNamespaceSqls(fullNamespace));
     } catch (SQLException e) {
       throw new ExecutionException("creating the schema failed", e);
     }
@@ -168,7 +168,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void createMetadataTableIfNotExists(Connection connection) throws SQLException {
+  @VisibleForTesting
+  void createMetadataTableIfNotExists(Connection connection) throws SQLException {
     String createTableStatement =
         "CREATE TABLE "
             + encloseFullTableName(metadataSchema, METADATA_TABLE)
@@ -715,7 +716,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   static void execute(Connection connection, String sql) throws SQLException {
-    if (sql == null) { return; }
+    if (sql == null) {
+      return;
+    }
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(sql);
     }
