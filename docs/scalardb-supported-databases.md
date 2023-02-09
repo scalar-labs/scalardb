@@ -10,6 +10,7 @@ ScalarDB supports the following databases and the databases that are compatible 
 * SQL Server
 * Amazon Aurora MySQL
 * Amazon Aurora PostgreSQL
+* SQLite 3
 
 ## Compatibility matrix
 
