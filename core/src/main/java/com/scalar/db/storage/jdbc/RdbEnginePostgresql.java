@@ -1,6 +1,5 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.api.TableMetadata;
@@ -10,20 +9,17 @@ import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEnginePostgresql implements RdbEngineStrategy {
 
   @Override
-  public void createNamespaceExecute(Connection connection, String fullNamespace)
-      throws SQLException {
-    execute(connection, "CREATE SCHEMA " + fullNamespace);
+  public String[] createNamespaceSqls(String fullNamespace) {
+    return new String[] {"CREATE SCHEMA " + fullNamespace};
   }
 
   @Override
@@ -37,18 +33,14 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
         + "))";
   }
 
-  @SuppressFBWarnings({"SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"})
   @Override
-  public void createTableInternalExecuteAfterCreateTable(
-      boolean hasDescClusteringOrder,
-      Connection connection,
-      String schema,
-      String table,
-      TableMetadata metadata)
-      throws SQLException {
+  public String[] createTableInternalSqlsAfterCreateTable(
+      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata) {
+    ArrayList<String> sqls = new ArrayList<>();
+
     if (hasDescClusteringOrder) {
       // Create a unique index for the clustering orders
-      String createUniqueIndexStatement =
+      sqls.add(
           "CREATE UNIQUE INDEX "
               + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
               + " ON "
@@ -59,39 +51,41 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
                       metadata.getClusteringKeyNames().stream()
                           .map(c -> enclose(c) + " " + metadata.getClusteringOrder(c)))
                   .collect(Collectors.joining(","))
-              + ")";
-      execute(connection, createUniqueIndexStatement);
+              + ")");
     }
+
+    return sqls.toArray(new String[0]);
   }
 
   @Override
-  public void createMetadataTableIfNotExistsExecute(
-      Connection connection, String createTableStatement) throws SQLException {
-    String createTableIfNotExistsStatement =
-        createTableStatement.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS");
-    execute(connection, createTableIfNotExistsStatement);
+  public String tryAddIfNotExistsToCreateTableSql(String createTableSql) {
+    return createTableSql.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS");
   }
 
   @Override
-  public void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
-      throws SQLException {
-    execute(connection, "CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema));
+  public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
+    return new String[] {"CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema)};
   }
 
   @Override
-  public void deleteMetadataSchema(Connection connection, String metadataSchema)
-      throws SQLException {
-    execute(connection, "DROP SCHEMA " + enclose(metadataSchema));
+  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+    return false;
   }
 
   @Override
-  public void dropNamespace(BasicDataSource dataSource, String namespace)
+  public String deleteMetadataSchemaSql(String metadataSchema) {
+    return "DROP SCHEMA " + enclose(metadataSchema);
+  }
+
+  @Override
+  public String dropNamespaceSql(String namespace) {
+    return "DROP SCHEMA " + enclose(namespace);
+  }
+
+  @Override
+  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      execute(connection, "DROP SCHEMA " + enclose(namespace));
-    } catch (SQLException e) {
-      throw new ExecutionException(String.format("error dropping the schema %s", namespace), e);
-    }
+    throw new ExecutionException(String.format("error dropping the schema %s", namespace), e);
   }
 
   @Override
@@ -104,46 +98,30 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   }
 
   @Override
-  public void alterColumnType(
-      Connection connection, String namespace, String table, String columnName, String columnType)
-      throws SQLException {
-    String alterColumnStatement =
-        "ALTER TABLE "
-            + encloseFullTableName(namespace, table)
-            + " ALTER COLUMN"
-            + enclose(columnName)
-            + " TYPE "
-            + columnType;
-    execute(connection, alterColumnStatement);
+  public String alterColumnTypeSql(
+      String namespace, String table, String columnName, String columnType) {
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, table)
+        + " ALTER COLUMN"
+        + enclose(columnName)
+        + " TYPE "
+        + columnType;
   }
 
   @Override
-  public void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
-      throws SQLException {
-    String tableExistsStatement = "SELECT 1 FROM " + fullTableName + " LIMIT 1";
-    execute(connection, tableExistsStatement);
+  public String tableExistsInternalTableCheckSql(String fullTableName) {
+    return "SELECT 1 FROM " + fullTableName + " LIMIT 1";
   }
 
   @Override
-  public void dropIndexExecute(Connection connection, String schema, String table, String indexName)
-      throws SQLException {
-    String dropIndexStatement = "DROP INDEX " + enclose(schema) + "." + enclose(indexName);
-    execute(connection, dropIndexStatement);
-  }
-
-  @Override
-  public boolean isDuplicateUserError(SQLException e) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean isDuplicateSchemaError(SQLException e) {
-    throw new UnsupportedOperationException();
+  public String dropIndexSql(String schema, String table, String indexName) {
+    return "DROP INDEX " + enclose(schema) + "." + enclose(indexName);
   }
 
   @Override
   public boolean isDuplicateTableError(SQLException e) {
-    throw new UnsupportedOperationException();
+    // 42P07: duplicate_table
+    return e.getSQLState().equals("42P07");
   }
 
   @Override

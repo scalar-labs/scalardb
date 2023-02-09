@@ -1,6 +1,5 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.api.TableMetadata;
@@ -10,21 +9,20 @@ import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.dbcp2.BasicDataSource;
 
 public class RdbEngineOracle implements RdbEngineStrategy {
 
   @Override
-  public void createNamespaceExecute(Connection connection, String fullNamespace)
-      throws SQLException {
-    execute(connection, "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"");
-    execute(connection, "ALTER USER " + fullNamespace + " quota unlimited on USERS");
+  public String[] createNamespaceSqls(String fullNamespace) {
+    return new String[] {
+      "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"",
+      "ALTER USER " + fullNamespace + " quota unlimited on USERS",
+    };
   }
 
   @Override
@@ -38,24 +36,18 @@ public class RdbEngineOracle implements RdbEngineStrategy {
         + ")) ROWDEPENDENCIES"; // add ROWDEPENDENCIES to the table to improve the performance
   }
 
-  @SuppressFBWarnings({"SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"})
   @Override
-  public void createTableInternalExecuteAfterCreateTable(
-      boolean hasDescClusteringOrder,
-      Connection connection,
-      String schema,
-      String table,
-      TableMetadata metadata)
-      throws SQLException {
+  public String[] createTableInternalSqlsAfterCreateTable(
+      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata) {
+    ArrayList<String> sqls = new ArrayList<>();
+
     // Set INITRANS to 3 and MAXTRANS to 255 for the table to improve the
     // performance
-    String alterTableStatement =
-        "ALTER TABLE " + encloseFullTableName(schema, table) + " INITRANS 3 MAXTRANS 255";
-    execute(connection, alterTableStatement);
+    sqls.add("ALTER TABLE " + encloseFullTableName(schema, table) + " INITRANS 3 MAXTRANS 255");
 
     if (hasDescClusteringOrder) {
       // Create a unique index for the clustering orders
-      String createUniqueIndexStatement =
+      sqls.add(
           "CREATE UNIQUE INDEX "
               + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
               + " ON "
@@ -66,52 +58,45 @@ public class RdbEngineOracle implements RdbEngineStrategy {
                       metadata.getClusteringKeyNames().stream()
                           .map(c -> enclose(c) + " " + metadata.getClusteringOrder(c)))
                   .collect(Collectors.joining(","))
-              + ")";
-      execute(connection, createUniqueIndexStatement);
+              + ")");
     }
+
+    return sqls.toArray(new String[0]);
   }
 
   @Override
-  public void createMetadataTableIfNotExistsExecute(
-      Connection connection, String createTableStatement) throws SQLException {
-    try {
-      execute(connection, createTableStatement);
-    } catch (SQLException e) {
-      // Suppress the exception thrown when the table already exists
-      if (!isDuplicateTableError(e)) {
-        throw e;
-      }
-    }
+  public String tryAddIfNotExistsToCreateTableSql(String createTableSql) {
+    return createTableSql;
   }
 
   @Override
-  public void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
-      throws SQLException {
-    try {
-      execute(connection, "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"");
-    } catch (SQLException e) {
-      // Suppress the exception thrown when the user already exists
-      if (!isDuplicateUserError(e)) {
-        throw e;
-      }
-    }
-    execute(connection, "ALTER USER " + enclose(metadataSchema) + " quota unlimited on USERS");
+  public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
+    return new String[] {
+      "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"",
+      "ALTER USER " + enclose(metadataSchema) + " quota unlimited on USERS",
+    };
   }
 
   @Override
-  public void deleteMetadataSchema(Connection connection, String metadataSchema)
-      throws SQLException {
-    execute(connection, "DROP USER " + enclose(metadataSchema));
+  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+    // ORA-01920: user name 'string' conflicts with another user or role name
+    return e.getErrorCode() == 1920;
   }
 
   @Override
-  public void dropNamespace(BasicDataSource dataSource, String namespace)
+  public String deleteMetadataSchemaSql(String metadataSchema) {
+    return "DROP USER " + enclose(metadataSchema);
+  }
+
+  @Override
+  public String dropNamespaceSql(String namespace) {
+    return "DROP USER " + enclose(namespace);
+  }
+
+  @Override
+  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      execute(connection, "DROP USER " + enclose(namespace));
-    } catch (SQLException e) {
-      throw new ExecutionException(String.format("error dropping the user %s", namespace), e);
-    }
+    throw new ExecutionException(String.format("error dropping the user %s", namespace), e);
   }
 
   @Override
@@ -120,32 +105,25 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
-  public void alterColumnType(
-      Connection connection, String namespace, String table, String columnName, String columnType)
-      throws SQLException {
-    String alterColumnStatement =
-        "ALTER TABLE "
-            + encloseFullTableName(namespace, table)
-            + " MODIFY ( "
-            + enclose(columnName)
-            + " "
-            + columnType
-            + " )";
-    execute(connection, alterColumnStatement);
+  public String alterColumnTypeSql(
+      String namespace, String table, String columnName, String columnType) {
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, table)
+        + " MODIFY ( "
+        + enclose(columnName)
+        + " "
+        + columnType
+        + " )";
   }
 
   @Override
-  public void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
-      throws SQLException {
-    String tableExistsStatement = "SELECT 1 FROM " + fullTableName + " FETCH FIRST 1 ROWS ONLY";
-    execute(connection, tableExistsStatement);
+  public String tableExistsInternalTableCheckSql(String fullTableName) {
+    return "SELECT 1 FROM " + fullTableName + " FETCH FIRST 1 ROWS ONLY";
   }
 
   @Override
-  public void dropIndexExecute(Connection connection, String schema, String table, String indexName)
-      throws SQLException {
-    String dropIndexStatement = "DROP INDEX " + enclose(indexName);
-    execute(connection, dropIndexStatement);
+  public String dropIndexSql(String schema, String table, String indexName) {
+    return "DROP INDEX " + enclose(indexName);
   }
 
   @Override
@@ -161,17 +139,6 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
     return new MergeIntoQuery(builder);
-  }
-
-  @Override
-  public boolean isDuplicateUserError(SQLException e) {
-    // ORA-01920: user name 'string' conflicts with another user or role name
-    return e.getErrorCode() == 1920;
-  }
-
-  @Override
-  public boolean isDuplicateSchemaError(SQLException e) {
-    throw new UnsupportedOperationException();
   }
 
   @Override

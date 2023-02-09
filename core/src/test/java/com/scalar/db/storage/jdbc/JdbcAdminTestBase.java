@@ -12,6 +12,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.mysql.cj.jdbc.exceptions.CommunicationsException;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -37,6 +38,8 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
+import org.postgresql.util.PSQLException;
+import org.postgresql.util.PSQLState;
 
 /**
  * Abstraction that defines unit tests for the {@link JdbcAdmin}. The class purpose is to be able to
@@ -654,6 +657,34 @@ public abstract class JdbcAdminTestBase {
     for (int i = 0; i < expectedSqlStatements.length; i++) {
       verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
     }
+  }
+
+  @Test
+  public void
+      createMetadataTableIfNotExists_WithInternalDbError_forMysql_shouldThrowInternalDbError()
+          throws SQLException {
+    createMetadataTableIfNotExists_WithInternalDbError_forX_shouldThrowInternalDbError(
+        RdbEngine.MYSQL, new CommunicationsException("", null));
+  }
+
+  @Test
+  public void
+      createMetadataTableIfNotExists_WithInternalDbError_forPostgresql_shouldThrowInternalDbError()
+          throws SQLException {
+    createMetadataTableIfNotExists_WithInternalDbError_forX_shouldThrowInternalDbError(
+        RdbEngine.POSTGRESQL, new PSQLException("", PSQLState.CONNECTION_FAILURE));
+  }
+
+  private void createMetadataTableIfNotExists_WithInternalDbError_forX_shouldThrowInternalDbError(
+      RdbEngine rdbEngine, SQLException internalDbError) throws SQLException {
+    // Arrange
+    when(connection.createStatement()).thenThrow(internalDbError);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    // Assert
+    assertThatThrownBy(() -> admin.createMetadataTableIfNotExists(connection))
+        .isInstanceOf(internalDbError.getClass());
   }
 
   @Test

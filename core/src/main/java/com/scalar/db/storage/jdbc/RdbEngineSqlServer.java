@@ -1,7 +1,5 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
-
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -9,19 +7,16 @@ import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithTop;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.dbcp2.BasicDataSource;
 
 class RdbEngineSqlServer implements RdbEngineStrategy {
 
   @Override
-  public void createNamespaceExecute(Connection connection, String fullNamespace)
-      throws SQLException {
-    execute(connection, "CREATE SCHEMA " + fullNamespace);
+  public String[] createNamespaceSqls(String fullNamespace) {
+    return new String[] {"CREATE SCHEMA " + fullNamespace};
   }
 
   @Override
@@ -47,55 +42,42 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   }
 
   @Override
-  public void createTableInternalExecuteAfterCreateTable(
-      boolean hasDescClusteringOrder,
-      Connection connection,
-      String schema,
-      String table,
-      TableMetadata metadata) {
+  public String[] createTableInternalSqlsAfterCreateTable(
+      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata) {
     // do nothing
+    return new String[0];
   }
 
   @Override
-  public void createMetadataTableIfNotExistsExecute(
-      Connection connection, String createTableStatement) throws SQLException {
-    try {
-      execute(connection, createTableStatement);
-    } catch (SQLException e) {
-      // Suppress the exception thrown when the table already exists
-      if (!isDuplicateTableError(e)) {
-        throw e;
-      }
-    }
+  public String tryAddIfNotExistsToCreateTableSql(String createTableSql) {
+    return createTableSql;
   }
 
   @Override
-  public void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
-      throws SQLException {
-    try {
-      execute(connection, "CREATE SCHEMA " + enclose(metadataSchema));
-    } catch (SQLException e) {
-      // Suppress the exception thrown when the schema already exists
-      if (!isDuplicateSchemaError(e)) {
-        throw e;
-      }
-    }
+  public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
+    return new String[] {"CREATE SCHEMA " + enclose(metadataSchema)};
   }
 
   @Override
-  public void deleteMetadataSchema(Connection connection, String metadataSchema)
-      throws SQLException {
-    execute(connection, "DROP SCHEMA " + enclose(metadataSchema));
+  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+    // 2714: There is already an object named '%.*ls' in the database.
+    return e.getErrorCode() == 2714;
   }
 
   @Override
-  public void dropNamespace(BasicDataSource dataSource, String namespace)
+  public String deleteMetadataSchemaSql(String metadataSchema) {
+    return "DROP SCHEMA " + enclose(metadataSchema);
+  }
+
+  @Override
+  public String dropNamespaceSql(String namespace) {
+    return "DROP SCHEMA " + enclose(namespace);
+  }
+
+  @Override
+  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      execute(connection, "DROP SCHEMA " + enclose(namespace));
-    } catch (SQLException e) {
-      throw new ExecutionException(String.format("error dropping the schema %s", namespace), e);
-    }
+    throw new ExecutionException(String.format("error dropping the schema %s", namespace), e);
   }
 
   @Override
@@ -108,37 +90,20 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   }
 
   @Override
-  public void alterColumnType(
-      Connection connection, String namespace, String table, String columnName, String columnType)
-      throws SQLException {
+  public String alterColumnTypeSql(
+      String namespace, String table, String columnName, String columnType) {
     // SQLServer does not require changes in column data types when making indices.
     throw new AssertionError();
   }
 
   @Override
-  public void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
-      throws SQLException {
-    String tableExistsStatement = "SELECT TOP 1 1 FROM " + fullTableName;
-    execute(connection, tableExistsStatement);
+  public String tableExistsInternalTableCheckSql(String fullTableName) {
+    return "SELECT TOP 1 1 FROM " + fullTableName;
   }
 
   @Override
-  public void dropIndexExecute(Connection connection, String schema, String table, String indexName)
-      throws SQLException {
-    String dropIndexStatement =
-        "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
-    execute(connection, dropIndexStatement);
-  }
-
-  @Override
-  public boolean isDuplicateUserError(SQLException e) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean isDuplicateSchemaError(SQLException e) {
-    // 2714: There is already an object named '%.*ls' in the database.
-    return e.getErrorCode() == 2714;
+  public String dropIndexSql(String schema, String table, String indexName) {
+    return "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
   }
 
   @Override

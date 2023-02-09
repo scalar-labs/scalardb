@@ -5,15 +5,13 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
-import java.sql.Connection;
 import java.sql.SQLException;
-import org.apache.commons.dbcp2.BasicDataSource;
 
+/**
+ * An interface to hide the difference between underlying JDBC SQL engines in SQL dialects, error
+ * codes, and so on. It's NOT responsible for actually connecting to underlying engines.
+ */
 public interface RdbEngineStrategy {
-
-  boolean isDuplicateUserError(SQLException e);
-
-  boolean isDuplicateSchemaError(SQLException e);
 
   boolean isDuplicateTableError(SQLException e);
 
@@ -33,40 +31,34 @@ public interface RdbEngineStrategy {
 
   String computeBooleanValue(boolean value);
 
-  void createNamespaceExecute(Connection connection, String fullNamespace) throws SQLException;
+  String[] createNamespaceSqls(String fullNamespace);
 
   String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata);
 
-  void createTableInternalExecuteAfterCreateTable(
-      boolean hasDescClusteringOrder,
-      Connection connection,
-      String schema,
-      String table,
-      TableMetadata metadata)
-      throws SQLException;
+  String[] createTableInternalSqlsAfterCreateTable(
+      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata);
 
-  void createMetadataTableIfNotExistsExecute(Connection connection, String createTableStatement)
-      throws SQLException;
+  String tryAddIfNotExistsToCreateTableSql(String createTableSql);
 
-  void createMetadataSchemaIfNotExists(Connection connection, String metadataSchema)
-      throws SQLException;
+  String[] createMetadataSchemaIfNotExistsSql(String metadataSchema);
 
-  void deleteMetadataSchema(Connection connection, String metadataSchema) throws SQLException;
+  boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e);
 
-  void dropNamespace(BasicDataSource dataSource, String namespace) throws ExecutionException;
+  String deleteMetadataSchemaSql(String metadataSchema);
+
+  String dropNamespaceSql(String namespace);
+
+  void dropNamespaceTranslateSQLException(SQLException e, String namespace)
+      throws ExecutionException;
 
   String namespaceExistsStatement();
 
-  void alterColumnType(
-      Connection connection, String namespace, String table, String columnName, String columnType)
-      throws SQLException;
+  String alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
-  void tableExistsInternalExecuteTableCheck(Connection connection, String fullTableName)
-      throws SQLException;
+  String tableExistsInternalTableCheckSql(String fullTableName);
 
-  void dropIndexExecute(Connection connection, String schema, String table, String indexName)
-      throws SQLException;
+  String dropIndexSql(String schema, String table, String indexName);
 
   /**
    * Enclose the target (schema, table or column) to use reserved words and special characters.
