@@ -824,6 +824,13 @@ public abstract class JdbcAdminTestBase {
         RdbEngine.ORACLE, "TRUNCATE TABLE \"my_ns\".\"foo_table\"");
   }
 
+  @Test
+  public void truncateTable_forSqlite_shouldExecuteTruncateTableStatement()
+      throws SQLException, ExecutionException {
+    truncateTable_forX_shouldExecuteTruncateTableStatement(
+        RdbEngine.SQLITE, "TRUNCATE TABLE \"my_ns_foo_table\"");
+  }
+
   private void truncateTable_forX_shouldExecuteTruncateTableStatement(
       RdbEngine rdbEngine, String expectedTruncateTableStatement)
       throws SQLException, ExecutionException {
