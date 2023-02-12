@@ -1743,6 +1743,22 @@ public abstract class JdbcAdminTestBase {
             + "].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
   }
 
+  @Test
+  public void
+      repairTable_WithMissingMetadataTableForSqlite_shouldCreateMetadataTableAndAddMetadataForTable()
+          throws SQLException, ExecutionException {
+    repairTable_WithMissingMetadataTableForX_shouldCreateMetadataTableAndAddMetadataForTable(
+        RdbEngine.SQLITE,
+        "SELECT 1 FROM \"my_ns_foo_table\" LIMIT 1",
+        "SELECT 1 FROM \"" + tableMetadataSchemaName + "_metadata\" LIMIT 1",
+        "CREATE TABLE IF NOT EXISTS \""
+            + tableMetadataSchemaName
+            + "_metadata\"(\"full_table_name\" TEXT,\"column_name\" TEXT,\"data_type\" TEXT NOT NULL,\"key_type\" TEXT,\"clustering_order\" TEXT,\"indexed\" BOOLEAN NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "_metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,FALSE,1)");
+  }
+
   private void
       repairTable_WithMissingMetadataTableForX_shouldCreateMetadataTableAndAddMetadataForTable(
           RdbEngine rdbEngine, String... expectedSqlStatements)
