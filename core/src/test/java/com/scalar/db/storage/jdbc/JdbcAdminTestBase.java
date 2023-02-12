@@ -121,6 +121,16 @@ public abstract class JdbcAdminTestBase {
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
   }
 
+  @Test
+  public void getTableMetadata_forSqlite_ShouldReturnTableMetadata()
+      throws SQLException, ExecutionException {
+    getTableMetadata_forX_ShouldReturnTableMetadata(
+        RdbEngine.SQLITE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "_metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
+  }
+
   private void getTableMetadata_forX_ShouldReturnTableMetadata(
       RdbEngine rdbEngine, String expectedSelectStatements)
       throws ExecutionException, SQLException {
