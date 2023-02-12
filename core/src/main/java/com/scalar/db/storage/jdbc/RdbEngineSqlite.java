@@ -51,7 +51,13 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public boolean isConflictError(SQLException e) {
-    throw new UnsupportedOperationException();
+    // Error code: SQLITE_BUSY (5)
+    // Message: The database file is locked (database is locked)
+
+    // Error code: SQLITE_BUSY (6)
+    // Message: A table in the database is locked (database table is locked)
+
+    return e.getErrorCode() == 5 || e.getErrorCode() == 6;
   }
 
   @Override
