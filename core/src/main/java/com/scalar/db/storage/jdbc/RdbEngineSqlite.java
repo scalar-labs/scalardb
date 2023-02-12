@@ -37,7 +37,7 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
     // (<https://github.com/xerial/sqlite-jdbc#sqlite-jdbc-driver>)
     // so unit testing would assure the error message assertions.
 
-    return e.getErrorCode() == 1 && e.getMessage().contains("(no such table:");
+    return e.getErrorCode() == 1 && e.getMessage().contains("no such table:");
   }
 
   @Override
