@@ -57,7 +57,18 @@ class RdbEngineSqliteTest {
   void isDuplicateKeyError() {}
 
   @Test
-  void isUndefinedTableError() {}
+  void isUndefinedTableError() throws SQLException {
+    // true case
+    SQLException e =
+        (SQLException) catchThrowable(() -> statement.executeUpdate("select 1 from t404"));
+    assertTrue(rdbEngine.isUndefinedTableError(e));
+
+    // false case
+    statement.executeUpdate("create table t (c integer)");
+    SQLException e2 =
+        (SQLException) catchThrowable(() -> statement.executeUpdate("select c404 from t"));
+    assertFalse(rdbEngine.isUndefinedTableError(e2));
+  }
 
   @Test
   void isConflictError() {}
