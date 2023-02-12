@@ -1864,6 +1864,21 @@ public abstract class JdbcAdminTestBase {
             + "].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
   }
 
+  @Test
+  public void repairTable_ExistingMetadataTableForSqlite_shouldDeleteThenAddMetadataForTable()
+      throws SQLException, ExecutionException {
+    repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
+        RdbEngine.SQLITE,
+        "SELECT 1 FROM \"my_ns_foo_table\" LIMIT 1",
+        "SELECT 1 FROM \"" + tableMetadataSchemaName + "_metadata\" LIMIT 1",
+        "DELETE FROM \""
+            + tableMetadataSchemaName
+            + "_metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "_metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,FALSE,1)");
+  }
+
   private void repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
       RdbEngine rdbEngine, String... expectedSqlStatements)
       throws SQLException, ExecutionException {
