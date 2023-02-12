@@ -109,7 +109,4 @@ class RdbEngineSqliteTest {
   void isConflictError_False() {
     assertFalse(rdbEngine.isConflictError(causeSyntaxError()));
   }
-
-  @Test
-  void isCreateMetadataSchemaDuplicateSchemaError() {}
 }
