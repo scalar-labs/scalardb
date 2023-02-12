@@ -1941,6 +1941,14 @@ public abstract class JdbcAdminTestBase {
         RdbEngine.SQL_SERVER, "SELECT TOP 1 1 FROM [my_ns].[foo_table]");
   }
 
+  @Test
+  public void
+      repairTable_WithNonExistingTableToRepairForSqlite_shouldThrowIllegalArgumentException()
+          throws SQLException {
+    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
+        RdbEngine.SQLITE, "SELECT 1 FROM \"my_ns_foo_table\" LIMIT 1");
+  }
+
   private void repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
       RdbEngine rdbEngine, String expectedCheckTableExistStatement) throws SQLException {
     // Arrange
@@ -1969,6 +1977,8 @@ public abstract class JdbcAdminTestBase {
         when(sqlException.getErrorCode()).thenReturn(208);
         break;
       case SQLITE:
+        when(sqlException.getErrorCode()).thenReturn(1);
+        when(sqlException.getMessage()).thenReturn("no such table: " + table);
         break;
     }
     when(checkTableExistStatement.execute(any())).thenThrow(sqlException);
