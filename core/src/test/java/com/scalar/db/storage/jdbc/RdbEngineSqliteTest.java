@@ -39,6 +39,10 @@ class RdbEngineSqliteTest {
     assertTrue(r);
   }
 
+  private SQLException causeSyntaxError() {
+    return (SQLException) catchThrowable(() -> statement.executeUpdate("invalid sql"));
+  }
+
   @Test
   void isDuplicateTableError() throws SQLException {
     statement.executeUpdate("create table t (c integer)");
@@ -102,6 +106,11 @@ class RdbEngineSqliteTest {
         (SQLException)
             catchThrowable(() -> statement2.executeUpdate("update t set c = c + 1 where c = 1"));
     assertTrue(rdbEngine.isConflictError(e));
+  }
+
+  @Test
+  void isConflictError_False() {
+    assertFalse(rdbEngine.isConflictError(causeSyntaxError()));
   }
 
   @Test
