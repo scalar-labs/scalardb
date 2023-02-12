@@ -1016,6 +1016,19 @@ public abstract class JdbcAdminTestBase {
             + "\".\"metadata\"");
   }
 
+  @Test
+  public void
+      dropTable_forSqliteWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable()
+          throws Exception {
+    dropTable_forXWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable(
+        RdbEngine.SQLITE,
+        "DROP TABLE \"my_ns_foo_table\"",
+        "DELETE FROM \""
+            + tableMetadataSchemaName
+            + "_metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + tableMetadataSchemaName + "_metadata\"");
+  }
+
   private void
       dropTable_forXWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable(
           RdbEngine rdbEngine, String... expectedSqlStatements) throws Exception {
@@ -1074,6 +1087,11 @@ public abstract class JdbcAdminTestBase {
   @Test
   public void dropNamespace_forOracle_shouldDropNamespace() throws Exception {
     dropSchema_forX_shouldDropSchema(RdbEngine.ORACLE, "DROP USER \"my_ns\"");
+  }
+
+  @Test
+  public void dropNamespace_forSqlite_shouldDropNamespace() {
+    // no SQL is executed
   }
 
   private void dropSchema_forX_shouldDropSchema(
