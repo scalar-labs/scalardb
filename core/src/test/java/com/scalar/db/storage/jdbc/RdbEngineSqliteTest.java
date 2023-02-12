@@ -54,7 +54,20 @@ class RdbEngineSqliteTest {
   }
 
   @Test
-  void isDuplicateKeyError() {}
+  void isDuplicateKeyError() throws SQLException {
+    statement.executeUpdate("create table t (c1 integer, c2 integer)");
+    statement.executeUpdate("create index i on t (c1)");
+
+    // true case
+    SQLException e =
+        (SQLException) catchThrowable(() -> statement.executeUpdate("create index i on t (c2)"));
+    assertTrue(rdbEngine.isDuplicateKeyError(e));
+
+    // false case
+    SQLException e3 =
+        (SQLException) catchThrowable(() -> statement.executeUpdate("drop index i404"));
+    assertFalse(rdbEngine.isDuplicateTableError(e3));
+  }
 
   @Test
   void isUndefinedTableError() throws SQLException {
