@@ -32,6 +32,7 @@ class RdbEngineSqliteTest {
 
   @AfterEach
   void tearDown() throws SQLException {
+    statement.close();
     connection.close();
 
     boolean r = dbFile.delete();
