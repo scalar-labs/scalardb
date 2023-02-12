@@ -1194,7 +1194,9 @@ public abstract class JdbcAdminTestBase {
   @Test
   public void namespaceExists_forMysqlWithExistingNamespace_shouldReturnTrue() throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
-        RdbEngine.MYSQL, "SELECT 1 FROM `information_schema`.`schemata` WHERE `schema_name` = ?");
+        RdbEngine.MYSQL,
+        "SELECT 1 FROM `information_schema`.`schemata` WHERE `schema_name` = ?",
+        "");
   }
 
   @Test
@@ -1202,24 +1204,34 @@ public abstract class JdbcAdminTestBase {
       throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
         RdbEngine.POSTGRESQL,
-        "SELECT 1 FROM \"information_schema\".\"schemata\" WHERE \"schema_name\" = ?");
+        "SELECT 1 FROM \"information_schema\".\"schemata\" WHERE \"schema_name\" = ?",
+        "");
   }
 
   @Test
   public void namespaceExists_forSqlServerWithExistingNamespace_shouldReturnTrue()
       throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
-        RdbEngine.SQL_SERVER, "SELECT 1 FROM [sys].[schemas] WHERE [name] = ?");
+        RdbEngine.SQL_SERVER, "SELECT 1 FROM [sys].[schemas] WHERE [name] = ?", "");
   }
 
   @Test
   public void namespaceExists_forOracleWithExistingNamespace_shouldReturnTrue() throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
-        RdbEngine.ORACLE, "SELECT 1 FROM \"ALL_USERS\" WHERE \"USERNAME\" = ?");
+        RdbEngine.ORACLE, "SELECT 1 FROM \"ALL_USERS\" WHERE \"USERNAME\" = ?", "");
+  }
+
+  @Test
+  public void namespaceExists_forSqliteWithExistingNamespace_shouldReturnTrue() throws Exception {
+    namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
+        RdbEngine.SQLITE,
+        "SELECT 1 FROM sqlite_master WHERE \"type\" = \"table\" AND \"tbl_name\" LIKE ?",
+        "_%");
   }
 
   private void namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
-      RdbEngine rdbEngine, String expectedSelectStatement) throws SQLException, ExecutionException {
+      RdbEngine rdbEngine, String expectedSelectStatement, String namespacePlaceholderSuffix)
+      throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
@@ -1239,7 +1251,7 @@ public abstract class JdbcAdminTestBase {
 
     verify(selectStatement).executeQuery();
     verify(connection).prepareStatement(expectedSelectStatement);
-    verify(selectStatement).setString(1, namespace);
+    verify(selectStatement).setString(1, namespace + namespacePlaceholderSuffix);
   }
 
   @Test
