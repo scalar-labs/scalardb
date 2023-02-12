@@ -1625,6 +1625,12 @@ public abstract class JdbcAdminTestBase {
             + "\".\"metadata\" SET \"indexed\"=0 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
+  @Test
+  public void dropIndex_forColumnTypeWithRequiredAlterationForSqlite_ShouldDropIndexProperly()
+      throws Exception {
+    // SQLite does not require column type change on CREATE INDEX.
+  }
+
   private void dropIndex_forColumnTypeWithRequiredAlterationForX_ShouldDropIndexProperly(
       RdbEngine rdbEngine,
       String expectedGetTableMetadataStatement,
