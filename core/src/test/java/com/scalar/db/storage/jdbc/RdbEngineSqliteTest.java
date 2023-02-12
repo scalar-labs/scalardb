@@ -1,7 +1,8 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.AssertionsForClassTypes.catchThrowable;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,48 +45,44 @@ class RdbEngineSqliteTest {
   }
 
   @Test
-  void isDuplicateTableError() throws SQLException {
+  void isDuplicateTableError_True() throws SQLException {
     statement.executeUpdate("create table t (c integer)");
 
-    // true case
     SQLException e =
         (SQLException) catchThrowable(() -> statement.executeUpdate("create table t (c integer)"));
     assertTrue(rdbEngine.isDuplicateTableError(e));
-
-    // false case
-    SQLException e2 =
-        (SQLException) catchThrowable(() -> statement.executeUpdate("drop table t404"));
-    assertFalse(rdbEngine.isDuplicateTableError(e2));
   }
 
   @Test
-  void isDuplicateKeyError() throws SQLException {
+  void isDuplicateTableError_False() {
+    assertFalse(rdbEngine.isDuplicateTableError(causeSyntaxError()));
+  }
+
+  @Test
+  void isDuplicateKeyError_True() throws SQLException {
     statement.executeUpdate("create table t (c1 integer, c2 integer)");
     statement.executeUpdate("create index i on t (c1)");
 
-    // true case
     SQLException e =
         (SQLException) catchThrowable(() -> statement.executeUpdate("create index i on t (c2)"));
     assertTrue(rdbEngine.isDuplicateKeyError(e));
-
-    // false case
-    SQLException e3 =
-        (SQLException) catchThrowable(() -> statement.executeUpdate("drop index i404"));
-    assertFalse(rdbEngine.isDuplicateTableError(e3));
   }
 
   @Test
-  void isUndefinedTableError() throws SQLException {
-    // true case
+  void isDuplicateKeyError_False() {
+    assertFalse(rdbEngine.isDuplicateTableError(causeSyntaxError()));
+  }
+
+  @Test
+  void isUndefinedTableError_True() {
     SQLException e =
         (SQLException) catchThrowable(() -> statement.executeUpdate("select 1 from t404"));
     assertTrue(rdbEngine.isUndefinedTableError(e));
+  }
 
-    // false case
-    statement.executeUpdate("create table t (c integer)");
-    SQLException e2 =
-        (SQLException) catchThrowable(() -> statement.executeUpdate("select c404 from t"));
-    assertFalse(rdbEngine.isUndefinedTableError(e2));
+  @Test
+  void isUndefinedTableError_False() {
+    assertFalse(rdbEngine.isUndefinedTableError(causeSyntaxError()));
   }
 
   @Test
