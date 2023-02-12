@@ -1955,14 +1955,21 @@ public abstract class JdbcAdminTestBase {
 
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
     SQLException sqlException = mock(SQLException.class);
-    if (rdbEngine == RdbEngine.MYSQL) {
-      when(sqlException.getErrorCode()).thenReturn(1049);
-    } else if (rdbEngine == RdbEngine.POSTGRESQL) {
-      when(sqlException.getSQLState()).thenReturn("42P01");
-    } else if (rdbEngine == RdbEngine.ORACLE) {
-      when(sqlException.getErrorCode()).thenReturn(942);
-    } else {
-      when(sqlException.getErrorCode()).thenReturn(208);
+    switch (rdbEngine) {
+      case MYSQL:
+        when(sqlException.getErrorCode()).thenReturn(1049);
+        break;
+      case POSTGRESQL:
+        when(sqlException.getSQLState()).thenReturn("42P01");
+        break;
+      case ORACLE:
+        when(sqlException.getErrorCode()).thenReturn(942);
+        break;
+      case SQL_SERVER:
+        when(sqlException.getErrorCode()).thenReturn(208);
+        break;
+      case SQLITE:
+        break;
     }
     when(checkTableExistStatement.execute(any())).thenThrow(sqlException);
 
