@@ -908,6 +908,19 @@ public abstract class JdbcAdminTestBase {
         "DROP USER \"" + tableMetadataSchemaName + "\"");
   }
 
+  @Test
+  public void dropTable_forSqliteWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata()
+      throws Exception {
+    dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
+        RdbEngine.SQLITE,
+        "DROP TABLE \"my_ns_foo_table\"",
+        "DELETE FROM \""
+            + tableMetadataSchemaName
+            + "_metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + tableMetadataSchemaName + "_metadata\"",
+        "DROP TABLE \"" + tableMetadataSchemaName + "_metadata\"");
+  }
+
   private void dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
       RdbEngine rdbEngine, String... expectedSqlStatements) throws Exception {
     // Arrange
