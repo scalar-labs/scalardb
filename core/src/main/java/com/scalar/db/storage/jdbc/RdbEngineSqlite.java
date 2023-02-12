@@ -16,7 +16,9 @@ import java.util.stream.Stream;
 public class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
   public boolean isDuplicateTableError(SQLException e) {
-    throw new UnsupportedOperationException();
+    return e.getErrorCode() == 1
+        && e.getMessage().contains("table")
+        && e.getMessage().endsWith("already exists");
   }
 
   @Override
