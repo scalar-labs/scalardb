@@ -1149,6 +1149,15 @@ public abstract class JdbcAdminTestBase {
             + "\".\"metadata\" WHERE \"full_table_name\" LIKE ?");
   }
 
+  @Test
+  public void getNamespaceTables_forSqlite_ShouldReturnTableNames() throws Exception {
+    getNamespaceTables_forX_ShouldReturnTableNames(
+        RdbEngine.SQLITE,
+        "SELECT DISTINCT \"full_table_name\" FROM \""
+            + tableMetadataSchemaName
+            + "_metadata\" WHERE \"full_table_name\" LIKE ?");
+  }
+
   private void getNamespaceTables_forX_ShouldReturnTableNames(
       RdbEngine rdbEngine, String expectedSelectStatement) throws Exception {
     // Arrange
