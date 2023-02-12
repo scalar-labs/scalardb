@@ -54,6 +54,10 @@ public interface RdbEngineStrategy {
 
   String namespaceExistsStatement();
 
+  default String namespaceExistsPlaceholder(String namespace) {
+    return namespace;
+  }
+
   String alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
   String tableExistsInternalTableCheckSql(String fullTableName);

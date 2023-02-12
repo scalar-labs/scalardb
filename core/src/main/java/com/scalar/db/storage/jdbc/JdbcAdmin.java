@@ -485,12 +485,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         PreparedStatement preparedStatement =
             connection.prepareStatement(namespaceExistsStatement)) {
 
-      // awfully hacky... <https://tech.pjin.jp/blog/2017/06/23/preparedstatement_problem_solution/>
-      if (rdbEngine instanceof RdbEngineSqlite) {
-        preparedStatement.setString(1, namespace + "_%");
-      } else {
-        preparedStatement.setString(1, namespace);
-      }
+      preparedStatement.setString(1, rdbEngine.namespaceExistsPlaceholder(namespace));
 
       return preparedStatement.executeQuery().next();
     } catch (SQLException e) {

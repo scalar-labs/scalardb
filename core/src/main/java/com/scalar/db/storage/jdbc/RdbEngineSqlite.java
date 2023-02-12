@@ -178,6 +178,11 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   }
 
   @Override
+  public String namespaceExistsPlaceholder(String namespace) {
+    return namespace + "_%";
+  }
+
+  @Override
   public String alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
     throw new AssertionError(
