@@ -33,7 +33,12 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public boolean isDuplicateKeyError(SQLException e) {
-    throw new UnsupportedOperationException();
+    // Error code: SQLITE_ERROR (1)
+    // Message: SQL error or missing database (index XXX already exists)
+
+    return e.getErrorCode() == 1
+        && e.getMessage().contains("(index")
+        && e.getMessage().endsWith("already exists)");
   }
 
   @Override
