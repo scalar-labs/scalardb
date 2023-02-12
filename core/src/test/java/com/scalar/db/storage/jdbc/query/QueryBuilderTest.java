@@ -290,7 +290,6 @@ public class QueryBuilderTest {
                 + "ORDER BY c1 ASC,c2 DESC FETCH FIRST 10 ROWS ONLY";
         break;
       case SQL_SERVER:
-      default:
         expectedQuery =
             "SELECT TOP 10 c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? "
                 + "ORDER BY c1 ASC,c2 DESC";
@@ -827,7 +826,6 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (?,?,?,?)";
         break;
       case SQL_SERVER:
-      default:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
                 + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
@@ -886,7 +884,6 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)";
         break;
       case SQL_SERVER:
-      default:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1,? c1) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
@@ -951,7 +948,6 @@ public class QueryBuilderTest {
                 + "VALUES (?,?,?,?,?,?,?,?)";
         break;
       case SQL_SERVER:
-      default:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
@@ -1029,7 +1025,6 @@ public class QueryBuilderTest {
                 + "VALUES (?,?,?,?,?,?,?,?,?)";
         break;
       case SQL_SERVER:
-      default:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
@@ -1115,7 +1110,6 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (?)";
         break;
       case SQL_SERVER:
-      default:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
                 + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (?);";
@@ -1156,7 +1150,6 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (?,?)";
         break;
       case SQL_SERVER:
-      default:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1,? c1) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
@@ -1206,7 +1199,6 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (?,?,?,?)";
         break;
       case SQL_SERVER:
-      default:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
