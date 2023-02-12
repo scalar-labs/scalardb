@@ -12,13 +12,23 @@ import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/** Namespace: Added to table prefix like `${namespace}_${tableName}`. */
+/**
+ * Namespace: Added to table prefix like `${namespace}_${tableName}`.
+ *
+ * <p>NOTE: SQLite has limited variety of error codes. We might have to check the error message in
+ * unit tests. Since <<a
+ * href="https://github.com/xerial/sqlite-jdbc#sqlite-jdbc-driver">xerial/sqlite-jdbc contains a
+ * native SQLite library in JAR</a>>, unit testing would assure the error message assertions.
+ */
 public class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
   public boolean isDuplicateTableError(SQLException e) {
+    // Error code: SQLITE_ERROR (1)
+    // Message: SQL error or missing database (table XXX already exists)
+
     return e.getErrorCode() == 1
-        && e.getMessage().contains("table")
-        && e.getMessage().endsWith("already exists");
+        && e.getMessage().contains("(table")
+        && e.getMessage().endsWith("already exists)");
   }
 
   @Override
@@ -30,12 +40,6 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   public boolean isUndefinedTableError(SQLException e) {
     // Error code: SQLITE_ERROR (1)
     // Message: SQL error or missing database (no such table: XXX)
-
-    // NOTE: SQLite has limited variety of error codes.
-    // We might have to check the error message in unit tests.
-    // xerial/sqlite-jdbc contains a native SQLite library in JAR,
-    // (<https://github.com/xerial/sqlite-jdbc#sqlite-jdbc-driver>)
-    // so unit testing would assure the error message assertions.
 
     return e.getErrorCode() == 1 && e.getMessage().contains("no such table:");
   }
