@@ -276,7 +276,7 @@ public class QueryBuilderTest {
     verify(preparedStatement).setString(2, "c1StartValue");
     verify(preparedStatement).setString(3, "c1EndValue");
 
-    String expectedQuery;
+    String expectedQuery = "";
     switch (rdbEngineType) {
       case MYSQL:
       case POSTGRESQL:
@@ -293,6 +293,11 @@ public class QueryBuilderTest {
         expectedQuery =
             "SELECT TOP 10 c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? "
                 + "ORDER BY c1 ASC,c2 DESC";
+        break;
+      case SQLITE:
+        expectedQuery =
+            "SELECT c1,c2 FROM \"n1_t1\" WHERE p1=? AND c1>=? AND c1<=? "
+                + "ORDER BY c1 ASC,c2 DESC LIMIT 10";
         break;
     }
     preparedStatement = mock(PreparedStatement.class);
@@ -798,7 +803,7 @@ public class QueryBuilderTest {
     RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
-    String expectedQuery;
+    String expectedQuery = "";
     UpsertQuery query;
     PreparedStatement preparedStatement;
 
@@ -830,6 +835,11 @@ public class QueryBuilderTest {
             "MERGE n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
                 + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
                 + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (?,?,?,?);";
+        break;
+      case SQLITE:
+        expectedQuery =
+            "INSERT INTO \"n1_t1\" (p1,v1,v2,v3) VALUES (?,?,?,?) "
+                + "ON CONFLICT (p1) DO UPDATE SET v1=?,v2=?,v3=?";
         break;
     }
     query =
@@ -889,6 +899,11 @@ public class QueryBuilderTest {
                 + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
                 + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
                 + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?);";
+        break;
+      case SQLITE:
+        expectedQuery =
+            "INSERT INTO \"n1_t1\" (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?) "
+                + "ON CONFLICT (p1,c1) DO UPDATE SET v1=?,v2=?,v3=?";
         break;
     }
     query =
@@ -953,6 +968,11 @@ public class QueryBuilderTest {
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
                 + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=? "
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?);";
+        break;
+      case SQLITE:
+        expectedQuery =
+            "INSERT INTO \"n1_t1\" (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?) "
+                + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?";
         break;
     }
     query =
@@ -1032,6 +1052,11 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4,v5) "
                 + "VALUES (?,?,?,?,?,?,?,?,?);";
         break;
+      case SQLITE:
+        expectedQuery =
+            "INSERT INTO \"n1_t1\" (p1,p2,c1,c2,v1,v2,v3,v4,v5) VALUES (?,?,?,?,?,?,?,?,?) "
+                + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?,v5=?";
+        break;
     }
     query =
         queryBuilder
@@ -1092,7 +1117,7 @@ public class QueryBuilderTest {
     RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
-    String expectedQuery;
+    String expectedQuery = "";
     UpsertQuery query;
     PreparedStatement preparedStatement;
 
@@ -1113,6 +1138,9 @@ public class QueryBuilderTest {
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
                 + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (?);";
+        break;
+      case SQLITE:
+        expectedQuery = "INSERT INTO \"n1_t1\" (p1) VALUES (?) ON CONFLICT (p1) DO NOTHING";
         break;
     }
     query =
@@ -1154,6 +1182,9 @@ public class QueryBuilderTest {
             "MERGE n1.t1 t1 USING (SELECT ? p1,? c1) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
                 + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (?,?);";
+        break;
+      case SQLITE:
+        expectedQuery = "INSERT INTO \"n1_t1\" (p1,c1) VALUES (?,?) ON CONFLICT (p1,c1) DO NOTHING";
         break;
     }
     query =
@@ -1204,6 +1235,11 @@ public class QueryBuilderTest {
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (?,?,?,?);";
         break;
+      case SQLITE:
+        expectedQuery =
+            "INSERT INTO \"n1_t1\" (p1,p2,c1,c2) VALUES (?,?,?,?) "
+                + "ON CONFLICT (p1,p2,c1,c2) DO NOTHING";
+        break;
     }
     query =
         queryBuilder
@@ -1239,7 +1275,7 @@ public class QueryBuilderTest {
   }
 
   private String encloseSql(String sql, RdbEngineStrategy rdbEngine) {
-    return sql.replace("n1.t1", rdbEngine.enclose("n1") + "." + rdbEngine.enclose("t1"))
+    return sql.replace("n1.t1", rdbEngine.encloseFullTableName("n1", "t1"))
         .replace("p1", rdbEngine.enclose("p1"))
         .replace("p2", rdbEngine.enclose("p2"))
         .replace("c1", rdbEngine.enclose("c1"))
