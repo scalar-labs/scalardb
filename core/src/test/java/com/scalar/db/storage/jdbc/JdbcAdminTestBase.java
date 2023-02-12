@@ -673,6 +673,48 @@ public abstract class JdbcAdminTestBase {
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
   }
 
+  @Test
+  public void createTable_WithClusteringOrderForSqlite_shouldExecuteCreateTableStatement()
+      throws ExecutionException, SQLException {
+    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
+        RdbEngine.SQLITE,
+        "CREATE TABLE \"my_ns_foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns_foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns_foo_table\" (\"c1\")",
+        "CREATE TABLE IF NOT EXISTS \""
+            + tableMetadataSchemaName
+            + "_metadata\"("
+            + "\"full_table_name\" TEXT,"
+            + "\"column_name\" TEXT,"
+            + "\"data_type\" TEXT NOT NULL,"
+            + "\"key_type\" TEXT,"
+            + "\"clustering_order\" TEXT,"
+            + "\"indexed\" BOOLEAN NOT NULL,"
+            + "\"ordinal_position\" INTEGER NOT NULL,"
+            + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "_metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,FALSE,1)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "_metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',TRUE,2)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "_metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',TRUE,3)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "_metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,FALSE,4)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "_metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,FALSE,5)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "_metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,FALSE,6)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "_metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,FALSE,7)");
+  }
+
   private void createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
       RdbEngine rdbEngine, String... expectedSqlStatements)
       throws SQLException, ExecutionException {
