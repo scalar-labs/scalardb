@@ -1525,6 +1525,20 @@ public abstract class JdbcAdminTestBase {
             + "\".\"metadata\" SET \"indexed\"=0 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
+  @Test
+  public void dropIndex_forColumnTypeWithoutRequiredAlterationForSqlite_ShouldDropIndexProperly()
+      throws Exception {
+    dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
+        RdbEngine.SQLITE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "_metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "DROP INDEX \"index_my_ns_my_tbl_my_column\"",
+        "UPDATE \""
+            + tableMetadataSchemaName
+            + "_metadata\" SET \"indexed\"=FALSE WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+  }
+
   private void dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
       RdbEngine rdbEngine,
       String expectedGetTableMetadataStatement,
