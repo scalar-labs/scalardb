@@ -2035,6 +2035,17 @@ public abstract class JdbcAdminTestBase {
             + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC");
   }
 
+  @Test
+  public void
+      addNewColumnToTable_WithAlreadyExistingColumnForSqlite_ShouldThrowIllegalArgumentException()
+          throws SQLException {
+    addNewColumnToTable_WithAlreadyExistingColumnForX_ShouldThrowIllegalArgumentException(
+        RdbEngine.SQLITE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "_metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
+  }
+
   private void
       addNewColumnToTable_WithAlreadyExistingColumnForX_ShouldThrowIllegalArgumentException(
           RdbEngine rdbEngine, String expectedGetMetadataStatement) throws SQLException {
