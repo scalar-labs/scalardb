@@ -84,7 +84,24 @@ class RdbEngineSqliteTest {
   }
 
   @Test
-  void isConflictError() {}
+  void isConflictError_True_SQLITE_BUSY_WhenUpdatingBeingDeletedTableInSeparateConnection()
+      throws SQLException {
+    statement.executeUpdate("create table t (c integer)");
+    statement.executeUpdate("insert into t values (1)");
+
+    Connection connection2 = DriverManager.getConnection("jdbc:sqlite:" + dbFile.getAbsolutePath());
+    Statement statement2 = connection2.createStatement();
+
+    statement.executeUpdate("begin");
+    statement2.executeUpdate("begin");
+
+    statement.executeUpdate("delete from t where c = 1");
+
+    SQLException e =
+        (SQLException)
+            catchThrowable(() -> statement2.executeUpdate("update t set c = c + 1 where c = 1"));
+    assertTrue(rdbEngine.isConflictError(e));
+  }
 
   @Test
   void isCreateMetadataSchemaDuplicateSchemaError() {}
