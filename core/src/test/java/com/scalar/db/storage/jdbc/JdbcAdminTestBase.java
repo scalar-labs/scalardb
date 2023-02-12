@@ -75,6 +75,27 @@ public abstract class JdbcAdminTestBase {
     }
   }
 
+  private void mockUndefinedTableError(RdbEngine rdbEngine, SQLException sqlException) {
+    switch (rdbEngine) {
+      case MYSQL:
+        when(sqlException.getErrorCode()).thenReturn(1049);
+        break;
+      case POSTGRESQL:
+        when(sqlException.getSQLState()).thenReturn("42P01");
+        break;
+      case ORACLE:
+        when(sqlException.getErrorCode()).thenReturn(942);
+        break;
+      case SQL_SERVER:
+        when(sqlException.getErrorCode()).thenReturn(208);
+        break;
+      case SQLITE:
+        when(sqlException.getErrorCode()).thenReturn(1);
+        when(sqlException.getMessage()).thenReturn("no such table: ");
+        break;
+    }
+  }
+
   /**
    * This sets the {@link JdbcConfig#TABLE_METADATA_SCHEMA} value that will be used to run the
    * tests.
@@ -1782,15 +1803,7 @@ public abstract class JdbcAdminTestBase {
 
     // Mock that the metadata table does not exist
     SQLException sqlException = mock(SQLException.class);
-    if (rdbEngine == RdbEngine.MYSQL) {
-      when(sqlException.getErrorCode()).thenReturn(1049);
-    } else if (rdbEngine == RdbEngine.POSTGRESQL) {
-      when(sqlException.getSQLState()).thenReturn("42P01");
-    } else if (rdbEngine == RdbEngine.ORACLE) {
-      when(sqlException.getErrorCode()).thenReturn(942);
-    } else {
-      when(sqlException.getErrorCode()).thenReturn(208);
-    }
+    mockUndefinedTableError(rdbEngine, sqlException);
     when(mockedStatements.get(1).execute(anyString())).thenThrow(sqlException);
 
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
@@ -1963,24 +1976,7 @@ public abstract class JdbcAdminTestBase {
 
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
     SQLException sqlException = mock(SQLException.class);
-    switch (rdbEngine) {
-      case MYSQL:
-        when(sqlException.getErrorCode()).thenReturn(1049);
-        break;
-      case POSTGRESQL:
-        when(sqlException.getSQLState()).thenReturn("42P01");
-        break;
-      case ORACLE:
-        when(sqlException.getErrorCode()).thenReturn(942);
-        break;
-      case SQL_SERVER:
-        when(sqlException.getErrorCode()).thenReturn(208);
-        break;
-      case SQLITE:
-        when(sqlException.getErrorCode()).thenReturn(1);
-        when(sqlException.getMessage()).thenReturn("no such table: " + table);
-        break;
-    }
+    mockUndefinedTableError(rdbEngine, sqlException);
     when(checkTableExistStatement.execute(any())).thenThrow(sqlException);
 
     // Act
