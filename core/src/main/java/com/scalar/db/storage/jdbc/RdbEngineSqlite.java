@@ -201,7 +201,7 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public String encloseFullTableName(String schema, String table) {
-    return schema + "_" + table;
+    return enclose(schema + "_" + table);
   }
 
   @Override
