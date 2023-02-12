@@ -3,7 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
+import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
@@ -218,6 +218,6 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
-    return new InsertOnDuplicateKeyUpdateQuery(builder);
+    return new InsertOnConflictDoUpdateQuery(builder);
   }
 }
