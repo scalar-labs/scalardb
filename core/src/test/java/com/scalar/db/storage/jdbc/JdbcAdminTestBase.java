@@ -1417,6 +1417,12 @@ public abstract class JdbcAdminTestBase {
             + "\".\"metadata\" SET \"indexed\"=1 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
+  @Test
+  public void
+      createIndex_forColumnTypeWithRequiredAlterationForSqlite_ShouldAlterColumnAndCreateIndexProperly() {
+    // SQLite does not require column type change on CREATE INDEX.
+  }
+
   private void
       createIndex_forColumnTypeWithRequiredAlterationForX_ShouldAlterColumnAndCreateIndexProperly(
           RdbEngine rdbEngine,
