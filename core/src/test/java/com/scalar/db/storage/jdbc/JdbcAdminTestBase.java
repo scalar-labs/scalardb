@@ -1313,6 +1313,21 @@ public abstract class JdbcAdminTestBase {
             + "\".\"metadata\" SET \"indexed\"=1 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
+  @Test
+  public void
+      createIndex_ForColumnTypeWithoutRequiredAlterationForSqlite_ShouldCreateIndexProperly()
+          throws Exception {
+    createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
+        RdbEngine.SQLITE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "_metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns_my_tbl\" (\"my_column\")",
+        "UPDATE \""
+            + tableMetadataSchemaName
+            + "_metadata\" SET \"indexed\"=TRUE WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+  }
+
   private void createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
       RdbEngine rdbEngine,
       String expectedGetTableMetadataStatement,
