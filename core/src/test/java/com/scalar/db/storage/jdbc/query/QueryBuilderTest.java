@@ -844,6 +844,7 @@ public class QueryBuilderTest {
     switch (rdbEngineType) {
       case MYSQL:
       case POSTGRESQL:
+      case SQLITE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "v1Value");
         verify(preparedStatement).setString(3, "v2Value");
@@ -903,6 +904,7 @@ public class QueryBuilderTest {
     switch (rdbEngineType) {
       case MYSQL:
       case POSTGRESQL:
+      case SQLITE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "c1Value");
         verify(preparedStatement).setString(3, "v1Value");
@@ -970,6 +972,7 @@ public class QueryBuilderTest {
     switch (rdbEngineType) {
       case MYSQL:
       case POSTGRESQL:
+      case SQLITE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "p2Value");
         verify(preparedStatement).setString(3, "c1Value");
@@ -1048,6 +1051,7 @@ public class QueryBuilderTest {
     switch (rdbEngineType) {
       case MYSQL:
       case POSTGRESQL:
+      case SQLITE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "p2Value");
         verify(preparedStatement).setString(3, "c1Value");
@@ -1127,6 +1131,7 @@ public class QueryBuilderTest {
     switch (rdbEngineType) {
       case MYSQL:
       case POSTGRESQL:
+      case SQLITE:
         verify(preparedStatement).setString(1, "p1Value");
         break;
       case ORACLE:
@@ -1171,6 +1176,7 @@ public class QueryBuilderTest {
     switch (rdbEngineType) {
       case MYSQL:
       case POSTGRESQL:
+      case SQLITE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "c1Value");
         break;
@@ -1220,6 +1226,7 @@ public class QueryBuilderTest {
     switch (rdbEngineType) {
       case MYSQL:
       case POSTGRESQL:
+      case SQLITE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "p2Value");
         verify(preparedStatement).setString(3, "c1Value");
