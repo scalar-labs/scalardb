@@ -40,6 +40,8 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.postgresql.util.PSQLException;
 import org.postgresql.util.PSQLState;
+import org.sqlite.SQLiteErrorCode;
+import org.sqlite.SQLiteException;
 
 /**
  * Abstraction that defines unit tests for the {@link JdbcAdmin}. The class purpose is to be able to
@@ -772,6 +774,14 @@ public abstract class JdbcAdminTestBase {
           throws SQLException {
     createMetadataTableIfNotExists_WithInternalDbError_forX_shouldThrowInternalDbError(
         RdbEngine.POSTGRESQL, new PSQLException("", PSQLState.CONNECTION_FAILURE));
+  }
+
+  @Test
+  public void
+      createMetadataTableIfNotExists_WithInternalDbError_forSqlite_shouldThrowInternalDbError()
+          throws SQLException {
+    createMetadataTableIfNotExists_WithInternalDbError_forX_shouldThrowInternalDbError(
+        RdbEngine.SQLITE, new SQLiteException("", SQLiteErrorCode.SQLITE_IOERR));
   }
 
   private void createMetadataTableIfNotExists_WithInternalDbError_forX_shouldThrowInternalDbError(
