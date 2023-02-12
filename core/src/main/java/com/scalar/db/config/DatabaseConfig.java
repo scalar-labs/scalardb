@@ -25,6 +25,7 @@ public class DatabaseConfig {
   private final Properties props;
   private ImmutableList<String> contactPoints;
   private int contactPort;
+  @Nullable private String jdbcDriver;
   @Nullable private String username;
   @Nullable private String password;
   private String storage;
@@ -80,6 +81,8 @@ public class DatabaseConfig {
         ImmutableList.copyOf(getStringArray(getProperties(), CONTACT_POINTS, new String[0]));
     contactPort = getInt(getProperties(), CONTACT_PORT, 0);
     checkArgument(contactPort >= 0);
+    jdbcDriver =
+        getString(getProperties(), "jdbc.driver", null); // TODO fix hard-coded property name
     username = getString(getProperties(), USERNAME, null);
     password = getString(getProperties(), PASSWORD, null);
     transactionManager = getString(getProperties(), TRANSACTION_MANAGER, "consensus-commit");
@@ -95,6 +98,10 @@ public class DatabaseConfig {
 
   public int getContactPort() {
     return contactPort;
+  }
+
+  public Optional<String> getJdbcDriver() {
+    return Optional.ofNullable(jdbcDriver);
   }
 
   public Optional<String> getUsername() {

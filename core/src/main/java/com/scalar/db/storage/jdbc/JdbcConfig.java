@@ -53,6 +53,7 @@ public class JdbcConfig {
   public static final int DEFAULT_ADMIN_CONNECTION_POOL_MAX_TOTAL = 25;
 
   private final String jdbcUrl;
+  @Nullable private final String jdbcDriver;
   @Nullable private final String username;
   @Nullable private final String password;
 
@@ -88,6 +89,7 @@ public class JdbcConfig {
       throw new IllegalArgumentException(DatabaseConfig.CONTACT_POINTS + " is empty");
     }
     jdbcUrl = databaseConfig.getContactPoints().get(0);
+    jdbcDriver = databaseConfig.getJdbcDriver().orElse(null);
     username = databaseConfig.getUsername().orElse(null);
     password = databaseConfig.getPassword().orElse(null);
 
@@ -160,6 +162,10 @@ public class JdbcConfig {
 
   public String getJdbcUrl() {
     return jdbcUrl;
+  }
+
+  public Optional<String> getJdbcDriver() {
+    return Optional.ofNullable(jdbcDriver);
   }
 
   public Optional<String> getUsername() {
