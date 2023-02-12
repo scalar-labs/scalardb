@@ -2155,6 +2155,26 @@ public abstract class JdbcAdminTestBase {
             + "].[metadata] VALUES ('ns.table','c2','INT',NULL,NULL,0,2)");
   }
 
+  @Test
+  public void addNewColumnToTable_ForSqlite_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    addNewColumnToTable_ForX_ShouldWorkProperly(
+        RdbEngine.SQLITE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + tableMetadataSchemaName
+            + "_metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns_table\" ADD \"c2\" INT",
+        "DELETE FROM \""
+            + tableMetadataSchemaName
+            + "_metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "_metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,FALSE,1)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "_metadata\" VALUES ('ns.table','c2','INT',NULL,NULL,FALSE,2)");
+  }
+
   private void addNewColumnToTable_ForX_ShouldWorkProperly(
       RdbEngine rdbEngine, String expectedGetMetadataStatement, String... expectedSqlStatements)
       throws SQLException, ExecutionException {
