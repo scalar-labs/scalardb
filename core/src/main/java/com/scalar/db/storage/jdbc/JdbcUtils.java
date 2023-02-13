@@ -57,7 +57,6 @@ public final class JdbcUtils {
   public static BasicDataSource initDataSourceForTableMetadata(JdbcConfig config) {
     BasicDataSource dataSource = new BasicDataSource();
     dataSource.setUrl(config.getJdbcUrl());
-    config.getJdbcDriver().ifPresent(dataSource::setDriverClassName);
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
     dataSource.setMinIdle(config.getTableMetadataConnectionPoolMinIdle());
@@ -69,7 +68,6 @@ public final class JdbcUtils {
   public static BasicDataSource initDataSourceForAdmin(JdbcConfig config) {
     BasicDataSource dataSource = new BasicDataSource();
     dataSource.setUrl(config.getJdbcUrl());
-    config.getJdbcDriver().ifPresent(dataSource::setDriverClassName);
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
     dataSource.setMinIdle(config.getAdminConnectionPoolMinIdle());
