@@ -36,6 +36,9 @@ docker {
     dependsOn shadowJar
     name "ghcr.io/scalar-labs/scalardb-schema-loader:${project.version}"
     files tasks.shadowJar.outputs
+    buildx true
+    platform "linux/amd64,linux/arm64/v8"
+    builder "multi_platform_builder"
 }
 
 task dockerfileLint(type: Exec) {

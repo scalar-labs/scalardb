@@ -70,6 +70,9 @@ application {
 docker {
     name "ghcr.io/scalar-labs/scalardb-server:${project.version}"
     files tasks.distTar.outputs, 'conf/log4j2.properties', 'conf/database.properties', 'docker-entrypoint.sh'
+    buildx true
+    platform "linux/amd64,linux/arm64/v8"
+    builder "multi_platform_builder"
 }
 
 task dockerfileLint(type: Exec) {
