@@ -171,7 +171,7 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
 
   @Override
   public String getDataTypeForKey(DataType dataType) {
-    // PostgreSQL does not require any change in column data types when making indices.
+    // SQL Server does not require any change in column data types when making indices.
     return null;
   }
 
