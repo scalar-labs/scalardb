@@ -13,12 +13,16 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Namespace: Added to table prefix like `${namespace}_${tableName}`.
+ * A RdnEngineStrategy implementation for SQLite.
  *
- * <p>NOTE: SQLite has limited variety of error codes. We might have to check the error message in
- * unit tests. Since <<a
+ * <p>Namespace: Added to table prefix like `${namespace}_${tableName}`.
+ *
+ * <p>Error handling: SQLite has limited variety of error codes compared to other JDBC databases. We
+ * need to heavily rely on error messages, which may be changed in SQLite implementation in the
+ * future. Since <a
  * href="https://github.com/xerial/sqlite-jdbc#sqlite-jdbc-driver">xerial/sqlite-jdbc contains a
- * native SQLite library in JAR</a>>, unit testing would assure the error message assertions.
+ * native SQLite library in JAR</a>, we should assure the real error messages in
+ * RdbEngineStrategyTest.
  */
 public class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
