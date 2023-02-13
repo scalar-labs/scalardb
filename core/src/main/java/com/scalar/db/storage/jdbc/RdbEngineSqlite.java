@@ -167,7 +167,8 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public String deleteMetadataSchemaSql(String metadataSchema) {
-    // Do nothing. Namespace is just a table prefix in the SQLite implementation.
+    // Do nothing. Metadata schema is just a prefix to the metadata table in the SQLite
+    // implementation.
     return null;
   }
 
