@@ -216,8 +216,6 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public String dropIndexSql(String schema, String table, String indexName) {
-    // TODO SQLite cannot scope an index name to a table. Consider adding <namespace>_ prefix to
-    // index names.
     return "DROP INDEX " + enclose(indexName);
   }
 
