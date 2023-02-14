@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.apache.commons.dbcp2.BasicDataSource;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -709,6 +710,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   static void execute(Connection connection, String sql) throws SQLException {
+    if (StringUtils.isEmpty(sql)) {
+      return;
+    }
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(sql);
     }
