@@ -89,7 +89,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       addTableMetadata(connection, namespace, table, metadata, true);
     } catch (SQLException e) {
       throw new ExecutionException(
-          "creating the table failed: " + getFullTableName(namespace, table), e);
+          "creating the table failed: " + rdbEngine.encloseFullTableName(namespace, table), e);
     }
   }
 
