@@ -17,7 +17,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 @Command(
-    name = "java -jar scalardb-schema-loader-<version>.jar",
+    name = "scalardb-schema-loader",
     description = "Create/Delete schemas in the storage defined in the config file")
 public class SchemaLoaderCommand implements Callable<Integer> {
   private static final Logger logger = LoggerFactory.getLogger(SchemaLoaderCommand.class);
