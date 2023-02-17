@@ -25,7 +25,7 @@ import java.util.stream.Stream;
  * RdbEngineStrategyTest.
  */
 public class RdbEngineSqlite implements RdbEngineStrategy {
-  private final String NAMESPACE_SEPARATOR = "$";
+  private static final String NAMESPACE_SEPARATOR = "$";
 
   @Override
   public boolean isDuplicateTableError(SQLException e) {
