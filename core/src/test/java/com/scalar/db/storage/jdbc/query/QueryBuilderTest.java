@@ -296,7 +296,7 @@ public class QueryBuilderTest {
         break;
       case SQLITE:
         expectedQuery =
-            "SELECT c1,c2 FROM \"n1_t1\" WHERE p1=? AND c1>=? AND c1<=? "
+            "SELECT c1,c2 FROM \"n1$t1\" WHERE p1=? AND c1>=? AND c1<=? "
                 + "ORDER BY c1 ASC,c2 DESC LIMIT 10";
         break;
     }
@@ -838,7 +838,7 @@ public class QueryBuilderTest {
         break;
       case SQLITE:
         expectedQuery =
-            "INSERT INTO \"n1_t1\" (p1,v1,v2,v3) VALUES (?,?,?,?) "
+            "INSERT INTO \"n1$t1\" (p1,v1,v2,v3) VALUES (?,?,?,?) "
                 + "ON CONFLICT (p1) DO UPDATE SET v1=?,v2=?,v3=?";
         break;
     }
@@ -902,7 +902,7 @@ public class QueryBuilderTest {
         break;
       case SQLITE:
         expectedQuery =
-            "INSERT INTO \"n1_t1\" (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?) "
+            "INSERT INTO \"n1$t1\" (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?) "
                 + "ON CONFLICT (p1,c1) DO UPDATE SET v1=?,v2=?,v3=?";
         break;
     }
@@ -971,7 +971,7 @@ public class QueryBuilderTest {
         break;
       case SQLITE:
         expectedQuery =
-            "INSERT INTO \"n1_t1\" (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?) "
+            "INSERT INTO \"n1$t1\" (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?) "
                 + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?";
         break;
     }
@@ -1054,7 +1054,7 @@ public class QueryBuilderTest {
         break;
       case SQLITE:
         expectedQuery =
-            "INSERT INTO \"n1_t1\" (p1,p2,c1,c2,v1,v2,v3,v4,v5) VALUES (?,?,?,?,?,?,?,?,?) "
+            "INSERT INTO \"n1$t1\" (p1,p2,c1,c2,v1,v2,v3,v4,v5) VALUES (?,?,?,?,?,?,?,?,?) "
                 + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?,v5=?";
         break;
     }
@@ -1140,7 +1140,7 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (?);";
         break;
       case SQLITE:
-        expectedQuery = "INSERT INTO \"n1_t1\" (p1) VALUES (?) ON CONFLICT (p1) DO NOTHING";
+        expectedQuery = "INSERT INTO \"n1$t1\" (p1) VALUES (?) ON CONFLICT (p1) DO NOTHING";
         break;
     }
     query =
@@ -1184,7 +1184,7 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (?,?);";
         break;
       case SQLITE:
-        expectedQuery = "INSERT INTO \"n1_t1\" (p1,c1) VALUES (?,?) ON CONFLICT (p1,c1) DO NOTHING";
+        expectedQuery = "INSERT INTO \"n1$t1\" (p1,c1) VALUES (?,?) ON CONFLICT (p1,c1) DO NOTHING";
         break;
     }
     query =
@@ -1237,7 +1237,7 @@ public class QueryBuilderTest {
         break;
       case SQLITE:
         expectedQuery =
-            "INSERT INTO \"n1_t1\" (p1,p2,c1,c2) VALUES (?,?,?,?) "
+            "INSERT INTO \"n1$t1\" (p1,p2,c1,c2) VALUES (?,?,?,?) "
                 + "ON CONFLICT (p1,p2,c1,c2) DO NOTHING";
         break;
     }

@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 /**
  * A RdnEngineStrategy implementation for SQLite.
  *
- * <p>Namespace: Added to table prefix like `${namespace}_${tableName}`.
+ * <p>Namespace: Added to table prefix like `${namespace}${NAMESPACE_SEPARATOR}${tableName}`.
  *
  * <p>Error handling: SQLite has limited variety of error codes compared to other JDBC databases. We
  * need to heavily rely on error messages, which may be changed in SQLite implementation in the
@@ -25,6 +25,8 @@ import java.util.stream.Stream;
  * RdbEngineStrategyTest.
  */
 public class RdbEngineSqlite implements RdbEngineStrategy {
+  private final String NAMESPACE_SEPARATOR = "$";
+
   @Override
   public boolean isDuplicateTableError(SQLException e) {
     // Error code: SQLITE_ERROR (1)
@@ -199,7 +201,7 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public String namespaceExistsPlaceholder(String namespace) {
-    return namespace + "_%";
+    return namespace + NAMESPACE_SEPARATOR + "%";
   }
 
   @Override
@@ -226,7 +228,7 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public String encloseFullTableName(String schema, String table) {
-    return enclose(schema + "_" + table);
+    return enclose(schema + NAMESPACE_SEPARATOR + table);
   }
 
   @Override
