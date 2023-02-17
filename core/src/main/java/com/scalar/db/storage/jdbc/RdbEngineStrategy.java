@@ -33,6 +33,10 @@ public interface RdbEngineStrategy {
 
   String[] createNamespaceSqls(String fullNamespace);
 
+  default boolean isValidTableName(String tableName) {
+    return true;
+  }
+
   String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata);
 

@@ -84,6 +84,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
+    if (!rdbEngine.isValidTableName(table)) {
+      throw new ExecutionException("table name is not acceptable: " + table);
+    }
+
     try (Connection connection = dataSource.getConnection()) {
       createTableInternal(connection, namespace, table, metadata);
       createIndex(connection, namespace, table, metadata);

@@ -121,6 +121,11 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   }
 
   @Override
+  public boolean isValidTableName(String tableName) {
+    return !tableName.contains(NAMESPACE_SEPARATOR);
+  }
+
+  @Override
   public String computeBooleanValue(boolean value) {
     return value ? "TRUE" : "FALSE";
   }

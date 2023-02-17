@@ -109,4 +109,14 @@ class RdbEngineSqliteTest {
   void isConflictError_False() {
     assertFalse(rdbEngine.isConflictError(causeSyntaxError()));
   }
+
+  @Test
+  void isValidTableName_True() {
+    assertTrue(rdbEngine.isValidTableName("a_b"));
+  }
+
+  @Test
+  void isValidTableName_False_WhenContainsNamespaceSeparator() {
+    assertFalse(rdbEngine.isValidTableName("a$b"));
+  }
 }

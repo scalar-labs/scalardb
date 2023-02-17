@@ -276,6 +276,23 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
+  public void createTable_forSqlite_withInvalidTableName_shouldThrowExecutionException()
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo$table"; // contains namespace separator
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
+
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.SQLITE);
+
+    // Act
+    // Assert
+    assertThatThrownBy(() -> admin.createTable(namespace, table, metadata, new HashMap<>()))
+        .isInstanceOf(ExecutionException.class);
+  }
+
+  @Test
   public void createTable_forMysql_shouldExecuteCreateTableStatement()
       throws ExecutionException, SQLException {
     createTable_forX_shouldExecuteCreateTableStatement(
