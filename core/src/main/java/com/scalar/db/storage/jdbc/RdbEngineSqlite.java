@@ -190,6 +190,12 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   }
 
   @Override
+  public String truncateTableSql(String namespace, String table) {
+    // SQLite does not support TRUNCATE TABLE statement.
+    return "DELETE FROM " + encloseFullTableName(namespace, table);
+  }
+
+  @Override
   public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException {
     throw new AssertionError("dropNamespace never happen in SQLite implementation");

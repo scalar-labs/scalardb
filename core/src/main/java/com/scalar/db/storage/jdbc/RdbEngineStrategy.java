@@ -53,6 +53,10 @@ public interface RdbEngineStrategy {
 
   String dropNamespaceSql(String namespace);
 
+  default String truncateTableSql(String namespace, String table) {
+    return "TRUNCATE TABLE " + encloseFullTableName(namespace, table);
+  }
+
   void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException;
 

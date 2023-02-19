@@ -367,7 +367,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
-    String truncateTableStatement = "TRUNCATE TABLE " + encloseFullTableName(namespace, table);
+    String truncateTableStatement = rdbEngine.truncateTableSql(namespace, table);
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, truncateTableStatement);
     } catch (SQLException e) {
