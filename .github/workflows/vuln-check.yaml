@@ -13,6 +13,7 @@ on:
         required: true
       SLACK_SECURITY_WEBHOOK_URL:
         required: true
+  pull_request:
 
 env:
   TERM: dumb
@@ -49,7 +50,9 @@ jobs:
         if: always()
         id: version
         run: |
-          VERSION=$(gradle :core:properties -q | grep "version:" | awk '{print $2}')
+          gradle -v
+          ./gradlew -v
+          VERSION=$(./gradlew :core:properties -q | grep "version:" | awk '{print $2}')
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Run Trivy vulnerability scanner for ScalarDB Server
@@ -63,25 +66,25 @@ jobs:
           severity: 'CRITICAL,HIGH'
           timeout: '60m'
 
-      - name: Post Trivy vulnerability check failure for ScalarDB Server to Slack
-        if: failure()
-        uses: slackapi/slack-github-action@v1.23.0
-        with:
-          payload: |
-            {
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": ":octagonal_sign: The vulnerability check for ScalarDB Server on `${{ github.repository }}` <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|failed> with `${{ inputs.target-ref }}`"
-                  }
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+#      - name: Post Trivy vulnerability check failure for ScalarDB Server to Slack
+#        if: failure()
+#        uses: slackapi/slack-github-action@v1.23.0
+#        with:
+#          payload: |
+#            {
+#              "blocks": [
+#                {
+#                  "type": "section",
+#                  "text": {
+#                    "type": "mrkdwn",
+#                    "text": ":octagonal_sign: The vulnerability check for ScalarDB Server on `${{ github.repository }}` <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|failed> with `${{ inputs.target-ref }}`"
+#                  }
+#                }
+#              ]
+#            }
+#        env:
+#          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
+#          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
 
       - name: Run Trivy vulnerability scanner for ScalarDB Schema Loader
         if: always()
@@ -94,23 +97,23 @@ jobs:
           severity: 'CRITICAL,HIGH'
           timeout: '60m'
 
-      - name: Post Trivy vulnerability check failure for ScalarDB Schema Loader to Slack
-        if: failure()
-        uses: slackapi/slack-github-action@v1.23.0
-        with:
-          payload: |
-            {
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": ":octagonal_sign: The vulnerability check for ScalarDB Schema Loader on `${{ github.repository }}` <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|failed> with `${{ inputs.target-ref }}`"
-                  }
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+#      - name: Post Trivy vulnerability check failure for ScalarDB Schema Loader to Slack
+#        if: failure()
+#        uses: slackapi/slack-github-action@v1.23.0
+#        with:
+#          payload: |
+#            {
+#              "blocks": [
+#                {
+#                  "type": "section",
+#                  "text": {
+#                    "type": "mrkdwn",
+#                    "text": ":octagonal_sign: The vulnerability check for ScalarDB Schema Loader on `${{ github.repository }}` <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|failed> with `${{ inputs.target-ref }}`"
+#                  }
+#                }
+#              ]
+#            }
+#        env:
+#          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
+#          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
 
