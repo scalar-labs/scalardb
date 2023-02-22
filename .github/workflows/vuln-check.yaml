@@ -49,7 +49,7 @@ jobs:
         if: always()
         id: version
         run: |
-          VERSION=$(gradle :core:properties -q | grep "version:" | awk '{print $2}')
+          VERSION=$(./gradlew :core:properties -q | grep "version:" | awk '{print $2}')
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Run Trivy vulnerability scanner for ScalarDB Server
