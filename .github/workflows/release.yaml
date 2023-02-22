@@ -68,7 +68,7 @@ jobs:
           registries: ${{ secrets.AWS_MARKETPLACE_ECR_ID }}
 
       - name: Create containers
-        run: gradle docker
+        run: ./gradlew docker
 
       - name: Push containers
         run: |
@@ -98,7 +98,7 @@ jobs:
       - name: Upload scalardb, scalardb-server, scalardb-rpc, scalardb-schema-loader, and scalardb-integration-test to Maven Central Repository
         run: |
           echo "${{secrets.SIGNING_SECRET_KEY_RING}}" | base64 -d > ~/.gradle/secring.gpg
-          gradle publish \
+          ./gradlew publish \
           -Psigning.keyId="${{ secrets.SIGNING_KEY_ID }}" \
           -P'signing.password'="${{ secrets.SIGNING_PASSWORD }}" \
           -Psigning.secretKeyRingFile="$(echo ~/.gradle/secring.gpg)" \
@@ -117,7 +117,7 @@ jobs:
           prerelease: false
 
       - name: Build scalardb-server zip
-        run: gradle :server:distZip
+        run: ./gradlew :server:distZip
 
       - name: Upload scalardb-server zip
         uses: actions/upload-release-asset@v1
@@ -130,7 +130,7 @@ jobs:
           asset_content_type: application/zip
 
       - name: Build scalardb-schema-loader jar
-        run: gradle :schema-loader:shadowJar
+        run: ./gradlew :schema-loader:shadowJar
 
       - name: Upload scalardb-schema-loader jar
         uses: actions/upload-release-asset@v1
