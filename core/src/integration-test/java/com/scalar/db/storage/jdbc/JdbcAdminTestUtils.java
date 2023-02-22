@@ -41,8 +41,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   @Override
   public void truncateMetadataTable() throws Exception {
     String truncateTableStatement =
-        "TRUNCATE TABLE "
-            + rdbEngine.encloseFullTableName(metadataSchema, JdbcAdmin.METADATA_TABLE);
+        rdbEngine.truncateTableSql(metadataSchema, JdbcAdmin.METADATA_TABLE);
     execute(truncateTableStatement);
   }
 
