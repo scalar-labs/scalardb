@@ -7,7 +7,6 @@ import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Properties;
 import org.apache.commons.dbcp2.BasicDataSource;
 
@@ -54,9 +53,8 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
 
   private void execute(String sql) throws SQLException {
     try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config);
-        Connection connection = dataSource.getConnection();
-        Statement stmt = connection.createStatement()) {
-      stmt.execute(sql);
+        Connection connection = dataSource.getConnection(); ) {
+      JdbcAdmin.execute(connection, sql);
     }
   }
 }
