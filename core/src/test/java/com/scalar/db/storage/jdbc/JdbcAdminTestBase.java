@@ -866,7 +866,7 @@ public abstract class JdbcAdminTestBase {
   public void truncateTable_forSqlite_shouldExecuteTruncateTableStatement()
       throws SQLException, ExecutionException {
     truncateTable_forX_shouldExecuteTruncateTableStatement(
-        RdbEngine.SQLITE, "TRUNCATE TABLE \"my_ns$foo_table\"");
+        RdbEngine.SQLITE, "DELETE FROM \"my_ns$foo_table\"");
   }
 
   private void truncateTable_forX_shouldExecuteTruncateTableStatement(
