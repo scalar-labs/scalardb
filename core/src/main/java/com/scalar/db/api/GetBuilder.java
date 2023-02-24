@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.scalar.db.api.OperationBuilder.Buildable;
 import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
+import com.scalar.db.api.OperationBuilder.ClearNamespace;
 import com.scalar.db.api.OperationBuilder.ClearProjections;
 import com.scalar.db.api.OperationBuilder.ClusteringKey;
 import com.scalar.db.api.OperationBuilder.Consistency;
@@ -21,7 +22,8 @@ import javax.annotation.Nullable;
 
 public class GetBuilder {
 
-  public static class Namespace implements OperationBuilder.Namespace<Table> {
+  public static class Namespace
+      implements OperationBuilder.Namespace<Table>, OperationBuilder.Table<PartitionKeyOrIndexKey> {
 
     Namespace() {}
 
@@ -29,6 +31,12 @@ public class GetBuilder {
     public Table namespace(String namespaceName) {
       checkNotNull(namespaceName);
       return new Table(namespaceName);
+    }
+
+    @Override
+    public PartitionKeyOrIndexKey table(String tableName) {
+      checkNotNull(tableName);
+      return new PartitionKeyOrIndexKey(null, tableName);
     }
   }
 
@@ -48,7 +56,7 @@ public class GetBuilder {
   public static class PartitionKeyOrIndexKey extends PartitionKeyBuilder<BuildableGet>
       implements IndexKey<BuildableGetWithIndex> {
 
-    private PartitionKeyOrIndexKey(String namespace, String table) {
+    private PartitionKeyOrIndexKey(@Nullable String namespace, String table) {
       super(namespace, table);
     }
 
@@ -70,7 +78,7 @@ public class GetBuilder {
     @Nullable Key clusteringKey;
     @Nullable com.scalar.db.api.Consistency consistency;
 
-    private BuildableGet(String namespace, String table, Key partitionKey) {
+    private BuildableGet(@Nullable String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
     }
 
@@ -123,13 +131,13 @@ public class GetBuilder {
 
   public static class BuildableGetWithIndex
       implements Consistency<BuildableGetWithIndex>, Projection<BuildableGetWithIndex> {
-    private final String namespaceName;
+    @Nullable private final String namespaceName;
     private final String tableName;
     private final Key indexKey;
     private final List<String> projections = new ArrayList<>();
     @Nullable private com.scalar.db.api.Consistency consistency;
 
-    private BuildableGetWithIndex(String namespace, String table, Key indexKey) {
+    private BuildableGetWithIndex(@Nullable String namespace, String table, Key indexKey) {
       namespaceName = namespace;
       tableName = table;
       this.indexKey = indexKey;
@@ -180,7 +188,8 @@ public class GetBuilder {
           PartitionKey<BuildableGetOrGetWithIndexFromExisting>,
           IndexKey<BuildableGetOrGetWithIndexFromExisting>,
           ClearProjections<BuildableGetOrGetWithIndexFromExisting>,
-          ClearClusteringKey<BuildableGetOrGetWithIndexFromExisting> {
+          ClearClusteringKey<BuildableGetOrGetWithIndexFromExisting>,
+          ClearNamespace<BuildableGetOrGetWithIndexFromExisting> {
 
     private Key indexKey;
     private final boolean isGetWithIndex;
@@ -268,6 +277,12 @@ public class GetBuilder {
     public BuildableGetOrGetWithIndexFromExisting clearClusteringKey() {
       checkNotGetWithIndex();
       this.clusteringKey = null;
+      return this;
+    }
+
+    @Override
+    public BuildableGetOrGetWithIndexFromExisting clearNamespace() {
+      this.namespaceName = null;
       return this;
     }
 

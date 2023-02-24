@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
 import com.scalar.db.api.OperationBuilder.ClearCondition;
+import com.scalar.db.api.OperationBuilder.ClearNamespace;
 import com.scalar.db.api.OperationBuilder.ClearValues;
 import com.scalar.db.api.OperationBuilder.ClusteringKey;
 import com.scalar.db.api.OperationBuilder.Condition;
@@ -27,7 +28,8 @@ import javax.annotation.Nullable;
 
 public class PutBuilder {
 
-  public static class Namespace implements OperationBuilder.Namespace<Table> {
+  public static class Namespace
+      implements OperationBuilder.Namespace<Table>, OperationBuilder.Table<PartitionKey> {
 
     Namespace() {}
 
@@ -35,6 +37,12 @@ public class PutBuilder {
     public Table namespace(String namespaceName) {
       checkNotNull(namespaceName);
       return new Table(namespaceName);
+    }
+
+    @Override
+    public PartitionKey table(String tableName) {
+      checkNotNull(tableName);
+      return new PartitionKey(null, tableName);
     }
   }
 
@@ -53,7 +61,7 @@ public class PutBuilder {
 
   public static class PartitionKey extends PartitionKeyBuilder<Buildable> {
 
-    private PartitionKey(String namespaceName, String tableName) {
+    private PartitionKey(@Nullable String namespaceName, String tableName) {
       super(namespaceName, tableName);
     }
 
@@ -74,7 +82,7 @@ public class PutBuilder {
     @Nullable com.scalar.db.api.Consistency consistency;
     @Nullable MutationCondition condition;
 
-    private Buildable(String namespace, String table, Key partitionKey) {
+    private Buildable(@Nullable String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
     }
 
@@ -220,7 +228,8 @@ public class PutBuilder {
           OperationBuilder.PartitionKey<BuildableFromExisting>,
           ClearClusteringKey<BuildableFromExisting>,
           ClearValues<BuildableFromExisting>,
-          ClearCondition<BuildableFromExisting> {
+          ClearCondition<BuildableFromExisting>,
+          ClearNamespace<BuildableFromExisting> {
 
     BuildableFromExisting(Put put) {
       super(put.forNamespace().orElse(null), put.forTable().orElse(null), put.getPartitionKey());
@@ -374,6 +383,12 @@ public class PutBuilder {
     @Override
     public BuildableFromExisting clearCondition() {
       this.condition = null;
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearNamespace() {
+      this.namespaceName = null;
       return this;
     }
   }

@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
 import com.scalar.db.api.OperationBuilder.ClearCondition;
+import com.scalar.db.api.OperationBuilder.ClearNamespace;
 import com.scalar.db.api.OperationBuilder.ClusteringKey;
 import com.scalar.db.api.OperationBuilder.Condition;
 import com.scalar.db.api.OperationBuilder.Consistency;
@@ -14,7 +15,8 @@ import javax.annotation.Nullable;
 
 public class DeleteBuilder {
 
-  public static class Namespace implements OperationBuilder.Namespace<Table> {
+  public static class Namespace
+      implements OperationBuilder.Namespace<Table>, OperationBuilder.Table<PartitionKey> {
 
     Namespace() {}
 
@@ -22,6 +24,12 @@ public class DeleteBuilder {
     public Table namespace(String namespaceName) {
       checkNotNull(namespaceName);
       return new Table(namespaceName);
+    }
+
+    @Override
+    public PartitionKey table(String tableName) {
+      checkNotNull(tableName);
+      return new PartitionKey(null, tableName);
     }
   }
 
@@ -40,7 +48,7 @@ public class DeleteBuilder {
 
   public static class PartitionKey extends PartitionKeyBuilder<Buildable> {
 
-    private PartitionKey(String namespace, String table) {
+    private PartitionKey(@Nullable String namespace, String table) {
       super(namespace, table);
     }
 
@@ -57,7 +65,7 @@ public class DeleteBuilder {
     @Nullable com.scalar.db.api.Consistency consistency;
     @Nullable MutationCondition condition;
 
-    private Buildable(String namespace, String table, Key partitionKey) {
+    private Buildable(@Nullable String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
     }
 
@@ -102,7 +110,8 @@ public class DeleteBuilder {
           OperationBuilder.Table<BuildableFromExisting>,
           OperationBuilder.PartitionKey<BuildableFromExisting>,
           ClearCondition<BuildableFromExisting>,
-          ClearClusteringKey<BuildableFromExisting> {
+          ClearClusteringKey<BuildableFromExisting>,
+          ClearNamespace<BuildableFromExisting> {
 
     BuildableFromExisting(Delete delete) {
       super(
@@ -163,6 +172,12 @@ public class DeleteBuilder {
     @Override
     public BuildableFromExisting clearClusteringKey() {
       this.clusteringKey = null;
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearNamespace() {
+      this.namespaceName = null;
       return this;
     }
   }

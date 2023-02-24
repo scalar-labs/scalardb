@@ -31,12 +31,10 @@ public class GetBuilderTest {
   @Test
   public void buildGet_WithMandatoryParameters_ShouldBuildGetWithMandatoryParameters() {
     // Arrange Act
-    Get actual =
-        Get.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).partitionKey(partitionKey1).build();
+    Get actual = Get.newBuilder().table(TABLE_1).partitionKey(partitionKey1).build();
 
     // Assert
-    assertThat(actual)
-        .isEqualTo(new Get(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(actual).isEqualTo(new Get(partitionKey1).forTable(TABLE_1));
   }
 
   @Test
@@ -162,11 +160,10 @@ public class GetBuilderTest {
   @Test
   public void buildGetWithIndex_WithMandatoryParameters_ShouldBuildGetWithMandatoryParameters() {
     // Arrange Act
-    Get actual = Get.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).indexKey(indexKey1).build();
+    Get actual = Get.newBuilder().table(TABLE_1).indexKey(indexKey1).build();
 
     // Assert
-    assertThat(actual)
-        .isEqualTo(new GetWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(actual).isEqualTo(new GetWithIndex(indexKey1).forTable(TABLE_1));
   }
 
   @Test
@@ -259,5 +256,49 @@ public class GetBuilderTest {
         .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> Get.newBuilder(existingGet).clearClusteringKey())
         .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void buildGet_FromExistingAndClearNamespace_ShouldBuildGetWithoutNamespace() {
+    // Arrange
+    Get existingGet =
+        new Get(indexKey1)
+            .forNamespace(NAMESPACE_1)
+            .forTable(TABLE_1)
+            .withProjections(Arrays.asList("c1", "c2"))
+            .withConsistency(Consistency.LINEARIZABLE);
+
+    // Act
+    Get newGet = Get.newBuilder(existingGet).clearNamespace().build();
+
+    // Assert
+    assertThat(newGet)
+        .isEqualTo(
+            new Get(indexKey1)
+                .forTable(TABLE_1)
+                .withProjections(Arrays.asList("c1", "c2"))
+                .withConsistency(Consistency.LINEARIZABLE));
+  }
+
+  @Test
+  public void buildGetWithIndex_FromExistingAndClearNamespace_ShouldBuildGetWithoutNamespace() {
+    // Arrange
+    GetWithIndex existingGet =
+        new GetWithIndex(indexKey1)
+            .forNamespace(NAMESPACE_1)
+            .forTable(TABLE_1)
+            .withProjections(Arrays.asList("c1", "c2"))
+            .withConsistency(Consistency.LINEARIZABLE);
+
+    // Act
+    Get newGet = Get.newBuilder(existingGet).clearNamespace().build();
+
+    // Assert
+    assertThat(newGet)
+        .isEqualTo(
+            new GetWithIndex(indexKey1)
+                .forTable(TABLE_1)
+                .withProjections(Arrays.asList("c1", "c2"))
+                .withConsistency(Consistency.LINEARIZABLE));
   }
 }
