@@ -70,6 +70,7 @@ public class MultiStorage extends AbstractDistributedStorage {
                 namespaceStorageMap.put(table, nameStorageMap.get(storageName)));
 
     defaultStorage = nameStorageMap.get(config.getDefaultStorage());
+    databaseConfig.getDefaultNamespaceName().ifPresent(this::withNamespace);
   }
 
   @VisibleForTesting

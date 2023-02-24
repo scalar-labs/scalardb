@@ -30,6 +30,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -56,6 +57,7 @@ public class GrpcTransactionManager extends ActiveTransactionManagedDistributedT
   private final DistributedTransactionGrpc.DistributedTransactionStub stub;
   private final DistributedTransactionGrpc.DistributedTransactionBlockingStub blockingStub;
   private final TableMetadataManager metadataManager;
+  private final Optional<String> defaultNamespaceName;
 
   @Inject
   public GrpcTransactionManager(DatabaseConfig databaseConfig) {
@@ -67,6 +69,7 @@ public class GrpcTransactionManager extends ActiveTransactionManagedDistributedT
     metadataManager =
         new TableMetadataManager(
             new GrpcAdmin(channel, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
+    defaultNamespaceName = databaseConfig.getDefaultNamespaceName();
   }
 
   @VisibleForTesting
@@ -82,6 +85,7 @@ public class GrpcTransactionManager extends ActiveTransactionManagedDistributedT
     this.stub = stub;
     this.blockingStub = blockingStub;
     this.metadataManager = metadataManager;
+    defaultNamespaceName = databaseConfig.getDefaultNamespaceName();
   }
 
   @Override
@@ -99,12 +103,24 @@ public class GrpcTransactionManager extends ActiveTransactionManagedDistributedT
         () -> {
           GrpcTransactionOnBidirectionalStream stream = getStream();
           String transactionId = stream.beginTransaction(txId);
-          GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
-          getNamespace().ifPresent(transaction::withNamespace);
-          getTable().ifPresent(transaction::withTable);
+          GrpcTransaction transaction = createTransaction(stream, transactionId);
           return decorate(transaction);
         },
         EXCEPTION_FACTORY);
+  }
+
+  private GrpcTransaction createTransaction(
+      GrpcTransactionOnBidirectionalStream stream, String transactionId) {
+    GrpcTransaction transaction;
+    if (defaultNamespaceName.isPresent()) {
+      transaction = new GrpcTransaction(transactionId, stream, defaultNamespaceName.get());
+    } else {
+      transaction = new GrpcTransaction(transactionId, stream);
+    }
+    getNamespace().ifPresent(transaction::withNamespace);
+    getTable().ifPresent(transaction::withTable);
+
+    return transaction;
   }
 
   @Override
@@ -122,9 +138,7 @@ public class GrpcTransactionManager extends ActiveTransactionManagedDistributedT
         () -> {
           GrpcTransactionOnBidirectionalStream stream = getStream();
           String transactionId = stream.startTransaction(txId);
-          GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
-          getNamespace().ifPresent(transaction::withNamespace);
-          getTable().ifPresent(transaction::withTable);
+          GrpcTransaction transaction = createTransaction(stream, transactionId);
           return decorate(transaction);
         },
         EXCEPTION_FACTORY);

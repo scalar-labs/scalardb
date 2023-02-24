@@ -643,6 +643,30 @@ Delete delete =
 transaction.mutate(Arrays.asList(put, delete));
 ```
 
+#### Use a default namespace for CRUD operations
+A default namespace for all the CRUD operations can be set with a property of the ScalarDB configuration.
+If you would like to use this setting with ScalarDB server, it needs to be set on the client-side configuration
+
+```properties
+scalar.db.default_namespace_name=<a_namespace_name>
+```
+Any operation that does not specify a namespace will use the default namespace set in the configuration
+```java
+//This operation will target the default namespace
+Scan scanUsingDefaultNamespace =
+    Scan.newBuilder()
+        .table("tbl")
+        .all()
+        .build();
+//This operation will target the "ns" namespace
+Scan scanUsingSpecifiedNamespace =
+    Scan.newBuilder()
+        .namespace("ns")
+        .table("tbl")
+        .all()
+        .build();
+```
+
 #### Notes
 
 - All the builders of the CRUD operations can specify consistency with the `consistency()` methods, but it's ignored, and the `LINEARIZABLE` consistency level is always used in transactions.

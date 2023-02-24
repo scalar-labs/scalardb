@@ -30,6 +30,14 @@ public class GrpcTwoPhaseCommitTransaction extends AbstractTwoPhaseCommitTransac
     this.stream = stream;
   }
 
+  public GrpcTwoPhaseCommitTransaction(
+      String txId,
+      GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream,
+      String defaultNamespaceName) {
+    this(txId, stream);
+    withNamespace(defaultNamespaceName);
+  }
+
   @Override
   public String getId() {
     return txId;

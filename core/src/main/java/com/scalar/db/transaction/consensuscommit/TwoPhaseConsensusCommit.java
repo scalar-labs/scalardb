@@ -45,6 +45,15 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     this.recovery = recovery;
   }
 
+  public TwoPhaseConsensusCommit(
+      CrudHandler crud,
+      CommitHandler commit,
+      RecoveryHandler recovery,
+      String defaultNamespaceName) {
+    this(crud, commit, recovery);
+    withNamespace(defaultNamespaceName);
+  }
+
   @Override
   public String getId() {
     return crud.getSnapshot().getId();

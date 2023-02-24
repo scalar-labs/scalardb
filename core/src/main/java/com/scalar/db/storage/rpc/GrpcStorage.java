@@ -65,6 +65,7 @@ public class GrpcStorage extends AbstractDistributedStorage {
     metadataManager =
         new TableMetadataManager(
             new GrpcAdmin(channel, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
+    databaseConfig.getDefaultNamespaceName().ifPresent(this::withNamespace);
   }
 
   @VisibleForTesting

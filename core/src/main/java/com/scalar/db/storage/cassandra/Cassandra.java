@@ -60,6 +60,7 @@ public class Cassandra extends AbstractDistributedStorage {
         new TableMetadataManager(
             new CassandraAdmin(clusterManager), config.getMetadataCacheExpirationTimeSecs());
     operationChecker = new OperationChecker(metadataManager);
+    config.getDefaultNamespaceName().ifPresent(this::withNamespace);
   }
 
   @Override

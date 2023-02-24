@@ -60,6 +60,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
     jdbcService = new JdbcService(tableMetadataManager, operationChecker, queryBuilder);
+    databaseConfig.getDefaultNamespaceName().ifPresent(this::withNamespace);
   }
 
   @VisibleForTesting

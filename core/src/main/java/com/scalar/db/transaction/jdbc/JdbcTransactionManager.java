@@ -19,6 +19,7 @@ import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import java.sql.SQLException;
+import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.concurrent.ThreadSafe;
 import org.apache.commons.dbcp2.BasicDataSource;
@@ -33,11 +34,13 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
   private final BasicDataSource tableMetadataDataSource;
   private final RdbEngineStrategy rdbEngine;
   private final JdbcService jdbcService;
+  private final Optional<String> defaultNamespaceName;
 
   @Inject
   public JdbcTransactionManager(DatabaseConfig databaseConfig) {
     super(databaseConfig);
     JdbcConfig config = new JdbcConfig(databaseConfig);
+    defaultNamespaceName = databaseConfig.getDefaultNamespaceName();
 
     dataSource = JdbcUtils.initDataSource(config, true);
     rdbEngine = RdbEngineFactory.create(config);
@@ -65,6 +68,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
     this.tableMetadataDataSource = tableMetadataDataSource;
     this.rdbEngine = rdbEngine;
     this.jdbcService = jdbcService;
+    this.defaultNamespaceName = databaseConfig.getDefaultNamespaceName();
   }
 
   @Override
@@ -76,8 +80,18 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
   @Override
   public DistributedTransaction begin(String txId) throws TransactionException {
     try {
-      JdbcTransaction transaction =
-          new JdbcTransaction(txId, jdbcService, dataSource.getConnection(), rdbEngine);
+      JdbcTransaction transaction;
+      if (defaultNamespaceName.isPresent()) {
+        transaction =
+            new JdbcTransaction(
+                txId,
+                jdbcService,
+                dataSource.getConnection(),
+                rdbEngine,
+                defaultNamespaceName.get());
+      } else {
+        transaction = new JdbcTransaction(txId, jdbcService, dataSource.getConnection(), rdbEngine);
+      }
       getNamespace().ifPresent(transaction::withNamespace);
       getTable().ifPresent(transaction::withTable);
       return decorate(transaction);

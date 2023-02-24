@@ -33,6 +33,7 @@ public class TwoPhaseConsensusCommitManager
   private final RecoveryHandler recovery;
   private final CommitHandler commit;
   private final boolean isIncludeMetadataEnabled;
+  private final Optional<String> defaultNamespaceName;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -50,6 +51,7 @@ public class TwoPhaseConsensusCommitManager
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
+    defaultNamespaceName = databaseConfig.getDefaultNamespaceName();
   }
 
   public TwoPhaseConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -67,6 +69,7 @@ public class TwoPhaseConsensusCommitManager
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
+    defaultNamespaceName = databaseConfig.getDefaultNamespaceName();
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -92,6 +95,7 @@ public class TwoPhaseConsensusCommitManager
     this.recovery = recovery;
     this.commit = commit;
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
+    defaultNamespaceName = databaseConfig.getDefaultNamespaceName();
   }
 
   @Override
@@ -137,8 +141,12 @@ public class TwoPhaseConsensusCommitManager
         new Snapshot(txId, isolation, strategy, tableMetadataManager, parallelExecutor);
     CrudHandler crud =
         new CrudHandler(storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled);
-
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
+    TwoPhaseConsensusCommit transaction;
+    if (defaultNamespaceName.isPresent()) {
+      transaction = new TwoPhaseConsensusCommit(crud, commit, recovery, defaultNamespaceName.get());
+    } else {
+      transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
+    }
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
     return decorate(transaction);

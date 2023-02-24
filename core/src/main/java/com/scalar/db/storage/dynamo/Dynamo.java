@@ -73,6 +73,7 @@ public class Dynamo extends AbstractDistributedStorage {
     deleteStatementHandler =
         new DeleteStatementHandler(client, metadataManager, config.getNamespacePrefix());
     batchHandler = new BatchHandler(client, metadataManager, config.getNamespacePrefix());
+    databaseConfig.getDefaultNamespaceName().ifPresent(this::withNamespace);
 
     logger.info("DynamoDB object is created properly.");
   }
