@@ -101,7 +101,7 @@ Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getti
 You can follow the [azure official guide](https://docs.microsoft.com/en-us/azure/cosmos-db/restore-account-continuous-backup#restore-account-portal). After restoring backups. change the default consistencies of the restored databases to `STRONG`
 It is recommended to use the mid-time of paused duration as a restore point as we explained earlier.
 
-ScalarDB tables use stored procedures of Cosmos DB for NoSQL. However, the PITR feature of Cosmos DB for NoSQL doesn't restore stored procedures. So, you must create stored procedures in all tables. You can do it using ScalarDB Schema Loader the `--repair-all` flag. Please refer to the Schema Loader document [Repair tables](https://github.com/scalar-labs/scalardb/blob/master/docs/schema-loader.md#repair-tables).
+ScalarDB tables use stored procedures of Cosmos DB for NoSQL. However, the PITR feature of Cosmos DB for NoSQL doesn't restore stored procedures. So, you must create stored procedures in all tables. You can do it using ScalarDB Schema Loader with the `--repair-all` flag. Please refer to the Schema Loader document [Repair tables](https://github.com/scalar-labs/scalardb/blob/master/docs/schema-loader.md#repair-tables).
 
 ### DynamoDB (restore)
 
