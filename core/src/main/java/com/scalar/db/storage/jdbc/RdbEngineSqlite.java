@@ -11,6 +11,8 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.sqlite.SQLiteErrorCode;
+import org.sqlite.SQLiteException;
 
 /**
  * A RdnEngineStrategy implementation for SQLite.
@@ -39,12 +41,12 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public boolean isDuplicateKeyError(SQLException e) {
-    // Error code: SQLITE_ERROR (1)
-    // Message: SQL error or missing database (index XXX already exists)
+    // Error code: SQLITE_CONSTRAINT_PRIMARYKEY (1555)
 
-    return e.getErrorCode() == 1
-        && e.getMessage().contains("(index")
-        && e.getMessage().endsWith("already exists)");
+    // Error code: SQLITE_CONSTRAINT_UNIQUE (2067)
+
+    return ((SQLiteException) e).getResultCode() == SQLiteErrorCode.SQLITE_CONSTRAINT_PRIMARYKEY
+        || ((SQLiteException) e).getResultCode() == SQLiteErrorCode.SQLITE_CONSTRAINT_UNIQUE;
   }
 
   @Override

@@ -59,12 +59,22 @@ class RdbEngineSqliteTest {
   }
 
   @Test
-  void isDuplicateKeyError_True() throws SQLException {
-    statement.executeUpdate("create table t (c1 integer, c2 integer)");
-    statement.executeUpdate("create index i on t (c1)");
+  void isDuplicateKeyError_True_OnPrimaryKeyConstraintViolation() throws SQLException {
+    statement.executeUpdate("create table t (c1 integer, c2 integer, primary key (c1))");
+    statement.executeUpdate("insert into t values (1, 2)");
 
     SQLException e =
-        (SQLException) catchThrowable(() -> statement.executeUpdate("create index i on t (c2)"));
+        (SQLException) catchThrowable(() -> statement.executeUpdate("insert into t values (1, 3)"));
+    assertTrue(rdbEngine.isDuplicateKeyError(e));
+  }
+
+  @Test
+  void isDuplicateKeyError_True_OnUniqueConstraintViolation() throws SQLException {
+    statement.executeUpdate("create table t (c1 integer, c2 integer, unique (c1))");
+    statement.executeUpdate("insert into t values (1, 2)");
+
+    SQLException e =
+        (SQLException) catchThrowable(() -> statement.executeUpdate("insert into t values (1, 3)"));
     assertTrue(rdbEngine.isDuplicateKeyError(e));
   }
 
