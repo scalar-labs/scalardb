@@ -38,12 +38,10 @@ public class ScanBuilderTest {
   @Test
   public void buildScan_WithMandatoryParameters_ShouldBuildScanWithMandatoryParameters() {
     // Arrange Act
-    Scan actual =
-        Scan.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).partitionKey(partitionKey1).build();
+    Scan actual = Scan.newBuilder().table(TABLE_1).partitionKey(partitionKey1).build();
 
     // Assert
-    assertThat(actual)
-        .isEqualTo(new Scan(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(actual).isEqualTo(new Scan(partitionKey1).forTable(TABLE_1));
   }
 
   @Test
@@ -234,6 +232,18 @@ public class ScanBuilderTest {
   }
 
   @Test
+  public void buildScan_FromExistingAndClearNamespace_ShouldBuildScanWithoutNamespace() {
+    // Arrange
+    Scan existingScan = new Scan(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+
+    // Act
+    Scan newScan = Scan.newBuilder(existingScan).clearNamespace().build();
+
+    // Assert
+    assertThat(newScan).isEqualTo(new Scan(partitionKey1).forTable(TABLE_1));
+  }
+
+  @Test
   public void
       buildScan_FromExistingWithUnsupportedOperation_ShouldThrowUnsupportedOperationException() {
     // Arrange
@@ -247,10 +257,10 @@ public class ScanBuilderTest {
   @Test
   public void buildScanAll_WithMandatoryParameters_ShouldBuildScanWithMandatoryParameters() {
     // Arrange Act
-    Scan actual = Scan.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).all().build();
+    Scan actual = Scan.newBuilder().table(TABLE_1).all().build();
 
     // Assert
-    assertThat(actual).isEqualTo(new ScanAll().forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(actual).isEqualTo(new ScanAll().forTable(TABLE_1));
   }
 
   @Test
@@ -366,14 +376,24 @@ public class ScanBuilderTest {
   }
 
   @Test
-  public void buildScanWithIndex_WithMandatoryParameters_ShouldBuildScanWithMandatoryParameters() {
-    // Arrange Act
-    Scan actual =
-        Scan.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).indexKey(indexKey1).build();
+  public void buildScanAll_FromExistingAndClearNamespace_ShouldBuildScanWithoutNamespace() {
+    // Arrange
+    ScanAll existingScan = new ScanAll().forNamespace(NAMESPACE_1).forTable(TABLE_1);
+
+    // Act
+    Scan newScan = Scan.newBuilder(existingScan).clearNamespace().build();
 
     // Assert
-    assertThat(actual)
-        .isEqualTo(new ScanWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(newScan).isEqualTo(new ScanAll().forTable(TABLE_1));
+  }
+
+  @Test
+  public void buildScanWithIndex_WithMandatoryParameters_ShouldBuildScanWithMandatoryParameters() {
+    // Arrange Act
+    Scan actual = Scan.newBuilder().table(TABLE_1).indexKey(indexKey1).build();
+
+    // Assert
+    assertThat(actual).isEqualTo(new ScanWithIndex(indexKey1).forTable(TABLE_1));
   }
 
   @Test
@@ -485,5 +505,18 @@ public class ScanBuilderTest {
         .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> Scan.newBuilder(existingScan).clearEnd())
         .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void buildScanWithIndex_FromExistingAndClearNamespace_ShouldBuildScanWithoutNamespace() {
+    // Arrange
+    ScanWithIndex existingScan =
+        new ScanWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+
+    // Act
+    Scan newScan = Scan.newBuilder(existingScan).clearNamespace().build();
+
+    // Assert
+    assertThat(newScan).isEqualTo(new ScanWithIndex(indexKey1).forTable(TABLE_1));
   }
 }
