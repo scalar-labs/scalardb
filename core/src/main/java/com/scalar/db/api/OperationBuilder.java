@@ -21,6 +21,15 @@ class OperationBuilder {
     T namespace(String namespaceName);
   }
 
+  interface ClearNamespace<T> {
+    /**
+     * Removes the namespace
+     *
+     * @return the operation builder
+     */
+    T clearNamespace();
+  }
+
   interface Table<T> {
     /**
      * Sets the specified target table for this operation
@@ -402,21 +411,21 @@ class OperationBuilder {
   }
 
   abstract static class PartitionKeyBuilder<T> implements PartitionKey<T> {
-    final String namespaceName;
+    @Nullable final String namespaceName;
     final String tableName;
 
-    public PartitionKeyBuilder(String namespaceName, String tableName) {
+    public PartitionKeyBuilder(@Nullable String namespaceName, String tableName) {
       this.namespaceName = namespaceName;
       this.tableName = tableName;
     }
   }
 
   abstract static class Buildable<T> {
-    String namespaceName;
+    @Nullable String namespaceName;
     String tableName;
     Key partitionKey;
 
-    public Buildable(String namespaceName, String tableName, Key partitionKey) {
+    public Buildable(@Nullable String namespaceName, String tableName, Key partitionKey) {
       this.namespaceName = namespaceName;
       this.tableName = tableName;
       this.partitionKey = partitionKey;
