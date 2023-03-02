@@ -34,6 +34,7 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
   private final ActiveExpiringMap<String, ActiveTransaction> activeTransactions;
 
   public ActiveTransactionManagedTwoPhaseCommitTransactionManager(DatabaseConfig config) {
+    super(config);
     activeTransactions =
         new ActiveExpiringMap<>(
             config.getActiveTransactionManagementExpirationTimeMillis(),

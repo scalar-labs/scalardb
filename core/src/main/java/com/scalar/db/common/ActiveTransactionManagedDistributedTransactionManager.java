@@ -32,6 +32,7 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
   private final ActiveExpiringMap<String, ActiveTransaction> activeTransactions;
 
   public ActiveTransactionManagedDistributedTransactionManager(DatabaseConfig config) {
+    super(config);
     activeTransactions =
         new ActiveExpiringMap<>(
             config.getActiveTransactionManagementExpirationTimeMillis(),

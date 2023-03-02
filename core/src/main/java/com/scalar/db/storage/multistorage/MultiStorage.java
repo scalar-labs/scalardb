@@ -42,6 +42,7 @@ public class MultiStorage extends AbstractDistributedStorage {
 
   @Inject
   public MultiStorage(DatabaseConfig databaseConfig) {
+    super(databaseConfig);
     MultiStorageConfig config = new MultiStorageConfig(databaseConfig);
 
     storages = new ArrayList<>();
@@ -70,14 +71,15 @@ public class MultiStorage extends AbstractDistributedStorage {
                 namespaceStorageMap.put(table, nameStorageMap.get(storageName)));
 
     defaultStorage = nameStorageMap.get(config.getDefaultStorage());
-    databaseConfig.getDefaultNamespaceName().ifPresent(this::withNamespace);
   }
 
   @VisibleForTesting
   MultiStorage(
+      DatabaseConfig databaseConfig,
       Map<String, DistributedStorage> tableStorageMap,
       Map<String, DistributedStorage> namespaceStorageMap,
       DistributedStorage defaultStorage) {
+    super(databaseConfig);
     this.tableStorageMap = tableStorageMap;
     this.namespaceStorageMap = namespaceStorageMap;
     this.defaultStorage = defaultStorage;

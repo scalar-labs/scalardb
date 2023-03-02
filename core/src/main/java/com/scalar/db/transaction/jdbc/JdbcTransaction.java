@@ -48,16 +48,6 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     this.rdbEngine = rdbEngine;
   }
 
-  JdbcTransaction(
-      String txId,
-      JdbcService jdbcService,
-      Connection connection,
-      RdbEngineStrategy rdbEngine,
-      String defaultNamespaceName) {
-    this(txId, jdbcService, connection, rdbEngine);
-    withNamespace(defaultNamespaceName);
-  }
-
   @Override
   public String getId() {
     return txId;

@@ -24,7 +24,6 @@ import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.storage.rpc.GrpcUtils;
 import com.scalar.db.util.ProtoUtils;
 import io.grpc.ManagedChannel;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -42,7 +41,6 @@ public class GrpcTwoPhaseCommitTransactionManager
   private final TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionStub stub;
   private final TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionBlockingStub blockingStub;
   private final TableMetadataManager metadataManager;
-  private final Optional<String> defaultNamespaceName;
 
   @Inject
   public GrpcTwoPhaseCommitTransactionManager(DatabaseConfig databaseConfig) {
@@ -54,7 +52,6 @@ public class GrpcTwoPhaseCommitTransactionManager
     metadataManager =
         new TableMetadataManager(
             new GrpcAdmin(channel, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
-    defaultNamespaceName = databaseConfig.getDefaultNamespaceName();
   }
 
   @VisibleForTesting
@@ -70,7 +67,6 @@ public class GrpcTwoPhaseCommitTransactionManager
     this.stub = stub;
     this.blockingStub = blockingStub;
     this.metadataManager = metadataManager;
-    this.defaultNamespaceName = Optional.empty();
   }
 
   @Override
@@ -97,13 +93,8 @@ public class GrpcTwoPhaseCommitTransactionManager
 
   private GrpcTwoPhaseCommitTransaction createTransaction(
       GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream, String transactionId) {
-    GrpcTwoPhaseCommitTransaction transaction;
-    if (defaultNamespaceName.isPresent()) {
-      transaction =
-          new GrpcTwoPhaseCommitTransaction(transactionId, stream, defaultNamespaceName.get());
-    } else {
-      transaction = new GrpcTwoPhaseCommitTransaction(transactionId, stream);
-    }
+    GrpcTwoPhaseCommitTransaction transaction =
+        new GrpcTwoPhaseCommitTransaction(transactionId, stream);
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
 

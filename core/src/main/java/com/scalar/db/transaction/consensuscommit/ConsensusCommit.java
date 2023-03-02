@@ -51,15 +51,6 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     this.beforeRecoveryHook = () -> {};
   }
 
-  public ConsensusCommit(
-      CrudHandler crud,
-      CommitHandler commit,
-      RecoveryHandler recovery,
-      String defaultNamespaceName) {
-    this(crud, commit, recovery);
-    withNamespace(defaultNamespaceName);
-  }
-
   @Override
   public String getId() {
     return crud.getSnapshot().getId();

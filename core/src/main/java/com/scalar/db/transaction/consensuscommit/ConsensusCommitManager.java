@@ -35,7 +35,6 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
   private final RecoveryHandler recovery;
   private final CommitHandler commit;
   private final boolean isIncludeMetadataEnabled;
-  private final Optional<String> defaultNamespaceName;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -53,7 +52,6 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
-    defaultNamespaceName = databaseConfig.getDefaultNamespaceName();
   }
 
   ConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -71,7 +69,6 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
-    defaultNamespaceName = databaseConfig.getDefaultNamespaceName();
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -97,7 +94,6 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     this.recovery = recovery;
     this.commit = commit;
     this.isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
-    this.defaultNamespaceName = databaseConfig.getDefaultNamespaceName();
   }
 
   @Override
@@ -184,13 +180,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
         new Snapshot(txId, isolation, strategy, tableMetadataManager, parallelExecutor);
     CrudHandler crud =
         new CrudHandler(storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled);
-
-    ConsensusCommit consensus;
-    if (defaultNamespaceName.isPresent()) {
-      consensus = new ConsensusCommit(crud, commit, recovery, defaultNamespaceName.get());
-    } else {
-      consensus = new ConsensusCommit(crud, commit, recovery);
-    }
+    ConsensusCommit consensus = new ConsensusCommit(crud, commit, recovery);
     getNamespace().ifPresent(consensus::withNamespace);
     getTable().ifPresent(consensus::withTable);
     return decorate(consensus);

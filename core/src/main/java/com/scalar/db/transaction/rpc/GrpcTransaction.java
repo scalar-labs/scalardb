@@ -22,12 +22,6 @@ public class GrpcTransaction extends AbstractDistributedTransaction {
   private final String txId;
   private final GrpcTransactionOnBidirectionalStream stream;
 
-  public GrpcTransaction(
-      String txId, GrpcTransactionOnBidirectionalStream stream, String defaultNamespaceName) {
-    this(txId, stream);
-    withNamespace(defaultNamespaceName);
-  }
-
   public GrpcTransaction(String txId, GrpcTransactionOnBidirectionalStream stream) {
     this.txId = txId;
     this.stream = stream;

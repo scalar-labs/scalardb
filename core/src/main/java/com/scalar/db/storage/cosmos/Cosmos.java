@@ -44,6 +44,7 @@ public class Cosmos extends AbstractDistributedStorage {
 
   @Inject
   public Cosmos(DatabaseConfig databaseConfig) {
+    super(databaseConfig);
     CosmosConfig config = new CosmosConfig(databaseConfig);
 
     client =
@@ -63,7 +64,6 @@ public class Cosmos extends AbstractDistributedStorage {
     putStatementHandler = new PutStatementHandler(client, metadataManager);
     deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
     batchHandler = new BatchHandler(client, metadataManager);
-    databaseConfig.getDefaultNamespaceName().ifPresent(this::withNamespace);
 
     logger.info("Cosmos DB object is created properly.");
   }
