@@ -644,13 +644,16 @@ transaction.mutate(Arrays.asList(put, delete));
 ```
 
 #### Use a default namespace for CRUD operations
+
 A default namespace for all the CRUD operations can be set with a property of the ScalarDB configuration.
-If you would like to use this setting with ScalarDB server, it needs to be set on the client-side configuration
+If you would like to use this setting with ScalarDB server, it needs to be set on the client-side configuration.
 
 ```properties
 scalar.db.default_namespace_name=<a_namespace_name>
 ```
-Any operation that does not specify a namespace will use the default namespace set in the configuration
+
+Any operation that does not specify a namespace will use the default namespace set in the configuration.
+
 ```java
 //This operation will target the default namespace
 Scan scanUsingDefaultNamespace =
