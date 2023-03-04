@@ -8,7 +8,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.TransactionFactory;
-import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -18,7 +17,7 @@ public abstract class ConsensusCommitAdminIntegrationTestBase
   private DistributedTransactionAdmin adminWithIncludeMetadataEnabled;
 
   @Override
-  protected void initialize(String testName) throws IOException {
+  protected void initialize(String testName) throws Exception {
     Properties includeMetadataEnabledProperties = getPropsWithIncludeMetadataEnabled(testName);
     adminWithIncludeMetadataEnabled =
         TransactionFactory.create(includeMetadataEnabledProperties).getTransactionAdmin();
@@ -26,7 +25,7 @@ public abstract class ConsensusCommitAdminIntegrationTestBase
 
   @AfterAll
   @Override
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     super.afterAll();
 
     adminWithIncludeMetadataEnabled.close();

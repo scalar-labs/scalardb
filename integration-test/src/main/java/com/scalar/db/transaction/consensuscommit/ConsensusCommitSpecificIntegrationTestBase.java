@@ -139,7 +139,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @BeforeEach
-  public void setUp() throws ExecutionException {
+  public void setUp() throws Exception {
     truncateTables();
     storage = spy(originalStorage);
     coordinator = spy(new Coordinator(storage, consensusCommitConfig));
@@ -166,7 +166,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @AfterAll
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     dropTables();
     consensusCommitAdmin.close();
     originalStorage.close();

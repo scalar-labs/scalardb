@@ -115,7 +115,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @AfterAll
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     dropTables();
     admin.close();
   }

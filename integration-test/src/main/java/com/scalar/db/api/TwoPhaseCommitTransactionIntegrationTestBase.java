@@ -109,14 +109,14 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @BeforeEach
-  public void setUp() throws ExecutionException {
+  public void setUp() throws Exception {
     admin1.truncateTable(namespace1, TABLE_1);
     admin1.truncateCoordinatorTables();
     admin2.truncateTable(namespace2, TABLE_2);
   }
 
   @AfterAll
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     dropTables();
     admin1.close();
     admin2.close();

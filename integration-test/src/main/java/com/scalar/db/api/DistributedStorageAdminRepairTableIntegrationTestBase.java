@@ -93,7 +93,7 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
   }
 
   @BeforeEach
-  protected void beforeEach() throws Exception {
+  protected void setUp() throws Exception {
     StorageFactory factory = StorageFactory.create(getProperties(TEST_NAME));
     admin = factory.getStorageAdmin();
     createTable();

@@ -95,13 +95,13 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @BeforeEach
-  public void setUp() throws ExecutionException {
+  public void setUp() throws Exception {
     admin.truncateTable(namespace, TABLE);
     admin.truncateCoordinatorTables();
   }
 
   @AfterAll
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     dropTables();
     admin.close();
     manager.close();
