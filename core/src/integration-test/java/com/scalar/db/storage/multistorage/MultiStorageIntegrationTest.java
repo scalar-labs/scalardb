@@ -3,10 +3,12 @@ package com.scalar.db.storage.multistorage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -23,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -880,6 +883,70 @@ public class MultiStorageIntegrationTest {
     // Arrange Act Assert
     assertThatThrownBy(() -> multiStorage.mutate(Collections.emptyList()))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void operation_WhenDefaultNamespaceGiven_ShouldWorkProperly() {
+    Properties properties = MultiStorageEnv.getPropertiesForCassandra(TEST_NAME);
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, NAMESPACE1);
+    final DistributedStorage storageWithDefaultNamespace =
+        StorageFactory.create(properties).getStorage();
+    try {
+      Put putRecord1 =
+          Put.newBuilder()
+              .table(TABLE1)
+              .partitionKey(Key.ofInt(COL_NAME1, 0))
+              .clusteringKey(Key.ofInt(COL_NAME4, 1))
+              .build();
+      Put putRecord2 =
+          Put.newBuilder()
+              .table(TABLE1)
+              .partitionKey(Key.ofInt(COL_NAME1, 0))
+              .clusteringKey(Key.ofInt(COL_NAME4, 2))
+              .build();
+      Get getRecord1 =
+          Get.newBuilder()
+              .table(TABLE1)
+              .partitionKey(Key.ofInt(COL_NAME1, 0))
+              .clusteringKey(Key.ofInt(COL_NAME4, 1))
+              .build();
+      Scan scanAllRecords = Scan.newBuilder().table(TABLE1).all().build();
+      Mutation updateRecord1 =
+          Put.newBuilder()
+              .table(TABLE1)
+              .partitionKey(Key.ofInt(COL_NAME1, 0))
+              .clusteringKey(Key.ofInt(COL_NAME4, 1))
+              .textValue(COL_NAME2, "foo")
+              .build();
+      Mutation deleteRecord2 =
+          Delete.newBuilder()
+              .table(TABLE1)
+              .partitionKey(Key.ofInt(COL_NAME1, 0))
+              .clusteringKey(Key.ofInt(COL_NAME4, 2))
+              .build();
+      Delete deleteRecord1 =
+          Delete.newBuilder()
+              .table(TABLE1)
+              .partitionKey(Key.ofInt(COL_NAME1, 0))
+              .clusteringKey(Key.ofInt(COL_NAME4, 1))
+              .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                storageWithDefaultNamespace.put(putRecord1);
+                storageWithDefaultNamespace.put(putRecord2);
+                storageWithDefaultNamespace.get(getRecord1);
+                storageWithDefaultNamespace.scan(scanAllRecords).close();
+                storageWithDefaultNamespace.mutate(ImmutableList.of(updateRecord1, deleteRecord2));
+                storageWithDefaultNamespace.delete(deleteRecord1);
+              })
+          .doesNotThrowAnyException();
+    } finally {
+      if (storageWithDefaultNamespace != null) {
+        storageWithDefaultNamespace.close();
+      }
+    }
   }
 
   private int getCol1Value(Result result) {

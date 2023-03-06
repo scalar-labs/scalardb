@@ -58,6 +58,7 @@ public class GrpcStorage extends AbstractDistributedStorage {
 
   @Inject
   public GrpcStorage(DatabaseConfig databaseConfig) {
+    super(databaseConfig);
     config = new GrpcConfig(databaseConfig);
     channel = GrpcUtils.createChannel(config);
     stub = DistributedStorageGrpc.newStub(channel);
@@ -69,10 +70,12 @@ public class GrpcStorage extends AbstractDistributedStorage {
 
   @VisibleForTesting
   GrpcStorage(
+      DatabaseConfig databaseConfig,
       GrpcConfig config,
       DistributedStorageGrpc.DistributedStorageStub stub,
       DistributedStorageGrpc.DistributedStorageBlockingStub blockingStub,
       TableMetadataManager metadataManager) {
+    super(databaseConfig);
     this.config = config;
     channel = null;
     this.stub = stub;

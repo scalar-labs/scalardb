@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.BlobColumn;
@@ -33,6 +34,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.IntStream;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -159,6 +161,67 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act Assert
     assertThatThrownBy(() -> storage.get(get)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void operation_DefaultNamespaceGiven_ShouldWorkProperly() {
+    Properties properties = getProperties(TEST_NAME);
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, getNamespace());
+    final DistributedStorage storageWithDefaultNamespace =
+        StorageFactory.create(properties).getStorage();
+    try {
+      // Arrange
+      populateRecords();
+      Get get =
+          Get.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(COL_NAME1, 0))
+              .clusteringKey(Key.ofInt(COL_NAME4, 0))
+              .build();
+      Scan scan = Scan.newBuilder().table(TABLE).partitionKey(Key.ofInt(COL_NAME1, 0)).build();
+      Put put =
+          Put.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(COL_NAME1, 1))
+              .clusteringKey(Key.ofInt(COL_NAME4, 0))
+              .textValue(COL_NAME2, "foo")
+              .build();
+      Delete delete =
+          Delete.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(COL_NAME1, 2))
+              .clusteringKey(Key.ofInt(COL_NAME4, 0))
+              .build();
+      Mutation putAsMutation1 =
+          Put.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(COL_NAME1, 3))
+              .clusteringKey(Key.ofInt(COL_NAME4, 0))
+              .textValue(COL_NAME2, "foo")
+              .build();
+      Mutation deleteAsMutation2 =
+          Delete.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(COL_NAME1, 3))
+              .clusteringKey(Key.ofInt(COL_NAME4, 1))
+              .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                storageWithDefaultNamespace.get(get);
+                storageWithDefaultNamespace.scan(scan).close();
+                storageWithDefaultNamespace.put(put);
+                storageWithDefaultNamespace.delete(delete);
+                storageWithDefaultNamespace.mutate(
+                    ImmutableList.of(putAsMutation1, deleteAsMutation2));
+              })
+          .doesNotThrowAnyException();
+    } finally {
+      if (storageWithDefaultNamespace != null) {
+        storageWithDefaultNamespace.close();
+      }
+    }
   }
 
   @Test

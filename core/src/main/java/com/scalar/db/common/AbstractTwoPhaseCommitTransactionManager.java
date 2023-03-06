@@ -9,6 +9,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationException;
@@ -31,8 +32,8 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
   private final List<TwoPhaseCommitTransactionDecorator> transactionDecorators =
       new CopyOnWriteArrayList<>();
 
-  public AbstractTwoPhaseCommitTransactionManager() {
-    namespace = Optional.empty();
+  public AbstractTwoPhaseCommitTransactionManager(DatabaseConfig config) {
+    namespace = config.getDefaultNamespaceName();
     tableName = Optional.empty();
 
     addTransactionDecorator(StateManagedTransaction::new);
