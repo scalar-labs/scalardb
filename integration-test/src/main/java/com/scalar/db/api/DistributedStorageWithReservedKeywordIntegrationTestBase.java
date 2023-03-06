@@ -103,7 +103,7 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
   }
 
   @BeforeEach
-  public void setUp() throws ExecutionException {
+  public void setUp() throws Exception {
     truncateTable();
     storage.with(namespace, tableName);
   }
@@ -113,7 +113,7 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
   }
 
   @AfterAll
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     dropTable();
     admin.close();
     storage.close();

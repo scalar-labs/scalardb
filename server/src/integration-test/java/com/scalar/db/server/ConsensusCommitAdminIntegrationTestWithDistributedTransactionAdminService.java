@@ -5,7 +5,6 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
-import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -21,7 +20,7 @@ public class ConsensusCommitAdminIntegrationTestWithDistributedTransactionAdminS
   private boolean isExternalServerUsed;
 
   @Override
-  protected void initialize(String testName) throws IOException {
+  protected void initialize(String testName) throws Exception {
     super.initialize(testName);
 
     Properties properties = ServerEnv.getServer1Properties(testName);
@@ -60,7 +59,7 @@ public class ConsensusCommitAdminIntegrationTestWithDistributedTransactionAdminS
 
   @AfterAll
   @Override
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     super.afterAll();
     if (server != null) {
       server.shutdown();
