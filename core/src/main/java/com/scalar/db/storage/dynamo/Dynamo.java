@@ -48,6 +48,7 @@ public class Dynamo extends AbstractDistributedStorage {
 
   @Inject
   public Dynamo(DatabaseConfig databaseConfig) {
+    super(databaseConfig);
     DynamoConfig config = new DynamoConfig(databaseConfig);
 
     DynamoDbClientBuilder builder = DynamoDbClient.builder();

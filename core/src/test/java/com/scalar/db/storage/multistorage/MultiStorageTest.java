@@ -10,6 +10,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
@@ -31,7 +32,7 @@ public class MultiStorageTest {
   protected static final String COL_NAME1 = "c1";
   protected static final String COL_NAME2 = "c2";
   protected static final String COL_NAME3 = "c3";
-
+  @Mock private DatabaseConfig databaseConfig;
   @Mock private DistributedStorage storage1;
   @Mock private DistributedStorage storage2;
   @Mock private DistributedStorage storage3;
@@ -49,7 +50,8 @@ public class MultiStorageTest {
     Map<String, DistributedStorage> namespaceStorageMap = new HashMap<>();
     namespaceStorageMap.put(NAMESPACE2, storage2);
     DistributedStorage defaultStorage = storage3;
-    multiStorage = new MultiStorage(tableStorageMap, namespaceStorageMap, defaultStorage);
+    multiStorage =
+        new MultiStorage(databaseConfig, tableStorageMap, namespaceStorageMap, defaultStorage);
   }
 
   @Test

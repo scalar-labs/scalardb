@@ -12,6 +12,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -32,6 +33,7 @@ public class JdbcDatabaseTest {
   private static final String NAMESPACE = "ns";
   private static final String TABLE = "tbl";
 
+  @Mock private DatabaseConfig databaseConfig;
   @Mock private BasicDataSource dataSource;
   @Mock private BasicDataSource tableMetadataDataSource;
   @Mock private JdbcService jdbcService;
@@ -53,6 +55,7 @@ public class JdbcDatabaseTest {
 
     jdbcDatabase =
         new JdbcDatabase(
+            databaseConfig,
             dataSource,
             tableMetadataDataSource,
             RdbEngine.createRdbEngineStrategy(RdbEngine.MYSQL),

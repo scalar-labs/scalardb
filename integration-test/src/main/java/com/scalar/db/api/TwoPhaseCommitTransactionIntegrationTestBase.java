@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Scan.Ordering;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -29,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.IntStream;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -1166,6 +1168,70 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     // Act Assert
     assertThatThrownBy(() -> manager1.resume(transaction.getId()))
         .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void operation_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    final TwoPhaseCommitTransactionManager manager1WithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager();
+    try {
+      // Arrange
+      populateRecords(manager1WithDefaultNamespace, namespace1, TABLE_1);
+      Get get =
+          Get.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .build();
+      Scan scan = Scan.newBuilder().table(TABLE_1).all().build();
+      Put put =
+          Put.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Delete delete =
+          Delete.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .build();
+      Mutation putAsMutation1 =
+          Put.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Mutation deleteAsMutation2 =
+          Delete.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+              .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                TwoPhaseCommitTransaction tx = manager1WithDefaultNamespace.start();
+                tx.get(get);
+                tx.scan(scan);
+                tx.put(put);
+                tx.delete(delete);
+                tx.mutate(ImmutableList.of(putAsMutation1, deleteAsMutation2));
+                tx.prepare();
+                tx.validate();
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    } finally {
+      if (manager1WithDefaultNamespace != null) {
+        manager1WithDefaultNamespace.close();
+      }
+    }
   }
 
   protected void populateRecords(

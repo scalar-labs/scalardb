@@ -85,13 +85,20 @@ public class GrpcTwoPhaseCommitTransactionManager
         () -> {
           GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getStream();
           String transactionId = stream.beginTransaction(txId);
-          GrpcTwoPhaseCommitTransaction transaction =
-              new GrpcTwoPhaseCommitTransaction(transactionId, stream);
-          getNamespace().ifPresent(transaction::withNamespace);
-          getTable().ifPresent(transaction::withTable);
+          GrpcTwoPhaseCommitTransaction transaction = createTransaction(stream, transactionId);
           return decorate(transaction);
         },
         EXCEPTION_FACTORY);
+  }
+
+  private GrpcTwoPhaseCommitTransaction createTransaction(
+      GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream, String transactionId) {
+    GrpcTwoPhaseCommitTransaction transaction =
+        new GrpcTwoPhaseCommitTransaction(transactionId, stream);
+    getNamespace().ifPresent(transaction::withNamespace);
+    getTable().ifPresent(transaction::withTable);
+
+    return transaction;
   }
 
   @Override
@@ -110,10 +117,7 @@ public class GrpcTwoPhaseCommitTransactionManager
         () -> {
           GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getStream();
           String transactionId = stream.startTransaction(txId);
-          GrpcTwoPhaseCommitTransaction transaction =
-              new GrpcTwoPhaseCommitTransaction(transactionId, stream);
-          getNamespace().ifPresent(transaction::withNamespace);
-          getTable().ifPresent(transaction::withTable);
+          GrpcTwoPhaseCommitTransaction transaction = createTransaction(stream, transactionId);
           return decorate(transaction);
         },
         EXCEPTION_FACTORY);
@@ -125,10 +129,7 @@ public class GrpcTwoPhaseCommitTransactionManager
         () -> {
           GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getStream();
           stream.joinTransaction(txId);
-          GrpcTwoPhaseCommitTransaction transaction =
-              new GrpcTwoPhaseCommitTransaction(txId, stream);
-          getNamespace().ifPresent(transaction::withNamespace);
-          getTable().ifPresent(transaction::withTable);
+          GrpcTwoPhaseCommitTransaction transaction = createTransaction(stream, txId);
           return decorate(transaction);
         },
         EXCEPTION_FACTORY);

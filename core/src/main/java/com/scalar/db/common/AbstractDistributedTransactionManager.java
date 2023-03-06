@@ -9,6 +9,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
@@ -29,8 +30,8 @@ public abstract class AbstractDistributedTransactionManager
   private final List<DistributedTransactionDecorator> transactionDecorators =
       new CopyOnWriteArrayList<>();
 
-  public AbstractDistributedTransactionManager() {
-    namespace = Optional.empty();
+  public AbstractDistributedTransactionManager(DatabaseConfig databaseConfig) {
+    namespace = databaseConfig.getDefaultNamespaceName();
     tableName = Optional.empty();
 
     addTransactionDecorator(StateManagedTransaction::new);

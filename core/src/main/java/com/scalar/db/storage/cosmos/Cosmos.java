@@ -44,6 +44,7 @@ public class Cosmos extends AbstractDistributedStorage {
 
   @Inject
   public Cosmos(DatabaseConfig databaseConfig) {
+    super(databaseConfig);
     CosmosConfig config = new CosmosConfig(databaseConfig);
 
     client =

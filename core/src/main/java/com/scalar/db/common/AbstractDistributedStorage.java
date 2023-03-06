@@ -6,6 +6,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
@@ -15,8 +16,8 @@ public abstract class AbstractDistributedStorage implements DistributedStorage {
   private Optional<String> namespace;
   private Optional<String> tableName;
 
-  public AbstractDistributedStorage() {
-    namespace = Optional.empty();
+  public AbstractDistributedStorage(DatabaseConfig config) {
+    namespace = config.getDefaultNamespaceName();
     tableName = Optional.empty();
   }
 

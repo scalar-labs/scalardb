@@ -99,12 +99,19 @@ public class GrpcTransactionManager extends ActiveTransactionManagedDistributedT
         () -> {
           GrpcTransactionOnBidirectionalStream stream = getStream();
           String transactionId = stream.beginTransaction(txId);
-          GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
-          getNamespace().ifPresent(transaction::withNamespace);
-          getTable().ifPresent(transaction::withTable);
+          GrpcTransaction transaction = createTransaction(stream, transactionId);
           return decorate(transaction);
         },
         EXCEPTION_FACTORY);
+  }
+
+  private GrpcTransaction createTransaction(
+      GrpcTransactionOnBidirectionalStream stream, String transactionId) {
+    GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
+    getNamespace().ifPresent(transaction::withNamespace);
+    getTable().ifPresent(transaction::withTable);
+
+    return transaction;
   }
 
   @Override
@@ -122,9 +129,7 @@ public class GrpcTransactionManager extends ActiveTransactionManagedDistributedT
         () -> {
           GrpcTransactionOnBidirectionalStream stream = getStream();
           String transactionId = stream.startTransaction(txId);
-          GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
-          getNamespace().ifPresent(transaction::withNamespace);
-          getTable().ifPresent(transaction::withTable);
+          GrpcTransaction transaction = createTransaction(stream, transactionId);
           return decorate(transaction);
         },
         EXCEPTION_FACTORY);

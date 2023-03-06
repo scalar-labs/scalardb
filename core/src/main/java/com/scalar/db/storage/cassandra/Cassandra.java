@@ -42,6 +42,7 @@ public class Cassandra extends AbstractDistributedStorage {
 
   @Inject
   public Cassandra(DatabaseConfig config) {
+    super(config);
     clusterManager = new ClusterManager(config);
     Session session = clusterManager.getSession();
 
