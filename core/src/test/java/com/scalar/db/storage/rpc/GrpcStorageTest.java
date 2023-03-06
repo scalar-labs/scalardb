@@ -11,6 +11,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
@@ -25,7 +26,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class GrpcStorageTest {
-
+  @Mock private DatabaseConfig databaseConfig;
   @Mock private GrpcConfig config;
   @Mock private DistributedStorageGrpc.DistributedStorageStub stub;
   @Mock private DistributedStorageGrpc.DistributedStorageBlockingStub blockingStub;
@@ -38,7 +39,7 @@ public class GrpcStorageTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    storage = new GrpcStorage(config, stub, blockingStub, metadataManager);
+    storage = new GrpcStorage(databaseConfig, config, stub, blockingStub, metadataManager);
     storage.with("namespace", "table");
     when(config.getDeadlineDurationMillis()).thenReturn(60000L);
     when(blockingStub.withDeadlineAfter(anyLong(), any())).thenReturn(blockingStub);
