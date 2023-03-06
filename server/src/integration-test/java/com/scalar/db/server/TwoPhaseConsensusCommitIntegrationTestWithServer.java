@@ -3,54 +3,67 @@ package com.scalar.db.server;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitIntegrationTestBase;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 
-public class ConsensusCommitIntegrationTestWithDistributedTransactionService
-    extends ConsensusCommitIntegrationTestBase {
+public class TwoPhaseConsensusCommitIntegrationTestWithServer
+    extends TwoPhaseConsensusCommitIntegrationTestBase {
 
   private static final String PORT_FOR_SERVER_WITH_INCLUDE_METADATA_ENABLED = "60053";
 
-  private ScalarDbServer server;
+  private ScalarDbServer server1;
+  private ScalarDbServer server2;
   private ScalarDbServer serverWithIncludeMetadataEnabled;
   private boolean isExternalServerUsed;
 
   @Override
   protected void initialize(String testName) throws IOException {
-    Properties properties = ServerEnv.getServer1Properties(testName);
-    if (properties != null) {
-      // Add testName as a coordinator namespace suffix
-      String coordinatorNamespace =
-          properties.getProperty(
-              ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
-      properties.setProperty(
-          ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
+    Properties properties1 = ServerEnv.getServer1Properties(testName);
+    Properties properties2 = ServerEnv.getServer2Properties(testName);
+    if (properties1 != null && properties2 != null) {
+      server1 = new ScalarDbServer(modifyProperties(properties1, testName));
+      server1.start();
 
-      server = new ScalarDbServer(properties);
-      server.start();
+      server2 = new ScalarDbServer(modifyProperties(properties2, testName));
+      server2.start();
 
-      properties.setProperty(ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
-      properties.setProperty(ServerConfig.PORT, PORT_FOR_SERVER_WITH_INCLUDE_METADATA_ENABLED);
-      serverWithIncludeMetadataEnabled = new ScalarDbServer(properties);
+      properties1.setProperty(ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
+      properties1.setProperty(ServerConfig.PORT, PORT_FOR_SERVER_WITH_INCLUDE_METADATA_ENABLED);
+      serverWithIncludeMetadataEnabled = new ScalarDbServer(properties1);
       serverWithIncludeMetadataEnabled.start();
     } else {
       isExternalServerUsed = true;
     }
   }
 
+  private Properties modifyProperties(Properties properties, String testName) {
+    // Add testName as a coordinator namespace suffix
+    String coordinatorNamespace =
+        properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
+    properties.setProperty(
+        ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
+
+    return properties;
+  }
+
   @Override
-  protected Properties getProps(String testName) {
+  protected Properties getProps1(String testName) {
     return ServerEnv.getClient1Properties(testName);
   }
 
   @Override
+  protected Properties getProps2(String testName) {
+    return ServerEnv.getClient2Properties(testName);
+  }
+
+  @Override
   protected Properties getPropsWithIncludeMetadataEnabled(String testName) {
-    Properties properties = getProperties(testName);
+    Properties properties = getProperties1(testName);
     properties.setProperty(
         DatabaseConfig.CONTACT_PORT, PORT_FOR_SERVER_WITH_INCLUDE_METADATA_ENABLED);
     return properties;
@@ -60,8 +73,11 @@ public class ConsensusCommitIntegrationTestWithDistributedTransactionService
   @Override
   public void afterAll() throws Exception {
     super.afterAll();
-    if (server != null) {
-      server.shutdown();
+    if (server1 != null) {
+      server1.shutdown();
+    }
+    if (server2 != null) {
+      server2.shutdown();
     }
     if (serverWithIncludeMetadataEnabled != null) {
       serverWithIncludeMetadataEnabled.shutdown();

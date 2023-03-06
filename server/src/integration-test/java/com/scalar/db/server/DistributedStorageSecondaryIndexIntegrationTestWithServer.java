@@ -1,12 +1,12 @@
 package com.scalar.db.server;
 
-import com.scalar.db.api.DistributedStorageMultipleClusteringKeyScanIntegrationTestBase;
+import com.scalar.db.api.DistributedStorageSecondaryIndexIntegrationTestBase;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 
-public class DistributedStorageServiceMultipleClusteringKeyScanIntegrationTest
-    extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
+public class DistributedStorageSecondaryIndexIntegrationTestWithServer
+    extends DistributedStorageSecondaryIndexIntegrationTestBase {
 
   private ScalarDbServer server;
 
