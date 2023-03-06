@@ -10,7 +10,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 
-public class ConsensusCommitAdminRepairTableIntegrationTestWithDistributedTransactionAdminService
+public class ConsensusCommitAdminRepairTableIntegrationTestWithServer
     extends ConsensusCommitAdminRepairTableIntegrationTestBase {
 
   private ScalarDbServer server;

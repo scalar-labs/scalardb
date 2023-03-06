@@ -10,7 +10,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 
-public class ConsensusCommitAdminIntegrationTestWithDistributedTransactionAdminService
+public class ConsensusCommitAdminIntegrationTestWithServer
     extends ConsensusCommitAdminIntegrationTestBase {
 
   private static final String PORT_FOR_SERVER_WITH_INCLUDE_METADATA_ENABLED = "60053";
