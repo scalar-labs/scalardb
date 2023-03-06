@@ -121,12 +121,12 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   }
 
   @BeforeEach
-  public void setUp() throws ExecutionException {
+  public void setUp() throws Exception {
     admin.truncateTable(namespace, TABLE);
   }
 
   @AfterAll
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     dropTable();
     admin.close();
     storage.close();

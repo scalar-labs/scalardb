@@ -1,7 +1,6 @@
 package com.scalar.db.server;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
@@ -72,7 +71,7 @@ public class TwoPhaseConsensusCommitIntegrationTestWithTwoPhaseCommitTransaction
 
   @AfterAll
   @Override
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     super.afterAll();
     if (server1 != null) {
       server1.shutdown();

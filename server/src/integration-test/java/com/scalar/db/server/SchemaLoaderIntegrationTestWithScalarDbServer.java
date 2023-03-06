@@ -1,6 +1,5 @@
 package com.scalar.db.server;
 
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
@@ -42,7 +41,7 @@ public class SchemaLoaderIntegrationTestWithScalarDbServer extends SchemaLoaderI
 
   @AfterAll
   @Override
-  public void afterAll() throws ExecutionException, IOException {
+  public void afterAll() throws Exception {
     super.afterAll();
     if (server != null) {
       server.shutdown();
