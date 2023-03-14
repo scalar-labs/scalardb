@@ -1,25 +1,20 @@
 package com.scalar.db.exception.transaction;
 
-import java.util.Optional;
-
 /** An exception thrown when the transaction status of the committing transaction is unknown. */
 public class UnknownTransactionStatusException extends TransactionException {
-  private Optional<String> unknownTxId = Optional.empty();
+  private final String unknownTxId;
 
-  public UnknownTransactionStatusException(String message) {
+  public UnknownTransactionStatusException(String message, String txId) {
     super(message);
-  }
-
-  public UnknownTransactionStatusException(String message, Throwable cause) {
-    super(message, cause);
+    this.unknownTxId = txId;
   }
 
   public UnknownTransactionStatusException(String message, Throwable cause, String txId) {
     super(message, cause);
-    this.unknownTxId = Optional.ofNullable(txId);
+    this.unknownTxId = txId;
   }
 
-  public Optional<String> getUnknownTransactionId() {
+  public String getUnknownTransactionId() {
     return unknownTxId;
   }
 }

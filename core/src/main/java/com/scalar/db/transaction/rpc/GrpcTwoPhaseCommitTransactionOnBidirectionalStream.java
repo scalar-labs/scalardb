@@ -65,6 +65,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
   private final AtomicBoolean finished = new AtomicBoolean();
 
   private ClientCallStreamObserver<TwoPhaseCommitTransactionRequest> requestStream;
+  private String transactionId;
 
   public GrpcTwoPhaseCommitTransactionOnBidirectionalStream(
       GrpcConfig config,
@@ -133,7 +134,8 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     ResponseOrError responseOrError =
         sendRequest(TwoPhaseCommitTransactionRequest.newBuilder().setBeginRequest(request).build());
     throwIfErrorForBeginOrStartOrJoin(responseOrError, "begin");
-    return responseOrError.getResponse().getBeginResponse().getTransactionId();
+    this.transactionId = responseOrError.getResponse().getBeginResponse().getTransactionId();
+    return this.transactionId;
   }
 
   public String startTransaction(@Nullable String transactionId) throws TransactionException {
@@ -148,7 +150,8 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     ResponseOrError responseOrError =
         sendRequest(TwoPhaseCommitTransactionRequest.newBuilder().setStartRequest(request).build());
     throwIfErrorForBeginOrStartOrJoin(responseOrError, "start");
-    return responseOrError.getResponse().getStartResponse().getTransactionId();
+    this.transactionId = responseOrError.getResponse().getStartResponse().getTransactionId();
+    return this.transactionId;
   }
 
   public void joinTransaction(String transactionId) throws TransactionException {
@@ -160,6 +163,8 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
                 .setJoinRequest(JoinRequest.newBuilder().setTransactionId(transactionId).build())
                 .build());
     throwIfErrorForBeginOrStartOrJoin(responseOrError, "join");
+
+    this.transactionId = transactionId;
   }
 
   private void throwIfErrorForBeginOrStartOrJoin(ResponseOrError responseOrError, String command)
@@ -366,7 +371,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
         case TRANSACTION_CONFLICT:
           throw new CommitConflictException(error.getMessage());
         case UNKNOWN_TRANSACTION_STATUS:
-          throw new UnknownTransactionStatusException(error.getMessage());
+          throw new UnknownTransactionStatusException(error.getMessage(), transactionId);
         default:
           throw new CommitException(error.getMessage());
       }

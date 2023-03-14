@@ -55,6 +55,7 @@ public class GrpcTransactionOnBidirectionalStream
   private final AtomicBoolean finished = new AtomicBoolean();
 
   private ClientCallStreamObserver<TransactionRequest> requestStream;
+  private String transactionId;
 
   public GrpcTransactionOnBidirectionalStream(
       GrpcConfig config, DistributedTransactionStub stub, TableMetadataManager metadataManager) {
@@ -118,7 +119,8 @@ public class GrpcTransactionOnBidirectionalStream
     ResponseOrError responseOrError =
         sendRequest(TransactionRequest.newBuilder().setBeginRequest(request).build());
     throwIfErrorForBeginOrStart(responseOrError, "begin");
-    return responseOrError.getResponse().getBeginResponse().getTransactionId();
+    this.transactionId = responseOrError.getResponse().getBeginResponse().getTransactionId();
+    return this.transactionId;
   }
 
   public String startTransaction(@Nullable String transactionId) throws TransactionException {
@@ -134,7 +136,8 @@ public class GrpcTransactionOnBidirectionalStream
     ResponseOrError responseOrError =
         sendRequest(TransactionRequest.newBuilder().setStartRequest(request).build());
     throwIfErrorForBeginOrStart(responseOrError, "start");
-    return responseOrError.getResponse().getStartResponse().getTransactionId();
+    this.transactionId = responseOrError.getResponse().getStartResponse().getTransactionId();
+    return this.transactionId;
   }
 
   private void throwIfErrorForBeginOrStart(ResponseOrError responseOrError, String command)
@@ -276,7 +279,7 @@ public class GrpcTransactionOnBidirectionalStream
         case TRANSACTION_CONFLICT:
           throw new CommitConflictException(error.getMessage());
         case UNKNOWN_TRANSACTION_STATUS:
-          throw new UnknownTransactionStatusException(error.getMessage());
+          throw new UnknownTransactionStatusException(error.getMessage(), transactionId);
         default:
           throw new CommitException(error.getMessage());
       }

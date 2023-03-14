@@ -151,7 +151,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
       try {
         connection.rollback();
       } catch (SQLException sqlException) {
-        throw new UnknownTransactionStatusException("failed to rollback", sqlException);
+        throw new UnknownTransactionStatusException("failed to rollback", sqlException, txId);
       }
       throw createCommitException(e);
     } finally {
