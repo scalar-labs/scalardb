@@ -60,7 +60,10 @@ public class CrudHandler {
       snapshot.put(key, result);
       return createGetResult(key, originalProjections);
     }
-    throw new UncommittedRecordException(result.get(), "this record needs recovery");
+    throw new UncommittedRecordException(
+        result.get(),
+        "this record needs recovery. transactionId: " + snapshot.getId(),
+        snapshot.getId());
   }
 
   private Optional<Result> createGetResult(Snapshot.Key key, List<String> projections)
@@ -91,7 +94,10 @@ public class CrudHandler {
       for (Result r : scanner) {
         TransactionResult result = new TransactionResult(r);
         if (!result.isCommitted()) {
-          throw new UncommittedRecordException(result, "the record needs recovery");
+          throw new UncommittedRecordException(
+              result,
+              "the record needs recovery. transactionId: " + snapshot.getId(),
+              snapshot.getId());
         }
 
         Snapshot.Key key = new Snapshot.Key(scan, r);
@@ -146,7 +152,8 @@ public class CrudHandler {
       get.withConsistency(Consistency.LINEARIZABLE);
       return storage.get(get).map(TransactionResult::new);
     } catch (ExecutionException e) {
-      throw new CrudException("get failed.", e);
+      throw new CrudException(
+          "get failed. transactionId: " + snapshot.getId(), e, snapshot.getId());
     }
   }
 
@@ -163,7 +170,8 @@ public class CrudHandler {
       scan.withConsistency(Consistency.LINEARIZABLE);
       return storage.scan(scan);
     } catch (ExecutionException e) {
-      throw new CrudException("scan failed.", e);
+      throw new CrudException(
+          "scan failed. transactionId: " + snapshot.getId(), e, snapshot.getId());
     }
   }
 
@@ -178,7 +186,10 @@ public class CrudHandler {
       }
       return metadata.getTableMetadata();
     } catch (ExecutionException e) {
-      throw new CrudException("getting a table metadata failed", e);
+      throw new CrudException(
+          "getting a table metadata failed. transactionId: " + snapshot.getId(),
+          e,
+          snapshot.getId());
     }
   }
 

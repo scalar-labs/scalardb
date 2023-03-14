@@ -44,7 +44,7 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
               try {
                 t.rollback();
               } catch (Exception e) {
-                logger.warn("rollback failed", e);
+                logger.warn("rollback failed. transactionId: {}", t.getId(), e);
               }
             });
   }
@@ -52,8 +52,7 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
   private void add(ActiveTransaction transaction) throws TransactionException {
     if (activeTransactions.putIfAbsent(transaction.getId(), transaction) != null) {
       transaction.rollback();
-      throw new TransactionException(
-          "The transaction already exists. transactionId: " + transaction.getId());
+      throw new TransactionException("The transaction already exists", transaction.getId());
     }
   }
 
@@ -70,7 +69,8 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
                 new TransactionNotFoundException(
                     "A transaction associated with the specified transaction ID is not found. "
                         + "It might have been expired. transactionId: "
-                        + txId));
+                        + txId,
+                    txId));
   }
 
   @Override

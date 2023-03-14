@@ -51,9 +51,9 @@ public class CommitHandler {
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
       if (e instanceof PreparationConflictException) {
-        throw new CommitConflictException(e.getMessage(), e);
+        throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
       }
-      throw new CommitException(e.getMessage(), e);
+      throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
     }
 
     try {
@@ -62,9 +62,9 @@ public class CommitHandler {
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
       if (e instanceof ValidationConflictException) {
-        throw new CommitConflictException(e.getMessage(), e);
+        throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
       }
-      throw new CommitException(e.getMessage(), e);
+      throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
     }
 
     commitState(snapshot);
@@ -75,11 +75,16 @@ public class CommitHandler {
     try {
       prepareRecords(snapshot);
     } catch (NoMutationException e) {
-      throw new PreparationConflictException("preparing record exists", e);
+      throw new PreparationConflictException(
+          "preparing record exists. transactionId: " + snapshot.getId(), e, snapshot.getId());
     } catch (RetriableExecutionException e) {
-      throw new PreparationConflictException("conflict happened when preparing records", e);
+      throw new PreparationConflictException(
+          "conflict happened when preparing records. transactionId: " + snapshot.getId(),
+          e,
+          snapshot.getId());
     } catch (ExecutionException e) {
-      throw new PreparationException("preparing records failed", e);
+      throw new PreparationException(
+          "preparing records failed. transactionId: " + snapshot.getId(), e, snapshot.getId());
     }
   }
 
@@ -102,7 +107,8 @@ public class CommitHandler {
       // validation is executed when SERIALIZABLE with EXTRA_READ strategy is chosen.
       snapshot.toSerializableWithExtraRead(storage);
     } catch (ExecutionException e) {
-      throw new ValidationException("validation failed", e);
+      throw new ValidationException(
+          "validation failed. transactionId: " + snapshot.getId(), e, snapshot.getId());
     }
   }
 
@@ -122,19 +128,25 @@ public class CommitHandler {
           if (state.equals(TransactionState.ABORTED)) {
             rollbackRecords(snapshot);
             throw new CommitException(
-                "committing state in coordinator failed. the transaction is aborted", e);
+                "committing state in coordinator failed. the transaction is aborted. transactionId: "
+                    + id,
+                e,
+                id);
           }
         } else {
           throw new UnknownTransactionStatusException(
-              "committing state failed with NoMutationException but the coordinator status doesn't exist",
+              "committing state failed with NoMutationException but the coordinator status doesn't exist. transactionId: "
+                  + id,
               e,
               id);
         }
       } catch (CoordinatorException e1) {
-        throw new UnknownTransactionStatusException("can't get the state", e1, id);
+        throw new UnknownTransactionStatusException(
+            "can't get the state. transactionId: " + id, e1, id);
       }
     } catch (CoordinatorException e) {
-      throw new UnknownTransactionStatusException("coordinator status is unknown", e, id);
+      throw new UnknownTransactionStatusException(
+          "coordinator status is unknown. transactionId: " + id, e, id);
     }
   }
 
@@ -151,7 +163,7 @@ public class CommitHandler {
       }
       parallelExecutor.commitRecords(tasks, snapshot.getId());
     } catch (Exception e) {
-      logger.warn("committing records failed", e);
+      logger.warn("committing records failed. transactionId: {}", snapshot.getId(), e);
       // ignore since records are recovered lazily
     }
   }
@@ -169,14 +181,17 @@ public class CommitHandler {
           return state.get().getState();
         }
         throw new UnknownTransactionStatusException(
-            "aborting state failed with NoMutationException but the coordinator status doesn't exist",
+            "aborting state failed with NoMutationException but the coordinator status doesn't exist. transactionId: "
+                + id,
             e,
             id);
       } catch (CoordinatorException e1) {
-        throw new UnknownTransactionStatusException("can't get the state", e1, id);
+        throw new UnknownTransactionStatusException(
+            "can't get the state. transactionId: " + id, e1, id);
       }
     } catch (CoordinatorException e) {
-      throw new UnknownTransactionStatusException("coordinator status is unknown", e, id);
+      throw new UnknownTransactionStatusException(
+          "coordinator status is unknown. transactionId: " + id, e, id);
     }
   }
 
@@ -195,7 +210,7 @@ public class CommitHandler {
       }
       parallelExecutor.rollbackRecords(tasks, snapshot.getId());
     } catch (Exception e) {
-      logger.warn("rolling back records failed", e);
+      logger.warn("rolling back records failed. transactionId: {}", snapshot.getId(), e);
       // ignore since records are recovered lazily
     }
   }

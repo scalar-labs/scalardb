@@ -65,6 +65,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
   private final AtomicBoolean finished = new AtomicBoolean();
 
   private ClientCallStreamObserver<TwoPhaseCommitTransactionRequest> requestStream;
+  private String transactionId;
 
   public GrpcTwoPhaseCommitTransactionOnBidirectionalStream(
       GrpcConfig config,
@@ -133,7 +134,8 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     ResponseOrError responseOrError =
         sendRequest(TwoPhaseCommitTransactionRequest.newBuilder().setBeginRequest(request).build());
     throwIfErrorForBeginOrStartOrJoin(responseOrError, "begin");
-    return responseOrError.getResponse().getBeginResponse().getTransactionId();
+    this.transactionId = responseOrError.getResponse().getBeginResponse().getTransactionId();
+    return this.transactionId;
   }
 
   public String startTransaction(@Nullable String transactionId) throws TransactionException {
@@ -148,7 +150,8 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     ResponseOrError responseOrError =
         sendRequest(TwoPhaseCommitTransactionRequest.newBuilder().setStartRequest(request).build());
     throwIfErrorForBeginOrStartOrJoin(responseOrError, "start");
-    return responseOrError.getResponse().getStartResponse().getTransactionId();
+    this.transactionId = responseOrError.getResponse().getStartResponse().getTransactionId();
+    return this.transactionId;
   }
 
   public void joinTransaction(String transactionId) throws TransactionException {
@@ -160,6 +163,8 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
                 .setJoinRequest(JoinRequest.newBuilder().setTransactionId(transactionId).build())
                 .build());
     throwIfErrorForBeginOrStartOrJoin(responseOrError, "join");
+
+    this.transactionId = transactionId;
   }
 
   private void throwIfErrorForBeginOrStartOrJoin(ResponseOrError responseOrError, String command)
@@ -179,7 +184,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new TransactionException("failed to " + command, error);
+      throw new TransactionException("failed to " + command, error, null);
     }
   }
 
@@ -222,7 +227,8 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     try {
       return metadataManager.getTableMetadata(operation);
     } catch (ExecutionException e) {
-      throw new CrudException("getting a metadata failed", e);
+      throw new CrudException(
+          "getting a metadata failed. transactionId: " + transactionId, e, transactionId);
     }
   }
 
@@ -256,7 +262,8 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new CrudException("failed to execute crud", error);
+      throw new CrudException(
+          "failed to execute crud. transactionId: " + transactionId, error, transactionId);
     }
 
     TwoPhaseCommitTransactionResponse response = responseOrError.getResponse();
@@ -266,9 +273,9 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
         case INVALID_ARGUMENT:
           throw new IllegalArgumentException(error.getMessage());
         case TRANSACTION_CONFLICT:
-          throw new CrudConflictException(error.getMessage());
+          throw new CrudConflictException(error.getMessage(), transactionId);
         default:
-          throw new CrudException(error.getMessage());
+          throw new CrudException(error.getMessage(), transactionId);
       }
     }
   }
@@ -292,16 +299,17 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new PreparationException("failed to prepare", error);
+      throw new PreparationException(
+          "failed to prepare. transactionId: " + transactionId, error, transactionId);
     }
 
     TwoPhaseCommitTransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
       TwoPhaseCommitTransactionResponse.Error error = response.getError();
       if (error.getErrorCode() == ErrorCode.TRANSACTION_CONFLICT) {
-        throw new PreparationConflictException(error.getMessage());
+        throw new PreparationConflictException(error.getMessage(), transactionId);
       }
-      throw new PreparationException(error.getMessage());
+      throw new PreparationException(error.getMessage(), transactionId);
     }
   }
 
@@ -324,16 +332,17 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new ValidationException("failed to validate", error);
+      throw new ValidationException(
+          "failed to validate. transactionId: " + transactionId, error, transactionId);
     }
 
     TwoPhaseCommitTransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
       TwoPhaseCommitTransactionResponse.Error error = response.getError();
       if (error.getErrorCode() == ErrorCode.TRANSACTION_CONFLICT) {
-        throw new ValidationConflictException(error.getMessage());
+        throw new ValidationConflictException(error.getMessage(), transactionId);
       }
-      throw new ValidationException(error.getMessage());
+      throw new ValidationException(error.getMessage(), transactionId);
     }
   }
 
@@ -356,7 +365,8 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new CommitException("failed to commit", error);
+      throw new CommitException(
+          "failed to commit. transactionId: " + transactionId, error, transactionId);
     }
 
     TwoPhaseCommitTransactionResponse response = responseOrError.getResponse();
@@ -364,11 +374,11 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
       TwoPhaseCommitTransactionResponse.Error error = response.getError();
       switch (error.getErrorCode()) {
         case TRANSACTION_CONFLICT:
-          throw new CommitConflictException(error.getMessage());
+          throw new CommitConflictException(error.getMessage(), transactionId);
         case UNKNOWN_TRANSACTION_STATUS:
-          throw new UnknownTransactionStatusException(error.getMessage());
+          throw new UnknownTransactionStatusException(error.getMessage(), transactionId);
         default:
-          throw new CommitException(error.getMessage());
+          throw new CommitException(error.getMessage(), transactionId);
       }
     }
   }
@@ -393,11 +403,12 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new RollbackException("failed to rollback", error);
+      throw new RollbackException(
+          "failed to rollback. transactionId: " + transactionId, error, transactionId);
     }
     TwoPhaseCommitTransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
-      throw new RollbackException(response.getError().getMessage());
+      throw new RollbackException(response.getError().getMessage(), transactionId);
     }
   }
 
@@ -421,11 +432,12 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new AbortException("failed to abort", error);
+      throw new AbortException(
+          "failed to abort. transactionId: " + transactionId, error, transactionId);
     }
     TwoPhaseCommitTransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
-      throw new AbortException(response.getError().getMessage());
+      throw new AbortException(response.getError().getMessage(), transactionId);
     }
   }
 

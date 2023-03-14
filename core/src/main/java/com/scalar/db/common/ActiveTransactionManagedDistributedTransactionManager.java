@@ -42,7 +42,7 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
               try {
                 t.rollback();
               } catch (Exception e) {
-                logger.warn("rollback failed", e);
+                logger.warn("rollback failed. transactionId: {}", t.getId(), e);
               }
             });
   }
@@ -50,8 +50,7 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
   private void add(ActiveTransaction transaction) throws TransactionException {
     if (activeTransactions.putIfAbsent(transaction.getId(), transaction) != null) {
       transaction.rollback();
-      throw new TransactionException(
-          "The transaction already exists. transactionId: " + transaction.getId());
+      throw new TransactionException("The transaction already exists", transaction.getId());
     }
   }
 
@@ -68,7 +67,8 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
                 new TransactionNotFoundException(
                     "A transaction associated with the specified transaction ID is not found. "
                         + "It might have been expired. transactionId: "
-                        + txId));
+                        + txId,
+                    txId));
   }
 
   @Override
