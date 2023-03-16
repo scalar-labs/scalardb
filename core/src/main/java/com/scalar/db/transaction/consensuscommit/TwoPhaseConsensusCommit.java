@@ -162,7 +162,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     try {
       commit.abortState(crud.getSnapshot().getId());
     } catch (UnknownTransactionStatusException e) {
-      throw new RollbackException("rollback failed", e);
+      throw new RollbackException("rollback failed", e, getId());
     }
 
     commit.rollbackRecords(crud.getSnapshot());
@@ -189,7 +189,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   }
 
   private void lazyRecovery(Selection selection, List<TransactionResult> results) {
-    logger.debug("recover uncommitted records: " + results);
+    logger.debug("recover uncommitted records: {}", results);
     beforeRecoveryHook.run();
     results.forEach(r -> recovery.recover(selection, r));
   }

@@ -38,11 +38,11 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
             config.getActiveTransactionManagementExpirationTimeMillis(),
             TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
             t -> {
-              logger.warn("the transaction is expired. transactionId: {}", t.getId());
+              logger.warn("the transaction is expired. transaction ID: {}", t.getId());
               try {
                 t.rollback();
               } catch (Exception e) {
-                logger.warn("rollback failed", e);
+                logger.warn("rollback failed. transaction ID: {}", t.getId(), e);
               }
             });
   }
@@ -50,8 +50,7 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
   private void add(ActiveTransaction transaction) throws TransactionException {
     if (activeTransactions.putIfAbsent(transaction.getId(), transaction) != null) {
       transaction.rollback();
-      throw new TransactionException(
-          "The transaction already exists. transactionId: " + transaction.getId());
+      throw new TransactionException("The transaction already exists", transaction.getId());
     }
   }
 
@@ -67,8 +66,8 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
             () ->
                 new TransactionNotFoundException(
                     "A transaction associated with the specified transaction ID is not found. "
-                        + "It might have been expired. transactionId: "
-                        + txId));
+                        + "It might have been expired",
+                    txId));
   }
 
   @Override
