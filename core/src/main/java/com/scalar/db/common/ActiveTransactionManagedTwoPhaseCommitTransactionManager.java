@@ -40,11 +40,11 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
             config.getActiveTransactionManagementExpirationTimeMillis(),
             TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
             t -> {
-              logger.warn("the transaction is expired. transactionId: {}", t.getId());
+              logger.warn("the transaction is expired. transaction ID: {}", t.getId());
               try {
                 t.rollback();
               } catch (Exception e) {
-                logger.warn("rollback failed. transactionId: {}", t.getId(), e);
+                logger.warn("rollback failed. transaction ID: {}", t.getId(), e);
               }
             });
   }
@@ -68,8 +68,7 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
             () ->
                 new TransactionNotFoundException(
                     "A transaction associated with the specified transaction ID is not found. "
-                        + "It might have been expired. transactionId: "
-                        + txId,
+                        + "It might have been expired",
                     txId));
   }
 

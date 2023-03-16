@@ -200,8 +200,7 @@ public class GrpcTransactionOnBidirectionalStream
     try {
       return metadataManager.getTableMetadata(operation);
     } catch (ExecutionException e) {
-      throw new CrudException(
-          "getting a metadata failed. transactionId: " + transactionId, e, transactionId);
+      throw new CrudException("getting a metadata failed", e, transactionId);
     }
   }
 
@@ -234,8 +233,7 @@ public class GrpcTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new CrudException(
-          "failed to execute crud. transactionId: " + transactionId, error, transactionId);
+      throw new CrudException("failed to execute crud", error, transactionId);
     }
 
     TransactionResponse response = responseOrError.getResponse();
@@ -271,8 +269,7 @@ public class GrpcTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new CommitException(
-          "failed to commit. transactionId: " + transactionId, error, transactionId);
+      throw new CommitException("failed to commit", error, transactionId);
     }
 
     TransactionResponse response = responseOrError.getResponse();
@@ -309,8 +306,7 @@ public class GrpcTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new RollbackException(
-          "failed to rollback. transactionId: " + transactionId, error, transactionId);
+      throw new RollbackException("failed to rollback", error, transactionId);
     }
 
     TransactionResponse response = responseOrError.getResponse();
@@ -339,8 +335,7 @@ public class GrpcTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new AbortException(
-          "failed to abort. transactionId: " + transactionId, error, transactionId);
+      throw new AbortException("failed to abort", error, transactionId);
     }
 
     TransactionResponse response = responseOrError.getResponse();

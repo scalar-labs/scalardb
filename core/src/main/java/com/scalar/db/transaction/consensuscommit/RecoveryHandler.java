@@ -41,7 +41,7 @@ public class RecoveryHandler {
     try {
       state = coordinator.getState(result.getId());
     } catch (CoordinatorException e) {
-      logger.warn("can't get coordinator state. transactionId: {}", result.getId(), e);
+      logger.warn("can't get coordinator state. transaction ID: {}", result.getId(), e);
       return;
     }
 
@@ -69,7 +69,7 @@ public class RecoveryHandler {
       composer.add(selection, result);
       mutate(composer.get(), result.getId());
     } catch (Exception e) {
-      logger.warn("rolling back a record failed. transactionId: {}", result.getId(), e);
+      logger.warn("rolling back a record failed. transaction ID: {}", result.getId(), e);
       // ignore since the record is recovered lazily
     }
   }
@@ -108,7 +108,7 @@ public class RecoveryHandler {
       storage.mutate(mutations);
     } catch (ExecutionException e) {
       logger.warn(
-          "mutation in recovery failed. the record will be eventually recovered. transactionId: {}",
+          "mutation in recovery failed. the record will be eventually recovered. transaction ID: {}",
           transactionId,
           e);
     }

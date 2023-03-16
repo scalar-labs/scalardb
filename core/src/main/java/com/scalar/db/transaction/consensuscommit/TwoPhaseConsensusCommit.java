@@ -162,7 +162,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     try {
       commit.abortState(crud.getSnapshot().getId());
     } catch (UnknownTransactionStatusException e) {
-      throw new RollbackException("rollback failed. transactionId: " + getId(), e, getId());
+      throw new RollbackException("rollback failed", e, getId());
     }
 
     commit.rollbackRecords(crud.getSnapshot());

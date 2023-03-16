@@ -535,8 +535,8 @@ public class TwoPhaseCommitTransactionService
                 .build());
       } catch (UnknownTransactionStatusException e) {
         logger.error(
-            "the transaction status is unknown. transactionId: "
-                + e.getTransactionId().orElse("null"),
+            "the transaction status is unknown. transaction ID: {}",
+            e.getTransactionId().orElse("null"),
             e);
         responseBuilder.setError(
             TwoPhaseCommitTransactionResponse.Error.newBuilder()

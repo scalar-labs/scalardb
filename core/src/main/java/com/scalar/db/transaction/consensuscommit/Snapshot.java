@@ -157,7 +157,7 @@ public class Snapshot {
       }
       return metadata.getTableMetadata();
     } catch (ExecutionException e) {
-      throw new CrudException("getting a table metadata failed. transactionId: " + id, e, id);
+      throw new CrudException("getting a table metadata failed", e, id);
     }
   }
 
@@ -419,14 +419,12 @@ public class Snapshot {
 
   private void throwExceptionDueToPotentialAntiDependency() throws PreparationConflictException {
     throw new PreparationConflictException(
-        "reading empty records might cause write skew anomaly so aborting the transaction for safety. transactionId: "
-            + id,
+        "reading empty records might cause write skew anomaly so aborting the transaction for safety",
         id);
   }
 
   private void throwExceptionDueToAntiDependency() throws ValidationConflictException {
-    throw new ValidationConflictException(
-        "Anti-dependency found. Aborting the transaction. transactionId: " + id, id);
+    throw new ValidationConflictException("Anti-dependency found. Aborting the transaction", id);
   }
 
   private boolean isExtraReadEnabled() {
