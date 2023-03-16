@@ -14,7 +14,7 @@ public class UnknownTransactionStatusException extends TransactionException {
   }
 
   /**
-   * @return a transaction ID that associated with the transaction whose status is unknown
+   * @return the transaction ID associated with the transaction whose status is unknown
    * @deprecated As of release 3.9.0. Will be removed in release 5.0.0
    */
   @Deprecated
