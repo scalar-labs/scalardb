@@ -4,22 +4,22 @@ import java.util.Optional;
 
 /** An exception thrown when the transaction status of the committing transaction is unknown. */
 public class UnknownTransactionStatusException extends TransactionException {
-  private Optional<String> unknownTxId = Optional.empty();
 
-  public UnknownTransactionStatusException(String message) {
-    super(message);
+  public UnknownTransactionStatusException(String message, String transactionId) {
+    super(message, transactionId);
   }
 
-  public UnknownTransactionStatusException(String message, Throwable cause) {
-    super(message, cause);
+  public UnknownTransactionStatusException(String message, Throwable cause, String transactionId) {
+    super(message, cause, transactionId);
   }
 
-  public UnknownTransactionStatusException(String message, Throwable cause, String txId) {
-    super(message, cause);
-    this.unknownTxId = Optional.ofNullable(txId);
-  }
-
+  /**
+   * @return a transaction ID that associated with the transaction whose status is unknown
+   * @deprecated As of release 3.9.0. Will be removed in release 5.0.0
+   */
+  @Deprecated
+  @SuppressWarnings("InlineMeSuggester")
   public Optional<String> getUnknownTransactionId() {
-    return unknownTxId;
+    return getTransactionId();
   }
 }

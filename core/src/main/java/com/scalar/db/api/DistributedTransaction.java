@@ -92,7 +92,7 @@ public interface DistributedTransaction extends TransactionCrudOperable {
     try {
       rollback();
     } catch (RollbackException e) {
-      throw new AbortException(e.getMessage(), e);
+      throw new AbortException(e.getMessage(), e, e.getTransactionId().orElse(null));
     }
   }
 }

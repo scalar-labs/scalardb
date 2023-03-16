@@ -6,11 +6,11 @@ package com.scalar.db.exception.transaction;
  */
 public class TransactionNotFoundException extends TransactionException {
 
-  public TransactionNotFoundException(String message) {
-    super(message);
+  public TransactionNotFoundException(String message, String transactionId) {
+    super(message, transactionId);
   }
 
-  public TransactionNotFoundException(String message, Throwable cause) {
-    super(message, cause);
+  public TransactionNotFoundException(String message, Throwable cause, String transactionId) {
+    super(message, cause, transactionId);
   }
 }

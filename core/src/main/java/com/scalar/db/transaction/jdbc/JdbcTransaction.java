@@ -61,7 +61,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     } catch (SQLException e) {
       throw createCrudException(e, "get operation failed");
     } catch (ExecutionException e) {
-      throw new CrudException("get operation failed", e);
+      throw new CrudException("get operation failed", e, txId);
     }
   }
 
@@ -73,7 +73,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     } catch (SQLException e) {
       throw createCrudException(e, "scan operation failed");
     } catch (ExecutionException e) {
-      throw new CrudException("scan operation failed", e);
+      throw new CrudException("scan operation failed", e, txId);
     }
   }
 
@@ -92,7 +92,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     } catch (SQLException e) {
       throw createCrudException(e, "put operation failed");
     } catch (ExecutionException e) {
-      throw new CrudException("put operation failed", e);
+      throw new CrudException("put operation failed", e, txId);
     }
   }
 
@@ -119,7 +119,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     } catch (SQLException e) {
       throw createCrudException(e, "delete operation failed");
     } catch (ExecutionException e) {
-      throw new CrudException("delete operation failed", e);
+      throw new CrudException("delete operation failed", e, txId);
     }
   }
 
@@ -151,7 +151,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
       try {
         connection.rollback();
       } catch (SQLException sqlException) {
-        throw new UnknownTransactionStatusException("failed to rollback", sqlException);
+        throw new UnknownTransactionStatusException("failed to rollback", sqlException, txId);
       }
       throw createCommitException(e);
     } finally {
@@ -173,7 +173,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
       connection.rollback();
     } catch (SQLException e) {
-      throw new RollbackException("failed to rollback", e);
+      throw new RollbackException("failed to rollback", e, txId);
     } finally {
       try {
         connection.close();
@@ -185,15 +185,15 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
   private CrudException createCrudException(SQLException e, String message) {
     if (rdbEngine.isConflictError(e)) {
-      return new CrudConflictException("conflict happened; try restarting transaction", e);
+      return new CrudConflictException("conflict happened; try restarting transaction", e, txId);
     }
-    return new CrudException(message, e);
+    return new CrudException(message, e, txId);
   }
 
   private CommitException createCommitException(SQLException e) {
     if (rdbEngine.isConflictError(e)) {
-      return new CommitConflictException("conflict happened; try restarting transaction", e);
+      return new CommitConflictException("conflict happened; try restarting transaction", e, txId);
     }
-    return new CommitException("failed to commit", e);
+    return new CommitException("failed to commit", e, txId);
   }
 }
