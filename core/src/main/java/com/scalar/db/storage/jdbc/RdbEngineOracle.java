@@ -9,6 +9,7 @@ import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import java.sql.Driver;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -231,5 +232,10 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public String computeBooleanValue(boolean value) {
     return value ? "1" : "0";
+  }
+
+  @Override
+  public Driver getDriverClass() {
+    return new oracle.jdbc.driver.OracleDriver();
   }
 }

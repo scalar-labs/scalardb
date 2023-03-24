@@ -6,12 +6,21 @@ import org.apache.commons.dbcp2.BasicDataSource;
 public final class JdbcUtils {
   private JdbcUtils() {}
 
-  public static BasicDataSource initDataSource(JdbcConfig config) {
-    return initDataSource(config, false);
+  public static BasicDataSource initDataSource(JdbcConfig config, RdbEngineStrategy rdbEngine) {
+    return initDataSource(config, rdbEngine, false);
   }
 
-  public static BasicDataSource initDataSource(JdbcConfig config, boolean transactional) {
+  public static BasicDataSource initDataSource(
+      JdbcConfig config, RdbEngineStrategy rdbEngine, boolean transactional) {
     BasicDataSource dataSource = new BasicDataSource();
+
+    /*
+     * We need to set the driver class of an underlying database to the dataSource in order
+     * to avoid the "No suitable driver" error in case when ServiceLoader in java.sql.DriverManager
+     * doesn't work (e.g., when we dynamically load a driver class from a fatJar).
+     */
+    dataSource.setDriver(rdbEngine.getDriverClass());
+
     dataSource.setUrl(config.getJdbcUrl());
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
@@ -54,8 +63,17 @@ public final class JdbcUtils {
     return dataSource;
   }
 
-  public static BasicDataSource initDataSourceForTableMetadata(JdbcConfig config) {
+  public static BasicDataSource initDataSourceForTableMetadata(
+      JdbcConfig config, RdbEngineStrategy rdbEngine) {
     BasicDataSource dataSource = new BasicDataSource();
+
+    /*
+     * We need to set the driver class of an underlying database to the dataSource in order
+     * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
+     * work (e.g., when we dynamically load a driver class from a fatJar).
+     */
+    dataSource.setDriver(rdbEngine.getDriverClass());
+
     dataSource.setUrl(config.getJdbcUrl());
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
@@ -65,8 +83,17 @@ public final class JdbcUtils {
     return dataSource;
   }
 
-  public static BasicDataSource initDataSourceForAdmin(JdbcConfig config) {
+  public static BasicDataSource initDataSourceForAdmin(
+      JdbcConfig config, RdbEngineStrategy rdbEngine) {
     BasicDataSource dataSource = new BasicDataSource();
+
+    /*
+     * We need to set the driver class of an underlying database to the dataSource in order
+     * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
+     * work (e.g., when we dynamically load a driver class from a fatJar).
+     */
+    dataSource.setDriver(rdbEngine.getDriverClass());
+
     dataSource.setUrl(config.getJdbcUrl());
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);

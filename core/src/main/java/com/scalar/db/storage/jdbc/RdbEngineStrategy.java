@@ -5,6 +5,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import java.sql.Driver;
 import java.sql.SQLException;
 
 /**
@@ -18,7 +19,7 @@ public interface RdbEngineStrategy {
   boolean isDuplicateKeyError(SQLException e);
 
   boolean isUndefinedTableError(SQLException e);
-  /** Serialization error or deadlock found. */
+
   boolean isConflictError(SQLException e);
 
   String getDataTypeForEngine(DataType dataType);
@@ -75,4 +76,6 @@ public interface RdbEngineStrategy {
   SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit);
 
   UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder);
+
+  Driver getDriverClass();
 }
