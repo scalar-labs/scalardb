@@ -1,22 +1,21 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toVersionValue;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIf;
+import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import java.util.ArrayList;
@@ -51,68 +50,92 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
   }
 
   private void add(Put base, @Nullable TransactionResult result) {
-    Put put =
-        new Put(base.getPartitionKey(), base.getClusteringKey().orElse(null))
-            .forNamespace(base.forNamespace().get())
-            .forTable(base.forTable().get())
-            .withConsistency(Consistency.LINEARIZABLE);
+    PutBuilder.Buildable putBuilder =
+        Put.newBuilder()
+            .namespace(base.forNamespace().get())
+            .table(base.forTable().get())
+            .partitionKey(base.getPartitionKey())
+            .consistency(Consistency.LINEARIZABLE);
 
-    put.withValue(Attribute.toIdValue(id));
-    put.withValue(Attribute.toStateValue(TransactionState.PREPARED));
-    put.withValue(Attribute.toPreparedAtValue(current));
-    base.getColumns().values().forEach(put::withValue);
-
-    if (result != null) { // overwrite existing record
-      put.withValues(createBeforeValues(base, result));
-      int version = result.getVersion();
-      put.withValue(Attribute.toVersionValue(version + 1));
-
-      // check if the record is not interrupted by other conflicting transactions
-      put.withCondition(
-          new PutIf(
-              new ConditionalExpression(VERSION, toVersionValue(version), Operator.EQ),
-              new ConditionalExpression(ID, toIdValue(result.getId()), Operator.EQ)));
-    } else { // initial record
-      put.withValue(Attribute.toVersionValue(1));
-
-      // check if the record is not created by other conflicting transactions
-      put.withCondition(new PutIfNotExists());
+    if (base.getClusteringKey().isPresent()) {
+      putBuilder.clusteringKey(base.getClusteringKey().get());
     }
 
-    mutations.add(put);
+    putBuilder.textValue(Attribute.ID, id);
+    putBuilder.intValue(Attribute.STATE, TransactionState.PREPARED.get());
+    putBuilder.bigIntValue(Attribute.PREPARED_AT, current);
+    base.getColumns().values().forEach(putBuilder::value);
+
+    if (result != null) { // overwrite existing record
+      createBeforeColumns(base, result).forEach(putBuilder::value);
+      int version = result.getVersion();
+      putBuilder.intValue(Attribute.VERSION, version + 1);
+
+      // check if the record is not interrupted by other conflicting transactions
+      if (result.getId() == null) {
+        // record is deemed-commit state
+        putBuilder.condition(
+            ConditionBuilder.putIf(ConditionBuilder.column(ID).isNullText())
+                .and(ConditionBuilder.column(VERSION).isNullInt())
+                .build());
+      } else {
+        putBuilder.condition(
+            ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(result.getId()))
+                .and(ConditionBuilder.column(VERSION).isEqualToInt(version))
+                .build());
+      }
+    } else { // initial record
+      putBuilder.intValue(Attribute.VERSION, 1);
+
+      // check if the record is not created by other conflicting transactions
+      putBuilder.condition(ConditionBuilder.putIfNotExists());
+    }
+
+    mutations.add(putBuilder.build());
   }
 
   private void add(Delete base, @Nullable TransactionResult result) {
-    Put put =
-        new Put(base.getPartitionKey(), base.getClusteringKey().orElse(null))
-            .forNamespace(base.forNamespace().get())
-            .forTable(base.forTable().get())
-            .withConsistency(Consistency.LINEARIZABLE);
+    PutBuilder.Buildable putBuilder =
+        Put.newBuilder()
+            .namespace(base.forNamespace().get())
+            .table(base.forTable().get())
+            .partitionKey(base.getPartitionKey())
+            .consistency(Consistency.LINEARIZABLE);
 
-    List<Value<?>> values = new ArrayList<>();
-    values.add(Attribute.toIdValue(id));
-    values.add(Attribute.toStateValue(TransactionState.DELETED));
-    values.add(Attribute.toPreparedAtValue(current));
-
-    if (result != null) {
-      values.addAll(createBeforeValues(base, result));
-      int version = result.getVersion();
-      values.add(Attribute.toVersionValue(version + 1));
-
-      // check if the record is not interrupted by other conflicting transactions
-      put.withCondition(
-          new PutIf(
-              new ConditionalExpression(VERSION, toVersionValue(version), Operator.EQ),
-              new ConditionalExpression(ID, toIdValue(result.getId()), Operator.EQ)));
-    } else {
-      put.withValue(Attribute.toVersionValue(1));
-
-      // check if the record is not created by other conflicting transactions
-      put.withCondition(new PutIfNotExists());
+    if (base.getClusteringKey().isPresent()) {
+      putBuilder.clusteringKey(base.getClusteringKey().get());
     }
 
-    put.withValues(values);
-    mutations.add(put);
+    putBuilder.textValue(Attribute.ID, id);
+    putBuilder.intValue(Attribute.STATE, TransactionState.DELETED.get());
+    putBuilder.bigIntValue(Attribute.PREPARED_AT, current);
+
+    if (result != null) {
+      createBeforeColumns(base, result).forEach(putBuilder::value);
+      int version = result.getVersion();
+      putBuilder.intValue(Attribute.VERSION, version + 1);
+
+      // check if the record is not interrupted by other conflicting transactions
+      if (result.getId() == null) {
+        // record is deemed-commit state
+        putBuilder.condition(
+            ConditionBuilder.putIf(ConditionBuilder.column(ID).isNullText())
+                .and(ConditionBuilder.column(VERSION).isNullInt())
+                .build());
+      } else {
+        putBuilder.condition(
+            ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(result.getId()))
+                .and(ConditionBuilder.column(VERSION).isEqualToInt(version))
+                .build());
+      }
+    } else {
+      putBuilder.intValue(Attribute.VERSION, 1);
+
+      // check if the record is not created by other conflicting transactions
+      putBuilder.condition(ConditionBuilder.putIfNotExists());
+    }
+
+    mutations.add(putBuilder.build());
   }
 
   // This prepares a record that was read but didn't exist to avoid anti-dependency for the record.
@@ -137,28 +160,35 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     mutations.add(put);
   }
 
-  private List<Value<?>> createBeforeValues(Mutation base, TransactionResult result) {
-    List<Value<?>> values = new ArrayList<>();
+  private List<Column<?>> createBeforeColumns(Mutation base, TransactionResult result) {
+    List<Column<?>> columns = new ArrayList<>();
     result
-        .getValues()
+        .getColumns()
         .values()
         .forEach(
-            v -> {
-              if (isBeforeRequired(v, base.getPartitionKey(), base.getClusteringKey())) {
-                values.add(v.copyWith(Attribute.BEFORE_PREFIX + v.getName()));
+            column -> {
+              if (isBeforeRequired(column, base.getPartitionKey(), base.getClusteringKey())) {
+                if (column.getName().equals(Attribute.VERSION) && column.hasNullValue()) {
+                  // For preparing an update of a deemed-commit state record, we need to use
+                  // version 0 rather than NULL since we want to distinguish the preparation from
+                  // an initial record insertion.
+                  columns.add(IntColumn.of(Attribute.BEFORE_VERSION, 0));
+                } else {
+                  columns.add(column.copyWith(Attribute.BEFORE_PREFIX + column.getName()));
+                }
               }
             });
-    return values;
+    return columns;
   }
 
-  private boolean isBeforeRequired(Value<?> value, Key primary, Optional<Key> clustering) {
-    return !value.getName().startsWith(Attribute.BEFORE_PREFIX)
-        && !isValueInKeys(value, primary, clustering);
+  private boolean isBeforeRequired(Column<?> column, Key primary, Optional<Key> clustering) {
+    return !column.getName().startsWith(Attribute.BEFORE_PREFIX)
+        && !isColumnInKeys(column, primary, clustering);
   }
 
-  private boolean isValueInKeys(Value<?> value, Key primary, Optional<Key> clustering) {
-    for (Value<?> v : primary) {
-      if (v.equals(value)) {
+  private boolean isColumnInKeys(Column<?> column, Key primary, Optional<Key> clustering) {
+    for (Column<?> c : primary.getColumns()) {
+      if (c.equals(column)) {
         return true;
       }
     }
@@ -167,8 +197,8 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
       return false;
     }
 
-    for (Value<?> v : clustering.get()) {
-      if (v.equals(value)) {
+    for (Column<?> c : clustering.get().getColumns()) {
+      if (c.equals(column)) {
         return true;
       }
     }

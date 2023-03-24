@@ -6,7 +6,9 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.AbstractResult;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Optional;
@@ -23,14 +25,18 @@ public class TransactionResult extends AbstractResult {
     this.result = checkNotNull(result);
   }
 
-  /** @deprecated As of release 3.8.0. Will be removed in release 5.0.0 */
+  /**
+   * @deprecated As of release 3.8.0. Will be removed in release 5.0.0
+   */
   @Deprecated
   @Override
   public Optional<Key> getPartitionKey() {
     return result.getPartitionKey();
   }
 
-  /** @deprecated As of release 3.8.0. Will be removed in release 5.0.0 */
+  /**
+   * @deprecated As of release 3.8.0. Will be removed in release 5.0.0
+   */
   @Deprecated
   @Override
   public Optional<Key> getClusteringKey() {
@@ -106,12 +112,17 @@ public class TransactionResult extends AbstractResult {
     return result.getColumns();
   }
 
+  @Nullable
   public String getId() {
     return getText(Attribute.ID);
   }
 
   public TransactionState getState() {
-    return TransactionState.getInstance(getInt(Attribute.STATE));
+    int state = getInt(Attribute.STATE);
+    if (state == 0) {
+      return TransactionState.COMMITTED;
+    }
+    return TransactionState.getInstance(state);
   }
 
   public int getVersion() {
@@ -128,5 +139,13 @@ public class TransactionResult extends AbstractResult {
 
   public boolean isCommitted() {
     return getState().equals(TransactionState.COMMITTED);
+  }
+
+  public TextColumn getBeforeIdColumn() {
+    return (TextColumn) result.getColumns().get(Attribute.BEFORE_ID);
+  }
+
+  public IntColumn getBeforeVersionColumn() {
+    return (IntColumn) result.getColumns().get(Attribute.BEFORE_VERSION);
   }
 }

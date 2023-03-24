@@ -6,6 +6,7 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
 
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
@@ -15,16 +16,21 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.Value;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -55,17 +61,18 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
       // the record was not prepared (yet) by this transaction or has already been rollback deleted
       return;
     }
-    if (!latest.getId().equals(id)) {
+    if (latest.getId() == null || !latest.getId().equals(id)) {
       // the record was not prepared (yet) by this transaction or has already been rolled back
       return;
     }
 
-    TextValue beforeId = (TextValue) latest.getValue(Attribute.BEFORE_ID).get();
-    if (beforeId.get().isPresent()) {
-      mutations.add(composePut(base, latest));
-    } else {
+    TextColumn beforeId = latest.getBeforeIdColumn();
+    IntColumn beforeVersion = latest.getBeforeVersionColumn();
+    if (beforeId.hasNullValue() && beforeVersion.hasNullValue()) {
       // no record to rollback, so it should be deleted
       mutations.add(composeDelete(base, latest));
+    } else {
+      mutations.add(composePut(base, latest));
     }
   }
 
@@ -77,26 +84,38 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
     TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(base);
     LinkedHashSet<String> beforeImageColumnNames = metadata.getBeforeImageColumnNames();
 
-    Map<String, Value<?>> map = new HashMap<>();
+    List<Column<?>> columns = new ArrayList<>();
     result
-        .getValues()
+        .getColumns()
         .forEach(
             (k, v) -> {
               if (beforeImageColumnNames.contains(k)) {
                 String key = k.substring(Attribute.BEFORE_PREFIX.length());
-                map.put(key, v.copyWith(key));
+                if (key.equals(Attribute.VERSION) && v.getIntValue() == 0) {
+                  columns.add(IntColumn.ofNull(Attribute.VERSION));
+                } else {
+                  columns.add(v.copyWith(key));
+                }
               }
             });
 
-    return new Put(result.getPartitionKey().get(), result.getClusteringKey().orElse(null))
-        .forNamespace(base.forNamespace().get())
-        .forTable(base.forTable().get())
-        .withCondition(
-            new PutIf(
-                new ConditionalExpression(ID, toIdValue(id), Operator.EQ),
-                new ConditionalExpression(STATE, toStateValue(result.getState()), Operator.EQ)))
-        .withConsistency(Consistency.LINEARIZABLE)
-        .withValues(map.values());
+    PutBuilder.Buildable putBuilder = Put.newBuilder()
+        .namespace(base.forNamespace().get())
+        .table(base.forTable().get())
+        .partitionKey(result.getPartitionKey().get())
+        .condition(
+            ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(id))
+                .and(ConditionBuilder.column(STATE).isEqualToInt(result.getState().get()))
+                .build())
+        .consistency(Consistency.LINEARIZABLE);
+
+    if (result.getClusteringKey().isPresent()) {
+      putBuilder.clusteringKey(result.getClusteringKey().get());
+    }
+
+    columns.forEach(putBuilder::value);
+
+    return putBuilder.build();
   }
 
   private Delete composeDelete(Operation base, TransactionResult result) {

@@ -150,7 +150,8 @@ public class RollbackMutationComposerTest {
                 ScalarDbUtils.toColumn(Attribute.toPreparedAtValue(ANY_TIME_1)))
             .put(Attribute.STATE, ScalarDbUtils.toColumn(Attribute.toStateValue(state)))
             .put(Attribute.VERSION, ScalarDbUtils.toColumn(Attribute.toVersionValue(1)))
-            .put(Attribute.BEFORE_ID, ScalarDbUtils.toColumn(Attribute.toBeforeIdValue(null)));
+            .put(Attribute.BEFORE_ID, ScalarDbUtils.toColumn(Attribute.toBeforeIdValue(null)))
+            .put(Attribute.BEFORE_VERSION, IntColumn.ofNull(Attribute.BEFORE_VERSION));
     if (state.equals(TransactionState.COMMITTED)) {
       builder.put(
           Attribute.COMMITTED_AT, ScalarDbUtils.toColumn(Attribute.toCommittedAtValue(ANY_TIME_2)));
