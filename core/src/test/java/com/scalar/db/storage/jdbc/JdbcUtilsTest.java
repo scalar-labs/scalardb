@@ -40,7 +40,7 @@ public class JdbcUtilsTest {
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     Driver driver = new com.mysql.cj.jdbc.Driver();
-    when(rdbEngine.getDriverClass()).thenReturn(driver);
+    when(rdbEngine.getDriver()).thenReturn(driver);
 
     // Act
     BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine);
@@ -82,7 +82,7 @@ public class JdbcUtilsTest {
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     Driver driver = new org.postgresql.Driver();
-    when(rdbEngine.getDriverClass()).thenReturn(driver);
+    when(rdbEngine.getDriver()).thenReturn(driver);
 
     // Act
     BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine, true);
@@ -122,7 +122,7 @@ public class JdbcUtilsTest {
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     Driver driver = new oracle.jdbc.driver.OracleDriver();
-    when(rdbEngine.getDriverClass()).thenReturn(driver);
+    when(rdbEngine.getDriver()).thenReturn(driver);
 
     // Act
     BasicDataSource tableMetadataDataSource =
@@ -156,7 +156,7 @@ public class JdbcUtilsTest {
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     Driver driver = new com.microsoft.sqlserver.jdbc.SQLServerDriver();
-    when(rdbEngine.getDriverClass()).thenReturn(driver);
+    when(rdbEngine.getDriver()).thenReturn(driver);
 
     // Act
     BasicDataSource adminDataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);

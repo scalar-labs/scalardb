@@ -209,7 +209,7 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   }
 
   @Override
-  public Driver getDriverClass() {
+  public Driver getDriver() {
     return new com.microsoft.sqlserver.jdbc.SQLServerDriver();
   }
 }

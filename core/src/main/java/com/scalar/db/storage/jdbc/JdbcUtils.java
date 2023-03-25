@@ -19,7 +19,7 @@ public final class JdbcUtils {
      * to avoid the "No suitable driver" error in case when ServiceLoader in java.sql.DriverManager
      * doesn't work (e.g., when we dynamically load a driver class from a fatJar).
      */
-    dataSource.setDriver(rdbEngine.getDriverClass());
+    dataSource.setDriver(rdbEngine.getDriver());
 
     dataSource.setUrl(config.getJdbcUrl());
     config.getUsername().ifPresent(dataSource::setUsername);
@@ -72,7 +72,7 @@ public final class JdbcUtils {
      * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
      * work (e.g., when we dynamically load a driver class from a fatJar).
      */
-    dataSource.setDriver(rdbEngine.getDriverClass());
+    dataSource.setDriver(rdbEngine.getDriver());
 
     dataSource.setUrl(config.getJdbcUrl());
     config.getUsername().ifPresent(dataSource::setUsername);
@@ -92,7 +92,7 @@ public final class JdbcUtils {
      * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
      * work (e.g., when we dynamically load a driver class from a fatJar).
      */
-    dataSource.setDriver(rdbEngine.getDriverClass());
+    dataSource.setDriver(rdbEngine.getDriver());
 
     dataSource.setUrl(config.getJdbcUrl());
     config.getUsername().ifPresent(dataSource::setUsername);

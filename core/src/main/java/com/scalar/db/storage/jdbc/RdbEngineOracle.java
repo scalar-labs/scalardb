@@ -235,7 +235,7 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
-  public Driver getDriverClass() {
+  public Driver getDriver() {
     return new oracle.jdbc.driver.OracleDriver();
   }
 }

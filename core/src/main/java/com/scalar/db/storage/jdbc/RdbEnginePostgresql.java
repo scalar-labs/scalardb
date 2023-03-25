@@ -225,7 +225,7 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   }
 
   @Override
-  public Driver getDriverClass() {
+  public Driver getDriver() {
     return new org.postgresql.Driver();
   }
 }

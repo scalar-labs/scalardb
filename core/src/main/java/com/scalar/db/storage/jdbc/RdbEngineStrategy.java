@@ -77,5 +77,5 @@ public interface RdbEngineStrategy {
 
   UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder);
 
-  Driver getDriverClass();
+  Driver getDriver();
 }
