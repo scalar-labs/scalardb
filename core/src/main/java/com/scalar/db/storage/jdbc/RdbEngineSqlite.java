@@ -7,6 +7,7 @@ import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
@@ -39,6 +40,7 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
         && e.getMessage().endsWith("already exists)");
   }
 
+  @SuppressFBWarnings("BC_UNCONFIRMED_CAST")
   @Override
   public boolean isDuplicateKeyError(SQLException e) {
     // Error code: SQLITE_CONSTRAINT_PRIMARYKEY (1555)
