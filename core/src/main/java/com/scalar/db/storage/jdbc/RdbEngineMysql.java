@@ -7,6 +7,7 @@ import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import java.sql.Driver;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
@@ -225,5 +226,14 @@ class RdbEngineMysql implements RdbEngineStrategy {
   @Override
   public String computeBooleanValue(boolean value) {
     return value ? "true" : "false";
+  }
+
+  @Override
+  public Driver getDriver() {
+    try {
+      return new com.mysql.cj.jdbc.Driver();
+    } catch (SQLException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

@@ -1,15 +1,27 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
 import com.scalar.db.config.DatabaseConfig;
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.SQLException;
 import java.util.Properties;
 import org.apache.commons.dbcp2.BasicDataSource;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 public class JdbcUtilsTest {
+
+  @Mock private RdbEngineStrategy rdbEngine;
+
+  @BeforeEach
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
+  }
 
   @Test
   public void initDataSource_NonTransactional_ShouldReturnProperDataSource() throws SQLException {
@@ -27,11 +39,14 @@ public class JdbcUtilsTest {
     properties.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "100");
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+    Driver driver = new com.mysql.cj.jdbc.Driver();
+    when(rdbEngine.getDriver()).thenReturn(driver);
 
     // Act
-    BasicDataSource dataSource = JdbcUtils.initDataSource(config);
+    BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine);
 
     // Assert
+    assertThat(dataSource.getDriver()).isEqualTo(driver);
     assertThat(dataSource.getUrl()).isEqualTo("jdbc:mysql://localhost:3306/");
     assertThat(dataSource.getUsername()).isEqualTo("root");
     assertThat(dataSource.getPassword()).isEqualTo("mysql");
@@ -66,11 +81,14 @@ public class JdbcUtilsTest {
     properties.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "200");
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+    Driver driver = new org.postgresql.Driver();
+    when(rdbEngine.getDriver()).thenReturn(driver);
 
     // Act
-    BasicDataSource dataSource = JdbcUtils.initDataSource(config, true);
+    BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine, true);
 
     // Assert
+    assertThat(dataSource.getDriver()).isEqualTo(driver);
     assertThat(dataSource.getUrl()).isEqualTo("jdbc:postgresql://localhost:5432/");
     assertThat(dataSource.getUsername()).isEqualTo("user");
     assertThat(dataSource.getPassword()).isEqualTo("postgres");
@@ -103,11 +121,15 @@ public class JdbcUtilsTest {
     properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL, "300");
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+    Driver driver = new oracle.jdbc.driver.OracleDriver();
+    when(rdbEngine.getDriver()).thenReturn(driver);
 
     // Act
-    BasicDataSource tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config);
+    BasicDataSource tableMetadataDataSource =
+        JdbcUtils.initDataSourceForTableMetadata(config, rdbEngine);
 
     // Assert
+    assertThat(tableMetadataDataSource.getDriver()).isEqualTo(driver);
     assertThat(tableMetadataDataSource.getUrl())
         .isEqualTo("jdbc:oracle:thin:@localhost:1521/XEPDB1");
     assertThat(tableMetadataDataSource.getUsername()).isEqualTo("user");
@@ -133,11 +155,14 @@ public class JdbcUtilsTest {
     properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_TOTAL, "300");
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+    Driver driver = new com.microsoft.sqlserver.jdbc.SQLServerDriver();
+    when(rdbEngine.getDriver()).thenReturn(driver);
 
     // Act
-    BasicDataSource adminDataSource = JdbcUtils.initDataSourceForAdmin(config);
+    BasicDataSource adminDataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
 
     // Assert
+    assertThat(adminDataSource.getDriver()).isEqualTo(driver);
     assertThat(adminDataSource.getUrl()).isEqualTo("jdbc:sqlserver://localhost:1433");
     assertThat(adminDataSource.getUsername()).isEqualTo("user");
     assertThat(adminDataSource.getPassword()).isEqualTo("sqlserver");
