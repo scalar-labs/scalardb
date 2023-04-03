@@ -55,7 +55,8 @@ public final class ConfigUtils {
     }
   }
 
-  public static Integer getInt(Properties properties, String name, Integer defaultValue) {
+  @Nullable
+  public static Integer getInt(Properties properties, String name, @Nullable Integer defaultValue) {
     String value = trimAndReplace(properties.getProperty(name));
     if (Strings.isNullOrEmpty(value)) {
       return defaultValue;
@@ -81,7 +82,8 @@ public final class ConfigUtils {
     }
   }
 
-  public static Long getLong(Properties properties, String name, Long defaultValue) {
+  @Nullable
+  public static Long getLong(Properties properties, String name, @Nullable Long defaultValue) {
     String value = trimAndReplace(properties.getProperty(name));
     if (Strings.isNullOrEmpty(value)) {
       return defaultValue;
@@ -108,7 +110,9 @@ public final class ConfigUtils {
     }
   }
 
-  public static Boolean getBoolean(Properties properties, String name, Boolean defaultValue) {
+  @Nullable
+  public static Boolean getBoolean(
+      Properties properties, String name, @Nullable Boolean defaultValue) {
     String value = trimAndReplace(properties.getProperty(name));
     if (Strings.isNullOrEmpty(value)) {
       return defaultValue;
