@@ -81,14 +81,10 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   public void put(Put put) throws CrudException {
     put = copyAndSetTargetToIfNot(put);
 
-    // Ignore the condition in the put
-    if (put.getCondition().isPresent()) {
-      logger.warn("ignoring the condition of the mutation: {}", put);
-      put.withCondition(null);
-    }
-
     try {
-      jdbcService.put(put, connection);
+      if (!jdbcService.put(put, connection)) {
+        throw new CrudException("no mutation was applied", txId);
+      }
     } catch (SQLException e) {
       throw createCrudException(e, "put operation failed");
     } catch (ExecutionException e) {
@@ -108,14 +104,10 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   public void delete(Delete delete) throws CrudException {
     delete = copyAndSetTargetToIfNot(delete);
 
-    // Ignore the condition in the delete
-    if (delete.getCondition().isPresent()) {
-      logger.warn("ignoring the condition of the mutation: {}", delete);
-      delete.withCondition(null);
-    }
-
     try {
-      jdbcService.delete(delete, connection);
+      if (!jdbcService.delete(delete, connection)) {
+        throw new CrudException("no mutation was applied", txId);
+      }
     } catch (SQLException e) {
       throw createCrudException(e, "delete operation failed");
     } catch (ExecutionException e) {

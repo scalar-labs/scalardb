@@ -583,6 +583,45 @@ Put put =
         .build();
 ```
 
+##### Put with a condition
+
+In a Put operation, you can specify a condition, and only when the specified condition matches, the Put operation is executed.
+It's like a well-known CAS (compare and swap) operation, and the condition comparison and the update are performed atomically.
+
+You can specify a condition in a Put operation as follows:
+
+```java
+// Build a condition
+MutationCondition condition =
+    ConditionBuilder.putIf(ConditionBuilder.column("c4").isEqualToFloat(0.0F))
+        .and(ConditionBuilder.column("c5").isEqualToDouble(0.0))
+        .build();
+
+Put put =
+    Put.newBuilder()
+        .namespace("ns")
+        .table("tbl")
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .floatValue("c4", 1.23F)
+        .doubleValue("c5", 4.56)
+        .condition(condition) // condition
+        .build();
+
+// Execute the Put operation
+transaction.put(put);
+```
+
+Other than the `putIf` condition, you can specify the `putIfExists` and `putIfNotExists` conditions as follows:
+
+```java
+// Build a putIfExists condition
+MutationCondition putIfExistsCondition = ConditionBuilder.putIfExists();
+
+// Build a putIfNotExists condition
+MutationCondition putIfNotExistsCondition = ConditionBuilder.putIfNotExists();
+```
+
 #### Delete operation
 
 `Delete` is an operation to delete a record specified by a primary key.
@@ -605,6 +644,39 @@ Delete delete =
 
 // Execute the Delete operation
 transaction.delete(delete);
+```
+
+##### Delete with a condition
+
+Similar to a Put operation, you can specify a condition in a Delete operation.
+
+You can specify a condition in a Delete operation as follows:
+
+```java
+// Build a condition
+MutationCondition condition =
+    ConditionBuilder.deleteIf(ConditionBuilder.column("c4").isEqualToFloat(0.0F))
+        .and(ConditionBuilder.column("c5").isEqualToDouble(0.0))
+        .build();
+
+Delete delete =
+    Delete.newBuilder()
+        .namespace("ns")
+        .table("tbl")
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .condition(condition)  // condition
+        .build();
+
+// Execute the Delete operation
+transaction.delete(delete);
+```
+
+Other than the `deleteIf` condition, you can specify the `deleteIfExists` condition as follows:
+
+```java
+// Build a deleteIfExists condition
+MutationCondition deleteIfExistsCondition = ConditionBuilder.deleteIfExists();
 ```
 
 #### Mutate operation
@@ -672,9 +744,7 @@ Scan scanUsingSpecifiedNamespace =
 
 #### Notes
 
-- All the builders of the CRUD operations can specify consistency with the `consistency()` methods, but it's ignored, and the `LINEARIZABLE` consistency level is always used in transactions.
-- Also, the builders of the mutation operations (Put and Delete operations) can specify a condition with the `condition()` methods, but it's ignored, too. 
-Please program such conditions in a transaction if you want to implement conditional mutation.
+All the builders of the CRUD operations can specify consistency with the `consistency()` methods, but it's ignored, and the `LINEARIZABLE` consistency level is always used in transactions.
 
 ### Commit a transaction
 

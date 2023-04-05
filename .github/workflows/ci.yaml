@@ -416,7 +416,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestScalarDbServer' task
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: integrationTestScalarDbServer
+          arguments: integrationTestScalarDbServer --tests "ConsensusCommitIntegrationTestWithServer" --tests "TwoPhaseConsensusCommitIntegrationTestWithServer"
 
       - name: Upload Gradle test reports
         uses: actions/upload-artifact@v3

@@ -207,6 +207,26 @@ public class JdbcTransactionManagerTest {
   }
 
   @Test
+  public void put_withNoMutation_shouldThrowCrudException()
+      throws SQLException, ExecutionException {
+    // Arrange
+    when(jdbcService.put(any(), any())).thenReturn(false);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              DistributedTransaction transaction = manager.begin();
+              Put put =
+                  new Put(new Key("p1", "val1"))
+                      .withValue("v1", "val2")
+                      .forNamespace(NAMESPACE)
+                      .forTable(TABLE);
+              transaction.put(put);
+            })
+        .isInstanceOf(CrudException.class);
+  }
+
+  @Test
   public void
       whenDeleteOperationsExecutedAndJdbcServiceThrowsSQLException_shouldThrowCrudException()
           throws Exception {
@@ -240,6 +260,23 @@ public class JdbcTransactionManagerTest {
               transaction.delete(delete);
             })
         .isInstanceOf(CrudConflictException.class);
+  }
+
+  @Test
+  public void delete_withNoMutation_shouldThrowCrudException()
+      throws SQLException, ExecutionException {
+    // Arrange
+    when(jdbcService.delete(any(), any())).thenReturn(false);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              DistributedTransaction transaction = manager.begin();
+              Delete delete =
+                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
+              transaction.delete(delete);
+            })
+        .isInstanceOf(CrudException.class);
   }
 
   @Test
@@ -291,6 +328,7 @@ public class JdbcTransactionManagerTest {
   @Test
   public void whenCommitFails_shouldThrowCommitExceptionAndRollback() throws Exception {
     // Arrange
+    when(jdbcService.put(any(), any())).thenReturn(true);
     doThrow(sqlException).when(connection).commit();
 
     // Act Assert
@@ -315,6 +353,7 @@ public class JdbcTransactionManagerTest {
   @Test
   public void whenRollbackFails_shouldThrowAbortException() throws Exception {
     // Arrange
+    when(jdbcService.put(any(), any())).thenReturn(true);
     doThrow(sqlException).when(connection).rollback();
 
     // Act Assert
@@ -338,6 +377,7 @@ public class JdbcTransactionManagerTest {
   @Test
   public void whenRollbackFails_shouldThrowRollbackException() throws Exception {
     // Arrange
+    when(jdbcService.put(any(), any())).thenReturn(true);
     doThrow(sqlException).when(connection).rollback();
 
     // Act Assert
@@ -362,6 +402,7 @@ public class JdbcTransactionManagerTest {
   public void whenCommitAndRollbackFails_shouldThrowUnknownTransactionStatusException()
       throws Exception {
     // Arrange
+    when(jdbcService.put(any(), any())).thenReturn(true);
     doThrow(sqlException).when(connection).commit();
     doThrow(sqlException).when(connection).rollback();
 

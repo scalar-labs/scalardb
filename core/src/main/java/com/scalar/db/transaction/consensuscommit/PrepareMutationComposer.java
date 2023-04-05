@@ -10,14 +10,18 @@ import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
+import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Value;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,14 +75,32 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
       int version = result.getVersion();
       put.withValue(Attribute.toVersionValue(version + 1));
 
+      List<ConditionalExpression> conditions = new ArrayList<>();
       // check if the record is not interrupted by other conflicting transactions
-      put.withCondition(
-          new PutIf(
-              new ConditionalExpression(VERSION, toVersionValue(version), Operator.EQ),
-              new ConditionalExpression(ID, toIdValue(result.getId()), Operator.EQ)));
+      conditions.add(new ConditionalExpression(VERSION, toVersionValue(version), Operator.EQ));
+      conditions.add(new ConditionalExpression(ID, toIdValue(result.getId()), Operator.EQ));
+      // add the base operation conditions
+      if (base.getCondition().isPresent()) {
+        MutationCondition condition = base.getCondition().get();
+        if (condition instanceof PutIf) {
+          conditions.addAll(base.getCondition().get().getExpressions());
+        } else if ((condition instanceof PutIfNotExists)) {
+          throw new NoMutationException("the record exist so the condition is not satisfied.");
+        }
+        // Do nothing if the condition is a PutIfExists since the PutIf condition set below
+        // ensure the record exists
+      }
+      put.withCondition(new PutIf(conditions));
     } else { // initial record
       put.withValue(Attribute.toVersionValue(1));
 
+      if (base.getCondition().isPresent()) {
+        MutationCondition condition = base.getCondition().get();
+        if (condition instanceof PutIf || condition instanceof PutIfExists) {
+          throw new NoMutationException(
+              "the record does not exist so the condition is not satisfied.");
+        }
+      }
       // check if the record is not created by other conflicting transactions
       put.withCondition(new PutIfNotExists());
     }
@@ -103,13 +125,29 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
       int version = result.getVersion();
       values.add(Attribute.toVersionValue(version + 1));
 
+      List<ConditionalExpression> conditions = new ArrayList<>();
       // check if the record is not interrupted by other conflicting transactions
-      put.withCondition(
-          new PutIf(
-              new ConditionalExpression(VERSION, toVersionValue(version), Operator.EQ),
-              new ConditionalExpression(ID, toIdValue(result.getId()), Operator.EQ)));
+      conditions.add(new ConditionalExpression(VERSION, toVersionValue(version), Operator.EQ));
+      conditions.add(new ConditionalExpression(ID, toIdValue(result.getId()), Operator.EQ));
+
+      // add the base operation conditions
+      if (base.getCondition().isPresent()) {
+        if (base.getCondition().get() instanceof DeleteIf) {
+          conditions.addAll(base.getCondition().get().getExpressions());
+        }
+        // Do nothing when the condition is a DeleteIfExists since the PutIf condition set below
+        // ensure the record exists
+      }
+
+      put.withCondition(new PutIf(conditions));
     } else {
       put.withValue(Attribute.toVersionValue(1));
+
+      if (base.getCondition().isPresent()) {
+        // DeleteIf or DeleteIfExists
+        throw new NoMutationException(
+            "the record does not exist so the condition is not satisfied.");
+      }
 
       // check if the record is not created by other conflicting transactions
       put.withCondition(new PutIfNotExists());
@@ -127,7 +165,6 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
             .forNamespace(base.forNamespace().get())
             .forTable(base.forTable().get())
             .withConsistency(Consistency.LINEARIZABLE);
-
     List<Value<?>> values = new ArrayList<>();
     values.add(Attribute.toIdValue(id));
     values.add(Attribute.toStateValue(TransactionState.DELETED));
