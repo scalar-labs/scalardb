@@ -345,7 +345,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=5000&journal_mode=WAL
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
 
       - name: Upload Gradle test reports
         if: always()
