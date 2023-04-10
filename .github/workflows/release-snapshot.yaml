@@ -56,8 +56,7 @@ jobs:
 
       - name: Create SNAPSHOT containers
         if: contains(steps.version.outputs.version, '-SNAPSHOT')
-        run: |
-          ./gradlew docker
+        run: ./gradlew docker
 
       - name: Push SNAPSHOT containers
         if: contains(steps.version.outputs.version, '-SNAPSHOT')
