@@ -62,6 +62,5 @@ jobs:
       - name: Push SNAPSHOT containers
         if: contains(steps.version.outputs.version, '-SNAPSHOT')
         run: |
-          ./gradlew docker
           docker push ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }}
           docker push ghcr.io/scalar-labs/scalardb-schema-loader:${{ steps.version.outputs.version }}
