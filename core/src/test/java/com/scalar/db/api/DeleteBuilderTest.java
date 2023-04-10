@@ -29,16 +29,10 @@ public class DeleteBuilderTest {
   @Test
   public void build_WithMandatoryParameters_ShouldBuildDeleteWithMandatoryParameters() {
     // Arrange Act
-    Delete actual =
-        Delete.newBuilder()
-            .namespace(NAMESPACE_1)
-            .table(TABLE_1)
-            .partitionKey(partitionKey1)
-            .build();
+    Delete actual = Delete.newBuilder().table(TABLE_1).partitionKey(partitionKey1).build();
 
     // Assert
-    assertThat(actual)
-        .isEqualTo(new Delete(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(actual).isEqualTo(new Delete(partitionKey1).forTable(TABLE_1));
   }
 
   @Test
@@ -158,5 +152,18 @@ public class DeleteBuilderTest {
     // Assert
     assertThat(newDelete)
         .isEqualTo(new Delete(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+  }
+
+  @Test
+  public void build_FromExistingAndClearNamespace_ShouldBuildDeleteWithoutNamespace() {
+    // Arrange
+    Delete existingDelete =
+        new Delete(partitionKey1, clusteringKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+
+    // Act
+    Delete newDelete = Delete.newBuilder(existingDelete).clearNamespace().build();
+
+    // Assert
+    assertThat(newDelete).isEqualTo(new Delete(partitionKey1, clusteringKey1).forTable(TABLE_1));
   }
 }

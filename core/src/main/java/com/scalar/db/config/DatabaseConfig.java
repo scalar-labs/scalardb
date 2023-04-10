@@ -31,6 +31,7 @@ public class DatabaseConfig {
   private String transactionManager;
   private long metadataCacheExpirationTimeSecs;
   private long activeTransactionManagementExpirationTimeMillis;
+  @Nullable private String defaultNamespaceName;
 
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
@@ -43,6 +44,7 @@ public class DatabaseConfig {
       PREFIX + "metadata.cache_expiration_time_secs";
   public static final String ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS =
       PREFIX + "active_transaction_management.expiration_time_millis";
+  public static final String DEFAULT_NAMESPACE_NAME = PREFIX + "default_namespace_name";
 
   public DatabaseConfig(File propertiesFile) throws IOException {
     try (FileInputStream stream = new FileInputStream(propertiesFile)) {
@@ -87,6 +89,7 @@ public class DatabaseConfig {
         getLong(getProperties(), METADATA_CACHE_EXPIRATION_TIME_SECS, -1);
     activeTransactionManagementExpirationTimeMillis =
         getLong(getProperties(), ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS, 0);
+    defaultNamespaceName = getString(getProperties(), DEFAULT_NAMESPACE_NAME, null);
   }
 
   public List<String> getContactPoints() {
@@ -119,5 +122,9 @@ public class DatabaseConfig {
 
   public long getActiveTransactionManagementExpirationTimeMillis() {
     return activeTransactionManagementExpirationTimeMillis;
+  }
+
+  public Optional<String> getDefaultNamespaceName() {
+    return Optional.ofNullable(defaultNamespaceName);
   }
 }

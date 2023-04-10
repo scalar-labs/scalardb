@@ -55,6 +55,7 @@ public class GrpcTransactionOnBidirectionalStream
   private final AtomicBoolean finished = new AtomicBoolean();
 
   private ClientCallStreamObserver<TransactionRequest> requestStream;
+  private String transactionId;
 
   public GrpcTransactionOnBidirectionalStream(
       GrpcConfig config, DistributedTransactionStub stub, TableMetadataManager metadataManager) {
@@ -118,7 +119,8 @@ public class GrpcTransactionOnBidirectionalStream
     ResponseOrError responseOrError =
         sendRequest(TransactionRequest.newBuilder().setBeginRequest(request).build());
     throwIfErrorForBeginOrStart(responseOrError, "begin");
-    return responseOrError.getResponse().getBeginResponse().getTransactionId();
+    this.transactionId = responseOrError.getResponse().getBeginResponse().getTransactionId();
+    return this.transactionId;
   }
 
   public String startTransaction(@Nullable String transactionId) throws TransactionException {
@@ -134,7 +136,8 @@ public class GrpcTransactionOnBidirectionalStream
     ResponseOrError responseOrError =
         sendRequest(TransactionRequest.newBuilder().setStartRequest(request).build());
     throwIfErrorForBeginOrStart(responseOrError, "start");
-    return responseOrError.getResponse().getStartResponse().getTransactionId();
+    this.transactionId = responseOrError.getResponse().getStartResponse().getTransactionId();
+    return this.transactionId;
   }
 
   private void throwIfErrorForBeginOrStart(ResponseOrError responseOrError, String command)
@@ -154,7 +157,7 @@ public class GrpcTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new TransactionException("failed to " + command, error);
+      throw new TransactionException("failed to " + command, error, null);
     }
   }
 
@@ -197,7 +200,7 @@ public class GrpcTransactionOnBidirectionalStream
     try {
       return metadataManager.getTableMetadata(operation);
     } catch (ExecutionException e) {
-      throw new CrudException("getting a metadata failed", e);
+      throw new CrudException("getting a metadata failed", e, transactionId);
     }
   }
 
@@ -230,7 +233,7 @@ public class GrpcTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new CrudException("failed to execute crud", error);
+      throw new CrudException("failed to execute crud", error, transactionId);
     }
 
     TransactionResponse response = responseOrError.getResponse();
@@ -240,9 +243,9 @@ public class GrpcTransactionOnBidirectionalStream
         case INVALID_ARGUMENT:
           throw new IllegalArgumentException(error.getMessage());
         case TRANSACTION_CONFLICT:
-          throw new CrudConflictException(error.getMessage());
+          throw new CrudConflictException(error.getMessage(), transactionId);
         default:
-          throw new CrudException(error.getMessage());
+          throw new CrudException(error.getMessage(), transactionId);
       }
     }
   }
@@ -266,7 +269,7 @@ public class GrpcTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new CommitException("failed to commit", error);
+      throw new CommitException("failed to commit", error, transactionId);
     }
 
     TransactionResponse response = responseOrError.getResponse();
@@ -274,11 +277,11 @@ public class GrpcTransactionOnBidirectionalStream
       TransactionResponse.Error error = response.getError();
       switch (error.getErrorCode()) {
         case TRANSACTION_CONFLICT:
-          throw new CommitConflictException(error.getMessage());
+          throw new CommitConflictException(error.getMessage(), transactionId);
         case UNKNOWN_TRANSACTION_STATUS:
-          throw new UnknownTransactionStatusException(error.getMessage());
+          throw new UnknownTransactionStatusException(error.getMessage(), transactionId);
         default:
-          throw new CommitException(error.getMessage());
+          throw new CommitException(error.getMessage(), transactionId);
       }
     }
   }
@@ -303,12 +306,12 @@ public class GrpcTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new RollbackException("failed to rollback", error);
+      throw new RollbackException("failed to rollback", error, transactionId);
     }
 
     TransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
-      throw new RollbackException(response.getError().getMessage());
+      throw new RollbackException(response.getError().getMessage(), transactionId);
     }
   }
 
@@ -332,12 +335,12 @@ public class GrpcTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new AbortException("failed to abort", error);
+      throw new AbortException("failed to abort", error, transactionId);
     }
 
     TransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
-      throw new AbortException(response.getError().getMessage());
+      throw new AbortException(response.getError().getMessage(), transactionId);
     }
   }
 

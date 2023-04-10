@@ -113,7 +113,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @AfterAll
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     dropTables();
     admin.close();
   }

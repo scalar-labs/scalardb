@@ -1,7 +1,6 @@
 package com.scalar.db.server;
 
-import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
+import com.scalar.db.api.DistributedStorageAdminRepairTableIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.util.Properties;
@@ -9,10 +8,11 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 
-public class SchemaLoaderIntegrationTestWithScalarDbServer extends SchemaLoaderIntegrationTestBase {
+public class DistributedStorageAdminRepairTableIntegrationTestWithServer
+    extends DistributedStorageAdminRepairTableIntegrationTestBase {
 
   private ScalarDbServer server;
-  boolean isExternalServerUsed;
+  private boolean isExternalServerUsed;
 
   @Override
   protected void initialize(String testName) throws IOException {
@@ -40,9 +40,9 @@ public class SchemaLoaderIntegrationTestWithScalarDbServer extends SchemaLoaderI
     return new ServerAdminTestUtils(properties);
   }
 
-  @AfterAll
   @Override
-  public void afterAll() throws ExecutionException, IOException {
+  @AfterAll
+  public void afterAll() throws Exception {
     super.afterAll();
     if (server != null) {
       server.shutdown();
@@ -53,19 +53,24 @@ public class SchemaLoaderIntegrationTestWithScalarDbServer extends SchemaLoaderI
   @Override
   @Test
   @DisabledIf("isExternalServerUsed")
-  public void createTableThenDropMetadataTableThenRepairTables_ShouldExecuteProperly()
-      throws Exception {
-    super.createTableThenDropMetadataTableThenRepairTables_ShouldExecuteProperly();
+  public void repairTable_ForDeletedMetadataTable_ShouldRepairProperly() throws Exception {
+    super.repairTable_ForDeletedMetadataTable_ShouldRepairProperly();
   }
 
   /** This test is disabled if {@link #isExternalServerUsed()} return true */
   @Override
   @Test
   @DisabledIf("isExternalServerUsed")
-  public void
-      createTableThenDropMetadataTableThenRepairTablesWithCoordinator_ShouldExecuteProperly()
-          throws Exception {
-    super.createTableThenDropMetadataTableThenRepairTablesWithCoordinator_ShouldExecuteProperly();
+  public void repairTable_ForTruncatedMetadataTable_ShouldRepairProperly() throws Exception {
+    super.repairTable_ForTruncatedMetadataTable_ShouldRepairProperly();
+  }
+
+  /** This test is disabled if {@link #isExternalServerUsed()} return true */
+  @Override
+  @Test
+  @DisabledIf("isExternalServerUsed")
+  public void repairTable_ForCorruptedMetadataTable_ShouldRepairProperly() throws Exception {
+    super.repairTable_ForCorruptedMetadataTable_ShouldRepairProperly();
   }
 
   @SuppressWarnings("unused")

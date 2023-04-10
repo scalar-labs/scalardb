@@ -9,6 +9,7 @@ import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import java.sql.Driver;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -221,5 +222,10 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   @Override
   public String computeBooleanValue(boolean value) {
     return value ? "true" : "false";
+  }
+
+  @Override
+  public Driver getDriver() {
+    return new org.postgresql.Driver();
   }
 }

@@ -6,11 +6,11 @@ package com.scalar.db.exception.transaction;
  */
 public class CrudConflictException extends CrudException {
 
-  public CrudConflictException(String message) {
-    super(message);
+  public CrudConflictException(String message, String transactionId) {
+    super(message, transactionId);
   }
 
-  public CrudConflictException(String message, Throwable cause) {
-    super(message, cause);
+  public CrudConflictException(String message, Throwable cause, String transactionId) {
+    super(message, cause, transactionId);
   }
 }

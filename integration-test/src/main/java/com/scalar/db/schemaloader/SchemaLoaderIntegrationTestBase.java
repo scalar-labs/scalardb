@@ -95,7 +95,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
   }
 
   @BeforeEach
-  public void setUp() throws ExecutionException {
+  public void setUp() throws Exception {
     dropTablesIfExist();
   }
 
@@ -268,7 +268,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
   }
 
   @AfterAll
-  public void afterAll() throws ExecutionException, IOException {
+  public void afterAll() throws Exception {
     dropTablesIfExist();
     storageAdmin.close();
 

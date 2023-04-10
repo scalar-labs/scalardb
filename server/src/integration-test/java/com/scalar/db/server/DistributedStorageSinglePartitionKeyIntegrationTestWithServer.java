@@ -1,13 +1,12 @@
 package com.scalar.db.server;
 
-import com.scalar.db.api.DistributedStorageConditionalMutationIntegrationTestBase;
-import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.api.DistributedStorageSinglePartitionKeyIntegrationTestBase;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 
-public class DistributedStorageServiceConditionalMutationIntegrationTest
-    extends DistributedStorageConditionalMutationIntegrationTestBase {
+public class DistributedStorageSinglePartitionKeyIntegrationTestWithServer
+    extends DistributedStorageSinglePartitionKeyIntegrationTestBase {
 
   private ScalarDbServer server;
 
@@ -27,16 +26,10 @@ public class DistributedStorageServiceConditionalMutationIntegrationTest
 
   @AfterAll
   @Override
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     super.afterAll();
     if (server != null) {
       server.shutdown();
     }
-  }
-
-  @Override
-  protected int getThreadNum() {
-    // Since Deadlock error sometimes happens in MySQL, change the concurrency to 1
-    return 1;
   }
 }

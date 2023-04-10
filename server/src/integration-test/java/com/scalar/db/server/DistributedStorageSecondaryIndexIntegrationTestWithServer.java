@@ -1,13 +1,12 @@
 package com.scalar.db.server;
 
-import com.scalar.db.api.DistributedStorageColumnValueIntegrationTestBase;
-import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.api.DistributedStorageSecondaryIndexIntegrationTestBase;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 
-public class DistributedStorageServiceColumnValueIntegrationTest
-    extends DistributedStorageColumnValueIntegrationTestBase {
+public class DistributedStorageSecondaryIndexIntegrationTestWithServer
+    extends DistributedStorageSecondaryIndexIntegrationTestBase {
 
   private ScalarDbServer server;
 
@@ -27,7 +26,7 @@ public class DistributedStorageServiceColumnValueIntegrationTest
 
   @AfterAll
   @Override
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     super.afterAll();
     if (server != null) {
       server.shutdown();

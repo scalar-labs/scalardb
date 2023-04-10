@@ -94,7 +94,7 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
   }
 
   @BeforeEach
-  protected void beforeEach() throws Exception {
+  protected void setUp() throws Exception {
     TransactionFactory factory = TransactionFactory.create(getProperties(TEST_NAME));
     admin = factory.getTransactionAdmin();
     createTable();

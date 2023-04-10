@@ -1,13 +1,12 @@
 package com.scalar.db.server;
 
-import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
-import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.api.DistributedStorageMultipleClusteringKeyScanIntegrationTestBase;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 
-public class DistributedStorageAdminServiceIntegrationTest
-    extends DistributedStorageAdminIntegrationTestBase {
+public class DistributedStorageMultipleClusteringKeyScanIntegrationTestWithServer
+    extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
 
   private ScalarDbServer server;
 
@@ -27,7 +26,7 @@ public class DistributedStorageAdminServiceIntegrationTest
 
   @AfterAll
   @Override
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     super.afterAll();
     if (server != null) {
       server.shutdown();

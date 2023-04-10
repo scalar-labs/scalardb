@@ -52,8 +52,8 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   }
 
   private void execute(String sql) throws SQLException {
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config);
-        Connection connection = dataSource.getConnection(); ) {
+    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
+        Connection connection = dataSource.getConnection()) {
       JdbcAdmin.execute(connection, sql);
     }
   }

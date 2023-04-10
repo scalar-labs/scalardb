@@ -1,7 +1,6 @@
 package com.scalar.db.server;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestBase;
@@ -12,8 +11,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 
-public class ConsensusCommitIntegrationTestWithDistributedTransactionService
-    extends ConsensusCommitIntegrationTestBase {
+public class ConsensusCommitIntegrationTestWithServer extends ConsensusCommitIntegrationTestBase {
 
   private static final String PORT_FOR_SERVER_WITH_INCLUDE_METADATA_ENABLED = "60053";
 
@@ -59,7 +57,7 @@ public class ConsensusCommitIntegrationTestWithDistributedTransactionService
 
   @AfterAll
   @Override
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     super.afterAll();
     if (server != null) {
       server.shutdown();

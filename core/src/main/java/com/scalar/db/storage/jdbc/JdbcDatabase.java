@@ -46,12 +46,13 @@ public class JdbcDatabase extends AbstractDistributedStorage {
 
   @Inject
   public JdbcDatabase(DatabaseConfig databaseConfig) {
+    super(databaseConfig);
     JdbcConfig config = new JdbcConfig(databaseConfig);
 
-    dataSource = JdbcUtils.initDataSource(config);
     rdbEngine = RdbEngineFactory.create(config);
+    dataSource = JdbcUtils.initDataSource(config, rdbEngine);
 
-    tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config);
+    tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config, rdbEngine);
     TableMetadataManager tableMetadataManager =
         new TableMetadataManager(
             new JdbcAdmin(tableMetadataDataSource, config),
@@ -64,10 +65,12 @@ public class JdbcDatabase extends AbstractDistributedStorage {
 
   @VisibleForTesting
   JdbcDatabase(
+      DatabaseConfig databaseConfig,
       BasicDataSource dataSource,
       BasicDataSource tableMetadataDataSource,
       RdbEngineStrategy rdbEngine,
       JdbcService jdbcService) {
+    super(databaseConfig);
     this.dataSource = dataSource;
     this.tableMetadataDataSource = tableMetadataDataSource;
     this.jdbcService = jdbcService;

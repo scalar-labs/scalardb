@@ -43,12 +43,12 @@ public class GrpcTransactionManager extends ActiveTransactionManagedDistributedT
   static final Retry.ExceptionFactory<TransactionException> EXCEPTION_FACTORY =
       (message, cause) -> {
         if (cause == null) {
-          return new TransactionException(message);
+          return new TransactionException(message, null);
         }
         if (cause instanceof TransactionException) {
           return (TransactionException) cause;
         }
-        return new TransactionException(message, cause);
+        return new TransactionException(message, cause, null);
       };
 
   private final GrpcConfig config;
@@ -99,12 +99,19 @@ public class GrpcTransactionManager extends ActiveTransactionManagedDistributedT
         () -> {
           GrpcTransactionOnBidirectionalStream stream = getStream();
           String transactionId = stream.beginTransaction(txId);
-          GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
-          getNamespace().ifPresent(transaction::withNamespace);
-          getTable().ifPresent(transaction::withTable);
+          GrpcTransaction transaction = createTransaction(stream, transactionId);
           return decorate(transaction);
         },
         EXCEPTION_FACTORY);
+  }
+
+  private GrpcTransaction createTransaction(
+      GrpcTransactionOnBidirectionalStream stream, String transactionId) {
+    GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
+    getNamespace().ifPresent(transaction::withNamespace);
+    getTable().ifPresent(transaction::withTable);
+
+    return transaction;
   }
 
   @Override
@@ -122,9 +129,7 @@ public class GrpcTransactionManager extends ActiveTransactionManagedDistributedT
         () -> {
           GrpcTransactionOnBidirectionalStream stream = getStream();
           String transactionId = stream.startTransaction(txId);
-          GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
-          getNamespace().ifPresent(transaction::withNamespace);
-          getTable().ifPresent(transaction::withTable);
+          GrpcTransaction transaction = createTransaction(stream, transactionId);
           return decorate(transaction);
         },
         EXCEPTION_FACTORY);
@@ -236,7 +241,7 @@ public class GrpcTransactionManager extends ActiveTransactionManagedDistributedT
             if (e.getStatus().getCode() == Code.UNAVAILABLE) {
               throw new ServiceTemporaryUnavailableException(e.getMessage(), e);
             }
-            throw new TransactionException(e.getMessage(), e);
+            throw new TransactionException(e.getMessage(), e, null);
           }
         },
         EXCEPTION_FACTORY);

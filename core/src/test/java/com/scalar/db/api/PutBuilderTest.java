@@ -33,12 +33,10 @@ public class PutBuilderTest {
   @Test
   public void build_WithMandatoryParameters_ShouldBuildPutWithMandatoryParameters() {
     // Arrange Act
-    Put actual =
-        Put.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).partitionKey(partitionKey1).build();
+    Put actual = Put.newBuilder().table(TABLE_1).partitionKey(partitionKey1).build();
 
     // Assert
-    assertThat(actual)
-        .isEqualTo(new Put(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(actual).isEqualTo(new Put(partitionKey1).forTable(TABLE_1));
   }
 
   @Test
@@ -320,5 +318,18 @@ public class PutBuilderTest {
     // Assert
     assertThat(newPut)
         .isEqualTo(new Put(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+  }
+
+  @Test
+  public void build_FromExistingAndClearNamespace_ShouldBuildPutWithoutNamespace() {
+    // Arrange
+    Put existingPut =
+        new Put(partitionKey1, clusteringKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+
+    // Act
+    Put newPut = Put.newBuilder(existingPut).clearNamespace().build();
+
+    // Assert
+    assertThat(newPut).isEqualTo(new Put(partitionKey1, clusteringKey1).forTable(TABLE_1));
   }
 }

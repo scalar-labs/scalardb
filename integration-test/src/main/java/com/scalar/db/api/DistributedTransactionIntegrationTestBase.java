@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Scan.Ordering;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -29,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.IntStream;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -95,13 +97,13 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @BeforeEach
-  public void setUp() throws ExecutionException {
+  public void setUp() throws Exception {
     admin.truncateTable(namespace, TABLE);
     admin.truncateCoordinatorTables();
   }
 
   @AfterAll
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     dropTables();
     admin.close();
     manager.close();
@@ -940,6 +942,68 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Act Assert
     assertThatThrownBy(() -> manager.resume(transaction.getId()))
         .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void operation_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    final DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager();
+    try {
+      // Arrange
+      populateRecords();
+      Get get =
+          Get.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .build();
+      Scan scan = Scan.newBuilder().table(TABLE).all().build();
+      Put put =
+          Put.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Delete delete =
+          Delete.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .build();
+      Mutation putAsMutation1 =
+          Put.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Mutation deleteAsMutation2 =
+          Delete.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+              .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                tx.get(get);
+                tx.scan(scan);
+                tx.put(put);
+                tx.delete(delete);
+                tx.mutate(ImmutableList.of(putAsMutation1, deleteAsMutation2));
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    } finally {
+      if (managerWithDefaultNamespace != null) {
+        managerWithDefaultNamespace.close();
+      }
+    }
   }
 
   protected void populateRecords() throws TransactionException {

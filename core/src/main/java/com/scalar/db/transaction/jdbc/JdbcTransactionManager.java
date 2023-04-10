@@ -39,10 +39,10 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
     super(databaseConfig);
     JdbcConfig config = new JdbcConfig(databaseConfig);
 
-    dataSource = JdbcUtils.initDataSource(config, true);
     rdbEngine = RdbEngineFactory.create(config);
+    dataSource = JdbcUtils.initDataSource(config, rdbEngine, true);
 
-    tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config);
+    tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config, rdbEngine);
     TableMetadataManager tableMetadataManager =
         new TableMetadataManager(
             new JdbcAdmin(tableMetadataDataSource, config),
@@ -82,7 +82,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
       getTable().ifPresent(transaction::withTable);
       return decorate(transaction);
     } catch (SQLException e) {
-      throw new TransactionException("failed to start the transaction", e);
+      throw new TransactionException("failed to start the transaction", e, null);
     }
   }
 
