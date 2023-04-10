@@ -54,7 +54,12 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
 
-      - name: Create and push SNAPSHOT version container images for scalardb-server and scalardb-schema-loader to GitHub Packages
+      - name: Create SNAPSHOT containers
+        if: contains(steps.version.outputs.version, '-SNAPSHOT')
+        run: |
+          ./gradlew docker
+
+      - name: Push SNAPSHOT containers
         if: contains(steps.version.outputs.version, '-SNAPSHOT')
         run: |
           ./gradlew docker
