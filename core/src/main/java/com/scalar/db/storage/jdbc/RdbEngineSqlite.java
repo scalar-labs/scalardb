@@ -8,6 +8,7 @@ import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.sql.Driver;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
@@ -254,5 +255,10 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
     return new InsertOnConflictDoUpdateQuery(builder);
+  }
+
+  @Override
+  public Driver getDriver() {
+    return new org.sqlite.JDBC();
   }
 }
