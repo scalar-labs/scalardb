@@ -4,6 +4,7 @@ import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
 
 public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegrationTestBase {
 
@@ -25,26 +26,23 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
 
   @Test
   @Override
+  @DisabledIf("isSqlite")
   public void createNamespace_ForNonExistingNamespace_ShouldCreateNamespaceProperly()
       throws ExecutionException {
-    if (!isSqlite()) {
-      super.createNamespace_ForNonExistingNamespace_ShouldCreateNamespaceProperly();
-    }
+    super.createNamespace_ForNonExistingNamespace_ShouldCreateNamespaceProperly();
   }
 
   @Test
   @Override
+  @DisabledIf("isSqlite")
   public void createNamespace_ForExistingNamespace_ShouldThrowExecutionException() {
-    if (!isSqlite()) {
-      super.createNamespace_ForExistingNamespace_ShouldThrowExecutionException();
-    }
+    super.createNamespace_ForExistingNamespace_ShouldThrowExecutionException();
   }
 
   @Test
   @Override
+  @DisabledIf("isSqlite")
   public void dropNamespace_ForNonExistingNamespace_ShouldThrowExecutionException() {
-    if (!isSqlite()) {
-      super.dropNamespace_ForNonExistingNamespace_ShouldThrowExecutionException();
-    }
+    super.dropNamespace_ForNonExistingNamespace_ShouldThrowExecutionException();
   }
 }
