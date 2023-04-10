@@ -9,7 +9,8 @@ public enum RdbEngine {
   MYSQL,
   POSTGRESQL,
   ORACLE,
-  SQL_SERVER;
+  SQL_SERVER,
+  SQLITE;
 
   public static RdbEngineStrategy createRdbEngineStrategy(RdbEngine rdbEngine) {
     switch (rdbEngine) {
@@ -21,6 +22,8 @@ public enum RdbEngine {
         return new RdbEngineOracle();
       case SQL_SERVER:
         return new RdbEngineSqlServer();
+      case SQLITE:
+        return new RdbEngineSqlite();
       default:
         throw new AssertionError();
     }
