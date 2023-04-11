@@ -7,7 +7,7 @@ This document briefly explains how you can get started with ScalarDB on DynamoDB
 
 ScalarDB is written in Java. So the following software is required to run it.
 
-* [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (or OpenJDK 8)
+* [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (or OpenJDK 8) or higher
 * Other libraries used from the above are automatically installed through gradle
         
 From here, we assume Oracle JDK 8 is properly installed in your local environment.
