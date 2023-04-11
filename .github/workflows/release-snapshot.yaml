@@ -46,3 +46,20 @@ jobs:
           -Psigning.secretKeyRingFile="$(echo ~/.gradle/secring.gpg)" \
           -PossrhUsername="${{ secrets.OSSRH_USERNAMAE }}" \
           -PossrhPassword="${{ secrets.OSSRH_PASSWORD }}"
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Create SNAPSHOT containers
+        if: contains(steps.version.outputs.version, '-SNAPSHOT')
+        run: ./gradlew docker
+
+      - name: Push SNAPSHOT containers
+        if: contains(steps.version.outputs.version, '-SNAPSHOT')
+        run: |
+          docker push ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }}
+          docker push ghcr.io/scalar-labs/scalardb-schema-loader:${{ steps.version.outputs.version }}
