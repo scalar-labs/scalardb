@@ -20,8 +20,7 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
   // different from the other adapters. So disable several tests that check such behaviors.
 
   private boolean isSqlite() {
-    String jdbcUrl = System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL);
-    return jdbcUrl.startsWith("jdbc:sqlite:");
+    return JdbcEnv.getRdbEngineFromProperty() == RdbEngine.SQLITE;
   }
 
   @Test

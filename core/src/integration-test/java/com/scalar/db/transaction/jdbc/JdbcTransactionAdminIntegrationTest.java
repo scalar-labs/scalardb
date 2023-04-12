@@ -4,6 +4,7 @@ import com.scalar.db.api.DistributedTransactionAdminIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.jdbc.JdbcEnv;
+import com.scalar.db.storage.jdbc.RdbEngine;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
@@ -26,8 +27,7 @@ public class JdbcTransactionAdminIntegrationTest
   // different from the other adapters. So disable several tests that check such behaviors.
 
   private boolean isSqlite() {
-    String jdbcUrl = System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL);
-    return jdbcUrl.startsWith("jdbc:sqlite:");
+    return JdbcEnv.getRdbEngineFromProperty() == RdbEngine.SQLITE;
   }
 
   @Test
