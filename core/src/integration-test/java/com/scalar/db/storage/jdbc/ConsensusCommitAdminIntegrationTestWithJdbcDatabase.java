@@ -9,9 +9,6 @@ import org.junit.jupiter.api.condition.DisabledIf;
 public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
     extends ConsensusCommitAdminIntegrationTestBase {
 
-  private static final String PROP_JDBC_URL = "scalardb.jdbc.url";
-  private static final String DEFAULT_JDBC_URL = "jdbc:mysql://localhost:3306/";
-
   @Override
   protected Properties getProps(String testName) {
     return JdbcEnv.getProperties(testName);

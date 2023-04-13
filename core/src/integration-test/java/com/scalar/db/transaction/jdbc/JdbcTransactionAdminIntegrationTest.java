@@ -12,9 +12,6 @@ import org.junit.jupiter.api.condition.DisabledIf;
 public class JdbcTransactionAdminIntegrationTest
     extends DistributedTransactionAdminIntegrationTestBase {
 
-  private static final String PROP_JDBC_URL = "scalardb.jdbc.url";
-  private static final String DEFAULT_JDBC_URL = "jdbc:mysql://localhost:3306/";
-
   @Override
   protected Properties getProperties(String testName) {
     Properties properties = new Properties();
