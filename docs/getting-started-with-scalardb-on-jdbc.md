@@ -8,7 +8,7 @@ This document briefly explains how you can get started with ScalarDB on JDBC dat
 ScalarDB is written in Java and uses a JDBC database as an underlying storage implementation, so the following software is required to run it.
 
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (or OpenJDK 8)
-* A JDBC database instance. Currently, MySQL, PostgreSQL, Oracle Database, SQL Server, and Amazon Aurora are officially supported
+* A JDBC database instance. Currently, MySQL, PostgreSQL, Oracle Database, SQL Server, Amazon Aurora, and SQLite are officially supported
 * Other libraries used from the above are automatically installed through gradle
 
 From here, we assume Oracle JDK 8 and a JDBC database is properly installed in your local environment, and it is running in your localhost.
@@ -82,3 +82,15 @@ scalar.db.transaction_manager=jdbc
 
 When using JDBC transaction, the `SERIALIZABLE` isolation level is used by default.
 And you can change it with the `scalar.db.jdbc.isolation_level` property.
+
+## Use SQLite3 storage
+
+You can use SQLite3 as a backend database. To do that, you need to set `scalar.db.contact_points` in **scalardb.properties** as follows.
+
+```properties
+scalar.db.contact_points=jdbc:sqlite:your-db.sqlite3?busy_timeout=10000
+```
+
+Unlike other database servers, [SQLite3 does not fully support concurrent access](https://www.sqlite.org/lang_transaction.html).
+In order to avoid frequent errors caused internally by the [`SQLITE_BUSY`](https://www.sqlite.org/rescode.html#busy),
+it is recommended to set a [`busy_timeout`](https://www.sqlite.org/c3ref/busy_timeout.html) parameter.
