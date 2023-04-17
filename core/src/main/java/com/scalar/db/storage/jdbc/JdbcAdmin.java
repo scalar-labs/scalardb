@@ -3,6 +3,7 @@ package com.scalar.db.storage.jdbc;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -83,6 +84,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
+    if (!rdbEngine.isValidTableName(table)) {
+      throw new ExecutionException("table name is not acceptable: " + table);
+    }
+
     try (Connection connection = dataSource.getConnection()) {
       createTableInternal(connection, namespace, table, metadata);
       createIndex(connection, namespace, table, metadata);
@@ -362,7 +367,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
-    String truncateTableStatement = "TRUNCATE TABLE " + encloseFullTableName(namespace, table);
+    String truncateTableStatement = rdbEngine.truncateTableSql(namespace, table);
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, truncateTableStatement);
     } catch (SQLException e) {
@@ -484,7 +489,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =
             connection.prepareStatement(namespaceExistsStatement)) {
-      preparedStatement.setString(1, namespace);
+      preparedStatement.setString(1, rdbEngine.namespaceExistsPlaceholder(namespace));
       return preparedStatement.executeQuery().next();
     } catch (SQLException e) {
       throw new ExecutionException("checking if the namespace exists failed", e);
@@ -709,6 +714,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   static void execute(Connection connection, String sql) throws SQLException {
+    if (Strings.isNullOrEmpty(sql)) {
+      return;
+    }
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(sql);
     }

@@ -34,6 +34,10 @@ public interface RdbEngineStrategy {
 
   String[] createNamespaceSqls(String fullNamespace);
 
+  default boolean isValidTableName(String tableName) {
+    return true;
+  }
+
   String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata);
 
@@ -50,10 +54,18 @@ public interface RdbEngineStrategy {
 
   String dropNamespaceSql(String namespace);
 
+  default String truncateTableSql(String namespace, String table) {
+    return "TRUNCATE TABLE " + encloseFullTableName(namespace, table);
+  }
+
   void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException;
 
   String namespaceExistsStatement();
+
+  default String namespaceExistsPlaceholder(String namespace) {
+    return namespace;
+  }
 
   String alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
