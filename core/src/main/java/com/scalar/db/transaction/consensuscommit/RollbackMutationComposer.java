@@ -17,7 +17,6 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
-import com.scalar.db.api.PutIf;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -25,13 +24,10 @@ import com.scalar.db.io.Column;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
-import com.scalar.db.io.Value;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -99,15 +95,16 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
               }
             });
 
-    PutBuilder.Buildable putBuilder = Put.newBuilder()
-        .namespace(base.forNamespace().get())
-        .table(base.forTable().get())
-        .partitionKey(result.getPartitionKey().get())
-        .condition(
-            ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(id))
-                .and(ConditionBuilder.column(STATE).isEqualToInt(result.getState().get()))
-                .build())
-        .consistency(Consistency.LINEARIZABLE);
+    PutBuilder.Buildable putBuilder =
+        Put.newBuilder()
+            .namespace(base.forNamespace().get())
+            .table(base.forTable().get())
+            .partitionKey(result.getPartitionKey().get())
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(id))
+                    .and(ConditionBuilder.column(STATE).isEqualToInt(result.getState().get()))
+                    .build())
+            .consistency(Consistency.LINEARIZABLE);
 
     if (result.getClusteringKey().isPresent()) {
       putBuilder.clusteringKey(result.getClusteringKey().get());

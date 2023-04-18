@@ -144,9 +144,6 @@ public class PrepareMutationComposerTest {
             .put(Attribute.COMMITTED_AT, BigIntColumn.ofNull(Attribute.COMMITTED_AT))
             .put(Attribute.STATE, IntColumn.ofNull(Attribute.STATE))
             .put(Attribute.VERSION, IntColumn.ofNull(Attribute.VERSION))
-            .put(
-                Attribute.BEFORE_PREFIX + ANY_NAME_3,
-                IntColumn.of(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_1))
             .put(Attribute.BEFORE_ID, TextColumn.ofNull(Attribute.BEFORE_ID))
             .put(Attribute.BEFORE_PREPARED_AT, BigIntColumn.ofNull(Attribute.BEFORE_PREPARED_AT))
             .put(Attribute.BEFORE_COMMITTED_AT, BigIntColumn.ofNull(Attribute.BEFORE_COMMITTED_AT))
