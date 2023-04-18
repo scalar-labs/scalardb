@@ -19,9 +19,9 @@ public class TransactionException extends Exception {
   }
 
   /**
-   * Returns a transaction ID that associated with the transaction whose status is unknown.
+   * Returns the transaction ID associated with the transaction that threw the exception.
    *
-   * @return a transaction ID that associated with the transaction whose status is unknown
+   * @return the transaction ID associated with the transaction that threw the exception
    */
   public Optional<String> getTransactionId() {
     return Optional.ofNullable(transactionId);

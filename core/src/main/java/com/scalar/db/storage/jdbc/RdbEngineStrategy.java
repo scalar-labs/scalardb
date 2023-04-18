@@ -5,6 +5,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import java.sql.Driver;
 import java.sql.SQLException;
 
 /**
@@ -18,7 +19,7 @@ public interface RdbEngineStrategy {
   boolean isDuplicateKeyError(SQLException e);
 
   boolean isUndefinedTableError(SQLException e);
-  /** Serialization error or deadlock found. */
+
   boolean isConflictError(SQLException e);
 
   String getDataTypeForEngine(DataType dataType);
@@ -32,6 +33,10 @@ public interface RdbEngineStrategy {
   String computeBooleanValue(boolean value);
 
   String[] createNamespaceSqls(String fullNamespace);
+
+  default boolean isValidTableName(String tableName) {
+    return true;
+  }
 
   String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata);
@@ -49,10 +54,18 @@ public interface RdbEngineStrategy {
 
   String dropNamespaceSql(String namespace);
 
+  default String truncateTableSql(String namespace, String table) {
+    return "TRUNCATE TABLE " + encloseFullTableName(namespace, table);
+  }
+
   void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException;
 
   String namespaceExistsStatement();
+
+  default String namespaceExistsPlaceholder(String namespace) {
+    return namespace;
+  }
 
   String alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
@@ -75,4 +88,6 @@ public interface RdbEngineStrategy {
   SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit);
 
   UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder);
+
+  Driver getDriver();
 }

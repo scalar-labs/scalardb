@@ -77,7 +77,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
   }
 
   private void execute(String sql) throws SQLException {
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(jdbcConfig);
+    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(jdbcConfig, rdbEngine);
         Connection connection = dataSource.getConnection();
         Statement stmt = connection.createStatement()) {
       stmt.execute(sql);

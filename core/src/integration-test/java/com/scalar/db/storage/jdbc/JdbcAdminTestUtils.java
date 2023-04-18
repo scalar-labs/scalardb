@@ -7,7 +7,6 @@ import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Properties;
 import org.apache.commons.dbcp2.BasicDataSource;
 
@@ -29,20 +28,14 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
     execute(
         "DROP TABLE " + rdbEngine.encloseFullTableName(metadataSchema, JdbcAdmin.METADATA_TABLE));
 
-    String dropNamespaceStatement;
-    if (rdbEngine instanceof RdbEngineOracle) {
-      dropNamespaceStatement = "DROP USER " + rdbEngine.enclose(metadataSchema);
-    } else {
-      dropNamespaceStatement = "DROP SCHEMA " + rdbEngine.enclose(metadataSchema);
-    }
+    String dropNamespaceStatement = rdbEngine.dropNamespaceSql(metadataSchema);
     execute(dropNamespaceStatement);
   }
 
   @Override
   public void truncateMetadataTable() throws Exception {
     String truncateTableStatement =
-        "TRUNCATE TABLE "
-            + rdbEngine.encloseFullTableName(metadataSchema, JdbcAdmin.METADATA_TABLE);
+        rdbEngine.truncateTableSql(metadataSchema, JdbcAdmin.METADATA_TABLE);
     execute(truncateTableStatement);
   }
 
@@ -59,10 +52,9 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   }
 
   private void execute(String sql) throws SQLException {
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config);
-        Connection connection = dataSource.getConnection();
-        Statement stmt = connection.createStatement()) {
-      stmt.execute(sql);
+    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
+        Connection connection = dataSource.getConnection()) {
+      JdbcAdmin.execute(connection, sql);
     }
   }
 }
