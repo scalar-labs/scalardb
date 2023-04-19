@@ -7,7 +7,7 @@ This document briefly explains how you can get started with ScalarDB on Cassandr
 
 ScalarDB is written in Java and uses Cassandra as an underlying storage implementation, so the following software is required to run it.
 
-* [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (or OpenJDK 8)
+* [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (or OpenJDK 8) or higher
 * [Casssandra](http://cassandra.apache.org/) 3.11.x (the current stable version as of writing)
     * Take a look at [this document](http://cassandra.apache.org/download/) for how to set up Cassandra.
     * Change `commitlog_sync` from `periodic` to `batch` in `cassandra.yaml` not to lose data when quorum of replica nodes go down
