@@ -1,14 +1,15 @@
 package com.scalar.db.util;
 
 import com.google.common.collect.Streams;
+import com.scalar.db.api.BaseOperationInterface;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetWithIndex;
 import com.scalar.db.api.Mutation;
-import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.ScanInterface;
 import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
@@ -62,15 +63,15 @@ public final class ScalarDbUtils {
     return ret;
   }
 
-  public static Scan copyAndSetTargetToIfNot(
-      Scan scan, Optional<String> namespace, Optional<String> tableName) {
-    Scan ret;
+  public static ScanInterface copyAndSetTargetToIfNot(
+      ScanInterface scan, Optional<String> namespace, Optional<String> tableName) {
+    ScanInterface ret;
     if (scan instanceof ScanAll) {
       ret = new ScanAll((ScanAll) scan); // copy
     } else if (scan instanceof ScanWithIndex) {
       ret = new ScanWithIndex((ScanWithIndex) scan); // copy
     } else {
-      ret = new Scan(scan); // copy
+      ret = new Scan((Scan) scan); // copy
     }
     setTargetToIfNot(ret, namespace, tableName);
     return ret;
@@ -101,7 +102,7 @@ public final class ScalarDbUtils {
   }
 
   private static void setTargetToIfNot(
-      Operation operation, Optional<String> namespace, Optional<String> tableName) {
+      BaseOperationInterface operation, Optional<String> namespace, Optional<String> tableName) {
     if (!operation.forNamespace().isPresent()) {
       operation.forNamespace(namespace.orElse(null));
     }

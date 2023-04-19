@@ -67,7 +67,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
-    scan = copyAndSetTargetToIfNot(scan);
+    scan = (Scan) copyAndSetTargetToIfNot(scan);
     try {
       return jdbcService.scan(scan, connection);
     } catch (SQLException e) {

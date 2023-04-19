@@ -86,7 +86,7 @@ public class Cassandra extends AbstractDistributedStorage {
   @Override
   @Nonnull
   public Scanner scan(Scan scan) throws ExecutionException {
-    scan = copyAndSetTargetToIfNot(scan);
+    scan = (Scan) copyAndSetTargetToIfNot(scan);
     operationChecker.check(scan);
 
     ResultSet results = handlers.select().handle(scan);

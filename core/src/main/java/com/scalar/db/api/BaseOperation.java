@@ -1,34 +1,32 @@
 package com.scalar.db.api;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.google.common.collect.ComparisonChain;
-import com.scalar.db.io.Key;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * A multidimensional map abstraction for storage operations.
- *
- * @author Hiroyuki Yamada
- */
+/** A base abstraction for storage operations. */
 @NotThreadSafe
-public abstract class Operation extends BaseOperation {
-  private final Key partitionKey;
-  private final Optional<Key> clusteringKey;
+public abstract class BaseOperation implements BaseOperationInterface {
+  private static final Logger logger = LoggerFactory.getLogger(BaseOperation.class);
+  private Optional<String> namespace;
+  private Optional<String> tableName;
+  private Consistency consistency;
 
-  public Operation(Key partitionKey, Key clusteringKey) {
-    this.partitionKey = checkNotNull(partitionKey);
-    this.clusteringKey = Optional.ofNullable(clusteringKey);
+  BaseOperation() {
+    namespace = Optional.empty();
+    tableName = Optional.empty();
+    consistency = Consistency.SEQUENTIAL;
   }
 
-  public Operation(Operation operation) {
-    super(operation);
-    this.partitionKey = operation.partitionKey;
-    this.clusteringKey = operation.clusteringKey;
+  BaseOperation(BaseOperation operation) {
+    namespace = operation.namespace;
+    tableName = operation.tableName;
+    consistency = operation.consistency;
   }
 
   /**
@@ -39,7 +37,7 @@ public abstract class Operation extends BaseOperation {
   @Override
   @Nonnull
   public Optional<String> forNamespace() {
-    return super.forNamespace();
+    return namespace;
   }
 
   /**
@@ -50,7 +48,7 @@ public abstract class Operation extends BaseOperation {
   @Override
   @Nonnull
   public Optional<String> forTable() {
-    return super.forTable();
+    return tableName;
   }
 
   /**
@@ -58,10 +56,22 @@ public abstract class Operation extends BaseOperation {
    *
    * @return an {@code Optional} with the returned the full table name
    */
-  @Override
   @Nonnull
   public Optional<String> forFullTableName() {
-    return super.forFullTableName();
+    if (!namespace.isPresent() || !tableName.isPresent()) {
+      logger.warn("namespace or table name isn't specified");
+      return Optional.empty();
+    }
+    return Optional.of(namespace.get() + "." + tableName.get());
+  }
+
+  /**
+   * Returns the consistency level for this operation
+   *
+   * @return the consistency level
+   */
+  public Consistency getConsistency() {
+    return consistency;
   }
 
   /**
@@ -73,8 +83,9 @@ public abstract class Operation extends BaseOperation {
    */
   @Deprecated
   @Override
-  public Operation forNamespace(String namespace) {
-    return (Operation) super.forNamespace(namespace);
+  public BaseOperation forNamespace(String namespace) {
+    this.namespace = Optional.ofNullable(namespace);
+    return this;
   }
 
   /**
@@ -86,38 +97,9 @@ public abstract class Operation extends BaseOperation {
    */
   @Deprecated
   @Override
-  public Operation forTable(String tableName) {
-    return (Operation) super.forTable(tableName);
-  }
-
-  /**
-   * Returns the partition key
-   *
-   * @return the partition {@code Key}
-   */
-  @Nonnull
-  public Key getPartitionKey() {
-    return partitionKey;
-  }
-
-  /**
-   * Returns the clustering key
-   *
-   * @return the clustering {@code Key}
-   */
-  @Nonnull
-  public Optional<Key> getClusteringKey() {
-    return clusteringKey;
-  }
-
-  /**
-   * Returns the consistency level for this operation
-   *
-   * @return the consistency level
-   */
-  @Override
-  public Consistency getConsistency() {
-    return super.getConsistency();
+  public BaseOperation forTable(String tableName) {
+    this.tableName = Optional.ofNullable(tableName);
+    return this;
   }
 
   /**
@@ -128,9 +110,9 @@ public abstract class Operation extends BaseOperation {
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
    */
   @Deprecated
-  @Override
-  public Operation withConsistency(Consistency consistency) {
-    return (Operation) super.withConsistency(consistency);
+  BaseOperation withConsistency(Consistency consistency) {
+    this.consistency = consistency;
+    return this;
   }
 
   /**
@@ -138,8 +120,7 @@ public abstract class Operation extends BaseOperation {
    * equal if:
    *
    * <ul>
-   *   <li>both super class instances are equal and
-   *   <li>it is also an {@code Operation} and
+   *   <li>it is also an {@code BaseOperation} and
    *   <li>both instances have the same partition key, clustering key, namespace, table name and
    *       consistency
    * </ul>
@@ -149,35 +130,29 @@ public abstract class Operation extends BaseOperation {
    */
   @Override
   public boolean equals(Object o) {
-    if (!super.equals(o)) {
-      return false;
-    }
     if (o == this) {
       return true;
     }
-    if (!(o instanceof Operation)) {
+    if (!(o instanceof BaseOperation)) {
       return false;
     }
-    Operation other = (Operation) o;
+    BaseOperation other = (BaseOperation) o;
     return ComparisonChain.start()
-            .compare(partitionKey, other.partitionKey)
             .compare(
-                clusteringKey.orElse(null),
-                other.clusteringKey.orElse(null),
+                namespace.orElse(null),
+                other.namespace.orElse(null),
                 Comparator.nullsFirst(Comparator.naturalOrder()))
+            .compare(
+                tableName.orElse(null),
+                other.tableName.orElse(null),
+                Comparator.nullsFirst(Comparator.naturalOrder()))
+            .compare(consistency, other.consistency)
             .result()
         == 0;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), partitionKey, clusteringKey);
+    return Objects.hash(namespace, tableName, consistency);
   }
-
-  /**
-   * Access the specified visitor
-   *
-   * @param v a visitor object to access
-   */
-  public abstract void accept(OperationVisitor v);
 }

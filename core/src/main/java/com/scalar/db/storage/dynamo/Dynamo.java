@@ -105,7 +105,7 @@ public class Dynamo extends AbstractDistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
-    scan = copyAndSetTargetToIfNot(scan);
+    scan = (Scan) copyAndSetTargetToIfNot(scan);
     operationChecker.check(scan);
 
     return selectStatementHandler.handle(scan);

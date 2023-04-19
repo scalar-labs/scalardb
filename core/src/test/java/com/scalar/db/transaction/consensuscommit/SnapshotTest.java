@@ -22,6 +22,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.ScanInterface;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.ResultImpl;
@@ -81,7 +82,7 @@ public class SnapshotTest {
 
   private Snapshot snapshot;
   private Map<Snapshot.Key, Optional<TransactionResult>> readSet;
-  private Map<Scan, List<Snapshot.Key>> scanSet;
+  private Map<ScanInterface, List<Snapshot.Key>> scanSet;
   private Map<Snapshot.Key, Put> writeSet;
   private Map<Snapshot.Key, Delete> deleteSet;
 

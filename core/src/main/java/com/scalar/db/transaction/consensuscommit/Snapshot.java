@@ -11,6 +11,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.ScanInterface;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -45,7 +46,7 @@ public class Snapshot {
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
   private final Map<Key, Optional<TransactionResult>> readSet;
-  private final Map<Scan, List<Key>> scanSet;
+  private final Map<ScanInterface, List<Key>> scanSet;
   private final Map<Key, Put> writeSet;
   private final Map<Key, Delete> deleteSet;
 
@@ -74,7 +75,7 @@ public class Snapshot {
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
       Map<Key, Optional<TransactionResult>> readSet,
-      Map<Scan, List<Key>> scanSet,
+      Map<ScanInterface, List<Key>> scanSet,
       Map<Key, Put> writeSet,
       Map<Key, Delete> deleteSet) {
     this.id = id;
@@ -103,7 +104,7 @@ public class Snapshot {
     readSet.put(key, result);
   }
 
-  public void put(Scan scan, List<Key> keys) {
+  public void put(ScanInterface scan, List<Key> keys) {
     scanSet.put(scan, keys);
   }
 
@@ -161,7 +162,7 @@ public class Snapshot {
     }
   }
 
-  private TableMetadata getTableMetadata(Scan scan) throws ExecutionException {
+  private TableMetadata getTableMetadata(ScanInterface scan) throws ExecutionException {
     try {
       TransactionTableMetadata metadata =
           tableMetadataManager.getTransactionTableMetadata(
@@ -177,8 +178,8 @@ public class Snapshot {
     }
   }
 
-  public Optional<List<Key>> get(Scan scan) {
-    if (isWriteSetOverlappedWith(scan)) {
+  public Optional<List<Key>> get(ScanInterface scan) {
+    if (scan instanceof Scan && isWriteSetOverlappedWith((Scan) scan)) {
       throw new IllegalArgumentException("reading already written data is not allowed");
     }
     if (scanSet.containsKey(scan)) {
@@ -318,14 +319,14 @@ public class Snapshot {
     List<ParallelExecutorTask> tasks = new ArrayList<>();
 
     // Read set by scan is re-validated to check if there is no anti-dependency
-    for (Map.Entry<Scan, List<Key>> entry : scanSet.entrySet()) {
+    for (Map.Entry<ScanInterface, List<Key>> entry : scanSet.entrySet()) {
       tasks.add(
           () -> {
             Map<Key, TransactionResult> currentReadMap = new HashMap<>();
             Set<Key> validatedReadSet = new HashSet<>();
             Scanner scanner = null;
             try {
-              Scan scan = entry.getKey();
+              Scan scan = (Scan) entry.getKey();
               // only get tx_id and tx_version columns because we use only them to compare
               scan.clearProjections();
               scan.withProjection(Attribute.ID).withProjection(Attribute.VERSION);
@@ -454,7 +455,7 @@ public class Snapshot {
       this((Operation) delete);
     }
 
-    public Key(Scan scan, Result result) {
+    public Key(ScanInterface scan, Result result) {
       this.namespace = scan.forNamespace().get();
       this.table = scan.forTable().get();
       this.partitionKey = result.getPartitionKey().get();

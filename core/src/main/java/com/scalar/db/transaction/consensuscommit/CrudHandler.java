@@ -9,6 +9,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanInterface;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -119,8 +120,8 @@ public class CrudHandler {
     return createScanResults(scan, originalProjections, results);
   }
 
-  private List<Result> createScanResults(Scan scan, List<String> projections, List<Result> results)
-      throws CrudException {
+  private List<Result> createScanResults(
+      ScanInterface scan, List<String> projections, List<Result> results) throws CrudException {
     TableMetadata metadata = getTableMetadata(scan.forNamespace().get(), scan.forTable().get());
     return results.stream()
         .map(r -> new FilteredResult(r, projections, metadata, isIncludeMetadataEnabled))

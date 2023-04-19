@@ -63,7 +63,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
-    scan = copyAndSetTargetToIfNot(scan);
+    scan = (Scan) copyAndSetTargetToIfNot(scan);
     try {
       return crud.scan(scan);
     } catch (UncommittedRecordException e) {

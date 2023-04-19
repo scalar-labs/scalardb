@@ -26,7 +26,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  * @author Hiroyuki Yamada
  */
 @NotThreadSafe
-public class Scan extends Selection {
+public class Scan extends Selection implements ScanInterface {
 
   private final List<Ordering> orderings;
   private Optional<Key> startClusteringKey;

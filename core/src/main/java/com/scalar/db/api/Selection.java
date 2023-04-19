@@ -16,7 +16,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  * @author Hiroyuki Yamada
  */
 @NotThreadSafe
-public abstract class Selection extends Operation {
+public abstract class Selection extends Operation implements SelectionInterface {
   private final List<String> projections;
 
   /**
@@ -72,6 +72,7 @@ public abstract class Selection extends Operation {
     projections.clear();
   }
 
+  @Override
   @Nonnull
   public List<String> getProjections() {
     return ImmutableList.copyOf(projections);

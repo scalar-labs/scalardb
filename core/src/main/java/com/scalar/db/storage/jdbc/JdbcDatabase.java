@@ -93,7 +93,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
-    scan = copyAndSetTargetToIfNot(scan);
+    scan = (Scan) copyAndSetTargetToIfNot(scan);
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
