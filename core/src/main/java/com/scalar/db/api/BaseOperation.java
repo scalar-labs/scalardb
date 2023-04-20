@@ -121,8 +121,7 @@ public abstract class BaseOperation implements BaseOperationInterface {
    *
    * <ul>
    *   <li>it is also an {@code BaseOperation} and
-   *   <li>both instances have the same partition key, clustering key, namespace, table name and
-   *       consistency
+   *   <li>both instances have the same namespace, table and consistency
    * </ul>
    *
    * @param o an object to be tested for equality

@@ -32,65 +32,6 @@ public abstract class Operation extends BaseOperation {
   }
 
   /**
-   * Returns the namespace for this operation
-   *
-   * @return an {@code Optional} with the returned namespace
-   */
-  @Override
-  @Nonnull
-  public Optional<String> forNamespace() {
-    return super.forNamespace();
-  }
-
-  /**
-   * Returns the table name for this operation
-   *
-   * @return an {@code Optional} with the returned table name
-   */
-  @Override
-  @Nonnull
-  public Optional<String> forTable() {
-    return super.forTable();
-  }
-
-  /**
-   * Returns the full table name with the full namespace for this operation
-   *
-   * @return an {@code Optional} with the returned the full table name
-   */
-  @Override
-  @Nonnull
-  public Optional<String> forFullTableName() {
-    return super.forFullTableName();
-  }
-
-  /**
-   * Sets the specified target namespace for this operation
-   *
-   * @param namespace target namespace for this operation
-   * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
-   */
-  @Deprecated
-  @Override
-  public Operation forNamespace(String namespace) {
-    return (Operation) super.forNamespace(namespace);
-  }
-
-  /**
-   * Sets the specified target table for this operation
-   *
-   * @param tableName target table name for this operation
-   * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
-   */
-  @Deprecated
-  @Override
-  public Operation forTable(String tableName) {
-    return (Operation) super.forTable(tableName);
-  }
-
-  /**
    * Returns the partition key
    *
    * @return the partition {@code Key}
@@ -140,8 +81,7 @@ public abstract class Operation extends BaseOperation {
    * <ul>
    *   <li>both super class instances are equal and
    *   <li>it is also an {@code Operation} and
-   *   <li>both instances have the same partition key, clustering key, namespace, table name and
-   *       consistency
+   *   <li>both instances have the same partition key and clustering key
    * </ul>
    *
    * @param o an object to be tested for equality

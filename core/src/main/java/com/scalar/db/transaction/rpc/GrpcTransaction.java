@@ -40,7 +40,7 @@ public class GrpcTransaction extends AbstractDistributedTransaction {
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
-    scan = (Scan) copyAndSetTargetToIfNot(scan);
+    scan = copyAndSetTargetToIfNot(scan);
     return stream.scan(scan);
   }
 

@@ -85,7 +85,7 @@ public class Cosmos extends AbstractDistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
-    scan = (Scan) copyAndSetTargetToIfNot(scan);
+    scan = copyAndSetTargetToIfNot(scan);
     operationChecker.check(scan);
 
     return selectStatementHandler.handle(scan);

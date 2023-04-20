@@ -94,7 +94,7 @@ public class MultiStorage extends AbstractDistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
-    scan = (Scan) copyAndSetTargetToIfNot(scan);
+    scan = copyAndSetTargetToIfNot(scan);
     return getStorage(scan).scan(scan);
   }
 

@@ -5,7 +5,7 @@ import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.ScanInterface;
+import com.scalar.db.api.Scan;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
@@ -64,7 +64,7 @@ public abstract class AbstractDistributedTransaction implements DistributedTrans
     return ScalarDbUtils.copyAndSetTargetToIfNot(get, namespace, tableName);
   }
 
-  protected ScanInterface copyAndSetTargetToIfNot(ScanInterface scan) {
+  protected Scan copyAndSetTargetToIfNot(Scan scan) {
     return ScalarDbUtils.copyAndSetTargetToIfNot(scan, namespace, tableName);
   }
 

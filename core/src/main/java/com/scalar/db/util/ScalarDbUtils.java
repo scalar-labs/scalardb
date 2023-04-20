@@ -9,7 +9,6 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
-import com.scalar.db.api.ScanInterface;
 import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
@@ -63,15 +62,15 @@ public final class ScalarDbUtils {
     return ret;
   }
 
-  public static ScanInterface copyAndSetTargetToIfNot(
-      ScanInterface scan, Optional<String> namespace, Optional<String> tableName) {
-    ScanInterface ret;
+  public static Scan copyAndSetTargetToIfNot(
+      Scan scan, Optional<String> namespace, Optional<String> tableName) {
+    Scan ret;
     if (scan instanceof ScanAll) {
       ret = new ScanAll((ScanAll) scan); // copy
     } else if (scan instanceof ScanWithIndex) {
       ret = new ScanWithIndex((ScanWithIndex) scan); // copy
     } else {
-      ret = new Scan((Scan) scan); // copy
+      ret = new Scan(scan); // copy
     }
     setTargetToIfNot(ret, namespace, tableName);
     return ret;

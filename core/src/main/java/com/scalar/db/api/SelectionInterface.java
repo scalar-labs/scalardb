@@ -6,9 +6,9 @@ import java.util.List;
 public interface SelectionInterface extends BaseOperationInterface {
 
   /**
-   * Returns the table name for this operation
+   * Returns the list of column names to be projected for this operation
    *
-   * @return a {@code List} of column names to be projected
+   * @return the {@code List} of column names to be projected
    */
   List<String> getProjections();
 }

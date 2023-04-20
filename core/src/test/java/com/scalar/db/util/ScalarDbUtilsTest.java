@@ -8,7 +8,6 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
-import com.scalar.db.api.ScanInterface;
 import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
@@ -44,7 +43,7 @@ public class ScalarDbUtilsTest {
     Scan scan = new Scan(new Key("c1", "v1"));
 
     // Act
-    ScanInterface actual = ScalarDbUtils.copyAndSetTargetToIfNot(scan, NAMESPACE, TABLE);
+    Scan actual = ScalarDbUtils.copyAndSetTargetToIfNot(scan, NAMESPACE, TABLE);
 
     // Assert
     assertThat(actual == scan).isFalse();
@@ -62,7 +61,7 @@ public class ScalarDbUtilsTest {
     Scan scanAll = new ScanAll();
 
     // Act
-    ScanInterface actual = ScalarDbUtils.copyAndSetTargetToIfNot(scanAll, NAMESPACE, TABLE);
+    Scan actual = ScalarDbUtils.copyAndSetTargetToIfNot(scanAll, NAMESPACE, TABLE);
 
     // Assert
     assertThat(actual == scanAll).isFalse();
@@ -79,7 +78,7 @@ public class ScalarDbUtilsTest {
     Scan scanWithIndex = new ScanWithIndex(new Key("c2", "v2"));
 
     // Act
-    ScanInterface actual = ScalarDbUtils.copyAndSetTargetToIfNot(scanWithIndex, NAMESPACE, TABLE);
+    Scan actual = ScalarDbUtils.copyAndSetTargetToIfNot(scanWithIndex, NAMESPACE, TABLE);
 
     // Assert
     assertThat(actual == scanWithIndex).isFalse();

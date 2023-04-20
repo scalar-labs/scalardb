@@ -43,7 +43,7 @@ public class GrpcTwoPhaseCommitTransaction extends AbstractTwoPhaseCommitTransac
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
-    scan = (Scan) copyAndSetTargetToIfNot(scan);
+    scan = copyAndSetTargetToIfNot(scan);
     return stream.scan(scan);
   }
 

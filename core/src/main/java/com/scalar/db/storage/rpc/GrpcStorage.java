@@ -102,7 +102,7 @@ public class GrpcStorage extends AbstractDistributedStorage {
 
   @Override
   public Scanner scan(Scan originalScan) throws ExecutionException {
-    Scan scan = (Scan) copyAndSetTargetToIfNot(originalScan);
+    Scan scan = copyAndSetTargetToIfNot(originalScan);
     return executeWithRetries(
         () -> {
           TableMetadata tableMetadata = metadataManager.getTableMetadata(scan);
