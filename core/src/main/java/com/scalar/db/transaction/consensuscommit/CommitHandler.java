@@ -86,7 +86,8 @@ public class CommitHandler {
 
   private void prepareRecords(Snapshot snapshot)
       throws ExecutionException, PreparationConflictException {
-    PrepareMutationComposer composer = new PrepareMutationComposer(snapshot.getId());
+    PrepareMutationComposer composer =
+        new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
     snapshot.to(composer);
     PartitionedMutations mutations = new PartitionedMutations(composer.get());
 

@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import com.google.common.collect.Streams;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
@@ -15,12 +16,19 @@ import javax.annotation.concurrent.Immutable;
 public class TransactionTableMetadata {
 
   private final TableMetadata tableMetadata;
+  private final ImmutableLinkedHashSet<String> primaryKeyColumnNames;
   private final ImmutableLinkedHashSet<String> transactionMetaColumnNames;
   private final ImmutableLinkedHashSet<String> beforeImageColumnNames;
   private final ImmutableLinkedHashSet<String> afterImageColumnNames;
 
   public TransactionTableMetadata(TableMetadata tableMetadata) {
     this.tableMetadata = tableMetadata;
+    primaryKeyColumnNames =
+        new ImmutableLinkedHashSet<>(
+            Streams.concat(
+                    tableMetadata.getPartitionKeyNames().stream(),
+                    tableMetadata.getClusteringKeyNames().stream())
+                .collect(Collectors.toCollection(LinkedHashSet::new)));
     transactionMetaColumnNames =
         new ImmutableLinkedHashSet<>(
             tableMetadata.getColumnNames().stream()
@@ -68,6 +76,10 @@ public class TransactionTableMetadata {
 
   public Set<String> getSecondaryIndexNames() {
     return tableMetadata.getSecondaryIndexNames();
+  }
+
+  public LinkedHashSet<String> getPrimaryKeyColumnNames() {
+    return primaryKeyColumnNames;
   }
 
   public LinkedHashSet<String> getTransactionMetaColumnNames() {
