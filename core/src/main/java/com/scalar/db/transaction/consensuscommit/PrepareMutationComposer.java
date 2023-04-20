@@ -56,15 +56,12 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
             .table(base.forTable().get())
             .partitionKey(base.getPartitionKey())
             .consistency(Consistency.LINEARIZABLE);
-
-    if (base.getClusteringKey().isPresent()) {
-      putBuilder.clusteringKey(base.getClusteringKey().get());
-    }
+    base.getClusteringKey().ifPresent(putBuilder::clusteringKey);
+    base.getColumns().values().forEach(putBuilder::value);
 
     putBuilder.textValue(Attribute.ID, id);
     putBuilder.intValue(Attribute.STATE, TransactionState.PREPARED.get());
     putBuilder.bigIntValue(Attribute.PREPARED_AT, current);
-    base.getColumns().values().forEach(putBuilder::value);
 
     if (result != null) { // overwrite existing record
       createBeforeColumns(base, result).forEach(putBuilder::value);
@@ -101,10 +98,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
             .table(base.forTable().get())
             .partitionKey(base.getPartitionKey())
             .consistency(Consistency.LINEARIZABLE);
-
-    if (base.getClusteringKey().isPresent()) {
-      putBuilder.clusteringKey(base.getClusteringKey().get());
-    }
+    base.getClusteringKey().ifPresent(putBuilder::clusteringKey);
 
     putBuilder.textValue(Attribute.ID, id);
     putBuilder.intValue(Attribute.STATE, TransactionState.DELETED.get());

@@ -105,11 +105,7 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
                     .and(ConditionBuilder.column(STATE).isEqualToInt(result.getState().get()))
                     .build())
             .consistency(Consistency.LINEARIZABLE);
-
-    if (result.getClusteringKey().isPresent()) {
-      putBuilder.clusteringKey(result.getClusteringKey().get());
-    }
-
+    result.getClusteringKey().ifPresent(putBuilder::clusteringKey);
     columns.forEach(putBuilder::value);
 
     return putBuilder.build();
