@@ -163,9 +163,10 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
             column -> {
               if (isBeforeRequired(column, base.getPartitionKey(), base.getClusteringKey())) {
                 if (column.getName().equals(Attribute.VERSION) && column.hasNullValue()) {
-                  // For preparing an update of a deemed-commit state record, we need to use
-                  // version 0 rather than NULL since we want to distinguish the preparation from
-                  // an initial record insertion.
+                  // A prepare-state record with NULLs for both before_id and before_version will be
+                  // deleted as an initial record in a rollback situation. To avoid this and roll
+                  // back to a record with a NULL version (i.e., regarded as committed) correctly,
+                  // we need to use version 0 rather than NULL for before_version.
                   columns.add(IntColumn.of(Attribute.BEFORE_VERSION, 0));
                 } else {
                   columns.add(column.copyWith(Attribute.BEFORE_PREFIX + column.getName()));
