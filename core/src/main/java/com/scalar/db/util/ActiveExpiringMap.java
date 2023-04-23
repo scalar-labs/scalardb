@@ -16,21 +16,23 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
 public class ActiveExpiringMap<K, V> {
-  private final ConcurrentMap<K, ValueHolder<V>> map;
+  private final ConcurrentMap<K, ValueHolder> map;
   private final long valueLifetimeMillis;
   private final long valueExpirationThreadIntervalMillis;
-  private final Consumer<V> valueExpirationHandler;
+  private final BiConsumer<K, V> valueExpirationHandler;
 
   public ActiveExpiringMap(
       long valueLifetimeMillis,
       long valueExpirationThreadIntervalMillis,
-      Consumer<V> valueExpirationHandler) {
+      BiConsumer<K, V> valueExpirationHandler) {
     map = new ConcurrentHashMap<>();
     this.valueLifetimeMillis = valueLifetimeMillis;
     this.valueExpirationThreadIntervalMillis = valueExpirationThreadIntervalMillis;
@@ -50,9 +52,9 @@ public class ActiveExpiringMap<K, V> {
                     .map(Entry::getKey)
                     .forEach(
                         key -> {
-                          ValueHolder<V> value = map.remove(key);
+                          ValueHolder value = map.remove(key);
                           if (value != null) {
-                            valueExpirationHandler.accept(value.get());
+                            valueExpirationHandler.accept(key, value.get());
                           }
                         });
                 Uninterruptibles.sleepUninterruptibly(
@@ -65,28 +67,39 @@ public class ActiveExpiringMap<K, V> {
   }
 
   public Optional<V> get(K key) {
-    if (!map.containsKey(key)) {
+    ValueHolder value = map.get(key);
+    if (value == null) {
       return Optional.empty();
     }
-    ValueHolder<V> value = map.get(key);
     value.updateExpirationTime();
     return Optional.of(value.get());
   }
 
-  public V putIfAbsent(K key, V value) {
-    ValueHolder<V> prev = map.putIfAbsent(key, new ValueHolder<>(value, valueLifetimeMillis));
-    if (prev == null) {
-      return null;
-    }
-    return prev.get();
+  public Optional<V> putIfAbsent(K key, V value) {
+    ValueHolder prev = map.putIfAbsent(key, new ValueHolder(value));
+    return prev == null ? Optional.empty() : Optional.of(prev.get());
   }
 
-  public V put(K key, V value) {
-    ValueHolder<V> prev = map.put(key, new ValueHolder<>(value, valueLifetimeMillis));
-    if (prev == null) {
-      return null;
-    }
-    return prev.get();
+  public Optional<V> put(K key, V value) {
+    ValueHolder prev = map.put(key, new ValueHolder(value));
+    return prev == null ? Optional.empty() : Optional.of(prev.get());
+  }
+
+  public Optional<V> computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+    ValueHolder prev = map.computeIfAbsent(key, mappingFunction.andThen(ValueHolder::new));
+    return prev == null ? Optional.empty() : Optional.of(prev.get());
+  }
+
+  public Optional<V> computeIfPresent(
+      K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+    ValueHolder prev =
+        map.computeIfPresent(
+            key,
+            (k, oldValue) -> {
+              V newValue = remappingFunction.apply(k, oldValue.get());
+              return new ValueHolder(newValue);
+            });
+    return prev == null ? Optional.empty() : Optional.of(prev.get());
   }
 
   public boolean contains(K key) {
@@ -97,12 +110,9 @@ public class ActiveExpiringMap<K, V> {
     return map.values().stream().map(ValueHolder::get).anyMatch(value::equals);
   }
 
-  public V remove(K key) {
-    ValueHolder<V> prev = map.remove(key);
-    if (prev == null) {
-      return null;
-    }
-    return prev.get();
+  public Optional<V> remove(K key) {
+    ValueHolder prev = map.remove(key);
+    return prev == null ? Optional.empty() : Optional.of(prev.get());
   }
 
   public Set<K> keySet() {
@@ -110,12 +120,12 @@ public class ActiveExpiringMap<K, V> {
   }
 
   public Collection<V> values() {
-    Collection<ValueHolder<V>> values = map.values();
+    Collection<ValueHolder> values = map.values();
     return new AbstractCollection<V>() {
       @Override
       public Iterator<V> iterator() {
         return new Iterator<V>() {
-          private final Iterator<ValueHolder<V>> valueIterator = values.iterator();
+          private final Iterator<ValueHolder> valueIterator = values.iterator();
 
           @Override
           public boolean hasNext() {
@@ -124,7 +134,7 @@ public class ActiveExpiringMap<K, V> {
 
           @Override
           public V next() {
-            ValueHolder<V> next = valueIterator.next();
+            ValueHolder next = valueIterator.next();
             return next.get();
           }
 
@@ -144,12 +154,12 @@ public class ActiveExpiringMap<K, V> {
 
   public Set<Map.Entry<K, V>> entrySet() {
     return new AbstractSet<Entry<K, V>>() {
-      private final Set<Entry<K, ValueHolder<V>>> entries = map.entrySet();
+      private final Set<Entry<K, ValueHolder>> entries = map.entrySet();
 
       @Override
       public Iterator<Entry<K, V>> iterator() {
         return new Iterator<Entry<K, V>>() {
-          private final Iterator<Entry<K, ValueHolder<V>>> entryIterator = entries.iterator();
+          private final Iterator<Entry<K, ValueHolder>> entryIterator = entries.iterator();
 
           @Override
           public boolean hasNext() {
@@ -159,7 +169,7 @@ public class ActiveExpiringMap<K, V> {
           @SuppressFBWarnings("SE_BAD_FIELD")
           @Override
           public Entry<K, V> next() {
-            Entry<K, ValueHolder<V>> next = entryIterator.next();
+            Entry<K, ValueHolder> next = entryIterator.next();
             return new AbstractMap.SimpleEntry<K, V>(next.getKey(), next.getValue().get()) {
               @Override
               public V setValue(V value) {
@@ -183,7 +193,7 @@ public class ActiveExpiringMap<K, V> {
   }
 
   public void updateExpirationTime(K key) {
-    ValueHolder<V> value = map.get(key);
+    ValueHolder value = map.get(key);
     if (value != null) {
       value.updateExpirationTime();
     }
@@ -191,19 +201,17 @@ public class ActiveExpiringMap<K, V> {
 
   @VisibleForTesting
   @Nullable
-  ValueHolder<V> getValueHolder(K key) {
+  ValueHolder getValueHolder(K key) {
     return map.get(key);
   }
 
   @VisibleForTesting
-  static class ValueHolder<V> {
+  class ValueHolder {
     private final V value;
-    private final long lifetimeMillis;
     private final AtomicLong lastUpdateTime = new AtomicLong();
 
-    public ValueHolder(V value, long lifetimeMillis) {
+    public ValueHolder(V value) {
       this.value = value;
-      this.lifetimeMillis = lifetimeMillis;
       updateExpirationTime();
     }
 
@@ -212,7 +220,7 @@ public class ActiveExpiringMap<K, V> {
     }
 
     public boolean isExpired() {
-      return System.currentTimeMillis() - lastUpdateTime.get() >= lifetimeMillis;
+      return System.currentTimeMillis() - lastUpdateTime.get() >= valueLifetimeMillis;
     }
 
     public V get() {
