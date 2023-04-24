@@ -127,6 +127,7 @@ public class TransactionTableMetadataManagerTest {
     assertThat(actual.getClusteringKeyNames())
         .isEqualTo(new LinkedHashSet<>(Collections.singletonList(ACCOUNT_TYPE)));
     assertThat(actual.getClusteringOrder(ACCOUNT_TYPE)).isEqualTo(Order.ASC);
+    assertThat(actual.getClusteringOrders().get(ACCOUNT_TYPE)).isEqualTo(Order.ASC);
     assertThat(actual.getColumnNames())
         .isEqualTo(
             new LinkedHashSet<>(
@@ -165,6 +166,7 @@ public class TransactionTableMetadataManagerTest {
     assertThat(actual.getColumnDataType(Attribute.BEFORE_COMMITTED_AT)).isEqualTo(DataType.BIGINT);
     assertThat(actual.getSecondaryIndexNames())
         .isEqualTo(new HashSet<>(Collections.singletonList(BRANCH)));
+    assertThat(actual.getPrimaryKeyColumnNames()).containsExactly(ACCOUNT_ID, ACCOUNT_TYPE);
     assertThat(actual.getTransactionMetaColumnNames())
         .isEqualTo(
             new LinkedHashSet<>(

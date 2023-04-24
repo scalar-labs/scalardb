@@ -17,28 +17,32 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.io.Key;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Value;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
 public class PrepareMutationComposer extends AbstractMutationComposer {
 
-  public PrepareMutationComposer(String id) {
+  private final TransactionTableMetadataManager tableMetadataManager;
+
+  public PrepareMutationComposer(String id, TransactionTableMetadataManager tableMetadataManager) {
     super(id);
+    this.tableMetadataManager = tableMetadataManager;
   }
 
   @VisibleForTesting
-  PrepareMutationComposer(String id, long current) {
+  PrepareMutationComposer(
+      String id, long current, TransactionTableMetadataManager tableMetadataManager) {
     super(id, current);
+    this.tableMetadataManager = tableMetadataManager;
   }
 
   @Override
-  public void add(Operation base, @Nullable TransactionResult result) {
+  public void add(Operation base, @Nullable TransactionResult result) throws ExecutionException {
     if (base instanceof Put) {
       add((Put) base, result);
     } else if (base instanceof Delete) {
@@ -50,7 +54,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     }
   }
 
-  private void add(Put base, @Nullable TransactionResult result) {
+  private void add(Put base, @Nullable TransactionResult result) throws ExecutionException {
     Put put =
         new Put(base.getPartitionKey(), base.getClusteringKey().orElse(null))
             .forNamespace(base.forNamespace().get())
@@ -82,7 +86,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     mutations.add(put);
   }
 
-  private void add(Delete base, @Nullable TransactionResult result) {
+  private void add(Delete base, @Nullable TransactionResult result) throws ExecutionException {
     Put put =
         new Put(base.getPartitionKey(), base.getClusteringKey().orElse(null))
             .forNamespace(base.forNamespace().get())
@@ -137,41 +141,20 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     mutations.add(put);
   }
 
-  private List<Value<?>> createBeforeValues(Mutation base, TransactionResult result) {
+  private List<Value<?>> createBeforeValues(Mutation base, TransactionResult result)
+      throws ExecutionException {
     List<Value<?>> values = new ArrayList<>();
-    result
-        .getValues()
-        .values()
-        .forEach(
-            v -> {
-              if (isBeforeRequired(v, base.getPartitionKey(), base.getClusteringKey())) {
-                values.add(v.copyWith(Attribute.BEFORE_PREFIX + v.getName()));
-              }
-            });
+    for (Value<?> value : result.getValues().values()) {
+      if (isBeforeRequired(base, value.getName())) {
+        values.add(value.copyWith(Attribute.BEFORE_PREFIX + value.getName()));
+      }
+    }
     return values;
   }
 
-  private boolean isBeforeRequired(Value<?> value, Key primary, Optional<Key> clustering) {
-    return !value.getName().startsWith(Attribute.BEFORE_PREFIX)
-        && !isValueInKeys(value, primary, clustering);
-  }
-
-  private boolean isValueInKeys(Value<?> value, Key primary, Optional<Key> clustering) {
-    for (Value<?> v : primary) {
-      if (v.equals(value)) {
-        return true;
-      }
-    }
-
-    if (!clustering.isPresent()) {
-      return false;
-    }
-
-    for (Value<?> v : clustering.get()) {
-      if (v.equals(value)) {
-        return true;
-      }
-    }
-    return false;
+  private boolean isBeforeRequired(Mutation base, String columnName) throws ExecutionException {
+    TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(base);
+    return !metadata.getPrimaryKeyColumnNames().contains(columnName)
+        && metadata.getAfterImageColumnNames().contains(columnName);
   }
 }
