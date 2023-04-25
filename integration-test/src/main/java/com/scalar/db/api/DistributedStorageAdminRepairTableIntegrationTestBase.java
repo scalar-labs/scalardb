@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -148,5 +149,17 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
     // Assert
     assertThat(admin.tableExists(getNamespace(), getTable())).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
+  }
+
+  @Test
+  public void repairTable_ForNonExistingTable_ShouldThrowIllegalArgument() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                admin.repairTable(
+                    getNamespace(), "non-existing-table", TABLE_METADATA, getCreationOptions()))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }
