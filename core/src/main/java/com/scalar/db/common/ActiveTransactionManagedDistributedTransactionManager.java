@@ -37,18 +37,18 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
         new ActiveExpiringMap<>(
             config.getActiveTransactionManagementExpirationTimeMillis(),
             TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
-            t -> {
-              logger.warn("the transaction is expired. transaction ID: {}", t.getId());
+            (id, t) -> {
+              logger.warn("the transaction is expired. transaction ID: {}", id);
               try {
                 t.rollback();
               } catch (Exception e) {
-                logger.warn("rollback failed. transaction ID: {}", t.getId(), e);
+                logger.warn("rollback failed. transaction ID: {}", id, e);
               }
             });
   }
 
   private void add(ActiveTransaction transaction) throws TransactionException {
-    if (activeTransactions.putIfAbsent(transaction.getId(), transaction) != null) {
+    if (activeTransactions.putIfAbsent(transaction.getId(), transaction).isPresent()) {
       transaction.rollback();
       throw new TransactionException("The transaction already exists", transaction.getId());
     }
