@@ -3,7 +3,9 @@
 Here we assume Oracle JDK 8 and the underlying storage/database such as Cassandra are properly configured.
 If you haven't done it, please configure them first by following [this](getting-started.md).
 
-First, clone the [scalardb](https://github.com/scalar-labs/scalardb) repository.
+First, open a terminal, go to your work directory, and clone the [scalardb](https://github.com/scalar-labs/scalardb) repository.
+```shell
+$ git clone https://github.com/scalar-labs/scalardb
 
 In Terminal, let's move to the `getting-started` directory in the cloned repository so that we can avoid too much copy-and-paste.
 ```shell
