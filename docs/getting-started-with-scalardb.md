@@ -7,7 +7,7 @@ First, open a terminal, go to your work directory, and clone the [scalardb](http
 ```shell
 $ git clone https://github.com/scalar-labs/scalardb
 
-In Terminal, let's move to the `getting-started` directory in the cloned repository so that we can avoid too much copy-and-paste.
+Then, let's move to the `getting-started` directory in the cloned repository so that we can avoid too much copy-and-paste.
 ```shell
 $ cd scalardb/docs/getting-started
 ```
