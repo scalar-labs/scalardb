@@ -1,6 +1,5 @@
-# ScalarDB
+# Add ScalarDB to your build
 
-## Add ScalarDB to your build
 The library is available on [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb).
 You can install it in your application using your build tool such as Gradle and Maven. 
 
