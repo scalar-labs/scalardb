@@ -37,7 +37,7 @@ It contains two sections: ScalarDB Server configurations and underlying storage/
 # ScalarDB Server configurations
 #
 
-# Port number of ScalarDB Server. 60051 by default
+# Port number of ScalarDB Server. 60051 by default.
 scalar.db.server.port=60051
 
 # Prometheus exporter port. Use 8080 if this is not given. Prometheus exporter will not be started if a negative number is given.
@@ -48,6 +48,9 @@ scalar.db.server.grpc.max_inbound_message_size=
 
 # The maximum size of metadata allowed to be received. If not specified, use the gRPC default value.
 scalar.db.server.grpc.max_inbound_metadata_size=
+
+# The decommissioning duration in seconds. 30 seconds by default.                 
+scalar.db.server.decommissioning_duration_secs=30
 
 #
 # Underlying storage/database configurations
