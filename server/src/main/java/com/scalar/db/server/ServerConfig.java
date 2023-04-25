@@ -26,8 +26,14 @@ public class ServerConfig {
   public static final String GRPC_MAX_INBOUND_METADATA_SIZE =
       PREFIX + "grpc.max_inbound_metadata_size";
 
+  /** The decommissioning duration in seconds. */
+  public static final String DECOMMISSIONING_DURATION_SECS =
+      PREFIX + "decommissioning_duration_secs";
+
   public static final int DEFAULT_PORT = 60051;
   public static final int DEFAULT_PROMETHEUS_EXPORTER_PORT = 8080;
+
+  public static final int DEFAULT_DECOMMISSIONING_DURATION_SECS = 30;
 
   private final Properties props;
   private int port;
@@ -35,6 +41,8 @@ public class ServerConfig {
 
   @Nullable private Integer grpcMaxInboundMessageSize;
   @Nullable private Integer grpcMaxInboundMetadataSize;
+
+  private int decommissioningDurationSecs;
 
   public ServerConfig(File propertiesFile) throws IOException {
     try (FileInputStream stream = new FileInputStream(propertiesFile)) {
@@ -73,6 +81,10 @@ public class ServerConfig {
 
     grpcMaxInboundMessageSize = getInt(getProperties(), GRPC_MAX_INBOUND_MESSAGE_SIZE, null);
     grpcMaxInboundMetadataSize = getInt(getProperties(), GRPC_MAX_INBOUND_METADATA_SIZE, null);
+
+    decommissioningDurationSecs =
+        getInt(
+            getProperties(), DECOMMISSIONING_DURATION_SECS, DEFAULT_DECOMMISSIONING_DURATION_SECS);
   }
 
   public int getPort() {
@@ -89,5 +101,9 @@ public class ServerConfig {
 
   public Optional<Integer> getGrpcMaxInboundMetadataSize() {
     return Optional.ofNullable(grpcMaxInboundMetadataSize);
+  }
+
+  public int getDecommissioningDurationSecs() {
+    return decommissioningDurationSecs;
   }
 }
