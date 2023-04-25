@@ -6,6 +6,7 @@ If you haven't done it, please configure them first by following [this](getting-
 First, open a terminal, go to your work directory, and clone the [scalardb](https://github.com/scalar-labs/scalardb) repository.
 ```shell
 $ git clone https://github.com/scalar-labs/scalardb
+```
 
 Then, let's move to the `getting-started` directory in the cloned repository so that we can avoid too much copy-and-paste.
 ```shell
