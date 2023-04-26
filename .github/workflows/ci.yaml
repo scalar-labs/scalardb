@@ -79,13 +79,13 @@ jobs:
       - name: Dockerfile Lint for ScalarDB Server
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: :server:dockerfileLint
+          arguments: ':server:dockerfileLint'
 
       - name: Dockerfile Lint for ScalarDB Schema Loader
         if: always()
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: :schema-loader:dockerfileLint
+          arguments: ':schema-loader:dockerfileLint'
 
   integration-test-for-cassandra:
     runs-on: ubuntu-latest

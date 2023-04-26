@@ -24,6 +24,7 @@ public class ServerConfigTest {
         .isEqualTo(ServerConfig.DEFAULT_PROMETHEUS_EXPORTER_PORT);
     assertThat(config.getGrpcMaxInboundMessageSize()).isNotPresent();
     assertThat(config.getGrpcMaxInboundMetadataSize()).isNotPresent();
+    assertThat(config.getDecommissioningDurationSecs()).isEqualTo(30);
   }
 
   @Test
@@ -88,5 +89,18 @@ public class ServerConfigTest {
     assertThat(config.getGrpcMaxInboundMessageSize().get()).isEqualTo(1000);
     assertThat(config.getGrpcMaxInboundMetadataSize()).isPresent();
     assertThat(config.getGrpcMaxInboundMetadataSize().get()).isEqualTo(2000);
+  }
+
+  @Test
+  public void constructor_DecommissioningDurationSecsGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties properties = new Properties();
+    properties.setProperty(ServerConfig.DECOMMISSIONING_DURATION_SECS, "60");
+
+    // Act
+    ServerConfig config = new ServerConfig(properties);
+
+    // Assert
+    assertThat(config.getDecommissioningDurationSecs()).isEqualTo(60);
   }
 }
