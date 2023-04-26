@@ -13,6 +13,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -178,7 +179,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       throws ExecutionException {
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata == null) {
-      throw new IllegalArgumentException("Table does not exist: " + namespace + "." + table);
+      throw new IllegalArgumentException(
+          "Table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
     }
     String beforeColumnName = getBeforeImageColumnName(columnName, tableMetadata);
 
