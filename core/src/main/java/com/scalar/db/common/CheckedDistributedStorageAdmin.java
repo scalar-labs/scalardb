@@ -50,7 +50,8 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
       throw new IllegalArgumentException("Namespace does not exist: " + namespace);
     }
     if (tableExists(namespace, table)) {
-      throw new IllegalArgumentException("Table already exists: " + namespace + "." + table);
+      throw new IllegalArgumentException(
+          "Table already exists: " + ScalarDbUtils.getFullTableName(namespace, table));
     }
 
     try {
@@ -64,7 +65,8 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
     if (!tableExists(namespace, table)) {
-      throw new IllegalArgumentException("Table does not exist: " + namespace + "." + table);
+      throw new IllegalArgumentException(
+          "Table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
     }
 
     try {
@@ -95,7 +97,8 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
     if (!tableExists(namespace, table)) {
-      throw new IllegalArgumentException("Table does not exist: " + namespace + "." + table);
+      throw new IllegalArgumentException(
+          "Table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
     }
 
     try {
@@ -147,7 +150,8 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   public void dropIndex(String namespace, String table, String columnName)
       throws ExecutionException {
     if (!tableExists(namespace, table)) {
-      throw new IllegalArgumentException("Table does not exist: " + namespace + "." + table);
+      throw new IllegalArgumentException(
+          "Table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
     }
 
     if (!indexExists(namespace, table, columnName)) {
