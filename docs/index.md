@@ -6,8 +6,27 @@ ScalarDB is a universal transaction manager that achieves:
 - database/storage-agnostic ACID transactions in a scalable manner even if an underlying database or storage is not ACID-compliant.
 - multi-storage/database/service ACID transactions that can span multiple (possibly different) databases, storages, and services.
 
+## Install
+The library is available on [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb).
+You can install it in your application using your build tool such as Gradle and Maven. 
+
+To add a dependency on ScalarDB using Gradle, use the following:
+```gradle
+dependencies {
+    implementation 'com.scalar-labs:scalardb:3.8.0'
+}
+```
+
+To add a dependency using Maven:
+```xml
+<dependency>
+  <groupId>com.scalar-labs</groupId>
+  <artifactId>scalardb</artifactId>
+  <version>3.8.0</version>
+</dependency>
+```
+
 ## Docs
-* [Add ScalarDB to your build](add-scalardb-to-your-build.md)
 * [Getting started](getting-started.md)
 * [Java API Guide](api-guide.md)
 * [ScalarDB Samples](https://github.com/scalar-labs/scalardb-samples)
@@ -55,7 +74,7 @@ $ ls -a .pre-commit-config.yaml
 $ pre-commit install
 ```
 
-The code formatter is automatically executed when committing files. A commit will fail and be formatted by the formatter when any invalid code format is detected. Try to commit the change again.
+The code formatter is automatically executed when commiting files. A commit will fail and be formatted by the formatter when any invalid code format is detected. Try to commit the change again.
 
 ## License
 ScalarDB is dual-licensed under both the Apache 2.0 License (found in the LICENSE file in the root directory) and a commercial license.
