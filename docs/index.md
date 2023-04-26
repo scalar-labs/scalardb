@@ -74,7 +74,7 @@ $ ls -a .pre-commit-config.yaml
 $ pre-commit install
 ```
 
-The code formatter is automatically executed when commiting files. A commit will fail and be formatted by the formatter when any invalid code format is detected. Try to commit the change again.
+The code formatter is automatically executed when committing files. A commit will fail and be formatted by the formatter when any invalid code format is detected. Try to commit the change again.
 
 ## License
 ScalarDB is dual-licensed under both the Apache 2.0 License (found in the LICENSE file in the root directory) and a commercial license.
