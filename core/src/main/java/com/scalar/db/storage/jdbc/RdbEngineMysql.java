@@ -77,7 +77,7 @@ class RdbEngineMysql implements RdbEngineStrategy {
   @Override
   public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException {
-    throw new ExecutionException("dropping the schema failed: %s" + namespace, e);
+    throw new ExecutionException("dropping the schema failed: " + namespace, e);
   }
 
   @Override
