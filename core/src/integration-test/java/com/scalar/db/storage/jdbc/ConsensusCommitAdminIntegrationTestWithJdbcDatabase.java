@@ -17,6 +17,7 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
   // Since SQLite doesn't have persistent namespaces, some behaviors around the namespace are
   // different from the other adapters. So disable several tests that check such behaviors.
 
+  @SuppressWarnings("unused")
   private boolean isSqlite() {
     return JdbcEnv.getRdbEngineFromProperty() == RdbEngine.SQLITE;
   }

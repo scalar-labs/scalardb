@@ -627,8 +627,8 @@ public class SnapshotTest {
   }
 
   @Test
-  public void
-      toSerializableWithExtraWrite_UnmutatedReadSetExists_ShouldConvertReadSetIntoWriteSet() {
+  public void toSerializableWithExtraWrite_UnmutatedReadSetExists_ShouldConvertReadSetIntoWriteSet()
+      throws ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Get get = prepareAnotherGet();
@@ -655,7 +655,8 @@ public class SnapshotTest {
 
   @Test
   public void
-      toSerializableWithExtraWrite_UnmutatedReadSetForNonExistingExists_ShouldNotThrowAnyException() {
+      toSerializableWithExtraWrite_UnmutatedReadSetForNonExistingExists_ShouldNotThrowAnyException()
+          throws ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Get get = prepareAnotherGet();
