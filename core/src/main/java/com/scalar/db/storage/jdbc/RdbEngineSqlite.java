@@ -1,7 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
@@ -201,8 +200,7 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   }
 
   @Override
-  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
-      throws ExecutionException {
+  public void dropNamespaceTranslateSQLException(SQLException e, String namespace) {
     throw new AssertionError("dropNamespace never happen in SQLite implementation");
   }
 

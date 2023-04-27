@@ -44,7 +44,7 @@ public class MergeQuery implements UpsertQuery {
         k -> k.forEach(v -> enclosedKeyNames.add(rdbEngine.enclose(v.getName()))));
 
     List<String> enclosedValueNames =
-        columns.keySet().stream().map(n -> rdbEngine.enclose(n)).collect(Collectors.toList());
+        columns.keySet().stream().map(rdbEngine::enclose).collect(Collectors.toList());
 
     StringBuilder sql = new StringBuilder();
     sql.append("MERGE ")

@@ -7,7 +7,9 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Value;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
@@ -29,10 +31,11 @@ public class CosmosOperation {
     }
 
     if (operation.getClusteringKey().isPresent()) {
-      return operation.getClusteringKey().get().get().stream()
-          .map(Value::getName)
-          .collect(Collectors.toList())
-          .containsAll(metadata.getClusteringKeyNames());
+      Set<String> set =
+          operation.getClusteringKey().get().get().stream()
+              .map(Value::getName)
+              .collect(Collectors.toCollection(HashSet::new));
+      return set.containsAll(metadata.getClusteringKeyNames());
     } else {
       return false;
     }
