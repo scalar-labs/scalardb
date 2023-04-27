@@ -739,7 +739,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void dropNamespace(String nonPrefixedNamespace) throws ExecutionException {
+  public void dropNamespace(String nonPrefixedNamespace) {
     // Do nothing since DynamoDB does not support namespace
   }
 
