@@ -30,7 +30,7 @@ subprojects {
         commonsDbcp2Version = '2.9.0'
         mysqlDriverVersion = '8.0.31'
         postgresqlDriverVersion = '42.5.1'
-        oracleDriverVersion = '21.8.0.0'
+        oracleDriverVersion = '21.9.0.0'
         sqlserverDriverVersion = '11.2.2.jre8'
         sqliteDriverVersion = '3.40.0.0'
         grpcVersion = '1.51.0'
