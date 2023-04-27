@@ -3,6 +3,7 @@ package com.scalar.db.storage.dynamo;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedStorageProvider;
+import com.scalar.db.common.CheckedDistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
 
 public class DynamoProvider implements DistributedStorageProvider {
@@ -18,6 +19,7 @@ public class DynamoProvider implements DistributedStorageProvider {
 
   @Override
   public DistributedStorageAdmin createDistributedStorageAdmin(DatabaseConfig config) {
-    return new DynamoAdmin(config);
+    // Set the namespace check to false because DynamoDB does not support namespaces.
+    return new CheckedDistributedStorageAdmin(new DynamoAdmin(config), false);
   }
 }

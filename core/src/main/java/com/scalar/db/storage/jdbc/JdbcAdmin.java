@@ -372,7 +372,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       execute(connection, truncateTableStatement);
     } catch (SQLException e) {
       throw new ExecutionException(
-          "error truncating the table " + getFullTableName(namespace, table), e);
+          "truncating the table failed: " + getFullTableName(namespace, table), e);
     }
   }
 
@@ -539,7 +539,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void createIndex(
       String namespace, String table, String columnName, Map<String, String> options)
       throws ExecutionException {
-
     try (Connection connection = dataSource.getConnection()) {
       alterToIndexColumnTypeIfNecessary(connection, namespace, table, columnName);
       createIndex(connection, namespace, table, columnName);
@@ -639,11 +638,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
-      if (currentTableMetadata.getColumnNames().contains(columnName)) {
-        throw new IllegalArgumentException(
-            String.format("The column %s already exists", columnName));
-      }
-
       TableMetadata updatedTableMetadata =
           TableMetadata.newBuilder(currentTableMetadata).addColumn(columnName, columnType).build();
       String addNewColumnStatement =

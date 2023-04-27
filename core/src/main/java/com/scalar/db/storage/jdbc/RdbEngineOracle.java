@@ -97,7 +97,7 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException {
-    throw new ExecutionException(String.format("error dropping the user %s", namespace), e);
+    throw new ExecutionException("dropping the user failed: " + namespace, e);
   }
 
   @Override

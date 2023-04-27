@@ -4,8 +4,8 @@ import com.scalar.db.api.DistributedTransactionAdminIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.jdbc.JdbcEnv;
-import com.scalar.db.storage.jdbc.RdbEngine;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 
@@ -25,7 +25,7 @@ public class JdbcTransactionAdminIntegrationTest
 
   @SuppressWarnings("unused")
   private boolean isSqlite() {
-    return JdbcEnv.getRdbEngineFromProperty() == RdbEngine.SQLITE;
+    return JdbcEnv.isSqlite();
   }
 
   @Test
@@ -39,14 +39,112 @@ public class JdbcTransactionAdminIntegrationTest
   @Test
   @Override
   @DisabledIf("isSqlite")
-  public void createNamespace_ForExistingNamespace_ShouldThrowExecutionException() {
-    super.createNamespace_ForExistingNamespace_ShouldThrowExecutionException();
+  public void createNamespace_ForExistingNamespace_ShouldThrowIllegalArgumentException() {
+    super.createNamespace_ForExistingNamespace_ShouldThrowIllegalArgumentException();
   }
 
   @Test
   @Override
   @DisabledIf("isSqlite")
-  public void dropNamespace_ForNonExistingNamespace_ShouldThrowExecutionException() {
-    super.dropNamespace_ForNonExistingNamespace_ShouldThrowExecutionException();
+  public void createNamespace_IfNotExists_ForExistingNamespace_ShouldNotThrowAnyException() {
+    super.createNamespace_IfNotExists_ForExistingNamespace_ShouldNotThrowAnyException();
+  }
+
+  @Test
+  @Override
+  @DisabledIf("isSqlite")
+  public void dropNamespace_ForNonExistingNamespace_ShouldDropNamespaceProperly()
+      throws ExecutionException {
+    super.dropNamespace_ForNonExistingNamespace_ShouldDropNamespaceProperly();
+  }
+
+  @Test
+  @Override
+  @DisabledIf("isSqlite")
+  public void dropNamespace_ForNonExistingNamespace_ShouldThrowIllegalArgumentException() {
+    super.dropNamespace_ForNonExistingNamespace_ShouldThrowIllegalArgumentException();
+  }
+
+  @Test
+  @Override
+  @DisabledIf("isSqlite")
+  public void dropNamespace_ForNonEmptyNamespace_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    super.dropNamespace_ForNonEmptyNamespace_ShouldThrowIllegalArgumentException();
+  }
+
+  @Test
+  @Override
+  @DisabledIf("isSqlite")
+  public void dropNamespace_IfExists_ForNonExistingNamespace_ShouldNotThrowAnyException() {
+    super.dropNamespace_IfExists_ForNonExistingNamespace_ShouldNotThrowAnyException();
+  }
+
+  @Test
+  @Override
+  @DisabledIf("isSqlite")
+  public void namespaceExists_ShouldReturnCorrectResults() throws ExecutionException {
+    super.namespaceExists_ShouldReturnCorrectResults();
+  }
+
+  @Test
+  @Override
+  @DisabledIf("isSqlite")
+  public void createTable_ForNonExistingNamespace_ShouldThrowIllegalArgumentException() {
+    super.createTable_ForNonExistingNamespace_ShouldThrowIllegalArgumentException();
+  }
+
+  // Disable several tests for the coordinator tables since JDBC transaction doesn't have
+  // coordinator tables
+
+  @Disabled("JDBC transaction doesn't have coordinator tables")
+  @Test
+  @Override
+  public void createCoordinatorTables_ShouldCreateCoordinatorTablesCorrectly()
+      throws ExecutionException {
+    super.createCoordinatorTables_ShouldCreateCoordinatorTablesCorrectly();
+  }
+
+  @Disabled("JDBC transaction doesn't have coordinator tables")
+  @Test
+  @Override
+  public void
+      createCoordinatorTables_CoordinatorTablesAlreadyExist_ShouldThrowIllegalArgumentException() {
+    super
+        .createCoordinatorTables_CoordinatorTablesAlreadyExist_ShouldThrowIllegalArgumentException();
+  }
+
+  @Disabled("JDBC transaction doesn't have coordinator tables")
+  @Test
+  @Override
+  public void
+      createCoordinatorTables_IfNotExist_CoordinatorTablesAlreadyExist_ShouldNotThrowAnyException() {
+    super
+        .createCoordinatorTables_IfNotExist_CoordinatorTablesAlreadyExist_ShouldNotThrowAnyException();
+  }
+
+  @Disabled("JDBC transaction doesn't have coordinator tables")
+  @Test
+  @Override
+  public void dropCoordinatorTables_ShouldDropCoordinatorTablesCorrectly()
+      throws ExecutionException {
+    super.dropCoordinatorTables_ShouldDropCoordinatorTablesCorrectly();
+  }
+
+  @Disabled("JDBC transaction doesn't have coordinator tables")
+  @Test
+  @Override
+  public void
+      dropCoordinatorTables_CoordinatorTablesDoNotExist_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    super.dropCoordinatorTables_CoordinatorTablesDoNotExist_ShouldThrowIllegalArgumentException();
+  }
+
+  @Disabled("JDBC transaction doesn't have coordinator tables")
+  @Test
+  @Override
+  public void dropCoordinatorTables_IfExist_CoordinatorTablesDoNotExist_ShouldNotThrowAnyException()
+      throws ExecutionException {
+    super.dropCoordinatorTables_IfExist_CoordinatorTablesDoNotExist_ShouldNotThrowAnyException();
   }
 }

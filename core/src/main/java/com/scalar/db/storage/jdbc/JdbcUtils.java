@@ -102,4 +102,8 @@ public final class JdbcUtils {
     dataSource.setMaxTotal(config.getAdminConnectionPoolMaxTotal());
     return dataSource;
   }
+
+  public static boolean isSqlite(JdbcConfig config) {
+    return config.getJdbcUrl().startsWith("jdbc:sqlite:");
+  }
 }
