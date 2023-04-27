@@ -184,12 +184,10 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
 
   @Override
   public String getDataTypeForKey(DataType dataType) {
-    switch (dataType) {
-      case TEXT:
-        return "VARCHAR(10485760)";
-      default:
-        return null;
+    if (dataType == DataType.TEXT) {
+      return "VARCHAR(10485760)";
     }
+    return null;
   }
 
   @Override

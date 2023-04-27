@@ -8,6 +8,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Value;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
@@ -29,10 +30,11 @@ public class CosmosOperation {
     }
 
     if (operation.getClusteringKey().isPresent()) {
-      return operation.getClusteringKey().get().get().stream()
-          .map(Value::getName)
-          .collect(Collectors.toList())
-          .containsAll(metadata.getClusteringKeyNames());
+      Set<String> set =
+          operation.getClusteringKey().get().get().stream()
+              .map(Value::getName)
+              .collect(Collectors.toSet());
+      return set.containsAll(metadata.getClusteringKeyNames());
     } else {
       return false;
     }

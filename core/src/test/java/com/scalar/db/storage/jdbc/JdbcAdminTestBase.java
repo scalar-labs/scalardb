@@ -276,8 +276,7 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  public void createTable_forSqlite_withInvalidTableName_shouldThrowExecutionException()
-      throws SQLException, ExecutionException {
+  public void createTable_forSqlite_withInvalidTableName_shouldThrowExecutionException() {
     // Arrange
     String namespace = "my_ns";
     String table = "foo$table"; // contains namespace separator
@@ -1664,8 +1663,7 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  public void dropIndex_forColumnTypeWithRequiredAlterationForSqlite_ShouldDropIndexProperly()
-      throws Exception {
+  public void dropIndex_forColumnTypeWithRequiredAlterationForSqlite_ShouldDropIndexProperly() {
     // SQLite does not require column type change on CREATE INDEX.
   }
 
