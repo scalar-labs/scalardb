@@ -78,7 +78,7 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   @Override
   public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException {
-    throw new ExecutionException(String.format("error dropping the schema %s", namespace), e);
+    throw new ExecutionException("dropping the schema failed: " + namespace, e);
   }
 
   @Override

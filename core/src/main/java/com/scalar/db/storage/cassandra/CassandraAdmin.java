@@ -242,8 +242,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       throw new IllegalArgumentException(
           "The table " + getFullTableName(namespace, table) + "  does not exist");
     }
-    // The table metadata are not managed by ScalarDB, so we don't need to do anything
-    // here
+    // The table metadata are not managed by ScalarDB, so we don't need to do anything here
   }
 
   @Override
@@ -251,11 +250,6 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {
     try {
-      if (getTableMetadata(namespace, table).getColumnNames().contains(columnName)) {
-        throw new IllegalArgumentException(
-            String.format("The column %s already exists", columnName));
-      }
-
       String alterTableQuery =
           SchemaBuilder.alterTable(namespace, table)
               .addColumn(columnName)

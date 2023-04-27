@@ -740,10 +740,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropNamespace(String nonPrefixedNamespace) throws ExecutionException {
-    Set<String> tables = getNamespaceTableNames(nonPrefixedNamespace);
-    for (String table : tables) {
-      dropTable(nonPrefixedNamespace, table);
-    }
+    // Do nothing since DynamoDB does not support namespace
   }
 
   @Override
@@ -787,15 +784,20 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       String nonPrefixedNamespace, String table, String columnName, Map<String, String> options)
       throws ExecutionException {
     Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
-    if (getTableMetadata(nonPrefixedNamespace, table).getColumnDataType(columnName)
-        == DataType.BOOLEAN) {
+    TableMetadata metadata = getTableMetadata(nonPrefixedNamespace, table);
+
+    if (metadata == null) {
+      throw new IllegalArgumentException(
+          "Table " + getFullTableName(namespace, table) + " does not exist.");
+    }
+
+    if (metadata.getColumnDataType(columnName) == DataType.BOOLEAN) {
       throw new IllegalArgumentException(
           "Currently, BOOLEAN type is not supported for a secondary index in DynamoDB: "
               + columnName);
     }
 
     long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_REQUEST_UNIT));
-    TableMetadata metadata = getTableMetadata(nonPrefixedNamespace, table);
 
     try {
       client.updateTable(
@@ -1185,11 +1187,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       TableMetadata currentTableMetadata = getTableMetadata(nonPrefixedNamespace, table);
-      if (currentTableMetadata.getColumnNames().contains(columnName)) {
-        throw new IllegalArgumentException(
-            String.format("The column %s already exists", columnName));
-      }
-
       TableMetadata updatedTableMetadata =
           TableMetadata.newBuilder(currentTableMetadata).addColumn(columnName, columnType).build();
       Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);

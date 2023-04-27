@@ -14,6 +14,8 @@ public interface DistributedTransactionAdmin extends Admin {
    * Creates coordinator namespace and tables.
    *
    * @param options options to create namespace and tables
+   * @throws IllegalArgumentException if the coordinator namespace already exists or the coordinator
+   *     tables already exist
    * @throws ExecutionException if the operation fails
    */
   void createCoordinatorTables(Map<String, String> options) throws ExecutionException;
@@ -22,9 +24,10 @@ public interface DistributedTransactionAdmin extends Admin {
    * Creates coordinator namespace and tables.
    *
    * @param ifNotExist if set to true, the coordinator namespace and tables will be created only if
-   *     they do not exist. If set to false, it will try to create the coordinator namespace and
-   *     tables but may throw an exception if they already exist
+   *     they do not exist. If set to false, it will throw an exception if they already exist
    * @param options options to create namespace and tables
+   * @throws IllegalArgumentException if the coordinator namespace already exists or the coordinator
+   *     tables already exist if ifNotExist is set to false
    * @throws ExecutionException if the operation fails
    */
   default void createCoordinatorTables(boolean ifNotExist, Map<String, String> options)
@@ -39,8 +42,9 @@ public interface DistributedTransactionAdmin extends Admin {
    * Creates coordinator namespace and tables.
    *
    * @param ifNotExist if set to true, the coordinator namespace and tables will be created only if
-   *     they do not exist. If set to false, it will try to create the coordinator namespace and
-   *     tables but may throw an exception if they already exist
+   *     they do not exist. If set to false, it will throw an exception if they already exist
+   * @throws IllegalArgumentException if the coordinator namespace already exists or the coordinator
+   *     tables already exist if ifNotExist is set to false
    * @throws ExecutionException if the operation fails
    */
   default void createCoordinatorTables(boolean ifNotExist) throws ExecutionException {
@@ -53,6 +57,8 @@ public interface DistributedTransactionAdmin extends Admin {
   /**
    * Creates coordinator namespace and tables.
    *
+   * @throws IllegalArgumentException if the coordinator namespace already exists or the coordinator
+   *     tables already exist if ifNotExist is set to false
    * @throws ExecutionException if the operation fails
    */
   default void createCoordinatorTables() throws ExecutionException {
@@ -62,6 +68,7 @@ public interface DistributedTransactionAdmin extends Admin {
   /**
    * Drops coordinator namespace and tables.
    *
+   * @throws IllegalArgumentException if the coordinator tables do not exist
    * @throws ExecutionException if the operation fails
    */
   void dropCoordinatorTables() throws ExecutionException;
@@ -70,8 +77,9 @@ public interface DistributedTransactionAdmin extends Admin {
    * Drops coordinator namespace and tables.
    *
    * @param ifExist if set to true, the coordinator namespace and tables will be dropped only if
-   *     they exist. If set to false, it will try to drop the coordinator namespace and tables but
-   *     may throw an exception if they do not exist
+   *     they exist. If set to false, it will throw an exception if they do not exist
+   * @throws IllegalArgumentException if the coordinator tables do not exist if ifExist is set to
+   *     false
    * @throws ExecutionException if the operation fails
    */
   default void dropCoordinatorTables(boolean ifExist) throws ExecutionException {
@@ -84,6 +92,7 @@ public interface DistributedTransactionAdmin extends Admin {
   /**
    * Truncates coordinator tables.
    *
+   * @throws IllegalArgumentException if the coordinator tables do not exist
    * @throws ExecutionException if the operation fails
    */
   void truncateCoordinatorTables() throws ExecutionException;
@@ -100,6 +109,7 @@ public interface DistributedTransactionAdmin extends Admin {
    * Repair coordinator tables which may be in an unknown state.
    *
    * @param options options to repair
+   * @throws IllegalArgumentException if the coordinator tables do not exist
    * @throws ExecutionException if the operation fails
    */
   void repairCoordinatorTables(Map<String, String> options) throws ExecutionException;
