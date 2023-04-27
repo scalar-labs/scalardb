@@ -42,7 +42,7 @@ subprojects {
         prometheusVersion = '0.16.0'
         commonsTextVersion = '1.10.0'
         jettyVersion = '9.4.50.v20221201'
-        junitVersion = '5.9.2'
+        junitVersion = '5.9.3'
         commonsLangVersion = '3.12.0'
         assertjVersion = '3.24.1'
         mockitoVersion = '4.11.0'
