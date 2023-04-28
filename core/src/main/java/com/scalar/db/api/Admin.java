@@ -15,6 +15,7 @@ public interface Admin {
    *
    * @param namespace the namespace to create
    * @param options namespace creation options
+   * @throws IllegalArgumentException if the namespace already exists
    * @throws ExecutionException if the operation fails
    */
   void createNamespace(String namespace, Map<String, String> options) throws ExecutionException;
@@ -24,10 +25,10 @@ public interface Admin {
    *
    * @param namespace the namespace to create
    * @param ifNotExists if set to true, the namespace will be created only if it does not exist
-   *     already. If set to false, it will try to create the namespace but may throw an exception if
-   *     it already exists
+   *     already. If set to false, it will throw an exception if it already exists
    * @param options namespace creation options
-   * @throws ExecutionException if the namespace already exists among other
+   * @throws IllegalArgumentException if the namespace already exists if ifNotExists is set to false
+   * @throws ExecutionException if the operation fails
    */
   default void createNamespace(String namespace, boolean ifNotExists, Map<String, String> options)
       throws ExecutionException {
@@ -42,8 +43,8 @@ public interface Admin {
    *
    * @param namespace the namespace to create
    * @param ifNotExists if set to true, the namespace will be created only if it does not exist
-   *     already. If set to false, it will try to create the namespace but may throw an exception if
-   *     it already exists
+   *     already. If set to false, it will throw an exception if it already exists
+   * @throws IllegalArgumentException if the namespace already exists if ifNotExists is set to false
    * @throws ExecutionException if the operation fails
    */
   default void createNamespace(String namespace, boolean ifNotExists) throws ExecutionException {
@@ -54,7 +55,8 @@ public interface Admin {
    * Creates a namespace.
    *
    * @param namespace the namespace to create
-   * @throws ExecutionException if the namespace already exits among other
+   * @throws IllegalArgumentException if the namespace already exists
+   * @throws ExecutionException if the operation fails
    */
   default void createNamespace(String namespace) throws ExecutionException {
     createNamespace(namespace, Collections.emptyMap());
@@ -67,6 +69,7 @@ public interface Admin {
    * @param table a table to create
    * @param metadata a metadata to create
    * @param options options to create
+   * @throws IllegalArgumentException if the namespace does not exist or the table already exists
    * @throws ExecutionException if the operation fails
    */
   void createTable(
@@ -80,9 +83,10 @@ public interface Admin {
    * @param table a table to create
    * @param metadata a metadata to create
    * @param ifNotExists if set to true, the table will be created only if it does not exist already.
-   *     If set to false, it will try to create the table but may throw an exception if it already
-   *     exists
+   *     If set to false, it will throw an exception if it already exists
    * @param options options to create
+   * @throws IllegalArgumentException if the namespace does not exist. Or if the table already
+   *     exists if ifNotExists is set to false
    * @throws ExecutionException if the operation fails
    */
   default void createTable(
@@ -105,8 +109,9 @@ public interface Admin {
    * @param table a table to create
    * @param metadata a metadata to create
    * @param ifNotExists if set to true, the table will be created only if it does not exist already.
-   *     If set to false, it will try to create the table but may throw an exception if it already
-   *     exists
+   *     If set to false, it will throw an exception if it already exists
+   * @throws IllegalArgumentException if the namespace does not exist. Or if the table already
+   *     exists if ifNotExists is set to false
    * @throws ExecutionException if the operation fails
    */
   default void createTable(
@@ -121,6 +126,7 @@ public interface Admin {
    * @param namespace an existing namespace
    * @param table a table to create
    * @param metadata a metadata to create
+   * @throws IllegalArgumentException if the namespace does not exist or the table already exists
    * @throws ExecutionException if the operation fails
    */
   default void createTable(String namespace, String table, TableMetadata metadata)
@@ -133,6 +139,7 @@ public interface Admin {
    *
    * @param namespace a namespace to drop
    * @param table a table to drop
+   * @throws IllegalArgumentException if the table does not exist
    * @throws ExecutionException if the operation fails
    */
   void dropTable(String namespace, String table) throws ExecutionException;
@@ -143,7 +150,8 @@ public interface Admin {
    * @param namespace a namespace to drop
    * @param table a table to drop
    * @param ifExists if set to true, the table will be dropped only if it exists. If set to false,
-   *     it will try to drop the table but may throw an exception if it does not exist
+   *     it will throw an exception if it does not exist
+   * @throws IllegalArgumentException if the table does not exist if ifExists is set to false
    * @throws ExecutionException if the operation fails
    */
   default void dropTable(String namespace, String table, boolean ifExists)
@@ -158,6 +166,7 @@ public interface Admin {
    * Drops the specified namespace.
    *
    * @param namespace a namespace to drop
+   * @throws IllegalArgumentException if the namespace does not exist or the namespace is not empty
    * @throws ExecutionException if the operation fails
    */
   void dropNamespace(String namespace) throws ExecutionException;
@@ -167,7 +176,9 @@ public interface Admin {
    *
    * @param namespace a namespace to drop
    * @param ifExists if set to true, the namespace will be dropped only if it exists. If set to
-   *     false, it will try to drop the namespace but may throw an exception if it does not exist
+   *     false, it will throw an exception if it does not exist
+   * @throws IllegalArgumentException if the namespace does not exist if ifExists is set to false.
+   *     Or if the namespace is not empty
    * @throws ExecutionException if the operation fails
    */
   default void dropNamespace(String namespace, boolean ifExists) throws ExecutionException {
@@ -182,6 +193,7 @@ public interface Admin {
    *
    * @param namespace a namespace to truncate
    * @param table a table to truncate
+   * @throws IllegalArgumentException if the table does not exist
    * @throws ExecutionException if the operation fails
    */
   void truncateTable(String namespace, String table) throws ExecutionException;
@@ -193,6 +205,8 @@ public interface Admin {
    * @param table a table to create a secondary index
    * @param columnName a name of the target column
    * @param options options to create a secondary index
+   * @throws IllegalArgumentException if the table does not exist or the column does not exist or
+   *     the index already exists
    * @throws ExecutionException if the operation fails
    */
   void createIndex(String namespace, String table, String columnName, Map<String, String> options)
@@ -205,9 +219,10 @@ public interface Admin {
    * @param table a table to create a secondary index
    * @param columnName a name of the target column
    * @param ifNotExists if set to true, the secondary index will be created only if it does not
-   *     exist already. If set to false, it will try to create the secondary index but may throw an
-   *     exception if it already exists
+   *     exist already. If set to false, it will throw an exception if it already exists
    * @param options options to create a secondary index
+   * @throws IllegalArgumentException if the table does not exist or the column does not exist. Or
+   *     the index already exists if ifNotExists is set to false
    * @throws ExecutionException if the operation fails
    */
   default void createIndex(
@@ -230,8 +245,9 @@ public interface Admin {
    * @param table a table to create a secondary index
    * @param columnName a name of the target column
    * @param ifNotExists if set to true, the secondary index will be created only if it does not
-   *     exist already. If set to false, it will try to create the secondary index but may throw an
-   *     exception if it already exists
+   *     exist already. If set to false, it will throw an exception if it already exists
+   * @throws IllegalArgumentException if the table does not exist or the column does not exist. Or
+   *     the index already exists if ifNotExists is set to false
    * @throws ExecutionException if the operation fails
    */
   default void createIndex(String namespace, String table, String columnName, boolean ifNotExists)
@@ -245,6 +261,8 @@ public interface Admin {
    * @param namespace a namespace to create a secondary index
    * @param table a table to create a secondary index
    * @param columnName a name of the target column
+   * @throws IllegalArgumentException if the table does not exist or the column does not exist or
+   *     the index already exists
    * @throws ExecutionException if the operation fails
    */
   default void createIndex(String namespace, String table, String columnName)
@@ -258,6 +276,7 @@ public interface Admin {
    * @param namespace a namespace to drop a secondary index
    * @param table a table to drop a secondary index
    * @param columnName a name of the target column
+   * @throws IllegalArgumentException if the table does not exist or the index does not exist
    * @throws ExecutionException if the operation fails
    */
   void dropIndex(String namespace, String table, String columnName) throws ExecutionException;
@@ -269,8 +288,9 @@ public interface Admin {
    * @param table a table to drop a secondary index
    * @param columnName a name of the target column
    * @param ifExists if set to true, the secondary index will be dropped only if it exists. If set
-   *     to false, it will try to drop the secondary index but may throw an exception if it does not
-   *     exist
+   *     to false, it will throw an exception if it does not exist
+   * @throws IllegalArgumentException if the table does not exist. Or if the index does not exist if
+   *     ifExists is set to false
    * @throws ExecutionException if the operation fails
    */
   default void dropIndex(String namespace, String table, String columnName, boolean ifExists)
@@ -347,6 +367,7 @@ public interface Admin {
    * @param table an existing table
    * @param metadata the metadata associated to the table to repair
    * @param options options to repair
+   * @throws IllegalArgumentException if the table does not exist
    * @throws ExecutionException if the operation fails
    */
   void repairTable(
@@ -376,6 +397,7 @@ public interface Admin {
    * @param table the table name
    * @param columnName the name of the new column
    * @param columnType the type of the new column
+   * @throws IllegalArgumentException if the table does not exist or the column already exists
    * @throws ExecutionException if the operation fails
    */
   void addNewColumnToTable(String namespace, String table, String columnName, DataType columnType)

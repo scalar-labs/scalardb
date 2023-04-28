@@ -31,20 +31,11 @@ public final class JdbcEnv {
     return props;
   }
 
-  public static RdbEngine getRdbEngineFromProperty() {
-    String jdbcUrl = System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL);
-    if (jdbcUrl.startsWith("jdbc:mysql:")) {
-      return RdbEngine.MYSQL;
-    } else if (jdbcUrl.startsWith("jdbc:postgresql:")) {
-      return RdbEngine.POSTGRESQL;
-    } else if (jdbcUrl.startsWith("jdbc:oracle:")) {
-      return RdbEngine.ORACLE;
-    } else if (jdbcUrl.startsWith("jdbc:sqlserver:")) {
-      return RdbEngine.SQL_SERVER;
-    } else if (jdbcUrl.startsWith("jdbc:sqlite:")) {
-      return RdbEngine.SQLITE;
-    } else {
-      throw new IllegalArgumentException("the rdb engine is not supported: " + jdbcUrl);
-    }
+  public static boolean isSqlite() {
+    Properties props = new Properties();
+    props.setProperty(
+        DatabaseConfig.CONTACT_POINTS, System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL));
+    props.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    return JdbcUtils.isSqlite(new JdbcConfig(new DatabaseConfig(props)));
   }
 }

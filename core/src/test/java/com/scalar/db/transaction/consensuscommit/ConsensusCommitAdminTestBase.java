@@ -66,6 +66,19 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
+  public void
+      createCoordinatorTables_CoordinatorTablesAlreadyExist_shouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.TABLE))
+        .thenReturn(true);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.createCoordinatorTables())
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void createCoordinatorTables_WithOptions_shouldCreateCoordinatorTableProperly()
       throws ExecutionException {
     // Arrange
@@ -85,6 +98,8 @@ public abstract class ConsensusCommitAdminTestBase {
   public void truncateCoordinatorTables_shouldTruncateCoordinatorTableProperly()
       throws ExecutionException {
     // Arrange
+    when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.TABLE))
+        .thenReturn(true);
 
     // Act
     admin.truncateCoordinatorTables();
@@ -94,8 +109,23 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
+  public void
+      truncateCoordinatorTables_CoordinatorTablesNotExist_shouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.TABLE))
+        .thenReturn(false);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.truncateCoordinatorTables())
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void dropCoordinatorTables_shouldDropCoordinatorTableProperly() throws ExecutionException {
     // Arrange
+    when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.TABLE))
+        .thenReturn(true);
 
     // Act
     admin.dropCoordinatorTables();
@@ -103,6 +133,18 @@ public abstract class ConsensusCommitAdminTestBase {
     // Assert
     verify(distributedStorageAdmin).dropTable(coordinatorNamespaceName, Coordinator.TABLE);
     verify(distributedStorageAdmin).dropNamespace(coordinatorNamespaceName);
+  }
+
+  @Test
+  public void dropCoordinatorTables_CoordinatorTablesNotExist_shouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    // Arrange
+    when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.TABLE))
+        .thenReturn(false);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.dropCoordinatorTables())
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

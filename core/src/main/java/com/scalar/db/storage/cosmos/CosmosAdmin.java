@@ -109,9 +109,6 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   private void createContainer(String database, String table, TableMetadata metadata)
       throws ExecutionException {
-    if (!databaseExists(database)) {
-      throw new ExecutionException("the database does not exists");
-    }
     CosmosDatabase cosmosDatabase = client.getDatabase(database);
     CosmosContainerProperties properties = computeContainerProperties(table, metadata);
     cosmosDatabase.createContainer(properties);
@@ -278,14 +275,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
-    if (!databaseExists(namespace)) {
-      throw new ExecutionException("the database does not exist");
-    }
     CosmosDatabase database = client.getDatabase(namespace);
-    if (!containerExists(database, table)) {
-      throw new ExecutionException("the container does not exist");
-    }
-
     try {
       database.getContainer(table).delete();
       deleteTableMetadata(namespace, table);
@@ -319,10 +309,6 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
-    if (!databaseExists(namespace)) {
-      throw new ExecutionException("the database does not exist");
-    }
-
     try {
       client.getDatabase(namespace).delete();
     } catch (RuntimeException e) {
@@ -555,15 +541,9 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
-      if (currentTableMetadata.getColumnNames().contains(columnName)) {
-        throw new IllegalArgumentException(
-            String.format("The column %s already exists", columnName));
-      }
-
       TableMetadata updatedTableMetadata =
           TableMetadata.newBuilder(currentTableMetadata).addColumn(columnName, columnType).build();
       putTableMetadata(namespace, table, updatedTableMetadata);
-
     } catch (ExecutionException e) {
       throw new ExecutionException(
           String.format(
@@ -581,21 +561,6 @@ public class CosmosAdmin implements DistributedStorageAdmin {
         return false;
       }
       throw e;
-    }
-    return true;
-  }
-
-  private boolean containerExists(CosmosDatabase database, String containerId)
-      throws ExecutionException {
-    try {
-      database.getContainer(containerId).read();
-    } catch (RuntimeException e) {
-      if (e instanceof CosmosException
-          && ((CosmosException) e).getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
-        return false;
-      }
-      throw new ExecutionException(
-          String.format("reading the container %s failed", containerId), e);
     }
     return true;
   }
