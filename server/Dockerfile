@@ -19,15 +19,6 @@ WORKDIR /scalardb
 # server.tar, log4j2.properties and database.properties to build/docker.
 ADD server.tar .
 
-ENV SCALAR_DB_CONTACT_POINTS 'cassandra'
-ENV SCALAR_DB_CONTACT_PORT '9042'
-ENV SCALAR_DB_USERNAME ''
-ENV SCALAR_DB_PASSWORD ''
-ENV SCALAR_DB_STORAGE 'cassandra'
-ENV SCALAR_DB_TRANSACTION_MANAGER 'consensus-commit'
-ENV SCALAR_DB_ISOLATION_LEVEL ''
-ENV SCALAR_DB_CONSENSUSCOMMIT_SERIALIZABLE_STRATEGY ''
-
 WORKDIR /scalardb/server
 
 COPY database.properties .
