@@ -4,3 +4,4 @@ com.scalar.db.storage.dynamo.DynamoProvider
 com.scalar.db.storage.jdbc.JdbcProvider
 com.scalar.db.storage.multistorage.MultiStorageProvider
 com.scalar.db.storage.rpc.GrpcProvider
+com.scalar.db.storage.redis.RedisProvider

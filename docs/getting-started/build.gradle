@@ -9,7 +9,9 @@ repositories {
 mainClassName = "sample.ElectronicMoneyMain"
 
 dependencies {
-    implementation 'com.scalar-labs:scalardb:3.8.0'
+    implementation(fileTree(dir: '../../core/build/libs', include: ['scalardb-4.0.0-SNAPSHOT-all.jar']))
+
+//    implementation 'com.scalar-labs:scalardb:3.8.0'
     implementation 'org.slf4j:slf4j-simple:1.7.30'
 }
 

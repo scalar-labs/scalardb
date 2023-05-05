@@ -141,8 +141,8 @@ public class CrudHandler {
       // Retrieve only the after images columns when including the metadata is disabled, otherwise
       // retrieve all the columns
       if (!isIncludeMetadataEnabled) {
-        LinkedHashSet<String> afterImageColumnNames =
-            tableMetadataManager.getTransactionTableMetadata(get).getAfterImageColumnNames();
+        TransactionTableMetadata txMeta = tableMetadataManager.getTransactionTableMetadata(get);
+        LinkedHashSet<String> afterImageColumnNames = txMeta.getAfterImageColumnNames();
         get.withProjections(afterImageColumnNames);
       }
       get.withConsistency(Consistency.LINEARIZABLE);
