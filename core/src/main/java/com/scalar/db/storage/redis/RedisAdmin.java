@@ -9,6 +9,7 @@ import com.scalar.db.io.DataType;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import redis.clients.jedis.Jedis;
@@ -47,29 +48,18 @@ public class RedisAdmin implements DistributedStorageAdmin {
   /** Try to find any key with the namespace prefix. */
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    boolean ret = false;
+    List<String> keys = scanKeysWithPrefix(namespace + KEY_SEPARATOR);
+    return !keys.isEmpty();
+  }
 
-    try (Jedis jedis = client.getJedis()) {
-      // note: `jedis.keys()` is slow, so use `jedis.scan()` instead.
-      // see:
-      // <https://www.javadoc.io/static/redis.clients/jedis/5.0.0-alpha1/redis/clients/jedis/Jedis.html#keys-byte:A->
-      ScanParams params = new ScanParams().match(namespace + KEY_SEPARATOR + "*");
-      ScanResult<String> result;
-      String cursor = "0";
-      do {
-        result = jedis.scan(cursor, params);
-        List<String> keys = result.getResult();
-
-        if (!keys.isEmpty()) {
-          ret = true;
-          break;
-        }
-
-        cursor = result.getCursor();
-      } while (!cursor.equals("0"));
-    }
-
-    return ret;
+  /**
+   * Collect table names from keys (`<namespace>$<table>$<column>`).
+   */
+  @Override
+  public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
+    return scanKeysWithPrefix(namespace + KEY_SEPARATOR).stream()
+        .map(key -> key.split(KEY_SEPARATOR)[1])
+        .collect(Collectors.toSet());
   }
 
   @Override
@@ -109,11 +99,6 @@ public class RedisAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
-    throw new RuntimeException("Not implemented");
-  }
-
-  @Override
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
@@ -130,5 +115,25 @@ public class RedisAdmin implements DistributedStorageAdmin {
   @Override
   public void close() {
     throw new RuntimeException("Not implemented");
+  }
+
+  /**
+   * @implNote <a
+   *     href="https://www.javadoc.io/static/redis.clients/jedis/5.0.0-alpha1/redis/clients/jedis/Jedis.html#keys-byte:A-">`jedis.keys()`
+   *     is slow</a>, so `jedis.scan()` is used here.
+   */
+  private List<String> scanKeysWithPrefix(String prefix) {
+    List<String> keys = null;
+    try (Jedis jedis = client.getJedis()) {
+      ScanParams params = new ScanParams().match(prefix + "*");
+      ScanResult<String> result;
+      String cursor = "0";
+      do {
+        result = jedis.scan(cursor, params);
+        keys = result.getResult();
+        cursor = result.getCursor();
+      } while (!cursor.equals("0"));
+    }
+    return keys;
   }
 }
