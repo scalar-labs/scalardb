@@ -1,0 +1,18 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="SchemaLoader (redis; core-shadowJar)" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="com.scalar.db.schemaloader.SchemaLoader" />
+    <module name="com.scalar-labs.scalardb.schema-loader.main" />
+    <option name="PROGRAM_PARAMETERS" value="--config scalardb.properties --schema-file emoney.json --coordinator" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/docs/getting-started" />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="com.scalar.db.schemaloader.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <method v="2">
+      <option name="Gradle.BeforeRunTask" enabled="true" tasks="shadowJar" externalProjectPath="$PROJECT_DIR$/core" vmOptions="" scriptParameters="" />
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
