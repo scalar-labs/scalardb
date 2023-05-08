@@ -1,21 +1,30 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static com.scalar.db.api.ConditionalExpression.Operator;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
+import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
+import static com.scalar.db.transaction.consensuscommit.Attribute.toVersionValue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionBuilder;
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
@@ -25,6 +34,8 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.ScalarDbUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 public class PrepareMutationComposerTest {
   private static final String ANY_NAMESPACE_NAME = "namespace";
@@ -40,6 +51,7 @@ public class PrepareMutationComposerTest {
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_NAME_3 = "name3";
+  private static final String ANY_NAME_WITH_BEFORE_PREFIX = "before_x";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
   private static final int ANY_INT_1 = 100;
@@ -52,15 +64,24 @@ public class PrepareMutationComposerTest {
               .addColumn(ANY_NAME_1, DataType.TEXT)
               .addColumn(ANY_NAME_2, DataType.TEXT)
               .addColumn(ANY_NAME_3, DataType.INT)
+              .addColumn(ANY_NAME_WITH_BEFORE_PREFIX, DataType.INT)
               .addPartitionKey(ANY_NAME_1)
               .addClusteringKey(ANY_NAME_2)
               .build());
 
+  @Mock private TransactionTableMetadataManager tableMetadataManager;
+
   private PrepareMutationComposer composer;
 
   @BeforeEach
-  public void setUp() {
-    composer = new PrepareMutationComposer(ANY_ID_3, ANY_TIME_5);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
+
+    // Arrange
+    composer = new PrepareMutationComposer(ANY_ID_3, ANY_TIME_5, tableMetadataManager);
+
+    when(tableMetadataManager.getTransactionTableMetadata(any(Operation.class)))
+        .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
   }
 
   private Put preparePut() {
@@ -69,7 +90,8 @@ public class PrepareMutationComposerTest {
     return new Put(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME)
-        .withValue(ANY_NAME_3, ANY_INT_3);
+        .withValue(ANY_NAME_3, ANY_INT_3)
+        .withValue(ANY_NAME_WITH_BEFORE_PREFIX, ANY_INT_3);
   }
 
   private Delete prepareDelete() {
@@ -103,6 +125,7 @@ public class PrepareMutationComposerTest {
             .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
             .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
             .put(ANY_NAME_3, IntColumn.of(ANY_NAME_3, ANY_INT_2))
+            .put(ANY_NAME_WITH_BEFORE_PREFIX, IntColumn.of(ANY_NAME_WITH_BEFORE_PREFIX, ANY_INT_2))
             .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(ANY_ID_2)))
             .put(
                 Attribute.PREPARED_AT,
@@ -117,6 +140,9 @@ public class PrepareMutationComposerTest {
             .put(
                 Attribute.BEFORE_PREFIX + ANY_NAME_3,
                 IntColumn.of(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_1))
+            .put(
+                Attribute.BEFORE_PREFIX + ANY_NAME_WITH_BEFORE_PREFIX,
+                IntColumn.of(Attribute.BEFORE_PREFIX + ANY_NAME_WITH_BEFORE_PREFIX, ANY_INT_1))
             .put(Attribute.BEFORE_ID, ScalarDbUtils.toColumn(Attribute.toBeforeIdValue(ANY_ID_1)))
             .put(
                 Attribute.BEFORE_PREPARED_AT,
@@ -154,7 +180,7 @@ public class PrepareMutationComposerTest {
   }
 
   @Test
-  public void add_PutAndResultGiven_ShouldComposePutWithPutIfCondition() {
+  public void add_PutAndResultGiven_ShouldComposePutWithPutIfCondition() throws ExecutionException {
     // Arrange
     Put put = preparePut();
     TransactionResult result = prepareResult();
@@ -164,30 +190,29 @@ public class PrepareMutationComposerTest {
 
     // Assert
     Put actual = (Put) composer.get().get(0);
-    Put expected =
-        Put.newBuilder(put)
-            .consistency(Consistency.LINEARIZABLE)
-            .textValue(Attribute.ID, ANY_ID_3)
-            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
-            .intValue(Attribute.VERSION, 3)
-            .bigIntValue(Attribute.PREPARED_AT, ANY_TIME_5)
-            .bigIntValue(Attribute.BEFORE_PREPARED_AT, ANY_TIME_3)
-            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, ANY_TIME_4)
-            .textValue(Attribute.BEFORE_ID, ANY_ID_2)
-            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
-            .intValue(Attribute.BEFORE_VERSION, 2)
-            .intValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_2)
-            .condition(
-                ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2))
-                    .and(ConditionBuilder.column(VERSION).isEqualToInt(2))
-                    .build())
-            .build();
-    assertThat(actual).isEqualTo(expected);
+    put.withConsistency(Consistency.LINEARIZABLE);
+    put.withCondition(
+        new PutIf(
+            new ConditionalExpression(ID, toIdValue(ANY_ID_2), Operator.EQ),
+            new ConditionalExpression(VERSION, toVersionValue(2), Operator.EQ)));
+    put.withValue(Attribute.toPreparedAtValue(ANY_TIME_5));
+    put.withValue(Attribute.toIdValue(ANY_ID_3));
+    put.withValue(Attribute.toStateValue(TransactionState.PREPARED));
+    put.withValue(Attribute.toVersionValue(3));
+    put.withValue(Attribute.toBeforePreparedAtValue(ANY_TIME_3));
+    put.withValue(Attribute.toBeforeCommittedAtValue(ANY_TIME_4));
+    put.withValue(Attribute.toBeforeIdValue(ANY_ID_2));
+    put.withValue(Attribute.toBeforeStateValue(TransactionState.COMMITTED));
+    put.withValue(Attribute.toBeforeVersionValue(2));
+    put.withValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_2);
+    put.withValue(Attribute.BEFORE_PREFIX + ANY_NAME_WITH_BEFORE_PREFIX, ANY_INT_2);
+    assertThat(actual).isEqualTo(put);
   }
 
   @Test
   public void
-      add_PutAndResultWithNullTxIdGiven_ShouldComposePutWithBeforeVersion0AndPutIfNullCondition() {
+      add_PutAndResultWithNullTxIdGiven_ShouldComposePutWithBeforeVersion0AndPutIfNullCondition()
+          throws ExecutionException {
     // Arrange
     Put put = preparePut();
     TransactionResult result = prepareResultWithNullMetadata();
@@ -219,7 +244,8 @@ public class PrepareMutationComposerTest {
   }
 
   @Test
-  public void add_PutAndNullResultGiven_ShouldComposePutWithPutIfNotExistsCondition() {
+  public void add_PutAndNullResultGiven_ShouldComposePutWithPutIfNotExistsCondition()
+      throws ExecutionException {
     // Arrange
     Put put = preparePut();
 
@@ -238,7 +264,8 @@ public class PrepareMutationComposerTest {
   }
 
   @Test
-  public void add_DeleteAndResultGiven_ShouldComposePutWithPutIfCondition() {
+  public void add_DeleteAndResultGiven_ShouldComposePutWithPutIfCondition()
+      throws ExecutionException {
     // Arrange
     Delete delete = prepareDelete();
     TransactionResult result = prepareResult();
@@ -249,33 +276,32 @@ public class PrepareMutationComposerTest {
     // Assert
     Put actual = (Put) composer.get().get(0);
     Put expected =
-        Put.newBuilder()
-            .namespace(delete.forNamespace().get())
-            .table(delete.forTable().get())
-            .partitionKey(delete.getPartitionKey())
-            .clusteringKey(delete.getClusteringKey().orElse(null))
-            .consistency(Consistency.LINEARIZABLE)
-            .textValue(Attribute.ID, ANY_ID_3)
-            .intValue(Attribute.STATE, TransactionState.DELETED.get())
-            .intValue(Attribute.VERSION, 3)
-            .bigIntValue(Attribute.PREPARED_AT, ANY_TIME_5)
-            .bigIntValue(Attribute.BEFORE_PREPARED_AT, ANY_TIME_3)
-            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, ANY_TIME_4)
-            .textValue(Attribute.BEFORE_ID, ANY_ID_2)
-            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
-            .intValue(Attribute.BEFORE_VERSION, 2)
-            .intValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_2)
-            .condition(
-                ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2))
-                    .and(ConditionBuilder.column(VERSION).isEqualToInt(2))
-                    .build())
-            .build();
+        new Put(delete.getPartitionKey(), delete.getClusteringKey().orElse(null))
+            .forNamespace(delete.forNamespace().get())
+            .forTable(delete.forTable().get());
+    expected.withConsistency(Consistency.LINEARIZABLE);
+    expected.withCondition(
+        new PutIf(
+            new ConditionalExpression(ID, toIdValue(ANY_ID_2), Operator.EQ),
+            new ConditionalExpression(VERSION, toVersionValue(2), Operator.EQ)));
+    expected.withValue(Attribute.toPreparedAtValue(ANY_TIME_5));
+    expected.withValue(Attribute.toIdValue(ANY_ID_3));
+    expected.withValue(Attribute.toStateValue(TransactionState.DELETED));
+    expected.withValue(Attribute.toVersionValue(3));
+    expected.withValue(Attribute.toBeforePreparedAtValue(ANY_TIME_3));
+    expected.withValue(Attribute.toBeforeCommittedAtValue(ANY_TIME_4));
+    expected.withValue(Attribute.toBeforeIdValue(ANY_ID_2));
+    expected.withValue(Attribute.toBeforeStateValue(TransactionState.COMMITTED));
+    expected.withValue(Attribute.toBeforeVersionValue(2));
+    expected.withValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_2);
+    expected.withValue(Attribute.BEFORE_PREFIX + ANY_NAME_WITH_BEFORE_PREFIX, ANY_INT_2);
     assertThat(actual).isEqualTo(expected);
   }
 
   @Test
   public void
-      add_DeleteAndResultWithNullTxIdGiven_ShouldComposePutWithBeforeVersion0AndPutIfNullCondition() {
+      add_DeleteAndResultWithNullTxIdGiven_ShouldComposePutWithBeforeVersion0AndPutIfNullCondition()
+          throws ExecutionException {
     // Arrange
     Delete delete = prepareDelete();
     TransactionResult result = prepareResultWithNullMetadata();
@@ -311,7 +337,8 @@ public class PrepareMutationComposerTest {
   }
 
   @Test
-  public void add_DeleteAndNullResultGiven_ShouldComposePutWithPutIfNotExistsCondition() {
+  public void add_DeleteAndNullResultGiven_ShouldComposePutWithPutIfNotExistsCondition()
+      throws ExecutionException {
     // Arrange
     Delete delete = prepareDelete();
 
@@ -335,7 +362,8 @@ public class PrepareMutationComposerTest {
 
   @Test
   public void
-      add_GetAndNullResultGiven_ShouldComposePutForPuttingNonExistingRecordForSerializableWithExtraWrite() {
+      add_GetAndNullResultGiven_ShouldComposePutForPuttingNonExistingRecordForSerializableWithExtraWrite()
+          throws ExecutionException {
     // Arrange
     Get get = prepareGet();
 

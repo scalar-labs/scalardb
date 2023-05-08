@@ -13,7 +13,7 @@ You can install it in your application using your build tool such as Gradle and 
 To add a dependency on ScalarDB using Gradle, use the following:
 ```gradle
 dependencies {
-    implementation 'com.scalar-labs:scalardb:3.8.0'
+    implementation 'com.scalar-labs:scalardb:3.9.0'
 }
 ```
 
@@ -22,7 +22,7 @@ To add a dependency using Maven:
 <dependency>
   <groupId>com.scalar-labs</groupId>
   <artifactId>scalardb</artifactId>
-  <version>3.8.0</version>
+  <version>3.9.0</version>
 </dependency>
 ```
 
@@ -74,7 +74,7 @@ $ ls -a .pre-commit-config.yaml
 $ pre-commit install
 ```
 
-The code formatter is automatically executed when commiting files. A commit will fail and be formatted by the formatter when any invalid code format is detected. Try to commit the change again.
+The code formatter is automatically executed when committing files. A commit will fail and be formatted by the formatter when any invalid code format is detected. Try to commit the change again.
 
 ## License
 ScalarDB is dual-licensed under both the Apache 2.0 License (found in the LICENSE file in the root directory) and a commercial license.

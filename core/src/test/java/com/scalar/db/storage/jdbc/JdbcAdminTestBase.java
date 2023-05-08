@@ -276,8 +276,7 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  public void createTable_forSqlite_withInvalidTableName_shouldThrowExecutionException()
-      throws SQLException, ExecutionException {
+  public void createTable_forSqlite_withInvalidTableName_shouldThrowExecutionException() {
     // Arrange
     String namespace = "my_ns";
     String table = "foo$table"; // contains namespace separator
@@ -1664,8 +1663,7 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  public void dropIndex_forColumnTypeWithRequiredAlterationForSqlite_ShouldDropIndexProperly()
-      throws Exception {
+  public void dropIndex_forColumnTypeWithRequiredAlterationForSqlite_ShouldDropIndexProperly() {
     // SQLite does not require column type change on CREATE INDEX.
   }
 
@@ -2002,90 +2000,6 @@ public abstract class JdbcAdminTestBase {
 
     // Assert
     verify(checkTableExistStatement).execute(expectedCheckTableExistStatement);
-  }
-
-  @Test
-  public void
-      addNewColumnToTable_WithAlreadyExistingColumnForMysql_ShouldThrowIllegalArgumentException()
-          throws SQLException {
-    addNewColumnToTable_WithAlreadyExistingColumnForX_ShouldThrowIllegalArgumentException(
-        RdbEngine.MYSQL,
-        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
-            + tableMetadataSchemaName
-            + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC");
-  }
-
-  @Test
-  public void
-      addNewColumnToTable_WithAlreadyExistingColumnForOracle_ShouldThrowIllegalArgumentException()
-          throws SQLException {
-    addNewColumnToTable_WithAlreadyExistingColumnForX_ShouldThrowIllegalArgumentException(
-        RdbEngine.ORACLE,
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + tableMetadataSchemaName
-            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
-  }
-
-  @Test
-  public void
-      addNewColumnToTable_WithAlreadyExistingColumnForPostgresql_ShouldThrowIllegalArgumentException()
-          throws SQLException {
-    addNewColumnToTable_WithAlreadyExistingColumnForX_ShouldThrowIllegalArgumentException(
-        RdbEngine.POSTGRESQL,
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + tableMetadataSchemaName
-            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
-  }
-
-  @Test
-  public void
-      addNewColumnToTable_WithAlreadyExistingColumnForSqlServer_ShouldThrowIllegalArgumentException()
-          throws SQLException {
-    addNewColumnToTable_WithAlreadyExistingColumnForX_ShouldThrowIllegalArgumentException(
-        RdbEngine.SQL_SERVER,
-        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
-            + tableMetadataSchemaName
-            + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC");
-  }
-
-  @Test
-  public void
-      addNewColumnToTable_WithAlreadyExistingColumnForSqlite_ShouldThrowIllegalArgumentException()
-          throws SQLException {
-    addNewColumnToTable_WithAlreadyExistingColumnForX_ShouldThrowIllegalArgumentException(
-        RdbEngine.SQLITE,
-        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + tableMetadataSchemaName
-            + "$metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
-  }
-
-  private void
-      addNewColumnToTable_WithAlreadyExistingColumnForX_ShouldThrowIllegalArgumentException(
-          RdbEngine rdbEngine, String expectedGetMetadataStatement) throws SQLException {
-    // Arrange
-    String namespace = "ns";
-    String table = "table";
-    String currentColumn = "c1";
-
-    PreparedStatement selectStatement = mock(PreparedStatement.class);
-    ResultSet resultSet =
-        mockResultSet(
-            Collections.singletonList(
-                new Row(currentColumn, DataType.TEXT.toString(), "PARTITION", null, false)));
-    when(selectStatement.executeQuery()).thenReturn(resultSet);
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
-    when(dataSource.getConnection()).thenReturn(connection);
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
-
-    // Act
-    // Act Assert
-    assertThatThrownBy(
-            () -> admin.addNewColumnToTable(namespace, table, currentColumn, DataType.INT))
-        .isInstanceOf(IllegalArgumentException.class);
-
-    // Assert
-    verify(connection).prepareStatement(expectedGetMetadataStatement);
-    verify(selectStatement).setString(1, getFullTableName(namespace, table));
   }
 
   @Test

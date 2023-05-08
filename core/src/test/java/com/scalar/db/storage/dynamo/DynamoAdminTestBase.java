@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -213,40 +212,6 @@ public abstract class DynamoAdminTestBase {
     assertThat(admin.namespaceExists(NAMESPACE)).isTrue();
     // compare with namespace prefix
     assertThat(admin.namespaceExists(NAMESPACE.substring(0, NAMESPACE.length() - 1))).isFalse();
-  }
-
-  @Test
-  public void dropNamespace_ShouldDropAllTablesInNamespace() throws ExecutionException {
-    // Arrange
-    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
-    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
-    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
-    when(listTablesResponse.tableNames())
-        .thenReturn(
-            ImmutableList.<String>builder()
-                .add(getPrefixedNamespace() + ".tb1")
-                .add(getPrefixedNamespace() + ".tb2")
-                .add(getPrefixedNamespace() + ".tb3")
-                .build())
-        .thenReturn(Collections.emptyList());
-
-    GetItemResponse response = mock(GetItemResponse.class);
-    when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
-    when(response.item()).thenReturn(Collections.emptyMap());
-
-    ScanResponse scanResponse = mock(ScanResponse.class);
-    when(scanResponse.count()).thenReturn(1);
-    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
-
-    admin = spy(admin);
-
-    // Act
-    admin.dropNamespace(NAMESPACE);
-
-    // Assert
-    verify(admin).dropTable(NAMESPACE, "tb1");
-    verify(admin).dropTable(NAMESPACE, "tb2");
-    verify(admin).dropTable(NAMESPACE, "tb3");
   }
 
   @Test
@@ -1138,48 +1103,6 @@ public abstract class DynamoAdminTestBase {
             PutItemRequest.builder()
                 .tableName(getFullMetadataTableName())
                 .item(itemValues)
-                .build());
-  }
-
-  @Test
-  public void addNewColumnToTable_WithAlreadyExistingColumn_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    String column = "c1";
-
-    GetItemResponse response = mock(GetItemResponse.class);
-    when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
-    when(response.item())
-        .thenReturn(
-            ImmutableMap.<String, AttributeValue>builder()
-                .put(
-                    DynamoAdmin.METADATA_ATTR_TABLE,
-                    AttributeValue.builder().s(getFullTableName()).build())
-                .put(
-                    DynamoAdmin.METADATA_ATTR_COLUMNS,
-                    AttributeValue.builder()
-                        .m(
-                            ImmutableMap.<String, AttributeValue>builder()
-                                .put(column, AttributeValue.builder().s("text").build())
-                                .build())
-                        .build())
-                .put(
-                    DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
-                    AttributeValue.builder().l(AttributeValue.builder().s(column).build()).build())
-                .build());
-
-    // Act Assert
-    assertThatThrownBy(() -> admin.addNewColumnToTable(NAMESPACE, TABLE, column, DataType.TEXT))
-        .isInstanceOf(IllegalArgumentException.class);
-
-    Map<String, AttributeValue> key = new HashMap<>();
-    key.put(
-        DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(getFullTableName()).build());
-    verify(client)
-        .getItem(
-            GetItemRequest.builder()
-                .tableName(getFullMetadataTableName())
-                .key(key)
-                .consistentRead(true)
                 .build());
   }
 

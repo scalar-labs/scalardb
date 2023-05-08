@@ -14,30 +14,34 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.IntColumn;
-import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
 public class PrepareMutationComposer extends AbstractMutationComposer {
 
-  public PrepareMutationComposer(String id) {
+  private final TransactionTableMetadataManager tableMetadataManager;
+
+  public PrepareMutationComposer(String id, TransactionTableMetadataManager tableMetadataManager) {
     super(id);
+    this.tableMetadataManager = tableMetadataManager;
   }
 
   @VisibleForTesting
-  PrepareMutationComposer(String id, long current) {
+  PrepareMutationComposer(
+      String id, long current, TransactionTableMetadataManager tableMetadataManager) {
     super(id, current);
+    this.tableMetadataManager = tableMetadataManager;
   }
 
   @Override
-  public void add(Operation base, @Nullable TransactionResult result) {
+  public void add(Operation base, @Nullable TransactionResult result) throws ExecutionException {
     if (base instanceof Put) {
       add((Put) base, result);
     } else if (base instanceof Delete) {
@@ -49,7 +53,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     }
   }
 
-  private void add(Put base, @Nullable TransactionResult result) {
+  private void add(Put base, @Nullable TransactionResult result) throws ExecutionException {
     PutBuilder.Buildable putBuilder =
         Put.newBuilder()
             .namespace(base.forNamespace().get())
@@ -91,7 +95,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     mutations.add(putBuilder.build());
   }
 
-  private void add(Delete base, @Nullable TransactionResult result) {
+  private void add(Delete base, @Nullable TransactionResult result) throws ExecutionException {
     PutBuilder.Buildable putBuilder =
         Put.newBuilder()
             .namespace(base.forNamespace().get())
@@ -154,49 +158,28 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     mutations.add(put);
   }
 
-  private List<Column<?>> createBeforeColumns(Mutation base, TransactionResult result) {
+  private List<Column<?>> createBeforeColumns(Mutation base, TransactionResult result)
+      throws ExecutionException {
     List<Column<?>> columns = new ArrayList<>();
-    result
-        .getColumns()
-        .values()
-        .forEach(
-            column -> {
-              if (isBeforeRequired(column, base.getPartitionKey(), base.getClusteringKey())) {
-                if (column.getName().equals(Attribute.VERSION) && column.hasNullValue()) {
-                  // A prepare-state record with NULLs for both before_id and before_version will be
-                  // deleted as an initial record in a rollback situation. To avoid this and roll
-                  // back to a record with a NULL version (i.e., regarded as committed) correctly,
-                  // we need to use version 0 rather than NULL for before_version.
-                  columns.add(IntColumn.of(Attribute.BEFORE_VERSION, 0));
-                } else {
-                  columns.add(column.copyWith(Attribute.BEFORE_PREFIX + column.getName()));
-                }
-              }
-            });
+    for (Column<?> column : result.getColumns().values()) {
+      if (isBeforeRequired(base, column.getName())) {
+        if (column.getName().equals(Attribute.VERSION) && column.hasNullValue()) {
+          // A prepare-state record with NULLs for both before_id and before_version will be deleted
+          // as an initial record in a rollback situation. To avoid this and roll back to a record
+          // with a NULL version (i.e., regarded as committed) correctly we need to use version 0
+          // rather than NULL for before_version.
+          columns.add(IntColumn.of(Attribute.BEFORE_VERSION, 0));
+        } else {
+          columns.add(column.copyWith(Attribute.BEFORE_PREFIX + column.getName()));
+        }
+      }
+    }
     return columns;
   }
 
-  private boolean isBeforeRequired(Column<?> column, Key primary, Optional<Key> clustering) {
-    return !column.getName().startsWith(Attribute.BEFORE_PREFIX)
-        && !isColumnInKeys(column, primary, clustering);
-  }
-
-  private boolean isColumnInKeys(Column<?> column, Key primary, Optional<Key> clustering) {
-    for (Column<?> c : primary.getColumns()) {
-      if (c.equals(column)) {
-        return true;
-      }
-    }
-
-    if (!clustering.isPresent()) {
-      return false;
-    }
-
-    for (Column<?> c : clustering.get().getColumns()) {
-      if (c.equals(column)) {
-        return true;
-      }
-    }
-    return false;
+  private boolean isBeforeRequired(Mutation base, String columnName) throws ExecutionException {
+    TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(base);
+    return !metadata.getPrimaryKeyColumnNames().contains(columnName)
+        && metadata.getAfterImageColumnNames().contains(columnName);
   }
 }

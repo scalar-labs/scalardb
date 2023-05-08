@@ -16,8 +16,9 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
   // Since SQLite doesn't have persistent namespaces, some behaviors around the namespace are
   // different from the other adapters. So disable several tests that check such behaviors.
 
+  @SuppressWarnings("unused")
   private boolean isSqlite() {
-    return JdbcEnv.getRdbEngineFromProperty() == RdbEngine.SQLITE;
+    return JdbcEnv.isSqlite();
   }
 
   @Test
@@ -31,14 +32,58 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
   @Test
   @Override
   @DisabledIf("isSqlite")
-  public void createNamespace_ForExistingNamespace_ShouldThrowExecutionException() {
-    super.createNamespace_ForExistingNamespace_ShouldThrowExecutionException();
+  public void createNamespace_ForExistingNamespace_ShouldThrowIllegalArgumentException() {
+    super.createNamespace_ForExistingNamespace_ShouldThrowIllegalArgumentException();
   }
 
   @Test
   @Override
   @DisabledIf("isSqlite")
-  public void dropNamespace_ForNonExistingNamespace_ShouldThrowExecutionException() {
-    super.dropNamespace_ForNonExistingNamespace_ShouldThrowExecutionException();
+  public void createNamespace_IfNotExists_ForExistingNamespace_ShouldNotThrowAnyException() {
+    super.createNamespace_IfNotExists_ForExistingNamespace_ShouldNotThrowAnyException();
+  }
+
+  @Test
+  @Override
+  @DisabledIf("isSqlite")
+  public void dropNamespace_ForNonExistingNamespace_ShouldDropNamespaceProperly()
+      throws ExecutionException {
+    super.dropNamespace_ForNonExistingNamespace_ShouldDropNamespaceProperly();
+  }
+
+  @Test
+  @Override
+  @DisabledIf("isSqlite")
+  public void dropNamespace_ForNonExistingNamespace_ShouldThrowIllegalArgumentException() {
+    super.dropNamespace_ForNonExistingNamespace_ShouldThrowIllegalArgumentException();
+  }
+
+  @Test
+  @Override
+  @DisabledIf("isSqlite")
+  public void dropNamespace_ForNonEmptyNamespace_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    super.dropNamespace_ForNonEmptyNamespace_ShouldThrowIllegalArgumentException();
+  }
+
+  @Test
+  @Override
+  @DisabledIf("isSqlite")
+  public void dropNamespace_IfExists_ForNonExistingNamespace_ShouldNotThrowAnyException() {
+    super.dropNamespace_IfExists_ForNonExistingNamespace_ShouldNotThrowAnyException();
+  }
+
+  @Test
+  @Override
+  @DisabledIf("isSqlite")
+  public void namespaceExists_ShouldReturnCorrectResults() throws ExecutionException {
+    super.namespaceExists_ShouldReturnCorrectResults();
+  }
+
+  @Test
+  @Override
+  @DisabledIf("isSqlite")
+  public void createTable_ForNonExistingNamespace_ShouldThrowIllegalArgumentException() {
+    super.createTable_ForNonExistingNamespace_ShouldThrowIllegalArgumentException();
   }
 }

@@ -86,7 +86,7 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   @Override
   public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException {
-    throw new ExecutionException(String.format("error dropping the schema %s", namespace), e);
+    throw new ExecutionException("dropping the schema failed: " + namespace, e);
   }
 
   @Override
@@ -184,12 +184,10 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
 
   @Override
   public String getDataTypeForKey(DataType dataType) {
-    switch (dataType) {
-      case TEXT:
-        return "VARCHAR(10485760)";
-      default:
-        return null;
+    if (dataType == DataType.TEXT) {
+      return "VARCHAR(10485760)";
     }
+    return null;
   }
 
   @Override

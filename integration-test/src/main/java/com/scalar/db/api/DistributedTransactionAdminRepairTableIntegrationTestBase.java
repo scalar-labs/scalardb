@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -150,6 +151,22 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
   }
 
   @Test
+  public void
+      repairTableAndCoordinatorTable_CoordinatorTablesDoNotExist_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    if (!hasCoordinatorTables()) {
+      return;
+    }
+
+    // Arrange
+    admin.dropCoordinatorTables(true);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.repairCoordinatorTables(getCreationOptions()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void repairTable_ForCorruptedMetadataTable_ShouldRepairProperly() throws Exception {
     // Arrange
     adminTestUtils.corruptMetadata(getNamespace(), getTable());
@@ -163,6 +180,18 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     if (hasCoordinatorTables()) {
       assertThat(adminTestUtils.areTableMetadataForCoordinatorTablesPresent()).isTrue();
     }
+  }
+
+  @Test
+  public void repairTable_ForNonExistingTable_ShouldThrowIllegalArgument() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                admin.repairTable(
+                    getNamespace(), "non-existing-table", TABLE_METADATA, getCreationOptions()))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   protected boolean hasCoordinatorTables() {
