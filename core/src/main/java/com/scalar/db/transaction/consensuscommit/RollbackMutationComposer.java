@@ -23,11 +23,11 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextColumn;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -57,18 +57,19 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
       // the record was not prepared (yet) by this transaction or has already been rollback deleted
       return;
     }
-    if (latest.getId() == null || !latest.getId().equals(id)) {
-      // the record was not prepared (yet) by this transaction or has already been rolled back
+    if (!Objects.equals(latest.getId(), id)) {
+      // This is the case for the record that was not prepared (yet) by this transaction or has
+      // already been rolled back. We need to use Objects.equals() here since the transaction ID of
+      // the latest record can be NULL (and different from this transaction's ID) when the record
+      // has already been rolled back to the deemed committed state by another transaction.
       return;
     }
 
-    TextColumn beforeId = latest.getBeforeIdColumn();
-    IntColumn beforeVersion = latest.getBeforeVersionColumn();
-    if (beforeId.hasNullValue() && beforeVersion.hasNullValue()) {
+    if (latest.hasBeforeImage()) {
+      mutations.add(composePut(base, latest));
+    } else {
       // no record to rollback, so it should be deleted
       mutations.add(composeDelete(base, latest));
-    } else {
-      mutations.add(composePut(base, latest));
     }
   }
 

@@ -137,6 +137,17 @@ public class TransactionResult extends AbstractResult {
     return getState().equals(TransactionState.COMMITTED);
   }
 
+  public boolean isDeemedAsCommitted() {
+    return getId() == null;
+  }
+
+  public boolean hasBeforeImage() {
+    // We need to check not only before_id but also before_version to determine if the record has
+    // the before image or not since we set before_version to 0 for the prepared record when
+    // updating the record deemed as the committed state (cf. PrepareMutationComposer).
+    return !getBeforeIdColumn().hasNullValue() || !getBeforeVersionColumn().hasNullValue();
+  }
+
   public TextColumn getBeforeIdColumn() {
     return (TextColumn) result.getColumns().get(Attribute.BEFORE_ID);
   }

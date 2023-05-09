@@ -413,13 +413,7 @@ public class Snapshot {
     if (!latestResult.isPresent()) {
       return false;
     }
-    if (latestResult.get().getId() != null && result.get().getId() == null) {
-      return true;
-    }
-    if (latestResult.get().getId() == null && result.get().getId() == null) {
-      return false;
-    }
-    return !latestResult.get().getId().equals(result.get().getId())
+    return !Objects.equals(latestResult.get().getId(), result.get().getId())
         || latestResult.get().getVersion() != result.get().getVersion();
   }
 

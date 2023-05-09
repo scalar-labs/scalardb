@@ -73,7 +73,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
       putBuilder.intValue(Attribute.VERSION, version + 1);
 
       // check if the record is not interrupted by other conflicting transactions
-      if (result.getId() == null) {
+      if (result.isDeemedAsCommitted()) {
         // record is deemed-commit state
         putBuilder.condition(
             ConditionBuilder.putIf(ConditionBuilder.column(ID).isNullText())
@@ -114,8 +114,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
       putBuilder.intValue(Attribute.VERSION, version + 1);
 
       // check if the record is not interrupted by other conflicting transactions
-      if (result.getId() == null) {
-        // record is deemed-commit state
+      if (result.isDeemedAsCommitted()) {
         putBuilder.condition(
             ConditionBuilder.putIf(ConditionBuilder.column(ID).isNullText())
                 .and(ConditionBuilder.column(VERSION).isNullInt())
@@ -165,9 +164,10 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
       if (isBeforeRequired(base, column.getName())) {
         if (column.getName().equals(Attribute.VERSION) && column.hasNullValue()) {
           // A prepare-state record with NULLs for both before_id and before_version will be deleted
-          // as an initial record in a rollback situation. To avoid this and roll back to a record
-          // with a NULL version (i.e., regarded as committed) correctly we need to use version 0
-          // rather than NULL for before_version.
+          // as an initial record in a rollback situation. To avoid this for
+          // NULL-transaction-metadata records (i.e., records regarded as committed) and roll back
+          // them correctly, we need to use version 0 rather than NULL for before_version. Note that
+          // we can use other "before" columns to distinguish those two cases.
           columns.add(IntColumn.of(Attribute.BEFORE_VERSION, 0));
         } else {
           columns.add(column.copyWith(Attribute.BEFORE_PREFIX + column.getName()));
