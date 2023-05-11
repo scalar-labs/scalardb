@@ -114,11 +114,12 @@ public class TransactionResult extends AbstractResult {
   }
 
   public TransactionState getState() {
-    int state = getInt(Attribute.STATE);
-    if (state == 0) {
+    if (isNull(Attribute.STATE)) {
+      // To handle existing databases that do not have transaction metadata, the record is deemed as
+      // committed if the state is NULL.
       return TransactionState.COMMITTED;
     }
-    return TransactionState.getInstance(state);
+    return TransactionState.getInstance(getInt(Attribute.STATE));
   }
 
   public int getVersion() {
@@ -148,11 +149,11 @@ public class TransactionResult extends AbstractResult {
     return !getBeforeIdColumn().hasNullValue() || !getBeforeVersionColumn().hasNullValue();
   }
 
-  public TextColumn getBeforeIdColumn() {
+  private TextColumn getBeforeIdColumn() {
     return (TextColumn) result.getColumns().get(Attribute.BEFORE_ID);
   }
 
-  public IntColumn getBeforeVersionColumn() {
+  private IntColumn getBeforeVersionColumn() {
     return (IntColumn) result.getColumns().get(Attribute.BEFORE_VERSION);
   }
 }

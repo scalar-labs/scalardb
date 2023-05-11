@@ -89,6 +89,9 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
               if (beforeImageColumnNames.contains(k)) {
                 String key = k.substring(Attribute.BEFORE_PREFIX.length());
                 if (key.equals(Attribute.VERSION) && v.getIntValue() == 0) {
+                  // Since we use version 0 instead of copying NULL for before_version when updating
+                  // a NULL-transaction-metadata record, we conversely change 0 to NULL for
+                  // rollback. See also PrepareMutationComposer.
                   columns.add(IntColumn.ofNull(Attribute.VERSION));
                 } else {
                   columns.add(v.copyWith(key));
