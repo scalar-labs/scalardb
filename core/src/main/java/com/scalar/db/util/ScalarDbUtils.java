@@ -67,6 +67,8 @@ public final class ScalarDbUtils {
     Scan ret;
     if (scan instanceof ScanAll) {
       ret = new ScanAll((ScanAll) scan); // copy
+    } else if (scan instanceof ScanWithIndex) {
+      ret = new ScanWithIndex((ScanWithIndex) scan); // copy
     } else {
       ret = new Scan(scan); // copy
     }
@@ -78,7 +80,8 @@ public final class ScalarDbUtils {
       Mutation mutation, Optional<String> namespace, Optional<String> tableName) {
     if (mutation instanceof Put) {
       return copyAndSetTargetToIfNot((Put) mutation, namespace, tableName);
-    } else { // Delete
+    } else {
+      assert mutation instanceof Delete;
       return copyAndSetTargetToIfNot((Delete) mutation, namespace, tableName);
     }
   }

@@ -1,7 +1,5 @@
 package com.scalar.db.storage.jdbc.query;
 
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import static com.scalar.db.storage.jdbc.query.QueryUtils.getConditionString;
 
 import com.scalar.db.api.ConditionalExpression;
@@ -9,7 +7,7 @@ import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -24,7 +22,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class UpdateQuery implements Query {
 
-  private final RdbEngine rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
   private final String schema;
   private final String table;
   private final TableMetadata tableMetadata;
@@ -47,7 +45,7 @@ public class UpdateQuery implements Query {
   @Override
   public String sql() {
     return "UPDATE "
-        + enclosedFullTableName(schema, table, rdbEngine)
+        + rdbEngine.encloseFullTableName(schema, table)
         + " SET "
         + makeSetSqlString()
         + " WHERE "
@@ -56,15 +54,15 @@ public class UpdateQuery implements Query {
 
   private String makeSetSqlString() {
     return columns.keySet().stream()
-        .map(n -> enclose(n, rdbEngine) + "=?")
+        .map(n -> rdbEngine.enclose(n) + "=?")
         .collect(Collectors.joining(","));
   }
 
   private String makeConditionSqlString() {
     List<String> conditions = new ArrayList<>();
-    partitionKey.forEach(v -> conditions.add(enclose(v.getName(), rdbEngine) + "=?"));
+    partitionKey.forEach(v -> conditions.add(rdbEngine.enclose(v.getName()) + "=?"));
     clusteringKey.ifPresent(
-        k -> k.forEach(v -> conditions.add(enclose(v.getName(), rdbEngine) + "=?")));
+        k -> k.forEach(v -> conditions.add(rdbEngine.enclose(v.getName()) + "=?")));
     otherConditions.forEach(
         c ->
             conditions.add(
@@ -105,7 +103,7 @@ public class UpdateQuery implements Query {
   }
 
   public static class Builder {
-    private final RdbEngine rdbEngine;
+    private final RdbEngineStrategy rdbEngine;
     private final String schema;
     private final String table;
     private final TableMetadata tableMetadata;
@@ -114,7 +112,7 @@ public class UpdateQuery implements Query {
     private Optional<Key> clusteringKey;
     private Map<String, Column<?>> columns;
 
-    Builder(RdbEngine rdbEngine, String schema, String table, TableMetadata tableMetadata) {
+    Builder(RdbEngineStrategy rdbEngine, String schema, String table, TableMetadata tableMetadata) {
       this.rdbEngine = rdbEngine;
       this.schema = schema;
       this.table = table;

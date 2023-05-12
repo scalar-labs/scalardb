@@ -1,12 +1,12 @@
-# Scalar DB Schema Loader
+# ScalarDB Schema Loader
 
-Scalar DB has its own data model and schema, that maps to the implementation specific data model and schema.
+ScalarDB has its own data model and schema, that maps to the implementation specific data model and schema.
 Also, it stores internal metadata (e.g., transaction ID, record version, transaction status) for managing transaction logs and statuses when you use the Consensus Commit transaction manager.
-It is a little hard for application developers to manage the schema mapping and metadata for transactions, so we offer a tool called Scalar DB Schema Loader for creating schema without requiring much knowledge about those.
+It is a little hard for application developers to manage the schema mapping and metadata for transactions, so we offer a tool called ScalarDB Schema Loader for creating schema without requiring much knowledge about those.
 
 There are two ways to specify general CLI options in Schema Loader:
-  - Pass a Scalar DB configuration file and database/storage-specific options additionally.
-  - Pass the options without a Scalar DB configuration (Deprecated).
+  - Pass a ScalarDB configuration file and database/storage-specific options additionally.
+  - Pass the options without a ScalarDB configuration (Deprecated).
 
 Note that this tool supports only basic options to create/delete/repair/alter a table. If you want
 to use the advanced features of a database, please alter your tables with a database specific tool after creating them with this tool.
@@ -15,7 +15,7 @@ to use the advanced features of a database, please alter your tables with a data
 
 ## Install
 
-The release versions of `schema-loader` can be downloaded from [releases](https://github.com/scalar-labs/scalardb/releases) page of Scalar DB.
+The release versions of `schema-loader` can be downloaded from [releases](https://github.com/scalar-labs/scalardb/releases) page of ScalarDB.
 
 ## Build
 
@@ -56,7 +56,7 @@ Create/Delete schemas in the storage defined in the config file
                         which columns need to be added and which indexes need
                         to be created or deleted
   -c, --config=<configPath>
-                      Path to the config file of Scalar DB
+                      Path to the config file of ScalarDB
       --compaction-strategy=<compactionStrategy>
                       The compaction strategy, must be LCS, STCS or TWCS
                         (supported in Cassandra)
@@ -85,7 +85,7 @@ Create/Delete schemas in the storage defined in the config file
 
 ```
 
-For Cosmos DB (Deprecated. Please use the command using a config file instead):
+For Cosmos DB for NoSQL (Deprecated. Please use the command using a config file instead):
 ```console
 Usage: java -jar scalardb-schema-loader-<version>.jar --cosmos [-D]
        [--no-scaling] -f=<schemaFile> -h=<uri> -p=<key> [-r=<ru>]
@@ -197,10 +197,10 @@ $ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> 
 
 For using CLI arguments fully for configuration (Deprecated. Please use the command using a config file instead):
 ```console
-# For Cosmos DB
-$ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json [-r BASE_RESOURCE_UNIT]
+# For Cosmos DB for NoSQL
+$ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f schema.json [-r BASE_RESOURCE_UNIT]
 ```
-  - `<COSMOS_DB_KEY>` you can use a primary key or a secondary key.
+  - `<COSMOS_DB_FOR_NOSQL_KEY>` you can use a primary key or a secondary key.
   - `-r BASE_RESOURCE_UNIT` is an option. You can specify the RU of each database. The maximum RU in tables in the database will be set. If you don't specify RU of tables, the database RU will be set with this option. By default, it's 400.
 
 ```console
@@ -208,7 +208,7 @@ $ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_
 $ java -jar scalardb-schema-loader-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json [-r BASE_RESOURCE_UNIT]
 ```
   - `<REGION>` should be a string to specify an AWS region like `ap-northeast-1`.
-  - `-r` option is almost the same as Cosmos DB option. However, the unit means DynamoDB capacity unit. The read and write capacity units are set the same value.
+  - `-r` option is almost the same as Cosmos DB for NoSQL option. However, the unit means DynamoDB capacity unit. The read and write capacity units are set the same value.
 
 ```console
 # For Cassandra
@@ -240,8 +240,8 @@ For using CLI arguments fully for configuration (Deprecated. Please use the comm
 file instead):
 
 ```console
-# For Cosmos DB
-$ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json --alter
+# For Cosmos DB for NoSQL
+$ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f schema.json --alter
 ```
 
 ```console
@@ -269,8 +269,8 @@ $ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> 
   
 For using CLI arguments fully for configuration (Deprecated. Please use the command using a config file instead):
 ```console
-# For Cosmos DB
-$ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json -D
+# For Cosmos DB for NoSQL
+$ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f schema.json -D
 ```
 
 ```console
@@ -290,7 +290,7 @@ $ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> 
 
 ### Repair tables
 
-This command will repair the table metadata of existing tables. When using Cosmos DB, it additionally repairs stored procedure attached to each table.
+This command will repair the table metadata of existing tables. When using Cosmos DB for NoSQL, it additionally repairs stored procedure attached to each table.
 
 For using config file (Sample config file can be found [here](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties)):
 ```console
@@ -300,8 +300,8 @@ $ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> 
 
 For using CLI arguments fully for configuration (Deprecated. Please use the command using a config file instead):
 ```console
-# For Cosmos DB
-$ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json --repair-all
+# For Cosmos DB for NoSQL
+$ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f schema.json --repair-all
 ```
 
 ```console
@@ -425,35 +425,35 @@ The database/storage-specific options you can specify are as follows:
 For Cassandra:
 - `compaction-strategy`, a compaction strategy. It should be `STCS` (SizeTieredCompaction), `LCS` (LeveledCompactionStrategy) or `TWCS` (TimeWindowCompactionStrategy).
 
-For DynamoDB and Cosmos DB:
+For DynamoDB and Cosmos DB for NoSQL:
 - `ru`, a request unit. Please see [RU](#ru) for the details.
 
 ## Scaling Performance
 
 ### RU
 
-You can scale the throughput of Cosmos DB and DynamoDB by specifying `--ru` option (which applies to all the tables) or `ru` parameter for each table. The default values are `400` for Cosmos DB and `10` for DynamoDB respectively, which are set without `--ru` option.
+You can scale the throughput of Cosmos DB for NoSQL and DynamoDB by specifying `--ru` option (which applies to all the tables) or `ru` parameter for each table. The default values are `400` for Cosmos DB for NoSQL and `10` for DynamoDB respectively, which are set without `--ru` option.
 
-Note that the schema loader abstracts [Request Unit](https://docs.microsoft.com/azure/cosmos-db/request-units) of Cosmos DB and [Capacity Unit](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadWriteCapacityMode.html#HowItWorks.ProvisionedThroughput.Manual) of DynamoDB with `RU`.
+Note that the schema loader abstracts [Request Unit](https://docs.microsoft.com/azure/cosmos-db/request-units) of Cosmos DB for NoSQL and [Capacity Unit](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadWriteCapacityMode.html#HowItWorks.ProvisionedThroughput.Manual) of DynamoDB with `RU`.
 So, please set an appropriate value depending on the database implementations. Please also note that the schema loader sets the same value to both Read Capacity Unit and Write Capacity Unit for DynamoDB.
 
 ### Auto-scaling
 
-By default, the schema loader enables auto-scaling of RU for all tables: RU is scaled in or out between 10% and 100% of a specified RU depending on a workload. For example, if you specify `-r 10000`, RU of each table is scaled in or out between 1000 and 10000. Note that auto-scaling of Cosmos DB is enabled only when you set more than or equal to 4000 RU.
+By default, the schema loader enables auto-scaling of RU for all tables: RU is scaled in or out between 10% and 100% of a specified RU depending on a workload. For example, if you specify `-r 10000`, RU of each table is scaled in or out between 1000 and 10000. Note that auto-scaling of Cosmos DB for NoSQL is enabled only when you set more than or equal to 4000 RU.
 
-## Data type mapping between Scalar DB and the other databases
+## Data type mapping between ScalarDB and the other databases
 
-Here are the supported data types in Scalar DB and their mapping to the data types of other databases.
+Here are the supported data types in ScalarDB and their mapping to the data types of other databases.
 
-| Scalar DB | Cassandra | Cosmos DB      | DynamoDB | MySQL    | PostgreSQL       | Oracle         | SQL Server      |
-|-----------|-----------|----------------|----------|----------|------------------|----------------|-----------------|
-| BOOLEAN   | boolean   | boolean (JSON) | BOOL     | boolean  | boolean          | number(1)      | bit             |
-| INT       | int       | number (JSON)  | N        | int      | int              | int            | int             |
-| BIGINT    | bigint    | number (JSON)  | N        | bigint   | bigint           | number(19)     | bigint          |
-| FLOAT     | float     | number (JSON)  | N        | double   | float            | binary_float   | float(24)       |
-| DOUBLE    | double    | number (JSON)  | N        | double   | double precision | binary_double  | float           |
-| TEXT      | text      | string (JSON)  | S        | longtext | text             | varchar2(4000) | varchar(8000)   |
-| BLOB      | blob      | string (JSON)  | B        | longblob | bytea            | RAW(2000)      | varbinary(8000) |
+| ScalarDB  | Cassandra | Cosmos DB for NoSQL | DynamoDB | MySQL    | PostgreSQL       | Oracle         | SQL Server      | SQLite  |
+|-----------|-----------|---------------------|----------|----------|------------------|----------------|-----------------|---------|
+| BOOLEAN   | boolean   | boolean (JSON)      | BOOL     | boolean  | boolean          | number(1)      | bit             | boolean |
+| INT       | int       | number (JSON)       | N        | int      | int              | int            | int             | int     |
+| BIGINT    | bigint    | number (JSON)       | N        | bigint   | bigint           | number(19)     | bigint          | bigint  |
+| FLOAT     | float     | number (JSON)       | N        | double   | float            | binary_float   | float(24)       | float   |
+| DOUBLE    | double    | number (JSON)       | N        | double   | double precision | binary_double  | float           | double  |
+| TEXT      | text      | string (JSON)       | S        | longtext | text             | varchar2(4000) | varchar(8000)   | text    |
+| BLOB      | blob      | string (JSON)       | B        | longblob | bytea            | RAW(2000)      | varbinary(8000) | blob    |
 
 However, the following types in JDBC databases are converted differently when they are used as a primary key or a secondary index key due to the limitations of RDB data types.
 
@@ -462,7 +462,7 @@ However, the following types in JDBC databases are converted differently when th
 | TEXT     | VARCHAR(64)   | VARCHAR(10485760) | VARCHAR2(64) |
 | BLOB     | VARBINARY(64) |                   | RAW(64)      |
 
-The value range of `BIGINT` in Scalar DB is from -2^53 to 2^53 regardless of the underlying database.
+The value range of `BIGINT` in ScalarDB is from -2^53 to 2^53 regardless of the underlying database.
 
 If this data type mapping doesn't match your application, please alter the tables to change the data types after creating them with this tool.
 
@@ -484,7 +484,7 @@ dependencies {
 ### Code sample
 
 You can create, alter, delete and repair tables that are defined in the schema using SchemaLoader by
-simply passing Scalar DB configuration file, schema, and additional options if needed as shown
+simply passing ScalarDB configuration file, schema, and additional options if needed as shown
 below.
 
 ```java
@@ -553,7 +553,7 @@ SchemaLoader.repairTables(configFilePath, serializedSchemaJson, tableReparationO
 SchemaLoader.unload(configFilePath, serializedSchemaJson, deleteCoordinatorTables);
 ```
 
-For Scalar DB configuration, a `Properties` object can be used as well.
+For ScalarDB configuration, a `Properties` object can be used as well.
 
 ```java
 // Create tables

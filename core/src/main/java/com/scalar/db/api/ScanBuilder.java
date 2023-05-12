@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.scalar.db.api.OperationBuilder.All;
 import com.scalar.db.api.OperationBuilder.Buildable;
 import com.scalar.db.api.OperationBuilder.ClearBoundaries;
+import com.scalar.db.api.OperationBuilder.ClearNamespace;
 import com.scalar.db.api.OperationBuilder.ClearOrderings;
 import com.scalar.db.api.OperationBuilder.ClearProjections;
 import com.scalar.db.api.OperationBuilder.ClusteringKeyFiltering;
@@ -25,7 +26,9 @@ import javax.annotation.Nullable;
 
 public class ScanBuilder {
 
-  public static class Namespace implements OperationBuilder.Namespace<Table> {
+  public static class Namespace
+      implements OperationBuilder.Namespace<Table>,
+          OperationBuilder.Table<PartitionKeyOrIndexKeyOrAll> {
 
     Namespace() {}
 
@@ -33,6 +36,12 @@ public class ScanBuilder {
     public Table namespace(String namespaceName) {
       checkNotNull(namespaceName);
       return new Table(namespaceName);
+    }
+
+    @Override
+    public PartitionKeyOrIndexKeyOrAll table(String tableName) {
+      checkNotNull(tableName);
+      return new PartitionKeyOrIndexKeyOrAll(null, tableName);
     }
   }
 
@@ -52,7 +61,7 @@ public class ScanBuilder {
   public static class PartitionKeyOrIndexKeyOrAll extends PartitionKeyBuilder<BuildableScan>
       implements IndexKey<BuildableScanWithIndex>, All<BuildableScanAll> {
 
-    private PartitionKeyOrIndexKeyOrAll(String namespace, String table) {
+    private PartitionKeyOrIndexKeyOrAll(@Nullable String namespace, String table) {
       super(namespace, table);
     }
 
@@ -89,7 +98,7 @@ public class ScanBuilder {
     int limit = 0;
     @Nullable com.scalar.db.api.Consistency consistency;
 
-    private BuildableScan(String namespace, String table, Key partitionKey) {
+    private BuildableScan(@Nullable String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
     }
 
@@ -188,14 +197,14 @@ public class ScanBuilder {
       implements Consistency<BuildableScanWithIndex>,
           Projection<BuildableScanWithIndex>,
           Limit<BuildableScanWithIndex> {
-    private final String namespaceName;
+    @Nullable private final String namespaceName;
     private final String tableName;
     private final Key indexKey;
     private final List<String> projections = new ArrayList<>();
     private int limit = 0;
     @Nullable private com.scalar.db.api.Consistency consistency;
 
-    private BuildableScanWithIndex(String namespaceName, String tableName, Key indexKey) {
+    private BuildableScanWithIndex(@Nullable String namespaceName, String tableName, Key indexKey) {
       this.namespaceName = namespaceName;
       this.tableName = tableName;
       this.indexKey = indexKey;
@@ -319,7 +328,8 @@ public class ScanBuilder {
           IndexKey<BuildableScanOrScanAllFromExisting>,
           ClearProjections<BuildableScanOrScanAllFromExisting>,
           ClearOrderings<BuildableScanOrScanAllFromExisting>,
-          ClearBoundaries<BuildableScanOrScanAllFromExisting> {
+          ClearBoundaries<BuildableScanOrScanAllFromExisting>,
+          ClearNamespace<BuildableScanOrScanAllFromExisting> {
 
     private final boolean isScanWithIndex;
     private final boolean isScanAll;
@@ -484,6 +494,12 @@ public class ScanBuilder {
     public BuildableScanOrScanAllFromExisting clearOrderings() {
       checkNotScanWithIndexOrScanAll();
       this.orderings.clear();
+      return this;
+    }
+
+    @Override
+    public BuildableScanOrScanAllFromExisting clearNamespace() {
+      this.namespaceName = null;
       return this;
     }
 

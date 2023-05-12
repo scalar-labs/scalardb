@@ -41,7 +41,7 @@ public class RecoveryHandler {
     try {
       state = coordinator.getState(result.getId());
     } catch (CoordinatorException e) {
-      logger.warn("can't get coordinator state", e);
+      logger.warn("can't get coordinator state. transaction ID: {}", result.getId(), e);
       return;
     }
 
@@ -67,9 +67,9 @@ public class RecoveryHandler {
       RollbackMutationComposer composer =
           new RollbackMutationComposer(result.getId(), storage, tableMetadataManager);
       composer.add(selection, result);
-      mutate(composer.get());
+      mutate(composer.get(), result.getId());
     } catch (Exception e) {
-      logger.warn("rolling back a record failed", e);
+      logger.warn("rolling back a record failed. transaction ID: {}", result.getId(), e);
       // ignore since the record is recovered lazily
     }
   }
@@ -83,7 +83,7 @@ public class RecoveryHandler {
         result.getId());
     CommitMutationComposer composer = new CommitMutationComposer(result.getId());
     composer.add(selection, result);
-    mutate(composer.get());
+    mutate(composer.get(), result.getId());
   }
 
   private void abortIfExpired(Selection selection, TransactionResult result) {
@@ -100,14 +100,17 @@ public class RecoveryHandler {
     }
   }
 
-  private void mutate(List<Mutation> mutations) {
+  private void mutate(List<Mutation> mutations, String transactionId) {
     if (mutations.isEmpty()) {
       return;
     }
     try {
       storage.mutate(mutations);
     } catch (ExecutionException e) {
-      logger.warn("mutation in recovery failed. the record will be eventually recovered", e);
+      logger.warn(
+          "mutation in recovery failed. the record will be eventually recovered. transaction ID: {}",
+          transactionId,
+          e);
     }
   }
 }

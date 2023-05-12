@@ -281,15 +281,9 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
-    if (!databaseExists(namespace)) {
-      throw new ExecutionException("the database does not exist");
-    }
-    if (!containerExists(namespace, table)) {
-      throw new ExecutionException("the container does not exist");
-    }
-
+    CosmosDatabase database = client.getDatabase(namespace);
     try {
-      client.getDatabase(namespace).getContainer(table).delete();
+      database.getContainer(table).delete();
       deleteTableMetadata(namespace, table);
     } catch (RuntimeException e) {
       throw new ExecutionException("deleting the container failed", e);
@@ -572,15 +566,9 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
-      if (currentTableMetadata.getColumnNames().contains(columnName)) {
-        throw new IllegalArgumentException(
-            String.format("The column %s already exists", columnName));
-      }
-
       TableMetadata updatedTableMetadata =
           TableMetadata.newBuilder(currentTableMetadata).addColumn(columnName, columnType).build();
       putTableMetadata(namespace, table, updatedTableMetadata);
-
     } catch (ExecutionException e) {
       throw new ExecutionException(
           String.format(

@@ -40,7 +40,7 @@ public abstract class StatementHandler {
    *
    * @param operation an {@code Operation} to execute
    * @return a {@code ResultSet}
-   * @throws ExecutionException if the execution failed
+   * @throws ExecutionException if the execution fails
    */
   @Nonnull
   public ResultSet handle(Operation operation) throws ExecutionException {

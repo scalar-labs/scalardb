@@ -207,6 +207,20 @@ public class JdbcConfigTest {
 
   @Test
   public void
+      constructor_PropertiesWithEmptyContactPointsGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
+
+    // Act Assert
+    assertThatThrownBy(() -> new JdbcConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
       constructor_WithTableMetadataSchemaAndMetadataSchemaGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Properties props = new Properties();

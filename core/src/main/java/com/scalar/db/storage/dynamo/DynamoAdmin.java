@@ -782,7 +782,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
     try {
       deleteFromNamespaceTable(namespace);
-      dropAllTablesOfNamespace(namespace);
       dropNamespaceTableIfEmpty();
     } catch (Exception e) {
       throw new ExecutionException(
@@ -790,13 +789,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
               + Namespace.of(namespacePrefix, nonPrefixedNamespace)
               + " failed",
           e);
-    }
-  }
-
-  private void dropAllTablesOfNamespace(Namespace namespace) throws ExecutionException {
-    Set<String> tables = getNamespaceTableNames(namespace.nonPrefixed());
-    for (String table : tables) {
-      dropTable(namespace.nonPrefixed(), table);
     }
   }
 
@@ -875,15 +867,20 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       String nonPrefixedNamespace, String table, String columnName, Map<String, String> options)
       throws ExecutionException {
     Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
-    if (getTableMetadata(nonPrefixedNamespace, table).getColumnDataType(columnName)
-        == DataType.BOOLEAN) {
+    TableMetadata metadata = getTableMetadata(nonPrefixedNamespace, table);
+
+    if (metadata == null) {
+      throw new IllegalArgumentException(
+          "Table " + getFullTableName(namespace, table) + " does not exist.");
+    }
+
+    if (metadata.getColumnDataType(columnName) == DataType.BOOLEAN) {
       throw new IllegalArgumentException(
           "Currently, BOOLEAN type is not supported for a secondary index in DynamoDB: "
               + columnName);
     }
 
     long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_REQUEST_UNIT));
-    TableMetadata metadata = getTableMetadata(nonPrefixedNamespace, table);
 
     try {
       client.updateTable(
@@ -1275,11 +1272,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       TableMetadata currentTableMetadata = getTableMetadata(nonPrefixedNamespace, table);
-      if (currentTableMetadata.getColumnNames().contains(columnName)) {
-        throw new IllegalArgumentException(
-            String.format("The column %s already exists", columnName));
-      }
-
       TableMetadata updatedTableMetadata =
           TableMetadata.newBuilder(currentTableMetadata).addColumn(columnName, columnType).build();
       Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);

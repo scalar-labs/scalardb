@@ -17,6 +17,7 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
+import com.scalar.db.common.DecoratedTwoPhaseCommitTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -28,7 +29,6 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.transaction.common.WrappedTwoPhaseCommitTransaction;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Collections;
 import java.util.List;
@@ -102,10 +102,6 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     properties.setProperty(
         ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + TEST_NAME);
 
-    // Async commit can cause unexpected lazy recoveries, which can fail the tests. So we disable it
-    // for now.
-    properties.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
-
     return properties;
   }
 
@@ -147,7 +143,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   @BeforeEach
-  public void setUp() throws ExecutionException {
+  public void setUp() throws Exception {
     truncateTables();
   }
 
@@ -158,7 +154,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   @AfterAll
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     dropTables();
     consensusCommitAdmin1.close();
     consensusCommitAdmin2.close();
@@ -498,7 +494,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
     TwoPhaseConsensusCommit transaction =
         (TwoPhaseConsensusCommit)
-            ((WrappedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
+            ((DecoratedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -577,7 +573,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
     TwoPhaseConsensusCommit transaction =
         (TwoPhaseConsensusCommit)
-            ((WrappedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
+            ((DecoratedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -878,7 +874,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
     TwoPhaseConsensusCommit transaction =
         (TwoPhaseConsensusCommit)
-            ((WrappedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
+            ((DecoratedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -951,7 +947,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
     TwoPhaseConsensusCommit transaction =
         (TwoPhaseConsensusCommit)
-            ((WrappedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
+            ((DecoratedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->

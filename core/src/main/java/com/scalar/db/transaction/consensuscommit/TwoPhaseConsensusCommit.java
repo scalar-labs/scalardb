@@ -10,16 +10,13 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
-import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.common.AbstractTwoPhaseCommitTransaction;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
-import com.scalar.db.transaction.common.AbstractTwoPhaseCommitTransaction;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
@@ -34,7 +31,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private final CrudHandler crud;
   private final CommitHandler commit;
   private final RecoveryHandler recovery;
-  private final boolean isCoordinator;
 
   private boolean validated;
   private boolean needRollback;
@@ -43,12 +39,10 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private Runnable beforeRecoveryHook = () -> {};
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public TwoPhaseConsensusCommit(
-      CrudHandler crud, CommitHandler commit, RecoveryHandler recovery, boolean isCoordinator) {
+  public TwoPhaseConsensusCommit(CrudHandler crud, CommitHandler commit, RecoveryHandler recovery) {
     this.crud = crud;
     this.commit = commit;
     this.recovery = recovery;
-    this.isCoordinator = isCoordinator;
   }
 
   @Override
@@ -126,14 +120,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   @Override
   public void prepare() throws PreparationException {
     try {
-      commit.prepare(crud.getSnapshot(), false);
-    } catch (CommitConflictException e) {
-      throw new PreparationConflictException("prepare failed", e);
-    } catch (CommitException e) {
-      throw new PreparationException("prepare failed", e);
-    } catch (UnknownTransactionStatusException e) {
-      // Should not be reached here because CommitHandler.prepare() with abortIfError=false won't
-      // throw UnknownTransactionStatusException
+      commit.prepare(crud.getSnapshot());
     } finally {
       needRollback = true;
     }
@@ -141,37 +128,26 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
   @Override
   public void validate() throws ValidationException {
-    try {
-      commit.preCommitValidation(crud.getSnapshot(), false);
-      validated = true;
-    } catch (CommitConflictException e) {
-      throw new ValidationConflictException("validation failed", e);
-    } catch (CommitException e) {
-      throw new ValidationException("validation failed", e);
-    } catch (UnknownTransactionStatusException e) {
-      // Should not be reached here because CommitHandler.prepare() with abortIfError=false won't
-      // throw UnknownTransactionStatusException
-    }
+    commit.validate(crud.getSnapshot());
+    validated = true;
   }
 
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
-    if (crud.getSnapshot().isPreCommitValidationRequired() && !validated) {
+    if (crud.getSnapshot().isValidationRequired() && !validated) {
       throw new IllegalStateException(
           "The transaction is not validated."
               + " When using the EXTRA_READ serializable strategy, you need to call validate()"
               + " before calling commit()");
     }
 
-    if (isCoordinator) {
-      try {
-        commit.commitState(crud.getSnapshot());
-      } catch (Exception e) {
-        // no need to rollback because the transaction has already been rolled back
-        needRollback = false;
+    try {
+      commit.commitState(crud.getSnapshot());
+    } catch (CommitException | UnknownTransactionStatusException e) {
+      // no need to rollback because the transaction has already been rolled back
+      needRollback = false;
 
-        throw e;
-      }
+      throw e;
     }
 
     commit.commitRecords(crud.getSnapshot());
@@ -183,12 +159,10 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
       return;
     }
 
-    if (isCoordinator) {
-      try {
-        commit.abort(crud.getSnapshot().getId());
-      } catch (UnknownTransactionStatusException e) {
-        throw new RollbackException("rollback failed", e);
-      }
+    try {
+      commit.abortState(crud.getSnapshot().getId());
+    } catch (UnknownTransactionStatusException e) {
+      throw new RollbackException("rollback failed", e, getId());
     }
 
     commit.rollbackRecords(crud.getSnapshot());
@@ -215,7 +189,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   }
 
   private void lazyRecovery(Selection selection, List<TransactionResult> results) {
-    logger.debug("recover uncommitted records: " + results);
+    logger.debug("recover uncommitted records: {}", results);
     beforeRecoveryHook.run();
     results.forEach(r -> recovery.recover(selection, r));
   }

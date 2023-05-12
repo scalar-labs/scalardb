@@ -34,6 +34,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
   private final TableMetadata tableMetadata;
   private final Connection connection;
   private final QueryBuilder queryBuilder;
+  private final RdbEngineStrategy rdbEngine;
 
   private boolean isMutated;
   private SQLException sqlException;
@@ -43,12 +44,14 @@ public class ConditionalMutator implements MutationConditionVisitor {
       Mutation mutation,
       TableMetadata tableMetadata,
       Connection connection,
-      QueryBuilder queryBuilder) {
+      QueryBuilder queryBuilder)
+      throws SQLException {
     assert mutation.getCondition().isPresent();
     this.mutation = mutation;
     this.tableMetadata = tableMetadata;
     this.connection = connection;
     this.queryBuilder = queryBuilder;
+    rdbEngine = RdbEngineFactory.create(connection);
   }
 
   public boolean mutate() throws SQLException {
@@ -101,8 +104,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
       isMutated = true;
     } catch (SQLException e) {
       // ignore the duplicate key error
-      // "23000" is for MySQL/Oracle/SQL Server and "23505" is for PostgreSQL
-      if (!e.getSQLState().equals("23000") && !e.getSQLState().equals("23505")) {
+      if (!rdbEngine.isDuplicateKeyError(e)) {
         sqlException = e;
       }
     }

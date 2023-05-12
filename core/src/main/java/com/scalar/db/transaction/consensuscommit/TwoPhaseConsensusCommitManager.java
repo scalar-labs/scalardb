@@ -8,11 +8,11 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
+import com.scalar.db.common.ActiveTransactionManagedTwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.transaction.common.ActiveTransactionManagedTwoPhaseCommitTransactionManager;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
@@ -116,7 +116,7 @@ public class TwoPhaseConsensusCommitManager
   @VisibleForTesting
   TwoPhaseCommitTransaction begin(String txId, Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
-    return createNewTransaction(txId, true, isolation, strategy);
+    return createNewTransaction(txId, isolation, strategy);
   }
 
   @Override
@@ -128,22 +128,20 @@ public class TwoPhaseConsensusCommitManager
   @VisibleForTesting
   TwoPhaseCommitTransaction join(String txId, Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
-    return createNewTransaction(txId, false, isolation, strategy);
+    return createNewTransaction(txId, isolation, strategy);
   }
 
   private TwoPhaseCommitTransaction createNewTransaction(
-      String txId, boolean isCoordinator, Isolation isolation, SerializableStrategy strategy)
-      throws TransactionException {
+      String txId, Isolation isolation, SerializableStrategy strategy) throws TransactionException {
     Snapshot snapshot =
         new Snapshot(txId, isolation, strategy, tableMetadataManager, parallelExecutor);
     CrudHandler crud =
         new CrudHandler(storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled);
 
-    TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator);
+    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
-    return activate(transaction);
+    return decorate(transaction);
   }
 
   @Override
@@ -165,7 +163,7 @@ public class TwoPhaseConsensusCommitManager
   public TransactionState rollback(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     try {
-      return commit.abort(txId);
+      return commit.abortState(txId);
     } catch (UnknownTransactionStatusException ignored) {
       return TransactionState.UNKNOWN;
     }

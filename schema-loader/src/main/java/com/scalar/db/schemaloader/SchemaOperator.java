@@ -1,6 +1,7 @@
 package com.scalar.db.schemaloader;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Suppliers;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
@@ -17,6 +18,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,23 +28,34 @@ import org.slf4j.LoggerFactory;
 public class SchemaOperator implements AutoCloseable {
   private static final Logger logger = LoggerFactory.getLogger(SchemaOperator.class);
 
-  private final DistributedStorageAdmin storageAdmin;
-  private final DistributedTransactionAdmin transactionAdmin;
+  private final Supplier<DistributedStorageAdmin> storageAdmin;
+  private final AtomicBoolean storageAdminLoaded = new AtomicBoolean();
+  private final Supplier<DistributedTransactionAdmin> transactionAdmin;
+  private final AtomicBoolean transactionAdminLoaded = new AtomicBoolean();
   private final TableMetadataAlterationProcessor alterationProcessor;
 
   public SchemaOperator(Path propertiesFilePath) throws IOException {
-    StorageFactory storageFactory = StorageFactory.create(propertiesFilePath);
-    storageAdmin = storageFactory.getStorageAdmin();
-    TransactionFactory transactionFactory = TransactionFactory.create(propertiesFilePath);
-    transactionAdmin = transactionFactory.getTransactionAdmin();
-    alterationProcessor = new TableMetadataAlterationProcessor();
+    this(StorageFactory.create(propertiesFilePath), TransactionFactory.create(propertiesFilePath));
   }
 
   public SchemaOperator(Properties properties) {
-    StorageFactory storageFactory = StorageFactory.create(properties);
-    storageAdmin = storageFactory.getStorageAdmin();
-    TransactionFactory transactionFactory = TransactionFactory.create(properties);
-    transactionAdmin = transactionFactory.getTransactionAdmin();
+    this(StorageFactory.create(properties), TransactionFactory.create(properties));
+  }
+
+  @VisibleForTesting
+  SchemaOperator(StorageFactory storageFactory, TransactionFactory transactionFactory) {
+    storageAdmin =
+        Suppliers.memoize(
+            () -> {
+              storageAdminLoaded.set(true);
+              return storageFactory.getStorageAdmin();
+            });
+    transactionAdmin =
+        Suppliers.memoize(
+            () -> {
+              transactionAdminLoaded.set(true);
+              return transactionFactory.getTransactionAdmin();
+            });
     alterationProcessor = new TableMetadataAlterationProcessor();
   }
 
@@ -50,8 +64,10 @@ public class SchemaOperator implements AutoCloseable {
       DistributedStorageAdmin storageAdmin,
       DistributedTransactionAdmin transactionAdmin,
       TableMetadataAlterationProcessor alterationProcessor) {
-    this.storageAdmin = storageAdmin;
-    this.transactionAdmin = transactionAdmin;
+    this.storageAdmin = () -> storageAdmin;
+    storageAdminLoaded.set(true);
+    this.transactionAdmin = () -> transactionAdmin;
+    transactionAdminLoaded.set(true);
     this.alterationProcessor = alterationProcessor;
   }
 
@@ -75,11 +91,15 @@ public class SchemaOperator implements AutoCloseable {
       String tableName = tableSchema.getTable();
       try {
         if (tableSchema.isTransactionTable()) {
-          transactionAdmin.repairTable(
-              namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
+          transactionAdmin
+              .get()
+              .repairTable(
+                  namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
         } else {
-          storageAdmin.repairTable(
-              namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
+          storageAdmin
+              .get()
+              .repairTable(
+                  namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
         }
         logger.info("Repairing the table {} in the namespace {} succeeded.", tableName, namespace);
       } catch (ExecutionException e) {
@@ -94,7 +114,7 @@ public class SchemaOperator implements AutoCloseable {
     try {
       // always use transactionAdmin since we are not sure this namespace is for transaction or
       // storage
-      transactionAdmin.createNamespace(namespace, true, options);
+      transactionAdmin.get().createNamespace(namespace, true, options);
     } catch (ExecutionException e) {
       throw new SchemaLoaderException("Creating the namespace " + namespace + " failed.", e);
     }
@@ -105,11 +125,15 @@ public class SchemaOperator implements AutoCloseable {
     String tableName = tableSchema.getTable();
     try {
       if (tableSchema.isTransactionTable()) {
-        transactionAdmin.createTable(
-            namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
+        transactionAdmin
+            .get()
+            .createTable(
+                namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
       } else {
-        storageAdmin.createTable(
-            namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
+        storageAdmin
+            .get()
+            .createTable(
+                namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
       }
       logger.info("Creating the table {} in the namespace {} succeeded.", tableName, namespace);
     } catch (ExecutionException e) {
@@ -139,9 +163,9 @@ public class SchemaOperator implements AutoCloseable {
       throws SchemaLoaderException {
     try {
       if (isTransactional) {
-        transactionAdmin.dropTable(namespace, tableName);
+        transactionAdmin.get().dropTable(namespace, tableName);
       } else {
-        storageAdmin.dropTable(namespace, tableName);
+        storageAdmin.get().dropTable(namespace, tableName);
       }
       logger.info("Deleting the table {} in the namespace {} succeeded.", tableName, namespace);
     } catch (ExecutionException e) {
@@ -155,7 +179,9 @@ public class SchemaOperator implements AutoCloseable {
       try {
         // always use transactionAdmin since we are not sure this namespace is for transaction or
         // storage
-        transactionAdmin.dropNamespace(namespace, true);
+        if (transactionAdmin.get().getNamespaceTableNames(namespace).isEmpty()) {
+          transactionAdmin.get().dropNamespace(namespace, true);
+        }
       } catch (ExecutionException e) {
         throw new SchemaLoaderException("Deleting the namespace " + namespace + " failed.", e);
       }
@@ -166,9 +192,9 @@ public class SchemaOperator implements AutoCloseable {
       throws SchemaLoaderException {
     try {
       if (isTransactional) {
-        return transactionAdmin.tableExists(namespace, tableName);
+        return transactionAdmin.get().tableExists(namespace, tableName);
       } else {
-        return storageAdmin.tableExists(namespace, tableName);
+        return storageAdmin.get().tableExists(namespace, tableName);
       }
     } catch (ExecutionException e) {
       throw new SchemaLoaderException(
@@ -187,7 +213,7 @@ public class SchemaOperator implements AutoCloseable {
       return;
     }
     try {
-      transactionAdmin.createCoordinatorTables(options);
+      transactionAdmin.get().createCoordinatorTables(options);
       logger.info("Creating the coordinator tables succeeded.");
     } catch (ExecutionException e) {
       throw new SchemaLoaderException("Creating the coordinator tables failed.", e);
@@ -200,7 +226,7 @@ public class SchemaOperator implements AutoCloseable {
       return;
     }
     try {
-      transactionAdmin.dropCoordinatorTables();
+      transactionAdmin.get().dropCoordinatorTables();
       logger.info("Deleting the coordinator tables succeeded.");
     } catch (ExecutionException e) {
       throw new SchemaLoaderException("Deleting the coordinator tables failed.", e);
@@ -209,7 +235,7 @@ public class SchemaOperator implements AutoCloseable {
 
   private boolean coordinatorTablesExist() throws SchemaLoaderException {
     try {
-      return transactionAdmin.coordinatorTablesExist();
+      return transactionAdmin.get().coordinatorTablesExist();
     } catch (ExecutionException e) {
       throw new SchemaLoaderException(
           "Checking the existence of the coordinator tables failed.", e);
@@ -218,7 +244,7 @@ public class SchemaOperator implements AutoCloseable {
 
   public void repairCoordinatorTables(Map<String, String> options) throws SchemaLoaderException {
     try {
-      transactionAdmin.repairCoordinatorTables(options);
+      transactionAdmin.get().repairCoordinatorTables(options);
       logger.info("Repairing the coordinator tables succeeded.");
     } catch (ExecutionException e) {
       throw new SchemaLoaderException("Repairing the coordinator tables failed.", e);
@@ -271,9 +297,9 @@ public class SchemaOperator implements AutoCloseable {
   private TableMetadata getCurrentTableMetadata(
       String namespace, String table, boolean isTransactional) throws ExecutionException {
     if (isTransactional) {
-      return transactionAdmin.getTableMetadata(namespace, table);
+      return transactionAdmin.get().getTableMetadata(namespace, table);
     } else {
-      return storageAdmin.getTableMetadata(namespace, table);
+      return storageAdmin.get().getTableMetadata(namespace, table);
     }
   }
 
@@ -297,9 +323,9 @@ public class SchemaOperator implements AutoCloseable {
       throws ExecutionException {
     for (String deletedIndex : alteredMetadata.getDeletedSecondaryIndexNames()) {
       if (isTransactional) {
-        transactionAdmin.dropIndex(namespace, table, deletedIndex);
+        transactionAdmin.get().dropIndex(namespace, table, deletedIndex);
       } else {
-        storageAdmin.dropIndex(namespace, table, deletedIndex);
+        storageAdmin.get().dropIndex(namespace, table, deletedIndex);
       }
       logger.info(
           String.format(
@@ -317,9 +343,9 @@ public class SchemaOperator implements AutoCloseable {
       throws ExecutionException {
     for (String addedIndex : alteredMetadata.getAddedSecondaryIndexNames()) {
       if (isTransactional) {
-        transactionAdmin.createIndex(namespace, table, addedIndex, options);
+        transactionAdmin.get().createIndex(namespace, table, addedIndex, options);
       } else {
-        storageAdmin.createIndex(namespace, table, addedIndex, options);
+        storageAdmin.get().createIndex(namespace, table, addedIndex, options);
       }
       logger.info(
           String.format(
@@ -337,9 +363,11 @@ public class SchemaOperator implements AutoCloseable {
     for (String addedColumn : alteredMetadata.getAddedColumnNames()) {
       DataType addedColumnDataType = alteredMetadata.getAddedColumnDataTypes().get(addedColumn);
       if (isTransactional) {
-        transactionAdmin.addNewColumnToTable(namespace, table, addedColumn, addedColumnDataType);
+        transactionAdmin
+            .get()
+            .addNewColumnToTable(namespace, table, addedColumn, addedColumnDataType);
       } else {
-        storageAdmin.addNewColumnToTable(namespace, table, addedColumn, addedColumnDataType);
+        storageAdmin.get().addNewColumnToTable(namespace, table, addedColumn, addedColumnDataType);
       }
       logger.info(
           String.format(
@@ -350,7 +378,11 @@ public class SchemaOperator implements AutoCloseable {
 
   @Override
   public void close() {
-    storageAdmin.close();
-    transactionAdmin.close();
+    if (storageAdminLoaded.get()) {
+      storageAdmin.get().close();
+    }
+    if (transactionAdminLoaded.get()) {
+      transactionAdmin.get().close();
+    }
   }
 }

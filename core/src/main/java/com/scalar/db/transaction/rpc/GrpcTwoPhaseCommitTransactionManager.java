@@ -8,6 +8,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
+import com.scalar.db.common.ActiveTransactionManagedTwoPhaseCommitTransactionManager;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -20,10 +21,9 @@ import com.scalar.db.rpc.RollbackResponse;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionGrpc;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
-import com.scalar.db.transaction.common.ActiveTransactionManagedTwoPhaseCommitTransactionManager;
+import com.scalar.db.storage.rpc.GrpcUtils;
 import com.scalar.db.util.ProtoUtils;
 import io.grpc.ManagedChannel;
-import io.grpc.netty.NettyChannelBuilder;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -46,8 +46,7 @@ public class GrpcTwoPhaseCommitTransactionManager
   public GrpcTwoPhaseCommitTransactionManager(DatabaseConfig databaseConfig) {
     super(databaseConfig);
     config = new GrpcConfig(databaseConfig);
-    channel =
-        NettyChannelBuilder.forAddress(config.getHost(), config.getPort()).usePlaintext().build();
+    channel = GrpcUtils.createChannel(config);
     stub = TwoPhaseCommitTransactionGrpc.newStub(channel);
     blockingStub = TwoPhaseCommitTransactionGrpc.newBlockingStub(channel);
     metadataManager =
@@ -86,13 +85,20 @@ public class GrpcTwoPhaseCommitTransactionManager
         () -> {
           GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getStream();
           String transactionId = stream.beginTransaction(txId);
-          GrpcTwoPhaseCommitTransaction transaction =
-              new GrpcTwoPhaseCommitTransaction(transactionId, stream);
-          getNamespace().ifPresent(transaction::withNamespace);
-          getTable().ifPresent(transaction::withTable);
-          return activate(transaction);
+          GrpcTwoPhaseCommitTransaction transaction = createTransaction(stream, transactionId);
+          return decorate(transaction);
         },
         EXCEPTION_FACTORY);
+  }
+
+  private GrpcTwoPhaseCommitTransaction createTransaction(
+      GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream, String transactionId) {
+    GrpcTwoPhaseCommitTransaction transaction =
+        new GrpcTwoPhaseCommitTransaction(transactionId, stream);
+    getNamespace().ifPresent(transaction::withNamespace);
+    getTable().ifPresent(transaction::withTable);
+
+    return transaction;
   }
 
   @Override
@@ -111,11 +117,8 @@ public class GrpcTwoPhaseCommitTransactionManager
         () -> {
           GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getStream();
           String transactionId = stream.startTransaction(txId);
-          GrpcTwoPhaseCommitTransaction transaction =
-              new GrpcTwoPhaseCommitTransaction(transactionId, stream);
-          getNamespace().ifPresent(transaction::withNamespace);
-          getTable().ifPresent(transaction::withTable);
-          return activate(transaction);
+          GrpcTwoPhaseCommitTransaction transaction = createTransaction(stream, transactionId);
+          return decorate(transaction);
         },
         EXCEPTION_FACTORY);
   }
@@ -126,11 +129,8 @@ public class GrpcTwoPhaseCommitTransactionManager
         () -> {
           GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream = getStream();
           stream.joinTransaction(txId);
-          GrpcTwoPhaseCommitTransaction transaction =
-              new GrpcTwoPhaseCommitTransaction(txId, stream);
-          getNamespace().ifPresent(transaction::withNamespace);
-          getTable().ifPresent(transaction::withTable);
-          return activate(transaction);
+          GrpcTwoPhaseCommitTransaction transaction = createTransaction(stream, txId);
+          return decorate(transaction);
         },
         EXCEPTION_FACTORY);
   }

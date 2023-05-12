@@ -14,7 +14,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanBuilder.BuildableScanOrScanAllFromExisting;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
@@ -43,7 +42,7 @@ public abstract class ConsensusCommitIntegrationTestBase
 
   @AfterAll
   @Override
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     super.afterAll();
 
     managerWithIncludeMetadataEnabled.close();
@@ -67,10 +66,6 @@ public abstract class ConsensusCommitIntegrationTestBase
               ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
       properties.setProperty(
           ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
-
-      // Async commit can cause unexpected lazy recoveries, which can fail the tests. So we disable
-      // it for now.
-      properties.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
     }
     return properties;
   }

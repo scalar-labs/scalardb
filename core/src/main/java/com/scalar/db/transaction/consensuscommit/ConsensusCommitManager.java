@@ -10,11 +10,11 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.transaction.common.ActiveTransactionManagedTransactionManager;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
@@ -24,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class ConsensusCommitManager extends ActiveTransactionManagedTransactionManager {
+public class ConsensusCommitManager extends ActiveTransactionManagedDistributedTransactionManager {
   private static final Logger logger = LoggerFactory.getLogger(ConsensusCommitManager.class);
   private final DistributedStorage storage;
   private final DistributedStorageAdmin admin;
@@ -183,7 +183,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedTransactionM
     ConsensusCommit consensus = new ConsensusCommit(crud, commit, recovery);
     getNamespace().ifPresent(consensus::withNamespace);
     getTable().ifPresent(consensus::withTable);
-    return activate(consensus);
+    return decorate(consensus);
   }
 
   @Override
@@ -205,7 +205,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedTransactionM
   public TransactionState rollback(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     try {
-      return commit.abort(txId);
+      return commit.abortState(txId);
     } catch (UnknownTransactionStatusException ignored) {
       return TransactionState.UNKNOWN;
     }

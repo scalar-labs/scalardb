@@ -14,10 +14,10 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.EmptyScanner;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
-import com.scalar.db.storage.common.EmptyScanner;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -52,7 +52,7 @@ public class SelectStatementHandler extends StatementHandler {
    *
    * @param selection a {@code Selection} to execute
    * @return a {@code Scanner}
-   * @throws ExecutionException if the execution failed
+   * @throws ExecutionException if the execution fails
    */
   @Nonnull
   protected Scanner handle(Selection selection) throws ExecutionException {

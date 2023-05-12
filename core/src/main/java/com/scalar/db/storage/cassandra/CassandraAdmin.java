@@ -303,8 +303,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       throw new IllegalArgumentException(
           "The table " + getFullTableName(namespace, table) + "  does not exist");
     }
-    // The table metadata are not managed by Scalar DB, so we don't need to do anything
-    // here
+    // The table metadata are not managed by ScalarDB, so we don't need to do anything here
   }
 
   @Override
@@ -312,11 +311,6 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {
     try {
-      if (getTableMetadata(namespace, table).getColumnNames().contains(columnName)) {
-        throw new IllegalArgumentException(
-            String.format("The column %s already exists", columnName));
-      }
-
       String alterTableQuery =
           SchemaBuilder.alterTable(namespace, table)
               .addColumn(columnName)
@@ -455,10 +449,10 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   }
 
   /**
-   * Return the Scalar DB datatype value that is equivalent to {@link
+   * Return the ScalarDB datatype value that is equivalent to {@link
    * com.datastax.driver.core.DataType}
    *
-   * @return Scalar DB datatype that is equivalent {@link com.datastax.driver.core.DataType}
+   * @return ScalarDB datatype that is equivalent {@link com.datastax.driver.core.DataType}
    */
   private DataType fromCassandraDataType(
       com.datastax.driver.core.DataType.Name cassandraDataTypeName) throws ExecutionException {
@@ -486,7 +480,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   /**
    * Returns the equivalent {@link com.datastax.driver.core.DataType}
    *
-   * @return the equivalent {@link com.datastax.driver.core.DataType} to the Scalar DB data type
+   * @return the equivalent {@link com.datastax.driver.core.DataType} to the ScalarDB data type
    */
   private com.datastax.driver.core.DataType toCassandraDataType(DataType dataType) {
     switch (dataType) {

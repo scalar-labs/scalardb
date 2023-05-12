@@ -21,6 +21,8 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.schemaloader.alteration.TableMetadataAlteration;
 import com.scalar.db.schemaloader.alteration.TableMetadataAlterationProcessor;
+import com.scalar.db.service.StorageFactory;
+import com.scalar.db.service.TransactionFactory;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -130,6 +132,7 @@ public class SchemaOperatorTest {
     TableMetadata tableMetadata = mock(TableMetadata.class);
     when(tableSchema.getTableMetadata()).thenReturn(tableMetadata);
     when(transactionAdmin.tableExists("ns", "tb")).thenReturn(true);
+    when(transactionAdmin.getNamespaceTableNames("ns")).thenReturn(ImmutableSet.of());
 
     // Act
     operator.deleteTables(tableSchemaList);
@@ -137,7 +140,31 @@ public class SchemaOperatorTest {
     // Assert
     verify(transactionAdmin, times(3)).tableExists("ns", "tb");
     verify(transactionAdmin, times(3)).dropTable("ns", "tb");
+    verify(transactionAdmin).getNamespaceTableNames("ns");
     verify(transactionAdmin).dropNamespace("ns", true);
+  }
+
+  @Test
+  public void deleteTables_TableStillInNamespace_ShouldNotDropNamespace() throws Exception {
+    // Arrange
+    List<TableSchema> tableSchemaList = Arrays.asList(tableSchema, tableSchema, tableSchema);
+    when(tableSchema.getNamespace()).thenReturn("ns");
+    when(tableSchema.getOptions()).thenReturn(options);
+    when(tableSchema.isTransactionTable()).thenReturn(true);
+    when(tableSchema.getTable()).thenReturn("tb");
+    TableMetadata tableMetadata = mock(TableMetadata.class);
+    when(tableSchema.getTableMetadata()).thenReturn(tableMetadata);
+    when(transactionAdmin.tableExists("ns", "tb")).thenReturn(true);
+    when(transactionAdmin.getNamespaceTableNames("ns")).thenReturn(ImmutableSet.of("tbl"));
+
+    // Act
+    operator.deleteTables(tableSchemaList);
+
+    // Assert
+    verify(transactionAdmin, times(3)).tableExists("ns", "tb");
+    verify(transactionAdmin, times(3)).dropTable("ns", "tb");
+    verify(transactionAdmin).getNamespaceTableNames("ns");
+    verify(transactionAdmin, never()).dropNamespace("ns", true);
   }
 
   @Test
@@ -410,6 +437,55 @@ public class SchemaOperatorTest {
     verify(transactionAdmin).dropIndex(namespace2, table2, "c3");
     verifyNoMoreInteractions(transactionAdmin);
     verifyNoMoreInteractions(storageAdmin);
+  }
+
+  @Test
+  public void createTables_ForNonTransactionTable_ShouldCreateBothAdmins()
+      throws SchemaLoaderException {
+    // Arrange
+    StorageFactory storageFactory = mock(StorageFactory.class);
+    when(storageFactory.getStorageAdmin()).thenReturn(storageAdmin);
+    TransactionFactory transactionFactory = mock(TransactionFactory.class);
+    when(transactionFactory.getTransactionAdmin()).thenReturn(transactionAdmin);
+    operator = new SchemaOperator(storageFactory, transactionFactory);
+
+    when(tableSchema.getNamespace()).thenReturn("ns");
+    when(tableSchema.getOptions()).thenReturn(options);
+    when(tableSchema.isTransactionTable()).thenReturn(false);
+    when(tableSchema.getTable()).thenReturn("tb");
+    TableMetadata tableMetadata = mock(TableMetadata.class);
+    when(tableSchema.getTableMetadata()).thenReturn(tableMetadata);
+
+    // Act
+    operator.createTables(Collections.singletonList(tableSchema));
+
+    // Assert
+    verify(storageFactory).getStorageAdmin();
+    verify(transactionFactory).getTransactionAdmin();
+  }
+
+  @Test
+  public void createTables_ForTransactionTable_ShouldCreateOnlyTransactionAdmin()
+      throws SchemaLoaderException {
+    // Arrange
+    StorageFactory storageFactory = mock(StorageFactory.class);
+    TransactionFactory transactionFactory = mock(TransactionFactory.class);
+    when(transactionFactory.getTransactionAdmin()).thenReturn(transactionAdmin);
+    operator = new SchemaOperator(storageFactory, transactionFactory);
+
+    when(tableSchema.getNamespace()).thenReturn("ns");
+    when(tableSchema.getOptions()).thenReturn(options);
+    when(tableSchema.isTransactionTable()).thenReturn(true);
+    when(tableSchema.getTable()).thenReturn("tb");
+    TableMetadata tableMetadata = mock(TableMetadata.class);
+    when(tableSchema.getTableMetadata()).thenReturn(tableMetadata);
+
+    // Act
+    operator.createTables(Collections.singletonList(tableSchema));
+
+    // Assert
+    verify(storageFactory, never()).getStorageAdmin();
+    verify(transactionFactory).getTransactionAdmin();
   }
 
   @Test

@@ -33,108 +33,6 @@ private static final long serialVersionUID = 0L;
   getUnknownFields() {
     return this.unknownFields;
   }
-  private TableMetadata(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
-    this();
-    if (extensionRegistry == null) {
-      throw new java.lang.NullPointerException();
-    }
-    int mutable_bitField0_ = 0;
-    com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
-    try {
-      boolean done = false;
-      while (!done) {
-        int tag = input.readTag();
-        switch (tag) {
-          case 0:
-            done = true;
-            break;
-          case 10: {
-            if (!((mutable_bitField0_ & 0x00000001) != 0)) {
-              columns_ = com.google.protobuf.MapField.newMapField(
-                  ColumnsDefaultEntryHolder.defaultEntry);
-              mutable_bitField0_ |= 0x00000001;
-            }
-            com.google.protobuf.MapEntry<java.lang.String, java.lang.Integer>
-            columns__ = input.readMessage(
-                ColumnsDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
-            columns_.getMutableMap().put(
-                columns__.getKey(), columns__.getValue());
-            break;
-          }
-          case 18: {
-            java.lang.String s = input.readStringRequireUtf8();
-            if (!((mutable_bitField0_ & 0x00000002) != 0)) {
-              partitionKeyNames_ = new com.google.protobuf.LazyStringArrayList();
-              mutable_bitField0_ |= 0x00000002;
-            }
-            partitionKeyNames_.add(s);
-            break;
-          }
-          case 26: {
-            java.lang.String s = input.readStringRequireUtf8();
-            if (!((mutable_bitField0_ & 0x00000004) != 0)) {
-              clusteringKeyNames_ = new com.google.protobuf.LazyStringArrayList();
-              mutable_bitField0_ |= 0x00000004;
-            }
-            clusteringKeyNames_.add(s);
-            break;
-          }
-          case 34: {
-            if (!((mutable_bitField0_ & 0x00000008) != 0)) {
-              clusteringOrders_ = com.google.protobuf.MapField.newMapField(
-                  ClusteringOrdersDefaultEntryHolder.defaultEntry);
-              mutable_bitField0_ |= 0x00000008;
-            }
-            com.google.protobuf.MapEntry<java.lang.String, java.lang.Integer>
-            clusteringOrders__ = input.readMessage(
-                ClusteringOrdersDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
-            clusteringOrders_.getMutableMap().put(
-                clusteringOrders__.getKey(), clusteringOrders__.getValue());
-            break;
-          }
-          case 42: {
-            java.lang.String s = input.readStringRequireUtf8();
-            if (!((mutable_bitField0_ & 0x00000010) != 0)) {
-              secondaryIndexNames_ = new com.google.protobuf.LazyStringArrayList();
-              mutable_bitField0_ |= 0x00000010;
-            }
-            secondaryIndexNames_.add(s);
-            break;
-          }
-          default: {
-            if (!parseUnknownField(
-                input, unknownFields, extensionRegistry, tag)) {
-              done = true;
-            }
-            break;
-          }
-        }
-      }
-    } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-      throw e.setUnfinishedMessage(this);
-    } catch (com.google.protobuf.UninitializedMessageException e) {
-      throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
-    } catch (java.io.IOException e) {
-      throw new com.google.protobuf.InvalidProtocolBufferException(
-          e).setUnfinishedMessage(this);
-    } finally {
-      if (((mutable_bitField0_ & 0x00000002) != 0)) {
-        partitionKeyNames_ = partitionKeyNames_.getUnmodifiableView();
-      }
-      if (((mutable_bitField0_ & 0x00000004) != 0)) {
-        clusteringKeyNames_ = clusteringKeyNames_.getUnmodifiableView();
-      }
-      if (((mutable_bitField0_ & 0x00000010) != 0)) {
-        secondaryIndexNames_ = secondaryIndexNames_.getUnmodifiableView();
-      }
-      this.unknownFields = unknownFields.build();
-      makeExtensionsImmutable();
-    }
-  }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
     return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_TableMetadata_descriptor;
@@ -174,6 +72,7 @@ private static final long serialVersionUID = 0L;
                 com.google.protobuf.WireFormat.FieldType.ENUM,
                 com.scalar.db.rpc.DataType.DATA_TYPE_BOOLEAN.getNumber());
   }
+  @SuppressWarnings("serial")
   private com.google.protobuf.MapField<
       java.lang.String, java.lang.Integer> columns_;
   private com.google.protobuf.MapField<java.lang.String, java.lang.Integer>
@@ -197,14 +96,12 @@ private static final long serialVersionUID = 0L;
         java.lang.String, com.scalar.db.rpc.DataType, java.lang.Integer>(
             map, columnsValueConverter);
   }
-
   public int getColumnsCount() {
     return internalGetColumns().getMap().size();
   }
   /**
    * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
-
   @java.lang.Override
   public boolean containsColumns(
       java.lang.String key) {
@@ -224,7 +121,6 @@ private static final long serialVersionUID = 0L;
    * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
-
   public java.util.Map<java.lang.String, com.scalar.db.rpc.DataType>
   getColumnsMap() {
     return internalGetAdaptedColumnsMap(
@@ -233,7 +129,6 @@ private static final long serialVersionUID = 0L;
    * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
-
   public /* nullable */
 com.scalar.db.rpc.DataType getColumnsOrDefault(
       java.lang.String key,
@@ -250,7 +145,6 @@ com.scalar.db.rpc.DataType defaultValue) {
    * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
-
   public com.scalar.db.rpc.DataType getColumnsOrThrow(
       java.lang.String key) {
     if (key == null) { throw new NullPointerException("map key"); }
@@ -274,7 +168,6 @@ com.scalar.db.rpc.DataType defaultValue) {
    * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
-
   public java.util.Map<java.lang.String, java.lang.Integer>
   getColumnsValueMap() {
     return internalGetColumns().getMap();
@@ -283,7 +176,6 @@ com.scalar.db.rpc.DataType defaultValue) {
    * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
-
   public int getColumnsValueOrDefault(
       java.lang.String key,
       int defaultValue) {
@@ -296,7 +188,6 @@ com.scalar.db.rpc.DataType defaultValue) {
    * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
    */
   @java.lang.Override
-
   public int getColumnsValueOrThrow(
       java.lang.String key) {
     if (key == null) { throw new NullPointerException("map key"); }
@@ -309,6 +200,7 @@ com.scalar.db.rpc.DataType defaultValue) {
   }
 
   public static final int PARTITION_KEY_NAMES_FIELD_NUMBER = 2;
+  @SuppressWarnings("serial")
   private com.google.protobuf.LazyStringList partitionKeyNames_;
   /**
    * <code>repeated string partition_key_names = 2;</code>
@@ -344,6 +236,7 @@ com.scalar.db.rpc.DataType defaultValue) {
   }
 
   public static final int CLUSTERING_KEY_NAMES_FIELD_NUMBER = 3;
+  @SuppressWarnings("serial")
   private com.google.protobuf.LazyStringList clusteringKeyNames_;
   /**
    * <code>repeated string clustering_key_names = 3;</code>
@@ -390,6 +283,7 @@ com.scalar.db.rpc.DataType defaultValue) {
                 com.google.protobuf.WireFormat.FieldType.ENUM,
                 com.scalar.db.rpc.Order.ORDER_ASC.getNumber());
   }
+  @SuppressWarnings("serial")
   private com.google.protobuf.MapField<
       java.lang.String, java.lang.Integer> clusteringOrders_;
   private com.google.protobuf.MapField<java.lang.String, java.lang.Integer>
@@ -413,14 +307,12 @@ com.scalar.db.rpc.DataType defaultValue) {
         java.lang.String, com.scalar.db.rpc.Order, java.lang.Integer>(
             map, clusteringOrdersValueConverter);
   }
-
   public int getClusteringOrdersCount() {
     return internalGetClusteringOrders().getMap().size();
   }
   /**
    * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
-
   @java.lang.Override
   public boolean containsClusteringOrders(
       java.lang.String key) {
@@ -440,7 +332,6 @@ com.scalar.db.rpc.DataType defaultValue) {
    * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
-
   public java.util.Map<java.lang.String, com.scalar.db.rpc.Order>
   getClusteringOrdersMap() {
     return internalGetAdaptedClusteringOrdersMap(
@@ -449,7 +340,6 @@ com.scalar.db.rpc.DataType defaultValue) {
    * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
-
   public /* nullable */
 com.scalar.db.rpc.Order getClusteringOrdersOrDefault(
       java.lang.String key,
@@ -466,7 +356,6 @@ com.scalar.db.rpc.Order defaultValue) {
    * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
-
   public com.scalar.db.rpc.Order getClusteringOrdersOrThrow(
       java.lang.String key) {
     if (key == null) { throw new NullPointerException("map key"); }
@@ -490,7 +379,6 @@ com.scalar.db.rpc.Order defaultValue) {
    * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
-
   public java.util.Map<java.lang.String, java.lang.Integer>
   getClusteringOrdersValueMap() {
     return internalGetClusteringOrders().getMap();
@@ -499,7 +387,6 @@ com.scalar.db.rpc.Order defaultValue) {
    * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
-
   public int getClusteringOrdersValueOrDefault(
       java.lang.String key,
       int defaultValue) {
@@ -512,7 +399,6 @@ com.scalar.db.rpc.Order defaultValue) {
    * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
    */
   @java.lang.Override
-
   public int getClusteringOrdersValueOrThrow(
       java.lang.String key) {
     if (key == null) { throw new NullPointerException("map key"); }
@@ -525,6 +411,7 @@ com.scalar.db.rpc.Order defaultValue) {
   }
 
   public static final int SECONDARY_INDEX_NAMES_FIELD_NUMBER = 5;
+  @SuppressWarnings("serial")
   private com.google.protobuf.LazyStringList secondaryIndexNames_;
   /**
    * <code>repeated string secondary_index_names = 5;</code>
@@ -594,7 +481,7 @@ com.scalar.db.rpc.Order defaultValue) {
     for (int i = 0; i < secondaryIndexNames_.size(); i++) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 5, secondaryIndexNames_.getRaw(i));
     }
-    unknownFields.writeTo(output);
+    getUnknownFields().writeTo(output);
   }
 
   @java.lang.Override
@@ -647,7 +534,7 @@ com.scalar.db.rpc.Order defaultValue) {
       size += dataSize;
       size += 1 * getSecondaryIndexNamesList().size();
     }
-    size += unknownFields.getSerializedSize();
+    size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
   }
@@ -672,7 +559,7 @@ com.scalar.db.rpc.Order defaultValue) {
         other.internalGetClusteringOrders())) return false;
     if (!getSecondaryIndexNamesList()
         .equals(other.getSecondaryIndexNamesList())) return false;
-    if (!unknownFields.equals(other.unknownFields)) return false;
+    if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
 
@@ -703,7 +590,7 @@ com.scalar.db.rpc.Order defaultValue) {
       hash = (37 * hash) + SECONDARY_INDEX_NAMES_FIELD_NUMBER;
       hash = (53 * hash) + getSecondaryIndexNamesList().hashCode();
     }
-    hash = (29 * hash) + unknownFields.hashCode();
+    hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
   }
@@ -846,22 +733,18 @@ com.scalar.db.rpc.Order defaultValue) {
 
     // Construct using com.scalar.db.rpc.TableMetadata.newBuilder()
     private Builder() {
-      maybeForceBuilderInitialization();
+
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
       super(parent);
-      maybeForceBuilderInitialization();
-    }
-    private void maybeForceBuilderInitialization() {
-      if (com.google.protobuf.GeneratedMessageV3
-              .alwaysUseFieldBuilders) {
-      }
+
     }
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       internalGetMutableColumns().clear();
       partitionKeyNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       bitField0_ = (bitField0_ & ~0x00000002);
@@ -896,9 +779,13 @@ com.scalar.db.rpc.Order defaultValue) {
     @java.lang.Override
     public com.scalar.db.rpc.TableMetadata buildPartial() {
       com.scalar.db.rpc.TableMetadata result = new com.scalar.db.rpc.TableMetadata(this);
-      int from_bitField0_ = bitField0_;
-      result.columns_ = internalGetColumns();
-      result.columns_.makeImmutable();
+      buildPartialRepeatedFields(result);
+      if (bitField0_ != 0) { buildPartial0(result); }
+      onBuilt();
+      return result;
+    }
+
+    private void buildPartialRepeatedFields(com.scalar.db.rpc.TableMetadata result) {
       if (((bitField0_ & 0x00000002) != 0)) {
         partitionKeyNames_ = partitionKeyNames_.getUnmodifiableView();
         bitField0_ = (bitField0_ & ~0x00000002);
@@ -909,15 +796,23 @@ com.scalar.db.rpc.Order defaultValue) {
         bitField0_ = (bitField0_ & ~0x00000004);
       }
       result.clusteringKeyNames_ = clusteringKeyNames_;
-      result.clusteringOrders_ = internalGetClusteringOrders();
-      result.clusteringOrders_.makeImmutable();
       if (((bitField0_ & 0x00000010) != 0)) {
         secondaryIndexNames_ = secondaryIndexNames_.getUnmodifiableView();
         bitField0_ = (bitField0_ & ~0x00000010);
       }
       result.secondaryIndexNames_ = secondaryIndexNames_;
-      onBuilt();
-      return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.TableMetadata result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.columns_ = internalGetColumns();
+        result.columns_.makeImmutable();
+      }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.clusteringOrders_ = internalGetClusteringOrders();
+        result.clusteringOrders_.makeImmutable();
+      }
     }
 
     @java.lang.Override
@@ -966,6 +861,7 @@ com.scalar.db.rpc.Order defaultValue) {
       if (other == com.scalar.db.rpc.TableMetadata.getDefaultInstance()) return this;
       internalGetMutableColumns().mergeFrom(
           other.internalGetColumns());
+      bitField0_ |= 0x00000001;
       if (!other.partitionKeyNames_.isEmpty()) {
         if (partitionKeyNames_.isEmpty()) {
           partitionKeyNames_ = other.partitionKeyNames_;
@@ -988,6 +884,7 @@ com.scalar.db.rpc.Order defaultValue) {
       }
       internalGetMutableClusteringOrders().mergeFrom(
           other.internalGetClusteringOrders());
+      bitField0_ |= 0x00000008;
       if (!other.secondaryIndexNames_.isEmpty()) {
         if (secondaryIndexNames_.isEmpty()) {
           secondaryIndexNames_ = other.secondaryIndexNames_;
@@ -998,7 +895,7 @@ com.scalar.db.rpc.Order defaultValue) {
         }
         onChanged();
       }
-      this.mergeUnknownFields(other.unknownFields);
+      this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
     }
@@ -1013,17 +910,66 @@ com.scalar.db.rpc.Order defaultValue) {
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      com.scalar.db.rpc.TableMetadata parsedMessage = null;
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
       try {
-        parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 10: {
+              com.google.protobuf.MapEntry<java.lang.String, java.lang.Integer>
+              columns__ = input.readMessage(
+                  ColumnsDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
+              internalGetMutableColumns().getMutableMap().put(
+                  columns__.getKey(), columns__.getValue());
+              bitField0_ |= 0x00000001;
+              break;
+            } // case 10
+            case 18: {
+              java.lang.String s = input.readStringRequireUtf8();
+              ensurePartitionKeyNamesIsMutable();
+              partitionKeyNames_.add(s);
+              break;
+            } // case 18
+            case 26: {
+              java.lang.String s = input.readStringRequireUtf8();
+              ensureClusteringKeyNamesIsMutable();
+              clusteringKeyNames_.add(s);
+              break;
+            } // case 26
+            case 34: {
+              com.google.protobuf.MapEntry<java.lang.String, java.lang.Integer>
+              clusteringOrders__ = input.readMessage(
+                  ClusteringOrdersDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
+              internalGetMutableClusteringOrders().getMutableMap().put(
+                  clusteringOrders__.getKey(), clusteringOrders__.getValue());
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 34
+            case 42: {
+              java.lang.String s = input.readStringRequireUtf8();
+              ensureSecondaryIndexNamesIsMutable();
+              secondaryIndexNames_.add(s);
+              break;
+            } // case 42
+            default: {
+              if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                done = true; // was an endgroup tag
+              }
+              break;
+            } // default:
+          } // switch (tag)
+        } // while (!done)
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        parsedMessage = (com.scalar.db.rpc.TableMetadata) e.getUnfinishedMessage();
         throw e.unwrapIOException();
       } finally {
-        if (parsedMessage != null) {
-          mergeFrom(parsedMessage);
-        }
-      }
+        onChanged();
+      } // finally
       return this;
     }
     private int bitField0_;
@@ -1031,7 +977,7 @@ com.scalar.db.rpc.Order defaultValue) {
     private com.google.protobuf.MapField<
         java.lang.String, java.lang.Integer> columns_;
     private com.google.protobuf.MapField<java.lang.String, java.lang.Integer>
-    internalGetColumns() {
+        internalGetColumns() {
       if (columns_ == null) {
         return com.google.protobuf.MapField.emptyMapField(
             ColumnsDefaultEntryHolder.defaultEntry);
@@ -1039,8 +985,7 @@ com.scalar.db.rpc.Order defaultValue) {
       return columns_;
     }
     private com.google.protobuf.MapField<java.lang.String, java.lang.Integer>
-    internalGetMutableColumns() {
-      onChanged();;
+        internalGetMutableColumns() {
       if (columns_ == null) {
         columns_ = com.google.protobuf.MapField.newMapField(
             ColumnsDefaultEntryHolder.defaultEntry);
@@ -1048,16 +993,16 @@ com.scalar.db.rpc.Order defaultValue) {
       if (!columns_.isMutable()) {
         columns_ = columns_.copy();
       }
+      bitField0_ |= 0x00000001;
+      onChanged();
       return columns_;
     }
-
     public int getColumnsCount() {
       return internalGetColumns().getMap().size();
     }
     /**
      * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
-
     @java.lang.Override
     public boolean containsColumns(
         java.lang.String key) {
@@ -1077,7 +1022,6 @@ com.scalar.db.rpc.Order defaultValue) {
      * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
-
     public java.util.Map<java.lang.String, com.scalar.db.rpc.DataType>
     getColumnsMap() {
       return internalGetAdaptedColumnsMap(
@@ -1086,7 +1030,6 @@ com.scalar.db.rpc.Order defaultValue) {
      * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
-
     public /* nullable */
 com.scalar.db.rpc.DataType getColumnsOrDefault(
         java.lang.String key,
@@ -1103,7 +1046,6 @@ com.scalar.db.rpc.DataType defaultValue) {
      * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
-
     public com.scalar.db.rpc.DataType getColumnsOrThrow(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
@@ -1127,7 +1069,6 @@ com.scalar.db.rpc.DataType defaultValue) {
      * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
-
     public java.util.Map<java.lang.String, java.lang.Integer>
     getColumnsValueMap() {
       return internalGetColumns().getMap();
@@ -1136,7 +1077,6 @@ com.scalar.db.rpc.DataType defaultValue) {
      * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
-
     public int getColumnsValueOrDefault(
         java.lang.String key,
         int defaultValue) {
@@ -1149,7 +1089,6 @@ com.scalar.db.rpc.DataType defaultValue) {
      * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
     @java.lang.Override
-
     public int getColumnsValueOrThrow(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
@@ -1160,8 +1099,8 @@ com.scalar.db.rpc.DataType defaultValue) {
       }
       return map.get(key);
     }
-
     public Builder clearColumns() {
+      bitField0_ = (bitField0_ & ~0x00000001);
       internalGetMutableColumns().getMutableMap()
           .clear();
       return this;
@@ -1169,7 +1108,6 @@ com.scalar.db.rpc.DataType defaultValue) {
     /**
      * <code>map&lt;string, .rpc.DataType&gt; columns = 1;</code>
      */
-
     public Builder removeColumns(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
@@ -1182,7 +1120,8 @@ com.scalar.db.rpc.DataType defaultValue) {
      */
     @java.lang.Deprecated
     public java.util.Map<java.lang.String, com.scalar.db.rpc.DataType>
-    getMutableColumns() {
+        getMutableColumns() {
+      bitField0_ |= 0x00000001;
       return internalGetAdaptedColumnsMap(
            internalGetMutableColumns().getMutableMap());
     }
@@ -1196,6 +1135,7 @@ com.scalar.db.rpc.DataType defaultValue) {
       
       internalGetMutableColumns().getMutableMap()
           .put(key, columnsValueConverter.doBackward(value));
+      bitField0_ |= 0x00000001;
       return this;
     }
     /**
@@ -1206,6 +1146,7 @@ com.scalar.db.rpc.DataType defaultValue) {
       internalGetAdaptedColumnsMap(
           internalGetMutableColumns().getMutableMap())
               .putAll(values);
+      bitField0_ |= 0x00000001;
       return this;
     }
     /**
@@ -1214,6 +1155,7 @@ com.scalar.db.rpc.DataType defaultValue) {
     @java.lang.Deprecated
     public java.util.Map<java.lang.String, java.lang.Integer>
     getMutableColumnsValue() {
+      bitField0_ |= 0x00000001;
       return internalGetMutableColumns().getMutableMap();
     }
     /**
@@ -1226,6 +1168,7 @@ com.scalar.db.rpc.DataType defaultValue) {
       
       internalGetMutableColumns().getMutableMap()
           .put(key, value);
+      bitField0_ |= 0x00000001;
       return this;
     }
     /**
@@ -1235,6 +1178,7 @@ com.scalar.db.rpc.DataType defaultValue) {
         java.util.Map<java.lang.String, java.lang.Integer> values) {
       internalGetMutableColumns().getMutableMap()
           .putAll(values);
+      bitField0_ |= 0x00000001;
       return this;
     }
 
@@ -1285,10 +1229,8 @@ com.scalar.db.rpc.DataType defaultValue) {
      */
     public Builder setPartitionKeyNames(
         int index, java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  ensurePartitionKeyNamesIsMutable();
+      if (value == null) { throw new NullPointerException(); }
+      ensurePartitionKeyNamesIsMutable();
       partitionKeyNames_.set(index, value);
       onChanged();
       return this;
@@ -1300,10 +1242,8 @@ com.scalar.db.rpc.DataType defaultValue) {
      */
     public Builder addPartitionKeyNames(
         java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  ensurePartitionKeyNamesIsMutable();
+      if (value == null) { throw new NullPointerException(); }
+      ensurePartitionKeyNamesIsMutable();
       partitionKeyNames_.add(value);
       onChanged();
       return this;
@@ -1338,10 +1278,8 @@ com.scalar.db.rpc.DataType defaultValue) {
      */
     public Builder addPartitionKeyNamesBytes(
         com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
       ensurePartitionKeyNamesIsMutable();
       partitionKeyNames_.add(value);
       onChanged();
@@ -1395,10 +1333,8 @@ com.scalar.db.rpc.DataType defaultValue) {
      */
     public Builder setClusteringKeyNames(
         int index, java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureClusteringKeyNamesIsMutable();
+      if (value == null) { throw new NullPointerException(); }
+      ensureClusteringKeyNamesIsMutable();
       clusteringKeyNames_.set(index, value);
       onChanged();
       return this;
@@ -1410,10 +1346,8 @@ com.scalar.db.rpc.DataType defaultValue) {
      */
     public Builder addClusteringKeyNames(
         java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureClusteringKeyNamesIsMutable();
+      if (value == null) { throw new NullPointerException(); }
+      ensureClusteringKeyNamesIsMutable();
       clusteringKeyNames_.add(value);
       onChanged();
       return this;
@@ -1448,10 +1382,8 @@ com.scalar.db.rpc.DataType defaultValue) {
      */
     public Builder addClusteringKeyNamesBytes(
         com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
       ensureClusteringKeyNamesIsMutable();
       clusteringKeyNames_.add(value);
       onChanged();
@@ -1461,7 +1393,7 @@ com.scalar.db.rpc.DataType defaultValue) {
     private com.google.protobuf.MapField<
         java.lang.String, java.lang.Integer> clusteringOrders_;
     private com.google.protobuf.MapField<java.lang.String, java.lang.Integer>
-    internalGetClusteringOrders() {
+        internalGetClusteringOrders() {
       if (clusteringOrders_ == null) {
         return com.google.protobuf.MapField.emptyMapField(
             ClusteringOrdersDefaultEntryHolder.defaultEntry);
@@ -1469,8 +1401,7 @@ com.scalar.db.rpc.DataType defaultValue) {
       return clusteringOrders_;
     }
     private com.google.protobuf.MapField<java.lang.String, java.lang.Integer>
-    internalGetMutableClusteringOrders() {
-      onChanged();;
+        internalGetMutableClusteringOrders() {
       if (clusteringOrders_ == null) {
         clusteringOrders_ = com.google.protobuf.MapField.newMapField(
             ClusteringOrdersDefaultEntryHolder.defaultEntry);
@@ -1478,16 +1409,16 @@ com.scalar.db.rpc.DataType defaultValue) {
       if (!clusteringOrders_.isMutable()) {
         clusteringOrders_ = clusteringOrders_.copy();
       }
+      bitField0_ |= 0x00000008;
+      onChanged();
       return clusteringOrders_;
     }
-
     public int getClusteringOrdersCount() {
       return internalGetClusteringOrders().getMap().size();
     }
     /**
      * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
-
     @java.lang.Override
     public boolean containsClusteringOrders(
         java.lang.String key) {
@@ -1507,7 +1438,6 @@ com.scalar.db.rpc.DataType defaultValue) {
      * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
-
     public java.util.Map<java.lang.String, com.scalar.db.rpc.Order>
     getClusteringOrdersMap() {
       return internalGetAdaptedClusteringOrdersMap(
@@ -1516,7 +1446,6 @@ com.scalar.db.rpc.DataType defaultValue) {
      * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
-
     public /* nullable */
 com.scalar.db.rpc.Order getClusteringOrdersOrDefault(
         java.lang.String key,
@@ -1533,7 +1462,6 @@ com.scalar.db.rpc.Order defaultValue) {
      * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
-
     public com.scalar.db.rpc.Order getClusteringOrdersOrThrow(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
@@ -1557,7 +1485,6 @@ com.scalar.db.rpc.Order defaultValue) {
      * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
-
     public java.util.Map<java.lang.String, java.lang.Integer>
     getClusteringOrdersValueMap() {
       return internalGetClusteringOrders().getMap();
@@ -1566,7 +1493,6 @@ com.scalar.db.rpc.Order defaultValue) {
      * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
-
     public int getClusteringOrdersValueOrDefault(
         java.lang.String key,
         int defaultValue) {
@@ -1579,7 +1505,6 @@ com.scalar.db.rpc.Order defaultValue) {
      * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
     @java.lang.Override
-
     public int getClusteringOrdersValueOrThrow(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
@@ -1590,8 +1515,8 @@ com.scalar.db.rpc.Order defaultValue) {
       }
       return map.get(key);
     }
-
     public Builder clearClusteringOrders() {
+      bitField0_ = (bitField0_ & ~0x00000008);
       internalGetMutableClusteringOrders().getMutableMap()
           .clear();
       return this;
@@ -1599,7 +1524,6 @@ com.scalar.db.rpc.Order defaultValue) {
     /**
      * <code>map&lt;string, .rpc.Order&gt; clustering_orders = 4;</code>
      */
-
     public Builder removeClusteringOrders(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
@@ -1612,7 +1536,8 @@ com.scalar.db.rpc.Order defaultValue) {
      */
     @java.lang.Deprecated
     public java.util.Map<java.lang.String, com.scalar.db.rpc.Order>
-    getMutableClusteringOrders() {
+        getMutableClusteringOrders() {
+      bitField0_ |= 0x00000008;
       return internalGetAdaptedClusteringOrdersMap(
            internalGetMutableClusteringOrders().getMutableMap());
     }
@@ -1626,6 +1551,7 @@ com.scalar.db.rpc.Order defaultValue) {
       
       internalGetMutableClusteringOrders().getMutableMap()
           .put(key, clusteringOrdersValueConverter.doBackward(value));
+      bitField0_ |= 0x00000008;
       return this;
     }
     /**
@@ -1636,6 +1562,7 @@ com.scalar.db.rpc.Order defaultValue) {
       internalGetAdaptedClusteringOrdersMap(
           internalGetMutableClusteringOrders().getMutableMap())
               .putAll(values);
+      bitField0_ |= 0x00000008;
       return this;
     }
     /**
@@ -1644,6 +1571,7 @@ com.scalar.db.rpc.Order defaultValue) {
     @java.lang.Deprecated
     public java.util.Map<java.lang.String, java.lang.Integer>
     getMutableClusteringOrdersValue() {
+      bitField0_ |= 0x00000008;
       return internalGetMutableClusteringOrders().getMutableMap();
     }
     /**
@@ -1656,6 +1584,7 @@ com.scalar.db.rpc.Order defaultValue) {
       
       internalGetMutableClusteringOrders().getMutableMap()
           .put(key, value);
+      bitField0_ |= 0x00000008;
       return this;
     }
     /**
@@ -1665,6 +1594,7 @@ com.scalar.db.rpc.Order defaultValue) {
         java.util.Map<java.lang.String, java.lang.Integer> values) {
       internalGetMutableClusteringOrders().getMutableMap()
           .putAll(values);
+      bitField0_ |= 0x00000008;
       return this;
     }
 
@@ -1715,10 +1645,8 @@ com.scalar.db.rpc.Order defaultValue) {
      */
     public Builder setSecondaryIndexNames(
         int index, java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureSecondaryIndexNamesIsMutable();
+      if (value == null) { throw new NullPointerException(); }
+      ensureSecondaryIndexNamesIsMutable();
       secondaryIndexNames_.set(index, value);
       onChanged();
       return this;
@@ -1730,10 +1658,8 @@ com.scalar.db.rpc.Order defaultValue) {
      */
     public Builder addSecondaryIndexNames(
         java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureSecondaryIndexNamesIsMutable();
+      if (value == null) { throw new NullPointerException(); }
+      ensureSecondaryIndexNamesIsMutable();
       secondaryIndexNames_.add(value);
       onChanged();
       return this;
@@ -1768,10 +1694,8 @@ com.scalar.db.rpc.Order defaultValue) {
      */
     public Builder addSecondaryIndexNamesBytes(
         com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
       ensureSecondaryIndexNamesIsMutable();
       secondaryIndexNames_.add(value);
       onChanged();
@@ -1810,7 +1734,18 @@ com.scalar.db.rpc.Order defaultValue) {
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return new TableMetadata(input, extensionRegistry);
+      Builder builder = newBuilder();
+      try {
+        builder.mergeFrom(input, extensionRegistry);
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(builder.buildPartial());
+      } catch (com.google.protobuf.UninitializedMessageException e) {
+        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(e)
+            .setUnfinishedMessage(builder.buildPartial());
+      }
+      return builder.buildPartial();
     }
   };
 

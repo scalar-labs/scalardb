@@ -35,6 +35,9 @@ public class DynamoConfig {
       throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be 'dynamo'");
     }
 
+    if (databaseConfig.getContactPoints().isEmpty()) {
+      throw new IllegalArgumentException(DatabaseConfig.CONTACT_POINTS + " is empty");
+    }
     region = databaseConfig.getContactPoints().get(0);
     accessKeyId = databaseConfig.getUsername().orElse(null);
     secretAccessKey = databaseConfig.getPassword().orElse(null);

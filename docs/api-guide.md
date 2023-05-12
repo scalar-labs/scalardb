@@ -1,6 +1,6 @@
 # Java API Guide
 
-Scalar DB Java API is mainly composed of Administrative API and Transactional API.
+ScalarDB Java API is mainly composed of Administrative API and Transactional API.
 This guide briefly explains what kind of APIs exist and how to use them.
 
 * [Administrative API](#administrative-api)
@@ -8,7 +8,7 @@ This guide briefly explains what kind of APIs exist and how to use them.
 
 ## Administrative API
 
-This section explains how to execute administrative operations with Administrative API in Scalar DB.
+This section explains how to execute administrative operations with Administrative API in ScalarDB.
 You can execute administrative operations programmatically as follows, but you can also execute those operations through [Schema Loader](schema-loader.md).
 
 ### Get a DistributedTransactionAdmin instance
@@ -54,12 +54,12 @@ With the options, we can set storage adapter specific configurations.
 
 Currently, we can set the following options for the storage adapters:
 
-For Cosmos DB:
+For Cosmos DB for NoSQL:
 
-| name       | value                              | default |
-|------------|------------------------------------|---------|
-| ru         | Base resource unit                 | 400     |
-| no-scaling | Disable auto-scaling for Cosmos DB | false   |
+| name       | value                                        | default |
+|------------|----------------------------------------------|---------|
+| ru         | Base resource unit                           | 400     |
+| no-scaling | Disable auto-scaling for Cosmos DB for NoSQL | false   |
 
 For DynamoDB:
 
@@ -102,7 +102,7 @@ TableMetadata tableMetadata =
 
 Here you define columns, a partition key, a clustering key including clustering orders, and secondary indexes of a table.
 
-Please see [Scalar DB design document - Data Model](design.md#data-model) for the details of the Scalar DB Data Model.
+Please see [ScalarDB design document - Data Model](design.md#data-model) for the details of the ScalarDB Data Model.
 
 And then, you can create a table as follows: 
 
@@ -146,7 +146,7 @@ admin.addNewColumnToTable("ns", "tbl", "c6", DataType.INT)
 
 This should be executed with significant consideration as the execution time may vary greatly
 depending on the underlying storage. Please plan accordingly especially if the database runs in production:
-- For Cosmos and Dynamo DB: this operation is almost instantaneous as the table
+- For Cosmos DB for NoSQL and DynamoDB: this operation is almost instantaneous as the table
      schema is not modified. Only the table metadata stored in a separated table are updated.
 - For Cassandra: adding a column will only update the schema metadata and do not modify existing 
   schema records. The cluster topology is the main factor for the execution time. Since the schema 
@@ -258,7 +258,7 @@ admin.dropCoordinatorTables(ifExist);
 
 ## Transactional API
 
-This section explains how to execute transactional operations with Transactional API in Scalar DB.
+This section explains how to execute transactional operations with Transactional API in ScalarDB.
 
 ### Get a DistributedTransactionManager instance
 
@@ -267,13 +267,13 @@ You can get it in the following way:
 
 ```java
 TransactionFactory transactionFactory = TransactionFactory.create("<configuration file path>");
-DistributedTransactionManager manager = transactionFactory.getTransactionManager();
+DistributedTransactionManager transactionManager = transactionFactory.getTransactionManager();
 ```
 
 Once you have executed all transactional operations, you should close the `DistributedTransactionManager` instance as follows:
 
 ```java
-manager.close();
+transactionManager.close();
 ```
 
 ### Begin/Start a transaction
@@ -283,24 +283,24 @@ You can begin/start a transaction as follows:
 
 ```java
 // Begin a transaction
-DistributedTransaction transaction = manager.begin();
+DistributedTransaction transaction = transactionManager.begin();
 
 Or
 
 // Start a transaction
-DistributedTransaction transaction = manager.start();
+DistributedTransaction transaction = transactionManager.start();
 ```
 
 You can also begin/start a transaction with specifying a transaction ID as follows:
 
 ```java
 // Begin a transaction with specifying a transaction ID
-DistributedTransaction transaction = manager.begin("<transaction ID>");
+DistributedTransaction transaction = transactionManager.begin("<transaction ID>");
 
 Or
 
 // Start a transaction with specifying a transaction ID
-DistributedTransaction transaction = manager.start("<transaction ID>");
+DistributedTransaction transaction = transactionManager.start("<transaction ID>");
 ```
 
 Note that you must guarantee uniqueness of the transaction ID in this case.
@@ -311,7 +311,7 @@ You can resume a transaction you have already begun with specifying a transactio
 
 ```java
 // Resume a transaction
-DistributedTransaction transaction = manager.resume("<transaction ID>");
+DistributedTransaction transaction = transactionManager.resume("<transaction ID>");
 ```
 
 It is helpful in a stateful application where a transaction spans multiple client requests.
@@ -527,10 +527,6 @@ Instead of calling the `partitionKey()` method in the builder, you can call the 
 
 ```java
 // Create a Scan operation without a partition key
-Key partitionKey = Key.ofInt("c1", 10);
-Key startClusteringKey = Key.of("c2", "aaa", "c3", 100L);
-Key endClusteringKey = Key.of("c2", "aaa", "c3", 300L);
-
 Scan scan =
     Scan.newBuilder()
         .namespace("ns")
@@ -550,6 +546,7 @@ Note that you can't specify clustering key boundaries and orderings in Scan with
 
 `Put` is an operation to put a record specified by a primary key.
 It behaves as an upsert operation for a record, i.e., updating the record if the record exists; otherwise, inserting the record.
+Note that when you update an existing record, you need to read it using a `Get` or a `Scan` before a `Put` operation.
 
 You need to create a Put object first, and then you can execute it with the `transaction.put()` method as follows:
 
@@ -589,6 +586,7 @@ Put put =
 #### Delete operation
 
 `Delete` is an operation to delete a record specified by a primary key.
+Note that when you delete a record, you need to read it using a `Get` or a `Scan` before a `Delete` operation.
 
 You need to create a Delete object first, and then you can execute it with the `transaction.delete()` method as follows:
 
@@ -645,6 +643,33 @@ Delete delete =
 transaction.mutate(Arrays.asList(put, delete));
 ```
 
+#### Use a default namespace for CRUD operations
+
+A default namespace for all the CRUD operations can be set with a property of the ScalarDB configuration.
+If you would like to use this setting with ScalarDB server, it needs to be set on the client-side configuration.
+
+```properties
+scalar.db.default_namespace_name=<a_namespace_name>
+```
+
+Any operation that does not specify a namespace will use the default namespace set in the configuration.
+
+```java
+//This operation will target the default namespace
+Scan scanUsingDefaultNamespace =
+    Scan.newBuilder()
+        .table("tbl")
+        .all()
+        .build();
+//This operation will target the "ns" namespace
+Scan scanUsingSpecifiedNamespace =
+    Scan.newBuilder()
+        .namespace("ns")
+        .table("tbl")
+        .all()
+        .build();
+```
+
 #### Notes
 
 - All the builders of the CRUD operations can specify consistency with the `consistency()` methods, but it's ignored, and the `LINEARIZABLE` consistency level is always used in transactions.
@@ -678,46 +703,42 @@ Or
 transaction.abort();
 ```
 
-Please see [Handle Exceptions](#handle-exceptions) for the details of how to handle exceptions in Scalar DB.
-
-## Transactional operations for Two-phase Commit Transaction
-
-Please see [Two-phase Commit Transactions](two-phase-commit-transactions.md).
+Please see [Handle Exceptions](#handle-exceptions) for the details of how to handle exceptions in ScalarDB.
 
 ## Handle Exceptions
 
-Handling exceptions correctly in Scalar DB is very important.
+Handling exceptions correctly in ScalarDB is very important.
 If you mishandle exceptions, your data could become inconsistent.
-This document explains how to handle exceptions properly in Scalar DB.
+This document explains how to handle exceptions properly in ScalarDB.
 
-Let's look at the following example code to see how to handle exceptions in Scalar DB.
+Let's look at the following example code to see how to handle exceptions in ScalarDB.
 
 ```java
 public class Sample {
   public static void main(String[] args) throws IOException, InterruptedException {
     TransactionFactory factory = TransactionFactory.create("<configuration file path>");
-    DistributedTransactionManager manager = factory.getTransactionManager();
+    DistributedTransactionManager transactionManager = factory.getTransactionManager();
 
     int retryCount = 0;
 
     while (true) {
-      if (retryCount > 0) {
+      if (retryCount++ > 0) {
         // Retry the transaction three times maximum in this sample code
-        if (retryCount == 3) {
+        if (retryCount >= 3) {
           return;
         }
         // Sleep 100 milliseconds before retrying the transaction in this sample code
         TimeUnit.MILLISECONDS.sleep(100);
       }
 
-      // Start a transaction
+      // Begin a transaction
       DistributedTransaction tx;
       try {
-        tx = manager.start();
+        tx = transactionManager.begin();
       } catch (TransactionException e) {
-        // If starting a transaction fails, it indicates some failure happens during a transaction,
-        // so you should cancel the transaction or retry the transaction after the failure/error is
-        // fixed
+        // If beginning a transaction failed, it indicates some failure happens during the
+        // transaction, so you should cancel the transaction or retry the transaction after the
+        // failure/error is fixed
         return;
       }
 
@@ -731,21 +752,21 @@ public class Sample {
         // Commit the transaction
         tx.commit();
       } catch (CrudConflictException | CommitConflictException e) {
-        // If you catch CrudConflictException or CommitConflictException, it indicates conflicts 
-        // happen during a transaction so that you can retry the transaction
+        // If you catch CrudConflictException or CommitConflictException, it indicates a transaction
+        // conflict occurs during the transaction so that you can retry the transaction from the
+        // beginning
         try {
-          tx.abort();
-        } catch (AbortException ex) {
-          // Aborting the transaction fails. You can log it here
+          tx.rollback();
+        } catch (RollbackException ex) {
+          // Rolling back the transaction failed. You can log it here
         }
-        retryCount++;
       } catch (CrudException | CommitException e) {
         // If you catch CrudException or CommitException, it indicates some failure happens, so you
         // should cancel the transaction or retry the transaction after the failure/error is fixed
         try {
-          tx.abort();
-        } catch (AbortException ex) {
-          // Aborting the transaction fails. You can log it here
+          tx.rollback();
+        } catch (RollbackException ex) {
+          // Rolling back the transaction failed. You can log it here
         }
         return;
       } catch (UnknownTransactionStatusException e) {
@@ -762,28 +783,20 @@ public class Sample {
 
 The APIs for CRUD operations (`get()`/`scan()`/`put()`/`delete()`/`mutate()`) could throw `CrudException` and `CrudConflictException`.
 If you catch `CrudException`, it indicates some failure (e.g., database failure and network error) happens during a transaction, so you should cancel the transaction or retry the transaction after the failure/error is fixed.
-If you catch `CrudConflictException`, it indicates conflicts happen during a transaction so that you can retry the transaction, preferably with well-adjusted exponential backoff based on your application and environment.
+If you catch `CrudConflictException`, it indicates a transaction conflict occurs during the transaction so that you can retry the transaction from the beginning, preferably with well-adjusted exponential backoff based on your application and environment.
 The sample code retries three times maximum and sleeps 100 milliseconds before retrying the transaction.
 
 Also, the `commit()` API could throw `CommitException`, `CommitConflictException`, and `UnknownTransactionStatusException`.
 If you catch `CommitException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure/error is fixed.
-If you catch `CommitConflictException`, like the `CrudConflictException` case, you can retry the transaction.
+If you catch `CommitConflictException`, like the `CrudConflictException` case, you can retry the transaction from the beginning.
 If you catch `UnknownTransactionStatusException`, you are not sure if the transaction succeeds or not.
 In such a case, you need to check if the transaction is committed successfully or not and retry it if it fails.
 How to identify a transaction status is delegated to users.
 You may want to create a transaction status table and update it transactionally with other application data so that you can get the status of a transaction from the status table.
 
-### For Two-phase Commit Transactions
+## Transactional operations for Two-phase Commit Transaction
 
-You need to handle more exceptions when you use [Two-phase Commit Transactions](two-phase-commit-transactions.md) because you additionally need to call the `prepare()` API (and the `validate()` API when required).
-
-The `prepare()` API could throw `PreparationException` and `PreparationConflictException`.
-If you catch `PreparationException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure/error is fixed.
-If you catch `PreparationConflictException`, like the `CrudConflictException` case, you can retry the transaction.
-
-Also, the `validate()` API could throw `ValidationException` and `ValidationConflictException`.
-If you catch `ValidationException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure/error is fixed.
-If you catch `ValidationConflictException`, like the `CrudConflictException` case, you can retry the transaction.
+Please see [Two-phase Commit Transactions](two-phase-commit-transactions.md).
 
 ## Investigate Consensus Commit transactions errors
 
@@ -802,4 +815,4 @@ scalar.db.consensus_commit.include_metadata.enabled=true
 * [Getting started](getting-started.md)
 * [Multi-storage Transactions](multi-storage-transactions.md)
 * [Two-phase Commit Transactions](two-phase-commit-transactions.md)
-* [Scalar DB Server](scalardb-server.md)
+* [ScalarDB Server](scalardb-server.md)

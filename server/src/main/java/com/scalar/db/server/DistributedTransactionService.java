@@ -474,8 +474,8 @@ public class DistributedTransactionService
                 .build());
       } catch (UnknownTransactionStatusException e) {
         logger.error(
-            "the transaction status is unknown. transaction ID: "
-                + e.getUnknownTransactionId().orElse("null"),
+            "the transaction status is unknown. transaction ID: {}",
+            e.getTransactionId().orElse("null"),
             e);
         responseBuilder.setError(
             TransactionResponse.Error.newBuilder()

@@ -6,17 +6,18 @@ import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.JdbcUtils;
-import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.RdbEngineFactory;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
-import com.scalar.db.transaction.common.ActiveTransactionManagedTransactionManager;
 import java.sql.SQLException;
 import java.util.UUID;
 import javax.annotation.concurrent.ThreadSafe;
@@ -25,12 +26,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class JdbcTransactionManager extends ActiveTransactionManagedTransactionManager {
+public class JdbcTransactionManager extends ActiveTransactionManagedDistributedTransactionManager {
   private static final Logger logger = LoggerFactory.getLogger(JdbcTransactionManager.class);
 
   private final BasicDataSource dataSource;
   private final BasicDataSource tableMetadataDataSource;
-  private final RdbEngine rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
   private final JdbcService jdbcService;
 
   @Inject
@@ -38,10 +39,10 @@ public class JdbcTransactionManager extends ActiveTransactionManagedTransactionM
     super(databaseConfig);
     JdbcConfig config = new JdbcConfig(databaseConfig);
 
-    dataSource = JdbcUtils.initDataSource(config, true);
-    rdbEngine = JdbcUtils.getRdbEngine(config.getJdbcUrl());
+    rdbEngine = RdbEngineFactory.create(config);
+    dataSource = JdbcUtils.initDataSource(config, rdbEngine, true);
 
-    tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config);
+    tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config, rdbEngine);
     TableMetadataManager tableMetadataManager =
         new TableMetadataManager(
             new JdbcAdmin(tableMetadataDataSource, config),
@@ -57,7 +58,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedTransactionM
       DatabaseConfig databaseConfig,
       BasicDataSource dataSource,
       BasicDataSource tableMetadataDataSource,
-      RdbEngine rdbEngine,
+      RdbEngineStrategy rdbEngine,
       JdbcService jdbcService) {
     super(databaseConfig);
     this.dataSource = dataSource;
@@ -79,9 +80,9 @@ public class JdbcTransactionManager extends ActiveTransactionManagedTransactionM
           new JdbcTransaction(txId, jdbcService, dataSource.getConnection(), rdbEngine);
       getNamespace().ifPresent(transaction::withNamespace);
       getTable().ifPresent(transaction::withTable);
-      return activate(transaction);
+      return decorate(transaction);
     } catch (SQLException e) {
-      throw new TransactionException("failed to start the transaction", e);
+      throw new TransactionException("failed to start the transaction", e, null);
     }
   }
 

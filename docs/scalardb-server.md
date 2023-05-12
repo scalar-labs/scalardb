@@ -1,23 +1,23 @@
-# Scalar DB Server
+# ScalarDB Server
 
-Scalar DB Server is a gRPC server that implements Scalar DB interface. 
-With Scalar DB Server, you can use Scalar DB features from multiple programming languages that are supported by gRPC.
+ScalarDB Server is a gRPC server that implements ScalarDB interface. 
+With ScalarDB Server, you can use ScalarDB features from multiple programming languages that are supported by gRPC.
 
 Currently, we provide only a Java client officially, and we will support other language clients officially in the future.
 Of course, you can generate language-specific client stubs by yourself.
 However, note that it is not necessarily straightforward to implement a client since it's using a bidirectional streaming RPC in gRPC, and you need to be familiar with it.
 
-This document explains how to install and use Scalar DB Server.
+This document explains how to install and use ScalarDB Server.
 
 ## Install prerequisites
 
-Scalar DB Server is written in Java. So the following software is required to run it.
+ScalarDB Server is written in Java. So the following software is required to run it.
 
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (OpenJDK 8) or higher
 
-## Install Scalar DB Server
+## Install ScalarDB Server
 
-We have Docker images in [our repository](https://github.com/orgs/scalar-labs/packages/container/package/scalardb-server) and zip archives of Scalar DB Server available in [releases](https://github.com/scalar-labs/scalardb/releases).
+We have Docker images in [our repository](https://github.com/orgs/scalar-labs/packages/container/package/scalardb-server) and zip archives of ScalarDB Server available in [releases](https://github.com/scalar-labs/scalardb/releases).
 
 If you are interested in building from source, run the following command: 
 
@@ -27,21 +27,36 @@ $ ./gradlew installDist
 
 Of course, you can archive the jar and libraries by `./gradlew distZip` and so on.
 
-## Configure Scalar DB Server
+Also, you can build a Docker image from the source as follows.
 
-You need a property file holding the configuration for Scalar DB Server. 
-It contains two sections: Scalar DB Server configurations and underlying storage/database configurations.
+```shell
+$ ./gradlew :server:docker
+```
+
+## Configure ScalarDB Server
+
+You need a property file holding the configuration for ScalarDB Server. 
+It contains two sections: ScalarDB Server configurations and underlying storage/database configurations.
 
 ```properties
 #
-# Scalar DB Server configurations
+# ScalarDB Server configurations
 #
 
-# Port number of Scalar DB Server. 60051 by default
+# Port number of ScalarDB Server. 60051 by default.
 scalar.db.server.port=60051
 
 # Prometheus exporter port. Use 8080 if this is not given. Prometheus exporter will not be started if a negative number is given.
 scalar.db.server.prometheus_exporter_port=8080
+
+# The maximum message size allowed to be received. If not specified, use the gRPC default value.
+scalar.db.server.grpc.max_inbound_message_size=
+
+# The maximum size of metadata allowed to be received. If not specified, use the gRPC default value.
+scalar.db.server.grpc.max_inbound_metadata_size=
+
+# The decommissioning duration in seconds. 30 seconds by default.                 
+scalar.db.server.decommissioning_duration_secs=30
 
 #
 # Underlying storage/database configurations
@@ -53,7 +68,7 @@ scalar.db.contact_points=localhost
 # Port number for all the contact points. Default port number for each database is used if empty.
 #scalar.db.contact_port=
 
-# Credential information to access the database. For Cosmos DB, username isn't used. For DynamoDB, AWS_ACCESS_KEY_ID is specified by the username and AWS_ACCESS_SECRET_KEY is specified by the password.
+# Credential information to access the database. For Cosmos DB for NoSQL, username isn't used. For DynamoDB, AWS_ACCESS_KEY_ID is specified by the username and AWS_ACCESS_SECRET_KEY is specified by the password.
 scalar.db.username=cassandra
 scalar.db.password=cassandra
 
@@ -78,28 +93,35 @@ scalar.db.consensus_commit.serializable_strategy=
 scalar.db.consensus_commit.include_metadata.enabled=false
 ```
 
-## Start Scalar DB Server
+You can set some sensitive data (e.g., credentials) as the values of properties using environment variables.
+
+```properties
+scalar.db.username=${env:SCALAR_DB_USERNAME}
+scalar.db.password=${env:SCALAR_DB_PASSWORD}
+```
+
+## Start ScalarDB Server
 
 ### Docker images
 
-For Docker images, you need to pull the Scalar DB Server image first:
+For Docker images, you need to pull the ScalarDB Server image first:
 ```shell
 $ docker pull ghcr.io/scalar-labs/scalardb-server:<version>
 ```
 
-And then, you can start Scalar DB Server with the following command:
+And then, you can start ScalarDB Server with the following command:
 ```shell
-$ docker run -v <your local property file path>:/scalardb/server/database.properties.tmpl -d -p 60051:60051 -p 8080:8080 ghcr.io/scalar-labs/scalardb-server:<version>
+$ docker run -v <your local property file path>:/scalardb/server/database.properties -d -p 60051:60051 -p 8080:8080 ghcr.io/scalar-labs/scalardb-server:<version>
 ```
 
 You can also start it with DEBUG logging as follows:
 ```shell
-$ docker run -v <your local property file path>:/scalardb/server/database.properties.tmpl -e SCALAR_DB_LOG_LEVEL=DEBUG -d -p 60051:60051 -p 8080:8080 ghcr.io/scalar-labs/scalardb-server:<version>
+$ docker run -v <your local property file path>:/scalardb/server/database.properties -e SCALAR_DB_LOG_LEVEL=DEBUG -d -p 60051:60051 -p 8080:8080 ghcr.io/scalar-labs/scalardb-server:<version>
 ````
 
 You can also start it with your custom log configuration as follows:
 ```shell
-$ docker run -v <your local property file path>:/scalardb/server/database.properties.tmpl -v <your custom log4j2 configuration file path>:/scalardb/server/log4j2.properties.tmpl -d -p 60051:60051 -p 8080:8080 ghcr.io/scalar-labs/scalardb-server:<version>
+$ docker run -v <your local property file path>:/scalardb/server/database.properties -v <your custom log4j2 configuration file path>:/scalardb/server/log4j2.properties -d -p 60051:60051 -p 8080:8080 ghcr.io/scalar-labs/scalardb-server:<version>
 ```
 
 You can also start it with environment variables as follows:
@@ -109,12 +131,12 @@ $ docker run --env SCALAR_DB_CONTACT_POINTS=cassandra --env SCALAR_DB_CONTACT_PO
 
 You can also start it with JMX as follows:
 ```shell
-$ docker run -v <your local property file path>:/scalardb/server/database.properties.tmpl -e JAVA_OPTS="-Dlog4j.configurationFile=file:log4j2.properties -Djava.rmi.server.hostname=<your container hostname or IP address> -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.port=9990 -Dcom.sun.management.jmxremote.rmi.port=9990 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false" -d -p 60051:60051 -p 8080:8080 -p 9990:9990 ghcr.io/scalar-labs/scalardb-server:<version>
+$ docker run -v <your local property file path>:/scalardb/server/database.properties -e JAVA_OPTS="-Dlog4j.configurationFile=file:log4j2.properties -Djava.rmi.server.hostname=<your container hostname or IP address> -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.port=9990 -Dcom.sun.management.jmxremote.rmi.port=9990 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false" -d -p 60051:60051 -p 8080:8080 -p 9990:9990 ghcr.io/scalar-labs/scalardb-server:<version>
 ```
 
 ### Zip archives
 
-For zip archives, you can start Scalar DB Server with the following commands:
+For zip archives, you can start ScalarDB Server with the following commands:
 
 ```shell
 $ unzip scalardb-server-<version>.zip
@@ -123,14 +145,14 @@ $ export JAVA_OPTS="<your JVM options>"
 $ bin/scalardb-server --config <your property file path>
 ```
 
-## Usage of the Java client of Scalar DB Server
+## Usage of the Java client of ScalarDB Server
 
-You can use the Java client of Scalar DB Server in almost the same way as other storages/databases.
+You can use the Java client of ScalarDB Server in almost the same way as other storages/databases.
 The difference is that you need to set `scalar.db.storage` and `scalar.db.transaction_manager` to `grpc` in your client side property file.
 
 ```properties
 # Comma separated contact points
-scalar.db.contact_points=<Scalar DB Server host>
+scalar.db.contact_points=<ScalarDB Server host>
 
 # Port number for all the contact points
 scalar.db.contact_port=60051
@@ -143,15 +165,21 @@ scalar.db.transaction_manager=grpc
 
 # The deadline duration for gRPC connections. The default is 60000 milliseconds (60 seconds)
 scalar.db.grpc.deadline_duration_millis=60000
+
+# The maximum message size allowed for a single gRPC frame. If not specified, use the gRPC default value.
+scalar.db.grpc.max_inbound_message_size=
+
+# The maximum size of metadata allowed to be received. If not specified, use the gRPC default value.
+scalar.db.grpc.max_inbound_metadata_size=
 ```
 
 ## Further reading
 
-Please see the following sample to learn Scalar DB Server further:
+Please see the following sample to learn ScalarDB Server further:
 
-- [Scalar DB Server Sample](https://github.com/scalar-labs/scalardb-samples/tree/main/scalardb-server-sample)
+- [ScalarDB Server Sample](https://github.com/scalar-labs/scalardb-samples/tree/main/scalardb-server-sample)
 
-Please also see the following documents to learn how to deploy Scalar DB Server:
+Please also see the following documents to learn how to deploy ScalarDB Server:
 
-- [Deploy Scalar DB Server on AWS](https://github.com/scalar-labs/scalar-kubernetes/blob/master/docs/ManualDeploymentGuideScalarDBServerOnEKS.md)
-- [Deploy Scalar DB Server on Azure](https://github.com/scalar-labs/scalar-kubernetes/blob/master/docs/ManualDeploymentGuideScalarDBServerOnAKS.md)
+- [Deploy ScalarDB Server on AWS](https://github.com/scalar-labs/scalar-kubernetes/blob/master/docs/ManualDeploymentGuideScalarDBServerOnEKS.md)
+- [Deploy ScalarDB Server on Azure](https://github.com/scalar-labs/scalar-kubernetes/blob/master/docs/ManualDeploymentGuideScalarDBServerOnAKS.md)

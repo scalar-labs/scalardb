@@ -18,8 +18,9 @@ public interface TransactionCrudOperable {
    *
    * @param get a {@code Get} command
    * @return an {@code Optional} with the returned result
-   * @throws CrudConflictException if conflicts happened. You can retry the transaction in this case
-   * @throws CrudException if the operation failed
+   * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
+   *     from the beginning in this case
+   * @throws CrudException if the operation fails
    */
   Optional<Result> get(Get get) throws CrudConflictException, CrudException;
 
@@ -30,8 +31,9 @@ public interface TransactionCrudOperable {
    *
    * @param scan a {@code Scan} command
    * @return a list of {@link Result}
-   * @throws CrudConflictException if conflicts happened. You can retry the transaction in this case
-   * @throws CrudException if the operation failed
+   * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
+   *     from the beginning in this case
+   * @throws CrudException if the operation fails
    */
   List<Result> scan(Scan scan) throws CrudConflictException, CrudException;
 
@@ -41,8 +43,9 @@ public interface TransactionCrudOperable {
    * a transaction if you want to implement conditional mutation.
    *
    * @param put a {@code Put} command
-   * @throws CrudConflictException if conflicts happened. You can retry the transaction in this case
-   * @throws CrudException if the operation failed
+   * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
+   *     from the beginning in this case
+   * @throws CrudException if the operation fails
    */
   void put(Put put) throws CrudConflictException, CrudException;
 
@@ -52,8 +55,9 @@ public interface TransactionCrudOperable {
    * such conditions in a transaction if you want to implement conditional mutation.
    *
    * @param puts a list of {@code Put} commands
-   * @throws CrudConflictException if conflicts happened. You can retry the transaction in this case
-   * @throws CrudException if the operation failed
+   * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
+   *     from the beginning in this case
+   * @throws CrudException if the operation fails
    */
   void put(List<Put> puts) throws CrudConflictException, CrudException;
 
@@ -63,8 +67,9 @@ public interface TransactionCrudOperable {
    * in a transaction if you want to implement conditional mutation.
    *
    * @param delete a {@code Delete} command
-   * @throws CrudConflictException if conflicts happened. You can retry the transaction in this case
-   * @throws CrudException if the operation failed
+   * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
+   *     from the beginning in this case
+   * @throws CrudException if the operation fails
    */
   void delete(Delete delete) throws CrudConflictException, CrudException;
 
@@ -74,8 +79,9 @@ public interface TransactionCrudOperable {
    * conditions in a transaction if you want to implement conditional mutation.
    *
    * @param deletes a list of {@code Delete} commands
-   * @throws CrudConflictException if conflicts happened. You can retry the transaction in this case
-   * @throws CrudException if the operation failed
+   * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
+   *     from the beginning in this case
+   * @throws CrudException if the operation fails
    */
   void delete(List<Delete> deletes) throws CrudConflictException, CrudException;
 
@@ -85,8 +91,9 @@ public interface TransactionCrudOperable {
    * such conditions in a transaction if you want to implement conditional mutation.
    *
    * @param mutations a list of {@code Mutation} commands
-   * @throws CrudConflictException if conflicts happened. You can retry the transaction in this case
-   * @throws CrudException if the operation failed
+   * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
+   *     from the beginning in this case
+   * @throws CrudException if the operation fails
    */
   void mutate(List<? extends Mutation> mutations) throws CrudConflictException, CrudException;
 }

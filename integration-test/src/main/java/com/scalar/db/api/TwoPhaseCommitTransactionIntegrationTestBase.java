@@ -6,11 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Scan.Ordering;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
@@ -28,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.IntStream;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,16 +40,16 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
-  private static final String NAMESPACE_BASE_NAME = "int_test_";
+  protected static final String NAMESPACE_BASE_NAME = "int_test_";
   protected static final String TABLE_1 = "test_table1";
   protected static final String TABLE_2 = "test_table2";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String ACCOUNT_TYPE = "account_type";
   protected static final String BALANCE = "balance";
-  private static final String SOME_COLUMN = "some_column";
+  protected static final String SOME_COLUMN = "some_column";
   protected static final int INITIAL_BALANCE = 1000;
-  private static final int NUM_ACCOUNTS = 4;
-  private static final int NUM_TYPES = 4;
+  protected static final int NUM_ACCOUNTS = 4;
+  protected static final int NUM_TYPES = 4;
   protected static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
           .addColumn(ACCOUNT_ID, DataType.INT)
@@ -57,10 +60,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
           .addClusteringKey(ACCOUNT_TYPE)
           .addSecondaryIndex(SOME_COLUMN)
           .build();
-  private DistributedTransactionAdmin admin1;
-  private DistributedTransactionAdmin admin2;
-  private TwoPhaseCommitTransactionManager manager1;
-  private TwoPhaseCommitTransactionManager manager2;
+  protected DistributedTransactionAdmin admin1;
+  protected DistributedTransactionAdmin admin2;
+  protected TwoPhaseCommitTransactionManager manager1;
+  protected TwoPhaseCommitTransactionManager manager2;
 
   protected String namespace1;
   protected String namespace2;
@@ -108,14 +111,14 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @BeforeEach
-  public void setUp() throws ExecutionException {
+  public void setUp() throws Exception {
     admin1.truncateTable(namespace1, TABLE_1);
     admin1.truncateCoordinatorTables();
     admin2.truncateTable(namespace2, TABLE_2);
   }
 
   @AfterAll
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     dropTables();
     admin1.close();
     admin2.close();
@@ -408,19 +411,17 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     List<ExpectedResult> expectedResults = new ArrayList<>();
     expectedResults.add(
         new ExpectedResultBuilder()
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
-            .nonKeyColumns(
-                ImmutableList.of(
-                    IntColumn.of(BALANCE, INITIAL_BALANCE), IntColumn.of(SOME_COLUMN, 2)))
+            .column(IntColumn.of(ACCOUNT_ID, 1))
+            .column(IntColumn.of(ACCOUNT_TYPE, 2))
+            .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
+            .column(IntColumn.of(SOME_COLUMN, 2))
             .build());
     expectedResults.add(
         new ExpectedResultBuilder()
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
-            .nonKeyColumns(
-                ImmutableList.of(
-                    IntColumn.of(BALANCE, INITIAL_BALANCE), IntColumn.of(SOME_COLUMN, 2)))
+            .column(IntColumn.of(ACCOUNT_ID, 2))
+            .column(IntColumn.of(ACCOUNT_TYPE, 1))
+            .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
+            .column(IntColumn.of(SOME_COLUMN, 2))
             .build());
 
     // Act
@@ -917,17 +918,14 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             i ->
                 IntStream.range(0, NUM_TYPES)
                     .forEach(
-                        j -> {
-                          ExpectedResultBuilder erBuilder =
-                              new ExpectedResultBuilder()
-                                  .partitionKey(Key.ofInt(ACCOUNT_ID, i))
-                                  .clusteringKey(Key.ofInt(ACCOUNT_TYPE, j))
-                                  .nonKeyColumns(
-                                      ImmutableList.of(
-                                          IntColumn.of(BALANCE, INITIAL_BALANCE),
-                                          IntColumn.of(SOME_COLUMN, i * j)));
-                          expectedResults.add(erBuilder.build());
-                        }));
+                        j ->
+                            expectedResults.add(
+                                new ExpectedResultBuilder()
+                                    .column(IntColumn.of(ACCOUNT_ID, i))
+                                    .column(IntColumn.of(ACCOUNT_TYPE, j))
+                                    .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
+                                    .column(IntColumn.of(SOME_COLUMN, i * j))
+                                    .build())));
     TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
   }
 
@@ -968,28 +966,28 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         results,
         ImmutableList.of(
             new ExpectedResultBuilder()
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
-                .nonKeyColumns(
-                    Arrays.asList(IntColumn.ofNull(BALANCE), IntColumn.ofNull(SOME_COLUMN)))
+                .column(IntColumn.of(ACCOUNT_ID, 1))
+                .column(IntColumn.of(ACCOUNT_TYPE, 1))
+                .column(IntColumn.ofNull(BALANCE))
+                .column(IntColumn.ofNull(SOME_COLUMN))
                 .build(),
             new ExpectedResultBuilder()
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
-                .nonKeyColumns(
-                    Arrays.asList(IntColumn.ofNull(BALANCE), IntColumn.ofNull(SOME_COLUMN)))
+                .column(IntColumn.of(ACCOUNT_ID, 1))
+                .column(IntColumn.of(ACCOUNT_TYPE, 2))
+                .column(IntColumn.ofNull(BALANCE))
+                .column(IntColumn.ofNull(SOME_COLUMN))
                 .build(),
             new ExpectedResultBuilder()
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
-                .nonKeyColumns(
-                    Arrays.asList(IntColumn.ofNull(BALANCE), IntColumn.ofNull(SOME_COLUMN)))
+                .column(IntColumn.of(ACCOUNT_ID, 2))
+                .column(IntColumn.of(ACCOUNT_TYPE, 1))
+                .column(IntColumn.ofNull(BALANCE))
+                .column(IntColumn.ofNull(SOME_COLUMN))
                 .build(),
             new ExpectedResultBuilder()
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .nonKeyColumns(
-                    Arrays.asList(IntColumn.ofNull(BALANCE), IntColumn.ofNull(SOME_COLUMN)))
+                .column(IntColumn.of(ACCOUNT_ID, 3))
+                .column(IntColumn.of(ACCOUNT_TYPE, 0))
+                .column(IntColumn.ofNull(BALANCE))
+                .column(IntColumn.ofNull(SOME_COLUMN))
                 .build()));
     assertThat(results).hasSize(2);
   }
@@ -1016,14 +1014,12 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             i ->
                 IntStream.range(0, NUM_TYPES)
                     .forEach(
-                        j -> {
-                          ExpectedResultBuilder erBuilder =
-                              new ExpectedResultBuilder()
-                                  .clusteringKey(Key.ofInt(ACCOUNT_TYPE, j))
-                                  .nonKeyColumns(
-                                      ImmutableList.of(IntColumn.of(BALANCE, INITIAL_BALANCE)));
-                          expectedResults.add(erBuilder.build());
-                        }));
+                        j ->
+                            expectedResults.add(
+                                new ExpectedResultBuilder()
+                                    .column(IntColumn.of(ACCOUNT_TYPE, j))
+                                    .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
+                                    .build())));
     TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
     results.forEach(
         result -> {
@@ -1116,9 +1112,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     // Assert
     ExpectedResult expectedResult =
         new ExpectedResultBuilder()
-            .nonKeyColumns(
-                ImmutableList.of(
-                    IntColumn.of(BALANCE, INITIAL_BALANCE), IntColumn.ofNull(SOME_COLUMN)))
+            .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
+            .column(IntColumn.ofNull(SOME_COLUMN))
             .build();
     TestUtils.assertResultsContainsExactlyInAnyOrder(
         results, Collections.singletonList(expectedResult));
@@ -1141,15 +1136,16 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
-  public void resume_WithoutBeginningTransaction_ShouldThrowIllegalStateException() {
+  public void resume_WithoutBeginningTransaction_ShouldThrowTransactionNotFoundException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager1.resume("txId")).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> manager1.resume("txId"))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
-  public void resume_WithBeginningAndCommittingTransaction_ShouldThrowIllegalStateException()
+  public void resume_WithBeginningAndCommittingTransaction_ShouldThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
     TwoPhaseCommitTransaction transaction = manager1.begin();
@@ -1158,22 +1154,87 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
     // Act Assert
     assertThatThrownBy(() -> manager1.resume(transaction.getId()))
-        .isInstanceOf(IllegalStateException.class);
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
-  public void resume_WithBeginningAndRollingBackTransaction_ShouldThrowIllegalStateException()
-      throws TransactionException {
+  public void
+      resume_WithBeginningAndRollingBackTransaction_ShouldThrowTransactionNotFoundException()
+          throws TransactionException {
     // Arrange
     TwoPhaseCommitTransaction transaction = manager1.begin();
     transaction.rollback();
 
     // Act Assert
     assertThatThrownBy(() -> manager1.resume(transaction.getId()))
-        .isInstanceOf(IllegalStateException.class);
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
-  private void populateRecords(
+  @Test
+  public void operation_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    final TwoPhaseCommitTransactionManager manager1WithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager();
+    try {
+      // Arrange
+      populateRecords(manager1WithDefaultNamespace, namespace1, TABLE_1);
+      Get get =
+          Get.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .build();
+      Scan scan = Scan.newBuilder().table(TABLE_1).all().build();
+      Put put =
+          Put.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Delete delete =
+          Delete.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .build();
+      Mutation putAsMutation1 =
+          Put.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Mutation deleteAsMutation2 =
+          Delete.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+              .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                TwoPhaseCommitTransaction tx = manager1WithDefaultNamespace.start();
+                tx.get(get);
+                tx.scan(scan);
+                tx.put(put);
+                tx.delete(delete);
+                tx.mutate(ImmutableList.of(putAsMutation1, deleteAsMutation2));
+                tx.prepare();
+                tx.validate();
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    } finally {
+      if (manager1WithDefaultNamespace != null) {
+        manager1WithDefaultNamespace.close();
+      }
+    }
+  }
+
+  protected void populateRecords(
       TwoPhaseCommitTransactionManager manager, String namespaceName, String tableName)
       throws TransactionException {
     TwoPhaseCommitTransaction transaction = manager.begin();
@@ -1202,7 +1263,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     transaction.commit();
   }
 
-  private void populateSingleRecord(String namespaceName, String tableName)
+  protected void populateSingleRecord(String namespaceName, String tableName)
       throws TransactionException {
     Put put =
         new Put(Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0))
@@ -1225,7 +1286,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private List<Get> prepareGets(String namespaceName, String tableName) {
+  protected List<Get> prepareGets(String namespaceName, String tableName) {
     List<Get> gets = new ArrayList<>();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(
@@ -1246,14 +1307,14 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         .withEnd(new Key(ACCOUNT_TYPE, toType));
   }
 
-  private ScanAll prepareScanAll(String namespaceName, String tableName) {
+  protected ScanAll prepareScanAll(String namespaceName, String tableName) {
     return new ScanAll()
         .forNamespace(namespaceName)
         .forTable(tableName)
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private Put preparePut(int id, int type, String namespaceName, String tableName) {
+  protected Put preparePut(int id, int type, String namespaceName, String tableName) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Put(partitionKey, clusteringKey)
@@ -1262,7 +1323,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private List<Put> preparePuts(String namespaceName, String tableName) {
+  protected List<Put> preparePuts(String namespaceName, String tableName) {
     List<Put> puts = new ArrayList<>();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(
@@ -1273,7 +1334,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     return puts;
   }
 
-  private Delete prepareDelete(int id, int type, String namespaceName, String tableName) {
+  protected Delete prepareDelete(int id, int type, String namespaceName, String tableName) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Delete(partitionKey, clusteringKey)
@@ -1282,7 +1343,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private int getBalance(Result result) {
+  protected int getBalance(Result result) {
     Optional<Value<?>> balance = result.getValue(BALANCE);
     assertThat(balance).isPresent();
     return balance.get().getAsInt();

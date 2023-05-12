@@ -27,25 +27,25 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedTransactionAdminIntegrationTestBase {
 
-  private static final String TEST_NAME = "tx_admin";
-  private static final String NAMESPACE1 = "int_test_" + TEST_NAME + "1";
-  private static final String NAMESPACE2 = "int_test_" + TEST_NAME + "2";
-  private static final String NAMESPACE3 = "int_test_" + TEST_NAME + "3";
+  protected static final String TEST_NAME = "tx_admin";
+  protected static final String NAMESPACE1 = "int_test_" + TEST_NAME + "1";
+  protected static final String NAMESPACE2 = "int_test_" + TEST_NAME + "2";
+  protected static final String NAMESPACE3 = "int_test_" + TEST_NAME + "3";
   protected static final String TABLE1 = "test_table1";
-  private static final String TABLE2 = "test_table2";
-  private static final String TABLE3 = "test_table3";
-  private static final String TABLE4 = "test_table4";
-  private static final String COL_NAME1 = "c1";
-  private static final String COL_NAME2 = "c2";
-  private static final String COL_NAME3 = "c3";
-  private static final String COL_NAME4 = "c4";
-  private static final String COL_NAME5 = "c5";
-  private static final String COL_NAME6 = "c6";
-  private static final String COL_NAME7 = "c7";
-  private static final String COL_NAME8 = "c8";
-  private static final String COL_NAME9 = "c9";
-  private static final String COL_NAME10 = "c10";
-  private static final String COL_NAME11 = "c11";
+  protected static final String TABLE2 = "test_table2";
+  protected static final String TABLE3 = "test_table3";
+  protected static final String TABLE4 = "test_table4";
+  protected static final String COL_NAME1 = "c1";
+  protected static final String COL_NAME2 = "c2";
+  protected static final String COL_NAME3 = "c3";
+  protected static final String COL_NAME4 = "c4";
+  protected static final String COL_NAME5 = "c5";
+  protected static final String COL_NAME6 = "c6";
+  protected static final String COL_NAME7 = "c7";
+  protected static final String COL_NAME8 = "c8";
+  protected static final String COL_NAME9 = "c9";
+  protected static final String COL_NAME10 = "c10";
+  protected static final String COL_NAME11 = "c11";
 
   protected static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
@@ -67,12 +67,12 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
           .addSecondaryIndex(COL_NAME5)
           .addSecondaryIndex(COL_NAME6)
           .build();
-  private TransactionFactory transactionFactory;
-  private DistributedTransactionAdmin admin;
+  protected TransactionFactory transactionFactory;
+  protected DistributedTransactionAdmin admin;
 
-  private String namespace1;
-  private String namespace2;
-  private String namespace3;
+  protected String namespace1;
+  protected String namespace2;
+  protected String namespace3;
 
   @BeforeAll
   public void beforeAll() throws Exception {
@@ -119,7 +119,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @AfterAll
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     dropTables();
     admin.close();
   }
@@ -226,12 +226,12 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @Test
-  public void createNamespace_ForExistingNamespace_ShouldThrowExecutionException() {
+  public void createNamespace_ForExistingNamespace_ShouldThrowIllegalArgumentException() {
     // Arrange
 
     // Act Assert
     assertThatThrownBy(() -> admin.createNamespace(namespace1))
-        .isInstanceOf(ExecutionException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -261,12 +261,29 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @Test
-  public void dropNamespace_ForNonExistingNamespace_ShouldThrowExecutionException() {
+  public void dropNamespace_ForNonExistingNamespace_ShouldThrowIllegalArgumentException() {
     // Arrange
 
     // Act Assert
     assertThatThrownBy(() -> admin.dropNamespace(namespace3))
-        .isInstanceOf(ExecutionException.class);
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void dropNamespace_ForNonEmptyNamespace_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    try {
+      // Arrange
+      admin.createNamespace(namespace3);
+      admin.createTable(namespace3, TABLE1, TABLE_METADATA);
+
+      // Act Assert
+      assertThatThrownBy(() -> admin.dropNamespace(namespace3))
+          .isInstanceOf(IllegalArgumentException.class);
+    } finally {
+      admin.dropTable(namespace3, TABLE1, true);
+      admin.dropNamespace(namespace3, true);
+    }
   }
 
   @Test
@@ -295,12 +312,21 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @Test
-  public void createTable_ForExistingTable_ShouldThrowExecutionException() {
+  public void createTable_ForExistingTable_ShouldThrowIllegalArgumentException() {
     // Arrange
 
     // Act Assert
     assertThatThrownBy(() -> admin.createTable(namespace1, TABLE1, TABLE_METADATA))
-        .isInstanceOf(ExecutionException.class);
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void createTable_ForNonExistingNamespace_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.createTable(namespace3, TABLE1, TABLE_METADATA))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -330,12 +356,12 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @Test
-  public void dropTable_ForNonExistingTable_ShouldThrowExecutionException() {
+  public void dropTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
     // Arrange
 
     // Act Assert
     assertThatThrownBy(() -> admin.dropTable(namespace1, TABLE4))
-        .isInstanceOf(ExecutionException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -383,6 +409,15 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
         manager.close();
       }
     }
+  }
+
+  @Test
+  public void truncateTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.truncateTable(namespace1, TABLE4))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -498,6 +533,74 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @Test
+  public void createIndex_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.createIndex(namespace1, TABLE4, COL_NAME2, getCreationOptions()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void createIndex_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                admin.createIndex(namespace1, TABLE1, "non-existing_column", getCreationOptions()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void createIndex_ForAlreadyExistingIndex_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata metadata =
+          TableMetadata.newBuilder()
+              .addColumn(COL_NAME1, DataType.INT)
+              .addColumn(COL_NAME2, DataType.INT)
+              .addPartitionKey(COL_NAME1)
+              .addSecondaryIndex(COL_NAME2)
+              .build();
+      admin.createTable(namespace1, TABLE4, metadata, options);
+
+      // Act Assert
+      assertThatThrownBy(
+              () -> admin.createIndex(namespace1, TABLE4, COL_NAME2, getCreationOptions()))
+          .isInstanceOf(IllegalArgumentException.class);
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
+  }
+
+  @Test
+  public void createIndex_IfNotExists_ForAlreadyExistingIndex_ShouldNotThrowAnyException()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata metadata =
+          TableMetadata.newBuilder()
+              .addColumn(COL_NAME1, DataType.INT)
+              .addColumn(COL_NAME2, DataType.INT)
+              .addPartitionKey(COL_NAME1)
+              .addSecondaryIndex(COL_NAME2)
+              .build();
+      admin.createTable(namespace1, TABLE4, metadata, options);
+
+      // Act Assert
+      assertThatCode(
+              () -> admin.createIndex(namespace1, TABLE4, COL_NAME2, true, getCreationOptions()))
+          .doesNotThrowAnyException();
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
+  }
+
+  @Test
   public void dropIndex_ForAllDataTypesWithExistingData_ShouldDropIndexCorrectly()
       throws Exception {
     DistributedTransactionManager transactionManager = null;
@@ -577,6 +680,33 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @Test
+  public void dropIndex_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.dropIndex(namespace1, "non-existing-table", COL_NAME2))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void dropIndex_ForNonExistingIndex_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.dropIndex(namespace1, TABLE1, COL_NAME2))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void dropIndex_IfExists_ForNonExistingIndex_ShouldNotThrowAnyException() {
+    // Arrange
+
+    // Act Assert
+    assertThatCode(() -> admin.dropIndex(namespace1, TABLE1, COL_NAME2, true))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
   public void addNewColumnToTable_AddColumnForEachExistingDataType_ShouldAddNewColumnsCorrectly()
       throws ExecutionException {
     try {
@@ -613,6 +743,105 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
+    }
+  }
+
+  @Test
+  public void addNewColumnToTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> admin.addNewColumnToTable(namespace1, TABLE4, COL_NAME2, DataType.TEXT))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void addNewColumnToTable_ForAlreadyExistingColumn_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> admin.addNewColumnToTable(namespace1, TABLE1, COL_NAME2, DataType.TEXT))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void createCoordinatorTables_ShouldCreateCoordinatorTablesCorrectly()
+      throws ExecutionException {
+    // Arrange
+    admin.dropCoordinatorTables();
+
+    // Act
+    admin.createCoordinatorTables(getCreationOptions());
+
+    // Assert
+    assertThat(admin.coordinatorTablesExist()).isTrue();
+  }
+
+  @Test
+  public void
+      createCoordinatorTables_CoordinatorTablesAlreadyExist_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.createCoordinatorTables(getCreationOptions()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      createCoordinatorTables_IfNotExist_CoordinatorTablesAlreadyExist_ShouldNotThrowAnyException() {
+    // Arrange
+
+    // Act Assert
+    assertThatCode(() -> admin.createCoordinatorTables(true, getCreationOptions()))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  public void dropCoordinatorTables_ShouldDropCoordinatorTablesCorrectly()
+      throws ExecutionException {
+    try {
+      // Arrange
+
+      // Act
+      admin.dropCoordinatorTables();
+
+      // Assert
+      assertThat(admin.coordinatorTablesExist()).isFalse();
+    } finally {
+      admin.createCoordinatorTables(true, getCreationOptions());
+    }
+  }
+
+  @Test
+  public void
+      dropCoordinatorTables_CoordinatorTablesDoNotExist_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    try {
+      // Arrange
+      admin.dropCoordinatorTables();
+
+      // Act Assert
+      assertThatThrownBy(() -> admin.dropCoordinatorTables())
+          .isInstanceOf(IllegalArgumentException.class);
+    } finally {
+      admin.createCoordinatorTables(true, getCreationOptions());
+    }
+  }
+
+  @Test
+  public void dropCoordinatorTables_IfExist_CoordinatorTablesDoNotExist_ShouldNotThrowAnyException()
+      throws ExecutionException {
+    try {
+      // Arrange
+      admin.dropCoordinatorTables();
+
+      // Act Assert
+      assertThatCode(() -> admin.dropCoordinatorTables(true)).doesNotThrowAnyException();
+    } finally {
+      admin.createCoordinatorTables(true, getCreationOptions());
     }
   }
 

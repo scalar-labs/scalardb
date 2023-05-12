@@ -49,7 +49,7 @@ public class TableMetadataManager {
    *
    * @param operation an operation
    * @return a table metadata. null if the table is not found.
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   public TableMetadata getTableMetadata(Operation operation) throws ExecutionException {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
@@ -64,7 +64,7 @@ public class TableMetadataManager {
    * @param namespace a namespace to retrieve
    * @param table a table to retrieve
    * @return a table metadata. null if the table is not found.
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     try {

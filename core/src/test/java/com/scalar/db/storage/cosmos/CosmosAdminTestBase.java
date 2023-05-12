@@ -884,40 +884,6 @@ public abstract class CosmosAdminTestBase {
   }
 
   @Test
-  public void addNewColumnToTable_WithAlreadyExistingColumn_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    String namespace = "ns";
-    String table = "table";
-    String column = "c1";
-    String fullTableName = getFullTableName(namespace, table);
-    @SuppressWarnings("unchecked")
-    CosmosItemResponse<CosmosTableMetadata> response = mock(CosmosItemResponse.class);
-
-    when(client.getDatabase(metadataDatabaseName)).thenReturn(database);
-    when(database.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER)).thenReturn(container);
-    when(container.readItem(
-            anyString(),
-            any(PartitionKey.class),
-            ArgumentMatchers.<Class<CosmosTableMetadata>>any()))
-        .thenReturn(response);
-
-    CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
-    cosmosTableMetadata.setColumns(ImmutableMap.of(column, "text"));
-    cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList(column));
-    cosmosTableMetadata.setSecondaryIndexNames(Collections.emptySet());
-    cosmosTableMetadata.setClusteringKeyNames(Collections.emptyList());
-
-    when(response.getItem()).thenReturn(cosmosTableMetadata);
-
-    // Act Assert
-    assertThatThrownBy(() -> admin.addNewColumnToTable(namespace, table, column, DataType.TEXT))
-        .isInstanceOf(IllegalArgumentException.class);
-
-    verify(container)
-        .readItem(fullTableName, new PartitionKey(fullTableName), CosmosTableMetadata.class);
-  }
-
-  @Test
   public void addNewColumnToTable_ShouldWorkProperly() throws ExecutionException {
     // Arrange
     String namespace = "ns";

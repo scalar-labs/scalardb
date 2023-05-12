@@ -22,6 +22,9 @@ public class ServerConfigTest {
     assertThat(config.getPort()).isEqualTo(ServerConfig.DEFAULT_PORT);
     assertThat(config.getPrometheusExporterPort())
         .isEqualTo(ServerConfig.DEFAULT_PROMETHEUS_EXPORTER_PORT);
+    assertThat(config.getGrpcMaxInboundMessageSize()).isNotPresent();
+    assertThat(config.getGrpcMaxInboundMetadataSize()).isNotPresent();
+    assertThat(config.getDecommissioningDurationSecs()).isEqualTo(30);
   }
 
   @Test
@@ -68,5 +71,36 @@ public class ServerConfigTest {
 
     // Act Assert
     assertThatThrownBy(() -> new ServerConfig(props)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithMaxInboundMessageSizeAndMaxInboundMetadataSizeGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(ServerConfig.GRPC_MAX_INBOUND_MESSAGE_SIZE, "1000");
+    props.setProperty(ServerConfig.GRPC_MAX_INBOUND_METADATA_SIZE, "2000");
+
+    // Act
+    ServerConfig config = new ServerConfig(props);
+
+    // Assert
+    assertThat(config.getGrpcMaxInboundMessageSize()).isPresent();
+    assertThat(config.getGrpcMaxInboundMessageSize().get()).isEqualTo(1000);
+    assertThat(config.getGrpcMaxInboundMetadataSize()).isPresent();
+    assertThat(config.getGrpcMaxInboundMetadataSize().get()).isEqualTo(2000);
+  }
+
+  @Test
+  public void constructor_DecommissioningDurationSecsGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties properties = new Properties();
+    properties.setProperty(ServerConfig.DECOMMISSIONING_DURATION_SECS, "60");
+
+    // Act
+    ServerConfig config = new ServerConfig(properties);
+
+    // Assert
+    assertThat(config.getDecommissioningDurationSecs()).isEqualTo(60);
   }
 }

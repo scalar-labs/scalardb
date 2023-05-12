@@ -30,59 +30,6 @@ private static final long serialVersionUID = 0L;
   getUnknownFields() {
     return this.unknownFields;
   }
-  private UpgradeRequest(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
-    this();
-    if (extensionRegistry == null) {
-      throw new java.lang.NullPointerException();
-    }
-    int mutable_bitField0_ = 0;
-    com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
-    try {
-      boolean done = false;
-      while (!done) {
-        int tag = input.readTag();
-        switch (tag) {
-          case 0:
-            done = true;
-            break;
-          case 10: {
-            if (!((mutable_bitField0_ & 0x00000001) != 0)) {
-              options_ = com.google.protobuf.MapField.newMapField(
-                  OptionsDefaultEntryHolder.defaultEntry);
-              mutable_bitField0_ |= 0x00000001;
-            }
-            com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
-            options__ = input.readMessage(
-                OptionsDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
-            options_.getMutableMap().put(
-                options__.getKey(), options__.getValue());
-            break;
-          }
-          default: {
-            if (!parseUnknownField(
-                input, unknownFields, extensionRegistry, tag)) {
-              done = true;
-            }
-            break;
-          }
-        }
-      }
-    } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-      throw e.setUnfinishedMessage(this);
-    } catch (com.google.protobuf.UninitializedMessageException e) {
-      throw e.asInvalidProtocolBufferException().setUnfinishedMessage(this);
-    } catch (java.io.IOException e) {
-      throw new com.google.protobuf.InvalidProtocolBufferException(
-          e).setUnfinishedMessage(this);
-    } finally {
-      this.unknownFields = unknownFields.build();
-      makeExtensionsImmutable();
-    }
-  }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
     return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_UpgradeRequest_descriptor;
@@ -120,6 +67,7 @@ private static final long serialVersionUID = 0L;
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "");
   }
+  @SuppressWarnings("serial")
   private com.google.protobuf.MapField<
       java.lang.String, java.lang.String> options_;
   private com.google.protobuf.MapField<java.lang.String, java.lang.String>
@@ -130,14 +78,12 @@ private static final long serialVersionUID = 0L;
     }
     return options_;
   }
-
   public int getOptionsCount() {
     return internalGetOptions().getMap().size();
   }
   /**
    * <code>map&lt;string, string&gt; options = 1;</code>
    */
-
   @java.lang.Override
   public boolean containsOptions(
       java.lang.String key) {
@@ -156,7 +102,6 @@ private static final long serialVersionUID = 0L;
    * <code>map&lt;string, string&gt; options = 1;</code>
    */
   @java.lang.Override
-
   public java.util.Map<java.lang.String, java.lang.String> getOptionsMap() {
     return internalGetOptions().getMap();
   }
@@ -164,10 +109,11 @@ private static final long serialVersionUID = 0L;
    * <code>map&lt;string, string&gt; options = 1;</code>
    */
   @java.lang.Override
-
-  public java.lang.String getOptionsOrDefault(
+  public /* nullable */
+java.lang.String getOptionsOrDefault(
       java.lang.String key,
-      java.lang.String defaultValue) {
+      /* nullable */
+java.lang.String defaultValue) {
     if (key == null) { throw new NullPointerException("map key"); }
     java.util.Map<java.lang.String, java.lang.String> map =
         internalGetOptions().getMap();
@@ -177,7 +123,6 @@ private static final long serialVersionUID = 0L;
    * <code>map&lt;string, string&gt; options = 1;</code>
    */
   @java.lang.Override
-
   public java.lang.String getOptionsOrThrow(
       java.lang.String key) {
     if (key == null) { throw new NullPointerException("map key"); }
@@ -209,7 +154,7 @@ private static final long serialVersionUID = 0L;
         internalGetOptions(),
         OptionsDefaultEntryHolder.defaultEntry,
         1);
-    unknownFields.writeTo(output);
+    getUnknownFields().writeTo(output);
   }
 
   @java.lang.Override
@@ -228,7 +173,7 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(1, options__);
     }
-    size += unknownFields.getSerializedSize();
+    size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
   }
@@ -245,7 +190,7 @@ private static final long serialVersionUID = 0L;
 
     if (!internalGetOptions().equals(
         other.internalGetOptions())) return false;
-    if (!unknownFields.equals(other.unknownFields)) return false;
+    if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
 
@@ -260,7 +205,7 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + OPTIONS_FIELD_NUMBER;
       hash = (53 * hash) + internalGetOptions().hashCode();
     }
-    hash = (29 * hash) + unknownFields.hashCode();
+    hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
   }
@@ -399,22 +344,18 @@ private static final long serialVersionUID = 0L;
 
     // Construct using com.scalar.db.rpc.UpgradeRequest.newBuilder()
     private Builder() {
-      maybeForceBuilderInitialization();
+
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
       super(parent);
-      maybeForceBuilderInitialization();
-    }
-    private void maybeForceBuilderInitialization() {
-      if (com.google.protobuf.GeneratedMessageV3
-              .alwaysUseFieldBuilders) {
-      }
+
     }
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       internalGetMutableOptions().clear();
       return this;
     }
@@ -442,11 +383,17 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.UpgradeRequest buildPartial() {
       com.scalar.db.rpc.UpgradeRequest result = new com.scalar.db.rpc.UpgradeRequest(this);
-      int from_bitField0_ = bitField0_;
-      result.options_ = internalGetOptions();
-      result.options_.makeImmutable();
+      if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.UpgradeRequest result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.options_ = internalGetOptions();
+        result.options_.makeImmutable();
+      }
     }
 
     @java.lang.Override
@@ -495,7 +442,8 @@ private static final long serialVersionUID = 0L;
       if (other == com.scalar.db.rpc.UpgradeRequest.getDefaultInstance()) return this;
       internalGetMutableOptions().mergeFrom(
           other.internalGetOptions());
-      this.mergeUnknownFields(other.unknownFields);
+      bitField0_ |= 0x00000001;
+      this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
     }
@@ -510,17 +458,39 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      com.scalar.db.rpc.UpgradeRequest parsedMessage = null;
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
       try {
-        parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 10: {
+              com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
+              options__ = input.readMessage(
+                  OptionsDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
+              internalGetMutableOptions().getMutableMap().put(
+                  options__.getKey(), options__.getValue());
+              bitField0_ |= 0x00000001;
+              break;
+            } // case 10
+            default: {
+              if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                done = true; // was an endgroup tag
+              }
+              break;
+            } // default:
+          } // switch (tag)
+        } // while (!done)
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        parsedMessage = (com.scalar.db.rpc.UpgradeRequest) e.getUnfinishedMessage();
         throw e.unwrapIOException();
       } finally {
-        if (parsedMessage != null) {
-          mergeFrom(parsedMessage);
-        }
-      }
+        onChanged();
+      } // finally
       return this;
     }
     private int bitField0_;
@@ -528,7 +498,7 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.MapField<
         java.lang.String, java.lang.String> options_;
     private com.google.protobuf.MapField<java.lang.String, java.lang.String>
-    internalGetOptions() {
+        internalGetOptions() {
       if (options_ == null) {
         return com.google.protobuf.MapField.emptyMapField(
             OptionsDefaultEntryHolder.defaultEntry);
@@ -536,8 +506,7 @@ private static final long serialVersionUID = 0L;
       return options_;
     }
     private com.google.protobuf.MapField<java.lang.String, java.lang.String>
-    internalGetMutableOptions() {
-      onChanged();;
+        internalGetMutableOptions() {
       if (options_ == null) {
         options_ = com.google.protobuf.MapField.newMapField(
             OptionsDefaultEntryHolder.defaultEntry);
@@ -545,16 +514,16 @@ private static final long serialVersionUID = 0L;
       if (!options_.isMutable()) {
         options_ = options_.copy();
       }
+      bitField0_ |= 0x00000001;
+      onChanged();
       return options_;
     }
-
     public int getOptionsCount() {
       return internalGetOptions().getMap().size();
     }
     /**
      * <code>map&lt;string, string&gt; options = 1;</code>
      */
-
     @java.lang.Override
     public boolean containsOptions(
         java.lang.String key) {
@@ -573,7 +542,6 @@ private static final long serialVersionUID = 0L;
      * <code>map&lt;string, string&gt; options = 1;</code>
      */
     @java.lang.Override
-
     public java.util.Map<java.lang.String, java.lang.String> getOptionsMap() {
       return internalGetOptions().getMap();
     }
@@ -581,10 +549,11 @@ private static final long serialVersionUID = 0L;
      * <code>map&lt;string, string&gt; options = 1;</code>
      */
     @java.lang.Override
-
-    public java.lang.String getOptionsOrDefault(
+    public /* nullable */
+java.lang.String getOptionsOrDefault(
         java.lang.String key,
-        java.lang.String defaultValue) {
+        /* nullable */
+java.lang.String defaultValue) {
       if (key == null) { throw new NullPointerException("map key"); }
       java.util.Map<java.lang.String, java.lang.String> map =
           internalGetOptions().getMap();
@@ -594,7 +563,6 @@ private static final long serialVersionUID = 0L;
      * <code>map&lt;string, string&gt; options = 1;</code>
      */
     @java.lang.Override
-
     public java.lang.String getOptionsOrThrow(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
@@ -605,8 +573,8 @@ private static final long serialVersionUID = 0L;
       }
       return map.get(key);
     }
-
     public Builder clearOptions() {
+      bitField0_ = (bitField0_ & ~0x00000001);
       internalGetMutableOptions().getMutableMap()
           .clear();
       return this;
@@ -614,7 +582,6 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>map&lt;string, string&gt; options = 1;</code>
      */
-
     public Builder removeOptions(
         java.lang.String key) {
       if (key == null) { throw new NullPointerException("map key"); }
@@ -627,7 +594,8 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Deprecated
     public java.util.Map<java.lang.String, java.lang.String>
-    getMutableOptions() {
+        getMutableOptions() {
+      bitField0_ |= 0x00000001;
       return internalGetMutableOptions().getMutableMap();
     }
     /**
@@ -637,22 +605,20 @@ private static final long serialVersionUID = 0L;
         java.lang.String key,
         java.lang.String value) {
       if (key == null) { throw new NullPointerException("map key"); }
-      if (value == null) {
-  throw new NullPointerException("map value");
-}
-
+      if (value == null) { throw new NullPointerException("map value"); }
       internalGetMutableOptions().getMutableMap()
           .put(key, value);
+      bitField0_ |= 0x00000001;
       return this;
     }
     /**
      * <code>map&lt;string, string&gt; options = 1;</code>
      */
-
     public Builder putAllOptions(
         java.util.Map<java.lang.String, java.lang.String> values) {
       internalGetMutableOptions().getMutableMap()
           .putAll(values);
+      bitField0_ |= 0x00000001;
       return this;
     }
     @java.lang.Override
@@ -688,7 +654,18 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return new UpgradeRequest(input, extensionRegistry);
+      Builder builder = newBuilder();
+      try {
+        builder.mergeFrom(input, extensionRegistry);
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(builder.buildPartial());
+      } catch (com.google.protobuf.UninitializedMessageException e) {
+        throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(e)
+            .setUnfinishedMessage(builder.buildPartial());
+      }
+      return builder.buildPartial();
     }
   };
 

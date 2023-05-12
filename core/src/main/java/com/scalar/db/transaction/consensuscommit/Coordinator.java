@@ -118,8 +118,7 @@ public class Coordinator {
         storage.put(put);
         break;
       } catch (NoMutationException e) {
-        logger.warn("mutation seems applied already", e);
-        throw new CoordinatorException("mutation seems applied already.", e);
+        throw new CoordinatorConflictException("mutation seems applied already.", e);
       } catch (ExecutionException e) {
         logger.warn("putting state in coordinator failed.", e);
       }

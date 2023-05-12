@@ -24,9 +24,9 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.DecoratedDistributedTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -35,7 +35,6 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.transaction.common.WrappedDistributedTransaction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -94,10 +93,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     properties.setProperty(
         ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + TEST_NAME);
 
-    // Async commit can cause unexpected lazy recoveries, which can fail the tests. So we disable it
-    // for now.
-    properties.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
-
     StorageFactory factory = StorageFactory.create(properties);
     admin = factory.getStorageAdmin();
     databaseConfig = new DatabaseConfig(properties);
@@ -144,7 +139,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @BeforeEach
-  public void setUp() throws ExecutionException {
+  public void setUp() throws Exception {
     truncateTables();
     storage = spy(originalStorage);
     coordinator = spy(new Coordinator(storage, consensusCommitConfig));
@@ -171,7 +166,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @AfterAll
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     dropTables();
     consensusCommitAdmin.close();
     originalStorage.close();
@@ -522,7 +517,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -599,7 +594,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -890,7 +885,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -958,7 +953,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((WrappedDistributedTransaction) manager.begin()).getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -2219,9 +2214,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     Throwable thrown = catchThrowable(transaction1::commit);
 
     // Assert
-    assertThat(thrown)
-        .isInstanceOf(CommitConflictException.class)
-        .hasCauseInstanceOf(NoMutationException.class);
+    assertThat(thrown).isInstanceOf(CommitConflictException.class);
     transaction = manager.begin();
     Optional<Result> result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     transaction.commit();
@@ -2260,9 +2253,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     Throwable thrown = catchThrowable(transaction1::commit);
 
     // Assert
-    assertThat(thrown)
-        .isInstanceOf(CommitConflictException.class)
-        .hasCauseInstanceOf(NoMutationException.class);
+    assertThat(thrown).isInstanceOf(CommitConflictException.class);
     transaction = manager.begin();
     Optional<Result> result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     transaction.commit();

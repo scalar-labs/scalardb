@@ -4,7 +4,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.List;
@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface SelectQuery extends Query {
 
   class Builder {
-    final RdbEngine rdbEngine;
+    final RdbEngineStrategy rdbEngine;
     final List<String> projections;
     String schema;
     String table;
@@ -31,7 +31,7 @@ public interface SelectQuery extends Query {
     Optional<String> indexedColumn = Optional.empty();
     boolean isConditionalQuery;
 
-    Builder(RdbEngine rdbEngine, List<String> projections) {
+    Builder(RdbEngineStrategy rdbEngine, List<String> projections) {
       this.rdbEngine = rdbEngine;
       this.projections = projections;
     }
@@ -131,17 +131,7 @@ public interface SelectQuery extends Query {
 
     public SelectQuery build() {
       if (limit > 0) {
-        switch (rdbEngine) {
-          case MYSQL:
-          case POSTGRESQL:
-            return new SelectWithLimitQuery(this, limit);
-          case ORACLE:
-            return new SelectWithFetchFirstNRowsOnly(this, limit);
-          case SQL_SERVER:
-            return new SelectWithTop(this, limit);
-          default:
-            throw new AssertionError("invalid rdb engine: " + rdbEngine);
-        }
+        return rdbEngine.buildSelectQuery(this, limit);
       }
       return new SimpleSelectQuery(this);
     }

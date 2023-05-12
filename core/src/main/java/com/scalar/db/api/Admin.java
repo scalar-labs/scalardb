@@ -15,7 +15,8 @@ public interface Admin {
    *
    * @param namespace the namespace to create
    * @param options namespace creation options
-   * @throws ExecutionException if the operation failed
+   * @throws IllegalArgumentException if the namespace already exists
+   * @throws ExecutionException if the operation fails
    */
   void createNamespace(String namespace, Map<String, String> options) throws ExecutionException;
 
@@ -23,11 +24,11 @@ public interface Admin {
    * Creates a namespace.
    *
    * @param namespace the namespace to create
-   * @param options namespace creation options
    * @param ifNotExists if set to true, the namespace will be created only if it does not exist
-   *     already. If set to false, it will try to create the namespace but may throw an exception if
-   *     it already exists
-   * @throws ExecutionException if the namespace already exists among other
+   *     already. If set to false, it will throw an exception if it already exists
+   * @param options namespace creation options
+   * @throws IllegalArgumentException if the namespace already exists if ifNotExists is set to false
+   * @throws ExecutionException if the operation fails
    */
   default void createNamespace(String namespace, boolean ifNotExists, Map<String, String> options)
       throws ExecutionException {
@@ -42,9 +43,9 @@ public interface Admin {
    *
    * @param namespace the namespace to create
    * @param ifNotExists if set to true, the namespace will be created only if it does not exist
-   *     already. If set to false, it will try to create the namespace but may throw an exception if
-   *     it already exists
-   * @throws ExecutionException if the operation failed
+   *     already. If set to false, it will throw an exception if it already exists
+   * @throws IllegalArgumentException if the namespace already exists if ifNotExists is set to false
+   * @throws ExecutionException if the operation fails
    */
   default void createNamespace(String namespace, boolean ifNotExists) throws ExecutionException {
     createNamespace(namespace, ifNotExists, Collections.emptyMap());
@@ -54,7 +55,8 @@ public interface Admin {
    * Creates a namespace.
    *
    * @param namespace the namespace to create
-   * @throws ExecutionException if the namespace already exits among other
+   * @throws IllegalArgumentException if the namespace already exists
+   * @throws ExecutionException if the operation fails
    */
   default void createNamespace(String namespace) throws ExecutionException {
     createNamespace(namespace, Collections.emptyMap());
@@ -67,7 +69,8 @@ public interface Admin {
    * @param table a table to create
    * @param metadata a metadata to create
    * @param options options to create
-   * @throws ExecutionException if the operation failed
+   * @throws IllegalArgumentException if the namespace does not exist or the table already exists
+   * @throws ExecutionException if the operation fails
    */
   void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
@@ -80,10 +83,11 @@ public interface Admin {
    * @param table a table to create
    * @param metadata a metadata to create
    * @param ifNotExists if set to true, the table will be created only if it does not exist already.
-   *     If set to false, it will try to create the table but may throw an exception if it already
-   *     exists
+   *     If set to false, it will throw an exception if it already exists
    * @param options options to create
-   * @throws ExecutionException if the operation failed
+   * @throws IllegalArgumentException if the namespace does not exist. Or if the table already
+   *     exists if ifNotExists is set to false
+   * @throws ExecutionException if the operation fails
    */
   default void createTable(
       String namespace,
@@ -105,9 +109,10 @@ public interface Admin {
    * @param table a table to create
    * @param metadata a metadata to create
    * @param ifNotExists if set to true, the table will be created only if it does not exist already.
-   *     If set to false, it will try to create the table but may throw an exception if it already
-   *     exists
-   * @throws ExecutionException if the operation failed
+   *     If set to false, it will throw an exception if it already exists
+   * @throws IllegalArgumentException if the namespace does not exist. Or if the table already
+   *     exists if ifNotExists is set to false
+   * @throws ExecutionException if the operation fails
    */
   default void createTable(
       String namespace, String table, TableMetadata metadata, boolean ifNotExists)
@@ -121,7 +126,8 @@ public interface Admin {
    * @param namespace an existing namespace
    * @param table a table to create
    * @param metadata a metadata to create
-   * @throws ExecutionException if the operation failed
+   * @throws IllegalArgumentException if the namespace does not exist or the table already exists
+   * @throws ExecutionException if the operation fails
    */
   default void createTable(String namespace, String table, TableMetadata metadata)
       throws ExecutionException {
@@ -133,7 +139,8 @@ public interface Admin {
    *
    * @param namespace a namespace to drop
    * @param table a table to drop
-   * @throws ExecutionException if the operation failed
+   * @throws IllegalArgumentException if the table does not exist
+   * @throws ExecutionException if the operation fails
    */
   void dropTable(String namespace, String table) throws ExecutionException;
 
@@ -143,8 +150,9 @@ public interface Admin {
    * @param namespace a namespace to drop
    * @param table a table to drop
    * @param ifExists if set to true, the table will be dropped only if it exists. If set to false,
-   *     it will try to drop the table but may throw an exception if it does not exist
-   * @throws ExecutionException if the operation failed
+   *     it will throw an exception if it does not exist
+   * @throws IllegalArgumentException if the table does not exist if ifExists is set to false
+   * @throws ExecutionException if the operation fails
    */
   default void dropTable(String namespace, String table, boolean ifExists)
       throws ExecutionException {
@@ -158,7 +166,8 @@ public interface Admin {
    * Drops the specified namespace.
    *
    * @param namespace a namespace to drop
-   * @throws ExecutionException if the operation failed
+   * @throws IllegalArgumentException if the namespace does not exist or the namespace is not empty
+   * @throws ExecutionException if the operation fails
    */
   void dropNamespace(String namespace) throws ExecutionException;
 
@@ -167,8 +176,10 @@ public interface Admin {
    *
    * @param namespace a namespace to drop
    * @param ifExists if set to true, the namespace will be dropped only if it exists. If set to
-   *     false, it will try to drop the namespace but may throw an exception if it does not exist
-   * @throws ExecutionException if the operation failed
+   *     false, it will throw an exception if it does not exist
+   * @throws IllegalArgumentException if the namespace does not exist if ifExists is set to false.
+   *     Or if the namespace is not empty
+   * @throws ExecutionException if the operation fails
    */
   default void dropNamespace(String namespace, boolean ifExists) throws ExecutionException {
     if (ifExists && !namespaceExists(namespace)) {
@@ -182,7 +193,8 @@ public interface Admin {
    *
    * @param namespace a namespace to truncate
    * @param table a table to truncate
-   * @throws ExecutionException if the operation failed
+   * @throws IllegalArgumentException if the table does not exist
+   * @throws ExecutionException if the operation fails
    */
   void truncateTable(String namespace, String table) throws ExecutionException;
 
@@ -193,7 +205,9 @@ public interface Admin {
    * @param table a table to create a secondary index
    * @param columnName a name of the target column
    * @param options options to create a secondary index
-   * @throws ExecutionException if the operation failed
+   * @throws IllegalArgumentException if the table does not exist or the column does not exist or
+   *     the index already exists
+   * @throws ExecutionException if the operation fails
    */
   void createIndex(String namespace, String table, String columnName, Map<String, String> options)
       throws ExecutionException;
@@ -205,10 +219,11 @@ public interface Admin {
    * @param table a table to create a secondary index
    * @param columnName a name of the target column
    * @param ifNotExists if set to true, the secondary index will be created only if it does not
-   *     exist already. If set to false, it will try to create the secondary index but may throw an
-   *     exception if it already exists
+   *     exist already. If set to false, it will throw an exception if it already exists
    * @param options options to create a secondary index
-   * @throws ExecutionException if the operation failed
+   * @throws IllegalArgumentException if the table does not exist or the column does not exist. Or
+   *     the index already exists if ifNotExists is set to false
+   * @throws ExecutionException if the operation fails
    */
   default void createIndex(
       String namespace,
@@ -230,9 +245,10 @@ public interface Admin {
    * @param table a table to create a secondary index
    * @param columnName a name of the target column
    * @param ifNotExists if set to true, the secondary index will be created only if it does not
-   *     exist already. If set to false, it will try to create the secondary index but may throw an
-   *     exception if it already exists
-   * @throws ExecutionException if the operation failed
+   *     exist already. If set to false, it will throw an exception if it already exists
+   * @throws IllegalArgumentException if the table does not exist or the column does not exist. Or
+   *     the index already exists if ifNotExists is set to false
+   * @throws ExecutionException if the operation fails
    */
   default void createIndex(String namespace, String table, String columnName, boolean ifNotExists)
       throws ExecutionException {
@@ -245,7 +261,9 @@ public interface Admin {
    * @param namespace a namespace to create a secondary index
    * @param table a table to create a secondary index
    * @param columnName a name of the target column
-   * @throws ExecutionException if the operation failed
+   * @throws IllegalArgumentException if the table does not exist or the column does not exist or
+   *     the index already exists
+   * @throws ExecutionException if the operation fails
    */
   default void createIndex(String namespace, String table, String columnName)
       throws ExecutionException {
@@ -258,7 +276,8 @@ public interface Admin {
    * @param namespace a namespace to drop a secondary index
    * @param table a table to drop a secondary index
    * @param columnName a name of the target column
-   * @throws ExecutionException if the operation failed
+   * @throws IllegalArgumentException if the table does not exist or the index does not exist
+   * @throws ExecutionException if the operation fails
    */
   void dropIndex(String namespace, String table, String columnName) throws ExecutionException;
 
@@ -269,9 +288,10 @@ public interface Admin {
    * @param table a table to drop a secondary index
    * @param columnName a name of the target column
    * @param ifExists if set to true, the secondary index will be dropped only if it exists. If set
-   *     to false, it will try to drop the secondary index but may throw an exception if it does not
-   *     exist
-   * @throws ExecutionException if the operation failed
+   *     to false, it will throw an exception if it does not exist
+   * @throws IllegalArgumentException if the table does not exist. Or if the index does not exist if
+   *     ifExists is set to false
+   * @throws ExecutionException if the operation fails
    */
   default void dropIndex(String namespace, String table, String columnName, boolean ifExists)
       throws ExecutionException {
@@ -288,7 +308,7 @@ public interface Admin {
    * @param table a table
    * @param columnName a name of the target column
    * @return true if the secondary index exists, false otherwise
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   default boolean indexExists(String namespace, String table, String columnName)
       throws ExecutionException {
@@ -305,7 +325,7 @@ public interface Admin {
    * @param namespace a namespace to retrieve
    * @param table a table to retrieve
    * @return the table metadata of the specified table. null if the table is not found.
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   @Nullable
   TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException;
@@ -315,7 +335,7 @@ public interface Admin {
    *
    * @param namespace a namespace
    * @return a set of table names, an empty set if the namespace doesn't exist
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   Set<String> getNamespaceTableNames(String namespace) throws ExecutionException;
 
@@ -324,7 +344,7 @@ public interface Admin {
    *
    * @param namespace a namespace
    * @return true if the namespace exists, false otherwise
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   boolean namespaceExists(String namespace) throws ExecutionException;
 
@@ -334,20 +354,21 @@ public interface Admin {
    * @param namespace a namespace
    * @param table a table
    * @return true if the table exists, false otherwise
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   default boolean tableExists(String namespace, String table) throws ExecutionException {
     return getNamespaceTableNames(namespace).contains(table);
   }
 
   /**
-   * Repair a table which may be in an unknown state
+   * Repair a table which may be in an unknown state.
    *
    * @param namespace an existing namespace
    * @param table an existing table
    * @param metadata the metadata associated to the table to repair
    * @param options options to repair
-   * @throws ExecutionException if the operation failed
+   * @throws IllegalArgumentException if the table does not exist
+   * @throws ExecutionException if the operation fails
    */
   void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
@@ -376,7 +397,8 @@ public interface Admin {
    * @param table the table name
    * @param columnName the name of the new column
    * @param columnType the type of the new column
-   * @throws ExecutionException if the operation failed
+   * @throws IllegalArgumentException if the table does not exist or the column already exists
+   * @throws ExecutionException if the operation fails
    */
   void addNewColumnToTable(String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException;
@@ -385,7 +407,7 @@ public interface Admin {
    * Returns the names of the existing namespaces created through Scalar DB.
    *
    * @return a set of namespaces names, an empty set if no namespaces exist
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   Set<String> getNamespaceNames() throws ExecutionException;
 
@@ -394,7 +416,7 @@ public interface Admin {
    * Typically, you will be requested, as indicated on the release notes, to run this method after
    * updating the Scalar DB version of your application environment.
    *
-   * @throws ExecutionException if the operation failed
+   * @throws ExecutionException if the operation fails
    */
   void upgrade(Map<String, String> options) throws ExecutionException;
 }

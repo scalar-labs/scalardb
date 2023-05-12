@@ -6,11 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Scan.Ordering;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
@@ -28,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.IntStream;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,15 +40,15 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedTransactionIntegrationTestBase {
 
-  private static final String NAMESPACE_BASE_NAME = "int_test_";
+  protected static final String NAMESPACE_BASE_NAME = "int_test_";
   protected static final String TABLE = "test_table";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String ACCOUNT_TYPE = "account_type";
   protected static final String BALANCE = "balance";
-  private static final String SOME_COLUMN = "some_column";
+  protected static final String SOME_COLUMN = "some_column";
   protected static final int INITIAL_BALANCE = 1000;
-  private static final int NUM_ACCOUNTS = 4;
-  private static final int NUM_TYPES = 4;
+  protected static final int NUM_ACCOUNTS = 4;
+  protected static final int NUM_TYPES = 4;
   protected static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
           .addColumn(ACCOUNT_ID, DataType.INT)
@@ -56,8 +59,8 @@ public abstract class DistributedTransactionIntegrationTestBase {
           .addClusteringKey(ACCOUNT_TYPE)
           .addSecondaryIndex(SOME_COLUMN)
           .build();
-  private DistributedTransactionAdmin admin;
-  private DistributedTransactionManager manager;
+  protected DistributedTransactionAdmin admin;
+  protected DistributedTransactionManager manager;
   protected String namespace;
 
   @BeforeAll
@@ -94,13 +97,13 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @BeforeEach
-  public void setUp() throws ExecutionException {
+  public void setUp() throws Exception {
     admin.truncateTable(namespace, TABLE);
     admin.truncateCoordinatorTables();
   }
 
   @AfterAll
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     dropTables();
     admin.close();
     manager.close();
@@ -370,19 +373,17 @@ public abstract class DistributedTransactionIntegrationTestBase {
     List<ExpectedResult> expectedResults = new ArrayList<>();
     expectedResults.add(
         new ExpectedResultBuilder()
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
-            .nonKeyColumns(
-                ImmutableList.of(
-                    IntColumn.of(BALANCE, INITIAL_BALANCE), IntColumn.of(SOME_COLUMN, 2)))
+            .column(IntColumn.of(ACCOUNT_ID, 1))
+            .column(IntColumn.of(ACCOUNT_TYPE, 2))
+            .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
+            .column(IntColumn.of(SOME_COLUMN, 2))
             .build());
     expectedResults.add(
         new ExpectedResultBuilder()
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
-            .nonKeyColumns(
-                ImmutableList.of(
-                    IntColumn.of(BALANCE, INITIAL_BALANCE), IntColumn.of(SOME_COLUMN, 2)))
+            .column(IntColumn.of(ACCOUNT_ID, 2))
+            .column(IntColumn.of(ACCOUNT_TYPE, 1))
+            .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
+            .column(IntColumn.of(SOME_COLUMN, 2))
             .build());
 
     // Act
@@ -414,17 +415,14 @@ public abstract class DistributedTransactionIntegrationTestBase {
             i ->
                 IntStream.range(0, NUM_TYPES)
                     .forEach(
-                        j -> {
-                          ExpectedResultBuilder erBuilder =
-                              new ExpectedResultBuilder()
-                                  .partitionKey(Key.ofInt(ACCOUNT_ID, i))
-                                  .clusteringKey(Key.ofInt(ACCOUNT_TYPE, j))
-                                  .nonKeyColumns(
-                                      ImmutableList.of(
-                                          IntColumn.of(BALANCE, INITIAL_BALANCE),
-                                          IntColumn.of(SOME_COLUMN, i * j)));
-                          expectedResults.add(erBuilder.build());
-                        }));
+                        j ->
+                            expectedResults.add(
+                                new ExpectedResultBuilder()
+                                    .column(IntColumn.of(ACCOUNT_ID, i))
+                                    .column(IntColumn.of(ACCOUNT_TYPE, j))
+                                    .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
+                                    .column(IntColumn.of(SOME_COLUMN, i * j))
+                                    .build())));
     TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
   }
 
@@ -461,28 +459,28 @@ public abstract class DistributedTransactionIntegrationTestBase {
         results,
         ImmutableList.of(
             new ExpectedResultBuilder()
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
-                .nonKeyColumns(
-                    Arrays.asList(IntColumn.ofNull(BALANCE), IntColumn.ofNull(SOME_COLUMN)))
+                .column(IntColumn.of(ACCOUNT_ID, 1))
+                .column(IntColumn.of(ACCOUNT_TYPE, 1))
+                .column(IntColumn.ofNull(BALANCE))
+                .column(IntColumn.ofNull(SOME_COLUMN))
                 .build(),
             new ExpectedResultBuilder()
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
-                .nonKeyColumns(
-                    Arrays.asList(IntColumn.ofNull(BALANCE), IntColumn.ofNull(SOME_COLUMN)))
+                .column(IntColumn.of(ACCOUNT_ID, 1))
+                .column(IntColumn.of(ACCOUNT_TYPE, 2))
+                .column(IntColumn.ofNull(BALANCE))
+                .column(IntColumn.ofNull(SOME_COLUMN))
                 .build(),
             new ExpectedResultBuilder()
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
-                .nonKeyColumns(
-                    Arrays.asList(IntColumn.ofNull(BALANCE), IntColumn.ofNull(SOME_COLUMN)))
+                .column(IntColumn.of(ACCOUNT_ID, 2))
+                .column(IntColumn.of(ACCOUNT_TYPE, 1))
+                .column(IntColumn.ofNull(BALANCE))
+                .column(IntColumn.ofNull(SOME_COLUMN))
                 .build(),
             new ExpectedResultBuilder()
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .nonKeyColumns(
-                    Arrays.asList(IntColumn.ofNull(BALANCE), IntColumn.ofNull(SOME_COLUMN)))
+                .column(IntColumn.of(ACCOUNT_ID, 3))
+                .column(IntColumn.of(ACCOUNT_TYPE, 0))
+                .column(IntColumn.ofNull(BALANCE))
+                .column(IntColumn.ofNull(SOME_COLUMN))
                 .build()));
     assertThat(results).hasSize(2);
   }
@@ -506,14 +504,12 @@ public abstract class DistributedTransactionIntegrationTestBase {
             i ->
                 IntStream.range(0, NUM_TYPES)
                     .forEach(
-                        j -> {
-                          ExpectedResultBuilder erBuilder =
-                              new ExpectedResultBuilder()
-                                  .clusteringKey(Key.ofInt(ACCOUNT_TYPE, j))
-                                  .nonKeyColumns(
-                                      ImmutableList.of(IntColumn.of(BALANCE, INITIAL_BALANCE)));
-                          expectedResults.add(erBuilder.build());
-                        }));
+                        j ->
+                            expectedResults.add(
+                                new ExpectedResultBuilder()
+                                    .column(IntColumn.of(ACCOUNT_TYPE, j))
+                                    .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
+                                    .build())));
     TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
   }
 
@@ -892,9 +888,8 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Assert
     ExpectedResult expectedResult =
         new ExpectedResultBuilder()
-            .nonKeyColumns(
-                ImmutableList.of(
-                    IntColumn.of(BALANCE, INITIAL_BALANCE), IntColumn.ofNull(SOME_COLUMN)))
+            .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
+            .column(IntColumn.ofNull(SOME_COLUMN))
             .build();
     TestUtils.assertResultsContainsExactlyInAnyOrder(
         results, Collections.singletonList(expectedResult));
@@ -916,15 +911,16 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
-  public void resume_WithoutBeginningTransaction_ShouldThrowIllegalStateException() {
+  public void resume_WithoutBeginningTransaction_ShouldThrowTransactionNotFoundException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume("txId")).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> manager.resume("txId"))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
-  public void resume_WithBeginningAndCommittingTransaction_ShouldThrowIllegalStateException()
+  public void resume_WithBeginningAndCommittingTransaction_ShouldThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin();
@@ -932,22 +928,85 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
     // Act Assert
     assertThatThrownBy(() -> manager.resume(transaction.getId()))
-        .isInstanceOf(IllegalStateException.class);
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
-  public void resume_WithBeginningAndRollingBackTransaction_ShouldThrowIllegalStateException()
-      throws TransactionException {
+  public void
+      resume_WithBeginningAndRollingBackTransaction_ShouldThrowTransactionNotFoundException()
+          throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin();
     transaction.rollback();
 
     // Act Assert
     assertThatThrownBy(() -> manager.resume(transaction.getId()))
-        .isInstanceOf(IllegalStateException.class);
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
-  private void populateRecords() throws TransactionException {
+  @Test
+  public void operation_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    final DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager();
+    try {
+      // Arrange
+      populateRecords();
+      Get get =
+          Get.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .build();
+      Scan scan = Scan.newBuilder().table(TABLE).all().build();
+      Put put =
+          Put.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Delete delete =
+          Delete.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .build();
+      Mutation putAsMutation1 =
+          Put.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Mutation deleteAsMutation2 =
+          Delete.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+              .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                tx.get(get);
+                tx.scan(scan);
+                tx.put(put);
+                tx.delete(delete);
+                tx.mutate(ImmutableList.of(putAsMutation1, deleteAsMutation2));
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    } finally {
+      if (managerWithDefaultNamespace != null) {
+        managerWithDefaultNamespace.close();
+      }
+    }
+  }
+
+  protected void populateRecords() throws TransactionException {
     DistributedTransaction transaction = manager.start();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(
@@ -972,7 +1031,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     transaction.commit();
   }
 
-  private void populateSingleRecord() throws TransactionException {
+  protected void populateSingleRecord() throws TransactionException {
     Put put =
         new Put(Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0))
             .forNamespace(namespace)
@@ -992,7 +1051,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private List<Get> prepareGets() {
+  protected List<Get> prepareGets() {
     List<Get> gets = new ArrayList<>();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(i -> IntStream.range(0, NUM_TYPES).forEach(j -> gets.add(prepareGet(i, j))));
@@ -1009,14 +1068,14 @@ public abstract class DistributedTransactionIntegrationTestBase {
         .withEnd(new Key(ACCOUNT_TYPE, toType));
   }
 
-  private ScanAll prepareScanAll() {
+  protected ScanAll prepareScanAll() {
     return new ScanAll()
         .forNamespace(namespace)
         .forTable(TABLE)
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private Put preparePut(int id, int type) {
+  protected Put preparePut(int id, int type) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Put(partitionKey, clusteringKey)
@@ -1025,7 +1084,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private List<Put> preparePuts() {
+  protected List<Put> preparePuts() {
     List<Put> puts = new ArrayList<>();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(i -> IntStream.range(0, NUM_TYPES).forEach(j -> puts.add(preparePut(i, j))));
@@ -1033,7 +1092,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     return puts;
   }
 
-  private Delete prepareDelete(int id, int type) {
+  protected Delete prepareDelete(int id, int type) {
     Key partitionKey = new Key(ACCOUNT_ID, id);
     Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Delete(partitionKey, clusteringKey)
@@ -1042,7 +1101,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  private int getBalance(Result result) {
+  protected int getBalance(Result result) {
     Optional<Value<?>> balance = result.getValue(BALANCE);
     assertThat(balance).isPresent();
     return balance.get().getAsInt();

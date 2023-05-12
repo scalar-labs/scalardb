@@ -1,6 +1,7 @@
 package com.scalar.db.server;
 
 import com.google.common.base.Strings;
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
@@ -24,10 +25,11 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
-@Command(name = "scalardb-server", description = "Starts Scalar DB Server.")
+@Command(name = "scalardb-server", description = "Starts ScalarDB Server.")
 public class ScalarDbServer implements Callable<Integer> {
   private static final Logger logger = LoggerFactory.getLogger(ScalarDbServer.class);
-  private static final long MAX_WAIT_TIME_MILLIS = 60000; // 60 seconds
+
+  private static final long MAX_SHUTDOWN_WAIT_TIME_MILLIS = 60000;
 
   @CommandLine.Option(
       names = {"--properties", "--config"},
@@ -38,6 +40,7 @@ public class ScalarDbServer implements Callable<Integer> {
 
   private ServerConfig config;
   private Server server;
+  private final HealthService healthService = new HealthService();
 
   private DistributedStorage storage;
   private DistributedStorageAdmin storageAdmin;
@@ -89,7 +92,7 @@ public class ScalarDbServer implements Callable<Integer> {
                     transactionManager, tableMetadataManager, gateKeeper, metrics))
             .addService(new DistributedTransactionAdminService(transactionAdmin, metrics))
             .addService(new AdminService(gateKeeper))
-            .addService(new HealthService())
+            .addService(healthService)
             .addService(ProtoReflectionService.newInstance());
 
     // Two-phase commit for JDBC is not supported for now
@@ -107,9 +110,12 @@ public class ScalarDbServer implements Callable<Integer> {
               + "\" to 'jdbc'");
     }
 
+    config.getGrpcMaxInboundMessageSize().ifPresent(builder::maxInboundMessageSize);
+    config.getGrpcMaxInboundMetadataSize().ifPresent(builder::maxInboundMetadataSize);
+
     server = builder.build().start();
 
-    logger.info("Scalar DB Server started, listening on {}", config.getPort());
+    logger.info("ScalarDB Server started, listening on {}", config.getPort());
   }
 
   public void addShutdownHook() {
@@ -117,10 +123,18 @@ public class ScalarDbServer implements Callable<Integer> {
         .addShutdownHook(
             new Thread(
                 () -> {
-                  logger.info("Signal received. Shutting down the server ...");
-                  shutdown(MAX_WAIT_TIME_MILLIS, TimeUnit.MILLISECONDS);
-                  logger.info("The server shut down.");
+                  logger.info("Signal received. Decommissioning ...");
+                  decommission();
+                  logger.info("Decommissioned. Shutting down.");
+                  shutdown(MAX_SHUTDOWN_WAIT_TIME_MILLIS, TimeUnit.MILLISECONDS);
+                  logger.info("ScalarDB Server shut down.");
                 }));
+  }
+
+  public void decommission() {
+    healthService.decommission();
+    Uninterruptibles.sleepUninterruptibly(
+        config.getDecommissioningDurationSecs(), TimeUnit.SECONDS);
   }
 
   public void shutdown() {

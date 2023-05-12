@@ -11,11 +11,11 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.common.AbstractDistributedStorage;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.storage.common.AbstractDistributedStorage;
-import com.scalar.db.storage.common.checker.OperationChecker;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
@@ -48,6 +48,7 @@ public class Dynamo extends AbstractDistributedStorage {
 
   @Inject
   public Dynamo(DatabaseConfig databaseConfig) {
+    super(databaseConfig);
     DynamoConfig config = new DynamoConfig(databaseConfig);
 
     DynamoDbClientBuilder builder = DynamoDbClient.builder();

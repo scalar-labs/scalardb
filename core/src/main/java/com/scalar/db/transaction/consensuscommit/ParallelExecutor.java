@@ -4,7 +4,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.concurrent.CompletionService;
@@ -23,7 +23,7 @@ public class ParallelExecutor {
 
   @FunctionalInterface
   public interface ParallelExecutorTask {
-    void run() throws ExecutionException, CommitConflictException;
+    void run() throws ExecutionException, ValidationConflictException;
   }
 
   private final ConsensusCommitConfig config;
@@ -38,7 +38,14 @@ public class ParallelExecutor {
       parallelExecutorService =
           Executors.newFixedThreadPool(
               config.getParallelExecutorCount(),
-              new ThreadFactoryBuilder().setNameFormat("parallel-executor-%d").build());
+              // Make this thread factory create daemon threads not to block JVM termination. JVM
+              // shutdown hook is executed before terminating daemon threads. So, daemon threads
+              // created by this thread factory will be properly terminated after pre-termination
+              // operations are done if the operations are set in JVM shutdown hook.
+              new ThreadFactoryBuilder()
+                  .setNameFormat("parallel-executor-%d")
+                  .setDaemon(true)
+                  .build());
     } else {
       parallelExecutorService = null;
     }
@@ -69,13 +76,14 @@ public class ParallelExecutor {
           stopOnError,
           "preparation",
           transactionId);
-    } catch (CommitConflictException ignored) {
-      // tasks for preparation should not throw CommitConflictException
+    } catch (ValidationConflictException e) {
+      throw new AssertionError(
+          "tasks for preparation should not throw ValidationConflictException", e);
     }
   }
 
   public void validate(List<ParallelExecutorTask> tasks, String transactionId)
-      throws ExecutionException, CommitConflictException {
+      throws ExecutionException, ValidationConflictException {
     executeTasks(
         tasks, config.isParallelValidationEnabled(), false, true, "validation", transactionId);
   }
@@ -90,8 +98,8 @@ public class ParallelExecutor {
           false,
           "commitRecords",
           transactionId);
-    } catch (CommitConflictException ignored) {
-      // tasks for commit should not throw CommitConflictException
+    } catch (ValidationConflictException e) {
+      throw new AssertionError("tasks for commit should not throw ValidationConflictException", e);
     }
   }
 
@@ -105,8 +113,9 @@ public class ParallelExecutor {
           false,
           "rollbackRecords",
           transactionId);
-    } catch (CommitConflictException ignored) {
-      // tasks for rollback should not throw CommitConflictException
+    } catch (ValidationConflictException e) {
+      throw new AssertionError(
+          "tasks for rollback should not throw ValidationConflictException", e);
     }
   }
 
@@ -117,7 +126,7 @@ public class ParallelExecutor {
       boolean stopOnError,
       String taskName,
       String transactionId)
-      throws ExecutionException, CommitConflictException {
+      throws ExecutionException, ValidationConflictException {
     if (parallel) {
       executeTasksInParallel(tasks, noWait, stopOnError, taskName, transactionId);
     } else {
@@ -131,7 +140,7 @@ public class ParallelExecutor {
       boolean stopOnError,
       String taskName,
       String transactionId)
-      throws ExecutionException, CommitConflictException {
+      throws ExecutionException, ValidationConflictException {
     assert parallelExecutorService != null;
 
     CompletionService<Void> completionService =
@@ -164,11 +173,11 @@ public class ParallelExecutor {
             } else {
               throw (ExecutionException) e.getCause();
             }
-          } else if (e.getCause() instanceof CommitConflictException) {
+          } else if (e.getCause() instanceof ValidationConflictException) {
             if (!stopOnError) {
-              exception = (CommitConflictException) e.getCause();
+              exception = (ValidationConflictException) e.getCause();
             } else {
-              throw (CommitConflictException) e.getCause();
+              throw (ValidationConflictException) e.getCause();
             }
           } else if (e.getCause() instanceof RuntimeException) {
             throw (RuntimeException) e.getCause();
@@ -184,7 +193,7 @@ public class ParallelExecutor {
         if (exception instanceof ExecutionException) {
           throw (ExecutionException) exception;
         } else {
-          throw (CommitConflictException) exception;
+          throw (ValidationConflictException) exception;
         }
       }
     }
@@ -192,13 +201,13 @@ public class ParallelExecutor {
 
   private void executeTasksSerially(
       List<ParallelExecutorTask> tasks, boolean stopOnError, String taskName, String transactionId)
-      throws ExecutionException, CommitConflictException {
+      throws ExecutionException, ValidationConflictException {
     Exception exception = null;
     for (ParallelExecutorTask task : tasks) {
       try {
         task.run();
-      } catch (ExecutionException | CommitConflictException e) {
-        logger.warn("failed to run a {} task. transactionId: {}", taskName, transactionId, e);
+      } catch (ExecutionException | ValidationConflictException e) {
+        logger.warn("failed to run a {} task. transaction ID: {}", taskName, transactionId, e);
 
         if (!stopOnError) {
           exception = e;
@@ -212,7 +221,7 @@ public class ParallelExecutor {
       if (exception instanceof ExecutionException) {
         throw (ExecutionException) exception;
       } else {
-        throw (CommitConflictException) exception;
+        throw (ValidationConflictException) exception;
       }
     }
   }

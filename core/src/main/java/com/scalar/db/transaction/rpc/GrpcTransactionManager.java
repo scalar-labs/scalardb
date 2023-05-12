@@ -8,6 +8,7 @@ import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -20,7 +21,7 @@ import com.scalar.db.rpc.RollbackRequest;
 import com.scalar.db.rpc.RollbackResponse;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
-import com.scalar.db.transaction.common.ActiveTransactionManagedTransactionManager;
+import com.scalar.db.storage.rpc.GrpcUtils;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableSupplier;
 import com.scalar.db.util.retry.Retry;
@@ -28,7 +29,6 @@ import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
 import io.grpc.ManagedChannel;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
-import io.grpc.netty.NettyChannelBuilder;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
@@ -37,18 +37,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class GrpcTransactionManager extends ActiveTransactionManagedTransactionManager {
+public class GrpcTransactionManager extends ActiveTransactionManagedDistributedTransactionManager {
   private static final Logger logger = LoggerFactory.getLogger(GrpcTransactionManager.class);
 
   static final Retry.ExceptionFactory<TransactionException> EXCEPTION_FACTORY =
       (message, cause) -> {
         if (cause == null) {
-          return new TransactionException(message);
+          return new TransactionException(message, null);
         }
         if (cause instanceof TransactionException) {
           return (TransactionException) cause;
         }
-        return new TransactionException(message, cause);
+        return new TransactionException(message, cause, null);
       };
 
   private final GrpcConfig config;
@@ -61,8 +61,7 @@ public class GrpcTransactionManager extends ActiveTransactionManagedTransactionM
   public GrpcTransactionManager(DatabaseConfig databaseConfig) {
     super(databaseConfig);
     config = new GrpcConfig(databaseConfig);
-    channel =
-        NettyChannelBuilder.forAddress(config.getHost(), config.getPort()).usePlaintext().build();
+    channel = GrpcUtils.createChannel(config);
     stub = DistributedTransactionGrpc.newStub(channel);
     blockingStub = DistributedTransactionGrpc.newBlockingStub(channel);
     metadataManager =
@@ -100,12 +99,19 @@ public class GrpcTransactionManager extends ActiveTransactionManagedTransactionM
         () -> {
           GrpcTransactionOnBidirectionalStream stream = getStream();
           String transactionId = stream.beginTransaction(txId);
-          GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
-          getNamespace().ifPresent(transaction::withNamespace);
-          getTable().ifPresent(transaction::withTable);
-          return activate(transaction);
+          GrpcTransaction transaction = createTransaction(stream, transactionId);
+          return decorate(transaction);
         },
         EXCEPTION_FACTORY);
+  }
+
+  private GrpcTransaction createTransaction(
+      GrpcTransactionOnBidirectionalStream stream, String transactionId) {
+    GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
+    getNamespace().ifPresent(transaction::withNamespace);
+    getTable().ifPresent(transaction::withTable);
+
+    return transaction;
   }
 
   @Override
@@ -123,10 +129,8 @@ public class GrpcTransactionManager extends ActiveTransactionManagedTransactionM
         () -> {
           GrpcTransactionOnBidirectionalStream stream = getStream();
           String transactionId = stream.startTransaction(txId);
-          GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
-          getNamespace().ifPresent(transaction::withNamespace);
-          getTable().ifPresent(transaction::withTable);
-          return activate(transaction);
+          GrpcTransaction transaction = createTransaction(stream, transactionId);
+          return decorate(transaction);
         },
         EXCEPTION_FACTORY);
   }
@@ -237,7 +241,7 @@ public class GrpcTransactionManager extends ActiveTransactionManagedTransactionM
             if (e.getStatus().getCode() == Code.UNAVAILABLE) {
               throw new ServiceTemporaryUnavailableException(e.getMessage(), e);
             }
-            throw new TransactionException(e.getMessage(), e);
+            throw new TransactionException(e.getMessage(), e, null);
           }
         },
         EXCEPTION_FACTORY);

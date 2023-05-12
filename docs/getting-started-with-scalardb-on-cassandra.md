@@ -1,13 +1,13 @@
-# Getting Started with Scalar DB on Cassandra
+# Getting Started with ScalarDB on Cassandra
     
 ## Overview
-This document briefly explains how you can get started with Scalar DB on Cassandra with a simple electronic money application.
+This document briefly explains how you can get started with ScalarDB on Cassandra with a simple electronic money application.
 
 ## Install prerequisites
 
-Scalar DB is written in Java and uses Cassandra as an underlying storage implementation, so the following software is required to run it.
+ScalarDB is written in Java and uses Cassandra as an underlying storage implementation, so the following software is required to run it.
 
-* [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (or OpenJDK 8)
+* [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (or OpenJDK 8) or higher
 * [Casssandra](http://cassandra.apache.org/) 3.11.x (the current stable version as of writing)
     * Take a look at [this document](http://cassandra.apache.org/download/) for how to set up Cassandra.
     * Change `commitlog_sync` from `periodic` to `batch` in `cassandra.yaml` not to lose data when quorum of replica nodes go down
@@ -15,9 +15,9 @@ Scalar DB is written in Java and uses Cassandra as an underlying storage impleme
 
 From here, we assume Oracle JDK 8 and Cassandra 3.11.x are properly installed in your local environment, and Cassandra is running in your localhost.
 
-## Configure Scalar DB
+## Configure ScalarDB
 
-The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for Scalar DB. Basically, it describes the Cassandra installation that will be used.
+The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for ScalarDB. Basically, it describes the Cassandra installation that will be used.
 
 ```properties
 # Comma separated contact points
@@ -34,4 +34,4 @@ scalar.db.password=cassandra
 scalar.db.storage=cassandra
 ```
 
-Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md) to run the application.
+Please follow [Getting Started with ScalarDB](getting-started-with-scalardb.md) to run the application.

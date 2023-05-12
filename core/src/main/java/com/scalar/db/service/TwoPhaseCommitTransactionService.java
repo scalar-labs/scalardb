@@ -5,6 +5,7 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import java.util.Optional;
 import javax.annotation.concurrent.Immutable;
 
@@ -80,7 +81,7 @@ public class TwoPhaseCommitTransactionService implements TwoPhaseCommitTransacti
   }
 
   @Override
-  public TwoPhaseCommitTransaction resume(String txId) throws TransactionException {
+  public TwoPhaseCommitTransaction resume(String txId) throws TransactionNotFoundException {
     return manager.resume(txId);
   }
 

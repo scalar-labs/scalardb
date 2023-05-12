@@ -1,20 +1,20 @@
-# Getting Started with Scalar DB on DynamoDB
+# Getting Started with ScalarDB on DynamoDB
 
 ## Overview
-This document briefly explains how you can get started with Scalar DB on DynamoDB with a simple electronic money application.
+This document briefly explains how you can get started with ScalarDB on DynamoDB with a simple electronic money application.
 
 ## Install prerequisites
 
-Scalar DB is written in Java. So the following software is required to run it.
+ScalarDB is written in Java. So the following software is required to run it.
 
-* [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (or OpenJDK 8)
+* [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (or OpenJDK 8) or higher
 * Other libraries used from the above are automatically installed through gradle
         
 From here, we assume Oracle JDK 8 is properly installed in your local environment.
 
-## Configure Scalar DB
+## Configure ScalarDB
     
-The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for Scalar DB. You need to update `contact_points` with AWS region, `username` with your AWS access key ID, `password` with your AWS secret access key, and `storage` with `dynamo`.
+The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for ScalarDB. You need to update `contact_points` with AWS region, `username` with your AWS access key ID, `password` with your AWS secret access key, and `storage` with `dynamo`.
 
 ```properties
 # The AWS region
@@ -34,9 +34,9 @@ scalar.db.dynamo.endpoint-override=
 scalar.db.dynamo.table_metadata.namespace=
 
 # Set a prefix for the user namespaces and metadata namespace names. Since AWS requires to have unique 
-# tables names in a single AWS region, this is useful if you want to use multiple Scalar DB environments 
+# tables names in a single AWS region, this is useful if you want to use multiple ScalarDB environments 
 # (development, production, etc.) in a single AWS region.
 scalar.db.dynamo.namespace.prefix=
 ```
 
-Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md) to run the application.
+Please follow [Getting Started with ScalarDB](getting-started-with-scalardb.md) to run the application.

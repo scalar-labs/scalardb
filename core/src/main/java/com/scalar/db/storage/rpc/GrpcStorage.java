@@ -12,6 +12,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.AbstractDistributedStorage;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -20,7 +21,6 @@ import com.scalar.db.rpc.DistributedStorageGrpc;
 import com.scalar.db.rpc.GetRequest;
 import com.scalar.db.rpc.GetResponse;
 import com.scalar.db.rpc.MutateRequest;
-import com.scalar.db.storage.common.AbstractDistributedStorage;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableSupplier;
 import com.scalar.db.util.retry.Retry;
@@ -28,7 +28,6 @@ import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
 import io.grpc.ManagedChannel;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
-import io.grpc.netty.NettyChannelBuilder;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -59,9 +58,9 @@ public class GrpcStorage extends AbstractDistributedStorage {
 
   @Inject
   public GrpcStorage(DatabaseConfig databaseConfig) {
+    super(databaseConfig);
     config = new GrpcConfig(databaseConfig);
-    channel =
-        NettyChannelBuilder.forAddress(config.getHost(), config.getPort()).usePlaintext().build();
+    channel = GrpcUtils.createChannel(config);
     stub = DistributedStorageGrpc.newStub(channel);
     blockingStub = DistributedStorageGrpc.newBlockingStub(channel);
     metadataManager =
@@ -71,10 +70,12 @@ public class GrpcStorage extends AbstractDistributedStorage {
 
   @VisibleForTesting
   GrpcStorage(
+      DatabaseConfig databaseConfig,
       GrpcConfig config,
       DistributedStorageGrpc.DistributedStorageStub stub,
       DistributedStorageGrpc.DistributedStorageBlockingStub blockingStub,
       TableMetadataManager metadataManager) {
+    super(databaseConfig);
     this.config = config;
     channel = null;
     this.stub = stub;

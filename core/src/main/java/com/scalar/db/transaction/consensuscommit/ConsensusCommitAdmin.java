@@ -13,6 +13,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -55,18 +56,30 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
   @Override
   public void createCoordinatorTables(Map<String, String> options) throws ExecutionException {
+    if (coordinatorTablesExist()) {
+      throw new IllegalArgumentException("coordinator tables already exist");
+    }
+
     admin.createNamespace(coordinatorNamespace, options);
     admin.createTable(coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
   }
 
   @Override
   public void dropCoordinatorTables() throws ExecutionException {
+    if (!coordinatorTablesExist()) {
+      throw new IllegalArgumentException("coordinator tables do not exist");
+    }
+
     admin.dropTable(coordinatorNamespace, Coordinator.TABLE);
     admin.dropNamespace(coordinatorNamespace);
   }
 
   @Override
   public void truncateCoordinatorTables() throws ExecutionException {
+    if (!coordinatorTablesExist()) {
+      throw new IllegalArgumentException("coordinator tables do not exist");
+    }
+
     admin.truncateTable(coordinatorNamespace, Coordinator.TABLE);
   }
 
@@ -166,6 +179,10 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          "Table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
+    }
     String beforeColumnName = getBeforeImageColumnName(columnName, tableMetadata);
 
     admin.addNewColumnToTable(namespace, table, columnName, columnType);

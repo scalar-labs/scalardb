@@ -28,6 +28,8 @@ public class GrpcConfigTest {
     assertThat(config.getPort()).isEqualTo(ANY_PORT);
     assertThat(config.getDeadlineDurationMillis())
         .isEqualTo(GrpcConfig.DEFAULT_DEADLINE_DURATION_MILLIS);
+    assertThat(config.getMaxInboundMessageSize()).isNotPresent();
+    assertThat(config.getMaxInboundMetadataSize()).isNotPresent();
   }
 
   @Test
@@ -42,7 +44,7 @@ public class GrpcConfigTest {
 
     // Assert
     assertThat(config.getHost()).isEqualTo(ANY_HOST);
-    assertThat(config.getPort()).isEqualTo(GrpcConfig.DEFAULT_SCALAR_DB_SERVER_PORT);
+    assertThat(config.getPort()).isEqualTo(GrpcConfig.DEFAULT_SERVER_PORT);
     assertThat(config.getDeadlineDurationMillis())
         .isEqualTo(GrpcConfig.DEFAULT_DEADLINE_DURATION_MILLIS);
   }
@@ -75,5 +77,37 @@ public class GrpcConfigTest {
     // Act
     assertThatThrownBy(() -> new GrpcConfig(new DatabaseConfig(props)))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithEmptyContactPointsGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.STORAGE, "grpc");
+
+    // Act
+    assertThatThrownBy(() -> new GrpcConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithMaxInboundMessageSizeAndMaxInboundMetadataSizeGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.STORAGE, "grpc");
+    props.setProperty(GrpcConfig.MAX_INBOUND_MESSAGE_SIZE, "1000");
+    props.setProperty(GrpcConfig.MAX_INBOUND_METADATA_SIZE, "2000");
+
+    // Act
+    GrpcConfig config = new GrpcConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.getMaxInboundMessageSize()).isPresent();
+    assertThat(config.getMaxInboundMessageSize().get()).isEqualTo(1000);
+    assertThat(config.getMaxInboundMetadataSize()).isPresent();
+    assertThat(config.getMaxInboundMetadataSize().get()).isEqualTo(2000);
   }
 }

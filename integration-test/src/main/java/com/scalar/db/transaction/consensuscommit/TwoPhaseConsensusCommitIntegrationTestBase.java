@@ -14,7 +14,6 @@ import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionIntegrationTestBase;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
@@ -44,7 +43,7 @@ public abstract class TwoPhaseConsensusCommitIntegrationTestBase
 
   @AfterAll
   @Override
-  public void afterAll() throws ExecutionException {
+  public void afterAll() throws Exception {
     super.afterAll();
 
     managerWithWithIncludeMetadataEnabled.close();
@@ -83,10 +82,6 @@ public abstract class TwoPhaseConsensusCommitIntegrationTestBase
         properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
     properties.setProperty(
         ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
-
-    // Async commit can cause unexpected lazy recoveries, which can fail the tests. So we disable
-    // it for now.
-    properties.setProperty(ConsensusCommitConfig.ASYNC_COMMIT_ENABLED, "false");
   }
 
   protected abstract Properties getProps1(String testName);

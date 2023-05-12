@@ -1,6 +1,5 @@
 package com.scalar.db.storage.jdbc.query;
 
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -16,6 +15,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -52,7 +52,8 @@ public class QueryBuilderTest {
 
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
-  public void selectQueryTest(RdbEngine rdbEngine) throws SQLException {
+  public void selectQueryTest(RdbEngine rdbEngineType) throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
     SelectQuery query;
@@ -275,8 +276,8 @@ public class QueryBuilderTest {
     verify(preparedStatement).setString(2, "c1StartValue");
     verify(preparedStatement).setString(3, "c1EndValue");
 
-    String expectedQuery;
-    switch (rdbEngine) {
+    String expectedQuery = "";
+    switch (rdbEngineType) {
       case MYSQL:
       case POSTGRESQL:
         expectedQuery =
@@ -289,10 +290,14 @@ public class QueryBuilderTest {
                 + "ORDER BY c1 ASC,c2 DESC FETCH FIRST 10 ROWS ONLY";
         break;
       case SQL_SERVER:
-      default:
         expectedQuery =
             "SELECT TOP 10 c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? "
                 + "ORDER BY c1 ASC,c2 DESC";
+        break;
+      case SQLITE:
+        expectedQuery =
+            "SELECT c1,c2 FROM \"n1$t1\" WHERE p1=? AND c1>=? AND c1<=? "
+                + "ORDER BY c1 ASC,c2 DESC LIMIT 10";
         break;
     }
     preparedStatement = mock(PreparedStatement.class);
@@ -317,7 +322,8 @@ public class QueryBuilderTest {
 
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
-  public void selectQueryWithIndexedColumnTest(RdbEngine rdbEngine) throws SQLException {
+  public void selectQueryWithIndexedColumnTest(RdbEngine rdbEngineType) throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
     SelectQuery query;
@@ -370,8 +376,9 @@ public class QueryBuilderTest {
 
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
-  public void selectQueryWithTableWithoutClusteringKeyTest(RdbEngine rdbEngine)
+  public void selectQueryWithTableWithoutClusteringKeyTest(RdbEngine rdbEngineType)
       throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
     TableMetadata tableMetadataWithoutClusteringKey =
@@ -422,7 +429,8 @@ public class QueryBuilderTest {
 
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
-  public void insertQueryTest(RdbEngine rdbEngine) throws SQLException {
+  public void insertQueryTest(RdbEngine rdbEngineType) throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
     InsertQuery query;
@@ -515,7 +523,8 @@ public class QueryBuilderTest {
 
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
-  public void updateQueryTest(RdbEngine rdbEngine) throws SQLException {
+  public void updateQueryTest(RdbEngine rdbEngineType) throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
     UpdateQuery query;
@@ -678,7 +687,8 @@ public class QueryBuilderTest {
 
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
-  public void deleteQueryTest(RdbEngine rdbEngine) throws SQLException {
+  public void deleteQueryTest(RdbEngine rdbEngineType) throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
     DeleteQuery query;
@@ -789,10 +799,11 @@ public class QueryBuilderTest {
 
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
-  public void upsertQueryTest(RdbEngine rdbEngine) throws SQLException {
+  public void upsertQueryTest(RdbEngine rdbEngineType) throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
-    String expectedQuery;
+    String expectedQuery = "";
     UpsertQuery query;
     PreparedStatement preparedStatement;
 
@@ -802,7 +813,7 @@ public class QueryBuilderTest {
     columns.put("v3", TextColumn.of("v3", "v3Value"));
 
     preparedStatement = mock(PreparedStatement.class);
-    switch (rdbEngine) {
+    switch (rdbEngineType) {
       case MYSQL:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?)"
@@ -820,11 +831,15 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (?,?,?,?)";
         break;
       case SQL_SERVER:
-      default:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
                 + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
                 + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (?,?,?,?);";
+        break;
+      case SQLITE:
+        expectedQuery =
+            "INSERT INTO \"n1$t1\" (p1,v1,v2,v3) VALUES (?,?,?,?) "
+                + "ON CONFLICT (p1) DO UPDATE SET v1=?,v2=?,v3=?";
         break;
     }
     query =
@@ -834,9 +849,10 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
-    switch (rdbEngine) {
+    switch (rdbEngineType) {
       case MYSQL:
       case POSTGRESQL:
+      case SQLITE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "v1Value");
         verify(preparedStatement).setString(3, "v2Value");
@@ -859,7 +875,7 @@ public class QueryBuilderTest {
     }
 
     preparedStatement = mock(PreparedStatement.class);
-    switch (rdbEngine) {
+    switch (rdbEngineType) {
       case MYSQL:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)"
@@ -878,12 +894,16 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)";
         break;
       case SQL_SERVER:
-      default:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1,? c1) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
                 + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
                 + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?);";
+        break;
+      case SQLITE:
+        expectedQuery =
+            "INSERT INTO \"n1$t1\" (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?) "
+                + "ON CONFLICT (p1,c1) DO UPDATE SET v1=?,v2=?,v3=?";
         break;
     }
     query =
@@ -893,9 +913,10 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
-    switch (rdbEngine) {
+    switch (rdbEngineType) {
       case MYSQL:
       case POSTGRESQL:
+      case SQLITE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "c1Value");
         verify(preparedStatement).setString(3, "v1Value");
@@ -922,7 +943,7 @@ public class QueryBuilderTest {
 
     columns.put("v4", TextColumn.of("v4", "v4Value"));
     preparedStatement = mock(PreparedStatement.class);
-    switch (rdbEngine) {
+    switch (rdbEngineType) {
       case MYSQL:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?)"
@@ -942,12 +963,16 @@ public class QueryBuilderTest {
                 + "VALUES (?,?,?,?,?,?,?,?)";
         break;
       case SQL_SERVER:
-      default:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
                 + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=? "
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?);";
+        break;
+      case SQLITE:
+        expectedQuery =
+            "INSERT INTO \"n1$t1\" (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?) "
+                + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?";
         break;
     }
     query =
@@ -960,9 +985,10 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
-    switch (rdbEngine) {
+    switch (rdbEngineType) {
       case MYSQL:
       case POSTGRESQL:
+      case SQLITE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "p2Value");
         verify(preparedStatement).setString(3, "c1Value");
@@ -999,7 +1025,7 @@ public class QueryBuilderTest {
 
     columns.put("v5", TextColumn.ofNull("v5"));
     preparedStatement = mock(PreparedStatement.class);
-    switch (rdbEngine) {
+    switch (rdbEngineType) {
       case MYSQL:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4,v5) VALUES (?,?,?,?,?,?,?,?,?)"
@@ -1019,13 +1045,17 @@ public class QueryBuilderTest {
                 + "VALUES (?,?,?,?,?,?,?,?,?)";
         break;
       case SQL_SERVER:
-      default:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
                 + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=?,v5=? "
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4,v5) "
                 + "VALUES (?,?,?,?,?,?,?,?,?);";
+        break;
+      case SQLITE:
+        expectedQuery =
+            "INSERT INTO \"n1$t1\" (p1,p2,c1,c2,v1,v2,v3,v4,v5) VALUES (?,?,?,?,?,?,?,?,?) "
+                + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?,v5=?";
         break;
     }
     query =
@@ -1038,9 +1068,10 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
-    switch (rdbEngine) {
+    switch (rdbEngineType) {
       case MYSQL:
       case POSTGRESQL:
+      case SQLITE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "p2Value");
         verify(preparedStatement).setString(3, "c1Value");
@@ -1082,15 +1113,16 @@ public class QueryBuilderTest {
 
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
-  public void upsertQueryWithoutValuesTest(RdbEngine rdbEngine) throws SQLException {
+  public void upsertQueryWithoutValuesTest(RdbEngine rdbEngineType) throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
-    String expectedQuery;
+    String expectedQuery = "";
     UpsertQuery query;
     PreparedStatement preparedStatement;
 
     preparedStatement = mock(PreparedStatement.class);
-    switch (rdbEngine) {
+    switch (rdbEngineType) {
       case MYSQL:
         expectedQuery = "INSERT IGNORE INTO n1.t1 (p1) VALUES (?)";
         break;
@@ -1103,10 +1135,12 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (?)";
         break;
       case SQL_SERVER:
-      default:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
                 + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (?);";
+        break;
+      case SQLITE:
+        expectedQuery = "INSERT INTO \"n1$t1\" (p1) VALUES (?) ON CONFLICT (p1) DO NOTHING";
         break;
     }
     query =
@@ -1116,9 +1150,10 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
-    switch (rdbEngine) {
+    switch (rdbEngineType) {
       case MYSQL:
       case POSTGRESQL:
+      case SQLITE:
         verify(preparedStatement).setString(1, "p1Value");
         break;
       case ORACLE:
@@ -1129,7 +1164,7 @@ public class QueryBuilderTest {
     }
 
     preparedStatement = mock(PreparedStatement.class);
-    switch (rdbEngine) {
+    switch (rdbEngineType) {
       case MYSQL:
         expectedQuery = "INSERT IGNORE INTO n1.t1 (p1,c1) VALUES (?,?)";
         break;
@@ -1143,11 +1178,13 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (?,?)";
         break;
       case SQL_SERVER:
-      default:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1,? c1) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
                 + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (?,?);";
+        break;
+      case SQLITE:
+        expectedQuery = "INSERT INTO \"n1$t1\" (p1,c1) VALUES (?,?) ON CONFLICT (p1,c1) DO NOTHING";
         break;
     }
     query =
@@ -1160,9 +1197,10 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
-    switch (rdbEngine) {
+    switch (rdbEngineType) {
       case MYSQL:
       case POSTGRESQL:
+      case SQLITE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "c1Value");
         break;
@@ -1176,7 +1214,7 @@ public class QueryBuilderTest {
     }
 
     preparedStatement = mock(PreparedStatement.class);
-    switch (rdbEngine) {
+    switch (rdbEngineType) {
       case MYSQL:
         expectedQuery = "INSERT IGNORE INTO n1.t1 (p1,p2,c1,c2) VALUES (?,?,?,?)";
         break;
@@ -1192,11 +1230,15 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (?,?,?,?)";
         break;
       case SQL_SERVER:
-      default:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (?,?,?,?);";
+        break;
+      case SQLITE:
+        expectedQuery =
+            "INSERT INTO \"n1$t1\" (p1,p2,c1,c2) VALUES (?,?,?,?) "
+                + "ON CONFLICT (p1,p2,c1,c2) DO NOTHING";
         break;
     }
     query =
@@ -1209,9 +1251,10 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
-    switch (rdbEngine) {
+    switch (rdbEngineType) {
       case MYSQL:
       case POSTGRESQL:
+      case SQLITE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "p2Value");
         verify(preparedStatement).setString(3, "c1Value");
@@ -1231,16 +1274,16 @@ public class QueryBuilderTest {
     }
   }
 
-  private String encloseSql(String sql, RdbEngine rdbEngine) {
-    return sql.replace("n1.t1", enclose("n1", rdbEngine) + "." + enclose("t1", rdbEngine))
-        .replace("p1", enclose("p1", rdbEngine))
-        .replace("p2", enclose("p2", rdbEngine))
-        .replace("c1", enclose("c1", rdbEngine))
-        .replace("c2", enclose("c2", rdbEngine))
-        .replace("v1", enclose("v1", rdbEngine))
-        .replace("v2", enclose("v2", rdbEngine))
-        .replace("v3", enclose("v3", rdbEngine))
-        .replace("v4", enclose("v4", rdbEngine))
-        .replace("v5", enclose("v5", rdbEngine));
+  private String encloseSql(String sql, RdbEngineStrategy rdbEngine) {
+    return sql.replace("n1.t1", rdbEngine.encloseFullTableName("n1", "t1"))
+        .replace("p1", rdbEngine.enclose("p1"))
+        .replace("p2", rdbEngine.enclose("p2"))
+        .replace("c1", rdbEngine.enclose("c1"))
+        .replace("c2", rdbEngine.enclose("c2"))
+        .replace("v1", rdbEngine.enclose("v1"))
+        .replace("v2", rdbEngine.enclose("v2"))
+        .replace("v3", rdbEngine.enclose("v3"))
+        .replace("v4", rdbEngine.enclose("v4"))
+        .replace("v5", rdbEngine.enclose("v5"));
   }
 }
