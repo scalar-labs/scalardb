@@ -31,6 +31,7 @@ import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
@@ -134,6 +135,19 @@ public class SnapshotTest {
             .put(ANY_NAME_4, ScalarDbUtils.toColumn(new TextValue(ANY_NAME_4, ANY_TEXT_4)))
             .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(txId)))
             .put(Attribute.VERSION, ScalarDbUtils.toColumn(Attribute.toVersionValue(ANY_VERSION)))
+            .build();
+    return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
+  }
+
+  private TransactionResult prepareResultWithNullMetadata() {
+    ImmutableMap<String, Column<?>> columns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
+            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
+            .put(ANY_NAME_3, TextColumn.of(ANY_NAME_3, ANY_TEXT_3))
+            .put(ANY_NAME_4, TextColumn.of(ANY_NAME_4, ANY_TEXT_4))
+            .put(Attribute.ID, TextColumn.ofNull(Attribute.ID))
+            .put(Attribute.VERSION, IntColumn.ofNull(Attribute.VERSION))
             .build();
     return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
   }
@@ -936,6 +950,55 @@ public class SnapshotTest {
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializableWithExtraRead(storage)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      toSerializableWithExtraRead_NullMetadataInReadSetNotChanged_ShouldProcessWithoutExceptions()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Get get = prepareAnotherGet();
+    Put put = preparePut();
+    TransactionResult result = prepareResultWithNullMetadata();
+    TransactionResult txResult = new TransactionResult(result);
+    snapshot.put(new Snapshot.Key(get), Optional.of(result));
+    snapshot.put(new Snapshot.Key(put), put);
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Get getWithProjections =
+        Get.newBuilder(get).projections(Attribute.ID, Attribute.VERSION).build();
+    when(storage.get(getWithProjections)).thenReturn(Optional.of(txResult));
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializableWithExtraRead(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage).get(getWithProjections);
+  }
+
+  @Test
+  public void
+      toSerializableWithExtraRead_NullMetadataInReadSetChanged_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Get get = prepareAnotherGet();
+    Put put = preparePut();
+    TransactionResult result = prepareResultWithNullMetadata();
+    TransactionResult changedResult = prepareResult(ANY_ID);
+    snapshot.put(new Snapshot.Key(get), Optional.of(result));
+    snapshot.put(new Snapshot.Key(put), put);
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Get getWithProjections =
+        Get.newBuilder(get).projections(Attribute.ID, Attribute.VERSION).build();
+    when(storage.get(getWithProjections)).thenReturn(Optional.of(changedResult));
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
+        .isInstanceOf(ValidationConflictException.class);
+
+    // Assert
+    verify(storage).get(getWithProjections);
   }
 
   @Test

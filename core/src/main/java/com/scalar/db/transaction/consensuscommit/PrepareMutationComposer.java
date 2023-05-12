@@ -1,23 +1,22 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toVersionValue;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIf;
+import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Value;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,68 +54,85 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
   }
 
   private void add(Put base, @Nullable TransactionResult result) throws ExecutionException {
-    Put put =
-        new Put(base.getPartitionKey(), base.getClusteringKey().orElse(null))
-            .forNamespace(base.forNamespace().get())
-            .forTable(base.forTable().get())
-            .withConsistency(Consistency.LINEARIZABLE);
+    PutBuilder.Buildable putBuilder =
+        Put.newBuilder()
+            .namespace(base.forNamespace().get())
+            .table(base.forTable().get())
+            .partitionKey(base.getPartitionKey())
+            .consistency(Consistency.LINEARIZABLE);
+    base.getClusteringKey().ifPresent(putBuilder::clusteringKey);
+    base.getColumns().values().forEach(putBuilder::value);
 
-    put.withValue(Attribute.toIdValue(id));
-    put.withValue(Attribute.toStateValue(TransactionState.PREPARED));
-    put.withValue(Attribute.toPreparedAtValue(current));
-    base.getColumns().values().forEach(put::withValue);
+    putBuilder.textValue(Attribute.ID, id);
+    putBuilder.intValue(Attribute.STATE, TransactionState.PREPARED.get());
+    putBuilder.bigIntValue(Attribute.PREPARED_AT, current);
 
     if (result != null) { // overwrite existing record
-      put.withValues(createBeforeValues(base, result));
+      createBeforeColumns(base, result).forEach(putBuilder::value);
       int version = result.getVersion();
-      put.withValue(Attribute.toVersionValue(version + 1));
+      putBuilder.intValue(Attribute.VERSION, version + 1);
 
       // check if the record is not interrupted by other conflicting transactions
-      put.withCondition(
-          new PutIf(
-              new ConditionalExpression(VERSION, toVersionValue(version), Operator.EQ),
-              new ConditionalExpression(ID, toIdValue(result.getId()), Operator.EQ)));
+      if (result.isDeemedAsCommitted()) {
+        // record is deemed-commit state
+        putBuilder.condition(
+            ConditionBuilder.putIf(ConditionBuilder.column(ID).isNullText())
+                .and(ConditionBuilder.column(VERSION).isNullInt())
+                .build());
+      } else {
+        putBuilder.condition(
+            ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(result.getId()))
+                .and(ConditionBuilder.column(VERSION).isEqualToInt(version))
+                .build());
+      }
     } else { // initial record
-      put.withValue(Attribute.toVersionValue(1));
+      putBuilder.intValue(Attribute.VERSION, 1);
 
       // check if the record is not created by other conflicting transactions
-      put.withCondition(new PutIfNotExists());
+      putBuilder.condition(ConditionBuilder.putIfNotExists());
     }
 
-    mutations.add(put);
+    mutations.add(putBuilder.build());
   }
 
   private void add(Delete base, @Nullable TransactionResult result) throws ExecutionException {
-    Put put =
-        new Put(base.getPartitionKey(), base.getClusteringKey().orElse(null))
-            .forNamespace(base.forNamespace().get())
-            .forTable(base.forTable().get())
-            .withConsistency(Consistency.LINEARIZABLE);
+    PutBuilder.Buildable putBuilder =
+        Put.newBuilder()
+            .namespace(base.forNamespace().get())
+            .table(base.forTable().get())
+            .partitionKey(base.getPartitionKey())
+            .consistency(Consistency.LINEARIZABLE);
+    base.getClusteringKey().ifPresent(putBuilder::clusteringKey);
 
-    List<Value<?>> values = new ArrayList<>();
-    values.add(Attribute.toIdValue(id));
-    values.add(Attribute.toStateValue(TransactionState.DELETED));
-    values.add(Attribute.toPreparedAtValue(current));
+    putBuilder.textValue(Attribute.ID, id);
+    putBuilder.intValue(Attribute.STATE, TransactionState.DELETED.get());
+    putBuilder.bigIntValue(Attribute.PREPARED_AT, current);
 
     if (result != null) {
-      values.addAll(createBeforeValues(base, result));
+      createBeforeColumns(base, result).forEach(putBuilder::value);
       int version = result.getVersion();
-      values.add(Attribute.toVersionValue(version + 1));
+      putBuilder.intValue(Attribute.VERSION, version + 1);
 
       // check if the record is not interrupted by other conflicting transactions
-      put.withCondition(
-          new PutIf(
-              new ConditionalExpression(VERSION, toVersionValue(version), Operator.EQ),
-              new ConditionalExpression(ID, toIdValue(result.getId()), Operator.EQ)));
+      if (result.isDeemedAsCommitted()) {
+        putBuilder.condition(
+            ConditionBuilder.putIf(ConditionBuilder.column(ID).isNullText())
+                .and(ConditionBuilder.column(VERSION).isNullInt())
+                .build());
+      } else {
+        putBuilder.condition(
+            ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(result.getId()))
+                .and(ConditionBuilder.column(VERSION).isEqualToInt(version))
+                .build());
+      }
     } else {
-      put.withValue(Attribute.toVersionValue(1));
+      putBuilder.intValue(Attribute.VERSION, 1);
 
       // check if the record is not created by other conflicting transactions
-      put.withCondition(new PutIfNotExists());
+      putBuilder.condition(ConditionBuilder.putIfNotExists());
     }
 
-    put.withValues(values);
-    mutations.add(put);
+    mutations.add(putBuilder.build());
   }
 
   // This prepares a record that was read but didn't exist to avoid anti-dependency for the record.
@@ -141,15 +157,24 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     mutations.add(put);
   }
 
-  private List<Value<?>> createBeforeValues(Mutation base, TransactionResult result)
+  private List<Column<?>> createBeforeColumns(Mutation base, TransactionResult result)
       throws ExecutionException {
-    List<Value<?>> values = new ArrayList<>();
-    for (Value<?> value : result.getValues().values()) {
-      if (isBeforeRequired(base, value.getName())) {
-        values.add(value.copyWith(Attribute.BEFORE_PREFIX + value.getName()));
+    List<Column<?>> columns = new ArrayList<>();
+    for (Column<?> column : result.getColumns().values()) {
+      if (isBeforeRequired(base, column.getName())) {
+        if (column.getName().equals(Attribute.VERSION) && column.hasNullValue()) {
+          // A prepare-state record with NULLs for both before_id and before_version will be deleted
+          // as an initial record in a rollback situation. To avoid this for
+          // NULL-transaction-metadata records (i.e., records regarded as committed) and roll back
+          // them correctly, we need to use version 0 rather than NULL for before_version. Note that
+          // we can use other "before" columns to distinguish those two cases.
+          columns.add(IntColumn.of(Attribute.BEFORE_VERSION, 0));
+        } else {
+          columns.add(column.copyWith(Attribute.BEFORE_PREFIX + column.getName()));
+        }
       }
     }
-    return values;
+    return columns;
   }
 
   private boolean isBeforeRequired(Mutation base, String columnName) throws ExecutionException {

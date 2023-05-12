@@ -334,7 +334,7 @@ public class Snapshot {
               for (Result result : scanner) {
                 TransactionResult transactionResult = new TransactionResult(result);
                 // Ignore records that this transaction has prepared (and that are in the write set)
-                if (transactionResult.getId().equals(id)) {
+                if (transactionResult.getId() != null && transactionResult.getId().equals(id)) {
                   continue;
                 }
                 currentReadMap.put(new Key(scan, result), transactionResult);
@@ -413,7 +413,7 @@ public class Snapshot {
     if (!latestResult.isPresent()) {
       return false;
     }
-    return !latestResult.get().getId().equals(result.get().getId())
+    return !Objects.equals(latestResult.get().getId(), result.get().getId())
         || latestResult.get().getVersion() != result.get().getVersion();
   }
 
