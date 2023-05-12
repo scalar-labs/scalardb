@@ -223,32 +223,15 @@ public abstract class DynamoAdminTestBase {
   }
 
   @Test
-  public void namespaceExists_ShouldPerformExactMatch() throws ExecutionException {
+  public void dropNamespace_WithOtherNamespacesExisting_ShouldDropNamespace()
+      throws ExecutionException {
     // Arrange
-    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
-    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
-    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
-    when(listTablesResponse.tableNames())
-        .thenReturn(ImmutableList.<String>builder().add(getFullTableName()).build());
+    ScanResponse scanResponse = mock(ScanResponse.class);
+    when(scanResponse.count()).thenReturn(1);
+    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
 
     // Act
-    // Assert
-    assertThat(admin.namespaceExists(NAMESPACE)).isTrue();
-    // compare with namespace prefix
-    assertThat(admin.namespaceExists(NAMESPACE.substring(0, NAMESPACE.length() - 1))).isFalse();
-  }
-  // https://github.com/scalar-labs/scalardb/issues/784
-  @Test
-  public void
-      dropNamespace_WithNamespacesLeftAndTablesInNamespace_ShouldDropAllTablesInNamespaceAndNamespace()
-          throws ExecutionException {
-    // Arrange
-    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
-    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
-    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
-    when(listTablesResponse.tableNames())
-        .thenReturn(ImmutableList.<String>builder().add(getFullTableName()).build());
-    // Act
+    admin.dropNamespace(NAMESPACE);
     // Assert
     verify(client)
         .deleteItem(
@@ -258,19 +241,14 @@ public abstract class DynamoAdminTestBase {
                     ImmutableMap.of(
                         DynamoAdmin.NAMESPACES_ATTR_NAME,
                         AttributeValue.builder().s(getPrefixedNamespace()).build()))
-                .conditionExpression("attribute_exists(" + DynamoAdmin.NAMESPACES_ATTR_NAME + ")")
                 .build());
-    verify(admin).dropTable(NAMESPACE, "tb1");
-    verify(admin).dropTable(NAMESPACE, "tb2");
-    verify(admin).dropTable(NAMESPACE, "tb3");
     verify(client)
         .scan(ScanRequest.builder().tableName(getFullNamespaceTableName()).limit(1).build());
   }
 
   @Test
-  public void
-      dropNamespace_WithoutNamespacesLeft_ShouldDropAllTablesInNamespaceAndNamespaceAndNamespacesTable()
-          throws ExecutionException {
+  public void dropNamespace_WithNoNamespacesLeft_ShouldDropNamespaceAndNamespacesTable()
+      throws ExecutionException {
     // Arrange
     ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
     when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
@@ -292,7 +270,6 @@ public abstract class DynamoAdminTestBase {
                     ImmutableMap.of(
                         DynamoAdmin.NAMESPACES_ATTR_NAME,
                         AttributeValue.builder().s(getPrefixedNamespace()).build()))
-                .conditionExpression("attribute_exists(" + DynamoAdmin.NAMESPACES_ATTR_NAME + ")")
                 .build());
 
     verify(client)
@@ -1282,8 +1259,6 @@ public abstract class DynamoAdminTestBase {
                     ImmutableMap.of(
                         DynamoAdmin.NAMESPACES_ATTR_NAME,
                         AttributeValue.builder().s(getPrefixedNamespace()).build()))
-                .conditionExpression(
-                    "attribute_not_exists(" + DynamoAdmin.NAMESPACES_ATTR_NAME + ")")
                 .build());
   }
 
@@ -1307,8 +1282,6 @@ public abstract class DynamoAdminTestBase {
                     ImmutableMap.of(
                         DynamoAdmin.NAMESPACES_ATTR_NAME,
                         AttributeValue.builder().s(getPrefixedNamespace()).build()))
-                .conditionExpression(
-                    "attribute_not_exists(" + DynamoAdmin.NAMESPACES_ATTR_NAME + ")")
                 .build());
   }
 

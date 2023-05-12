@@ -132,12 +132,12 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
 
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
-    return admin.getNamespaceNames();
+    return jdbcAdmin.getNamespaceNames();
   }
 
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
-    admin.upgrade(options);
+    jdbcAdmin.upgrade(options);
   }
 
   @Override

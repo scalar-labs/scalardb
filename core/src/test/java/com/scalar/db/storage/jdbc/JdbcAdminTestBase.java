@@ -1423,7 +1423,7 @@ public abstract class JdbcAdminTestBase {
   public void namespaceExists_forSqliteWithExistingNamespace_shouldReturnTrue() throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
         RdbEngine.SQLITE,
-        "SELECT 1 FROM sqlite_master WHERE \"type\" = \"table\" AND \"tbl_name\" LIKE ?",
+        "SELECT 1 FROM \"" + metadataSchemaName + "$namespaces\" WHERE \"namespace_name\" = ?",
         "$%");
   }
 

@@ -279,8 +279,7 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
     try {
       return admin.getNamespaceNames();
     } catch (ExecutionException e) {
-      throw new ExecutionException(
-          "Getting the namespace names failed", e);
+      throw new ExecutionException("Getting the namespace names failed", e);
     }
   }
 
@@ -289,8 +288,7 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
     try {
       admin.upgrade(options);
     } catch (ExecutionException e) {
-      throw new ExecutionException(
-          "Upgrading failed", e);
+      throw new ExecutionException("Upgrading failed", e);
     }
   }
 

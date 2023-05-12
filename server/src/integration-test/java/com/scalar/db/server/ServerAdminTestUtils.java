@@ -7,7 +7,6 @@ import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngineFactory;
-import com.scalar.db.storage.jdbc.RdbEngineOracle;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -35,14 +34,6 @@ public class ServerAdminTestUtils extends AdminTestUtils {
   @Override
   public void dropMetadataTable() throws SQLException {
     execute("DROP TABLE " + rdbEngine.encloseFullTableName(metadataNamespace, metadataTable));
-
-    String dropNamespaceStatement;
-    if (rdbEngine instanceof RdbEngineOracle) {
-      dropNamespaceStatement = "DROP USER " + rdbEngine.enclose(metadataNamespace);
-    } else {
-      dropNamespaceStatement = "DROP SCHEMA " + rdbEngine.enclose(metadataNamespace);
-    }
-    execute(dropNamespaceStatement);
   }
 
   @Override

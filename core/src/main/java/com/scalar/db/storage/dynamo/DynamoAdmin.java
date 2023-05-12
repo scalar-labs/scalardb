@@ -48,7 +48,6 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.ContinuousBackupsStatus;
 import software.amazon.awssdk.services.dynamodb.model.CreateGlobalSecondaryIndexAction;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
@@ -240,13 +239,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           PutItemRequest.builder()
               .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, NAMESPACES_TABLE))
               .item(itemValues)
-              // Will cause to throw a ConditionalCheckFailedException if the namespace already
-              // exists
-              .conditionExpression("attribute_not_exists(" + NAMESPACES_ATTR_NAME + ")")
               .build());
-    } catch (ConditionalCheckFailedException e) {
-      throw new ExecutionException(
-          "the namespace " + namespace + " cannot be created as it already exists");
     } catch (Exception e) {
       throw new ExecutionException(
           "inserting the namespace " + namespace + " into the namespaces table failed", e);
@@ -810,16 +803,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         ScalarDbUtils.getFullTableName(metadataNamespace, NAMESPACES_TABLE);
     try {
       client.deleteItem(
-          DeleteItemRequest.builder()
-              .tableName(namespacesTableFullName)
-              .key(keyToDelete)
-              // Will cause to throw a ConditionalCheckFailedException if the namespace does not
-              // exist
-              .conditionExpression("attribute_exists(" + NAMESPACES_ATTR_NAME + ")")
-              .build());
-    } catch (ConditionalCheckFailedException e) {
-      throw new ExecutionException(
-          "the namespace " + namespace + " cannot be dropped as it does not exist", e);
+          DeleteItemRequest.builder().tableName(namespacesTableFullName).key(keyToDelete).build());
     } catch (Exception e) {
       throw new ExecutionException(
           "deleting the namespace " + namespace + " from the namespaces table failed", e);
@@ -1235,7 +1219,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       return false;
     } catch (Exception e) {
       throw new ExecutionException(
-          "checking the namespace"
+          "checking the namespace "
               + Namespace.of(namespacePrefix, nonPrefixedNamespace)
               + " existence failed",
           e);

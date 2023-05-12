@@ -12,7 +12,6 @@ import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngineFactory;
-import com.scalar.db.storage.jdbc.RdbEngineOracle;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -56,14 +55,6 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     execute(
         "DROP TABLE "
             + rdbEngine.encloseFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE));
-
-    String dropNamespaceStatement;
-    if (rdbEngine instanceof RdbEngineOracle) {
-      dropNamespaceStatement = "DROP USER " + rdbEngine.enclose(jdbcMetadataSchema);
-    } else {
-      dropNamespaceStatement = "DROP SCHEMA " + rdbEngine.enclose(jdbcMetadataSchema);
-    }
-    execute(dropNamespaceStatement);
   }
 
   @Override

@@ -416,6 +416,7 @@ public interface Admin {
    * Typically, you will be requested, as indicated on the release notes, to run this method after
    * updating the Scalar DB version of your application environment.
    *
+   * @param options options to upgrade
    * @throws ExecutionException if the operation fails
    */
   void upgrade(Map<String, String> options) throws ExecutionException;
