@@ -75,7 +75,6 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
   private DistributedStorage storage;
   private Coordinator coordinator;
   private RecoveryHandler recovery;
-  private CommitHandler commit;
 
   @BeforeAll
   public void beforeAll() throws Exception {
@@ -141,7 +140,8 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
-    commit = spy(new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor));
+    CommitHandler commit =
+        spy(new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor));
     manager =
         new ConsensusCommitManager(
             storage,
