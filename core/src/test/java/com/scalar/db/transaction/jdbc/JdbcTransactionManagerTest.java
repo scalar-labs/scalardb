@@ -8,6 +8,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
@@ -217,10 +218,12 @@ public class JdbcTransactionManagerTest {
             () -> {
               DistributedTransaction transaction = manager.begin();
               Put put =
-                  new Put(new Key("p1", "val1"))
-                      .withValue("v1", "val2")
-                      .forNamespace(NAMESPACE)
-                      .forTable(TABLE);
+                  Put.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .condition(ConditionBuilder.putIfNotExists())
+                      .build();
               transaction.put(put);
             })
         .isInstanceOf(CrudException.class);
@@ -273,7 +276,12 @@ public class JdbcTransactionManagerTest {
             () -> {
               DistributedTransaction transaction = manager.begin();
               Delete delete =
-                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
+                  Delete.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .condition(ConditionBuilder.deleteIfExists())
+                      .build();
               transaction.delete(delete);
             })
         .isInstanceOf(CrudException.class);

@@ -1044,10 +1044,9 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
   @Test
   public void put_withPutIfExistsWhenRecordExists_shouldPutProperly() throws TransactionException {
+    // Arrange
     Put put = preparePut(0, 0);
     put(put);
-
-    // Arrange
     Put putIfExists =
         Put.newBuilder(put)
             .intValue(BALANCE, INITIAL_BALANCE)
@@ -1063,6 +1062,25 @@ public abstract class DistributedTransactionIntegrationTestBase {
     assertThat(result.getInt(ACCOUNT_ID)).isEqualTo(0);
     assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
     assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(result.isNull(SOME_COLUMN)).isTrue();
+  }
+
+  @Test
+  public void put_withPutIfNotExistsWhenRecordDoesNotExist_shouldPutProperly()
+      throws TransactionException {
+    // Arrange
+    Put putIfNotExists =
+        Put.newBuilder(preparePut(0, 0)).condition(ConditionBuilder.putIfNotExists()).build();
+
+    // Act Assert
+    getThenPut(putIfNotExists);
+
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult.isPresent()).isTrue();
+    Result result = optResult.get();
+    assertThat(result.getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.isNull(BALANCE)).isTrue();
     assertThat(result.isNull(SOME_COLUMN)).isTrue();
   }
 

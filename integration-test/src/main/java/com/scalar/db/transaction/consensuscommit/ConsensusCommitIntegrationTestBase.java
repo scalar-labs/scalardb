@@ -166,7 +166,6 @@ public abstract class ConsensusCommitIntegrationTestBase
   @Test
   public void put_withPutIfWhenRecordDoesNotExist_shouldThrowCommitConflictException()
       throws TransactionException {
-
     // Arrange
     Put put =
         Put.newBuilder(preparePut(0, 0))
@@ -183,7 +182,6 @@ public abstract class ConsensusCommitIntegrationTestBase
   @Test
   public void put_withPutIfExistsWhenRecordDoesNotExist_shouldThrowCommitConflictException()
       throws TransactionException {
-
     // Arrange
     Put put = Put.newBuilder(preparePut(0, 0)).condition(ConditionBuilder.putIfExists()).build();
 
@@ -192,6 +190,27 @@ public abstract class ConsensusCommitIntegrationTestBase
 
     Optional<Result> result = get(prepareGet(0, 0));
     assertThat(result).isNotPresent();
+  }
+
+  @Test
+  public void put_withPutIfNotExistsWhenRecordExists_shouldThrowCommitConflictException()
+      throws TransactionException {
+    // Arrange
+    Put put = preparePut(0, 0);
+    put(put);
+    Put putIfNotExists = Put.newBuilder(put).condition(ConditionBuilder.putIfNotExists()).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> getThenPut(putIfNotExists))
+        .isInstanceOf(CommitConflictException.class);
+
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult.isPresent()).isTrue();
+    Result result = optResult.get();
+    assertThat(result.getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.isNull(BALANCE)).isTrue();
+    assertThat(result.isNull(SOME_COLUMN)).isTrue();
   }
 
   @Test

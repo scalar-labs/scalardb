@@ -83,7 +83,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
       if (result.isDeemedAsCommitted()) {
         // record is deemed-commit state
         preparationConditions.add(ConditionBuilder.column(ID).isNullText());
-        preparationConditions.add((ConditionBuilder.column(VERSION).isNullInt()));
+        preparationConditions.add(ConditionBuilder.column(VERSION).isNullInt());
       } else {
         preparationConditions.add(ConditionBuilder.column(ID).isEqualToText(result.getId()));
         preparationConditions.add(ConditionBuilder.column(VERSION).isEqualToInt(version));

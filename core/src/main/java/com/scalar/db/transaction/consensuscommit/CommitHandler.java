@@ -76,7 +76,7 @@ public class CommitHandler {
       prepareRecords(snapshot);
     } catch (NoMutationException e) {
       throw new PreparationConflictException(
-          "preparing record exists or the operation condition is not satisfied",
+          "preparing record exists, or the operation condition is not satisfied",
           e,
           snapshot.getId());
     } catch (RetriableExecutionException e) {

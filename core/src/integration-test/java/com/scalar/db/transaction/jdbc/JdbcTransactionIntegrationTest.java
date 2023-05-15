@@ -80,6 +80,30 @@ public class JdbcTransactionIntegrationTest extends DistributedTransactionIntegr
   }
 
   @Test
+  public void put_withPutIfNotExistsWhenRecordExists_shouldThrowCrudException()
+      throws TransactionException {
+    // Arrange
+    Put put = preparePut(0, 0);
+    put(put);
+    Put putIfNotExists =
+        Put.newBuilder(put)
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> getThenPut(putIfNotExists)).isInstanceOf(CrudException.class);
+
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult.isPresent()).isTrue();
+    Result result = optResult.get();
+    assertThat(result.getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.isNull(BALANCE)).isTrue();
+    assertThat(result.isNull(SOME_COLUMN)).isTrue();
+  }
+
+  @Test
   public void delete_withDeleteIfExistsWhenRecordDoesNotExist_shouldThrowCrudException() {
     // Arrange
     Delete deleteIf =
