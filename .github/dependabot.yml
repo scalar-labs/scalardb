@@ -39,6 +39,8 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: [ "version-update:semver-major" ]
+      - dependency-name: "software.amazon.awssdk:*"
+        update-types: [ "version-update:semver-patch" ]
   # For GitHub Actions workflows, update all actions
   - package-ecosystem: "github-actions"
     directory: "/"

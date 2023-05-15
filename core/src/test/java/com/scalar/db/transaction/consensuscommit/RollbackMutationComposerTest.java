@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
@@ -18,12 +19,14 @@ import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
@@ -150,12 +153,56 @@ public class RollbackMutationComposerTest {
                 ScalarDbUtils.toColumn(Attribute.toPreparedAtValue(ANY_TIME_1)))
             .put(Attribute.STATE, ScalarDbUtils.toColumn(Attribute.toStateValue(state)))
             .put(Attribute.VERSION, ScalarDbUtils.toColumn(Attribute.toVersionValue(1)))
-            .put(Attribute.BEFORE_ID, ScalarDbUtils.toColumn(Attribute.toBeforeIdValue(null)));
+            .put(Attribute.BEFORE_ID, ScalarDbUtils.toColumn(Attribute.toBeforeIdValue(null)))
+            .put(Attribute.BEFORE_VERSION, IntColumn.ofNull(Attribute.BEFORE_VERSION));
     if (state.equals(TransactionState.COMMITTED)) {
       builder.put(
           Attribute.COMMITTED_AT, ScalarDbUtils.toColumn(Attribute.toCommittedAtValue(ANY_TIME_2)));
     }
     return new TransactionResult(new ResultImpl(builder.build(), TABLE_METADATA));
+  }
+
+  private TransactionResult prepareResultWithNullMetadata(TransactionState state) {
+    ImmutableMap<String, Column<?>> columns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
+            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
+            .put(ANY_NAME_3, IntColumn.of(ANY_NAME_3, ANY_INT_2))
+            .put(Attribute.ID, TextColumn.of(Attribute.ID, ANY_ID_2))
+            .put(Attribute.PREPARED_AT, BigIntColumn.of(Attribute.PREPARED_AT, ANY_TIME_1))
+            .put(Attribute.COMMITTED_AT, BigIntColumn.of(Attribute.COMMITTED_AT, ANY_TIME_1))
+            .put(Attribute.STATE, IntColumn.of(Attribute.STATE, state.get()))
+            .put(Attribute.VERSION, IntColumn.of(Attribute.VERSION, 1))
+            .put(
+                Attribute.BEFORE_PREFIX + ANY_NAME_3,
+                IntColumn.of(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_1))
+            .put(Attribute.BEFORE_ID, TextColumn.ofNull(Attribute.BEFORE_ID))
+            .put(Attribute.BEFORE_PREPARED_AT, BigIntColumn.ofNull(Attribute.BEFORE_PREPARED_AT))
+            .put(Attribute.BEFORE_COMMITTED_AT, BigIntColumn.ofNull(Attribute.BEFORE_COMMITTED_AT))
+            .put(Attribute.BEFORE_STATE, IntColumn.ofNull(Attribute.BEFORE_STATE))
+            .put(Attribute.BEFORE_VERSION, IntColumn.of(Attribute.BEFORE_VERSION, 0))
+            .build();
+    return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
+  }
+
+  private TransactionResult prepareInitialResultWithNullMetadata() {
+    ImmutableMap<String, Column<?>> columns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
+            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
+            .put(ANY_NAME_3, IntColumn.of(ANY_NAME_3, ANY_INT_1))
+            .put(Attribute.ID, TextColumn.ofNull(Attribute.ID))
+            .put(Attribute.PREPARED_AT, BigIntColumn.ofNull(Attribute.PREPARED_AT))
+            .put(Attribute.COMMITTED_AT, BigIntColumn.ofNull(Attribute.COMMITTED_AT))
+            .put(Attribute.STATE, IntColumn.ofNull(Attribute.STATE))
+            .put(Attribute.VERSION, IntColumn.ofNull(Attribute.VERSION))
+            .put(Attribute.BEFORE_ID, TextColumn.ofNull(Attribute.BEFORE_ID))
+            .put(Attribute.BEFORE_PREPARED_AT, BigIntColumn.ofNull(Attribute.BEFORE_PREPARED_AT))
+            .put(Attribute.BEFORE_COMMITTED_AT, BigIntColumn.ofNull(Attribute.BEFORE_COMMITTED_AT))
+            .put(Attribute.BEFORE_STATE, IntColumn.ofNull(Attribute.BEFORE_STATE))
+            .put(Attribute.BEFORE_VERSION, IntColumn.ofNull(Attribute.BEFORE_VERSION))
+            .build();
+    return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
   }
 
   private List<Value<?>> extractAfterValues(TransactionResult result) {
@@ -171,6 +218,21 @@ public class RollbackMutationComposerTest {
               }
             });
     return values;
+  }
+
+  private List<Column<?>> extractAfterColumns(TransactionResult result) {
+    List<Column<?>> columns = new ArrayList<>();
+    result
+        .getColumns()
+        .forEach(
+            (k, v) -> {
+              if (ConsensusCommitUtils.isAfterImageColumn(k, TABLE_METADATA)
+                  && !TABLE_METADATA.getPartitionKeyNames().contains(k)
+                  && !TABLE_METADATA.getClusteringKeyNames().contains(k)) {
+                columns.add(v);
+              }
+            });
+    return columns;
   }
 
   @Test
@@ -449,5 +511,53 @@ public class RollbackMutationComposerTest {
             new ConditionalExpression(
                 STATE, toStateValue(TransactionState.PREPARED), Operator.EQ)));
     assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void add_GetAndPreparedResultWithNullMetadataByThisGiven_ShouldComposePut()
+      throws ExecutionException {
+    // Arrange
+    TransactionResult result = prepareResultWithNullMetadata(TransactionState.PREPARED);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
+    Get get = prepareGet();
+
+    // Act
+    composer.add(get, result);
+
+    // Assert
+    Put actual = (Put) composer.get().get(0);
+    PutBuilder.Buildable builder =
+        Put.newBuilder()
+            .namespace(get.forNamespace().get())
+            .table(get.forTable().get())
+            .partitionKey(get.getPartitionKey())
+            .clusteringKey(get.getClusteringKey().get())
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2))
+                    .and(
+                        ConditionBuilder.column(STATE)
+                            .isEqualToInt(TransactionState.PREPARED.get()))
+                    .build());
+    extractAfterColumns(prepareInitialResultWithNullMetadata()).forEach(builder::value);
+    Put expected = builder.build();
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void add_GetAndInitialResultWithNullMetadataGivenFromStorage_ShouldDoNothing()
+      throws ExecutionException {
+    // Arrange
+    TransactionResult obtainedResult = prepareResultWithNullMetadata(TransactionState.PREPARED);
+    TransactionResult currentResult = prepareInitialResultWithNullMetadata();
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(currentResult));
+    Get get = prepareGet();
+
+    // Act
+    composer.add(get, obtainedResult);
+
+    // Assert
+    assertThat(composer.get().size()).isEqualTo(0);
+    verify(storage).get(any(Get.class));
   }
 }

@@ -8,6 +8,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
+import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
@@ -90,6 +91,33 @@ public class TransactionResultTest {
                 .put(
                     Attribute.BEFORE_VERSION,
                     ScalarDbUtils.toColumn(Attribute.toBeforeVersionValue(ANY_VERSION_1)))
+                .build(),
+            TABLE_METADATA));
+  }
+
+  private TransactionResult prepareResultWithNullMetadata() {
+    return new TransactionResult(
+        new ResultImpl(
+            ImmutableMap.<String, Column<?>>builder()
+                .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
+                .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
+                .put(ANY_NAME_3, IntColumn.of(ANY_NAME_3, ANY_INT_2))
+                .put(Attribute.ID, TextColumn.ofNull(Attribute.ID))
+                .put(Attribute.PREPARED_AT, BigIntColumn.ofNull(Attribute.PREPARED_AT))
+                .put(Attribute.COMMITTED_AT, BigIntColumn.ofNull(Attribute.COMMITTED_AT))
+                .put(Attribute.STATE, IntColumn.ofNull(Attribute.STATE))
+                .put(Attribute.VERSION, IntColumn.ofNull(Attribute.VERSION))
+                .put(
+                    Attribute.BEFORE_PREFIX + ANY_NAME_3,
+                    IntColumn.of(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_1))
+                .put(Attribute.BEFORE_ID, TextColumn.ofNull(Attribute.BEFORE_ID))
+                .put(
+                    Attribute.BEFORE_PREPARED_AT, BigIntColumn.ofNull(Attribute.BEFORE_PREPARED_AT))
+                .put(
+                    Attribute.BEFORE_COMMITTED_AT,
+                    BigIntColumn.ofNull(Attribute.BEFORE_COMMITTED_AT))
+                .put(Attribute.BEFORE_STATE, IntColumn.ofNull(Attribute.BEFORE_STATE))
+                .put(Attribute.BEFORE_VERSION, IntColumn.ofNull(Attribute.BEFORE_VERSION))
                 .build(),
             TABLE_METADATA));
   }
@@ -299,6 +327,18 @@ public class TransactionResultTest {
   public void getTransactionState_ResultGiven_ShouldReturnCorrectState() {
     // Arrange
     TransactionResult result = prepareResult();
+
+    // Act
+    TransactionState state = result.getState();
+
+    // Assert
+    assertThat(state).isEqualTo(TransactionState.COMMITTED);
+  }
+
+  @Test
+  public void getTransactionState_ResultWithNullMetadataGiven_ShouldReturnCorrectState() {
+    // Arrange
+    TransactionResult result = prepareResultWithNullMetadata();
 
     // Act
     TransactionState state = result.getState();
