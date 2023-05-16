@@ -1,0 +1,79 @@
+name: Auto-PR
+
+on:
+  pull_request:
+    branches:
+      - master
+    types:
+      - closed
+
+env:
+  TERM: dumb
+jobs:
+  if_merged:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.CR_PAT }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # This is necessary to avoid unexpected auto-merge in git cherry-pick
+          fetch-depth: 0
+
+      - name: Create pull requests
+        run: |
+          assignee=$(gh api graphql -F owner=${{ github.event.repository.owner.login }} -F repoName=${{ github.event.repository.name }} -F userName=${{ github.event.pull_request.user }} -f query='
+          query($owner: String!, $repoName: String!, $userName: String!) {
+            repository(owner: $owner, name: $repoName) {
+              assignableUsers(first: 100, query: $userName) {
+                nodes {
+                  name,
+                  email
+                }
+              }
+            }
+          }' | jq -r '.data.repository.assignableUsers.nodes[0]'
+          )
+          versions=$(gh api graphql -F owner=${{ github.event.repository.owner.login }} -F repoName=${{ github.event.repository.name }} -F pullRequestId=${{ github.event.number }} -f query='
+          query($owner: String!, $repoName: String!, $pullRequestId: Int!) {
+            repository(owner: $owner, name: $repoName) {
+              pullRequest(number: $pullRequestId) {
+                projectsV2(first: 100) {
+                  edges {
+                    node {
+                      title
+                    }
+                  }
+                }
+              }
+            }
+          }
+          ' | jq -r '.data.repository.pullRequest.projectsV2.edges[].node.title' | sed -n 's/^ScalarDB \([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p'
+          )
+          echo -------------
+          echo "versions: $versions"
+          echo -------------
+          git config --global user.email $(echo $assignee | jq -r .email)
+          git config --global user.name $(echo $assignee | jq -r .name)
+          git fetch origin
+
+          # TODO: Improve the readability
+          branches=$(echo $versions | ruby -rset -e 'bs = Set.new; STDIN.gets.split.each {|v| parts = v.strip.split(".")[0, 2]; bs << parts[0]; bs << parts.join(".")}; bs.each {|branch| puts branch}')
+
+          echo -------------
+          echo "branches: $branches"
+          echo -------------
+          for branch in $branches; do
+            git checkout $branch
+            new_branch="$branch-pull-${{ github.event.number }}"
+            git checkout -b "$new_branch"
+            git status
+            git cherry-pick --no-rerere-autoupdate -m1 ${{ github.sha }}
+            git push origin "$new_branch"
+            gh pr create --assignee "${{ github.event.pull_request.user.login }}" \
+              --base "$branch" \
+              --title "Backport to $branch : ${{ github.event.pull_request.title }}" \
+              --body "Backport of ${{ github.event.pull_request.url }}"
+          done
+
