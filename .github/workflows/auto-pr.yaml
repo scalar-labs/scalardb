@@ -58,8 +58,24 @@ jobs:
           git config --global user.name $(echo $assignee | jq -r .name)
           git fetch origin
 
-          # TODO: Improve the readability
-          branches=$(echo $versions | ruby -rset -e 'bs = Set.new; STDIN.gets.split.each {|v| parts = v.strip.split(".")[0, 2]; bs << parts[0]; bs << parts.join(".")}; bs.each {|branch| puts branch}')
+          branches=$(echo $versions | ruby -e '
+            require "set"
+
+            versions = STDIN.read.strip.split
+
+            versions.inject(Set.new) {|acc, v|
+              # Drop patch version by getting the first 2 elements
+              parts = v.strip.split(".")[0, 2]
+              # Support branch
+              acc << parts[0]
+              # Release branch
+              acc << parts.join(".")
+              acc
+            }.each {|branch|
+              puts branch
+            }
+          ')
+
 
           echo -------------
           echo "branches: $branches"
