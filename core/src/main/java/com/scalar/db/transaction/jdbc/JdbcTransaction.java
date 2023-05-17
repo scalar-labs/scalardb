@@ -83,7 +83,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
     try {
       if (!jdbcService.put(put, connection)) {
-        throw new CrudException("no mutation was applied", txId);
+        throw new CrudConflictException("the put operation condition is not satisfied", txId);
       }
     } catch (SQLException e) {
       throw createCrudException(e, "put operation failed");
@@ -106,7 +106,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
     try {
       if (!jdbcService.delete(delete, connection)) {
-        throw new CrudException("no mutation was applied", txId);
+        throw new CrudConflictException("the delete operation condition is not satisfied", txId);
       }
     } catch (SQLException e) {
       throw createCrudException(e, "delete operation failed");

@@ -169,6 +169,7 @@ public abstract class ConsensusCommitIntegrationTestBase
     // Arrange
     Put put =
         Put.newBuilder(preparePut(0, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
             .condition(ConditionBuilder.putIf(ConditionBuilder.column(BALANCE).isNullInt()).build())
             .build();
 
@@ -183,7 +184,11 @@ public abstract class ConsensusCommitIntegrationTestBase
   public void put_withPutIfExistsWhenRecordDoesNotExist_shouldThrowCommitConflictException()
       throws TransactionException {
     // Arrange
-    Put put = Put.newBuilder(preparePut(0, 0)).condition(ConditionBuilder.putIfExists()).build();
+    Put put =
+        Put.newBuilder(preparePut(0, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .condition(ConditionBuilder.putIfExists())
+            .build();
 
     // Act Assert
     assertThatThrownBy(() -> getThenPut(put)).isInstanceOf(CommitConflictException.class);

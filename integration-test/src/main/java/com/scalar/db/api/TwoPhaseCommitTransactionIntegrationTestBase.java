@@ -1308,6 +1308,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     // Arrange
     Put put =
         Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, INITIAL_BALANCE)
             .condition(
                 ConditionBuilder.putIf(ConditionBuilder.column(BALANCE).isNullText()).build())
             .build();
@@ -1325,6 +1326,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     // Arrange
     Put put =
         Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, INITIAL_BALANCE)
             .condition(ConditionBuilder.putIfExists())
             .build();
 

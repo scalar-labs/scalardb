@@ -9,7 +9,7 @@ import com.scalar.db.api.DistributedTransactionIntegrationTestBase;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.storage.jdbc.JdbcEnv;
 import java.util.Optional;
@@ -49,38 +49,41 @@ public class JdbcTransactionIntegrationTest extends DistributedTransactionIntegr
   public void rollback_forOngoingTransaction_ShouldRollbackCorrectly() {}
 
   @Test
-  public void put_withPutIfWhenRecordDoesNotExist_shouldThrowCrudException()
+  public void put_withPutIfWhenRecordDoesNotExist_shouldThrowCrudConflictException()
       throws TransactionException {
 
     // Arrange
     Put put =
         Put.newBuilder(preparePut(0, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
             .condition(ConditionBuilder.putIf(ConditionBuilder.column(BALANCE).isNullInt()).build())
             .build();
-
     // Act Assert
-    assertThatThrownBy(() -> put(put)).isInstanceOf(CrudException.class);
+    assertThatThrownBy(() -> put(put)).isInstanceOf(CrudConflictException.class);
 
     Optional<Result> result = get(prepareGet(0, 0));
     assertThat(result).isNotPresent();
   }
 
   @Test
-  public void put_withPutIfExistsWhenRecordDoesNotExist_shouldThrowCrudException()
+  public void put_withPutIfExistsWhenRecordDoesNotExist_shouldThrowCrudConflictException()
       throws TransactionException {
 
     // Arrange
-    Put put = Put.newBuilder(preparePut(0, 0)).condition(ConditionBuilder.putIfExists()).build();
-
+    Put put =
+        Put.newBuilder(preparePut(0, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .condition(ConditionBuilder.putIfExists())
+            .build();
     // Act Assert
-    assertThatThrownBy(() -> getThenPut(put)).isInstanceOf(CrudException.class);
+    assertThatThrownBy(() -> getThenPut(put)).isInstanceOf(CrudConflictException.class);
 
     Optional<Result> result = get(prepareGet(0, 0));
     assertThat(result).isNotPresent();
   }
 
   @Test
-  public void put_withPutIfNotExistsWhenRecordExists_shouldThrowCrudException()
+  public void put_withPutIfNotExistsWhenRecordExists_shouldThrowCrudConflictException()
       throws TransactionException {
     // Arrange
     Put put = preparePut(0, 0);
@@ -92,7 +95,7 @@ public class JdbcTransactionIntegrationTest extends DistributedTransactionIntegr
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> getThenPut(putIfNotExists)).isInstanceOf(CrudException.class);
+    assertThatThrownBy(() -> getThenPut(putIfNotExists)).isInstanceOf(CrudConflictException.class);
 
     Optional<Result> optResult = get(prepareGet(0, 0));
     assertThat(optResult.isPresent()).isTrue();
@@ -104,17 +107,17 @@ public class JdbcTransactionIntegrationTest extends DistributedTransactionIntegr
   }
 
   @Test
-  public void delete_withDeleteIfExistsWhenRecordDoesNotExist_shouldThrowCrudException() {
+  public void delete_withDeleteIfExistsWhenRecordDoesNotExist_shouldThrowCrudConflictException() {
     // Arrange
     Delete deleteIf =
         Delete.newBuilder(prepareDelete(0, 0)).condition(ConditionBuilder.deleteIfExists()).build();
 
     // Act Assert
-    assertThatThrownBy(() -> getThenDelete(deleteIf)).isInstanceOf(CrudException.class);
+    assertThatThrownBy(() -> getThenDelete(deleteIf)).isInstanceOf(CrudConflictException.class);
   }
 
   @Test
-  public void delete_withDeleteIfWithNonVerifiedCondition_shouldThrowCrudException()
+  public void delete_withDeleteIfWithNonVerifiedCondition_shouldThrowCrudConflictException()
       throws TransactionException {
     // Arrange
     Put initialData = Put.newBuilder(preparePut(0, 0)).build();
@@ -130,7 +133,7 @@ public class JdbcTransactionIntegrationTest extends DistributedTransactionIntegr
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> getThenDelete(deleteIf)).isInstanceOf(CrudException.class);
+    assertThatThrownBy(() -> getThenDelete(deleteIf)).isInstanceOf(CrudConflictException.class);
 
     Optional<Result> optResult = get(prepareGet(0, 0));
     assertThat(optResult.isPresent()).isTrue();
@@ -142,7 +145,7 @@ public class JdbcTransactionIntegrationTest extends DistributedTransactionIntegr
   }
 
   @Test
-  public void put_withPutIfWithNonVerifiedCondition_shouldThrowCrudException()
+  public void put_withPutIfWithNonVerifiedCondition_shouldThrowCrudConflictException()
       throws TransactionException {
     // Arrange
     Put initialData = Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, INITIAL_BALANCE).build();
@@ -159,7 +162,7 @@ public class JdbcTransactionIntegrationTest extends DistributedTransactionIntegr
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> getThenPut(putIf)).isInstanceOf(CrudException.class);
+    assertThatThrownBy(() -> getThenPut(putIf)).isInstanceOf(CrudConflictException.class);
 
     Optional<Result> optResult = get(prepareGet(0, 0));
     assertThat(optResult.isPresent()).isTrue();

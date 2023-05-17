@@ -208,7 +208,7 @@ public class JdbcTransactionManagerTest {
   }
 
   @Test
-  public void put_withNoMutation_shouldThrowCrudException()
+  public void put_withConditionNotSatisfied_shouldThrowCrudConflictException()
       throws SQLException, ExecutionException {
     // Arrange
     when(jdbcService.put(any(), any())).thenReturn(false);
@@ -226,7 +226,7 @@ public class JdbcTransactionManagerTest {
                       .build();
               transaction.put(put);
             })
-        .isInstanceOf(CrudException.class);
+        .isInstanceOf(CrudConflictException.class);
   }
 
   @Test
@@ -266,7 +266,7 @@ public class JdbcTransactionManagerTest {
   }
 
   @Test
-  public void delete_withNoMutation_shouldThrowCrudException()
+  public void delete_withConditionNotSatisfied_shouldThrowCrudConflictException()
       throws SQLException, ExecutionException {
     // Arrange
     when(jdbcService.delete(any(), any())).thenReturn(false);
@@ -284,7 +284,7 @@ public class JdbcTransactionManagerTest {
                       .build();
               transaction.delete(delete);
             })
-        .isInstanceOf(CrudException.class);
+        .isInstanceOf(CrudConflictException.class);
   }
 
   @Test
