@@ -43,16 +43,14 @@ jobs:
             repository(owner: $owner, name: $repoName) {
               pullRequest(number: $pullRequestId) {
                 projectsV2(first: 100) {
-                  edges {
-                    node {
-                      title
-                    }
+                  nodes {
+                    title
                   }
                 }
               }
             }
           }
-          ' | jq -r '.data.repository.pullRequest.projectsV2.edges[].node.title' | sed -n 's/^ScalarDB \([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p'
+          ' | jq -r '.data.repository.pullRequest.projectsV2.nodes[].title' | sed -n 's/^ScalarDB \([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p'
           )
           echo -------------
           echo "versions: $versions"
