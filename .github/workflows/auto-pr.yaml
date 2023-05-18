@@ -23,91 +23,29 @@ jobs:
 
       - name: Create pull requests
         run: |
-          # Get the author of the merged PR
-          assignee=$(gh api graphql -F owner=${{ github.event.repository.owner.login }} -F repoName=${{ github.event.repository.name }} -F userName=${{ github.event.pull_request.user.login }} -f query='
-          query($owner: String!, $repoName: String!, $userName: String!) {
-            repository(owner: $owner, name: $repoName) {
-              assignableUsers(first: 100, query: $userName) {
-                nodes {
-                  name,
-                  email
-                }
-              }
-            }
-          }' | jq -r '.data.repository.assignableUsers.nodes[0]'
-          )
+          assignee=$(ci/auto-pr/fetch_gh_user_info "${{ github.event.repository.owner.login }}" "${{ github.event.repository.name }}" "${{ github.event.pull_request.user.login }}")
+          echo -------------
+          echo "assignee: $assignee"
+          echo -------------
 
-          # Get GitHub projects associated with the merged PR and extract full versions (e.g. "3.7.1")
-          versions=$(gh api graphql -F owner=${{ github.event.repository.owner.login }} -F repoName=${{ github.event.repository.name }} -F pullRequestId=${{ github.event.number }} -f query='
-          query($owner: String!, $repoName: String!, $pullRequestId: Int!) {
-            repository(owner: $owner, name: $repoName) {
-              pullRequest(number: $pullRequestId) {
-                projectsV2(first: 100) {
-                  nodes {
-                    title
-                  }
-                }
-              }
-            }
-          }
-          ' | jq -r '.data.repository.pullRequest.projectsV2.nodes[].title' | sed -n 's/^ScalarDB \([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p'
-          )
+          versions=$(ci/auto-pr/fetch_gh_proj_versions "${{ github.event.repository.owner.login }}" "${{ github.event.repository.name }}" "${{ github.event.number }}")
           echo -------------
           echo "versions: $versions"
           echo -------------
 
-          # Extract target support branch and release branch names from the full versions
-          branches=$(echo $versions | ruby -e '
-            require "set"
-
-            versions = STDIN.read.strip.split
-
-            versions.inject(Set.new) {|acc, v|
-              major_version, minor_version, patch_version = v.strip.split(".")
-
-              if patch_version == "0"
-                if minor_version == "0"
-                  # e.g. project: "ScalarDB 4.0.0" -> branch: "master"
-                  #
-                  # This GitHub project corresponds to `main`/`master` branch.
-                  # The target change is already merged to the default branch.
-                  # Nonthing to do.
-                else
-                  # e.g. project: "ScalarDB 3.8.0" -> branch: "3"
-                  #
-                  # This GitHub project corresponds to a support branch.
-                  acc << major_version
-                end
-              else
-                # e.g. project: "ScalarDB 3.7.1" -> branch: "3.7"
-                #
-                # This GitHub project corresponds to a release branch.
-                acc << "#{major_version}.#{minor_version}"
-              end
-
-              acc
-            }.each {|branch|
-              puts branch
-            }
-          ')
+          branches=$(ci/auto-pr/conv_proj_version_to_branch $versions)
           echo -------------
           echo "branches: $branches"
           echo -------------
 
-          # Create PRs based on the target support branches and release branches
           git config --global user.email $(echo $assignee | jq -r .email)
           git config --global user.name $(echo $assignee | jq -r .name)
-          git fetch origin
-          for branch in $branches; do
-            git checkout $branch
-            new_branch="$branch-pull-${{ github.event.number }}"
-            git checkout -b "$new_branch"
-            git status
-            git cherry-pick --no-rerere-autoupdate -m1 ${{ github.sha }}
-            git push origin "$new_branch"
-            gh pr create --assignee "${{ github.event.pull_request.user.login }}" \
-              --base "$branch" \
-              --title "Backport to $branch : ${{ github.event.pull_request.title }}" \
-              --body "Backport of ${{ github.event.pull_request.url }}"
-          done
+
+          ci/auto-pr/create_pull_requests \
+            "${{ github.event.number }}" \
+            "${{ github.event.pull_request.html_url }}" \
+            "${{ github.event.pull_request.title }}" \
+            "${{ github.sha }}" \
+            "${{ github.event.pull_request.user.login }}" \
+            $branches
 
