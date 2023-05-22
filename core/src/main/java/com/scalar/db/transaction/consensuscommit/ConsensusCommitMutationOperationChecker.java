@@ -36,6 +36,13 @@ public class ConsensusCommitMutationOperationChecker {
     return metadata;
   }
 
+  /**
+   * Checks the mutation validity
+   *
+   * @param mutation a mutation operation
+   * @throws ExecutionException when retrieving the table metadata fails
+   * @throws IllegalArgumentException when the mutation is invalid
+   */
   public void check(Mutation mutation) throws ExecutionException {
     if (mutation instanceof Put) {
       check((Put) mutation);
@@ -51,7 +58,10 @@ public class ConsensusCommitMutationOperationChecker {
               if (!(condition instanceof PutIf
                   || condition instanceof PutIfNotExists
                   || condition instanceof PutIfExists)) {
-                throw new IllegalArgumentException("The condition is not allowed on Put operation");
+                throw new IllegalArgumentException(
+                    "A "
+                        + condition.getClass().getSimpleName()
+                        + " condition is not allowed on Put operation");
               }
             });
     TransactionTableMetadata metadata = getTableMetadata(put);
@@ -71,7 +81,9 @@ public class ConsensusCommitMutationOperationChecker {
             condition -> {
               if (!(condition instanceof DeleteIf || condition instanceof DeleteIfExists)) {
                 throw new IllegalArgumentException(
-                    "The condition is not allowed on Delete operation");
+                    "A "
+                        + condition.getClass().getSimpleName()
+                        + " condition is not allowed on Delete operation");
               }
             });
     checkConditionIsNotTargetingMetadataColumns(delete, getTableMetadata(delete));
