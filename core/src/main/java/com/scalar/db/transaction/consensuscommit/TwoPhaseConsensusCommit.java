@@ -11,6 +11,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.common.AbstractTwoPhaseCommitTransaction;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationException;
@@ -31,7 +32,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private final CrudHandler crud;
   private final CommitHandler commit;
   private final RecoveryHandler recovery;
-
+  private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
   private boolean validated;
   private boolean needRollback;
 
@@ -39,10 +40,15 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private Runnable beforeRecoveryHook = () -> {};
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public TwoPhaseConsensusCommit(CrudHandler crud, CommitHandler commit, RecoveryHandler recovery) {
+  public TwoPhaseConsensusCommit(
+      CrudHandler crud,
+      CommitHandler commit,
+      RecoveryHandler recovery,
+      ConsensusCommitMutationOperationChecker mutationOperationChecker) {
     this.crud = crud;
     this.commit = commit;
     this.recovery = recovery;
+    this.mutationOperationChecker = mutationOperationChecker;
   }
 
   @Override
@@ -73,48 +79,53 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   }
 
   @Override
-  public void put(Put put) {
+  public void put(Put put) throws CrudException {
     putInternal(put);
   }
 
   @Override
-  public void put(List<Put> puts) {
+  public void put(List<Put> puts) throws CrudException {
     checkArgument(puts.size() != 0);
-    puts.forEach(this::putInternal);
+    for (Put p : puts) {
+      putInternal(p);
+    }
   }
 
-  private void putInternal(Put put) {
+  private void putInternal(Put put) throws CrudException {
     put = copyAndSetTargetToIfNot(put);
+    checkMutation(put);
     crud.put(put);
   }
 
   @Override
-  public void delete(Delete delete) {
+  public void delete(Delete delete) throws CrudException {
     deleteInternal(delete);
   }
 
   @Override
-  public void delete(List<Delete> deletes) {
+  public void delete(List<Delete> deletes) throws CrudException {
     checkArgument(deletes.size() != 0);
-    deletes.forEach(this::deleteInternal);
+    for (Delete d : deletes) {
+      deleteInternal(d);
+    }
   }
 
-  private void deleteInternal(Delete delete) {
+  private void deleteInternal(Delete delete) throws CrudException {
     delete = copyAndSetTargetToIfNot(delete);
+    checkMutation(delete);
     crud.delete(delete);
   }
 
   @Override
-  public void mutate(List<? extends Mutation> mutations) {
+  public void mutate(List<? extends Mutation> mutations) throws CrudException {
     checkArgument(mutations.size() != 0);
-    mutations.forEach(
-        m -> {
-          if (m instanceof Put) {
-            putInternal((Put) m);
-          } else if (m instanceof Delete) {
-            deleteInternal((Delete) m);
-          }
-        });
+    for (Mutation m : mutations) {
+      if (m instanceof Put) {
+        putInternal((Put) m);
+      } else if (m instanceof Delete) {
+        deleteInternal((Delete) m);
+      }
+    }
   }
 
   @Override
@@ -192,5 +203,13 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     logger.debug("recover uncommitted records: {}", results);
     beforeRecoveryHook.run();
     results.forEach(r -> recovery.recover(selection, r));
+  }
+
+  private void checkMutation(Mutation mutation) throws CrudException {
+    try {
+      mutationOperationChecker.check(mutation);
+    } catch (ExecutionException e) {
+      throw new CrudException("Checking the operation failed", e, getId());
+    }
   }
 }

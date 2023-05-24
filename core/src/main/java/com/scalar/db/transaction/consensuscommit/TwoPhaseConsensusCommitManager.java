@@ -33,6 +33,7 @@ public class TwoPhaseConsensusCommitManager
   private final RecoveryHandler recovery;
   private final CommitHandler commit;
   private final boolean isIncludeMetadataEnabled;
+  private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -50,6 +51,7 @@ public class TwoPhaseConsensusCommitManager
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
+    mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
 
   public TwoPhaseConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -67,6 +69,7 @@ public class TwoPhaseConsensusCommitManager
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
+    mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -92,6 +95,7 @@ public class TwoPhaseConsensusCommitManager
     this.recovery = recovery;
     this.commit = commit;
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
+    mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
 
   @Override
@@ -138,7 +142,8 @@ public class TwoPhaseConsensusCommitManager
     CrudHandler crud =
         new CrudHandler(storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled);
 
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
+    TwoPhaseConsensusCommit transaction =
+        new TwoPhaseConsensusCommit(crud, commit, recovery, mutationOperationChecker);
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
     return decorate(transaction);
