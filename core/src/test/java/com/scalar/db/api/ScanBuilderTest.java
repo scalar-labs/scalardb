@@ -3,6 +3,9 @@ package com.scalar.db.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.google.common.collect.ImmutableSet;
+import com.scalar.db.api.Scan.ConditionSetBuilder;
+import com.scalar.db.api.Scan.Conjunction;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +32,7 @@ public class ScanBuilderTest {
   @Mock private Scan.Ordering ordering5;
   @Mock private Key indexKey1;
   @Mock private Key indexKey2;
+  @Mock private ConditionalExpression condition;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -252,6 +256,10 @@ public class ScanBuilderTest {
     // Act Assert
     assertThatThrownBy(() -> Scan.newBuilder(existingScan).indexKey(indexKey1))
         .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).where(condition))
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).clearConditions())
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
@@ -357,8 +365,6 @@ public class ScanBuilderTest {
         .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> Scan.newBuilder(existingScan).indexKey(indexKey1))
         .isInstanceOf(UnsupportedOperationException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScan).clearOrderings())
-        .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> Scan.newBuilder(existingScan).start(startClusteringKey1))
         .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> Scan.newBuilder(existingScan).start(startClusteringKey1, false))
@@ -366,8 +372,6 @@ public class ScanBuilderTest {
     assertThatThrownBy(() -> Scan.newBuilder(existingScan).end(endClusteringKey1, false))
         .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> Scan.newBuilder(existingScan).end(endClusteringKey1))
-        .isInstanceOf(UnsupportedOperationException.class);
-    assertThatThrownBy(() -> Scan.newBuilder(existingScan).ordering(ordering1))
         .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> Scan.newBuilder(existingScan).clearStart())
         .isInstanceOf(UnsupportedOperationException.class);
@@ -505,6 +509,10 @@ public class ScanBuilderTest {
         .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> Scan.newBuilder(existingScan).clearEnd())
         .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).where(condition))
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).clearConditions())
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
@@ -518,5 +526,590 @@ public class ScanBuilderTest {
 
     // Assert
     assertThat(newScan).isEqualTo(new ScanWithIndex(indexKey1).forTable(TABLE_1));
+  }
+
+  @Test
+  public void buildScanAll_ScanWithConjunctiveNormalForm_ShouldBuildScanWithConditionsCorrectly() {
+    // Arrange Act
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .all()
+            .where(ConditionBuilder.column("ck1").isGreaterThanInt(10))
+            .and(ConditionBuilder.column("ck2").isGreaterThanInt(10))
+            .and(
+                ConditionSetBuilder.condition(ConditionBuilder.column("ck3").isGreaterThanInt(10))
+                    .or(ConditionBuilder.column("ck4").isGreaterThanInt(10))
+                    .build())
+            .and(ConditionBuilder.column("col1").isGreaterThanInt(10))
+            .ordering(ordering1)
+            .orderings(Arrays.asList(ordering2, ordering3))
+            .orderings(ordering4, ordering5)
+            .limit(10)
+            .projections(Arrays.asList("pk1", "ck1"))
+            .projection("ck2")
+            .projections("ck3", "ck4")
+            .consistency(Consistency.EVENTUAL)
+            .build();
+
+    // Assert
+    assertThat(scan)
+        .isEqualTo(
+            new ScanAll()
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(
+                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck2").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                            ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                        Conjunction.of(
+                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck2").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                            ConditionBuilder.column("col1").isGreaterThanInt(10))))
+                .withOrdering(ordering1)
+                .withOrdering(ordering2)
+                .withOrdering(ordering3)
+                .withOrdering(ordering4)
+                .withOrdering(ordering5)
+                .withLimit(10)
+                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
+                .withConsistency(Consistency.EVENTUAL));
+  }
+
+  @Test
+  public void
+      buildScanAll_ScanWithConditionAndConditionSet_ShouldBuildScanWithConditionsCorrectly() {
+    // Arrange Act
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .all()
+            .where(ConditionBuilder.column("ck1").isGreaterThanInt(10))
+            .and(
+                ConditionSetBuilder.condition(ConditionBuilder.column("ck3").isGreaterThanInt(10))
+                    .or(ConditionBuilder.column("ck4").isGreaterThanInt(10))
+                    .build())
+            .and(ConditionBuilder.column("col1").isGreaterThanInt(10))
+            .limit(10)
+            .projections(Arrays.asList("pk1", "ck1"))
+            .projection("ck2")
+            .projections("ck3", "ck4")
+            .consistency(Consistency.EVENTUAL)
+            .build();
+
+    // Assert
+    assertThat(scan)
+        .isEqualTo(
+            new ScanAll()
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(
+                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                            ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                        Conjunction.of(
+                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                            ConditionBuilder.column("col1").isGreaterThanInt(10))))
+                .withLimit(10)
+                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
+                .withConsistency(Consistency.EVENTUAL));
+  }
+
+  @Test
+  public void buildScanAll_ScanWithTwoAndConditionSet_ShouldBuildScanWithConditionsCorrectly() {
+    // Arrange Act
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .all()
+            .where(
+                ConditionSetBuilder.condition(ConditionBuilder.column("ck3").isGreaterThanInt(10))
+                    .or(ConditionBuilder.column("ck4").isGreaterThanInt(10))
+                    .build())
+            .and(
+                ConditionSetBuilder.condition(ConditionBuilder.column("col1").isGreaterThanInt(10))
+                    .or(ConditionBuilder.column("col2").isGreaterThanInt(10))
+                    .build())
+            .limit(10)
+            .projections(Arrays.asList("pk1", "ck1"))
+            .projection("ck2")
+            .projections("ck3", "ck4")
+            .consistency(Consistency.EVENTUAL)
+            .build();
+
+    // Assert
+    assertThat(scan)
+        .isEqualTo(
+            new ScanAll()
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(
+                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                            ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                        Conjunction.of(
+                            ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                            ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                        Conjunction.of(
+                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                            ConditionBuilder.column("col2").isGreaterThanInt(10)),
+                        Conjunction.of(
+                            ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                            ConditionBuilder.column("col2").isGreaterThanInt(10))))
+                .withLimit(10)
+                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
+                .withConsistency(Consistency.EVENTUAL));
+  }
+
+  @Test
+  public void buildScanAll_ScanWithDisjunctiveNormalForm_ShouldBuildScanWithConditionsCorrectly() {
+    // Arrange Act
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .all()
+            .where(ConditionBuilder.column("ck1").isGreaterThanInt(10))
+            .or(ConditionBuilder.column("ck2").isGreaterThanInt(10))
+            .or(
+                ConditionSetBuilder.condition(ConditionBuilder.column("ck3").isGreaterThanInt(10))
+                    .and(ConditionBuilder.column("ck4").isGreaterThanInt(10))
+                    .build())
+            .or(ConditionBuilder.column("col1").isGreaterThanInt(10))
+            .ordering(ordering1)
+            .orderings(Arrays.asList(ordering2, ordering3))
+            .orderings(ordering4, ordering5)
+            .limit(10)
+            .projections(Arrays.asList("pk1", "ck1"))
+            .projection("ck2")
+            .projections("ck3", "ck4")
+            .consistency(Consistency.EVENTUAL)
+            .build();
+
+    // Assert
+    assertThat(scan)
+        .isEqualTo(
+            new ScanAll()
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
+                        Conjunction.of(ConditionBuilder.column("ck2").isGreaterThanInt(10)),
+                        Conjunction.of(
+                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck4").isGreaterThanInt(10)),
+                        Conjunction.of(ConditionBuilder.column("col1").isGreaterThanInt(10))))
+                .withOrdering(ordering1)
+                .withOrdering(ordering2)
+                .withOrdering(ordering3)
+                .withOrdering(ordering4)
+                .withOrdering(ordering5)
+                .withLimit(10)
+                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
+                .withConsistency(Consistency.EVENTUAL));
+  }
+
+  @Test
+  public void
+      buildScanAll_ScanWithConditionOrConditionSet_ShouldBuildScanWithConditionsCorrectly() {
+    // Arrange Act
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .all()
+            .where(ConditionBuilder.column("ck1").isGreaterThanInt(10))
+            .or(
+                ConditionSetBuilder.condition(ConditionBuilder.column("ck3").isGreaterThanInt(10))
+                    .and(ConditionBuilder.column("ck4").isGreaterThanInt(10))
+                    .build())
+            .or(ConditionBuilder.column("col1").isGreaterThanInt(10))
+            .limit(10)
+            .projections(Arrays.asList("pk1", "ck1"))
+            .projection("ck2")
+            .projections("ck3", "ck4")
+            .consistency(Consistency.EVENTUAL)
+            .build();
+
+    // Assert
+    assertThat(scan)
+        .isEqualTo(
+            new ScanAll()
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
+                        Conjunction.of(
+                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck4").isGreaterThanInt(10)),
+                        Conjunction.of(ConditionBuilder.column("col1").isGreaterThanInt(10))))
+                .withLimit(10)
+                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
+                .withConsistency(Consistency.EVENTUAL));
+  }
+
+  @Test
+  public void buildScanAll_ScanWithTwoOrConditionSet_ShouldBuildScanWithConditionsCorrectly() {
+    // Arrange Act
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .all()
+            .where(
+                ConditionSetBuilder.condition(ConditionBuilder.column("ck3").isGreaterThanInt(10))
+                    .and(ConditionBuilder.column("ck4").isGreaterThanInt(10))
+                    .build())
+            .or(
+                ConditionSetBuilder.condition(ConditionBuilder.column("col1").isGreaterThanInt(10))
+                    .and(ConditionBuilder.column("col2").isGreaterThanInt(10))
+                    .build())
+            .limit(10)
+            .projections(Arrays.asList("pk1", "ck1"))
+            .projection("ck2")
+            .projections("ck3", "ck4")
+            .consistency(Consistency.EVENTUAL)
+            .build();
+
+    // Assert
+    assertThat(scan)
+        .isEqualTo(
+            new ScanAll()
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(
+                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck4").isGreaterThanInt(10)),
+                        Conjunction.of(
+                            ConditionBuilder.column("col1").isGreaterThanInt(10),
+                            ConditionBuilder.column("col2").isGreaterThanInt(10))))
+                .withLimit(10)
+                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
+                .withConsistency(Consistency.EVENTUAL));
+  }
+
+  @Test
+  public void
+      buildScanAll_FromExistingWithConditionsAndUpdateAllParameters_ShouldBuildScanWithUpdatedParameters() {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .all()
+            .where(ConditionBuilder.column("pk1").isGreaterThanInt(10))
+            .ordering(ordering1)
+            .ordering(ordering2)
+            .limit(10)
+            .projection("pk1")
+            .consistency(Consistency.EVENTUAL)
+            .build();
+
+    // Act
+    Scan newScan =
+        Scan.newBuilder(scan)
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .clearConditions()
+            .where(ConditionBuilder.column("ck1").isGreaterThanInt(10))
+            .and(ConditionBuilder.column("ck2").isGreaterThanInt(10))
+            .and(
+                ConditionSetBuilder.condition(ConditionBuilder.column("ck3").isGreaterThanInt(10))
+                    .or(ConditionBuilder.column("ck4").isGreaterThanInt(10))
+                    .build())
+            .and(ConditionBuilder.column("col1").isGreaterThanInt(10))
+            .clearOrderings()
+            .ordering(ordering3)
+            .orderings(Arrays.asList(ordering4, ordering5))
+            .orderings(ordering1, ordering2)
+            .limit(5)
+            .clearProjections()
+            .projections(Arrays.asList("ck1", "ck2"))
+            .projection("ck3")
+            .projections("ck4", "ck5")
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    // Assert
+    assertThat(newScan)
+        .isEqualTo(
+            new ScanAll()
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(
+                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck2").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                            ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                        Conjunction.of(
+                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck2").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                            ConditionBuilder.column("col1").isGreaterThanInt(10))))
+                .withOrdering(ordering3)
+                .withOrdering(ordering4)
+                .withOrdering(ordering5)
+                .withOrdering(ordering1)
+                .withOrdering(ordering2)
+                .withLimit(5)
+                .withProjections(Arrays.asList("ck1", "ck2", "ck3", "ck4", "ck5"))
+                .withConsistency(Consistency.LINEARIZABLE));
+  }
+
+  @Test
+  public void
+      buildScanAll_FromExistingAndAddConditionAndConditionSet_ShouldBuildScanWithUpdatedParameters() {
+    // Arrange
+    Scan scan = Scan.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).all().build();
+
+    // Act
+    Scan newScan =
+        Scan.newBuilder(scan)
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .where(ConditionBuilder.column("ck1").isGreaterThanInt(10))
+            .and(
+                ConditionSetBuilder.condition(ConditionBuilder.column("ck3").isGreaterThanInt(10))
+                    .or(ConditionBuilder.column("ck4").isGreaterThanInt(10))
+                    .build())
+            .and(ConditionBuilder.column("col1").isGreaterThanInt(10))
+            .build();
+
+    // Assert
+    assertThat(newScan)
+        .isEqualTo(
+            new ScanAll()
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(
+                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                            ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                        Conjunction.of(
+                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                            ConditionBuilder.column("col1").isGreaterThanInt(10))))
+                .withConsistency(Consistency.SEQUENTIAL));
+  }
+
+  @Test
+  public void
+      buildScanAll_FromExistingAndAddTwoAndConditionSet_ShouldBuildScanWithUpdatedParameters() {
+    // Arrange
+    Scan scan = Scan.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).all().build();
+
+    // Act
+    Scan newScan =
+        Scan.newBuilder(scan)
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .where(
+                ConditionSetBuilder.condition(ConditionBuilder.column("ck3").isGreaterThanInt(10))
+                    .or(ConditionBuilder.column("ck4").isGreaterThanInt(10))
+                    .build())
+            .and(
+                ConditionSetBuilder.condition(ConditionBuilder.column("col1").isGreaterThanInt(10))
+                    .or(ConditionBuilder.column("col2").isGreaterThanInt(10))
+                    .build())
+            .build();
+
+    // Assert
+    assertThat(newScan)
+        .isEqualTo(
+            new ScanAll()
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(
+                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                            ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                        Conjunction.of(
+                            ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                            ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                        Conjunction.of(
+                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                            ConditionBuilder.column("col2").isGreaterThanInt(10)),
+                        Conjunction.of(
+                            ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                            ConditionBuilder.column("col2").isGreaterThanInt(10))))
+                .withConsistency(Consistency.SEQUENTIAL));
+  }
+
+  @Test
+  public void
+      buildScanAll_FromExistingAndAddTwoOrConditions_ShouldBuildScanWithUpdatedParameters() {
+    // Arrange
+    Scan scan = Scan.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).all().build();
+
+    // Act
+    Scan newScan =
+        Scan.newBuilder(scan)
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .where(ConditionBuilder.column("ck1").isGreaterThanInt(10))
+            .or(ConditionBuilder.column("ck2").isGreaterThanInt(10))
+            .build();
+
+    // Assert
+    assertThat(newScan)
+        .isEqualTo(
+            new ScanAll()
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
+                        Conjunction.of(ConditionBuilder.column("ck2").isGreaterThanInt(10))))
+                .withConsistency(Consistency.SEQUENTIAL));
+  }
+
+  @Test
+  public void
+      buildScanAll_FromExistingAndAddConditionOrConditionSet_ShouldBuildScanWithUpdatedParameters() {
+    // Arrange
+    Scan scan = Scan.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).all().build();
+
+    // Act
+    Scan newScan =
+        Scan.newBuilder(scan)
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .where(ConditionBuilder.column("ck1").isGreaterThanInt(10))
+            .or(
+                ConditionSetBuilder.condition(ConditionBuilder.column("ck3").isGreaterThanInt(10))
+                    .and(ConditionBuilder.column("ck4").isGreaterThanInt(10))
+                    .build())
+            .or(ConditionBuilder.column("col1").isGreaterThanInt(10))
+            .build();
+
+    // Assert
+    assertThat(newScan)
+        .isEqualTo(
+            new ScanAll()
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
+                        Conjunction.of(
+                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck4").isGreaterThanInt(10)),
+                        Conjunction.of(ConditionBuilder.column("col1").isGreaterThanInt(10))))
+                .withConsistency(Consistency.SEQUENTIAL));
+  }
+
+  @Test
+  public void
+      buildScanAll_FromExistingAndAddTwoOrConditionSet_ShouldBuildScanWithUpdatedParameters() {
+    // Arrange
+    Scan scan = Scan.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).all().build();
+
+    // Act
+    Scan newScan =
+        Scan.newBuilder(scan)
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .where(
+                ConditionSetBuilder.condition(ConditionBuilder.column("ck3").isGreaterThanInt(10))
+                    .and(ConditionBuilder.column("ck4").isGreaterThanInt(10))
+                    .build())
+            .or(
+                ConditionSetBuilder.condition(ConditionBuilder.column("col1").isGreaterThanInt(10))
+                    .and(ConditionBuilder.column("col2").isGreaterThanInt(10))
+                    .build())
+            .build();
+
+    // Assert
+    assertThat(newScan)
+        .isEqualTo(
+            new ScanAll()
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(
+                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck4").isGreaterThanInt(10)),
+                        Conjunction.of(
+                            ConditionBuilder.column("col1").isGreaterThanInt(10),
+                            ConditionBuilder.column("col2").isGreaterThanInt(10))))
+                .withConsistency(Consistency.SEQUENTIAL));
+  }
+
+  @Test
+  public void
+      buildScanAll_FromExistingWithConditionsAndAddOrderings_ShouldBuildScanWithConditionsAndUpdatedParameters() {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .all()
+            .where(ConditionBuilder.column("ck1").isGreaterThanInt(10))
+            .build();
+
+    // Act
+    Scan newScan =
+        Scan.newBuilder(scan)
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .clearOrderings()
+            .ordering(ordering3)
+            .orderings(Arrays.asList(ordering4, ordering5))
+            .orderings(ordering1, ordering2)
+            .build();
+
+    // Assert
+    assertThat(newScan)
+        .isEqualTo(
+            new ScanAll()
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10))))
+                .withOrdering(ordering3)
+                .withOrdering(ordering4)
+                .withOrdering(ordering5)
+                .withOrdering(ordering1)
+                .withOrdering(ordering2)
+                .withConsistency(Consistency.SEQUENTIAL));
+  }
+
+  @Test
+  public void
+      buildScanAll_FromExistingWithConditionAndCallWhereBeforeClearingCondition_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    Scan existingScan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .all()
+            .where(ConditionBuilder.column("pk1").isGreaterThanInt(10))
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> Scan.newBuilder(existingScan).where(condition))
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 }
