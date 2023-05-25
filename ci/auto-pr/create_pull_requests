@@ -19,6 +19,10 @@ assignee=$1
 shift
 branches=("$@")
 
+# Use the author info of the original Git commit
+git config --global user.email $(git show -s --format='%ae' $commit_sha)
+git config --global user.name $(git show -s --format='%an' $commit_sha)
+
 function cherry_pick_and_create_pull_request () {
   local branch=$1
   local new_branch=$2
