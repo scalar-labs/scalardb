@@ -1,0 +1,28 @@
+# When we push a new SNAPSHOT image, the old SNAPSHOT image remains as an untagged
+# image in GitHub Packages. We remove those untagged images by using this workflow.
+
+name: Remove untagged images
+
+on:
+  schedule:
+    # UTC
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  remove-untagged-container-images:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: scalardb-server
+        uses: camargo/delete-untagged-action@v1
+        with:
+          github-token: ${{ secrets.CR_PAT }}
+          package-name: scalardb-server
+
+      - name: scalardb-schema-loader
+        uses: camargo/delete-untagged-action@v1
+        with:
+          github-token: ${{ secrets.CR_PAT }}
+          package-name: scalardb-schema-loader
