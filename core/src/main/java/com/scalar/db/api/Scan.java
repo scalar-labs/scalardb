@@ -485,11 +485,19 @@ public class Scan extends Selection {
     }
   }
 
+  /**
+   * A conjunctive set of {@link ConditionalExpression}, and it is an internal representation of the
+   * optional parameter for a {@link Scan} command, which specifies arbitrary conditions with a
+   * disjunctive set of {@link Conjunction} (i.e., a disjunctive normal form, DNF). Its
+   * functionality is similar to {@link ScanBuilder.AndConditionSet}, but unlike {@link
+   * ScanBuilder.AndConditionSet}, this class is primarily used for an internal purpose. Breaking
+   * changes can and will be introduced to this class. Users should not depend on it.
+   */
   @Immutable
   public static class Conjunction {
-    private final Set<ConditionalExpression> conditions;
+    private final ImmutableSet<ConditionalExpression> conditions;
 
-    private Conjunction(Set<ConditionalExpression> conditions) {
+    private Conjunction(ImmutableSet<ConditionalExpression> conditions) {
       this.conditions = conditions;
     }
 
@@ -499,7 +507,7 @@ public class Scan extends Selection {
      * @return set of {@code ConditionalExpression} which this conjunction is composed of
      */
     public Set<ConditionalExpression> getConditions() {
-      return ImmutableSet.copyOf(conditions);
+      return conditions;
     }
 
     /**
@@ -564,236 +572,6 @@ public class Scan extends Selection {
     @Override
     public String toString() {
       return conditions.toString();
-    }
-  }
-
-  @Immutable
-  public static class AndConditionSet {
-    private final Set<ConditionalExpression> conditions;
-
-    private AndConditionSet(Set<ConditionalExpression> conditions) {
-      this.conditions = conditions;
-    }
-
-    /**
-     * Returns the set of {@code ConditionalExpression}.
-     *
-     * @return set of {@code ConditionalExpression}
-     */
-    public Set<ConditionalExpression> getConditions() {
-      return ImmutableSet.copyOf(conditions);
-    }
-
-    /**
-     * Indicates whether some other object is "equal to" this object. The other object is considered
-     * equal if:
-     *
-     * <ul>
-     *   <li>it is also an {@code AndConditionSet}
-     *   <li>both instances have the same set of {@code ConditionalExpression}
-     * </ul>
-     *
-     * @param o an object to be tested for equality
-     * @return {@code true} if the other object is "equal to" this object otherwise {@code false}
-     */
-    @Override
-    public boolean equals(Object o) {
-      if (o == this) {
-        return true;
-      }
-      if (!(o instanceof AndConditionSet)) {
-        return false;
-      }
-      AndConditionSet other = (AndConditionSet) o;
-      return conditions.equals(other.conditions);
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(conditions);
-    }
-
-    @Override
-    public String toString() {
-      return conditions.toString();
-    }
-  }
-
-  @Immutable
-  public static class OrConditionSet {
-    private final Set<ConditionalExpression> conditions;
-
-    private OrConditionSet(Set<ConditionalExpression> conditions) {
-      this.conditions = conditions;
-    }
-
-    /**
-     * Returns the set of {@code ConditionalExpression}.
-     *
-     * @return set of {@code ConditionalExpression}
-     */
-    public Set<ConditionalExpression> getConditions() {
-      return ImmutableSet.copyOf(conditions);
-    }
-
-    /**
-     * Indicates whether some other object is "equal to" this object. The other object is considered
-     * equal if:
-     *
-     * <ul>
-     *   <li>it is also an {@code OrConditionSet}
-     *   <li>both instances have the same set of {@code ConditionalExpression}
-     * </ul>
-     *
-     * @param o an object to be tested for equality
-     * @return {@code true} if the other object is "equal to" this object otherwise {@code false}
-     */
-    @Override
-    public boolean equals(Object o) {
-      if (o == this) {
-        return true;
-      }
-      if (!(o instanceof OrConditionSet)) {
-        return false;
-      }
-      OrConditionSet other = (OrConditionSet) o;
-      return conditions.equals(other.conditions);
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(conditions);
-    }
-
-    @Override
-    public String toString() {
-      return conditions.toString();
-    }
-  }
-
-  public static class ConditionSetBuilder {
-
-    /**
-     * Returns a builder object to build a {@code AndConditionSet} or {@code OrConditionSet}.
-     *
-     * @param condition a conditional expression to build a {@code AndConditionSet} or {@code
-     *     OrConditionSet}.
-     * @return a builder object
-     */
-    public static AndOrConditionSetBuilder condition(ConditionalExpression condition) {
-      return new AndOrConditionSetBuilder(ImmutableSet.of(condition));
-    }
-
-    /**
-     * Returns a builder object to build a {@code AndConditionSet}.
-     *
-     * @param conditions a set of conditional expressions to build a {@code AndConditionSet}.
-     * @return a builder object
-     */
-    public static BuildableAndConditionSet andConditionSet(Set<ConditionalExpression> conditions) {
-      return new BuildableAndConditionSet(conditions);
-    }
-
-    /**
-     * Returns a builder object to build a {@code OrConditionSet}.
-     *
-     * @param conditions a set of conditional expressions to build a {@code OrConditionSet}.
-     * @return a builder object
-     */
-    public static BuildableOrConditionSet orConditionSet(Set<ConditionalExpression> conditions) {
-      return new BuildableOrConditionSet(conditions);
-    }
-  }
-
-  public static class AndOrConditionSetBuilder {
-
-    private final Set<ConditionalExpression> conditions;
-
-    AndOrConditionSetBuilder(Set<ConditionalExpression> conditions) {
-      this.conditions = new HashSet<>();
-      this.conditions.addAll(conditions);
-    }
-
-    /**
-     * Adds a conditional expression for a {@code AndConditionSet}.
-     *
-     * @param condition a conditional expression for a {@code AndConditionSet}.
-     * @return a builder object
-     */
-    public BuildableAndConditionSet and(ConditionalExpression condition) {
-      conditions.add(condition);
-      return new BuildableAndConditionSet(conditions);
-    }
-
-    /**
-     * Adds a conditional expression for a {@code OrConditionSet}.
-     *
-     * @param condition a conditional expression for a {@code OrConditionSet}.
-     * @return a builder object
-     */
-    public BuildableOrConditionSet or(ConditionalExpression condition) {
-      conditions.add(condition);
-      return new BuildableOrConditionSet(conditions);
-    }
-  }
-
-  public static class BuildableAndConditionSet {
-
-    private final Set<ConditionalExpression> conditions;
-
-    private BuildableAndConditionSet(Set<ConditionalExpression> conditions) {
-      this.conditions = new HashSet<>();
-      this.conditions.addAll(conditions);
-    }
-
-    /**
-     * Adds a conditional expression for a {@code AndConditionSet}.
-     *
-     * @param condition a conditional expression for a {@code AndConditionSet}.
-     * @return a builder object
-     */
-    public BuildableAndConditionSet and(ConditionalExpression condition) {
-      conditions.add(condition);
-      return this;
-    }
-
-    /**
-     * Builds an and-wise condition set with the specified conditional expressions.
-     *
-     * @return an and-wise condition set
-     */
-    public AndConditionSet build() {
-      return new AndConditionSet(conditions);
-    }
-  }
-
-  public static class BuildableOrConditionSet {
-
-    private final Set<ConditionalExpression> conditions;
-
-    private BuildableOrConditionSet(Set<ConditionalExpression> conditions) {
-      this.conditions = new HashSet<>();
-      this.conditions.addAll(conditions);
-    }
-
-    /**
-     * Adds a conditional expression for a {@code OrConditionSet}.
-     *
-     * @param condition a conditional expression for a {@code OrConditionSet}.
-     * @return a builder object
-     */
-    public BuildableOrConditionSet or(ConditionalExpression condition) {
-      conditions.add(condition);
-      return this;
-    }
-
-    /**
-     * Builds an or-wise condition set with the specified conditional expressions.
-     *
-     * @return an or-wise condition set
-     */
-    public OrConditionSet build() {
-      return new OrConditionSet(conditions);
     }
   }
 }

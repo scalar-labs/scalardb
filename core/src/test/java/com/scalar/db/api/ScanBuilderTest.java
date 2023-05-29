@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableSet;
-import com.scalar.db.api.Scan.ConditionSetBuilder;
 import com.scalar.db.api.Scan.Conjunction;
+import com.scalar.db.api.ScanBuilder.AndConditionSet;
+import com.scalar.db.api.ScanBuilder.ConditionSetBuilder;
+import com.scalar.db.api.ScanBuilder.OrConditionSet;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,9 +18,14 @@ import org.mockito.MockitoAnnotations;
 public class ScanBuilderTest {
   private static final String NAMESPACE_1 = "namespace1";
   private static final String NAMESPACE_2 = "namespace2";
-
   private static final String TABLE_1 = "table1";
   private static final String TABLE_2 = "table2";
+  private static final String ANY_NAME_1 = "name1";
+  private static final String ANY_NAME_2 = "name2";
+  private static final String ANY_NAME_3 = "name3";
+  private static final String ANY_TEXT_1 = "text1";
+  private static final String ANY_TEXT_2 = "text2";
+
   @Mock private Key partitionKey1;
   @Mock private Key partitionKey2;
   @Mock private Key startClusteringKey1;
@@ -37,6 +44,34 @@ public class ScanBuilderTest {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+  }
+
+  private AndConditionSet prepareAndConditionSet() {
+    return ConditionSetBuilder.condition(
+            ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1))
+        .and(ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1))
+        .build();
+  }
+
+  private AndConditionSet prepareAnotherAndConditionSet() {
+    return ConditionSetBuilder.condition(
+            ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1))
+        .and(ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_2))
+        .build();
+  }
+
+  private OrConditionSet prepareOrConditionSet() {
+    return ConditionSetBuilder.condition(
+            ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1))
+        .or(ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1))
+        .build();
+  }
+
+  private OrConditionSet prepareAnotherOrConditionSet() {
+    return ConditionSetBuilder.condition(
+            ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1))
+        .or(ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_2))
+        .build();
   }
 
   @Test
@@ -1110,6 +1145,198 @@ public class ScanBuilderTest {
 
     // Act Assert
     assertThatThrownBy(() -> Scan.newBuilder(existingScan).where(condition))
-        .isInstanceOf(UnsupportedOperationException.class);
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void equals_SameAndConditionSetInstanceGiven_ShouldReturnTrue() {
+    // Arrange
+    AndConditionSet andConditionSet = prepareAndConditionSet();
+
+    // Act
+    @SuppressWarnings("SelfEquals")
+    boolean ret = andConditionSet.equals(andConditionSet);
+
+    // Assert
+    assertThat(ret).isTrue();
+  }
+
+  @Test
+  public void equals_SameAndConditionSetGiven_ShouldReturnTrue() {
+    // Arrange
+    AndConditionSet andConditionSet = prepareAndConditionSet();
+    AndConditionSet another = prepareAndConditionSet();
+
+    // Act
+    boolean ret = andConditionSet.equals(another);
+
+    // Assert
+    assertThat(ret).isTrue();
+    assertThat(andConditionSet.hashCode()).isEqualTo(another.hashCode());
+  }
+
+  @Test
+  public void equals_AndConditionSetWithDifferentConditionGiven_ShouldReturnFalse() {
+    // Arrange
+    AndConditionSet andConditionSet = prepareAndConditionSet();
+    AndConditionSet another = prepareAnotherAndConditionSet();
+
+    // Act
+    boolean ret = andConditionSet.equals(another);
+
+    // Assert
+    assertThat(ret).isFalse();
+  }
+
+  @Test
+  public void equals_SameOrConditionSetInstanceGiven_ShouldReturnTrue() {
+    // Arrange
+    OrConditionSet orConditionSet = prepareOrConditionSet();
+
+    // Act
+    @SuppressWarnings("SelfEquals")
+    boolean ret = orConditionSet.equals(orConditionSet);
+
+    // Assert
+    assertThat(ret).isTrue();
+  }
+
+  @Test
+  public void equals_SameOrConditionSetGiven_ShouldReturnTrue() {
+    // Arrange
+    OrConditionSet orConditionSet = prepareOrConditionSet();
+    OrConditionSet another = prepareOrConditionSet();
+
+    // Act
+    boolean ret = orConditionSet.equals(another);
+
+    // Assert
+    assertThat(ret).isTrue();
+    assertThat(orConditionSet.hashCode()).isEqualTo(another.hashCode());
+  }
+
+  @Test
+  public void equals_OrConditionSetWithDifferentConditionGiven_ShouldReturnFalse() {
+    // Arrange
+    OrConditionSet orConditionSet = prepareOrConditionSet();
+    OrConditionSet another = prepareAnotherOrConditionSet();
+
+    // Act
+    boolean ret = orConditionSet.equals(another);
+
+    // Assert
+    assertThat(ret).isFalse();
+  }
+
+  @Test
+  public void
+      ConditionSetBuilder_TwoConditionsConnectedWithAndGiven_ShouldBuildAndConditionSetCorrectly() {
+    // Arrange Act
+    AndConditionSet andConditionSet =
+        ConditionSetBuilder.condition(ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1))
+            .and(ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1))
+            .build();
+
+    // Assert
+    assertThat(andConditionSet.getConditions())
+        .hasSameElementsAs(
+            ImmutableSet.of(
+                ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
+                ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1)));
+  }
+
+  @Test
+  public void
+      ConditionSetBuilder_TwoConditionsConnectedWithOrGiven_ShouldBuildOrConditionSetCorrectly() {
+    // Arrange Act
+    OrConditionSet orConditionSet =
+        ConditionSetBuilder.condition(ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1))
+            .or(ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1))
+            .build();
+
+    // Assert
+    assertThat(orConditionSet.getConditions())
+        .hasSameElementsAs(
+            ImmutableSet.of(
+                ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
+                ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1)));
+  }
+
+  @Test
+  public void ConditionSetBuilder_SetOfConditionsGivenForAnd_ShouldBuildAndConditionSetCorrectly() {
+    // Arrange Act
+    AndConditionSet andConditionSet =
+        ConditionSetBuilder.andConditionSet(
+                ImmutableSet.of(
+                    ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
+                    ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1)))
+            .build();
+
+    // Assert
+    assertThat(andConditionSet.getConditions())
+        .hasSameElementsAs(
+            ImmutableSet.of(
+                ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
+                ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1)));
+  }
+
+  @Test
+  public void ConditionSetBuilder_SetOfConditionsGivenForOr_ShouldBuildOrConditionSetCorrectly() {
+    // Arrange Act
+    OrConditionSet orConditionSet =
+        ConditionSetBuilder.orConditionSet(
+                ImmutableSet.of(
+                    ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
+                    ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1)))
+            .build();
+
+    // Assert
+    assertThat(orConditionSet.getConditions())
+        .hasSameElementsAs(
+            ImmutableSet.of(
+                ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
+                ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1)));
+  }
+
+  @Test
+  public void
+      ConditionSetBuilder_AndConditionSetAndConditionConnectedWithAndGiven_ShouldBuildAndConditionSetCorrectly() {
+    // Arrange Act
+    AndConditionSet andConditionSet =
+        ConditionSetBuilder.andConditionSet(
+                ImmutableSet.of(
+                    ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
+                    ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1)))
+            .and(ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_1))
+            .build();
+
+    // Assert
+    assertThat(andConditionSet.getConditions())
+        .hasSameElementsAs(
+            ImmutableSet.of(
+                ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
+                ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1),
+                ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_1)));
+  }
+
+  @Test
+  public void
+      ConditionSetBuilder_OrConditionSetAndConditionConnectedWithOrGiven_ShouldBuildOrConditionSetCorrectly() {
+    // Arrange Act
+    OrConditionSet orConditionSet =
+        ConditionSetBuilder.orConditionSet(
+                ImmutableSet.of(
+                    ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
+                    ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1)))
+            .or(ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_1))
+            .build();
+
+    // Assert
+    assertThat(orConditionSet.getConditions())
+        .hasSameElementsAs(
+            ImmutableSet.of(
+                ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
+                ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1),
+                ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_1)));
   }
 }

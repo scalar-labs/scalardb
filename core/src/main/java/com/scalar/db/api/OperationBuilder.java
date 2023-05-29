@@ -419,7 +419,7 @@ class OperationBuilder {
      * @param conditions a set of conditions
      * @return the operation builder
      */
-    T where(Scan.OrConditionSet conditions);
+    T where(ScanBuilder.OrConditionSet conditions);
   }
 
   interface WhereOr<T> {
@@ -429,7 +429,7 @@ class OperationBuilder {
      * @param conditions a set of conditions
      * @return the operation builder
      */
-    T where(Scan.AndConditionSet conditions);
+    T where(ScanBuilder.AndConditionSet conditions);
   }
 
   interface And<T> {
@@ -447,7 +447,7 @@ class OperationBuilder {
      * @param conditions a set of conditions
      * @return the operation builder
      */
-    T and(Scan.OrConditionSet conditions);
+    T and(ScanBuilder.OrConditionSet conditions);
   }
 
   interface Or<T> {
@@ -465,7 +465,7 @@ class OperationBuilder {
      * @param conditions a set of conditions
      * @return the operation builder
      */
-    T or(Scan.AndConditionSet conditions);
+    T or(ScanBuilder.AndConditionSet conditions);
   }
 
   interface ClearConditions<T> {

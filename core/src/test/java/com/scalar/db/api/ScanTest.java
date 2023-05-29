@@ -3,11 +3,7 @@ package com.scalar.db.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.google.common.collect.ImmutableSet;
-import com.scalar.db.api.Scan.AndConditionSet;
-import com.scalar.db.api.Scan.ConditionSetBuilder;
 import com.scalar.db.api.Scan.Conjunction;
-import com.scalar.db.api.Scan.OrConditionSet;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import java.util.Collections;
@@ -19,7 +15,6 @@ public class ScanTest {
   private static final String ANY_TABLE = "table";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
-  private static final String ANY_NAME_3 = "name2";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
   private static final String ANY_TEXT_3 = "text3";
@@ -81,50 +76,6 @@ public class ScanTest {
         ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1),
         ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1));
   }
-
-  private AndConditionSet prepareAndConditionSet() {
-    return ConditionSetBuilder.condition(
-            ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1))
-        .and(ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1))
-        .build();
-  }
-
-  private AndConditionSet prepareAnotherAndConditionSet() {
-    return ConditionSetBuilder.condition(
-            ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1))
-        .and(ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_2))
-        .build();
-  }
-
-  private OrConditionSet prepareOrConditionSet() {
-    return ConditionSetBuilder.condition(
-            ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1))
-        .or(ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1))
-        .build();
-  }
-
-  private OrConditionSet prepareAnotherOrConditionSet() {
-    return ConditionSetBuilder.condition(
-            ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1))
-        .or(ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_2))
-        .build();
-  }
-
-  //  private Set<Conjunction> prepareConjunctions() {
-  //    return ImmutableSet.of(
-  //        RelationalScan.Conjunction.conjunction(
-  //            ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1)),
-  //        RelationalScan.Conjunction.conjunction(
-  //            ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_2)));
-  //  }
-  //
-  //  private Set<Conjunction> prepareConjunctionsWithDifferentOrder() {
-  //    return ImmutableSet.of(
-  //        RelationalScan.Conjunction.conjunction(
-  //            ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_2)),
-  //        RelationalScan.Conjunction.conjunction(
-  //            ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1)));
-  //  }
 
   @Test
   public void constructorAndSetters_AllSet_ShouldGetWhatsSet() {
@@ -313,197 +264,5 @@ public class ScanTest {
 
     // Assert
     assertThat(ret).isTrue();
-  }
-
-  @Test
-  public void equals_SameAndConditionSetInstanceGiven_ShouldReturnTrue() {
-    // Arrange
-    AndConditionSet andConditionSet = prepareAndConditionSet();
-
-    // Act
-    @SuppressWarnings("SelfEquals")
-    boolean ret = andConditionSet.equals(andConditionSet);
-
-    // Assert
-    assertThat(ret).isTrue();
-  }
-
-  @Test
-  public void equals_SameAndConditionSetGiven_ShouldReturnTrue() {
-    // Arrange
-    AndConditionSet andConditionSet = prepareAndConditionSet();
-    AndConditionSet another = prepareAndConditionSet();
-
-    // Act
-    boolean ret = andConditionSet.equals(another);
-
-    // Assert
-    assertThat(ret).isTrue();
-    assertThat(andConditionSet.hashCode()).isEqualTo(another.hashCode());
-  }
-
-  @Test
-  public void equals_AndConditionSetWithDifferentConditionGiven_ShouldReturnFalse() {
-    // Arrange
-    AndConditionSet andConditionSet = prepareAndConditionSet();
-    AndConditionSet another = prepareAnotherAndConditionSet();
-
-    // Act
-    boolean ret = andConditionSet.equals(another);
-
-    // Assert
-    assertThat(ret).isFalse();
-  }
-
-  @Test
-  public void equals_SameOrConditionSetInstanceGiven_ShouldReturnTrue() {
-    // Arrange
-    OrConditionSet orConditionSet = prepareOrConditionSet();
-
-    // Act
-    @SuppressWarnings("SelfEquals")
-    boolean ret = orConditionSet.equals(orConditionSet);
-
-    // Assert
-    assertThat(ret).isTrue();
-  }
-
-  @Test
-  public void equals_SameOrConditionSetGiven_ShouldReturnTrue() {
-    // Arrange
-    OrConditionSet orConditionSet = prepareOrConditionSet();
-    OrConditionSet another = prepareOrConditionSet();
-
-    // Act
-    boolean ret = orConditionSet.equals(another);
-
-    // Assert
-    assertThat(ret).isTrue();
-    assertThat(orConditionSet.hashCode()).isEqualTo(another.hashCode());
-  }
-
-  @Test
-  public void equals_OrConditionSetWithDifferentConditionGiven_ShouldReturnFalse() {
-    // Arrange
-    OrConditionSet orConditionSet = prepareOrConditionSet();
-    OrConditionSet another = prepareAnotherOrConditionSet();
-
-    // Act
-    boolean ret = orConditionSet.equals(another);
-
-    // Assert
-    assertThat(ret).isFalse();
-  }
-
-  @Test
-  public void
-      ConditionSetBuilder_TwoConditionsConnectedWithAndGiven_ShouldBuildAndConditionSetCorrectly() {
-    // Arrange Act
-    AndConditionSet andConditionSet =
-        ConditionSetBuilder.condition(ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1))
-            .and(ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1))
-            .build();
-
-    // Assert
-    assertThat(andConditionSet.getConditions())
-        .hasSameElementsAs(
-            ImmutableSet.of(
-                ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
-                ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1)));
-  }
-
-  @Test
-  public void
-      ConditionSetBuilder_TwoConditionsConnectedWithOrGiven_ShouldBuildOrConditionSetCorrectly() {
-    // Arrange Act
-    OrConditionSet orConditionSet =
-        ConditionSetBuilder.condition(ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1))
-            .or(ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1))
-            .build();
-
-    // Assert
-    assertThat(orConditionSet.getConditions())
-        .hasSameElementsAs(
-            ImmutableSet.of(
-                ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
-                ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1)));
-  }
-
-  @Test
-  public void ConditionSetBuilder_SetOfConditionsGivenForAnd_ShouldBuildAndConditionSetCorrectly() {
-    // Arrange Act
-    AndConditionSet andConditionSet =
-        ConditionSetBuilder.andConditionSet(
-                ImmutableSet.of(
-                    ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
-                    ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1)))
-            .build();
-
-    // Assert
-    assertThat(andConditionSet.getConditions())
-        .hasSameElementsAs(
-            ImmutableSet.of(
-                ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
-                ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1)));
-  }
-
-  @Test
-  public void ConditionSetBuilder_SetOfConditionsGivenForOr_ShouldBuildOrConditionSetCorrectly() {
-    // Arrange Act
-    OrConditionSet orConditionSet =
-        ConditionSetBuilder.orConditionSet(
-                ImmutableSet.of(
-                    ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
-                    ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1)))
-            .build();
-
-    // Assert
-    assertThat(orConditionSet.getConditions())
-        .hasSameElementsAs(
-            ImmutableSet.of(
-                ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
-                ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1)));
-  }
-
-  @Test
-  public void
-      ConditionSetBuilder_AndConditionSetAndConditionConnectedWithAndGiven_ShouldBuildAndConditionSetCorrectly() {
-    // Arrange Act
-    AndConditionSet andConditionSet =
-        ConditionSetBuilder.andConditionSet(
-                ImmutableSet.of(
-                    ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
-                    ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1)))
-            .and(ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_1))
-            .build();
-
-    // Assert
-    assertThat(andConditionSet.getConditions())
-        .hasSameElementsAs(
-            ImmutableSet.of(
-                ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
-                ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1),
-                ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_1)));
-  }
-
-  @Test
-  public void
-      ConditionSetBuilder_OrConditionSetAndConditionConnectedWithOrGiven_ShouldBuildOrConditionSetCorrectly() {
-    // Arrange Act
-    OrConditionSet orConditionSet =
-        ConditionSetBuilder.orConditionSet(
-                ImmutableSet.of(
-                    ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
-                    ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1)))
-            .or(ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_1))
-            .build();
-
-    // Assert
-    assertThat(orConditionSet.getConditions())
-        .hasSameElementsAs(
-            ImmutableSet.of(
-                ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
-                ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1),
-                ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_1)));
   }
 }
