@@ -23,11 +23,6 @@ jobs:
 
       - name: Create pull requests
         run: |
-          assignee=$(ci/auto-pr/fetch_gh_user_info "${{ github.event.repository.owner.login }}" "${{ github.event.repository.name }}" "${{ github.event.pull_request.user.login }}")
-          echo -------------
-          echo "assignee: $assignee"
-          echo -------------
-
           versions=$(ci/auto-pr/fetch_gh_proj_versions "${{ github.event.repository.owner.login }}" "${{ github.event.repository.name }}" "${{ github.event.number }}")
           echo -------------
           echo "versions: $versions"
@@ -37,9 +32,6 @@ jobs:
           echo -------------
           echo "branches: $branches"
           echo -------------
-
-          git config --global user.email $(echo $assignee | jq -r .email)
-          git config --global user.name $(echo $assignee | jq -r .name)
 
           ci/auto-pr/create_pull_requests \
             "${{ github.event.number }}" \

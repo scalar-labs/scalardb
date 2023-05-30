@@ -15,6 +15,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -47,6 +48,8 @@ public class ConsensusCommitTest {
   @SuppressWarnings("unused")
   @Mock
   private ConsensusCommitManager manager;
+
+  @Mock private ConsensusCommitMutationOperationChecker mutationOperationChecker;
 
   @InjectMocks private ConsensusCommit consensus;
 
@@ -134,7 +137,7 @@ public class ConsensusCommitTest {
   }
 
   @Test
-  public void put_PutGiven_ShouldCallCrudHandlerPut() {
+  public void put_PutGiven_ShouldCallCrudHandlerPut() throws ExecutionException, CrudException {
     // Arrange
     Put put = preparePut();
     doNothing().when(crud).put(put);
@@ -144,10 +147,12 @@ public class ConsensusCommitTest {
 
     // Assert
     verify(crud).put(put);
+    verify(mutationOperationChecker).check(put);
   }
 
   @Test
-  public void put_TwoPutsGiven_ShouldCallCrudHandlerPutTwice() {
+  public void put_TwoPutsGiven_ShouldCallCrudHandlerPutTwice()
+      throws ExecutionException, CrudException {
     // Arrange
     Put put = preparePut();
     doNothing().when(crud).put(put);
@@ -157,10 +162,12 @@ public class ConsensusCommitTest {
 
     // Assert
     verify(crud, times(2)).put(put);
+    verify(mutationOperationChecker, times(2)).check(put);
   }
 
   @Test
-  public void delete_DeleteGiven_ShouldCallCrudHandlerDelete() {
+  public void delete_DeleteGiven_ShouldCallCrudHandlerDelete()
+      throws CrudException, ExecutionException {
     // Arrange
     Delete delete = prepareDelete();
     doNothing().when(crud).delete(delete);
@@ -170,10 +177,12 @@ public class ConsensusCommitTest {
 
     // Assert
     verify(crud).delete(delete);
+    verify(mutationOperationChecker).check(delete);
   }
 
   @Test
-  public void delete_TwoDeletesGiven_ShouldCallCrudHandlerDeleteTwice() {
+  public void delete_TwoDeletesGiven_ShouldCallCrudHandlerDeleteTwice()
+      throws ExecutionException, CrudException {
     // Arrange
     Delete delete = prepareDelete();
     doNothing().when(crud).delete(delete);
@@ -183,10 +192,12 @@ public class ConsensusCommitTest {
 
     // Assert
     verify(crud, times(2)).delete(delete);
+    verify(mutationOperationChecker, times(2)).check(delete);
   }
 
   @Test
-  public void mutate_PutAndDeleteGiven_ShouldCallCrudHandlerPutAndDelete() {
+  public void mutate_PutAndDeleteGiven_ShouldCallCrudHandlerPutAndDelete()
+      throws CrudException, ExecutionException {
     // Arrange
     Put put = preparePut();
     Delete delete = prepareDelete();
@@ -199,6 +210,8 @@ public class ConsensusCommitTest {
     // Assert
     verify(crud).put(put);
     verify(crud).delete(delete);
+    verify(mutationOperationChecker).check(put);
+    verify(mutationOperationChecker).check(delete);
   }
 
   @Test
