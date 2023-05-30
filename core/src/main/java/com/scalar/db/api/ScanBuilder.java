@@ -272,7 +272,8 @@ public class ScanBuilder {
   }
 
   public static class BuildableScanAll
-      implements Consistency<BuildableScanAll>,
+      implements Ordering<BuildableScanAll>,
+          Consistency<BuildableScanAll>,
           Projection<BuildableScanAll>,
           Where<BuildableScanAllWithOngoingWhere>,
           WhereAnd<BuildableScanAllWithOngoingWhereAnd>,
@@ -280,6 +281,7 @@ public class ScanBuilder {
           Limit<BuildableScanAll> {
     private final String namespaceName;
     private final String tableName;
+    private final List<Scan.Ordering> orderings = new ArrayList<>();
     private final List<String> projections = new ArrayList<>();
     private int limit = 0;
     @Nullable private com.scalar.db.api.Consistency consistency;
@@ -315,6 +317,25 @@ public class ScanBuilder {
     }
 
     @Override
+    public BuildableScanAll ordering(Scan.Ordering ordering) {
+      checkNotNull(ordering);
+      orderings.add(ordering);
+      return this;
+    }
+
+    @Override
+    public BuildableScanAll orderings(Collection<Scan.Ordering> orderings) {
+      checkNotNull(orderings);
+      this.orderings.addAll(orderings);
+      return this;
+    }
+
+    @Override
+    public BuildableScanAll orderings(Scan.Ordering... orderings) {
+      return orderings(Arrays.asList(orderings));
+    }
+
+    @Override
     public BuildableScanAll consistency(com.scalar.db.api.Consistency consistency) {
       checkNotNull(consistency);
       this.consistency = consistency;
@@ -342,6 +363,7 @@ public class ScanBuilder {
     public Scan build() {
       Scan scan = new ScanAll();
       scan.forNamespace(namespaceName).forTable(tableName).withLimit(limit);
+      orderings.forEach(scan::withOrdering);
 
       if (!projections.isEmpty()) {
         scan.withProjections(projections);
@@ -848,15 +870,18 @@ public class ScanBuilder {
   }
 
   public static class BuildableScanAllFromExistingWithWhere
-      implements Consistency<BuildableScanAllFromExistingWithWhere>,
+      implements OperationBuilder.Namespace<BuildableScanAllFromExistingWithWhere>,
+          OperationBuilder.Table<BuildableScanAllFromExistingWithWhere>,
+          Consistency<BuildableScanAllFromExistingWithWhere>,
           Projection<BuildableScanAllFromExistingWithWhere>,
           Ordering<BuildableScanAllFromExistingWithWhere>,
           Limit<BuildableScanAllFromExistingWithWhere>,
           ClearProjections<BuildableScanAllFromExistingWithWhere>,
-          ClearOrderings<BuildableScanAllFromExistingWithWhere> {
+          ClearOrderings<BuildableScanAllFromExistingWithWhere>,
+          ClearNamespace<BuildableScanAllFromExistingWithWhere> {
 
-    protected final String namespaceName;
-    protected final String tableName;
+    @Nullable protected String namespaceName;
+    protected String tableName;
     @Nullable protected final ConditionalExpression condition;
     protected final Set<Scan.Conjunction> conjunctions = new HashSet<>();
     protected final List<Set<ConditionalExpression>> disjunctions = new ArrayList<>();
@@ -886,6 +911,20 @@ public class ScanBuilder {
       this.orderings.addAll(buildable.orderings);
       this.projections.addAll(buildable.projections);
       this.consistency = buildable.consistency;
+    }
+
+    @Override
+    public BuildableScanAllFromExistingWithWhere namespace(String namespaceName) {
+      checkNotNull(namespaceName);
+      this.namespaceName = namespaceName;
+      return this;
+    }
+
+    @Override
+    public BuildableScanAllFromExistingWithWhere table(String tableName) {
+      checkNotNull(tableName);
+      this.tableName = tableName;
+      return this;
     }
 
     @Override
@@ -949,6 +988,12 @@ public class ScanBuilder {
     @Override
     public BuildableScanAllFromExistingWithWhere clearOrderings() {
       this.orderings.clear();
+      return this;
+    }
+
+    @Override
+    public BuildableScanAllFromExistingWithWhere clearNamespace() {
+      this.namespaceName = null;
       return this;
     }
 

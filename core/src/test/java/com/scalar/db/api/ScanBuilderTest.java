@@ -314,6 +314,9 @@ public class ScanBuilderTest {
             .namespace(NAMESPACE_1)
             .table(TABLE_1)
             .all()
+            .ordering(ordering1)
+            .orderings(Arrays.asList(ordering2, ordering3))
+            .orderings(ordering4, ordering5)
             .limit(10)
             .projections(Arrays.asList("pk1", "ck1"))
             .projection("ck2")
@@ -328,6 +331,11 @@ public class ScanBuilderTest {
                 .forNamespace(NAMESPACE_1)
                 .forTable(TABLE_1)
                 .withConsistency(Consistency.EVENTUAL)
+                .withOrdering(ordering1)
+                .withOrdering(ordering2)
+                .withOrdering(ordering3)
+                .withOrdering(ordering4)
+                .withOrdering(ordering5)
                 .withLimit(10)
                 .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
                 .withConsistency(Consistency.EVENTUAL));
@@ -1146,6 +1154,56 @@ public class ScanBuilderTest {
     // Act Assert
     assertThatThrownBy(() -> Scan.newBuilder(existingScan).where(condition))
         .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void
+      buildScanAll_FromExistingAndUpdateNamespaceAndTableAfterWhere_ShouldBuildScanWithNewNamespaceAndTable() {
+    // Arrange
+    Scan scan = Scan.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).all().build();
+
+    // Act
+    Scan newScan =
+        Scan.newBuilder(scan)
+            .clearConditions()
+            .where(ConditionBuilder.column("ck1").isGreaterThanInt(10))
+            .namespace(NAMESPACE_2)
+            .table(TABLE_2)
+            .build();
+
+    // Assert
+    assertThat(newScan)
+        .isEqualTo(
+            new ScanAll()
+                .forNamespace(NAMESPACE_2)
+                .forTable(TABLE_2)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)))));
+  }
+
+  @Test
+  public void
+      buildScanAll_FromExistingAndClearNamespaceAfterWhere_ShouldBuildScanWithoutNamespace() {
+    // Arrange
+    Scan scan = Scan.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).all().build();
+
+    // Act
+    Scan newScan =
+        Scan.newBuilder(scan)
+            .clearConditions()
+            .where(ConditionBuilder.column("ck1").isGreaterThanInt(10))
+            .clearNamespace()
+            .build();
+
+    // Assert
+    assertThat(newScan)
+        .isEqualTo(
+            new ScanAll()
+                .forTable(TABLE_1)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)))));
   }
 
   @Test
