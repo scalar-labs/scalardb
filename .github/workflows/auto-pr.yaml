@@ -1,0 +1,43 @@
+name: Auto-PR
+
+on:
+  pull_request:
+    branches:
+      - master
+    types:
+      - closed
+
+env:
+  TERM: dumb
+jobs:
+  if_merged:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GH_PR_PAT }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # This is necessary to avoid unexpected auto-merge in git cherry-pick
+          fetch-depth: 0
+
+      - name: Create pull requests
+        run: |
+          versions=$(ci/auto-pr/fetch_gh_proj_versions "${{ github.event.repository.owner.login }}" "${{ github.event.repository.name }}" "${{ github.event.number }}")
+          echo -------------
+          echo "versions: $versions"
+          echo -------------
+
+          branches=$(ci/auto-pr/conv_proj_version_to_branch $versions)
+          echo -------------
+          echo "branches: $branches"
+          echo -------------
+
+          ci/auto-pr/create_pull_requests \
+            "${{ github.event.number }}" \
+            "${{ github.event.pull_request.html_url }}" \
+            "${{ github.event.pull_request.title }}" \
+            "${{ github.sha }}" \
+            "${{ github.event.pull_request.user.login }}" \
+            $branches
+
