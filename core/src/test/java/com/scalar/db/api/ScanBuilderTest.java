@@ -322,6 +322,7 @@ public class ScanBuilderTest {
             .projection("ck2")
             .projections("ck3", "ck4")
             .consistency(Consistency.EVENTUAL)
+            .where(ConditionBuilder.column("ck1").isGreaterThanInt(10))
             .build();
 
     // Assert
@@ -338,7 +339,10 @@ public class ScanBuilderTest {
                 .withOrdering(ordering5)
                 .withLimit(10)
                 .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
-                .withConsistency(Consistency.EVENTUAL));
+                .withConsistency(Consistency.EVENTUAL)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)))));
   }
 
   @Test
