@@ -5,6 +5,7 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
+import com.scalar.db.exception.transaction.PreparationUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
@@ -76,8 +77,12 @@ public interface TwoPhaseCommitTransaction extends TransactionCrudOperable {
    * @throws PreparationConflictException if a transaction conflict occurs. You can retry the
    *     transaction from the beginning in this case
    * @throws PreparationException if the operation fails
+   * @throws PreparationUnsatisfiedConditionException if the condition set on a mutation operation
+   *     is not satisfied
    */
-  void prepare() throws PreparationConflictException, PreparationException;
+  void prepare()
+      throws PreparationConflictException, PreparationException,
+          PreparationUnsatisfiedConditionException;
 
   /**
    * Validates a transaction. Depending on the concurrency control algorithm, you need a validation

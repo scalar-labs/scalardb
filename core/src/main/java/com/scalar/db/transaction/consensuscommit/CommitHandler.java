@@ -10,8 +10,10 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CommitUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
+import com.scalar.db.exception.transaction.PreparationUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
@@ -49,10 +51,17 @@ public class CommitHandler {
       prepare(snapshot);
     } catch (PreparationException e) {
       abortState(snapshot.getId());
+      if (e instanceof PreparationUnsatisfiedConditionException) {
+        // The condition is validated before records are mutated for the preparation step so no
+        // records rollback is needed
+        throw new CommitUnsatisfiedConditionException(
+            e.getMessage(), e, e.getTransactionId().orElse(null));
+      }
       rollbackRecords(snapshot);
       if (e instanceof PreparationConflictException) {
         throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
       }
+
       throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
     }
 
@@ -75,10 +84,7 @@ public class CommitHandler {
     try {
       prepareRecords(snapshot);
     } catch (NoMutationException e) {
-      throw new PreparationConflictException(
-          "preparing record exists, or the operation condition is not satisfied",
-          e,
-          snapshot.getId());
+      throw new PreparationConflictException("preparing record exists", e, snapshot.getId());
     } catch (RetriableExecutionException e) {
       throw new PreparationConflictException(
           "conflict happened when preparing records", e, snapshot.getId());
@@ -88,7 +94,8 @@ public class CommitHandler {
   }
 
   private void prepareRecords(Snapshot snapshot)
-      throws ExecutionException, PreparationConflictException {
+      throws ExecutionException, PreparationConflictException,
+          PreparationUnsatisfiedConditionException {
     PrepareMutationComposer composer =
         new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
     snapshot.to(composer);

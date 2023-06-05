@@ -3,6 +3,7 @@ package com.scalar.db.api;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CommitUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import java.util.Optional;
@@ -72,9 +73,13 @@ public interface DistributedTransaction extends TransactionCrudOperable {
    * @throws CommitConflictException if a transaction conflict occurs, You can retry the transaction
    *     from the beginning in this case
    * @throws CommitException if the operation fails
+   * @throws CommitUnsatisfiedConditionException if the condition set on a mutation operation is not
+   *     satisfied
    * @throws UnknownTransactionStatusException if the status of the commit is unknown
    */
-  void commit() throws CommitConflictException, CommitException, UnknownTransactionStatusException;
+  void commit()
+      throws CommitConflictException, CommitException, CommitUnsatisfiedConditionException,
+          UnknownTransactionStatusException;
 
   /**
    * Rolls back a transaction.

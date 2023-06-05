@@ -5,22 +5,16 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
-import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
-import com.scalar.db.api.PutIf;
-import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Value;
@@ -78,38 +72,22 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
       int version = result.getVersion();
       putBuilder.intValue(Attribute.VERSION, version + 1);
 
-      List<ConditionalExpression> preparationConditions = new ArrayList<>();
       // check if the record is not interrupted by other conflicting transactions
       if (result.isDeemedAsCommitted()) {
         // record is deemed-commit state
-        preparationConditions.add(ConditionBuilder.column(ID).isNullText());
-        preparationConditions.add(ConditionBuilder.column(VERSION).isNullInt());
+        putBuilder.condition(
+            ConditionBuilder.putIf(ConditionBuilder.column(ID).isNullText())
+                .and(ConditionBuilder.column(VERSION).isNullInt())
+                .build());
       } else {
-        preparationConditions.add(ConditionBuilder.column(ID).isEqualToText(result.getId()));
-        preparationConditions.add(ConditionBuilder.column(VERSION).isEqualToInt(version));
+        putBuilder.condition(
+            ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(result.getId()))
+                .and(ConditionBuilder.column(VERSION).isEqualToInt(version))
+                .build());
       }
-      // add the base operation conditions
-      if (base.getCondition().isPresent()) {
-        MutationCondition condition = base.getCondition().get();
-        if (condition instanceof PutIf) {
-          preparationConditions.addAll(base.getCondition().get().getExpressions());
-        } else if ((condition instanceof PutIfNotExists)) {
-          throw new NoMutationException("the record exist so the condition is not satisfied.");
-        }
-        // do nothing if the condition is a PutIfExists since the PutIf condition set below
-        // ensure the record exists
-      }
-      putBuilder.condition(ConditionBuilder.putIf(preparationConditions));
     } else { // initial record
       putBuilder.intValue(Attribute.VERSION, 1);
 
-      if (base.getCondition().isPresent()) {
-        MutationCondition condition = base.getCondition().get();
-        if (condition instanceof PutIf || condition instanceof PutIfExists) {
-          throw new NoMutationException(
-              "the record does not exist so the condition is not satisfied.");
-        }
-      }
       // check if the record is not created by other conflicting transactions
       putBuilder.condition(ConditionBuilder.putIfNotExists());
     }
@@ -135,30 +113,20 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
       int version = result.getVersion();
       putBuilder.intValue(Attribute.VERSION, version + 1);
 
-      List<ConditionalExpression> preparationConditions = new ArrayList<>();
       // check if the record is not interrupted by other conflicting transactions
       if (result.isDeemedAsCommitted()) {
-        preparationConditions.add(ConditionBuilder.column(ID).isNullText());
-        preparationConditions.add(ConditionBuilder.column(VERSION).isNullInt());
+        putBuilder.condition(
+            ConditionBuilder.putIf(ConditionBuilder.column(ID).isNullText())
+                .and(ConditionBuilder.column(VERSION).isNullInt())
+                .build());
       } else {
-        preparationConditions.add(ConditionBuilder.column(ID).isEqualToText(result.getId()));
-        preparationConditions.add(ConditionBuilder.column(VERSION).isEqualToInt(version));
+        putBuilder.condition(
+            ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(result.getId()))
+                .and(ConditionBuilder.column(VERSION).isEqualToInt(version))
+                .build());
       }
-      // add the base operation conditions only if it is DeleteIf instance. Do nothing when the
-      // condition is a DeleteIfExists since the PutIf condition set below ensure the record exists
-      base.getCondition()
-          .filter(DeleteIf.class::isInstance)
-          .ifPresent(baseCondition -> preparationConditions.addAll(baseCondition.getExpressions()));
-
-      putBuilder.condition(ConditionBuilder.putIf(preparationConditions));
     } else {
       putBuilder.intValue(Attribute.VERSION, 1);
-
-      if (base.getCondition().isPresent()) {
-        // DeleteIf or DeleteIfExists
-        throw new NoMutationException(
-            "the record does not exist so the condition is not satisfied.");
-      }
 
       // check if the record is not created by other conflicting transactions
       putBuilder.condition(ConditionBuilder.putIfNotExists());

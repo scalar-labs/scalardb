@@ -14,12 +14,12 @@ import java.util.List;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-class ConditionChecker implements MutationConditionVisitor {
+public class ConditionChecker implements MutationConditionVisitor {
   private final TableMetadata tableMetadata;
   private boolean isPut;
   private boolean isValid;
 
-  public ConditionChecker(TableMetadata tableMetadata) {
+  private ConditionChecker(TableMetadata tableMetadata) {
     this.tableMetadata = tableMetadata;
   }
 
@@ -82,5 +82,13 @@ class ConditionChecker implements MutationConditionVisitor {
         break;
       }
     }
+  }
+
+  public static class ConditionCheckerFactory {
+    public ConditionChecker create(TableMetadata tableMetadata) {
+      return new ConditionChecker(tableMetadata);
+    }
+
+    public ConditionCheckerFactory() {}
   }
 }

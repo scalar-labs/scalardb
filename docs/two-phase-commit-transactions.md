@@ -257,8 +257,8 @@ public class Sample {
         } catch (RollbackException ex) {
           // Rolling back the transaction failed. You can log it here
         }
-      } catch (CrudException | PreparationException | ValidationException | CommitException e) {
-        // If you catch CrudException or PreparationException or ValidationException or
+      } catch (CrudException | PreparationUnsatisfiedConditionException | PreparationException | ValidationException | CommitException e) {
+        // If you catch CrudException or PreparationUnsatisfiedConditionException or PreparationException or ValidationException or
         // CommitException, it indicates some failure happens, so you should cancel the transaction
         // or retry the transaction after the failure/error is fixed
         try {

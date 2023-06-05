@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -18,6 +19,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CommitUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
@@ -208,13 +210,34 @@ public class JdbcTransactionManagerTest {
   }
 
   @Test
-  public void put_withConditionNotSatisfied_shouldThrowCrudConflictException()
+  public void
+      putAndCommit_withConditionNotSatisfiedForPut_shouldThrowCommitUnsatisfiedConditionException()
+          throws SQLException, ExecutionException, TransactionException {
+    // Arrange
+    when(jdbcService.put(any(), any())).thenReturn(false);
+
+    // Act Assert
+    DistributedTransaction transaction = manager.begin();
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val1"))
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
+    transaction.put(put);
+
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitUnsatisfiedConditionException.class);
+  }
+
+  @Test
+  public void put_withConditionNotSatisfied_shouldNotThrow()
       throws SQLException, ExecutionException {
     // Arrange
     when(jdbcService.put(any(), any())).thenReturn(false);
 
     // Act Assert
-    assertThatThrownBy(
+    assertThatCode(
             () -> {
               DistributedTransaction transaction = manager.begin();
               Put put =
@@ -226,7 +249,50 @@ public class JdbcTransactionManagerTest {
                       .build();
               transaction.put(put);
             })
-        .isInstanceOf(CrudConflictException.class);
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      mutateAndCommit_withConditionNotSatisfiedForAllMutations_shouldThrowCommitUnsatisfiedConditionExceptionMentioningFirstExecutedMutationOnly()
+          throws SQLException, ExecutionException, TransactionException {
+    // Arrange
+    when(jdbcService.put(any(), any())).thenReturn(false);
+    when(jdbcService.delete(any(), any())).thenReturn(false);
+
+    // Act Assert
+    DistributedTransaction transaction = manager.begin();
+    Put put1 =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val1"))
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
+    transaction.put(put1);
+    Put put2 =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p2", "val2"))
+            .condition(ConditionBuilder.putIfExists())
+            .build();
+    transaction.put(put2);
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p3", "val3"))
+            .condition(ConditionBuilder.deleteIfExists())
+            .build();
+    transaction.delete(delete);
+
+    assertThatThrownBy(transaction::commit)
+        .isInstanceOf(CommitUnsatisfiedConditionException.class)
+        .hasMessageContaining("Put", "putIfNotExists")
+        .hasMessageNotContaining("putIfExists")
+        .hasMessageNotContaining("Delete")
+        .hasMessageNotContaining("deleteIfExists");
   }
 
   @Test
@@ -266,13 +332,13 @@ public class JdbcTransactionManagerTest {
   }
 
   @Test
-  public void delete_withConditionNotSatisfied_shouldThrowCrudConflictException()
+  public void delete_withConditionNotSatisfied_shouldNotThrow()
       throws SQLException, ExecutionException {
     // Arrange
     when(jdbcService.delete(any(), any())).thenReturn(false);
 
     // Act Assert
-    assertThatThrownBy(
+    assertThatCode(
             () -> {
               DistributedTransaction transaction = manager.begin();
               Delete delete =
@@ -284,7 +350,28 @@ public class JdbcTransactionManagerTest {
                       .build();
               transaction.delete(delete);
             })
-        .isInstanceOf(CrudConflictException.class);
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      deleteAndCommit_withConditionNotSatisfiedForDelete_shouldThrowCommitUnsatisfiedConditionException()
+          throws SQLException, ExecutionException, TransactionException {
+    // Arrange
+    when(jdbcService.delete(any(), any())).thenReturn(false);
+
+    // Act Assert
+    DistributedTransaction transaction = manager.begin();
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val1"))
+            .condition(ConditionBuilder.deleteIfExists())
+            .build();
+    transaction.delete(delete);
+
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitUnsatisfiedConditionException.class);
   }
 
   @Test

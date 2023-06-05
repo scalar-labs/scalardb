@@ -16,6 +16,7 @@ import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
+import com.scalar.db.exception.transaction.PreparationUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -303,10 +304,14 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     TwoPhaseCommitTransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
       TwoPhaseCommitTransactionResponse.Error error = response.getError();
-      if (error.getErrorCode() == ErrorCode.TRANSACTION_CONFLICT) {
-        throw new PreparationConflictException(error.getMessage(), transactionId);
+      switch (error.getErrorCode()) {
+        case TRANSACTION_CONFLICT:
+          throw new PreparationConflictException(error.getMessage(), transactionId);
+        case UNSATISFIED_CONDITION:
+          throw new PreparationUnsatisfiedConditionException(error.getMessage(), transactionId);
+        default:
+          throw new PreparationException(error.getMessage(), transactionId);
       }
-      throw new PreparationException(error.getMessage(), transactionId);
     }
   }
 

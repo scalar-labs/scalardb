@@ -11,6 +11,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.exception.transaction.CommitUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -470,6 +471,12 @@ public class DistributedTransactionService
         responseBuilder.setError(
             TransactionResponse.Error.newBuilder()
                 .setErrorCode(ErrorCode.TRANSACTION_CONFLICT)
+                .setMessage(e.getMessage())
+                .build());
+      } catch (CommitUnsatisfiedConditionException e) {
+        responseBuilder.setError(
+            TransactionResponse.Error.newBuilder()
+                .setErrorCode(ErrorCode.UNSATISFIED_CONDITION)
                 .setMessage(e.getMessage())
                 .build());
       } catch (UnknownTransactionStatusException e) {

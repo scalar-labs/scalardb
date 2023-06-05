@@ -11,6 +11,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
@@ -28,6 +29,7 @@ import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
+import com.scalar.db.exception.transaction.PreparationUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
@@ -91,6 +93,7 @@ public class SnapshotTest {
   @Mock private CommitMutationComposer commitComposer;
   @Mock private RollbackMutationComposer rollbackComposer;
   @Mock private TransactionTableMetadataManager tableMetadataManager;
+  @Mock private ConditionalMutationValidator conditionalMutationValidator;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -123,7 +126,8 @@ public class SnapshotTest {
             readSet,
             scanSet,
             writeSet,
-            deleteSet));
+            deleteSet,
+            conditionalMutationValidator));
   }
 
   private TransactionResult prepareResult(String txId) {
@@ -504,7 +508,8 @@ public class SnapshotTest {
 
   @Test
   public void to_PrepareMutationComposerGivenAndSnapshotIsolationSet_ShouldCallComposerProperly()
-      throws PreparationConflictException, ExecutionException {
+      throws PreparationConflictException, ExecutionException,
+          PreparationUnsatisfiedConditionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
@@ -522,12 +527,15 @@ public class SnapshotTest {
     // Assert
     verify(prepareComposer).add(put, result);
     verify(prepareComposer).add(delete, result);
+    verify(conditionalMutationValidator).validateConditionIsSatisfied(put, result);
+    verify(conditionalMutationValidator).validateConditionIsSatisfied(delete, result);
   }
 
   @Test
   public void
       to_PrepareMutationComposerGivenAndSerializableWithExtraWriteIsolationSet_ShouldCallComposerProperly()
-          throws PreparationConflictException, ExecutionException {
+          throws PreparationConflictException, ExecutionException,
+              PreparationUnsatisfiedConditionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Put put = preparePut();
@@ -545,11 +553,14 @@ public class SnapshotTest {
     verify(prepareComposer).add(put, result);
     verify(prepareComposer).add(putFromGet, result);
     verify(snapshot).toSerializableWithExtraWrite(prepareComposer);
+    verify(conditionalMutationValidator).validateConditionIsSatisfied(put, result);
+    verify(conditionalMutationValidator).validateConditionIsSatisfied(putFromGet, result);
   }
 
   @Test
   public void to_CommitMutationComposerGiven_ShouldCallComposerProperly()
-      throws PreparationConflictException, ExecutionException {
+      throws PreparationConflictException, ExecutionException,
+          PreparationUnsatisfiedConditionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
@@ -566,12 +577,14 @@ public class SnapshotTest {
     // Assert
     verify(commitComposer).add(put, result);
     verify(commitComposer).add(delete, result);
+    verifyNoInteractions(conditionalMutationValidator);
   }
 
   @Test
   public void
       to_CommitMutationComposerGivenAndSerializableWithExtraWriteIsolationSet_ShouldCallComposerProperly()
-          throws PreparationConflictException, ExecutionException {
+          throws PreparationConflictException, ExecutionException,
+              PreparationUnsatisfiedConditionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Put put = preparePut();
@@ -591,11 +604,13 @@ public class SnapshotTest {
     verify(commitComposer).add(put, result);
     verify(commitComposer).add(delete, result);
     verify(snapshot).toSerializableWithExtraWrite(commitComposer);
+    verifyNoInteractions(conditionalMutationValidator);
   }
 
   @Test
   public void to_RollbackMutationComposerGiven_ShouldCallComposerProperly()
-      throws PreparationConflictException, ExecutionException {
+      throws PreparationConflictException, ExecutionException,
+          PreparationUnsatisfiedConditionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
@@ -613,12 +628,14 @@ public class SnapshotTest {
     // Assert
     verify(rollbackComposer).add(put, result);
     verify(rollbackComposer).add(delete, result);
+    verifyNoInteractions(conditionalMutationValidator);
   }
 
   @Test
   public void
       to_RollbackMutationComposerGivenAndSerializableWithExtraWriteIsolationSet_ShouldCallComposerProperly()
-          throws PreparationConflictException, ExecutionException {
+          throws PreparationConflictException, ExecutionException,
+              PreparationUnsatisfiedConditionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Put put = preparePut();
@@ -638,6 +655,7 @@ public class SnapshotTest {
     verify(rollbackComposer).add(put, result);
     verify(rollbackComposer).add(delete, result);
     verify(snapshot).toSerializableWithExtraWrite(rollbackComposer);
+    verifyNoInteractions(conditionalMutationValidator);
   }
 
   @Test

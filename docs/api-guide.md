@@ -585,8 +585,10 @@ Put put =
 
 ##### Put with a condition
 
-In a Put operation, you can specify a condition, and only when the specified condition matches, the Put operation is executed.
-It's like a well-known CAS (compare and swap) operation, and the condition comparison and the update are performed atomically.
+In a Put operation, you have the option to include a condition. The Put operation is only committed if the specified condition is met.
+If the condition fails to be satisfied when committing, an exception called `CommitUnsatisfiedConditionException` is thrown.
+In the case of Two-Phase Commit Transactions, the condition is checked during the preparation phase. 
+If the condition is not met, a different exception called `PreparationUnsatisfiedConditionException` is thrown.
 
 You can specify a condition in a Put operation as follows:
 
@@ -648,7 +650,11 @@ transaction.delete(delete);
 
 ##### Delete with a condition
 
-Similar to a Put operation, you can specify a condition in a Delete operation.
+Similar to a Put operation, you have the option to include a condition for a Delete operation. 
+The Delete operation is only committed if the specified condition is met.
+If the condition fails to be satisfied when committing, an exception called `CommitUnsatisfiedConditionException` is thrown.
+In the case of Two-Phase Commit Transactions, the condition is checked during the preparation phase.
+If the condition is not met, a different exception called `PreparationUnsatisfiedConditionException` is thrown.
 
 You can specify a condition in a Delete operation as follows:
 
@@ -830,8 +836,8 @@ public class Sample {
         } catch (RollbackException ex) {
           // Rolling back the transaction failed. You can log it here
         }
-      } catch (CrudException | CommitException e) {
-        // If you catch CrudException or CommitException, it indicates some failure happens, so you
+      } catch (CrudException | CommitUnsatisfiedConditionException | CommitException e) {
+        // If you catch CrudException or CommitUnsatisfiedConditionException or CommitException, it indicates some failure happens, so you
         // should cancel the transaction or retry the transaction after the failure/error is fixed
         try {
           tx.rollback();

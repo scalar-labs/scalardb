@@ -2,16 +2,21 @@ package com.scalar.db.transaction.jdbc;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.PutIf;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.common.AbstractDistributedTransaction;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CommitUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
@@ -22,6 +27,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +46,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   private final JdbcService jdbcService;
   private final Connection connection;
   private final RdbEngineStrategy rdbEngine;
+  private @Nullable Mutation mutationWithUnsatisfiedCondition;
 
   JdbcTransaction(
       String txId, JdbcService jdbcService, Connection connection, RdbEngineStrategy rdbEngine) {
@@ -83,7 +91,14 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
     try {
       if (!jdbcService.put(put, connection)) {
-        throw new CrudConflictException("the put operation condition is not satisfied", txId);
+        // To match the Consensus Commit transaction behavior, instead of throwing an exception here
+        // when the condition is not satisfied, the exception is thrown when committing the
+        // transaction.
+        // For simplicity, if several mutations have unsatisfied condition, only the first executed
+        // mutation will be reported in the thrown exception message.
+        if (mutationWithUnsatisfiedCondition == null) {
+          mutationWithUnsatisfiedCondition = put;
+        }
       }
     } catch (SQLException e) {
       throw createCrudException(e, "put operation failed");
@@ -106,7 +121,14 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
     try {
       if (!jdbcService.delete(delete, connection)) {
-        throw new CrudConflictException("the delete operation condition is not satisfied", txId);
+        // To match the Consensus Commit transaction behavior, instead of throwing an exception here
+        // when the condition is not satisfied, the exception is thrown when committing the
+        // transaction.
+        // For simplicity, if several mutations have unsatisfied condition, only the first executed
+        // mutation will be reported in the thrown exception message.
+        if (mutationWithUnsatisfiedCondition == null) {
+          mutationWithUnsatisfiedCondition = delete;
+        }
       }
     } catch (SQLException e) {
       throw createCrudException(e, "delete operation failed");
@@ -137,6 +159,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
+    throwIfMutationHasUnsatisfiedCondition();
     try {
       connection.commit();
     } catch (SQLException e) {
@@ -153,6 +176,58 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
         logger.warn("failed to close the connection", e);
       }
     }
+  }
+
+  private void throwIfMutationHasUnsatisfiedCondition()
+      throws CommitUnsatisfiedConditionException, UnknownTransactionStatusException {
+    if (mutationWithUnsatisfiedCondition == null) {
+      return;
+    }
+
+    try {
+      connection.rollback();
+      throwUnsatisfiedConditionException(mutationWithUnsatisfiedCondition);
+    } catch (SQLException sqlException) {
+      throw new UnknownTransactionStatusException("failed to rollback", sqlException, txId);
+    } finally {
+      try {
+        connection.close();
+      } catch (SQLException e) {
+        logger.warn("failed to close the connection", e);
+      }
+    }
+  }
+
+  private void throwUnsatisfiedConditionException(Mutation mutation)
+      throws CommitUnsatisfiedConditionException {
+    assert mutation.getCondition().isPresent();
+
+    // Build the exception message
+    MutationCondition condition = mutation.getCondition().get();
+    String conditionColumns = "";
+    // For PutIf and DeleteIf, aggregate the condition columns to the message
+    if (condition instanceof PutIf || condition instanceof DeleteIf) {
+      List<ConditionalExpression> expressions = condition.getExpressions();
+      conditionColumns +=
+          expressions.stream()
+              .map(expr -> expr.getColumn().getName())
+              .collect(Collectors.joining(", "));
+    }
+
+    String exceptionMessage = "The " + condition.getClass().getSimpleName() + " condition ";
+    if (!conditionColumns.isEmpty()) {
+      // To write 'column' in the plural or singular form
+      if (condition.getExpressions().size() > 1) {
+        exceptionMessage += "targeting the columns '" + conditionColumns + "' ";
+      } else {
+        exceptionMessage += "targeting the column '" + conditionColumns + "' ";
+      }
+    }
+    exceptionMessage +=
+        "of the " + mutation.getClass().getSimpleName() + " operation is not validated";
+
+    logger.debug("The condition for the operation is not satisfied: " + mutation);
+    throw new CommitUnsatisfiedConditionException(exceptionMessage, txId);
   }
 
   @Override

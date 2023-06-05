@@ -13,6 +13,7 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
+import com.scalar.db.exception.transaction.PreparationUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
@@ -531,6 +532,12 @@ public class TwoPhaseCommitTransactionService
         responseBuilder.setError(
             TwoPhaseCommitTransactionResponse.Error.newBuilder()
                 .setErrorCode(ErrorCode.TRANSACTION_CONFLICT)
+                .setMessage(e.getMessage())
+                .build());
+      } catch (PreparationUnsatisfiedConditionException e) {
+        responseBuilder.setError(
+            TwoPhaseCommitTransactionResponse.Error.newBuilder()
+                .setErrorCode(ErrorCode.UNSATISFIED_CONDITION)
                 .setMessage(e.getMessage())
                 .build());
       } catch (UnknownTransactionStatusException e) {

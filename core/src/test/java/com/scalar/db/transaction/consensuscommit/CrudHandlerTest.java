@@ -379,7 +379,8 @@ public class CrudHandlerTest {
             readSet,
             new HashMap<>(),
             new HashMap<>(),
-            deleteSet);
+            deleteSet,
+            mock(ConditionalMutationValidator.class));
     handler = new CrudHandler(storage, snapshot, tableMetadataManager, false);
     when(scanner.iterator()).thenReturn(Arrays.asList(result, result2).iterator());
     when(storage.scan(scan)).thenReturn(scanner);

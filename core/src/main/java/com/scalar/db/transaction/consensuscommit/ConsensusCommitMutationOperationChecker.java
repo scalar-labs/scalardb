@@ -11,19 +11,22 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.common.checker.ConditionChecker;
+import com.scalar.db.common.checker.ConditionChecker.ConditionCheckerFactory;
 import com.scalar.db.exception.storage.ExecutionException;
-import java.util.Collections;
-import java.util.List;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
 public class ConsensusCommitMutationOperationChecker {
 
   private final TransactionTableMetadataManager transactionTableMetadataManager;
+  private final ConditionCheckerFactory conditionCheckerFactory;
 
   public ConsensusCommitMutationOperationChecker(
-      TransactionTableMetadataManager transactionTableMetadataManager) {
+      TransactionTableMetadataManager transactionTableMetadataManager,
+      ConditionCheckerFactory conditionCheckerFactory) {
     this.transactionTableMetadataManager = transactionTableMetadataManager;
+    this.conditionCheckerFactory = conditionCheckerFactory;
   }
 
   private TransactionTableMetadata getTableMetadata(Operation operation) throws ExecutionException {
@@ -52,18 +55,6 @@ public class ConsensusCommitMutationOperationChecker {
   }
 
   private void check(Put put) throws ExecutionException {
-    put.getCondition()
-        .ifPresent(
-            condition -> {
-              if (!(condition instanceof PutIf
-                  || condition instanceof PutIfNotExists
-                  || condition instanceof PutIfExists)) {
-                throw new IllegalArgumentException(
-                    "A "
-                        + condition.getClass().getSimpleName()
-                        + " condition is not allowed on Put operation");
-              }
-            });
     TransactionTableMetadata metadata = getTableMetadata(put);
     for (String column : put.getContainedColumnNames()) {
       if (metadata.getTransactionMetaColumnNames().contains(column)) {
@@ -71,32 +62,47 @@ public class ConsensusCommitMutationOperationChecker {
             "Mutating transaction metadata columns is not allowed. column: " + column);
       }
     }
-    checkConditionIsNotTargetingMetadataColumns(put, metadata);
+
+    if (!put.getCondition().isPresent()) {
+      return;
+    }
+    MutationCondition condition = put.getCondition().get();
+
+    if (!(condition instanceof PutIf
+        || condition instanceof PutIfNotExists
+        || condition instanceof PutIfExists)) {
+      throw new IllegalArgumentException(
+          "A "
+              + condition.getClass().getSimpleName()
+              + " condition is not allowed on Put operation");
+    }
+    checkConditionIsNotTargetingMetadataColumns(condition, metadata);
+    ConditionChecker conditionChecker = conditionCheckerFactory.create(metadata.getTableMetadata());
+    conditionChecker.check(condition, true);
   }
 
   private void check(Delete delete) throws ExecutionException {
-    delete
-        .getCondition()
-        .ifPresent(
-            condition -> {
-              if (!(condition instanceof DeleteIf || condition instanceof DeleteIfExists)) {
-                throw new IllegalArgumentException(
-                    "A "
-                        + condition.getClass().getSimpleName()
-                        + " condition is not allowed on Delete operation");
-              }
-            });
-    checkConditionIsNotTargetingMetadataColumns(delete, getTableMetadata(delete));
+    if (!delete.getCondition().isPresent()) {
+      return;
+    }
+    MutationCondition condition = delete.getCondition().get();
+
+    if (!(condition instanceof DeleteIf || condition instanceof DeleteIfExists)) {
+      throw new IllegalArgumentException(
+          "A "
+              + condition.getClass().getSimpleName()
+              + " condition is not allowed on Delete operation");
+    }
+    TransactionTableMetadata transactionMetadata = getTableMetadata(delete);
+    checkConditionIsNotTargetingMetadataColumns(condition, transactionMetadata);
+    ConditionChecker conditionChecker =
+        conditionCheckerFactory.create(transactionMetadata.getTableMetadata());
+    conditionChecker.check(condition, false);
   }
 
   private void checkConditionIsNotTargetingMetadataColumns(
-      Mutation mutation, TransactionTableMetadata metadata) {
-    List<ConditionalExpression> expressions =
-        mutation
-            .getCondition()
-            .map(MutationCondition::getExpressions)
-            .orElse(Collections.emptyList());
-    for (ConditionalExpression expression : expressions) {
+      MutationCondition mutationCondition, TransactionTableMetadata metadata) {
+    for (ConditionalExpression expression : mutationCondition.getExpressions()) {
       String column = expression.getColumn().getName();
       if (metadata.getTransactionMetaColumnNames().contains(column)) {
         throw new IllegalArgumentException(

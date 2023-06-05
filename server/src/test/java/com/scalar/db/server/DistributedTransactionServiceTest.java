@@ -3,6 +3,7 @@ package com.scalar.db.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -16,6 +17,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.exception.transaction.CommitUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.BigIntColumn;
@@ -35,10 +37,12 @@ import com.scalar.db.rpc.GetTransactionStateResponse;
 import com.scalar.db.rpc.RollbackRequest;
 import com.scalar.db.rpc.RollbackResponse;
 import com.scalar.db.rpc.TransactionRequest;
+import com.scalar.db.rpc.TransactionRequest.CommitRequest;
 import com.scalar.db.rpc.TransactionRequest.GetRequest;
 import com.scalar.db.rpc.TransactionRequest.ScanRequest;
 import com.scalar.db.rpc.TransactionRequest.StartRequest;
 import com.scalar.db.rpc.TransactionResponse;
+import com.scalar.db.rpc.TransactionResponse.Error.ErrorCode;
 import com.scalar.db.rpc.TransactionResponse.GetResponse;
 import com.scalar.db.rpc.TransactionResponse.ScanResponse;
 import com.scalar.db.rpc.Value;
@@ -88,7 +92,6 @@ public class DistributedTransactionServiceTest {
   @Mock private GateKeeper gateKeeper;
   @Mock private DistributedTransaction transaction;
   @Captor private ArgumentCaptor<StatusRuntimeException> exceptionCaptor;
-
   private DistributedTransactionService transactionService;
 
   @BeforeEach
@@ -834,6 +837,44 @@ public class DistributedTransactionServiceTest {
     // Assert
     verify(responseObserver).onError(exceptionCaptor.capture());
     assertThat(exceptionCaptor.getValue().getStatus().getCode()).isEqualTo(Code.INTERNAL);
+  }
+
+  @Test
+  public void
+      commit_TransactionThrowsCommitUnsatisfiedConditionException_ShouldRespondWithUnsatisfiedConditionError()
+          throws TransactionException {
+    // Arrange
+    @SuppressWarnings("unchecked")
+    StreamObserver<TransactionResponse> responseObserver = mock(StreamObserver.class);
+    TransactionStreamObserver transactionStreamObserver =
+        new TransactionStreamObserver(
+            manager, tableMetadataManager, responseObserver, new Metrics(), s -> true, () -> {});
+
+    TransactionRequest request =
+        TransactionRequest.newBuilder()
+            .setCommitRequest(CommitRequest.newBuilder().build())
+            .build();
+    CommitUnsatisfiedConditionException exception = mock(CommitUnsatisfiedConditionException.class);
+    when(exception.getMessage()).thenReturn("error_msg");
+    doThrow(exception).when(transaction).commit();
+
+    transactionStreamObserver.onNext(
+        TransactionRequest.newBuilder().setStartRequest(StartRequest.getDefaultInstance()).build());
+
+    // Act
+    transactionStreamObserver.onNext(request);
+
+    // Assert
+    verify(transaction).commit();
+    verify(responseObserver)
+        .onNext(
+            TransactionResponse.newBuilder()
+                .setError(
+                    TransactionResponse.Error.newBuilder()
+                        .setErrorCode(ErrorCode.UNSATISFIED_CONDITION)
+                        .setMessage("error_msg")
+                        .build())
+                .build());
   }
 
   @Test

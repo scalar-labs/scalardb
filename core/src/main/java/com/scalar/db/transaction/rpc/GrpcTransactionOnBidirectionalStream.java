@@ -12,6 +12,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CommitUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
@@ -280,6 +281,8 @@ public class GrpcTransactionOnBidirectionalStream
           throw new CommitConflictException(error.getMessage(), transactionId);
         case UNKNOWN_TRANSACTION_STATUS:
           throw new UnknownTransactionStatusException(error.getMessage(), transactionId);
+        case UNSATISFIED_CONDITION:
+          throw new CommitUnsatisfiedConditionException(error.getMessage(), transactionId);
         default:
           throw new CommitException(error.getMessage(), transactionId);
       }

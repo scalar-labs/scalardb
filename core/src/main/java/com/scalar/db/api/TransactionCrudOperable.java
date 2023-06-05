@@ -39,8 +39,7 @@ public interface TransactionCrudOperable {
 
   /**
    * Inserts/Updates an entry to the storage through a transaction with the specified {@link Put}
-   * command. Note that the conditions set in Put will be ignored. Please program such conditions in
-   * a transaction if you want to implement conditional mutation.
+   * command.
    *
    * @param put a {@code Put} command
    * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
@@ -51,8 +50,7 @@ public interface TransactionCrudOperable {
 
   /**
    * Inserts/Updates multiple entries to the storage through a transaction with the specified list
-   * of {@link Put} commands. Note that the conditions set in Put will be ignored. Please program
-   * such conditions in a transaction if you want to implement conditional mutation.
+   * of {@link Put} commands.
    *
    * @param puts a list of {@code Put} commands
    * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
@@ -63,8 +61,7 @@ public interface TransactionCrudOperable {
 
   /**
    * Deletes an entry from the storage through a transaction with the specified {@link Delete}
-   * command. Note that the conditions set in Delete will be ignored. Please program such conditions
-   * in a transaction if you want to implement conditional mutation.
+   * command.
    *
    * @param delete a {@code Delete} command
    * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
@@ -75,8 +72,7 @@ public interface TransactionCrudOperable {
 
   /**
    * Deletes entries from the storage through a transaction with the specified list of {@link
-   * Delete} commands. Note that the conditions set in Delete will be ignored. Please program such
-   * conditions in a transaction if you want to implement conditional mutation.
+   * Delete} commands.
    *
    * @param deletes a list of {@code Delete} commands
    * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
@@ -87,8 +83,7 @@ public interface TransactionCrudOperable {
 
   /**
    * Mutates entries of the storage through a transaction with the specified list of {@link
-   * Mutation} commands. Note that the conditions set in Mutation will be ignored. Please program
-   * such conditions in a transaction if you want to implement conditional mutation.
+   * Mutation} commands.
    *
    * @param mutations a list of {@code Mutation} commands
    * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction

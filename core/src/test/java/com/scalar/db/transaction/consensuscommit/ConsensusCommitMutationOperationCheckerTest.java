@@ -15,6 +15,8 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.common.checker.ConditionChecker;
+import com.scalar.db.common.checker.ConditionChecker.ConditionCheckerFactory;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.LinkedHashSet;
 import java.util.Optional;
@@ -33,15 +35,18 @@ public class ConsensusCommitMutationOperationCheckerTest {
   private static final String ANY_COL_2 = "any_col_2";
   private static final String ANY_METADATA_COL_1 = "any_metadata_col_1";
   private static final String ANY_METADATA_COL_2 = "any_metadata_col_2";
-  @Mock TransactionTableMetadataManager metadataManager;
-  @Mock Put put;
-  @Mock Delete delete;
-  @Mock TransactionTableMetadata tableMetadata;
+  @Mock private TransactionTableMetadataManager metadataManager;
+  @Mock private Put put;
+  @Mock private Delete delete;
+  @Mock private TransactionTableMetadata tableMetadata;
+  @Mock private ConditionCheckerFactory conditionCheckerFactory;
+  @Mock private ConditionChecker conditionChecker;
   @InjectMocks private ConsensusCommitMutationOperationChecker checker;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+    when(conditionCheckerFactory.create(any())).thenReturn(conditionChecker);
     when(metadataManager.getTransactionTableMetadata(any())).thenReturn(tableMetadata);
     LinkedHashSet<String> metadataColumns = new LinkedHashSet<>();
     metadataColumns.add(ANY_METADATA_COL_1);
@@ -63,13 +68,15 @@ public class ConsensusCommitMutationOperationCheckerTest {
 
   @ParameterizedTest
   @ValueSource(classes = {PutIf.class, PutIfExists.class, PutIfNotExists.class})
-  public void checkForPut_WithAllowedCondition_ShouldDoNothing(
+  public void checkForPut_WithAllowedCondition_ShouldCallConditionChecker(
       Class<? extends MutationCondition> putConditionClass) {
     // Arrange
-    when(put.getCondition()).thenReturn(Optional.of(mock(putConditionClass)));
+    MutationCondition condition = mock(putConditionClass);
+    when(put.getCondition()).thenReturn(Optional.of(condition));
 
     // Act Assert
     org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> checker.check(put));
+    verify(conditionChecker).check(condition, true);
   }
 
   @Test
@@ -117,7 +124,7 @@ public class ConsensusCommitMutationOperationCheckerTest {
   }
 
   @Test
-  public void checkForPut_WithConditionThatDoNotTargetMetadataColumns_ShouldDoNothing()
+  public void checkForPut_WithConditionThatDoNotTargetMetadataColumns_ShouldCallConditionChecker()
       throws ExecutionException {
     // Arrange
     MutationCondition condition =
@@ -129,6 +136,7 @@ public class ConsensusCommitMutationOperationCheckerTest {
     // Act Assert
     org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> checker.check(put));
     verify(metadataManager).getTransactionTableMetadata(put);
+    verify(conditionChecker).check(condition, true);
   }
 
   @ParameterizedTest
@@ -145,13 +153,15 @@ public class ConsensusCommitMutationOperationCheckerTest {
 
   @ParameterizedTest
   @ValueSource(classes = {DeleteIf.class, DeleteIfExists.class})
-  public void checkForDelete_WithAllowedCondition_ShouldDoNothing(
+  public void checkForDelete_WithAllowedCondition_ShouldCheckCondition(
       Class<? extends MutationCondition> deleteConditionClass) {
     // Arrange
-    when(delete.getCondition()).thenReturn(Optional.of(mock(deleteConditionClass)));
+    MutationCondition condition = mock(deleteConditionClass);
+    when(delete.getCondition()).thenReturn(Optional.of(condition));
 
     // Act Assert
     org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> checker.check(delete));
+    verify(conditionChecker).check(condition, false);
   }
 
   @Test
@@ -173,8 +183,9 @@ public class ConsensusCommitMutationOperationCheckerTest {
   }
 
   @Test
-  public void checkForDelete_WithConditionThatDoNotTargetMetadataColumns_ShouldDoNothing()
-      throws ExecutionException {
+  public void
+      checkForDelete_WithConditionThatDoNotTargetMetadataColumns_ShouldCallConditionChecker()
+          throws ExecutionException {
     // Arrange
     MutationCondition condition =
         ConditionBuilder.deleteIf(ConditionBuilder.column(ANY_COL_1).isNullInt())
@@ -185,5 +196,6 @@ public class ConsensusCommitMutationOperationCheckerTest {
     // Act Assert
     org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> checker.check(delete));
     verify(metadataManager).getTransactionTableMetadata(delete);
+    verify(conditionChecker).check(condition, false);
   }
 }

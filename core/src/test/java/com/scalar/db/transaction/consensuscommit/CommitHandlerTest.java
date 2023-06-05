@@ -6,10 +6,12 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Put;
@@ -19,6 +21,9 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CommitUnsatisfiedConditionException;
+import com.scalar.db.exception.transaction.PreparationConflictException;
+import com.scalar.db.exception.transaction.PreparationUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Key;
@@ -174,6 +179,28 @@ public class CommitHandlerTest {
     verify(coordinator, never())
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
+  }
+
+  @Test
+  public void
+      commit_PreparationUnsatisfiedConditionThrownInPrepareRecords_ShouldThrowCommitUnsatisfiedConditionException()
+          throws ExecutionException, CoordinatorException, PreparationConflictException,
+              PreparationUnsatisfiedConditionException {
+    // Arrange
+    Snapshot snapshot = mock(Snapshot.class);
+    when(snapshot.getId()).thenReturn(ANY_ID);
+    doThrow(PreparationUnsatisfiedConditionException.class).when(snapshot).to(any());
+    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+
+    // Act
+    assertThatThrownBy(() -> handler.commit(snapshot))
+        .isInstanceOf(CommitUnsatisfiedConditionException.class);
+
+    // Assert
+    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+    verify(coordinator, never())
+        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+    verify(handler, never()).rollbackRecords(any());
   }
 
   @Test

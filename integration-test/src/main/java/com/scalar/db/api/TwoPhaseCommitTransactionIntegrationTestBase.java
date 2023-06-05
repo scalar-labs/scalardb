@@ -12,6 +12,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
+import com.scalar.db.exception.transaction.PreparationUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.io.DataType;
@@ -1271,8 +1272,9 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
-  public void put_withPutIfWithNonVerifiedCondition_shouldThrowPreparationConflictException()
-      throws TransactionException {
+  public void
+      put_withPutIfWithNonVerifiedCondition_shouldThrowPreparationUnsatisfiedConditionException()
+          throws TransactionException {
     // Arrange
     Put initialData =
         Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
@@ -1291,7 +1293,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> getThenPut(putIf)).isInstanceOf(PreparationConflictException.class);
+    assertThatThrownBy(() -> getThenPut(putIf))
+        .isInstanceOf(PreparationUnsatisfiedConditionException.class);
 
     Optional<Result> optResult = get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(optResult.isPresent()).isTrue();
@@ -1303,8 +1306,9 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
-  public void put_withPutIfWhenRecordDoesNotExist_shouldThrowPreparationConflictException()
-      throws TransactionException {
+  public void
+      put_withPutIfWhenRecordDoesNotExist_shouldThrowPreparationUnsatisfiedConditionException()
+          throws TransactionException {
     // Arrange
     Put put =
         Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
@@ -1314,15 +1318,16 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> put(put)).isInstanceOf(PreparationConflictException.class);
+    assertThatThrownBy(() -> put(put)).isInstanceOf(PreparationUnsatisfiedConditionException.class);
 
     Optional<Result> result = get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
   }
 
   @Test
-  public void put_withPutIfExistsWhenRecordDoesNotExist_shouldThrowPreparationConflictException()
-      throws TransactionException {
+  public void
+      put_withPutIfExistsWhenRecordDoesNotExist_shouldThrowPreparationUnsatisfiedConditionException()
+          throws TransactionException {
     // Arrange
     Put put =
         Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
@@ -1331,7 +1336,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> getThenPut(put)).isInstanceOf(PreparationConflictException.class);
+    assertThatThrownBy(() -> getThenPut(put))
+        .isInstanceOf(PreparationUnsatisfiedConditionException.class);
 
     Optional<Result> result = get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
@@ -1382,8 +1388,9 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
-  public void put_withPutIfNotExistsWhenRecordExists_shouldThrowPreparationConflictException()
-      throws TransactionException {
+  public void
+      put_withPutIfNotExistsWhenRecordExists_shouldThrowPreparationUnsatisfiedConditionException()
+          throws TransactionException {
     // Arrange
     Put put = preparePut(0, 0, namespace1, TABLE_1);
     put(put);
@@ -1395,7 +1402,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
     // Act Assert
     assertThatThrownBy(() -> getThenPut(putIfNotExists))
-        .isInstanceOf(PreparationConflictException.class);
+        .isInstanceOf(PreparationUnsatisfiedConditionException.class);
 
     Optional<Result> optResult = get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(optResult.isPresent()).isTrue();
@@ -1434,8 +1441,9 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
-  public void delete_withDeleteIfWithNonVerifiedCondition_shouldThrowPreparationConflictException()
-      throws TransactionException {
+  public void
+      delete_withDeleteIfWithNonVerifiedCondition_shouldThrowPreparationUnsatisfiedConditionException()
+          throws TransactionException {
     // Arrange
     Put initialData = Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1)).build();
     put(initialData);
@@ -1451,7 +1459,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
     // Act Assert
     assertThatThrownBy(() -> getThenDelete(deleteIf))
-        .isInstanceOf(PreparationConflictException.class);
+        .isInstanceOf(PreparationUnsatisfiedConditionException.class);
 
     Optional<Result> optResult = get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(optResult.isPresent()).isTrue();
@@ -1480,10 +1488,11 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     Optional<Result> optResult = get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(optResult.isPresent()).isFalse();
   }
-  // Fails
+
   @Test
   public void
-      delete_withDeleteIfExistsWhenRecordDoesNotExist_shouldThrowPreparationConflictException() {
+      delete_withDeleteIfExistsWhenRecordDoesNotExist_shouldThrowPreparationUnsatisfiedConditionException()
+          throws Exception {
     // Arrange
     Delete deleteIf =
         Delete.newBuilder(prepareDelete(0, 0, namespace1, TABLE_1))
@@ -1492,7 +1501,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
     // Act Assert
     assertThatThrownBy(() -> getThenDelete(deleteIf))
-        .isInstanceOf(PreparationConflictException.class);
+        .isInstanceOf(PreparationUnsatisfiedConditionException.class);
   }
 
   private Optional<Result> get(Get get) throws TransactionException {
