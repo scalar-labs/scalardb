@@ -65,9 +65,11 @@ public interface TwoPhaseCommitTransactionManager {
    * Begins a new transaction. This method is assumed to be called by a coordinator process.
    *
    * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if beginning the transaction fails, but it's retryable.
+   *     You can retry the transaction by calling this method again.
    * @throws TransactionException if beginning the transaction fails
    */
-  TwoPhaseCommitTransaction begin() throws TransactionException;
+  TwoPhaseCommitTransaction begin() throws TransactionNotFoundException, TransactionException;
 
   /**
    * Begins a new transaction with the specified transaction ID. It is users' responsibility to
@@ -76,17 +78,23 @@ public interface TwoPhaseCommitTransactionManager {
    *
    * @param txId an user-provided unique transaction ID
    * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if beginning the transaction fails, but it's retryable.
+   *     You can retry the transaction by calling this method again.
    * @throws TransactionException if beginning the transaction fails
    */
-  TwoPhaseCommitTransaction begin(String txId) throws TransactionException;
+  TwoPhaseCommitTransaction begin(String txId)
+      throws TransactionNotFoundException, TransactionException;
 
   /**
    * Starts a new transaction. This method is an alias of {@link #begin()}.
    *
    * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if starting the transaction fails, but it's retryable. You
+   *     can retry the transaction by calling this method again.
    * @throws TransactionException if starting the transaction fails
    */
-  default TwoPhaseCommitTransaction start() throws TransactionException {
+  default TwoPhaseCommitTransaction start()
+      throws TransactionNotFoundException, TransactionException {
     return begin();
   }
 
@@ -96,9 +104,12 @@ public interface TwoPhaseCommitTransactionManager {
    *
    * @param txId an user-provided unique transaction ID
    * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if starting the transaction fails, but it's retryable. You
+   *     can retry the transaction by calling this method again.
    * @throws TransactionException if starting the transaction fails
    */
-  default TwoPhaseCommitTransaction start(String txId) throws TransactionException {
+  default TwoPhaseCommitTransaction start(String txId)
+      throws TransactionNotFoundException, TransactionException {
     return begin(txId);
   }
 
@@ -108,9 +119,12 @@ public interface TwoPhaseCommitTransactionManager {
    *
    * @param txId the transaction ID
    * @return {@link TwoPhaseCommitTransaction}
-   * @throws TransactionException if participating the transaction fails
+   * @throws TransactionNotFoundException if joining the transaction fails, but it's retryable. You
+   *     can retry the transaction by calling this method again.
+   * @throws TransactionException if joining the transaction fails
    */
-  TwoPhaseCommitTransaction join(String txId) throws TransactionException;
+  TwoPhaseCommitTransaction join(String txId)
+      throws TransactionNotFoundException, TransactionException;
 
   /**
    * Resumes an ongoing transaction associated with the specified transaction ID.

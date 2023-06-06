@@ -56,9 +56,11 @@ public interface DistributedTransactionManager {
    * Begins a new transaction.
    *
    * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if beginning the transaction fails, but it's retryable.
+   *     You can retry the transaction by calling this method again.
    * @throws TransactionException if beginning the transaction fails
    */
-  DistributedTransaction begin() throws TransactionException;
+  DistributedTransaction begin() throws TransactionNotFoundException, TransactionException;
 
   /**
    * Begins a new transaction with the specified transaction ID. It is users' responsibility to
@@ -67,17 +69,22 @@ public interface DistributedTransactionManager {
    *
    * @param txId an user-provided unique transaction ID
    * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if beginning the transaction fails, but it's retryable.
+   *     You can retry the transaction by calling this method again.
    * @throws TransactionException if beginning the transaction fails
    */
-  DistributedTransaction begin(String txId) throws TransactionException;
+  DistributedTransaction begin(String txId)
+      throws TransactionNotFoundException, TransactionException;
 
   /**
    * Starts a new transaction. This method is an alias of {@link #begin()}.
    *
    * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if beginning the transaction fails, but it's retryable.
+   *     You can retry the transaction by calling this method again.
    * @throws TransactionException if starting the transaction fails
    */
-  default DistributedTransaction start() throws TransactionException {
+  default DistributedTransaction start() throws TransactionNotFoundException, TransactionException {
     return begin();
   }
 
@@ -87,9 +94,12 @@ public interface DistributedTransactionManager {
    *
    * @param txId an user-provided unique transaction ID
    * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if beginning the transaction fails, but it's retryable.
+   *     You can retry the transaction by calling this method again.
    * @throws TransactionException if starting the transaction fails
    */
-  default DistributedTransaction start(String txId) throws TransactionException {
+  default DistributedTransaction start(String txId)
+      throws TransactionNotFoundException, TransactionException {
     return begin(txId);
   }
 

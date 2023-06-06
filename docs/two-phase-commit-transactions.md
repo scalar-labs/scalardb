@@ -222,6 +222,10 @@ public class Sample {
       TwoPhaseCommitTransaction tx;
       try {
         tx = transactionManager.begin();
+      } catch (TransactionNotFoundException e) {
+        // If beginning a transaction failed, but it's retryable, so that you can retry the
+        // transaction
+        continue;
       } catch (TransactionException e) {
         // If beginning a transaction failed, it indicates some failure happens during the
         // transaction, so you should cancel the transaction or retry the transaction after the
@@ -279,6 +283,13 @@ public class Sample {
 }
 ```
 
+The `begin()` API could throw `TransactionException` and `TransactionNotFoundException`.
+If you catch `TransactionException`, it indicates some failure (e.g., database failure and network error) happens during a transaction, so you should cancel the transaction or retry the transaction after the failure/error is fixed.
+If you catch `TransactionNotFoundException`, it indicates the transaction is not found, but it's retryable, so that you can retry the transaction.
+
+Although it's not illustrated in the sample code, the `join()` API could also throw a `TransactionException` and `TransactionNotFoundException`.
+And the way to handle them is the same as the `begin()` API.
+
 The APIs for CRUD operations (`get()`/`scan()`/`put()`/`delete()`/`mutate()`) could throw `CrudException` and `CrudConflictException`.
 If you catch `CrudException`, it indicates some failure (e.g., database failure and network error) happens during a transaction, so you should cancel the transaction or retry the transaction after the failure/error is fixed.
 If you catch `CrudConflictException`, it indicates a transaction conflict occurs during the transaction so that you can retry the transaction from the beginning, preferably with well-adjusted exponential backoff based on your application and environment.
@@ -299,6 +310,12 @@ If you catch `UnknownTransactionStatusException`, you are not sure if the transa
 In such a case, you need to check if the transaction is committed successfully or not and retry it if it fails.
 How to identify a transaction status is delegated to users.
 You may want to create a transaction status table and update it transactionally with other application data so that you can get the status of a transaction from the status table.
+
+Please note that if you begin a transaction with specifying a transaction ID, you need to use a different transaction ID when you retry the transaction.
+
+Although it's not illustrated in the sample code, the `resume()` API could also throw a `TransactionNotFoundException`.
+This exception indicates that the transaction associated with the specified ID was not found, and it might have been expired.
+In such cases, you can retry the transaction from the beginning.
 
 ### Request Routing in Two-phase Commit Transactions
 
