@@ -28,7 +28,7 @@ jobs:
           echo "assignee: $assignee"
           echo -------------
           if [[ -z $assignee ]]; then
-            # For instance, we can't assign `debendabot` to a new PR.
+            # For instance, we can't assign `dependabot` to a new PR.
             new_pr_assignee=''
           else
             new_pr_assignee="${{ github.event.pull_request.user.login }}"
