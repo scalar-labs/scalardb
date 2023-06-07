@@ -3,6 +3,7 @@ package com.scalar.db.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.scalar.db.api.Scan.Conjunction;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import java.util.Collections;
@@ -10,6 +11,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 public class ScanTest {
+  private static final String ANY_NAMESPACE = "namespace";
+  private static final String ANY_TABLE = "table";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_TEXT_1 = "text1";
@@ -43,6 +46,35 @@ public class ScanTest {
         .withProjection(ANY_NAME_1)
         .withOrdering(ordering)
         .withLimit(100);
+  }
+
+  private Scan prepareScanWithCondition(ConditionalExpression condition) {
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE)
+        .table(ANY_TABLE)
+        .all()
+        .where(condition)
+        .ordering(Scan.Ordering.asc(ANY_NAME_2))
+        .limit(100)
+        .build();
+  }
+
+  private Conjunction prepareConjunction() {
+    return Scan.Conjunction.of(
+        ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
+        ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1));
+  }
+
+  private Conjunction prepareAnotherConjunction() {
+    return Scan.Conjunction.of(
+        ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
+        ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_2));
+  }
+
+  private Conjunction prepareConjunctionWithDifferentConditionOrder() {
+    return Scan.Conjunction.of(
+        ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1),
+        ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1));
   }
 
   @Test
@@ -164,5 +196,73 @@ public class ScanTest {
 
     // Assert
     assertThat(ret).isFalse();
+  }
+
+  @Test
+  public void equals_ScanWithDifferentConjunctionsGiven_ShouldReturnFalse() {
+    // Arrange
+    Scan scan =
+        prepareScanWithCondition(ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1));
+    Scan another =
+        prepareScanWithCondition(ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_2));
+
+    // Act
+    boolean ret = scan.equals(another);
+
+    // Assert
+    assertThat(ret).isFalse();
+  }
+
+  @Test
+  public void equals_SameConjunctionInstanceGiven_ShouldReturnTrue() {
+    // Arrange
+    Conjunction conjunction = prepareConjunction();
+
+    // Act
+    @SuppressWarnings("SelfEquals")
+    boolean ret = conjunction.equals(conjunction);
+
+    // Assert
+    assertThat(ret).isTrue();
+  }
+
+  @Test
+  public void equals_SameConjunctionGiven_ShouldReturnTrue() {
+    // Arrange
+    Conjunction conjunction = prepareConjunction();
+    Conjunction another = prepareConjunction();
+
+    // Act
+    boolean ret = conjunction.equals(another);
+
+    // Assert
+    assertThat(ret).isTrue();
+    assertThat(conjunction.hashCode()).isEqualTo(another.hashCode());
+  }
+
+  @Test
+  public void equals_ConjunctionWithDifferentConditionGiven_ShouldReturnFalse() {
+    // Arrange
+    Conjunction conjunction = prepareConjunction();
+    Conjunction another = prepareAnotherConjunction();
+
+    // Act
+    boolean ret = conjunction.equals(another);
+
+    // Assert
+    assertThat(ret).isFalse();
+  }
+
+  @Test
+  public void equals_ConjunctionWithDifferentConditionOrderGiven_ShouldReturnTrue() {
+    // Arrange
+    Conjunction conjunction = prepareConjunction();
+    Conjunction another = prepareConjunctionWithDifferentConditionOrder();
+
+    // Act
+    boolean ret = conjunction.equals(another);
+
+    // Assert
+    assertThat(ret).isTrue();
   }
 }
