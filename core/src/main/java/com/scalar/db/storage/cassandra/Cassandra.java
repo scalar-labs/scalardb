@@ -19,6 +19,7 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -63,6 +64,21 @@ public class Cassandra extends AbstractDistributedStorage {
     operationChecker = new OperationChecker(metadataManager);
   }
 
+  Cassandra(
+      DatabaseConfig config,
+      ClusterManager clusterManager,
+      StatementHandlerManager handlers,
+      BatchHandler batch,
+      TableMetadataManager metadataManager,
+      OperationChecker operationChecker) {
+    super(config);
+    this.clusterManager = clusterManager;
+    this.handlers = handlers;
+    this.batch = batch;
+    this.metadataManager = metadataManager;
+    this.operationChecker = operationChecker;
+  }
+
   @Override
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
@@ -88,6 +104,11 @@ public class Cassandra extends AbstractDistributedStorage {
   public Scanner scan(Scan scan) throws ExecutionException {
     scan = copyAndSetTargetToIfNot(scan);
     operationChecker.check(scan);
+
+    if (ScalarDbUtils.isRelational(scan)) {
+      throw new UnsupportedOperationException(
+          "scanning all records with orderings or conditions is not supported in Cassandra");
+    }
 
     ResultSet results = handlers.select().handle(scan);
 

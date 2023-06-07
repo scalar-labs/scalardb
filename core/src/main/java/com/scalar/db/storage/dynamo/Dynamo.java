@@ -16,6 +16,7 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
@@ -78,6 +79,23 @@ public class Dynamo extends AbstractDistributedStorage {
     logger.info("DynamoDB object is created properly.");
   }
 
+  Dynamo(
+      DatabaseConfig databaseConfig,
+      DynamoDbClient client,
+      SelectStatementHandler select,
+      PutStatementHandler put,
+      DeleteStatementHandler delete,
+      BatchHandler batch,
+      OperationChecker operationChecker) {
+    super(databaseConfig);
+    this.client = client;
+    this.selectStatementHandler = select;
+    this.putStatementHandler = put;
+    this.deleteStatementHandler = delete;
+    this.batchHandler = batch;
+    this.operationChecker = operationChecker;
+  }
+
   @Override
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
@@ -107,6 +125,11 @@ public class Dynamo extends AbstractDistributedStorage {
   public Scanner scan(Scan scan) throws ExecutionException {
     scan = copyAndSetTargetToIfNot(scan);
     operationChecker.check(scan);
+
+    if (ScalarDbUtils.isRelational(scan)) {
+      throw new UnsupportedOperationException(
+          "scanning all records with orderings or conditions is not supported in DynamoDB");
+    }
 
     return selectStatementHandler.handle(scan);
   }

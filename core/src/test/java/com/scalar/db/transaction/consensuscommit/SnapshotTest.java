@@ -14,6 +14,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -22,6 +24,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.ScanBuilder.ConditionSetBuilder;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.ResultImpl;
@@ -62,12 +65,17 @@ public class SnapshotTest {
   private static final String ANY_NAME_4 = "name4";
   private static final String ANY_NAME_5 = "name5";
   private static final String ANY_NAME_6 = "name6";
+  private static final String ANY_NAME_7 = "name7";
+  private static final String ANY_NAME_8 = "name8";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
   private static final String ANY_TEXT_3 = "text3";
   private static final String ANY_TEXT_4 = "text4";
   private static final String ANY_TEXT_5 = "text5";
   private static final String ANY_TEXT_6 = "text6";
+  private static final int ANY_INT_0 = 0;
+  private static final int ANY_INT_1 = 1;
+  private static final int ANY_INT_2 = 2;
 
   private static final TableMetadata TABLE_METADATA =
       ConsensusCommitUtils.buildTransactionTableMetadata(
@@ -180,6 +188,19 @@ public class SnapshotTest {
         .forTable(ANY_TABLE_NAME);
   }
 
+  private Scan prepareRelationalScan() {
+    return prepareRelationalScan(ANY_NAMESPACE_NAME, ANY_TABLE_NAME);
+  }
+
+  private Scan prepareRelationalScan(String namespace, String table) {
+    return Scan.newBuilder()
+        .namespace(namespace)
+        .table(table)
+        .all()
+        .where(ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1))
+        .build();
+  }
+
   private Put preparePut() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
@@ -208,6 +229,22 @@ public class SnapshotTest {
         .forTable(ANY_TABLE_NAME)
         .withValue(ANY_NAME_3, ANY_TEXT_3)
         .withValue(ANY_NAME_4, ANY_TEXT_4);
+  }
+
+  private Put preparePutWithIntColumns() {
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(Key.ofInt(ANY_NAME_1, ANY_INT_1))
+        .value(IntColumn.of(ANY_NAME_2, ANY_INT_1))
+        .value(IntColumn.of(ANY_NAME_3, ANY_INT_1))
+        .value(IntColumn.of(ANY_NAME_4, ANY_INT_1))
+        .value(IntColumn.of(ANY_NAME_5, ANY_INT_1))
+        .value(IntColumn.of(ANY_NAME_6, ANY_INT_1))
+        .value(IntColumn.of(ANY_NAME_7, ANY_INT_1))
+        .value(IntColumn.ofNull(ANY_NAME_8))
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   private Delete prepareDelete() {
@@ -1300,5 +1337,157 @@ public class SnapshotTest {
     // Assert
     assertThat(keys).isNotEmpty();
     assertThat(keys.get()).containsExactly(aKey);
+  }
+
+  @Test
+  public void verify_RelationalScanGivenAndPutInSameTable_ShouldThrowException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    Scan scan = prepareRelationalScan();
+    Snapshot.Key key = new Snapshot.Key(scan, prepareResult(ANY_ID));
+    snapshot.put(scan, Collections.singletonList(key));
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void verify_RelationalScanGivenAndPutInDifferentNamespace_ShouldNotThrowException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    Scan scan = prepareRelationalScan(ANY_NAMESPACE_NAME_2, ANY_TABLE_NAME);
+    Snapshot.Key key = new Snapshot.Key(scan, prepareResult(ANY_ID));
+    snapshot.put(scan, Collections.singletonList(key));
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void verify_RelationalScanGivenAndPutInDifferentTable_ShouldNotThrowException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    Scan scan = prepareRelationalScan(ANY_NAMESPACE_NAME, ANY_TABLE_NAME_2);
+    Snapshot.Key key = new Snapshot.Key(scan, prepareResult(ANY_ID));
+    snapshot.put(scan, Collections.singletonList(key));
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verify_RelationalScanGivenAndNewPutInSameTableAndAllConditionsMatch_ShouldThrowException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Put put = preparePutWithIntColumns();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    Scan scan =
+        Scan.newBuilder(prepareRelationalScan())
+            .clearConditions()
+            .where(
+                ConditionSetBuilder.andConditionSet(
+                        ImmutableSet.of(
+                            ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT_1),
+                            ConditionBuilder.column(ANY_NAME_2).isNotEqualToInt(ANY_INT_2),
+                            ConditionBuilder.column(ANY_NAME_3).isGreaterThanInt(ANY_INT_0),
+                            ConditionBuilder.column(ANY_NAME_4)
+                                .isGreaterThanOrEqualToInt(ANY_INT_1),
+                            ConditionBuilder.column(ANY_NAME_5).isLessThanInt(ANY_INT_2),
+                            ConditionBuilder.column(ANY_NAME_6).isLessThanOrEqualToInt(ANY_INT_1),
+                            ConditionBuilder.column(ANY_NAME_7).isNotNullInt(),
+                            ConditionBuilder.column(ANY_NAME_8).isNullInt()))
+                    .build())
+            .build();
+    snapshot.put(scan, Collections.emptyList());
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verify_RelationalScanGivenAndNewPutInSameTableAndAnyConjunctionMatch_ShouldThrowException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    Scan scan =
+        Scan.newBuilder(prepareRelationalScan())
+            .clearConditions()
+            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_1))
+            .or(ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_4))
+            .build();
+    snapshot.put(scan, Collections.emptyList());
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verify_RelationalScanGivenAndNewPutInSameTableButConditionNotMatch_ShouldNotThrowException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    Scan scan =
+        Scan.newBuilder(prepareRelationalScan())
+            .clearConditions()
+            .where(ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_1))
+            .or(ConditionBuilder.column(ANY_NAME_5).isEqualToText(ANY_TEXT_1))
+            .build();
+    snapshot.put(scan, Collections.emptyList());
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verify_RelationalScanWithoutConjunctionGivenAndNewPutInSameTable_ShouldThrowException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Put put = preparePutWithIntColumns();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    Scan scan = Scan.newBuilder(prepareRelationalScan()).clearConditions().build();
+    snapshot.put(scan, Collections.emptyList());
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 }
