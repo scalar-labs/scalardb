@@ -223,7 +223,7 @@ public class Sample {
       try {
         tx = transactionManager.begin();
       } catch (TransactionNotFoundException e) {
-        // If beginning a transaction failed, but it's retryable, so that you can retry the
+        // If beginning a transaction failed, but it's retryable, so you can retry the
         // transaction
         continue;
       } catch (TransactionException e) {
@@ -287,7 +287,7 @@ The `begin()` API could throw `TransactionException` and `TransactionNotFoundExc
 If you catch `TransactionException`, it indicates some failure (e.g., database failure and network error) happens during a transaction, so you should cancel the transaction or retry the transaction after the failure/error is fixed.
 If you catch `TransactionNotFoundException`, it indicates the transaction is not found, but it's retryable, so that you can retry the transaction.
 
-Although it's not illustrated in the sample code, the `join()` API could also throw a `TransactionException` and `TransactionNotFoundException`.
+Although not illustrated in the sample code, the `join()` API could also throw a `TransactionException` and `TransactionNotFoundException`.
 And the way to handle them is the same as the `begin()` API.
 
 The APIs for CRUD operations (`get()`/`scan()`/`put()`/`delete()`/`mutate()`) could throw `CrudException` and `CrudConflictException`.
@@ -311,9 +311,9 @@ In such a case, you need to check if the transaction is committed successfully o
 How to identify a transaction status is delegated to users.
 You may want to create a transaction status table and update it transactionally with other application data so that you can get the status of a transaction from the status table.
 
-Please note that if you begin a transaction with specifying a transaction ID, you need to use a different transaction ID when you retry the transaction.
+Please note that if you begin a transaction by specifying a transaction ID, you must use a different ID when you retry the transaction.
 
-Although it's not illustrated in the sample code, the `resume()` API could also throw a `TransactionNotFoundException`.
+Although not illustrated in the sample code, the `resume()` API could also throw a `TransactionNotFoundException`.
 This exception indicates that the transaction associated with the specified ID was not found, and it might have been expired.
 In such cases, you can retry the transaction from the beginning.
 
