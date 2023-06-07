@@ -88,15 +88,18 @@ public class ScanAll extends Scan {
   }
 
   /**
-   * Guaranteed to throw an exception.
+   * Sets the specified scan ordering. Ordering can only be specified with arbitrary columns. To
+   * sort results by multiple columns, call this method multiple times in the order of sorting.
    *
-   * @throws UnsupportedOperationException always
-   * @deprecated Unsupported operation.
+   * @param ordering a scan ordering
+   * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Deprecated
   @Override
   public ScanAll withOrdering(Ordering ordering) {
-    throw new UnsupportedOperationException();
+    return (ScanAll) super.withOrdering(ordering);
   }
 
   /**
@@ -157,6 +160,11 @@ public class ScanAll extends Scan {
   @Deprecated
   public ScanAll withProjections(Collection<String> projections) {
     return (ScanAll) super.withProjections(projections);
+  }
+
+  @Override
+  ScanAll withConjunctions(Collection<Conjunction> conjunctions) {
+    return (ScanAll) super.withConjunctions(conjunctions);
   }
 
   @Override
