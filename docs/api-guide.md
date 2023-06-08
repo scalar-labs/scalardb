@@ -787,7 +787,7 @@ public class Sample {
 
 The `begin()` API could throw `TransactionException` and `TransactionNotFoundException`.
 If you catch `TransactionException`, it indicates some failure (e.g., database failure and network error) happens during the transaction, so you should cancel the transaction or retry the transaction after the failure or error is fixed.
-If you catch `TransactionNotFoundException`, it indicates the transaction is not found, but it's retryable, so you can retry the transaction.
+If you catch `TransactionNotFoundException`, it indicates beginning a transaction fails, but it's retryable. So you can retry the transaction in this case.
 
 The APIs for CRUD operations (`get()`/`scan()`/`put()`/`delete()`/`mutate()`) could throw `CrudException` and `CrudConflictException`.
 If you catch `CrudException`, it indicates some failure (e.g., database failure and network error) happens during the transaction, so you should cancel the transaction or retry the transaction after the failure or error is fixed.
