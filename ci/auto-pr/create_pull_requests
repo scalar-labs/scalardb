@@ -32,29 +32,16 @@ function cherry_pick_and_create_pull_request () {
   git cherry-pick --no-rerere-autoupdate -m1 $commit_sha
   git push origin $new_branch
   git status
-  if [[ -z $assignee ]]; then
-    gh pr create \
-      --base "$branch" \
-      --title "Backport to branch($branch) : $pull_request_title" \
-      --body "Backport of $pull_request_url"
-  else
-    gh pr create --assignee $assignee \
-      --base "$branch" \
-      --title "Backport to branch($branch) : $pull_request_title" \
-      --body "Backport of $pull_request_url"
-  fi
+  gh pr create --assignee $assignee \
+    --base "$branch" \
+    --title "Backport to branch($branch) : $pull_request_title" \
+    --body "Backport of $pull_request_url"
 }
 
 function create_issue () {
-  if [[ -z $assignee ]]; then
-    gh issue create \
-      --title "Backport to branch($branch) failed: $pull_request_title" \
-      --body "Backport of $pull_request_url to branch($branch) failed"
-  else
-    gh issue create --assignee $assignee \
-      --title "Backport to branch($branch) failed: $pull_request_title" \
-      --body "Backport of $pull_request_url to branch($branch) failed"
-  fi
+  gh issue create --assignee $assignee \
+    --title "Backport to branch($branch) failed: $pull_request_title" \
+    --body "Backport of $pull_request_url to branch($branch) failed"
 }
 
 git fetch origin
