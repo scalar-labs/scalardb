@@ -23,18 +23,17 @@ From here, we assume Oracle JDK 8 is properly installed in your local environmen
 The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for ScalarDB. You need to update `contact_points` and `password` with your Cosmos DB for NoSQL URI and Cosmos DB for NoSQL key respectively, and `storage` with `cosmos`.
     
 ```properties
+# Cosmos DB for NoSQL storage implementation is used for Consensus Commit
+scalar.db.storage=cosmos
+
 # The Cosmos DB for NoSQL URI
 scalar.db.contact_points=<COSMOS_DB_FOR_NOSQL_URI>
 
 # The Cosmos DB for NoSQL key
 scalar.db.password=<COSMOS_DB_FOR_NOSQL_KEY>
-
-# Cosmos DB for NoSQL storage implementation
-scalar.db.storage=cosmos
-
-# The database name for the table metadata. If not specified, the default name ("scalardb") is used
-scalar.db.cosmos.table_metadata.database=
 ```
 Note that you can use a primary key or a secondary key for `<COSMOS_DB_FOR_NOSQL_KEY>`.
+
+For the details of the configuration, please refer to [ScalarDB Configurations](configurations.md).
 
 Please follow [Getting Started with ScalarDB](getting-started-with-scalardb.md) to run the application.

@@ -36,7 +36,7 @@ $ ./gradlew :server:docker
 ## Configure ScalarDB Server
 
 You need a property file holding the configuration for ScalarDB Server. 
-It contains two sections: ScalarDB Server configurations and underlying storage/database configurations.
+It contains two sections: ScalarDB Server configurations and Transaction manager configurations.
 
 ```properties
 #
@@ -59,29 +59,29 @@ scalar.db.server.grpc.max_inbound_metadata_size=
 scalar.db.server.decommissioning_duration_secs=30
 
 #
-# Underlying storage/database configurations
+# Transaction manager configurations
 #
 
-# Comma separated contact points. For DynamoDB, the region is specified by this parameter.
+# Transaction manager implementation. `consensus-commit` by default.
+scalar.db.transaction_manager=consensus-commit
+
+# Storage implementation used for Consensus Commit. `cassandra` by default.
+scalar.db.storage=cassandra
+
+# Comma separated contact points.
 scalar.db.contact_points=localhost
 
-# Port number for all the contact points. Default port number for each database is used if empty.
+# Port number for all the contact points.
 #scalar.db.contact_port=
 
-# Credential information to access the database. For Cosmos DB for NoSQL, username isn't used. For DynamoDB, AWS_ACCESS_KEY_ID is specified by the username and AWS_ACCESS_SECRET_KEY is specified by the password.
+# Credential information to access the database.
 scalar.db.username=cassandra
 scalar.db.password=cassandra
 
-# Storage implementation. "cassandra" or "cosmos" or "dynamo" or "jdbc" or "grpc" can be set. Default storage is "cassandra".
-scalar.db.storage=cassandra
-
-# The type of the transaction manager. "consensus-commit" or "jdbc" or "grpc" can be set. The default is "consensus-commit".
-scalar.db.transaction_manager=consensus-commit
-
-# Isolation level used for ConsensusCommit. Either SNAPSHOT or SERIALIZABLE can be specified. SNAPSHOT is used by default.
+# Isolation level used for Consensus Commit. Either SNAPSHOT or SERIALIZABLE can be specified. SNAPSHOT is used by default.
 scalar.db.consensus_commit.isolation_level=SNAPSHOT
 
-# Serializable strategy used for ConsensusCommit transaction manager.
+# Serializable strategy used for Consensus Commit.
 # Either EXTRA_READ or EXTRA_WRITE can be specified. EXTRA_READ is used by default.
 # If SNAPSHOT is specified in the property "scalar.db.consensus_commit.isolation_level", this is ignored.
 scalar.db.consensus_commit.serializable_strategy=
@@ -99,6 +99,8 @@ You can set some sensitive data (e.g., credentials) as the values of properties 
 scalar.db.username=${env:SCALAR_DB_USERNAME}
 scalar.db.password=${env:SCALAR_DB_PASSWORD}
 ```
+
+For the details of the Transaction manager configurations, see [ScalarDB Configurations](configurations.md).
 
 ## Start ScalarDB Server
 
@@ -148,22 +150,19 @@ $ bin/scalardb-server --config <your property file path>
 ## Usage of the Java client of ScalarDB Server
 
 You can use the Java client of ScalarDB Server in almost the same way as other storages/databases.
-The difference is that you need to set `scalar.db.storage` and `scalar.db.transaction_manager` to `grpc` in your client side property file.
+The difference is that you need to set `scalar.db.transaction_manager` to `grpc` in your client side property file.
 
 ```properties
-# Comma separated contact points
-scalar.db.contact_points=<ScalarDB Server host>
-
-# Port number for all the contact points
-scalar.db.contact_port=60051
-
-# Storage implementation
-scalar.db.storage=grpc
-
-# The type of the transaction manager
+# Transaction manager implementation.
 scalar.db.transaction_manager=grpc
 
-# The deadline duration for gRPC connections. The default is 60000 milliseconds (60 seconds)
+# Comma separated contact points.
+scalar.db.contact_points=<ScalarDB Server host>
+
+# Port number for all the contact points.
+scalar.db.contact_port=60051
+
+# The deadline duration for gRPC connections. The default is 60000 milliseconds (60 seconds).
 scalar.db.grpc.deadline_duration_millis=60000
 
 # The maximum message size allowed for a single gRPC frame. If not specified, use the gRPC default value.

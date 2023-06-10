@@ -34,7 +34,7 @@ public class DatabaseConfigTest {
     assertThat(config.getStorage()).isEqualTo("cassandra");
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
     assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
-    assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(0);
+    assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
   }
 
   @Test
@@ -57,7 +57,7 @@ public class DatabaseConfigTest {
     assertThat(config.getStorage()).isEqualTo("cassandra");
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
     assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
-    assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(0);
+    assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
     assertThat(config.getDefaultNamespaceName()).isEmpty();
   }
 
@@ -81,7 +81,7 @@ public class DatabaseConfigTest {
     assertThat(config.getStorage()).isEqualTo("cassandra");
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
     assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
-    assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(0);
+    assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
     assertThat(config.getDefaultNamespaceName()).isEmpty();
   }
 
@@ -107,7 +107,7 @@ public class DatabaseConfigTest {
     assertThat(config.getStorage()).isEqualTo("cassandra");
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
     assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
-    assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(0);
+    assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
     assertThat(config.getDefaultNamespaceName()).isEmpty();
   }
 

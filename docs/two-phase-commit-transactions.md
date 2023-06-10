@@ -12,21 +12,21 @@ The configuration for Two-phase Commit Transactions is the same as the one for t
 For example, you can set the following configuration when you use Cassandra:
 
 ```properties
+# Storage implementation.
+scalar.db.storage=cassandra
+
 # Comma separated contact points
 scalar.db.contact_points=cassandra
 
-# Port number for all the contact points. Default port number for each database is used if empty.
+# Port number for all the contact points.
 scalar.db.contact_port=9042
 
 # Credential information to access the database
 scalar.db.username=cassandra
 scalar.db.password=cassandra
-
-# Storage implementation. Either cassandra or cosmos or dynamo or jdbc can be set. Default storage is cassandra.
-scalar.db.storage=cassandra
 ```
 
-Please see [Getting Started](getting-started.md) for configurations of other databases/storages.
+Please see [ScalarDB Configurations](configurations.md) for the details of the configurations.
 
 ### ScalarDB Server
 

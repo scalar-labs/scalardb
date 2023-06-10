@@ -17,7 +17,7 @@ level as long as the configuration is properly set for `multi-storage`. An examp
 configuration is shown as follows:
 
 ```properties
-# The storage is "multi-storage"
+# Multi-storage implementation is used for Consensus Commit
 scalar.db.storage=multi-storage
 
 # Define storage names, comma-separated format. In this case, "cassandra" and "mysql"
