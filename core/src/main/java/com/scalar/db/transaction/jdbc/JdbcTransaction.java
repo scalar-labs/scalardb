@@ -204,30 +204,35 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
     // Build the exception message
     MutationCondition condition = mutation.getCondition().get();
-    String conditionColumns = "";
+    String conditionColumns = null;
     // For PutIf and DeleteIf, aggregate the condition columns to the message
     if (condition instanceof PutIf || condition instanceof DeleteIf) {
       List<ConditionalExpression> expressions = condition.getExpressions();
-      conditionColumns +=
+      conditionColumns =
           expressions.stream()
               .map(expr -> expr.getColumn().getName())
               .collect(Collectors.joining(", "));
     }
 
-    String exceptionMessage = "The " + condition.getClass().getSimpleName() + " condition ";
-    if (!conditionColumns.isEmpty()) {
+    StringBuilder exceptionMessage =
+        new StringBuilder("The ")
+            .append(condition.getClass().getSimpleName())
+            .append(" condition ");
+    if (conditionColumns != null) {
       // To write 'column' in the plural or singular form
       if (condition.getExpressions().size() > 1) {
-        exceptionMessage += "targeting the columns '" + conditionColumns + "' ";
+        exceptionMessage.append("targeting the columns '").append(conditionColumns).append("' ");
       } else {
-        exceptionMessage += "targeting the column '" + conditionColumns + "' ";
+        exceptionMessage.append("targeting the column '").append(conditionColumns).append("' ");
       }
     }
-    exceptionMessage +=
-        "of the " + mutation.getClass().getSimpleName() + " operation is not validated";
+    exceptionMessage
+        .append("of the ")
+        .append(mutation.getClass().getSimpleName())
+        .append(" operation is not validated");
 
     logger.debug("The condition for the operation is not satisfied: " + mutation);
-    throw new CommitUnsatisfiedConditionException(exceptionMessage, txId);
+    throw new CommitUnsatisfiedConditionException(exceptionMessage.toString(), txId);
   }
 
   @Override
