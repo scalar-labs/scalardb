@@ -140,7 +140,7 @@ public class ConditionalMutationValidator {
       case NE:
         return Ordering.natural().compare(existingRecordColumn, conditionalExpressionColumn) != 0;
         // For 'greater than' and 'less than' types of conditions and when the existing record is
-        // null, we consider the condition to be unsatisfied. This mimic the behavior as if
+        // null, we consider the condition to be unsatisfied. This mimics the behavior as if
         // the condition was executed by the underlying storage
       case GT:
         return !existingRecordColumn.hasNullValue()
