@@ -225,10 +225,13 @@ public class Sample {
       TwoPhaseCommitTransaction tx;
       try {
         tx = transactionManager.begin();
+      } catch (TransactionNotFoundException e) {
+        // if the transaction fails to begin due to transient faults. You can retry the transaction
+        continue;
       } catch (TransactionException e) {
         // If beginning a transaction failed, it indicates some failure happens during the
         // transaction, so you should cancel the transaction or retry the transaction after the
-        // failure/error is fixed
+        // failure or error is fixed
         return;
       }
 
@@ -253,7 +256,7 @@ public class Sample {
           | CommitConflictException e) {
         // If you catch CrudConflictException or PreparationConflictException or
         // ValidationConflictException or CommitConflictException, it indicates a transaction
-        // conflict occurs during the transaction so that you can retry the transaction from the
+        // conflict occurs during the transaction, so you can retry the transaction from the
         // beginning
         try {
           tx.rollback();
@@ -263,7 +266,7 @@ public class Sample {
       } catch (CrudException | PreparationException | ValidationException | CommitException e) {
         // If you catch CrudException or PreparationException or ValidationException or
         // CommitException, it indicates some failure happens, so you should cancel the transaction
-        // or retry the transaction after the failure/error is fixed
+        // or retry the transaction after the failure or error is fixed
         try {
           tx.rollback();
         } catch (RollbackException ex) {
@@ -282,26 +285,39 @@ public class Sample {
 }
 ```
 
+The `begin()` API could throw `TransactionException` and `TransactionNotFoundException`.
+If you catch `TransactionException`, it indicates some failure (e.g., database failure and network error) happens during the transaction, so you should cancel the transaction or retry the transaction after the failure or error is fixed.
+If you catch `TransactionNotFoundException`, it indicates the transaction fails to begin due to transient faults. You can retry the transaction. So you can retry the transaction in this case.
+
+Although not illustrated in the sample code, the `join()` API could also throw a `TransactionException` and `TransactionNotFoundException`.
+And the way to handle them is the same as the `begin()` API.
+
 The APIs for CRUD operations (`get()`/`scan()`/`put()`/`delete()`/`mutate()`) could throw `CrudException` and `CrudConflictException`.
-If you catch `CrudException`, it indicates some failure (e.g., database failure and network error) happens during a transaction, so you should cancel the transaction or retry the transaction after the failure/error is fixed.
-If you catch `CrudConflictException`, it indicates a transaction conflict occurs during the transaction so that you can retry the transaction from the beginning, preferably with well-adjusted exponential backoff based on your application and environment.
+If you catch `CrudException`, it indicates some failure (e.g., database failure and network error) happens during the transaction, so you should cancel the transaction or retry the transaction after the failure or error is fixed.
+If you catch `CrudConflictException`, it indicates a transaction conflict occurs during the transaction so you can retry the transaction from the beginning, preferably with well-adjusted exponential backoff based on your application and environment.
 The sample code retries three times maximum and sleeps 100 milliseconds before retrying the transaction.
 
 The `prepare()` API could throw `PreparationException` and `PreparationConflictException`.
-If you catch `PreparationException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure/error is fixed.
+If you catch `PreparationException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure or error is fixed.
 If you catch `PreparationConflictException`, like the `CrudConflictException` case, you can retry the transaction from the beginning.
 
 The `validate()` API could throw `ValidationException` and `ValidationConflictException`.
-If you catch `ValidationException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure/error is fixed.
+If you catch `ValidationException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure or error is fixed.
 If you catch `ValidationConflictException`, like the `CrudConflictException` case, you can retry the transaction from the beginning.
 
 The `commit()` API could throw `CommitException`, `CommitConflictException`, and `UnknownTransactionStatusException`.
-If you catch `CommitException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure/error is fixed.
+If you catch `CommitException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure or error is fixed.
 If you catch `CommitConflictException`, like the `CrudConflictException` case, you can retry the transaction from the beginning.
 If you catch `UnknownTransactionStatusException`, you are not sure if the transaction succeeds or not.
 In such a case, you need to check if the transaction is committed successfully or not and retry it if it fails.
 How to identify a transaction status is delegated to users.
 You may want to create a transaction status table and update it transactionally with other application data so that you can get the status of a transaction from the status table.
+
+Please note that if you begin a transaction by specifying a transaction ID, you must use a different ID when you retry the transaction.
+
+Although not illustrated in the sample code, the `resume()` API could also throw a `TransactionNotFoundException`.
+This exception indicates that the transaction associated with the specified ID was not found, and it might have been expired.
+In such cases, you can retry the transaction from the beginning.
 
 ### Request Routing in Two-phase Commit Transactions
 
