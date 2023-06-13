@@ -230,7 +230,7 @@ public class CrudHandlerTest {
     // Assert
     TransactionResult expected = new TransactionResult(result);
     verify(snapshot).put(key, Optional.of(expected));
-    verify(snapshot, never()).verify(any());
+    verify(snapshot).verify(scan);
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));

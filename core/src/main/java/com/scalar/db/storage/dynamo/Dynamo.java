@@ -2,6 +2,7 @@ package com.scalar.db.storage.dynamo;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -79,6 +80,7 @@ public class Dynamo extends AbstractDistributedStorage {
     logger.info("DynamoDB object is created properly.");
   }
 
+  @VisibleForTesting
   Dynamo(
       DatabaseConfig databaseConfig,
       DynamoDbClient client,

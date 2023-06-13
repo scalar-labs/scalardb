@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -64,6 +65,7 @@ public class Cassandra extends AbstractDistributedStorage {
     operationChecker = new OperationChecker(metadataManager);
   }
 
+  @VisibleForTesting
   Cassandra(
       DatabaseConfig config,
       ClusterManager clusterManager,

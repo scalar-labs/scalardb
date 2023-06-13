@@ -75,13 +75,13 @@ public class CrudHandler {
   public List<Result> scan(Scan scan) throws CrudException {
     List<Result> results = scanInternal(scan);
 
-    if (ScalarDbUtils.isRelational(scan)) {
-      // We verify if this scan does not overlap previous writes using the results obtained from
-      // the actual scan since the condition (i.e., where clause) is arbitrary in the relational
-      // scan, and thus, the write command may not have columns used in the condition, which are
-      // necessary to determine overlaps.
-      snapshot.verify(scan);
-    }
+    // We verify if this scan does not overlap previous writes after the actual scan. For a
+    // relational scan, this must be done here, using the obtained results. This is because the
+    // condition (i.e., where clause) is arbitrary in the relational scan, and thus, the write
+    // command may not have columns used in the condition, which are necessary to determine
+    // overlaps. For a scan with clustering keys, we can determine overlaps without the actual
+    // scan, but we also check it here for consistent logic and readability.
+    snapshot.verify(scan);
 
     return results;
   }
