@@ -91,9 +91,10 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
     try {
       if (!jdbcService.put(put, connection)) {
-        // To match the Consensus Commit transaction behavior, instead of throwing an exception here
-        // when the condition is not satisfied, the exception is thrown when committing the
-        // transaction.
+        // Entering here means the MutationCondition of the Put operation is not satisfied.
+        // To match the Consensus Commit transaction behavior, instead of throwing an exception in
+        // transaction.put() when the condition is not satisfied, the exception is thrown when
+        // committing the transaction.
         // For simplicity, if several mutations have unsatisfied condition, only the first executed
         // mutation will be reported in the thrown exception message.
         if (mutationWithUnsatisfiedCondition == null) {
@@ -121,9 +122,10 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
     try {
       if (!jdbcService.delete(delete, connection)) {
-        // To match the Consensus Commit transaction behavior, instead of throwing an exception here
-        // when the condition is not satisfied, the exception is thrown when committing the
-        // transaction.
+        // Entering here means the MutationCondition of the Delete operation is not satisfied.
+        // To match the Consensus Commit transaction behavior, instead of throwing an exception in
+        // transaction.delete() when the condition is not satisfied, the exception is thrown when
+        // committing the transaction.
         // For simplicity, if several mutations have unsatisfied condition, only the first executed
         // mutation will be reported in the thrown exception message.
         if (mutationWithUnsatisfiedCondition == null) {
