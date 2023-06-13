@@ -22,7 +22,6 @@ import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CommitUnsatisfiedConditionException;
-import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
@@ -184,12 +183,13 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_PreparationUnsatisfiedConditionThrownInPrepareRecords_ShouldThrowCommitUnsatisfiedConditionException()
-          throws ExecutionException, CoordinatorException, PreparationConflictException,
-              PreparationUnsatisfiedConditionException {
+          throws CoordinatorException, PreparationUnsatisfiedConditionException {
     // Arrange
     Snapshot snapshot = mock(Snapshot.class);
     when(snapshot.getId()).thenReturn(ANY_ID);
-    doThrow(PreparationUnsatisfiedConditionException.class).when(snapshot).to(any());
+    doThrow(PreparationUnsatisfiedConditionException.class)
+        .when(snapshot)
+        .validateConditionalMutations();
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
 
     // Act

@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,7 +17,6 @@ import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.common.checker.ConditionChecker;
-import com.scalar.db.common.checker.ConditionChecker.ConditionCheckerFactory;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.LinkedHashSet;
 import java.util.Optional;
@@ -26,7 +26,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -39,14 +38,14 @@ public class ConsensusCommitMutationOperationCheckerTest {
   @Mock private Put put;
   @Mock private Delete delete;
   @Mock private TransactionTableMetadata tableMetadata;
-  @Mock private ConditionCheckerFactory conditionCheckerFactory;
   @Mock private ConditionChecker conditionChecker;
-  @InjectMocks private ConsensusCommitMutationOperationChecker checker;
+  private ConsensusCommitMutationOperationChecker checker;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    when(conditionCheckerFactory.create(any())).thenReturn(conditionChecker);
+    checker = spy(new ConsensusCommitMutationOperationChecker(metadataManager));
+    when(checker.createConditionChecker(any())).thenReturn(conditionChecker);
     when(metadataManager.getTransactionTableMetadata(any())).thenReturn(tableMetadata);
     LinkedHashSet<String> metadataColumns = new LinkedHashSet<>();
     metadataColumns.add(ANY_METADATA_COL_1);

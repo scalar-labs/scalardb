@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
@@ -11,8 +12,8 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.checker.ConditionChecker;
-import com.scalar.db.common.checker.ConditionChecker.ConditionCheckerFactory;
 import com.scalar.db.exception.storage.ExecutionException;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -20,13 +21,10 @@ import javax.annotation.concurrent.ThreadSafe;
 public class ConsensusCommitMutationOperationChecker {
 
   private final TransactionTableMetadataManager transactionTableMetadataManager;
-  private final ConditionCheckerFactory conditionCheckerFactory;
 
   public ConsensusCommitMutationOperationChecker(
-      TransactionTableMetadataManager transactionTableMetadataManager,
-      ConditionCheckerFactory conditionCheckerFactory) {
+      TransactionTableMetadataManager transactionTableMetadataManager) {
     this.transactionTableMetadataManager = transactionTableMetadataManager;
-    this.conditionCheckerFactory = conditionCheckerFactory;
   }
 
   private TransactionTableMetadata getTableMetadata(Operation operation) throws ExecutionException {
@@ -77,7 +75,7 @@ public class ConsensusCommitMutationOperationChecker {
               + " condition is not allowed on Put operation");
     }
     checkConditionIsNotTargetingMetadataColumns(condition, metadata);
-    ConditionChecker conditionChecker = conditionCheckerFactory.create(metadata.getTableMetadata());
+    ConditionChecker conditionChecker = createConditionChecker(metadata.getTableMetadata());
     conditionChecker.check(condition, true);
   }
 
@@ -96,7 +94,7 @@ public class ConsensusCommitMutationOperationChecker {
     TransactionTableMetadata transactionMetadata = getTableMetadata(delete);
     checkConditionIsNotTargetingMetadataColumns(condition, transactionMetadata);
     ConditionChecker conditionChecker =
-        conditionCheckerFactory.create(transactionMetadata.getTableMetadata());
+        createConditionChecker(transactionMetadata.getTableMetadata());
     conditionChecker.check(condition, false);
   }
 
@@ -110,5 +108,10 @@ public class ConsensusCommitMutationOperationChecker {
                 + column);
       }
     }
+  }
+
+  @VisibleForTesting
+  ConditionChecker createConditionChecker(TableMetadata tableMetadata) {
+    return new ConditionChecker(tableMetadata);
   }
 }

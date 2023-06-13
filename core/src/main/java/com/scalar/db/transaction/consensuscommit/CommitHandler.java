@@ -98,6 +98,7 @@ public class CommitHandler {
           PreparationUnsatisfiedConditionException {
     PrepareMutationComposer composer =
         new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
+    snapshot.validateConditionalMutations();
     snapshot.to(composer);
     PartitionedMutations mutations = new PartitionedMutations(composer.get());
 

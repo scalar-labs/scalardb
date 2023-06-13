@@ -11,7 +11,6 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
-import com.scalar.db.common.checker.ConditionChecker.ConditionCheckerFactory;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -54,9 +53,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
-    mutationOperationChecker =
-        new ConsensusCommitMutationOperationChecker(
-            tableMetadataManager, new ConditionCheckerFactory());
+    mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
 
   ConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -74,9 +71,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
-    mutationOperationChecker =
-        new ConsensusCommitMutationOperationChecker(
-            tableMetadataManager, new ConditionCheckerFactory());
+    mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -103,8 +98,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     this.commit = commit;
     this.isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     this.mutationOperationChecker =
-        new ConsensusCommitMutationOperationChecker(
-            tableMetadataManager, new ConditionCheckerFactory());
+        new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
 
   @Override

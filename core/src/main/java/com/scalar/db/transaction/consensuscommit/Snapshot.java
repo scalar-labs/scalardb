@@ -193,24 +193,17 @@ public class Snapshot {
   }
 
   public void to(MutationComposer composer)
-      throws ExecutionException, PreparationConflictException,
-          PreparationUnsatisfiedConditionException {
+      throws ExecutionException, PreparationConflictException {
     toSerializableWithExtraWrite(composer);
 
     for (Entry<Key, Put> entry : writeSet.entrySet()) {
       TransactionResult result =
           readSet.containsKey(entry.getKey()) ? readSet.get(entry.getKey()).orElse(null) : null;
-      if (composer instanceof PrepareMutationComposer) {
-        conditionalMutationValidator.validateConditionIsSatisfied(entry.getValue(), result);
-      }
       composer.add(entry.getValue(), result);
     }
     for (Entry<Key, Delete> entry : deleteSet.entrySet()) {
       TransactionResult result =
           readSet.containsKey(entry.getKey()) ? readSet.get(entry.getKey()).orElse(null) : null;
-      if (composer instanceof PrepareMutationComposer) {
-        conditionalMutationValidator.validateConditionIsSatisfied(entry.getValue(), result);
-      }
       composer.add(entry.getValue(), result);
     }
   }
@@ -445,6 +438,25 @@ public class Snapshot {
 
   public boolean isValidationRequired() {
     return isExtraReadEnabled();
+  }
+
+  public void validateConditionalMutations() throws PreparationUnsatisfiedConditionException {
+    for (Entry<Key, Put> entry : writeSet.entrySet()) {
+      if (!entry.getValue().getCondition().isPresent()) {
+        continue;
+      }
+      TransactionResult result =
+          readSet.containsKey(entry.getKey()) ? readSet.get(entry.getKey()).orElse(null) : null;
+      conditionalMutationValidator.validateConditionIsSatisfied(entry.getValue(), result);
+    }
+    for (Entry<Key, Delete> entry : deleteSet.entrySet()) {
+      if (!entry.getValue().getCondition().isPresent()) {
+        continue;
+      }
+      TransactionResult result =
+          readSet.containsKey(entry.getKey()) ? readSet.get(entry.getKey()).orElse(null) : null;
+      conditionalMutationValidator.validateConditionIsSatisfied(entry.getValue(), result);
+    }
   }
 
   @Immutable

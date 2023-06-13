@@ -19,7 +19,7 @@ public class ConditionChecker implements MutationConditionVisitor {
   private boolean isPut;
   private boolean isValid;
 
-  private ConditionChecker(TableMetadata tableMetadata) {
+  public ConditionChecker(TableMetadata tableMetadata) {
     this.tableMetadata = tableMetadata;
   }
 
@@ -82,13 +82,5 @@ public class ConditionChecker implements MutationConditionVisitor {
         break;
       }
     }
-  }
-
-  public static class ConditionCheckerFactory {
-    public ConditionChecker create(TableMetadata tableMetadata) {
-      return new ConditionChecker(tableMetadata);
-    }
-
-    public ConditionCheckerFactory() {}
   }
 }

@@ -10,7 +10,6 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
-import com.scalar.db.common.checker.ConditionChecker.ConditionCheckerFactory;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
@@ -26,11 +25,9 @@ import javax.annotation.concurrent.ThreadSafe;
 public class OperationChecker {
 
   private final TableMetadataManager tableMetadataManager;
-  private final ConditionCheckerFactory conditionCheckerFactory;
 
   public OperationChecker(TableMetadataManager tableMetadataManager) {
     this.tableMetadataManager = tableMetadataManager;
-    this.conditionCheckerFactory = new ConditionCheckerFactory();
   }
 
   public void check(Get get) throws ExecutionException {
@@ -263,9 +260,7 @@ public class OperationChecker {
         .getCondition()
         .ifPresent(
             c -> {
-              if (!conditionCheckerFactory
-                  .create(metadata)
-                  .check(mutation.getCondition().get(), isPut)) {
+              if (!new ConditionChecker(metadata).check(mutation.getCondition().get(), isPut)) {
                 throw new IllegalArgumentException(
                     "The condition is not properly specified. Operation: " + mutation);
               }
