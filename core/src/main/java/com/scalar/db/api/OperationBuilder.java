@@ -402,6 +402,81 @@ class OperationBuilder {
     T indexKey(Key indexKey);
   }
 
+  interface Where<T> {
+    /**
+     * Appends the specified condition.
+     *
+     * @param condition a condition
+     * @return the operation builder
+     */
+    T where(ConditionalExpression condition);
+  }
+
+  interface WhereAnd<T> {
+    /**
+     * Appends the specified set of or-wise conditions.
+     *
+     * @param conditions a set of conditions
+     * @return the operation builder
+     */
+    T where(ScanBuilder.OrConditionSet conditions);
+  }
+
+  interface WhereOr<T> {
+    /**
+     * Appends the specified set of and-wise conditions.
+     *
+     * @param conditions a set of conditions
+     * @return the operation builder
+     */
+    T where(ScanBuilder.AndConditionSet conditions);
+  }
+
+  interface And<T> {
+    /**
+     * Appends the specified condition.
+     *
+     * @param condition a condition
+     * @return the operation builder
+     */
+    T and(ConditionalExpression condition);
+
+    /**
+     * Appends the specified set of or-wise conditions.
+     *
+     * @param conditions a set of conditions
+     * @return the operation builder
+     */
+    T and(ScanBuilder.OrConditionSet conditions);
+  }
+
+  interface Or<T> {
+    /**
+     * Appends the specified condition.
+     *
+     * @param condition a condition
+     * @return the operation builder
+     */
+    T or(ConditionalExpression condition);
+
+    /**
+     * Appends the specified set of and-wise conditions.
+     *
+     * @param conditions a set of conditions
+     * @return the operation builder
+     */
+    T or(ScanBuilder.AndConditionSet conditions);
+  }
+
+  interface ClearConditions<T> {
+    /**
+     * Clear all conditions
+     *
+     * @return the scan operation builder
+     */
+    T clearConditions();
+  }
+
   abstract static class TableBuilder<T> implements Table<T> {
     final String namespace;
 
