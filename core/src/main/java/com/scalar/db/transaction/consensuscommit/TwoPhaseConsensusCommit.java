@@ -15,7 +15,6 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationException;
-import com.scalar.db.exception.transaction.PreparationUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
@@ -36,7 +35,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
   private boolean validated;
   private boolean needRollback;
-  private boolean needRecordsRollback = true;
 
   // For test
   private Runnable beforeRecoveryHook = () -> {};
@@ -134,11 +132,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   public void prepare() throws PreparationException {
     try {
       commit.prepare(crud.getSnapshot());
-    } catch (PreparationUnsatisfiedConditionException e) {
-      // The condition is validated before records are mutated for the preparation step so no
-      // records rollback is needed
-      needRecordsRollback = false;
-      throw e;
     } finally {
       needRollback = true;
     }
@@ -182,9 +175,8 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     } catch (UnknownTransactionStatusException e) {
       throw new RollbackException("rollback failed", e, getId());
     }
-    if (needRecordsRollback) {
-      commit.rollbackRecords(crud.getSnapshot());
-    }
+
+    commit.rollbackRecords(crud.getSnapshot());
   }
 
   @VisibleForTesting

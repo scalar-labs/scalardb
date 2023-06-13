@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -19,7 +18,6 @@ import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -30,7 +28,6 @@ import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
-import com.scalar.db.exception.transaction.PreparationUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
@@ -94,7 +91,6 @@ public class SnapshotTest {
   @Mock private CommitMutationComposer commitComposer;
   @Mock private RollbackMutationComposer rollbackComposer;
   @Mock private TransactionTableMetadataManager tableMetadataManager;
-  @Mock private ConditionalMutationValidator conditionalMutationValidator;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -127,8 +123,7 @@ public class SnapshotTest {
             readSet,
             scanSet,
             writeSet,
-            deleteSet,
-            conditionalMutationValidator));
+            deleteSet));
   }
 
   private TransactionResult prepareResult(String txId) {
@@ -1305,104 +1300,5 @@ public class SnapshotTest {
     // Assert
     assertThat(keys).isNotEmpty();
     assertThat(keys.get()).containsExactly(aKey);
-  }
-
-  @Test
-  public void validateConditionalMutations_entriesInWriteAndDeleteSet_ShouldValidateEachEntry()
-      throws PreparationUnsatisfiedConditionException {
-    // Arrange
-    Put put1 = Put.newBuilder(preparePut()).condition(mock(MutationCondition.class)).build();
-    Put put2 = Put.newBuilder(prepareAnotherPut()).condition(mock(MutationCondition.class)).build();
-    Snapshot.Key putKey1 = new Snapshot.Key(put1);
-    Snapshot.Key putKey2 = new Snapshot.Key(put2);
-    Delete delete1 =
-        Delete.newBuilder()
-            .namespace(ANY_NAMESPACE_NAME)
-            .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_4, ANY_TEXT_4))
-            .condition(mock(MutationCondition.class))
-            .build();
-    Delete delete2 =
-        Delete.newBuilder()
-            .namespace(ANY_NAMESPACE_NAME)
-            .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_4, ANY_TEXT_5))
-            .condition(mock(MutationCondition.class))
-            .build();
-    Snapshot.Key deleteKey1 = new Snapshot.Key(delete1);
-    Snapshot.Key deleteKey2 = new Snapshot.Key(delete2);
-    TransactionResult result1 = mock(TransactionResult.class);
-    TransactionResult result2 = mock(TransactionResult.class);
-    writeSet = new HashMap<>();
-    deleteSet = new HashMap<>();
-    readSet = new HashMap<>();
-    writeSet.put(putKey1, put1);
-    writeSet.put(putKey2, put2);
-    deleteSet.put(deleteKey1, delete1);
-    deleteSet.put(deleteKey2, delete2);
-    readSet.put(putKey1, Optional.of(result1));
-    readSet.put(deleteKey2, Optional.of(result2));
-    Snapshot snapshot =
-        spy(
-            new Snapshot(
-                ANY_ID,
-                Isolation.SNAPSHOT,
-                SerializableStrategy.EXTRA_READ,
-                tableMetadataManager,
-                new ParallelExecutor(config),
-                readSet,
-                scanSet,
-                writeSet,
-                deleteSet,
-                conditionalMutationValidator));
-
-    // Act
-    snapshot.validateConditionalMutations();
-
-    // Assert
-    verify(conditionalMutationValidator).validateConditionIsSatisfied(put1, result1);
-    verify(conditionalMutationValidator).validateConditionIsSatisfied(put2, null);
-    verify(conditionalMutationValidator).validateConditionIsSatisfied(delete1, null);
-    verify(conditionalMutationValidator).validateConditionIsSatisfied(delete2, result2);
-  }
-
-  @Test
-  public void validateConditionalMutations_entriesWithoutCondition_ShouldNotValidate()
-      throws PreparationUnsatisfiedConditionException {
-    // Arrange
-    Put put1 = mock(Put.class);
-    Put put2 = Put.newBuilder(prepareAnotherPut()).condition(mock(MutationCondition.class)).build();
-    Delete delete1 = mock(Delete.class);
-    Delete delete2 = mock(Delete.class);
-    Snapshot.Key putKey2 = new Snapshot.Key(put2);
-    writeSet = new HashMap<>();
-    deleteSet = new HashMap<>();
-    readSet = new HashMap<>();
-    writeSet.put(mock(Snapshot.Key.class), put1);
-    writeSet.put(putKey2, put2);
-    deleteSet.put(mock(Snapshot.Key.class), delete1);
-    deleteSet.put(mock(Snapshot.Key.class), delete2);
-    Snapshot snapshot =
-        spy(
-            new Snapshot(
-                ANY_ID,
-                Isolation.SNAPSHOT,
-                SerializableStrategy.EXTRA_READ,
-                tableMetadataManager,
-                new ParallelExecutor(config),
-                readSet,
-                scanSet,
-                writeSet,
-                deleteSet,
-                conditionalMutationValidator));
-
-    // Act
-    snapshot.validateConditionalMutations();
-
-    // Assert
-    verify(conditionalMutationValidator, never()).validateConditionIsSatisfied(eq(put1), any());
-    verify(conditionalMutationValidator).validateConditionIsSatisfied(put2, null);
-    verify(conditionalMutationValidator, never()).validateConditionIsSatisfied(eq(delete1), any());
-    verify(conditionalMutationValidator, never()).validateConditionIsSatisfied(eq(delete2), any());
   }
 }

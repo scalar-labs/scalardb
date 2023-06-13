@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,8 +46,9 @@ public interface TransactionCrudOperable {
    * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
    *     from the beginning in this case
    * @throws CrudException if the operation fails
+   * @throws UnsatisfiedConditionException if the operation condition is not satisfied
    */
-  void put(Put put) throws CrudConflictException, CrudException;
+  void put(Put put) throws CrudConflictException, CrudException, UnsatisfiedConditionException;
 
   /**
    * Inserts/Updates multiple entries to the storage through a transaction with the specified list
@@ -56,8 +58,10 @@ public interface TransactionCrudOperable {
    * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
    *     from the beginning in this case
    * @throws CrudException if the operation fails
+   * @throws UnsatisfiedConditionException if the operation condition is not satisfied
    */
-  void put(List<Put> puts) throws CrudConflictException, CrudException;
+  void put(List<Put> puts)
+      throws CrudConflictException, CrudException, UnsatisfiedConditionException;
 
   /**
    * Deletes an entry from the storage through a transaction with the specified {@link Delete}
@@ -67,8 +71,10 @@ public interface TransactionCrudOperable {
    * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
    *     from the beginning in this case
    * @throws CrudException if the operation fails
+   * @throws UnsatisfiedConditionException if the operation condition is not satisfied
    */
-  void delete(Delete delete) throws CrudConflictException, CrudException;
+  void delete(Delete delete)
+      throws CrudConflictException, CrudException, UnsatisfiedConditionException;
 
   /**
    * Deletes entries from the storage through a transaction with the specified list of {@link
@@ -78,8 +84,10 @@ public interface TransactionCrudOperable {
    * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
    *     from the beginning in this case
    * @throws CrudException if the operation fails
+   * @throws UnsatisfiedConditionException if the operation condition is not satisfied
    */
-  void delete(List<Delete> deletes) throws CrudConflictException, CrudException;
+  void delete(List<Delete> deletes)
+      throws CrudConflictException, CrudException, UnsatisfiedConditionException;
 
   /**
    * Mutates entries of the storage through a transaction with the specified list of {@link
@@ -89,6 +97,8 @@ public interface TransactionCrudOperable {
    * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
    *     from the beginning in this case
    * @throws CrudException if the operation fails
+   * @throws UnsatisfiedConditionException if the operation condition is not satisfied
    */
-  void mutate(List<? extends Mutation> mutations) throws CrudConflictException, CrudException;
+  void mutate(List<? extends Mutation> mutations)
+      throws CrudConflictException, CrudException, UnsatisfiedConditionException;
 }

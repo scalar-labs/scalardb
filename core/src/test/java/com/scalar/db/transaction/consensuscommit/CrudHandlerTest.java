@@ -13,6 +13,7 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
@@ -21,6 +22,7 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
@@ -66,11 +68,14 @@ public class CrudHandlerTest {
   @Mock private ParallelExecutor parallelExecutor;
   @Mock private Scanner scanner;
   @Mock private Result result;
+  @Mock private MutationConditionsValidator mutationConditionsValidator;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    handler = new CrudHandler(storage, snapshot, tableMetadataManager, false);
+    handler =
+        new CrudHandler(
+            storage, snapshot, tableMetadataManager, false, mutationConditionsValidator);
 
     // Arrange
     when(tableMetadataManager.getTransactionTableMetadata(any()))
@@ -379,8 +384,7 @@ public class CrudHandlerTest {
             readSet,
             new HashMap<>(),
             new HashMap<>(),
-            deleteSet,
-            mock(ConditionalMutationValidator.class));
+            deleteSet);
     handler = new CrudHandler(storage, snapshot, tableMetadataManager, false);
     when(scanner.iterator()).thenReturn(Arrays.asList(result, result2).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
@@ -411,5 +415,87 @@ public class CrudHandlerTest {
     Snapshot.Key key2 = new Snapshot.Key(scan, result2);
     assertThat(readSet.get(key2).isPresent()).isTrue();
     assertThat(readSet.get(key2).get()).isEqualTo(new TransactionResult(result2));
+  }
+
+  @Test
+  public void put_WithResultInReadSet_shouldCallAppropriateMethods()
+      throws UnsatisfiedConditionException {
+    // Arrange
+    Put put =
+        Put.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "foo")).build();
+    Snapshot.Key key = new Snapshot.Key(put);
+    TransactionResult result = mock(TransactionResult.class);
+    when(snapshot.getFromReadSet(any())).thenReturn(Optional.of(result));
+
+    // Act
+    handler.put(put);
+
+    // Assert
+    verify(snapshot).getFromReadSet(key);
+    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, result);
+    verify(snapshot).put(key, put);
+  }
+
+  @Test
+  public void put_WithoutResultInReadSet_shouldCallAppropriateMethods()
+      throws UnsatisfiedConditionException {
+    // Arrange
+    Put put =
+        Put.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "foo")).build();
+    Snapshot.Key key = new Snapshot.Key(put);
+    when(snapshot.getFromReadSet(any())).thenReturn(Optional.empty());
+
+    // Act
+    handler.put(put);
+
+    // Assert
+    verify(snapshot).getFromReadSet(key);
+    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, null);
+    verify(snapshot).put(key, put);
+  }
+
+  @Test
+  public void delete_WithResultInReadSet_shouldCallAppropriateMethods()
+      throws UnsatisfiedConditionException {
+    // Arrange
+    Delete delete =
+        Delete.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("c1", "foo"))
+            .build();
+    Snapshot.Key key = new Snapshot.Key(delete);
+    TransactionResult result = mock(TransactionResult.class);
+    when(snapshot.getFromReadSet(any())).thenReturn(Optional.of(result));
+
+    // Act
+    handler.delete(delete);
+
+    // Assert
+    verify(snapshot).getFromReadSet(key);
+    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(delete, result);
+    verify(snapshot).put(key, delete);
+  }
+
+  @Test
+  public void delete_WithoutResultInReadSet_shouldCallAppropriateMethods()
+      throws UnsatisfiedConditionException {
+    // Arrange
+    Delete delete =
+        Delete.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("c1", "foo"))
+            .build();
+    Snapshot.Key key = new Snapshot.Key(delete);
+    when(snapshot.getFromReadSet(any())).thenReturn(Optional.empty());
+
+    // Act
+    handler.delete(delete);
+
+    // Assert
+    verify(snapshot).getFromReadSet(key);
+    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(delete, null);
+    verify(snapshot).put(key, delete);
   }
 }

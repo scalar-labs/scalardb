@@ -16,10 +16,10 @@ import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
-import com.scalar.db.exception.transaction.PreparationUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionGrpc;
@@ -273,6 +273,8 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
           throw new IllegalArgumentException(error.getMessage());
         case TRANSACTION_CONFLICT:
           throw new CrudConflictException(error.getMessage(), transactionId);
+        case UNSATISFIED_CONDITION:
+          throw new UnsatisfiedConditionException(error.getMessage(), transactionId);
         default:
           throw new CrudException(error.getMessage(), transactionId);
       }
@@ -304,14 +306,10 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     TwoPhaseCommitTransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
       TwoPhaseCommitTransactionResponse.Error error = response.getError();
-      switch (error.getErrorCode()) {
-        case TRANSACTION_CONFLICT:
-          throw new PreparationConflictException(error.getMessage(), transactionId);
-        case UNSATISFIED_CONDITION:
-          throw new PreparationUnsatisfiedConditionException(error.getMessage(), transactionId);
-        default:
-          throw new PreparationException(error.getMessage(), transactionId);
+      if (error.getErrorCode() == ErrorCode.TRANSACTION_CONFLICT) {
+        throw new PreparationConflictException(error.getMessage(), transactionId);
       }
+      throw new PreparationException(error.getMessage(), transactionId);
     }
   }
 

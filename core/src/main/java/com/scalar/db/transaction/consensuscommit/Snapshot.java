@@ -16,7 +16,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
-import com.scalar.db.exception.transaction.PreparationUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import com.scalar.db.util.ScalarDbUtils;
@@ -49,7 +48,6 @@ public class Snapshot {
   private final Map<Scan, List<Key>> scanSet;
   private final Map<Key, Put> writeSet;
   private final Map<Key, Delete> deleteSet;
-  private final ConditionalMutationValidator conditionalMutationValidator;
 
   public Snapshot(
       String id,
@@ -66,7 +64,6 @@ public class Snapshot {
     scanSet = new HashMap<>();
     writeSet = new HashMap<>();
     deleteSet = new HashMap<>();
-    conditionalMutationValidator = new ConditionalMutationValidator(id);
   }
 
   @VisibleForTesting
@@ -79,8 +76,7 @@ public class Snapshot {
       Map<Key, Optional<TransactionResult>> readSet,
       Map<Scan, List<Key>> scanSet,
       Map<Key, Put> writeSet,
-      Map<Key, Delete> deleteSet,
-      ConditionalMutationValidator conditionalMutationValidator) {
+      Map<Key, Delete> deleteSet) {
     this.id = id;
     this.isolation = isolation;
     this.strategy = strategy;
@@ -90,7 +86,6 @@ public class Snapshot {
     this.scanSet = scanSet;
     this.writeSet = writeSet;
     this.deleteSet = deleteSet;
-    this.conditionalMutationValidator = conditionalMutationValidator;
   }
 
   @Nonnull
@@ -440,23 +435,8 @@ public class Snapshot {
     return isExtraReadEnabled();
   }
 
-  public void validateConditionalMutations() throws PreparationUnsatisfiedConditionException {
-    for (Entry<Key, Put> entry : writeSet.entrySet()) {
-      if (!entry.getValue().getCondition().isPresent()) {
-        continue;
-      }
-      TransactionResult result =
-          readSet.containsKey(entry.getKey()) ? readSet.get(entry.getKey()).orElse(null) : null;
-      conditionalMutationValidator.validateConditionIsSatisfied(entry.getValue(), result);
-    }
-    for (Entry<Key, Delete> entry : deleteSet.entrySet()) {
-      if (!entry.getValue().getCondition().isPresent()) {
-        continue;
-      }
-      TransactionResult result =
-          readSet.containsKey(entry.getKey()) ? readSet.get(entry.getKey()).orElse(null) : null;
-      conditionalMutationValidator.validateConditionIsSatisfied(entry.getValue(), result);
-    }
+  public Optional<TransactionResult> getFromReadSet(Key key) {
+    return readSet.containsKey(key) ? readSet.get(key) : Optional.empty();
   }
 
   @Immutable

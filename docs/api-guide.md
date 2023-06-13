@@ -583,13 +583,39 @@ Put put =
         .build();
 ```
 
-##### Put with a condition
+#### Delete operation
 
-In a Put operation, you have the option to include a condition. The Put operation is only committed if the specified condition is met.
-If the condition fails to be satisfied when committing, an exception called `CommitUnsatisfiedConditionException` is thrown.
-In the case of Two-Phase Commit Transactions, the condition is checked during the preparation phase. 
-If the condition is not met, a different exception called `PreparationUnsatisfiedConditionException` is thrown.
+`Delete` is an operation to delete a record specified by a primary key.
+Note that when you delete a record, you need to read it using a `Get` or a `Scan` before a `Delete` operation.
 
+You need to create a Delete object first, and then you can execute it with the `transaction.delete()` method as follows:
+
+```java
+// Create a Delete operation
+Key partitionKey = Key.ofInt("c1", 10);
+Key clusteringKey = Key.of("c2", "aaa", "c3", 100L);
+
+Delete delete =
+    Delete.newBuilder()
+        .namespace("ns")
+        .table("tbl")
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
+
+// Execute the Delete operation
+transaction.delete(delete);
+```
+
+#### Put and Delete with a condition
+You can write arbitrary conditions (e.g., a bank account balance must be equal to or more than zero) that you
+require a transaction to meet before being committed by having some checking logic in the transaction.
+Alternatively, you can also write simple conditions in a mutation operation, such as Put and Delete.
+
+When a Put or Delete operation includes a condition, it is only executed if the specified condition is met.
+If the condition fails to be satisfied when the operation is executed, an exception called `UnsatisfiedConditionException` is thrown.
+
+##### Conditions for Put
 You can specify a condition in a Put operation as follows:
 
 ```java
@@ -624,37 +650,7 @@ MutationCondition putIfExistsCondition = ConditionBuilder.putIfExists();
 MutationCondition putIfNotExistsCondition = ConditionBuilder.putIfNotExists();
 ```
 
-#### Delete operation
-
-`Delete` is an operation to delete a record specified by a primary key.
-Note that when you delete a record, you need to read it using a `Get` or a `Scan` before a `Delete` operation.
-
-You need to create a Delete object first, and then you can execute it with the `transaction.delete()` method as follows:
-
-```java
-// Create a Delete operation
-Key partitionKey = Key.ofInt("c1", 10);
-Key clusteringKey = Key.of("c2", "aaa", "c3", 100L);
-
-Delete delete =
-    Delete.newBuilder()
-        .namespace("ns")
-        .table("tbl")
-        .partitionKey(partitionKey)
-        .clusteringKey(clusteringKey)
-        .build();
-
-// Execute the Delete operation
-transaction.delete(delete);
-```
-
-##### Delete with a condition
-
-Similar to a Put operation, you have the option to include a condition for a Delete operation. 
-The Delete operation is only committed if the specified condition is met.
-If the condition fails to be satisfied when committing, an exception called `CommitUnsatisfiedConditionException` is thrown.
-In the case of Two-Phase Commit Transactions, the condition is checked during the preparation phase.
-If the condition is not met, a different exception called `PreparationUnsatisfiedConditionException` is thrown.
+##### Conditions for Delete
 
 You can specify a condition in a Delete operation as follows:
 
@@ -839,8 +835,17 @@ public class Sample {
         } catch (RollbackException ex) {
           // Rolling back the transaction failed. You can log it here
         }
-      } catch (CrudException | CommitUnsatisfiedConditionException | CommitException e) {
-        // If you catch CrudException or CommitUnsatisfiedConditionException or CommitException, it indicates some failure happens, so you
+      } catch (UnsatisfiedConditionException e) {
+        // You need to handle UnsatisfiedConditionException only if a mutation operation specifies a condition.
+        // This exception indicates the condition for the mutation operation is not met, so you can
+        // retry the transaction once the exception cause is fixed
+        try {
+          tx.rollback();
+        } catch (RollbackException ex) {
+          // Rolling back the transaction failed. You can log it here
+        }
+      } catch (CrudException | CommitException e) {
+        // If you catch CrudException or CommitException, it indicates some failure happens, so you
         // should cancel the transaction or retry the transaction after the failure or error is 
         // fixed
         try {

@@ -2,7 +2,6 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -19,7 +18,6 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationException;
-import com.scalar.db.exception.transaction.PreparationUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
@@ -318,24 +316,6 @@ public class TwoPhaseConsensusCommitTest {
     // Assert
     verify(commit).abortState(snapshot.getId());
     verify(commit).rollbackRecords(snapshot);
-  }
-
-  @Test
-  public void
-      rollback_CalledAfterPrepareFailsWithPreparationUnsatisfiedConditionException_ShouldAbortStateAndNotRollbackRecords()
-          throws PreparationException, UnknownTransactionStatusException, RollbackException {
-    // Arrange
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(PreparationUnsatisfiedConditionException.class).when(commit).prepare(snapshot);
-
-    // Act
-    assertThatThrownBy(transaction::prepare)
-        .isInstanceOf(PreparationUnsatisfiedConditionException.class);
-    transaction.rollback();
-
-    // Assert
-    verify(commit).abortState(snapshot.getId());
-    verify(commit, never()).rollbackRecords(any());
   }
 
   @Test

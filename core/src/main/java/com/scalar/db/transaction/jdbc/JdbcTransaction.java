@@ -16,11 +16,11 @@ import com.scalar.db.common.AbstractDistributedTransaction;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
-import com.scalar.db.exception.transaction.CommitUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import java.sql.Connection;
@@ -28,7 +28,6 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +45,6 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   private final JdbcService jdbcService;
   private final Connection connection;
   private final RdbEngineStrategy rdbEngine;
-  private @Nullable Mutation mutationWithUnsatisfiedCondition;
 
   JdbcTransaction(
       String txId, JdbcService jdbcService, Connection connection, RdbEngineStrategy rdbEngine) {
@@ -91,15 +89,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
     try {
       if (!jdbcService.put(put, connection)) {
-        // Entering here means the MutationCondition of the Put operation is not satisfied.
-        // To match the Consensus Commit transaction behavior, instead of throwing an exception in
-        // transaction.put() when the condition is not satisfied, the exception is thrown when
-        // committing the transaction.
-        // For simplicity, if several mutations have unsatisfied condition, only the first executed
-        // mutation will be reported in the thrown exception message.
-        if (mutationWithUnsatisfiedCondition == null) {
-          mutationWithUnsatisfiedCondition = put;
-        }
+        throwUnsatisfiedConditionException(put);
       }
     } catch (SQLException e) {
       throw createCrudException(e, "put operation failed");
@@ -122,15 +112,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
     try {
       if (!jdbcService.delete(delete, connection)) {
-        // Entering here means the MutationCondition of the Delete operation is not satisfied.
-        // To match the Consensus Commit transaction behavior, instead of throwing an exception in
-        // transaction.delete() when the condition is not satisfied, the exception is thrown when
-        // committing the transaction.
-        // For simplicity, if several mutations have unsatisfied condition, only the first executed
-        // mutation will be reported in the thrown exception message.
-        if (mutationWithUnsatisfiedCondition == null) {
-          mutationWithUnsatisfiedCondition = delete;
-        }
+        throwUnsatisfiedConditionException(delete);
       }
     } catch (SQLException e) {
       throw createCrudException(e, "delete operation failed");
@@ -161,7 +143,6 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
-    throwIfMutationHasUnsatisfiedCondition();
     try {
       connection.commit();
     } catch (SQLException e) {
@@ -180,28 +161,8 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     }
   }
 
-  private void throwIfMutationHasUnsatisfiedCondition()
-      throws CommitUnsatisfiedConditionException, UnknownTransactionStatusException {
-    if (mutationWithUnsatisfiedCondition == null) {
-      return;
-    }
-
-    try {
-      connection.rollback();
-      throwUnsatisfiedConditionException(mutationWithUnsatisfiedCondition);
-    } catch (SQLException sqlException) {
-      throw new UnknownTransactionStatusException("failed to rollback", sqlException, txId);
-    } finally {
-      try {
-        connection.close();
-      } catch (SQLException e) {
-        logger.warn("failed to close the connection", e);
-      }
-    }
-  }
-
   private void throwUnsatisfiedConditionException(Mutation mutation)
-      throws CommitUnsatisfiedConditionException {
+      throws UnsatisfiedConditionException {
     assert mutation.getCondition().isPresent();
 
     // Build the exception message
@@ -231,10 +192,9 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     exceptionMessage
         .append("of the ")
         .append(mutation.getClass().getSimpleName())
-        .append(" operation is not validated");
+        .append(" operation is not satisfied");
 
-    logger.debug("The condition for the operation is not satisfied: " + mutation);
-    throw new CommitUnsatisfiedConditionException(exceptionMessage.toString(), txId);
+    throw new UnsatisfiedConditionException(exceptionMessage.toString(), txId);
   }
 
   @Override

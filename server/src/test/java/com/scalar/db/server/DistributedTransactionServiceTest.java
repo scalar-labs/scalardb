@@ -2,6 +2,7 @@ package com.scalar.db.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -10,16 +11,18 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.common.TableMetadataManager;
-import com.scalar.db.exception.transaction.CommitUnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
@@ -28,6 +31,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
@@ -37,8 +41,8 @@ import com.scalar.db.rpc.GetTransactionStateResponse;
 import com.scalar.db.rpc.RollbackRequest;
 import com.scalar.db.rpc.RollbackResponse;
 import com.scalar.db.rpc.TransactionRequest;
-import com.scalar.db.rpc.TransactionRequest.CommitRequest;
 import com.scalar.db.rpc.TransactionRequest.GetRequest;
+import com.scalar.db.rpc.TransactionRequest.MutateRequest;
 import com.scalar.db.rpc.TransactionRequest.ScanRequest;
 import com.scalar.db.rpc.TransactionRequest.StartRequest;
 import com.scalar.db.rpc.TransactionResponse;
@@ -49,11 +53,13 @@ import com.scalar.db.rpc.Value;
 import com.scalar.db.rpc.Value.BlobValue;
 import com.scalar.db.rpc.Value.TextValue;
 import com.scalar.db.server.DistributedTransactionService.TransactionStreamObserver;
+import com.scalar.db.util.ProtoUtils;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -840,44 +846,6 @@ public class DistributedTransactionServiceTest {
   }
 
   @Test
-  public void
-      commit_TransactionThrowsCommitUnsatisfiedConditionException_ShouldRespondWithUnsatisfiedConditionError()
-          throws TransactionException {
-    // Arrange
-    @SuppressWarnings("unchecked")
-    StreamObserver<TransactionResponse> responseObserver = mock(StreamObserver.class);
-    TransactionStreamObserver transactionStreamObserver =
-        new TransactionStreamObserver(
-            manager, tableMetadataManager, responseObserver, new Metrics(), s -> true, () -> {});
-
-    TransactionRequest request =
-        TransactionRequest.newBuilder()
-            .setCommitRequest(CommitRequest.newBuilder().build())
-            .build();
-    CommitUnsatisfiedConditionException exception = mock(CommitUnsatisfiedConditionException.class);
-    when(exception.getMessage()).thenReturn("error_msg");
-    doThrow(exception).when(transaction).commit();
-
-    transactionStreamObserver.onNext(
-        TransactionRequest.newBuilder().setStartRequest(StartRequest.getDefaultInstance()).build());
-
-    // Act
-    transactionStreamObserver.onNext(request);
-
-    // Assert
-    verify(transaction).commit();
-    verify(responseObserver)
-        .onNext(
-            TransactionResponse.newBuilder()
-                .setError(
-                    TransactionResponse.Error.newBuilder()
-                        .setErrorCode(ErrorCode.UNSATISFIED_CONDITION)
-                        .setMessage("error_msg")
-                        .build())
-                .build());
-  }
-
-  @Test
   public void abort_GateKeeperReturnsFalse_ShouldThrowUnavailableError() {
     // Arrange
     AbortRequest request = AbortRequest.newBuilder().setTransactionId(ANY_ID).build();
@@ -891,5 +859,49 @@ public class DistributedTransactionServiceTest {
     // Assert
     verify(responseObserver).onError(exceptionCaptor.capture());
     assertThat(exceptionCaptor.getValue().getStatus().getCode()).isEqualTo(Code.UNAVAILABLE);
+  }
+
+  @Test
+  public void
+      mutate_ThrowsUnsatisfiedConditionException_ShouldRespondWithUnsatisfiedConditionError()
+          throws TransactionException {
+    // Arrange
+    @SuppressWarnings("unchecked")
+    StreamObserver<TransactionResponse> responseObserver = mock(StreamObserver.class);
+    TransactionStreamObserver transactionStreamObserver =
+        new TransactionStreamObserver(
+            manager, tableMetadataManager, responseObserver, new Metrics(), s -> true, () -> {});
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("c1", "foo"))
+            .condition(ConditionBuilder.putIfExists())
+            .build();
+    TransactionRequest putRequest =
+        TransactionRequest.newBuilder()
+            .setMutateRequest(MutateRequest.newBuilder().addMutations(ProtoUtils.toMutation(put)))
+            .build();
+    UnsatisfiedConditionException exception = mock(UnsatisfiedConditionException.class);
+    when(exception.getMessage()).thenReturn("error_msg");
+    doThrow(exception).when(transaction).mutate(anyList());
+
+    transactionStreamObserver.onNext(
+        TransactionRequest.newBuilder().setStartRequest(StartRequest.getDefaultInstance()).build());
+
+    // Act
+    transactionStreamObserver.onNext(putRequest);
+
+    // Assert
+    verify(transaction).mutate(Collections.singletonList(put));
+    verify(responseObserver)
+        .onNext(
+            TransactionResponse.newBuilder()
+                .setError(
+                    TransactionResponse.Error.newBuilder()
+                        .setErrorCode(ErrorCode.UNSATISFIED_CONDITION)
+                        .setMessage("error_msg")
+                        .build())
+                .build());
   }
 }

@@ -11,34 +11,34 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
-import com.scalar.db.exception.transaction.PreparationUnsatisfiedConditionException;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.Column;
 import java.util.List;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
- * This class verifies the mutation condition for Put and Delete operation are met by asserting the
- * condition on the existing record (if any) targeted by the mutation. It does not leverage the
- * underlying storage to validate the condition.
+ * This class checks if a record satisfies the conditions of Put and Delete operations that mutate
+ * the record.
  */
 @ThreadSafe
-public class ConditionalMutationValidator {
+public class MutationConditionsValidator {
   private final String transactionId;
 
-  public ConditionalMutationValidator(String transactionId) {
+  public MutationConditionsValidator(String transactionId) {
     this.transactionId = transactionId;
   }
 
   /**
-   * This validates the condition for the Put operation is satisfied.
+   * This checks if the condition of the specified Put operation is satisfied for the specified
+   * record.
    *
    * @param put a Put operation
    * @param existingRecord the current value of the record targeted by the mutation, if any
-   * @throws PreparationUnsatisfiedConditionException if the condition is not satisfied
+   * @throws UnsatisfiedConditionException if the condition is not satisfied
    */
-  public void validateConditionIsSatisfied(Put put, @Nullable TransactionResult existingRecord)
-      throws PreparationUnsatisfiedConditionException {
+  public void checkIfConditionIsSatisfied(Put put, @Nullable TransactionResult existingRecord)
+      throws UnsatisfiedConditionException {
     if (!put.getCondition().isPresent()) {
       return;
     }
@@ -64,15 +64,15 @@ public class ConditionalMutationValidator {
   }
 
   /**
-   * This validates the condition for the Delete operation is satisfied.
+   * This checks if the condition of the specified Delete operation is satisfied for the specified
+   * record.
    *
    * @param delete a Delete operation
    * @param existingRecord the current value of the record targeted by the mutation, if any
-   * @throws PreparationUnsatisfiedConditionException if the condition is not satisfied
+   * @throws UnsatisfiedConditionException if the condition is not satisfied
    */
-  public void validateConditionIsSatisfied(
-      Delete delete, @Nullable TransactionResult existingRecord)
-      throws PreparationUnsatisfiedConditionException {
+  public void checkIfConditionIsSatisfied(Delete delete, @Nullable TransactionResult existingRecord)
+      throws UnsatisfiedConditionException {
     if (!delete.getCondition().isPresent()) {
       return;
     }
@@ -94,8 +94,8 @@ public class ConditionalMutationValidator {
   }
 
   private void throwWhenRecordDoesNotExist(MutationCondition condition)
-      throws PreparationUnsatisfiedConditionException {
-    throw new PreparationUnsatisfiedConditionException(
+      throws UnsatisfiedConditionException {
+    throw new UnsatisfiedConditionException(
         "The record does not exist so the "
             + condition.getClass().getSimpleName()
             + " condition is not satisfied",
@@ -103,8 +103,8 @@ public class ConditionalMutationValidator {
   }
 
   private void throwWhenRecordExists(MutationCondition condition)
-      throws PreparationUnsatisfiedConditionException {
-    throw new PreparationUnsatisfiedConditionException(
+      throws UnsatisfiedConditionException {
+    throw new UnsatisfiedConditionException(
         "The record exists so the "
             + condition.getClass().getSimpleName()
             + " condition is not satisfied",
@@ -113,13 +113,13 @@ public class ConditionalMutationValidator {
 
   private void validateConditionalExpressions(
       List<ConditionalExpression> conditionalExpressions, TransactionResult existingRecord)
-      throws PreparationUnsatisfiedConditionException {
+      throws UnsatisfiedConditionException {
     for (ConditionalExpression conditionalExpression : conditionalExpressions) {
       if (!shouldMutate(
           existingRecord.getColumns().get(conditionalExpression.getColumn().getName()),
           conditionalExpression.getColumn(),
           conditionalExpression.getOperator())) {
-        throw new PreparationUnsatisfiedConditionException(
+        throw new UnsatisfiedConditionException(
             "The condition on the column '"
                 + conditionalExpression.getColumn().getName()
                 + "' is not satisfied",
