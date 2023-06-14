@@ -61,24 +61,26 @@ public class SimpleSelectQuery implements SelectQuery {
 
   @Override
   public String sql() {
-    String sql =
-        "SELECT "
-            + projectionSqlString()
-            + " FROM "
-            + rdbEngine.encloseFullTableName(schema, table);
+    StringBuilder builder =
+        new StringBuilder(
+            "SELECT "
+                + projectionSqlString()
+                + " FROM "
+                + rdbEngine.encloseFullTableName(schema, table));
     if (isRelationalQuery) {
       // for relational abstraction
-      sql += relationalConditionSqlString();
-      sql += relationalOrderBySqlString();
+      builder.append(relationalConditionSqlString());
+      builder.append(relationalOrderBySqlString());
     } else {
       // for multi-dimensional map abstraction
       if (isConditionalQuery) {
-        sql += " WHERE " + conditionSqlString();
+        builder.append(" WHERE ");
+        builder.append(conditionSqlString());
       }
-      sql += orderBySqlString();
+      builder.append(orderBySqlString());
     }
 
-    return sql;
+    return builder.toString();
   }
 
   private String projectionSqlString() {
@@ -108,19 +110,17 @@ public class SimpleSelectQuery implements SelectQuery {
       return "";
     }
 
-    List<String> conjunctionList = new ArrayList<>();
-    conjunctions.forEach(
-        conjunction -> {
-          List<String> conditions = new ArrayList<>();
-          conjunction
-              .getConditions()
-              .forEach(
-                  condition ->
-                      conditions.add(
-                          rdbEngine.enclose(condition.getColumn().getName())
-                              + convert(condition.getOperator())));
-          conjunctionList.add(String.join(" AND ", conditions));
-        });
+    List<String> conjunctionList =
+        conjunctions.stream()
+            .map(
+                conjunction ->
+                    conjunction.getConditions().stream()
+                        .map(
+                            condition ->
+                                rdbEngine.enclose(condition.getColumn().getName())
+                                    + convert(condition.getOperator()))
+                        .collect(Collectors.joining(" AND ")))
+            .collect(Collectors.toList());
 
     return " WHERE " + String.join(" OR ", conjunctionList);
   }
@@ -144,7 +144,7 @@ public class SimpleSelectQuery implements SelectQuery {
       case IS_NOT_NULL:
         return " IS NOT NULL";
       default:
-        throw new IllegalArgumentException("unknown operator");
+        throw new IllegalArgumentException("unknown operator: " + operator);
     }
   }
 
@@ -187,7 +187,7 @@ public class SimpleSelectQuery implements SelectQuery {
   }
 
   private String relationalOrderBySqlString() {
-    if (orderings.size() == 0) {
+    if (orderings.isEmpty()) {
       return "";
     }
 
@@ -236,8 +236,8 @@ public class SimpleSelectQuery implements SelectQuery {
       for (ConditionalExpression condition : conjunction.getConditions()) {
         if (!condition.getColumn().hasNullValue()) {
           condition.getColumn().accept(binder);
+          binder.throwSQLExceptionIfOccurred();
         }
-        binder.throwSQLExceptionIfOccurred();
       }
     }
   }

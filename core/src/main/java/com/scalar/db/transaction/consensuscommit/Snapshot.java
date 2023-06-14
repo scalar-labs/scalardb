@@ -291,7 +291,7 @@ public class Snapshot {
         continue;
       }
 
-      if (scan.getConjunctions().size() == 0) {
+      if (scan.getConjunctions().isEmpty()) {
         return true;
       }
 
@@ -335,7 +335,7 @@ public class Snapshot {
       case LTE:
         return column.compareTo((Column<T>) condition.getColumn()) <= 0;
       default:
-        throw new IllegalArgumentException("unknown operator");
+        throw new IllegalArgumentException("unknown operator: " + condition.getOperator());
     }
   }
 
