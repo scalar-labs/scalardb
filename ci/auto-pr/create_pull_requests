@@ -2,7 +2,7 @@
 
 set -e -o pipefail; [[ -n "$DEBUG" ]] && set -x
 
-if [[ $# < 5 ]]; then
+if [[ $# -lt 5 ]]; then
     echo "usage: $0 pull_request_id pull_request_url pull_request_title commit_sha assignee branches"
     exit 1
 fi
