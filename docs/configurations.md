@@ -56,7 +56,7 @@ The following describes the configurations available for each storage.
 | scalar.db.username       | Username to access the database.         |         |
 | scalar.db.password       | Password to access the database.         |         |
 
-- For Cosmos DB, the following configurations are available:
+- For Cosmos DB for NoSQL, the following configurations are available:
 
 | name                                     | description                                                                                   | default  |
 |------------------------------------------|-----------------------------------------------------------------------------------------------|----------|
