@@ -87,17 +87,17 @@ The following describes the configurations available for each storage.
 | scalar.db.password                                      | Password to access the database.                                                                                                                                             |                              |
 | scalar.db.jdbc.connection_pool.min_idle                 | Minimum number of idle connections in the connection pool.                                                                                                                   | 20                           |
 | scalar.db.jdbc.connection_pool.max_idle                 | Maximum number of connections that can remain idle in the connection pool.                                                                                                   | 50                           |
-| scalar.db.jdbc.connection_pool.max_total                | maximum total number of idle and borrowed connections that can be active at the same time for the connection pool. Use a negative value for no limit.                        | 100                          |
+| scalar.db.jdbc.connection_pool.max_total                | Maximum total number of idle and borrowed connections that can be active at the same time for the connection pool. Use a negative value for no limit.                        | 100                          |
 | scalar.db.jdbc.prepared_statements_pool.enabled         | Setting true to this property enables prepared statement pooling.                                                                                                            | false                        |
 | scalar.db.jdbc.prepared_statements_pool.max_open        | Maximum number of open statements that can be allocated from the statement pool at the same time, or negative for no limit.                                                  | -1                           |
 | scalar.db.jdbc.isolation_level                          | Isolation level for JDBC. Either `READ_UNCOMMITTED` or `READ_COMMITTED` or `REPEATABLE_READ` or `SERIALIZABLE` can be specified.                                             | Underlying database specific |
 | scalar.db.jdbc.table_metadata.schema                    | Schema name for the table metadata used for ScalarDB.                                                                                                                        | scalardb                     |
 | scalar.db.jdbc.table_metadata.connection_pool.min_idle  | Minimum number of idle connections in the connection pool for the table metadata.                                                                                            | 5                            |
 | scalar.db.jdbc.table_metadata.connection_pool.max_idle  | Maximum number of connections that can remain idle in the connection pool for the table metadata.                                                                            | 10                           |
-| scalar.db.jdbc.table_metadata.connection_pool.max_total | maximum total number of idle and borrowed connections that can be active at the same time for the connection pool for the table metadata. Use a negative value for no limit. | 25                           |
-| scalar.db.jdbc.admin.connection_pool.min_idle           | minimum number of idle connections in the connection pool for admin.                                                                                                         | 5                            |
-| scalar.db.jdbc.admin.connection_pool.max_idle           | maximum number of connections that can remain idle in the connection pool for admin.                                                                                         | 10                           |
-| scalar.db.jdbc.admin.connection_pool.max_total          | maximum total number of idle and borrowed connections that can be active at the same time for the connection pool for admin. Use a negative value for no limit.              | 25                           |
+| scalar.db.jdbc.table_metadata.connection_pool.max_total | Maximum total number of idle and borrowed connections that can be active at the same time for the connection pool for the table metadata. Use a negative value for no limit. | 25                           |
+| scalar.db.jdbc.admin.connection_pool.min_idle           | Minimum number of idle connections in the connection pool for admin.                                                                                                         | 5                            |
+| scalar.db.jdbc.admin.connection_pool.max_idle           | Maximum number of connections that can remain idle in the connection pool for admin.                                                                                         | 10                           |
+| scalar.db.jdbc.admin.connection_pool.max_total          | Maximum total number of idle and borrowed connections that can be active at the same time for the connection pool for admin. Use a negative value for no limit.              | 25                           |
 
 When you use SQLite3 as a JDBC database, you need to set `scalar.db.contact_points` as follows.
 
@@ -118,7 +118,7 @@ For the details of the Multi-storage, see [Multi-storage Transactions](multi-sto
 
 ### ScalarDB Server (gRPC)
 
-[ScalarDB Server](scalardb-server.md) is a standalone server that provides a gRPC interface to Scalar DB.
+[ScalarDB Server](scalardb-server.md) is a standalone server that provides a gRPC interface to ScalarDB.
 To interact with ScalarDB Server, you need to specify `grpc` for the `scalar.db.transaction_manager` property.
 
 The following configurations are available for ScalarDB Server:
@@ -136,7 +136,7 @@ For the details of ScalarDB Server, see [ScalarDB Server](scalardb-server.md).
 
 ### JDBC transactions
 
-Other than the default transaction manager Consensus Commit, Scalar DB supports JDBC transactions.
+Other than the default transaction manager Consensus Commit, ScalarDB supports JDBC transactions.
 To use JDBC transactions, you need to specify `jdbc` for the `scalar.db.transaction_manager` property.
 
 The following configurations are available for JDBC transactions:
@@ -149,17 +149,17 @@ The following configurations are available for JDBC transactions:
 | scalar.db.password                                      | Password to access the database.                                                                                                                                             |                              |
 | scalar.db.jdbc.connection_pool.min_idle                 | Minimum number of idle connections in the connection pool.                                                                                                                   | 20                           |
 | scalar.db.jdbc.connection_pool.max_idle                 | Maximum number of connections that can remain idle in the connection pool.                                                                                                   | 50                           |
-| scalar.db.jdbc.connection_pool.max_total                | maximum total number of idle and borrowed connections that can be active at the same time for the connection pool. Use a negative value for no limit.                        | 100                          |
+| scalar.db.jdbc.connection_pool.max_total                | Maximum total number of idle and borrowed connections that can be active at the same time for the connection pool. Use a negative value for no limit.                        | 100                          |
 | scalar.db.jdbc.prepared_statements_pool.enabled         | Setting true to this property enables prepared statement pooling.                                                                                                            | false                        |
 | scalar.db.jdbc.prepared_statements_pool.max_open        | Maximum number of open statements that can be allocated from the statement pool at the same time, or negative for no limit.                                                  | -1                           |
 | scalar.db.jdbc.isolation_level                          | Isolation level for JDBC. Either `READ_UNCOMMITTED` or `READ_COMMITTED` or `REPEATABLE_READ` or `SERIALIZABLE` can be specified.                                             | Underlying database specific |
 | scalar.db.jdbc.table_metadata.schema                    | Schema name for the table metadata used for ScalarDB.                                                                                                                        | scalardb                     |
 | scalar.db.jdbc.table_metadata.connection_pool.min_idle  | Minimum number of idle connections in the connection pool for the table metadata.                                                                                            | 5                            |
 | scalar.db.jdbc.table_metadata.connection_pool.max_idle  | Maximum number of connections that can remain idle in the connection pool for the table metadata.                                                                            | 10                           |
-| scalar.db.jdbc.table_metadata.connection_pool.max_total | maximum total number of idle and borrowed connections that can be active at the same time for the connection pool for the table metadata. Use a negative value for no limit. | 25                           |
-| scalar.db.jdbc.admin.connection_pool.min_idle           | minimum number of idle connections in the connection pool for admin.                                                                                                         | 5                            |
-| scalar.db.jdbc.admin.connection_pool.max_idle           | maximum number of connections that can remain idle in the connection pool for admin.                                                                                         | 10                           |
-| scalar.db.jdbc.admin.connection_pool.max_total          | maximum total number of idle and borrowed connections that can be active at the same time for the connection pool for admin. Use a negative value for no limit.              | 25                           |
+| scalar.db.jdbc.table_metadata.connection_pool.max_total | Mmaximum total number of idle and borrowed connections that can be active at the same time for the connection pool for the table metadata. Use a negative value for no limit. | 25                           |
+| scalar.db.jdbc.admin.connection_pool.min_idle           | Minimum number of idle connections in the connection pool for admin.                                                                                                         | 5                            |
+| scalar.db.jdbc.admin.connection_pool.max_idle           | Maximum number of connections that can remain idle in the connection pool for admin.                                                                                         | 10                           |
+| scalar.db.jdbc.admin.connection_pool.max_total          | Maximum total number of idle and borrowed connections that can be active at the same time for the connection pool for admin. Use a negative value for no limit.              | 25                           |
 
 When you use SQLite3 as a JDBC database, you need to set `scalar.db.contact_points` as follows.
 
@@ -173,7 +173,7 @@ it is recommended to set a [`busy_timeout`](https://www.sqlite.org/c3ref/busy_ti
 
 ## ScalarDB Server configurations
 
-[ScalarDB Server](scalardb-server.md) is a standalone server that provides a gRPC interface to Scalar DB.
+[ScalarDB Server](scalardb-server.md) is a standalone server that provides a gRPC interface to ScalarDB.
 This section explains the ScalarDB Server configurations.
 
 In addition to [Transaction manager configurations](#transaction-manager-configurations) and [Other configurations](#other-configurations), the following configurations are available for ScalarDB Server:
