@@ -690,6 +690,7 @@ public abstract class DistributedStorageRelationalScanIntegrationTestBase {
             .table(CONDITION_TEST_TABLE)
             .all()
             .where(ConditionBuilder.buildConditionalExpression(column, operator))
+            .ordering(Ordering.asc(PARTITION_KEY_NAME))
             .build();
 
     // Act
@@ -711,6 +712,7 @@ public abstract class DistributedStorageRelationalScanIntegrationTestBase {
             .table(CONDITION_TEST_TABLE)
             .all()
             .where(ConditionBuilder.buildConditionalExpression(column, operator))
+            .ordering(Ordering.asc(PARTITION_KEY_NAME))
             .build();
 
     // Act
@@ -730,6 +732,7 @@ public abstract class DistributedStorageRelationalScanIntegrationTestBase {
             .namespace(getNamespaceName())
             .table(CONDITION_TEST_TABLE)
             .all()
+            .ordering(Ordering.asc(PARTITION_KEY_NAME))
             .where(
                 prepareOrConditionSet(
                     ImmutableList.of(
@@ -763,6 +766,7 @@ public abstract class DistributedStorageRelationalScanIntegrationTestBase {
             .all()
             .where(prepareAndConditionSet(prepareNonKeyColumns(1)))
             .or(prepareAndConditionSet(prepareNonKeyColumns(2)))
+            .ordering(Ordering.asc(PARTITION_KEY_NAME))
             .build();
 
     // Act
