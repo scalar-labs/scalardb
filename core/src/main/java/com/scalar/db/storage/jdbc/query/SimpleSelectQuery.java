@@ -62,11 +62,10 @@ public class SimpleSelectQuery implements SelectQuery {
   @Override
   public String sql() {
     StringBuilder builder =
-        new StringBuilder(
-            "SELECT "
-                + projectionSqlString()
-                + " FROM "
-                + rdbEngine.encloseFullTableName(schema, table));
+        new StringBuilder("SELECT ")
+            .append(projectionSqlString())
+            .append(" FROM ")
+            .append(rdbEngine.encloseFullTableName(schema, table));
     if (isRelationalQuery) {
       // for relational abstraction
       builder.append(relationalConditionSqlString());
