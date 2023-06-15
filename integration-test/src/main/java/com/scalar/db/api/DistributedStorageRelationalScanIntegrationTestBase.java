@@ -732,7 +732,6 @@ public abstract class DistributedStorageRelationalScanIntegrationTestBase {
             .namespace(getNamespaceName())
             .table(CONDITION_TEST_TABLE)
             .all()
-            .ordering(Ordering.asc(PARTITION_KEY_NAME))
             .where(
                 prepareOrConditionSet(
                     ImmutableList.of(
@@ -745,6 +744,7 @@ public abstract class DistributedStorageRelationalScanIntegrationTestBase {
             .map(i -> prepareOrConditionSet(ImmutableList.of(columns1.get(i), columns2.get(i))))
             .collect(Collectors.toList());
     orConditionSets.forEach(builder::and);
+    builder.ordering(Ordering.asc(PARTITION_KEY_NAME));
 
     // Act
     List<Result> actual = scanAll(builder.build());
