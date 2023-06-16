@@ -188,8 +188,9 @@ public class Snapshot {
   }
 
   public void verify(Scan scan) {
-    if ((ScalarDbUtils.isRelational(scan) && isWriteSetOverlappedWithRelational(scan))
-        || (!ScalarDbUtils.isRelational(scan) && isWriteSetOverlappedWith(scan))) {
+    boolean isRelational = ScalarDbUtils.isRelational(scan);
+    if ((isRelational && isWriteSetOverlappedWithRelational(scan))
+        || (!isRelational && isWriteSetOverlappedWith(scan))) {
       throw new IllegalArgumentException("reading already written data is not allowed");
     }
   }
