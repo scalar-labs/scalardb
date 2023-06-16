@@ -181,11 +181,6 @@ public class Snapshot {
   }
 
   public Optional<List<Key>> get(Scan scan) {
-    if (!ScalarDbUtils.isRelational(scan) && isWriteSetOverlappedWith(scan)) {
-      // Verify overlaps only for non-relational scan since we do it later for relational scan
-      // (right before returning the results).
-      throw new IllegalArgumentException("reading already written data is not allowed");
-    }
     if (scanSet.containsKey(scan)) {
       return Optional.ofNullable(scanSet.get(scan));
     }

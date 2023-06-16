@@ -1100,7 +1100,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      get_ScanGivenAndPutWithSamePartitionKeyWithoutClusteringKeyInWriteSet_ShouldThrowIllegalArgumentException() {
+      get_ScanGivenAndPutWithSamePartitionKeyWithoutClusteringKeyInWriteSet_ShouldNotThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePutWithPartitionKeyOnly();
@@ -1112,12 +1112,29 @@ public class SnapshotTest {
     Throwable thrown = catchThrowable(() -> snapshot.get(scan));
 
     // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verify_ScanGivenAndPutWithSamePartitionKeyWithoutClusteringKeyInWriteSet_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Put put = preparePutWithPartitionKeyOnly();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    Scan scan = prepareScan();
+
+    // Act Assert
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+
+    // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void
-      get_ScanWithNoRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
+      verify_ScanWithNoRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
@@ -1132,7 +1149,7 @@ public class SnapshotTest {
             .forTable(ANY_TABLE_NAME);
 
     // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.get(scan));
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1140,7 +1157,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      get_ScanWithRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
+      verify_ScanWithRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
@@ -1174,11 +1191,11 @@ public class SnapshotTest {
             .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2), false);
 
     // Act Assert
-    Throwable thrown1 = catchThrowable(() -> snapshot.get(scan1));
-    Throwable thrown2 = catchThrowable(() -> snapshot.get(scan2));
-    Throwable thrown3 = catchThrowable(() -> snapshot.get(scan3));
-    Throwable thrown4 = catchThrowable(() -> snapshot.get(scan4));
-    Throwable thrown5 = catchThrowable(() -> snapshot.get(scan5));
+    Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1));
+    Throwable thrown2 = catchThrowable(() -> snapshot.verify(scan2));
+    Throwable thrown3 = catchThrowable(() -> snapshot.verify(scan3));
+    Throwable thrown4 = catchThrowable(() -> snapshot.verify(scan4));
+    Throwable thrown5 = catchThrowable(() -> snapshot.verify(scan5));
 
     // Assert
     assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
@@ -1190,7 +1207,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      get_ScanWithEndSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
+      verify_ScanWithEndSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
@@ -1220,9 +1237,9 @@ public class SnapshotTest {
             .forTable(ANY_TABLE_NAME);
 
     // Act Assert
-    Throwable thrown1 = catchThrowable(() -> snapshot.get(scan1));
-    Throwable thrown2 = catchThrowable(() -> snapshot.get(scan2));
-    Throwable thrown3 = catchThrowable(() -> snapshot.get(scan3));
+    Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1));
+    Throwable thrown2 = catchThrowable(() -> snapshot.verify(scan2));
+    Throwable thrown3 = catchThrowable(() -> snapshot.verify(scan3));
 
     // Assert
     assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
@@ -1232,7 +1249,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      get_ScanWithStartSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
+      verify_ScanWithStartSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
@@ -1262,9 +1279,9 @@ public class SnapshotTest {
             .forTable(ANY_TABLE_NAME);
 
     // Act Assert
-    Throwable thrown1 = catchThrowable(() -> snapshot.get(scan1));
-    Throwable thrown2 = catchThrowable(() -> snapshot.get(scan2));
-    Throwable thrown3 = catchThrowable(() -> snapshot.get(scan3));
+    Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1));
+    Throwable thrown2 = catchThrowable(() -> snapshot.verify(scan2));
+    Throwable thrown3 = catchThrowable(() -> snapshot.verify(scan3));
 
     // Assert
     assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
@@ -1273,7 +1290,7 @@ public class SnapshotTest {
   }
 
   @Test
-  public void get_ScanAllGivenAndPutInWriteSetInSameTable_ShouldThrowException() {
+  public void verify_ScanAllGivenAndPutInWriteSetInSameTable_ShouldThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
@@ -1287,14 +1304,15 @@ public class SnapshotTest {
             .forTable(ANY_TABLE_NAME);
 
     // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.get(scanAll));
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scanAll));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
-  public void get_ScanAllGivenAndPutInWriteSetNotOverlappingWithScanAll_ShouldReturnEmptyList() {
+  public void
+      verify_ScanAllGivenAndPutInWriteSetNotOverlappingWithScanAll_ShouldNotThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
@@ -1308,10 +1326,10 @@ public class SnapshotTest {
             .forTable(ANY_TABLE_NAME_2);
 
     // Act Assert
-    Optional<List<Snapshot.Key>> keys = snapshot.get(scanAll);
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scanAll));
 
     // Assert
-    assertThat(keys).isEmpty();
+    assertThat(thrown).doesNotThrowAnyException();
   }
 
   @Test
