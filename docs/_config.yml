@@ -3,7 +3,7 @@ google_analytics: "G-Q4TKS77KCP"
 
 defaults:
   - scope:
-      path: "docs" # Specifies where the docs are located.
+      path: "" # Specifies where the docs are located.
       type: "default" # Defines the type for docs.
     values:
       layout: default # Defines the template type used for docs (templates are located in the "_layouts" folder). 
