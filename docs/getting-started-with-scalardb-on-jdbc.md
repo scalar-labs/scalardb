@@ -18,13 +18,13 @@ From here, we assume Oracle JDK 8 and a JDBC database is properly installed in y
 The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for ScalarDB. Basically, it describes the JDBC database installation that will be used.
 
 ```properties
-# JDBC storage implementation is used for Consensus Commit
+# JDBC storage implementation is used for Consensus Commit.
 scalar.db.storage=jdbc
 
-# The JDBC URL
+# The JDBC URL.
 scalar.db.contact_points=jdbc:mysql://localhost:3306/
 
-# The username and password
+# The username and password.
 scalar.db.username=root
 scalar.db.password=mysql
 ```

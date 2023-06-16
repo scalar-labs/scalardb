@@ -20,16 +20,16 @@ From here, we assume Oracle JDK 8 and Cassandra 3.11.x are properly installed in
 The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for ScalarDB. Basically, it describes the Cassandra installation that will be used.
 
 ```properties
-# Cassandra storage implementation is used for Consensus Commit
+# Cassandra storage implementation is used for Consensus Commit.
 scalar.db.storage=cassandra
 
-# Comma separated contact points
+# Comma-separated contact points.
 scalar.db.contact_points=localhost
 
-# Port number for all the contact points. Default port number for each database is used if empty.
+# Port number for all the contact points.
 scalar.db.contact_port=9042
 
-# Credential information to access the database
+# Credential information to access the database.
 scalar.db.username=cassandra
 scalar.db.password=cassandra
 ```

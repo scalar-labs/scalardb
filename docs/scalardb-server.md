@@ -43,10 +43,10 @@ The property file must contain two sections: ScalarDB Server configurations and 
 # ScalarDB Server configurations
 #
 
-# Port number of ScalarDB Server. 60051 by default.
+# Port number of ScalarDB Server. The default is `60051`.
 scalar.db.server.port=60051
 
-# Prometheus exporter port. Use 8080 if this is not given. Prometheus exporter will not be started if a negative number is given.
+# Prometheus exporter port. Prometheus exporter will not be started if a negative number is given. The default is `8080`.
 scalar.db.server.prometheus_exporter_port=8080
 
 # The maximum message size allowed to be received. If not specified, use the gRPC default value.
@@ -55,7 +55,7 @@ scalar.db.server.grpc.max_inbound_message_size=
 # The maximum size of metadata allowed to be received. If not specified, use the gRPC default value.
 scalar.db.server.grpc.max_inbound_metadata_size=
 
-# The decommissioning duration in seconds. 30 seconds by default.                 
+# The decommissioning duration in seconds. The default is `30`.                 
 scalar.db.server.decommissioning_duration_secs=30
 
 #
@@ -68,7 +68,7 @@ scalar.db.transaction_manager=consensus-commit
 # Storage implementation used for Consensus Commit. The default is `cassandra`.
 scalar.db.storage=cassandra
 
-# Comma separated contact points.
+# Comma-separated contact points.
 scalar.db.contact_points=localhost
 
 # Port number for all the contact points.
@@ -85,12 +85,6 @@ scalar.db.consensus_commit.isolation_level=SNAPSHOT
 # Either `EXTRA_READ` or `EXTRA_WRITE` can be specified. The default is `EXTRA_READ`.
 # If `SNAPSHOT` is specified in the property `scalar.db.consensus_commit.isolation_level`, this is ignored.
 scalar.db.consensus_commit.serializable_strategy=
-
-# This is only usable for Consensus Commit.
-# If set to "true", Get and Scan operations results will contain transaction metadata. To see the transaction metadata columns details for a given table, you can use the `DistributedTransactionAdmin.getTableMetadata()`
-# method which will return the table metadata augmented with the transaction metadata columns. Using this configuration can be useful to investigate transaction related issues.
-# The default is false.
-scalar.db.consensus_commit.include_metadata.enabled=false
 ```
 
 You can set some sensitive data (e.g., credentials) as the values of properties using environment variables.
@@ -156,7 +150,7 @@ The difference is that you need to set `scalar.db.transaction_manager` to `grpc`
 # Transaction manager implementation.
 scalar.db.transaction_manager=grpc
 
-# Comma separated contact points.
+# Comma-separated contact points.
 scalar.db.contact_points=<ScalarDB Server host>
 
 # Port number for all the contact points.

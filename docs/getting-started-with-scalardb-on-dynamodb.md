@@ -17,13 +17,13 @@ From here, we assume Oracle JDK 8 is properly installed in your local environmen
 The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for ScalarDB. You need to update `contact_points` with AWS region, `username` with your AWS access key ID, `password` with your AWS secret access key, and `storage` with `dynamo`.
 
 ```properties
-# DynamoDB storage implementation is used for Consensus Commit
+# DynamoDB storage implementation is used for Consensus Commit.
 scalar.db.storage=dynamo
 
-# The AWS region
+# The AWS region.
 scalar.db.contact_points=<REGION>
 
-# The AWS access key ID and secret access key
+# The AWS access key ID and secret access key.
 scalar.db.username=<ACCESS_KEY_ID>
 scalar.db.password=<SECRET_ACCESS_KEY>
 ```

@@ -18,13 +18,13 @@ scalar.db.transaction_manager=consensus-commit
 # Storage implementation.
 scalar.db.storage=cassandra
 
-# Comma separated contact points
+# Comma-separated contact points.
 scalar.db.contact_points=cassandra
 
 # Port number for all the contact points.
 scalar.db.contact_port=9042
 
-# Credential information to access the database
+# Credential information to access the database.
 scalar.db.username=cassandra
 scalar.db.password=cassandra
 ```
