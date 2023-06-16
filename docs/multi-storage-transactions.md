@@ -17,7 +17,7 @@ level as long as the configuration is properly set for `multi-storage`. An examp
 configuration is shown as follows:
 
 ```properties
-# Consensus commit is required to use Multi-storage transactions
+# Consensus commit is required to use Multi-storage Transactions.
 scalar.db.transaction_manager=consensus-commit
 
 # Multi-storage implementation is used for Consensus Commit

@@ -29,6 +29,6 @@ scalar.db.username=root
 scalar.db.password=mysql
 ```
 
-For the details of the configuration, please refer to [ScalarDB Configurations](configurations.md).
+For details about configurations, see [ScalarDB Configurations](configurations.md).
 
-Please follow [Getting Started with ScalarDB](getting-started-with-scalardb.md) to run the application.
+To run the application, follow the instructions in [Getting Started with ScalarDB](getting-started-with-scalardb.md).

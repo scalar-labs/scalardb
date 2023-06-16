@@ -195,7 +195,7 @@ StorageFactory storageFactory = StorageFactory.create("<configuration file path>
 DistributedStorageAdmin admin = storageFactory.getStorageAdmin();
 ```
 
-Please see [ScalarDB Configurations](configurations.md) for the details of the configurations.
+For details about configurations, see [ScalarDB Configurations](configurations.md).
 
 Once you have executed all administrative operations, you should close the `DistributedStorageAdmin` instance as follows:
 

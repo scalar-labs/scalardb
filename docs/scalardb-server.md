@@ -36,7 +36,7 @@ $ ./gradlew :server:docker
 ## Configure ScalarDB Server
 
 You need a property file holding the configuration for ScalarDB Server. 
-It contains two sections: ScalarDB Server configurations and Transaction manager configurations.
+The property file must contain two sections: ScalarDB Server configurations and transaction manager configurations.
 
 ```properties
 #
@@ -62,10 +62,10 @@ scalar.db.server.decommissioning_duration_secs=30
 # Transaction manager configurations
 #
 
-# Transaction manager implementation. `consensus-commit` by default.
+# Transaction manager implementation. The default is `consensus-commit`.
 scalar.db.transaction_manager=consensus-commit
 
-# Storage implementation used for Consensus Commit. `cassandra` by default.
+# Storage implementation used for Consensus Commit. The default is `cassandra`.
 scalar.db.storage=cassandra
 
 # Comma separated contact points.
@@ -78,12 +78,12 @@ scalar.db.contact_points=localhost
 scalar.db.username=cassandra
 scalar.db.password=cassandra
 
-# Isolation level used for Consensus Commit. Either SNAPSHOT or SERIALIZABLE can be specified. SNAPSHOT is used by default.
+# Isolation level used for Consensus Commit. Either `SNAPSHOT` or `SERIALIZABLE` can be specified. The default is `SNAPSHOT`.
 scalar.db.consensus_commit.isolation_level=SNAPSHOT
 
 # Serializable strategy used for Consensus Commit.
-# Either EXTRA_READ or EXTRA_WRITE can be specified. EXTRA_READ is used by default.
-# If SNAPSHOT is specified in the property "scalar.db.consensus_commit.isolation_level", this is ignored.
+# Either `EXTRA_READ` or `EXTRA_WRITE` can be specified. The default is `EXTRA_READ`.
+# If `SNAPSHOT` is specified in the property `scalar.db.consensus_commit.isolation_level`, this is ignored.
 scalar.db.consensus_commit.serializable_strategy=
 
 # This is only usable for Consensus Commit.
@@ -100,7 +100,7 @@ scalar.db.username=${env:SCALAR_DB_USERNAME}
 scalar.db.password=${env:SCALAR_DB_PASSWORD}
 ```
 
-For the details of the Transaction manager configurations, see [ScalarDB Configurations](configurations.md).
+For details about transaction manager configurations, see [ScalarDB Configurations](configurations.md).
 
 ## Start ScalarDB Server
 
@@ -162,7 +162,7 @@ scalar.db.contact_points=<ScalarDB Server host>
 # Port number for all the contact points.
 scalar.db.contact_port=60051
 
-# The deadline duration for gRPC connections. The default is 60000 milliseconds (60 seconds).
+# The deadline duration for gRPC connections. The default is `60000` milliseconds (60 seconds).
 scalar.db.grpc.deadline_duration_millis=60000
 
 # The maximum message size allowed for a single gRPC frame. If not specified, use the gRPC default value.

@@ -12,7 +12,7 @@ The configuration for Two-phase Commit Transactions is the same as the one for t
 For example, you can set the following configuration when you use Cassandra:
 
 ```properties
-# Consensus commit is required to use Two-phase Commit Transactions
+# Consensus commit is required to use Two-phase Commit Transactions.
 scalar.db.transaction_manager=consensus-commit
 
 # Storage implementation.
@@ -29,7 +29,7 @@ scalar.db.username=cassandra
 scalar.db.password=cassandra
 ```
 
-Please see [ScalarDB Configurations](configurations.md) for the details of the configurations.
+For details about configurations, see [ScalarDB Configurations](configurations.md).
 
 ### ScalarDB Server
 

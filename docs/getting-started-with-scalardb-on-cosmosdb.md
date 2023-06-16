@@ -34,6 +34,6 @@ scalar.db.password=<COSMOS_DB_FOR_NOSQL_KEY>
 ```
 Note that you can use a primary key or a secondary key for `<COSMOS_DB_FOR_NOSQL_KEY>`.
 
-For the details of the configuration, please refer to [ScalarDB Configurations](configurations.md).
+For details about configurations, see [ScalarDB Configurations](configurations.md).
 
-Please follow [Getting Started with ScalarDB](getting-started-with-scalardb.md) to run the application.
+To run the application, follow the instructions in [Getting Started with ScalarDB](getting-started-with-scalardb.md).
