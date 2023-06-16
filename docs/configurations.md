@@ -4,7 +4,7 @@ This document describes the configurations for ScalarDB.
 
 ## Transaction manager configurations
 
-ScalarDB has several transaction manager implementations, and you can specify the transaction manager implementation by the `scalar.db.transaction_manager` property.
+ScalarDB has several transaction manager implementations, such as Consensus Commit, gRPC, and JDBC, and you can specify one of the implementations with the `scalar.db.transaction_manager` property.
 The following sections describes the configurations for each transaction manager.
 
 ### Consensus Commit
@@ -136,7 +136,7 @@ For the details of ScalarDB Server, see [ScalarDB Server](scalardb-server.md).
 
 ### JDBC transactions
 
-Other than the default transaction manager Consensus Commit, ScalarDB supports JDBC transactions.
+You can also use native JDBC transactions through ScalarDB when you only interact with one JDBC database. However, you cannot use most of ScalarDB features when you use JDBC transactions, which might defeat the purpose of using ScalarDB. So, please carefully consider your use case.
 To use JDBC transactions, you need to specify `jdbc` for the `scalar.db.transaction_manager` property.
 
 The following configurations are available for JDBC transactions:
