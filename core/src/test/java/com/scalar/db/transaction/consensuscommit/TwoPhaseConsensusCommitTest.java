@@ -348,6 +348,8 @@ public class TwoPhaseConsensusCommitTest {
 
     // Act Assert
     assertThatThrownBy(transaction::rollback).isInstanceOf(RollbackException.class);
+
+    verify(commit, never()).rollbackRecords(snapshot);
   }
 
   @Test
@@ -360,5 +362,7 @@ public class TwoPhaseConsensusCommitTest {
 
     // Act Assert
     assertThatThrownBy(transaction::rollback).isInstanceOf(RollbackException.class);
+
+    verify(commit, never()).rollbackRecords(snapshot);
   }
 }
