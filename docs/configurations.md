@@ -59,22 +59,22 @@ The following describes the configurations available for each storage.
 
 - For Cosmos DB for NoSQL, the following configurations are available:
 
-| Name                                       | Description                                                                                    | Default    |
-|--------------------------------------------|------------------------------------------------------------------------------------------------|------------|
-| `scalar.db.storage`                        | `cosmos` must be specified.                                                                    | -          |
-| `scalar.db.contact_points`                 | Azure Cosmos DB endpoint the SDK will connect to.                                              |            |
-| `scalar.db.password`                       | Either a master or read-only key used to perform authentication for accessing Azure Cosmos DB. |            |
-| `scalar.db.cosmos.table_metadata.database` | Database name for the table metadata used for ScalarDB.                                        | `scalardb` |
+| Name                                       | Description                                                                                              | Default    |
+|--------------------------------------------|----------------------------------------------------------------------------------------------------------|------------|
+| `scalar.db.storage`                        | `cosmos` must be specified.                                                                              | -          |
+| `scalar.db.contact_points`                 | Azure Cosmos DB for NoSQL endpoint with which ScalarDB should communicate.                               |            |
+| `scalar.db.password`                       | Either a master or read-only key used to perform authentication for accessing Azure Cosmos DB for NoSQL. |            |
+| `scalar.db.cosmos.table_metadata.database` | Database name for the table metadata used for ScalarDB.                                                  | `scalardb` |
 
 - For DynamoDB, the following configurations are available:
 
 | Name                                        | Description                                                                                                                                                                                                                                                 | Default    |
 |---------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
 | `scalar.db.storage`                         | `dynamo` must be specified.                                                                                                                                                                                                                                 | -          |
-| `scalar.db.contact_points`                  | Region with which the SDK should communicate (e.g., `us-east-1`).                                                                                                                                                                                           |            |
+| `scalar.db.contact_points`                  | AWS region with which ScalarDB should communicate (e.g., `us-east-1`).                                                                                                                                                                                      |            |
 | `scalar.db.username`                        | AWS access key used to identify the user interacting with AWS.                                                                                                                                                                                              |            |
 | `scalar.db.password`                        | AWS secret access key used to authenticate the user interacting with AWS.                                                                                                                                                                                   |            |
-| `scalar.db.dynamo.endpoint_override`        | Endpoint with which the SDK should communicate. This is primarily used for testing with a local instance instead of an AWS service.                                                                                                                         |            |
+| `scalar.db.dynamo.endpoint_override`        | Amazon DynamoDB endpoint with which ScalarDB should communicate. This is primarily used for testing with a local instance instead of an AWS service.                                                                                                        |            |
 | `scalar.db.dynamo.table_metadata.namespace` | Namespace name for the table metadata used for ScalarDB.                                                                                                                                                                                                    | `scalardb` |
 | `scalar.db.dynamo.namespace.prefix`         | Prefix for the user namespaces and metadata namespace names. Since AWS requires having unique tables names in a single AWS region, this is useful if you want to use multiple ScalarDB environments (development, production, etc.) in a single AWS region. |            |
 
