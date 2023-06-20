@@ -1,11 +1,14 @@
 package com.scalar.db.common.checker;
 
+import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Conjunction;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
@@ -126,6 +129,10 @@ public class OperationChecker {
     if (scanAll.getLimit() < 0) {
       throw new IllegalArgumentException("The limit cannot be negative. Operation: " + scanAll);
     }
+
+    checkOrderings(scanAll, metadata);
+
+    checkConjunctions(scanAll, metadata);
   }
 
   private void checkProjections(Selection selection, TableMetadata metadata) {
@@ -215,6 +222,40 @@ public class OperationChecker {
       } else {
         if (reverse != rightOrder) {
           throw new IllegalArgumentException(message.get());
+        }
+      }
+    }
+  }
+
+  private void checkOrderings(ScanAll scan, TableMetadata metadata) {
+    for (Scan.Ordering ordering : scan.getOrderings()) {
+      if (!metadata.getColumnNames().contains(ordering.getColumnName())) {
+        throw new IllegalArgumentException(
+            "The specified ordering column is not found. Invalid ordering: "
+                + ordering
+                + ", Operation: "
+                + scan);
+      }
+    }
+  }
+
+  private void checkConjunctions(ScanAll scan, TableMetadata metadata) {
+    for (Conjunction conjunction : scan.getConjunctions()) {
+      for (ConditionalExpression condition : conjunction.getConditions()) {
+        boolean isValid;
+        if (condition.getOperator() == Operator.IS_NULL
+            || condition.getOperator() == Operator.IS_NOT_NULL) {
+          // the value must be null if the operator is 'is null' or `is not null`
+          isValid =
+              new ColumnChecker(metadata, false, true, false, false).check(condition.getColumn());
+        } else {
+          // Otherwise, the value must not be null
+          isValid =
+              new ColumnChecker(metadata, true, false, false, false).check(condition.getColumn());
+        }
+        if (!isValid) {
+          throw new IllegalArgumentException(
+              "The condition is not properly specified. Operation: " + scan);
         }
       }
     }

@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ComparisonChain;
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -10,6 +11,7 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Conjunction;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
@@ -17,6 +19,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.io.Column;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
@@ -178,13 +181,18 @@ public class Snapshot {
   }
 
   public Optional<List<Key>> get(Scan scan) {
-    if (isWriteSetOverlappedWith(scan)) {
-      throw new IllegalArgumentException("reading already written data is not allowed");
-    }
     if (scanSet.containsKey(scan)) {
       return Optional.ofNullable(scanSet.get(scan));
     }
     return Optional.empty();
+  }
+
+  public void verify(Scan scan) {
+    boolean isRelational = ScalarDbUtils.isRelational(scan);
+    if ((isRelational && isWriteSetOverlappedWithRelational(scan))
+        || (!isRelational && isWriteSetOverlappedWith(scan))) {
+      throw new IllegalArgumentException("reading already written data is not allowed");
+    }
   }
 
   public void to(MutationComposer composer)
@@ -263,6 +271,82 @@ public class Snapshot {
       }
     }
     return false;
+  }
+
+  private boolean isWriteSetOverlappedWithRelational(Scan scan) {
+    for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
+      // We need to consider three cases here to prevent scan-after-write.
+      //   1) A put operation overlaps the scan range regardless of the update (put) results.
+      //   2) A put operation does not overlap the scan range as a result of the update.
+      //   3) A put operation overlaps the scan range as a result of the update.
+      // See the following examples. Assume that we have a table with two columns whose names are
+      // "key" and "value" and two records in the table: (key=1, value=2) and (key=2, key=3).
+      // Case 2 covers a transaction that puts (1, 4) and then scans "where value < 3". In this
+      // case, there is no overlap, but we intentionally prohibit it due to the consistency and
+      // simplicity of snapshot management. We can find case 2 using the scan results.
+      // Case 3 covers a transaction that puts (2, 2) and then scans "where value < 3". In this
+      // case, we cannot find the overlap using the scan results since the database is not updated
+      // yet. Thus, we need to evaluate if the scan condition potentially matches put operations.
+
+      // Check for cases 1 and 2
+      if (scanSet.get(scan).contains(entry.getKey())) {
+        return true;
+      }
+
+      // Check for case 3
+      Put put = entry.getValue();
+      if (!put.forNamespace().equals(scan.forNamespace())
+          || !put.forTable().equals(scan.forTable())) {
+        continue;
+      }
+
+      if (scan.getConjunctions().isEmpty()) {
+        return true;
+      }
+
+      Map<String, Column<?>> columns = new HashMap<>(put.getColumns());
+      put.getPartitionKey().getColumns().forEach(column -> columns.put(column.getName(), column));
+      put.getClusteringKey()
+          .ifPresent(
+              key -> key.getColumns().forEach(column -> columns.put(column.getName(), column)));
+      for (Conjunction conjunction : scan.getConjunctions()) {
+        boolean allMatched = true;
+        for (ConditionalExpression condition : conjunction.getConditions()) {
+          if (!columns.containsKey(condition.getColumn().getName())
+              || !match(columns.get(condition.getColumn().getName()), condition)) {
+            allMatched = false;
+            break;
+          }
+        }
+        if (allMatched) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  @SuppressWarnings("unchecked")
+  private <T> boolean match(Column<T> column, ConditionalExpression condition) {
+    assert column.getClass() == condition.getColumn().getClass();
+    switch (condition.getOperator()) {
+      case EQ:
+      case IS_NULL:
+        return column.equals(condition.getColumn());
+      case NE:
+      case IS_NOT_NULL:
+        return !column.equals(condition.getColumn());
+      case GT:
+        return column.compareTo((Column<T>) condition.getColumn()) > 0;
+      case GTE:
+        return column.compareTo((Column<T>) condition.getColumn()) >= 0;
+      case LT:
+        return column.compareTo((Column<T>) condition.getColumn()) < 0;
+      case LTE:
+        return column.compareTo((Column<T>) condition.getColumn()) <= 0;
+      default:
+        throw new IllegalArgumentException("unknown operator: " + condition.getOperator());
+    }
   }
 
   @VisibleForTesting

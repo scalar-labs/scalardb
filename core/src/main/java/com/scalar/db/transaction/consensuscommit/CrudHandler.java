@@ -91,6 +91,20 @@ public class CrudHandler {
   }
 
   public List<Result> scan(Scan scan) throws CrudException {
+    List<Result> results = scanInternal(scan);
+
+    // We verify if this scan does not overlap previous writes after the actual scan. For a
+    // relational scan, this must be done here, using the obtained keys in the scan set and scan
+    // condition. This is because the condition (i.e., where clause) is arbitrary in the relational
+    // scan, and thus, the write command may not have columns used in the condition, which are
+    // necessary to determine overlaps. For a scan with clustering keys, we can determine overlaps
+    // without the actual scan, but we also check it here for consistent logic and readability.
+    snapshot.verify(scan);
+
+    return results;
+  }
+
+  private List<Result> scanInternal(Scan scan) throws CrudException {
     List<String> originalProjections = new ArrayList<>(scan.getProjections());
 
     List<Result> results = new ArrayList<>();

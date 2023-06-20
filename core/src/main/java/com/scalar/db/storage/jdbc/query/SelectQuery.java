@@ -1,6 +1,8 @@
 package com.scalar.db.storage.jdbc.query;
 
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
@@ -9,6 +11,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface SelectQuery extends Query {
 
@@ -30,6 +33,8 @@ public interface SelectQuery extends Query {
     boolean isRangeQuery;
     Optional<String> indexedColumn = Optional.empty();
     boolean isConditionalQuery;
+    boolean isRelationalQuery;
+    Set<Conjunction> conjunctions = Collections.emptySet();
 
     Builder(RdbEngineStrategy rdbEngine, List<String> projections) {
       this.rdbEngine = rdbEngine;
@@ -116,6 +121,15 @@ public interface SelectQuery extends Query {
       }
 
       indexedColumn = Optional.of(column);
+    }
+
+    /*
+     * Assumes this is called by relational scan operations
+     */
+    public Builder where(Set<Conjunction> conjunctions) {
+      isRelationalQuery = true;
+      this.conjunctions = ImmutableSet.copyOf(conjunctions);
+      return this;
     }
 
     @SuppressFBWarnings("EI_EXPOSE_REP2")

@@ -2,7 +2,7 @@
 
 set -e -o pipefail; [[ -n "$DEBUG" ]] && set -x
 
-if [[ $# != 3 ]]; then
+if [[ $# -ne 3 ]]; then
     echo "usage: $0 repo_owner repo_name user"
     exit 1
 fi
