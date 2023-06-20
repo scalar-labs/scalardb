@@ -5,9 +5,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
@@ -153,6 +155,40 @@ public class JdbcServiceTest {
     // Assert
     verify(operationChecker).check(any(ScanAll.class));
     verify(queryBuilder).select(any());
+  }
+
+  @Test
+  public void whenGetScannerExecuted_withRelationalScan_shouldCallQueryBuilder() throws Exception {
+    // Arrange
+    when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
+
+    when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.where(anySet())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.orderBy(any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.limit(anyInt())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.build()).thenReturn(selectQuery);
+
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
+    when(preparedStatement.executeQuery()).thenReturn(resultSet);
+    when(resultSet.next()).thenReturn(false);
+
+    // Act
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .all()
+            .where(ConditionBuilder.column("column").isEqualToInt(10))
+            .build();
+    jdbcService.getScanner(scan, connection);
+
+    // Assert
+    verify(operationChecker).check(any(ScanAll.class));
+    verify(queryBuilder).select(any());
+    verify(queryBuilder.select(any())).from(any(), any(), any());
+    verify(queryBuilder.select(any())).where(anySet());
+    verify(queryBuilder.select(any())).orderBy(anyList());
+    verify(queryBuilder.select(any())).limit(anyInt());
   }
 
   @Test
