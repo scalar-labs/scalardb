@@ -38,7 +38,7 @@ To add a dependency using Maven:
 * [Requirements in the underlying databases](requirements.md)
 * [How to Back up and Restore](backup-restore.md)
 * [ScalarDB supported databases](scalardb-supported-databases.md)
-* [Configurations for Consensus Commit](configurations-for-consensus-commit.md)
+* [Configurations](configurations.md)
 * [Storage abstraction](storage-abstraction.md)
 * Slides
     * [Making Cassandra more capable, faster, and more reliable](https://speakerdeck.com/scalar/making-cassandra-more-capable-faster-and-more-reliable-at-apachecon-at-home-2020) at ApacheCon@Home 2020

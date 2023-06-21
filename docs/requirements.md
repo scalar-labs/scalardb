@@ -8,12 +8,12 @@ Here are the requirements to make ScalarDB on Cassandra (or Cassandra compatible
 
 1. Durability is provided.
    1. In Cassandra, `commitlog_sync` in cassandra.yaml must be changed to `batch` or `group` from the default `periodic`.
-2. (For Cassandra compatible databases) LWT is supported.
+2. (For Cassandra-compatible databases) Lightweight transactions (LWTs) are supported.
 
-For the first, it is required since ScalarDB only provides Atomicity and Isolation properties of ACID and requests the underlying databases to provide Durability.
-You can stil use `periodic`, but it is not recommended unless you know exactly what you are doing.
+The first requirement is necessary because ScalarDB provides only atomicity and isolation properties of ACID and requests the underlying databases to provide durability.
+You can still use `periodic`, but we do not recommend using this you know exactly what you are doing.
 
-For the second, ScalarDB does not work on some Cassandra compatible databases such as [Amazon Keyspaces](https://aws.amazon.com/keyspaces/) that don't support LWT since `ConsensusCommit` transaction manager relies on linearizable operations of underlying databases to make transactions serializable.
+The second requirement is necessary because ScalarDB does not work on some Cassandra-compatible databases, such as [Amazon Keyspaces](https://aws.amazon.com/keyspaces/), that do not support LWTs. This is because the Consensus Commit transaction manager relies on the linearizable operations of underlying databases to make transactions serializable.
 
 If the above requirements are met, storage operations with `LINEARIZABLE` can provide linearizablity and transaction operations with `SERIALIZABLE` can provide strict serializability.
 
