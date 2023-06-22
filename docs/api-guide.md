@@ -608,11 +608,10 @@ transaction.delete(delete);
 ```
 
 #### Put and Delete with a condition
-You can write arbitrary conditions (e.g., a bank account balance must be equal to or more than zero) that you
-require a transaction to meet before being committed by having some checking logic in the transaction.
-Alternatively, you can also write simple conditions in a mutation operation, such as Put and Delete.
+You can write arbitrary conditions (e.g., a bank account balance must be equal to or more than zero) that you require a transaction to meet before being committed by having logic that checks the conditions in the transaction.
+Alternatively, you can write simple conditions in a mutation operation, such as Put and Delete.
 
-When a Put or Delete operation includes a condition, it is only executed if the specified condition is met.
+When a Put or Delete operation includes a condition, the operation is executed only if the specified condition is met.
 If the condition fails to be satisfied when the operation is executed, an exception called `UnsatisfiedConditionException` is thrown.
 
 ##### Conditions for Put
@@ -640,7 +639,7 @@ Put put =
 transaction.put(put);
 ```
 
-Other than the `putIf` condition, you can specify the `putIfExists` and `putIfNotExists` conditions as follows:
+In addition to using the `putIf` condition, you can specify the `putIfExists` and `putIfNotExists` conditions as follows:
 
 ```java
 // Build a putIfExists condition
@@ -674,7 +673,7 @@ Delete delete =
 transaction.delete(delete);
 ```
 
-Other than the `deleteIf` condition, you can specify the `deleteIfExists` condition as follows:
+In addition to using the `deleteIf` condition, you can specify the `deleteIfExists` condition as follows:
 
 ```java
 // Build a deleteIfExists condition
@@ -746,7 +745,7 @@ Scan scanUsingSpecifiedNamespace =
 
 #### Notes
 
-All the builders of the CRUD operations can specify consistency with the `consistency()` methods, but it's ignored, and the `LINEARIZABLE` consistency level is always used in transactions.
+Although all the builders of the CRUD operations can specify consistency by using the `consistency()` methods, those methods are ignored. Instead, the `LINEARIZABLE` consistency level is always used in transactions.
 
 ### Commit a transaction
 
