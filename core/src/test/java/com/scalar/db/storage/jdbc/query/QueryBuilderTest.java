@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
@@ -48,6 +49,19 @@ public class QueryBuilderTest {
           .addClusteringKey("c2", Scan.Ordering.Order.DESC)
           .addSecondaryIndex("v1")
           .addSecondaryIndex("v2")
+          .build();
+
+  private static final TableMetadata RELATIONAL_TABLE_METADATA =
+      TableMetadata.newBuilder()
+          .addColumn("p1", DataType.TEXT)
+          .addColumn("p2", DataType.INT)
+          .addColumn("v1", DataType.INT)
+          .addColumn("v2", DataType.INT)
+          .addColumn("v3", DataType.INT)
+          .addColumn("v4", DataType.INT)
+          .addColumn("v5", DataType.INT)
+          .addPartitionKey("p1")
+          .addPartitionKey("p2")
           .build();
 
   @ParameterizedTest
@@ -318,6 +332,153 @@ public class QueryBuilderTest {
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "c1StartValue");
     verify(preparedStatement).setString(3, "c1EndValue");
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void selectQueryWithConjunctionsTest(RdbEngine rdbEngineType) throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+
+    SelectQuery query;
+    PreparedStatement preparedStatement;
+
+    query =
+        queryBuilder
+            .select(Collections.emptyList())
+            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .where(ImmutableSet.of())
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("SELECT * FROM n1.t1", rdbEngine));
+
+    query =
+        queryBuilder
+            .select(Collections.emptyList())
+            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .where(ImmutableSet.of())
+            .orderBy(
+                Arrays.asList(
+                    new Scan.Ordering("v1", Scan.Ordering.Order.ASC),
+                    new Scan.Ordering("v2", Scan.Ordering.Order.DESC)))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(encloseSql("SELECT * FROM n1.t1 ORDER BY v1 ASC,v2 DESC", rdbEngine));
+
+    query =
+        queryBuilder
+            .select(Arrays.asList("v1", "v2"))
+            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .where(ImmutableSet.of())
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("SELECT v1,v2 FROM n1.t1", rdbEngine));
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Collections.emptyList())
+            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .where(
+                ImmutableSet.of(Scan.Conjunction.of(ConditionBuilder.column("v1").isEqualToInt(1))))
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("SELECT * FROM n1.t1 WHERE v1=?", rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setInt(1, 1);
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Collections.emptyList())
+            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .where(
+                ImmutableSet.of(
+                    Scan.Conjunction.of(
+                        ConditionBuilder.column("v1").isEqualToInt(1),
+                        ConditionBuilder.column("v2").isEqualToInt(2))))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(encloseSql("SELECT * FROM n1.t1 WHERE v1=? AND v2=?", rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setInt(1, 1);
+    verify(preparedStatement).setInt(2, 2);
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Collections.emptyList())
+            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .where(
+                ImmutableSet.of(
+                    Scan.Conjunction.of(ConditionBuilder.column("v1").isEqualToInt(1)),
+                    Scan.Conjunction.of(ConditionBuilder.column("v2").isEqualToInt(2))))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(encloseSql("SELECT * FROM n1.t1 WHERE v1=? OR v2=?", rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setInt(1, 1);
+    verify(preparedStatement).setInt(2, 2);
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Collections.emptyList())
+            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .where(
+                ImmutableSet.of(
+                    Scan.Conjunction.of(
+                        ConditionBuilder.column("v1").isEqualToInt(1),
+                        ConditionBuilder.column("v2").isEqualToInt(2)),
+                    Scan.Conjunction.of(
+                        ConditionBuilder.column("v3").isEqualToInt(3),
+                        ConditionBuilder.column("v4").isEqualToInt(4))))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql("SELECT * FROM n1.t1 WHERE v1=? AND v2=? OR v3=? AND v4=?", rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setInt(1, 1);
+    verify(preparedStatement).setInt(2, 2);
+    verify(preparedStatement).setInt(3, 3);
+    verify(preparedStatement).setInt(4, 4);
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Collections.emptyList())
+            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .where(
+                ImmutableSet.of(
+                    Scan.Conjunction.of(
+                        ConditionBuilder.column("v1").isGreaterThanInt(1),
+                        ConditionBuilder.column("v1").isLessThanInt(2),
+                        ConditionBuilder.column("v2").isGreaterThanOrEqualToInt(3),
+                        ConditionBuilder.column("v2").isLessThanOrEqualToInt(4),
+                        ConditionBuilder.column("v2").isNotEqualToInt(5))))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql(
+                "SELECT * FROM n1.t1 WHERE v1>? AND v1<? AND v2>=? AND v2<=? AND v2!=?",
+                rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setInt(1, 1);
+    verify(preparedStatement).setInt(2, 2);
+    verify(preparedStatement).setInt(3, 3);
+    verify(preparedStatement).setInt(4, 4);
+    verify(preparedStatement).setInt(5, 5);
+
+    query =
+        queryBuilder
+            .select(Collections.emptyList())
+            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .where(
+                ImmutableSet.of(
+                    Scan.Conjunction.of(
+                        ConditionBuilder.column("v1").isNullInt(),
+                        ConditionBuilder.column("v2").isNotNullInt())))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql("SELECT * FROM n1.t1 WHERE v1 IS NULL AND v2 IS NOT NULL", rdbEngine));
   }
 
   @ParameterizedTest

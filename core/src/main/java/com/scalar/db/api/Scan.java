@@ -303,7 +303,8 @@ public class Scan extends Selection {
   }
 
   /**
-   * Returns the set of {@code Conjunction}.
+   * Returns the set of {@code Conjunction}. We regard this set as a disjunction of conjunctions
+   * (i.e., a disjunctive normal form, DNF).
    *
    * <p>This method is primarily for internal use. Breaking changes can and will be introduced to
    * this method. Users should not depend on it.
@@ -488,8 +489,8 @@ public class Scan extends Selection {
   /**
    * A conjunctive set of {@link ConditionalExpression}, and it is an internal representation of the
    * optional parameter for a {@link Scan} command, which specifies arbitrary conditions with a
-   * disjunctive set of {@link Conjunction} (i.e., a disjunctive normal form, DNF). Its
-   * functionality is similar to {@link ScanBuilder.AndConditionSet}, but unlike {@link
+   * disjunction of {@link Conjunction}s (i.e., a disjunctive normal form, DNF). Its functionality
+   * is similar to {@link ScanBuilder.AndConditionSet}, but unlike {@link
    * ScanBuilder.AndConditionSet}, this class is primarily used for an internal purpose. Breaking
    * changes can and will be introduced to this class. Users should not depend on it.
    */
