@@ -1,6 +1,8 @@
 package com.scalar.db.storage.jdbc.query;
 
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
@@ -10,6 +12,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -32,6 +35,8 @@ public class SimpleSelectQuery implements SelectQuery {
   private final boolean isRangeQuery;
   private final Optional<String> indexedColumn;
   private final boolean isConditionalQuery;
+  private final boolean isRelationalQuery;
+  private final Set<Conjunction> conjunctions;
 
   SimpleSelectQuery(Builder builder) {
     projections = builder.projections;
@@ -50,21 +55,31 @@ public class SimpleSelectQuery implements SelectQuery {
     isRangeQuery = builder.isRangeQuery;
     indexedColumn = builder.indexedColumn;
     isConditionalQuery = builder.isConditionalQuery;
+    isRelationalQuery = builder.isRelationalQuery;
+    conjunctions = builder.conjunctions;
   }
 
   @Override
   public String sql() {
-    String sql =
-        "SELECT "
-            + projectionSqlString()
-            + " FROM "
-            + rdbEngine.encloseFullTableName(schema, table);
-    if (isConditionalQuery) {
-      sql += " WHERE " + conditionSqlString();
+    StringBuilder builder =
+        new StringBuilder("SELECT ")
+            .append(projectionSqlString())
+            .append(" FROM ")
+            .append(rdbEngine.encloseFullTableName(schema, table));
+    if (isRelationalQuery) {
+      // for relational abstraction
+      builder.append(relationalConditionSqlString());
+      builder.append(relationalOrderBySqlString());
+    } else {
+      // for multi-dimensional map abstraction
+      if (isConditionalQuery) {
+        builder.append(" WHERE ");
+        builder.append(conditionSqlString());
+      }
+      builder.append(orderBySqlString());
     }
-    sql += orderBySqlString();
 
-    return sql;
+    return builder.toString();
   }
 
   private String projectionSqlString() {
@@ -87,6 +102,49 @@ public class SimpleSelectQuery implements SelectQuery {
     endColumn.ifPresent(
         c -> conditions.add(rdbEngine.enclose(c.getName()) + (endInclusive ? "<=?" : "<?")));
     return String.join(" AND ", conditions);
+  }
+
+  private String relationalConditionSqlString() {
+    if (conjunctions.isEmpty()) {
+      return "";
+    }
+
+    List<String> conjunctionList =
+        conjunctions.stream()
+            .map(
+                conjunction ->
+                    conjunction.getConditions().stream()
+                        .map(
+                            condition ->
+                                rdbEngine.enclose(condition.getColumn().getName())
+                                    + convert(condition.getOperator()))
+                        .collect(Collectors.joining(" AND ")))
+            .collect(Collectors.toList());
+
+    return " WHERE " + String.join(" OR ", conjunctionList);
+  }
+
+  private String convert(ConditionalExpression.Operator operator) {
+    switch (operator) {
+      case EQ:
+        return "=?";
+      case NE:
+        return "!=?";
+      case GT:
+        return ">?";
+      case GTE:
+        return ">=?";
+      case LT:
+        return "<?";
+      case LTE:
+        return "<=?";
+      case IS_NULL:
+        return " IS NULL";
+      case IS_NOT_NULL:
+        return " IS NOT NULL";
+      default:
+        throw new IllegalArgumentException("unknown operator: " + operator);
+    }
   }
 
   private String orderBySqlString() {
@@ -127,6 +185,17 @@ public class SimpleSelectQuery implements SelectQuery {
             .collect(Collectors.joining(","));
   }
 
+  private String relationalOrderBySqlString() {
+    if (orderings.isEmpty()) {
+      return "";
+    }
+
+    return " ORDER BY "
+        + orderings.stream()
+            .map(o -> rdbEngine.enclose(o.getColumnName()) + " " + o.getOrder())
+            .collect(Collectors.joining(","));
+  }
+
   @Override
   public void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder =
@@ -160,6 +229,15 @@ public class SimpleSelectQuery implements SelectQuery {
     if (endColumn.isPresent()) {
       endColumn.get().accept(binder);
       binder.throwSQLExceptionIfOccurred();
+    }
+
+    for (Conjunction conjunction : conjunctions) {
+      for (ConditionalExpression condition : conjunction.getConditions()) {
+        if (!condition.getColumn().hasNullValue()) {
+          condition.getColumn().accept(binder);
+          binder.throwSQLExceptionIfOccurred();
+        }
+      }
     }
   }
 }

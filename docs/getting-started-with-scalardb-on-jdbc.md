@@ -18,79 +18,17 @@ From here, we assume Oracle JDK 8 and a JDBC database is properly installed in y
 The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for ScalarDB. Basically, it describes the JDBC database installation that will be used.
 
 ```properties
-# The JDBC URL
-scalar.db.contact_points=jdbc:mysql://localhost:3306/
-
-# The username and password
-scalar.db.username=root
-scalar.db.password=mysql
-
-# JDBC storage implementation
+# JDBC storage implementation is used for Consensus Commit.
 scalar.db.storage=jdbc
 
-# The minimum number of idle connections in the connection pool. The default is 20
-scalar.db.jdbc.connection_pool.min_idle=20
+# The JDBC URL.
+scalar.db.contact_points=jdbc:mysql://localhost:3306/
 
-# The maximum number of connections that can remain idle in the connection pool. The default is 50
-scalar.db.jdbc.connection_pool.max_idle=50
-
-# The maximum total number of idle and borrowed connections that can be active at the same time for the connection pool. Use a negative value for no limit. The default is 100
-scalar.db.jdbc.connection_pool.max_total=100
-
-# Setting true to this property enables prepared statement pooling. The default is false
-scalar.db.jdbc.prepared_statements_pool.enabled=false
-
-# The maximum number of open statements that can be allocated from the statement pool at the same time, or negative for no limit. The default is -1
-scalar.db.jdbc.prepared_statements_pool.max_open=-1
-
-# Isolation level for JDBC. Either READ_UNCOMMITTED or READ_COMMITTED or REPEATABLE_READ or SERIALIZABLE can be specified
-scalar.db.jdbc.isolation_level=
-
-# The schema name of the table metadata. If not specified, the default name ("scalardb") is used
-scalar.db.jdbc.table_metadata.schema=
-
-# The minimum number of idle connections in the connection pool for the table metadata. The default is 5
-scalar.db.jdbc.table_metadata.connection_pool.min_idle=5
-
-# The maximum number of connections that can remain idle in the connection pool for the table metadata. The default is 10
-scalar.db.jdbc.table_metadata.connection_pool.max_idle=10
-
-# The maximum total number of idle and borrowed connections that can be active at the same time for the connection pool for the table metadata. Use a negative value for no limit. The default is 25
-scalar.db.jdbc.table_metadata.connection_pool.max_total=25
-
-# The minimum number of idle connections in the connection pool for admin. The default is 5
-scalar.db.jdbc.admin.connection_pool.min_idle=5
-
-# The maximum number of connections that can remain idle in the connection pool for admin. The default is 10
-scalar.db.jdbc.admin.connection_pool.max_idle=10
-
-# The maximum total number of idle and borrowed connections that can be active at the same time for the connection pool for admin. Use a negative value for no limit. The default is 25
-scalar.db.jdbc.admin.connection_pool.max_total=25
+# The username and password.
+scalar.db.username=root
+scalar.db.password=mysql
 ```
 
-Please follow [Getting Started with ScalarDB](getting-started-with-scalardb.md) to run the application.
+For details about configurations, see [ScalarDB Configurations](configurations.md).
 
-## Use JDBC transaction
-
-When you use a JDBC database as a backend database, you can optionally use the native transaction manager of a JDBC database instead of the default `ConsensusCommit` transaction manager.
-
-To use the native transaction manager, you need to set `jdbc` to a transaction manager type in **scalardb.properties** as follows.
-
-```properties
-scalar.db.transaction_manager=jdbc
-```
-
-When using JDBC transaction, the `SERIALIZABLE` isolation level is used by default.
-And you can change it with the `scalar.db.jdbc.isolation_level` property.
-
-## Use SQLite3 storage
-
-You can use SQLite3 as a backend database. To do that, you need to set `scalar.db.contact_points` in **scalardb.properties** as follows.
-
-```properties
-scalar.db.contact_points=jdbc:sqlite:your-db.sqlite3?busy_timeout=10000
-```
-
-Unlike other database servers, [SQLite3 does not fully support concurrent access](https://www.sqlite.org/lang_transaction.html).
-In order to avoid frequent errors caused internally by the [`SQLITE_BUSY`](https://www.sqlite.org/rescode.html#busy),
-it is recommended to set a [`busy_timeout`](https://www.sqlite.org/c3ref/busy_timeout.html) parameter.
+To run the application, follow the instructions in [Getting Started with ScalarDB](getting-started-with-scalardb.md).

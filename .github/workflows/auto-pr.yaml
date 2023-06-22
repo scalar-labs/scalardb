@@ -23,6 +23,17 @@ jobs:
 
       - name: Create pull requests
         run: |
+          assignee=$(ci/auto-pr/fetch_gh_user_info "${{ github.event.repository.owner.login }}" "${{ github.event.repository.name }}" "${{ github.event.pull_request.user.login }}")
+          echo -------------
+          echo "assignee: $assignee"
+          echo -------------
+          if [[ -z $assignee ]]; then
+            # For instance, we can't assign `debendabot` to a new PR.
+            new_pr_assignee="${{ github.event.pull_request.merged_by.login }}"
+          else
+            new_pr_assignee="${{ github.event.pull_request.user.login }}"
+          fi
+
           versions=$(ci/auto-pr/fetch_gh_proj_versions "${{ github.event.repository.owner.login }}" "${{ github.event.repository.name }}" "${{ github.event.number }}")
           echo -------------
           echo "versions: $versions"
@@ -38,6 +49,6 @@ jobs:
             "${{ github.event.pull_request.html_url }}" \
             "${{ github.event.pull_request.title }}" \
             "${{ github.sha }}" \
-            "${{ github.event.pull_request.user.login }}" \
+            "$new_pr_assignee" \
             $branches
 

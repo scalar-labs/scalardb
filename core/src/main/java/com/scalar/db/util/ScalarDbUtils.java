@@ -244,4 +244,9 @@ public final class ScalarDbUtils {
         throw new AssertionError();
     }
   }
+
+  public static boolean isRelational(Scan scan) {
+    return scan instanceof ScanAll
+        && (!scan.getOrderings().isEmpty() || !scan.getConjunctions().isEmpty());
+  }
 }
