@@ -323,12 +323,12 @@ In such cases, you can retry the transaction from the beginning.
 
 Services using Two-phase Commit Transactions usually execute a transaction by exchanging multiple requests and responses as follows:
 
-![](images/two_phase_commit_sequence_diagram.png)
+![Two-phase commit sequence diagram](images/two_phase_commit_sequence_diagram.png)
 
 Also, each service typically has multiple servers (or hosts) for scalability and availability and uses server-side (proxy) or client-side load balancing to distribute requests to the servers.
 In such a case, since a transaction processing in Two-phase Commit Transactions is stateful, requests in a transaction must be routed to the same servers while different transactions need to be distributed to balance the load.
 
-![](images/two_phase_commit_load_balancing.png)
+![Two-phase commit load balancing](images/two_phase_commit_load_balancing.png)
 
 There are several approaches to achieve it depending on the protocol between the services. Here, we introduce some approaches for gRPC and HTTP/1.1.
 
@@ -352,7 +352,18 @@ When using an L3/L4 load balancer, you can use the same HTTP connection to send 
 When using an L7 load balancer, since requests in the same HTTP connection do not necessarily go to the same server, you need to use cookies or similar for routing requests to correct server.
 You can use session affinity (sticky session) in that case.
 
-#### Resume a transaction
+#### ScalarDB Cluster
+
+Other than the above approaches, ScalarDB provides ScalarDB Cluster to simplify the routing of requests in Two-phase Commit Transactions.
+
+ScalarDB Cluster is a clustering solution for ScalarDB.
+It consists of a set of cluster nodes, each of which provides ScalarDB functionality.
+Importantly, each cluster node is equipped with a routing mechanism that allows it to route transaction requests to the appropriate cluster node within the cluster.
+
+ScalarDB Cluster is available only to users with a commercial license and permission.
+To get a license and permission, please [contact us](https://scalar-labs.com/contact_us/).
+
+### Resume a transaction
 
 Since services using Two-phase Commit Transactions exchange multiple requests/responses, you may need to execute a transaction across multiple endpoints/APIs.
 For such cases, you can resume a transaction object (a `TwoPhaseCommitTransaction` instance) that you began or joined as follows:

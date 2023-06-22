@@ -1,5 +1,7 @@
 # ScalarDB Server
 
+> **_NOTE:_** ScalarDB Server is deprecated. Use [ScalarDB Cluster](configurations.md#scalardb-cluster) instead.
+
 ScalarDB Server is a gRPC server that implements ScalarDB interface. 
 With ScalarDB Server, you can use ScalarDB features from multiple programming languages that are supported by gRPC.
 

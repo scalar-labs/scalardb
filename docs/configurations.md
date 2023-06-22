@@ -118,6 +118,8 @@ For details about using multiple storages, see [Multi-storage Transactions](mult
 
 ### ScalarDB Server (gRPC)
 
+> **_NOTE:_** ScalarDB Server is deprecated. Use [ScalarDB Cluster](#scalardb-cluster) instead.
+
 [ScalarDB Server](scalardb-server.md) is a standalone server that provides a gRPC interface to ScalarDB.
 To interact with ScalarDB Server, you must specify `grpc` for the `scalar.db.transaction_manager` property.
 
@@ -172,6 +174,15 @@ scalar.db.contact_points=jdbc:sqlite:<YOUR_DB>.sqlite3?busy_timeout=10000
 
 Unlike other JDBC databases, [SQLite3 does not fully support concurrent access](https://www.sqlite.org/lang_transaction.html).
 To avoid frequent errors caused internally by [`SQLITE_BUSY`](https://www.sqlite.org/rescode.html#busy), we recommend setting a [`busy_timeout`](https://www.sqlite.org/c3ref/busy_timeout.html) parameter.
+
+### ScalarDB Cluster
+
+ScalarDB Cluster is a clustering solution for ScalarDB.
+It consists of a set of cluster nodes, each of which provides ScalarDB functionality.
+Importantly, each cluster node is equipped with a routing mechanism that allows it to route transaction requests to the appropriate cluster node within the cluster.
+
+ScalarDB Cluster is available only to users with a commercial license and permission.
+To get a license and permission, please [contact us](https://scalar-labs.com/contact_us/).
 
 ## ScalarDB Server configurations
 
