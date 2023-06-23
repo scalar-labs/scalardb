@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
+import com.scalar.db.api.GetBuilder.BuildableGet;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -13,6 +14,7 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
@@ -1003,6 +1005,300 @@ public abstract class DistributedTransactionIntegrationTestBase {
       if (managerWithDefaultNamespace != null) {
         managerWithDefaultNamespace.close();
       }
+    }
+  }
+
+  @Test
+  public void put_withPutIfWithVerifiedCondition_shouldPutProperly() throws TransactionException {
+    // Arrange
+    int someColumnValue = 10;
+    Put initialData =
+        Put.newBuilder(preparePut(0, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .intValue(SOME_COLUMN, someColumnValue)
+            .build();
+    put(initialData);
+
+    int updatedBalance = 2;
+    Put putIf =
+        Put.newBuilder(initialData)
+            .intValue(BALANCE, updatedBalance)
+            .condition(
+                ConditionBuilder.putIf(
+                        ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+                    .and(ConditionBuilder.column(SOME_COLUMN).isNotNullInt())
+                    .build())
+            .build();
+
+    // Act
+    getThenPut(putIf);
+
+    // Assert
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult.isPresent()).isTrue();
+    Result result = optResult.get();
+    assertThat(result.getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.getInt(BALANCE)).isEqualTo(updatedBalance);
+    assertThat(result.getInt(SOME_COLUMN)).isEqualTo(someColumnValue);
+  }
+
+  @Test
+  public void put_withPutIfExistsWhenRecordExists_shouldPutProperly() throws TransactionException {
+    // Arrange
+    Put put = preparePut(0, 0);
+    put(put);
+    Put putIfExists =
+        Put.newBuilder(put)
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .condition(ConditionBuilder.putIfExists())
+            .build();
+
+    // Act Assert
+    getThenPut(putIfExists);
+
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult.isPresent()).isTrue();
+    Result result = optResult.get();
+    assertThat(result.getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(result.isNull(SOME_COLUMN)).isTrue();
+  }
+
+  @Test
+  public void put_withPutIfNotExistsWhenRecordDoesNotExist_shouldPutProperly()
+      throws TransactionException {
+    // Arrange
+    Put putIfNotExists =
+        Put.newBuilder(preparePut(0, 0)).condition(ConditionBuilder.putIfNotExists()).build();
+
+    // Act Assert
+    getThenPut(putIfNotExists);
+
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult.isPresent()).isTrue();
+    Result result = optResult.get();
+    assertThat(result.getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.isNull(BALANCE)).isTrue();
+    assertThat(result.isNull(SOME_COLUMN)).isTrue();
+  }
+
+  @Test
+  public void delete_withDeleteIfWithVerifiedCondition_shouldDeleteProperly()
+      throws TransactionException {
+    // Arrange
+    Put initialData = Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, INITIAL_BALANCE).build();
+    put(initialData);
+
+    Delete deleteIf =
+        Delete.newBuilder(prepareDelete(0, 0))
+            .condition(
+                ConditionBuilder.deleteIf(
+                        ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+                    .and(ConditionBuilder.column(SOME_COLUMN).isNullInt())
+                    .build())
+            .build();
+
+    // Act
+    getThenDelete(deleteIf);
+
+    // Assert
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult.isPresent()).isFalse();
+  }
+
+  @Test
+  public void delete_withDeleteIfExistsWhenRecordsExists_shouldDeleteProperly()
+      throws TransactionException {
+    // Arrange
+    Put initialData = Put.newBuilder(preparePut(0, 0)).build();
+    put(initialData);
+
+    Delete deleteIf =
+        Delete.newBuilder(prepareDelete(0, 0)).condition(ConditionBuilder.deleteIfExists()).build();
+
+    // Act Assert
+    getThenDelete(deleteIf);
+
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult.isPresent()).isFalse();
+  }
+
+  @Test
+  public void put_withPutIfWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException()
+      throws TransactionException {
+    // Arrange
+    Put put =
+        Put.newBuilder(preparePut(0, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .condition(ConditionBuilder.putIf(ConditionBuilder.column(BALANCE).isNullInt()).build())
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> put(put)).isInstanceOf(UnsatisfiedConditionException.class);
+
+    Optional<Result> result = get(prepareGet(0, 0));
+    assertThat(result).isNotPresent();
+  }
+
+  @Test
+  public void put_withPutIfExistsWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException()
+      throws TransactionException {
+    // Arrange
+    Put put =
+        Put.newBuilder(preparePut(0, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .condition(ConditionBuilder.putIfExists())
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> getThenPut(put)).isInstanceOf(UnsatisfiedConditionException.class);
+
+    Optional<Result> result = get(prepareGet(0, 0));
+    assertThat(result).isNotPresent();
+  }
+
+  @Test
+  public void put_withPutIfNotExistsWhenRecordExists_shouldThrowUnsatisfiedConditionException()
+      throws TransactionException {
+    // Arrange
+    Put put = preparePut(0, 0);
+    put(put);
+    Put putIfNotExists = Put.newBuilder(put).condition(ConditionBuilder.putIfNotExists()).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> getThenPut(putIfNotExists))
+        .isInstanceOf(UnsatisfiedConditionException.class);
+
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult.isPresent()).isTrue();
+    Result result = optResult.get();
+    assertThat(result.getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.isNull(BALANCE)).isTrue();
+    assertThat(result.isNull(SOME_COLUMN)).isTrue();
+  }
+
+  @Test
+  public void
+      delete_withDeleteIfExistsWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException() {
+    // Arrange
+    Delete deleteIf =
+        Delete.newBuilder(prepareDelete(0, 0)).condition(ConditionBuilder.deleteIfExists()).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> getThenDelete(deleteIf))
+        .isInstanceOf(UnsatisfiedConditionException.class);
+  }
+
+  @Test
+  public void delete_withDeleteIfWithNonVerifiedCondition_shouldThrowUnsatisfiedConditionException()
+      throws TransactionException {
+    // Arrange
+    Put initialData = Put.newBuilder(preparePut(0, 0)).build();
+    put(initialData);
+
+    Delete deleteIf =
+        Delete.newBuilder(prepareDelete(0, 0))
+            .condition(
+                ConditionBuilder.deleteIf(
+                        ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+                    .and(ConditionBuilder.column(SOME_COLUMN).isNotNullInt())
+                    .build())
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> getThenDelete(deleteIf))
+        .isInstanceOf(UnsatisfiedConditionException.class);
+
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult.isPresent()).isTrue();
+    Result result = optResult.get();
+    assertThat(result.getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.isNull(BALANCE)).isTrue();
+    assertThat(result.isNull(SOME_COLUMN)).isTrue();
+  }
+
+  @Test
+  public void put_withPutIfWithNonVerifiedCondition_shouldThrowUnsatisfiedConditionException()
+      throws TransactionException {
+    // Arrange
+    Put initialData = Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, INITIAL_BALANCE).build();
+    put(initialData);
+
+    Put putIf =
+        Put.newBuilder(initialData)
+            .intValue(BALANCE, 2)
+            .condition(
+                ConditionBuilder.putIf(
+                        ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+                    .and(ConditionBuilder.column(SOME_COLUMN).isNotNullInt())
+                    .build())
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> getThenPut(putIf)).isInstanceOf(UnsatisfiedConditionException.class);
+
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult.isPresent()).isTrue();
+    Result result = optResult.get();
+    assertThat(result.getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(result.isNull(SOME_COLUMN)).isTrue();
+  }
+
+  protected Optional<Result> get(Get get) throws TransactionException {
+    DistributedTransaction tx = manager.start();
+    try {
+      Optional<Result> result = tx.get(get);
+      tx.commit();
+      return result;
+    } catch (TransactionException e) {
+      tx.rollback();
+      throw e;
+    }
+  }
+
+  protected void put(Put put) throws TransactionException {
+    DistributedTransaction tx = manager.start();
+    try {
+      tx.put(put);
+      tx.commit();
+    } catch (TransactionException e) {
+      tx.rollback();
+      throw e;
+    }
+  }
+
+  protected void getThenPut(Put put) throws TransactionException {
+    getThenMutate(put);
+  }
+
+  protected void getThenDelete(Delete delete) throws TransactionException {
+    getThenMutate(delete);
+  }
+
+  protected void getThenMutate(Mutation mutation) throws TransactionException {
+    assert mutation.forNamespace().isPresent();
+    assert mutation.forTable().isPresent();
+    BuildableGet get =
+        Get.newBuilder()
+            .namespace(mutation.forNamespace().get())
+            .table(mutation.forTable().get())
+            .partitionKey(mutation.getPartitionKey());
+    mutation.getClusteringKey().ifPresent(get::clusteringKey);
+    DistributedTransaction tx = manager.start();
+    try {
+      tx.get(get.build());
+      tx.mutate(Collections.singletonList(mutation));
+      tx.commit();
+    } catch (TransactionException e) {
+      tx.rollback();
+      throw e;
     }
   }
 

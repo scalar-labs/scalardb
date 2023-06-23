@@ -14,7 +14,7 @@ import java.util.List;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-class ConditionChecker implements MutationConditionVisitor {
+public class ConditionChecker implements MutationConditionVisitor {
   private final TableMetadata tableMetadata;
   private boolean isPut;
   private boolean isValid;
