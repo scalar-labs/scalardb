@@ -14,6 +14,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -333,6 +334,35 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     verify(commit, never()).abortState(snapshot.getId());
+    verify(commit, never()).rollbackRecords(snapshot);
+  }
+
+  @Test
+  public void
+      rollback_UnknownTransactionStatusExceptionThrownByAbortState_ShouldThrowRollbackException()
+          throws UnknownTransactionStatusException, PreparationException {
+    // Arrange
+    transaction.prepare();
+    when(crud.getSnapshot()).thenReturn(snapshot);
+    when(commit.abortState(snapshot.getId())).thenThrow(UnknownTransactionStatusException.class);
+
+    // Act Assert
+    assertThatThrownBy(transaction::rollback).isInstanceOf(RollbackException.class);
+
+    verify(commit, never()).rollbackRecords(snapshot);
+  }
+
+  @Test
+  public void rollback_CommittedStateReturnedByAbortState_ShouldThrowRollbackException()
+      throws UnknownTransactionStatusException, PreparationException {
+    // Arrange
+    transaction.prepare();
+    when(crud.getSnapshot()).thenReturn(snapshot);
+    when(commit.abortState(snapshot.getId())).thenReturn(TransactionState.COMMITTED);
+
+    // Act Assert
+    assertThatThrownBy(transaction::rollback).isInstanceOf(RollbackException.class);
+
     verify(commit, never()).rollbackRecords(snapshot);
   }
 }
