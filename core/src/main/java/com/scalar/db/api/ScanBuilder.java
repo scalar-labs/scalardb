@@ -346,19 +346,19 @@ public class ScanBuilder {
     @Override
     public BuildableScanAllWithOngoingWhere where(ConditionalExpression condition) {
       checkNotNull(condition);
-      return new BuildableScanAllWithOngoingWhere(namespaceName, tableName, condition);
+      return new BuildableScanAllWithOngoingWhere(this, condition);
     }
 
     @Override
     public BuildableScanAllWithOngoingWhereAnd where(OrConditionSet orConditionSet) {
       checkNotNull(orConditionSet);
-      return new BuildableScanAllWithOngoingWhereAnd(namespaceName, tableName, orConditionSet);
+      return new BuildableScanAllWithOngoingWhereAnd(this, orConditionSet);
     }
 
     @Override
     public BuildableScanAllWithOngoingWhereOr where(AndConditionSet andConditionSet) {
       checkNotNull(andConditionSet);
-      return new BuildableScanAllWithOngoingWhereOr(namespaceName, tableName, andConditionSet);
+      return new BuildableScanAllWithOngoingWhereOr(this, andConditionSet);
     }
 
     public Scan build() {
@@ -382,8 +382,8 @@ public class ScanBuilder {
       implements And<BuildableScanAllWithOngoingWhereAnd>, Or<BuildableScanAllWithOngoingWhereOr> {
 
     private BuildableScanAllWithOngoingWhere(
-        String namespaceName, String tableName, ConditionalExpression condition) {
-      super(namespaceName, tableName, condition);
+        BuildableScanAll buildable, ConditionalExpression condition) {
+      super(buildable, condition);
     }
 
     @Override
@@ -431,8 +431,8 @@ public class ScanBuilder {
     }
 
     private BuildableScanAllWithOngoingWhereAnd(
-        String namespaceName, String tableName, OrConditionSet orConditionSet) {
-      super(namespaceName, tableName);
+        BuildableScanAll buildable, OrConditionSet orConditionSet) {
+      super(buildable);
       disjunctions.add(orConditionSet.getConditions());
     }
 
@@ -459,8 +459,8 @@ public class ScanBuilder {
     }
 
     private BuildableScanAllWithOngoingWhereOr(
-        String namespaceName, String tableName, AndConditionSet andConditionSet) {
-      super(namespaceName, tableName);
+        BuildableScanAll buildable, AndConditionSet andConditionSet) {
+      super(buildable);
       conjunctions.add(andConditionSet.getConditions());
     }
 
@@ -495,15 +495,19 @@ public class ScanBuilder {
     protected int limit = 0;
     @Nullable protected com.scalar.db.api.Consistency consistency;
 
-    private BuildableScanAllWithWhere(String namespaceName, String tableName) {
-      this(namespaceName, tableName, null);
+    private BuildableScanAllWithWhere(BuildableScanAll buildable) {
+      this(buildable, null);
     }
 
     private BuildableScanAllWithWhere(
-        String namespaceName, String tableName, @Nullable ConditionalExpression condition) {
-      this.namespaceName = namespaceName;
-      this.tableName = tableName;
+        BuildableScanAll buildable, @Nullable ConditionalExpression condition) {
+      this.namespaceName = buildable.namespaceName;
+      this.tableName = buildable.tableName;
       this.condition = condition;
+      this.limit = buildable.limit;
+      this.orderings.addAll(buildable.orderings);
+      this.projections.addAll(buildable.projections);
+      this.consistency = buildable.consistency;
     }
 
     private BuildableScanAllWithWhere(BuildableScanAllWithOngoingWhere buildable) {

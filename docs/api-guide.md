@@ -21,7 +21,7 @@ TransactionFactory transactionFactory = TransactionFactory.create("<configuratio
 DistributedTransactionAdmin admin = transactionFactory.getTransactionAdmin();
 ```
 
-Please see [Getting Started](getting-started.md) for the details of the configuration file.
+For details about configurations, see [ScalarDB Configurations](configurations.md).
 
 Once you have executed all administrative operations, you should close the `DistributedTransactionAdmin` instance as follows:
 
