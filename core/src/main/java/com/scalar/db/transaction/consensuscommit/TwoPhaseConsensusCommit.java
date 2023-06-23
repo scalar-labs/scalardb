@@ -10,6 +10,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.AbstractTwoPhaseCommitTransaction;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -160,7 +161,11 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     }
 
     try {
-      commit.abortState(crud.getSnapshot().getId());
+      TransactionState state = commit.abortState(crud.getSnapshot().getId());
+      if (state == TransactionState.COMMITTED) {
+        throw new RollbackException(
+            "rollback failed because the transaction has already been committed", getId());
+      }
     } catch (UnknownTransactionStatusException e) {
       throw new RollbackException("rollback failed", e, getId());
     }
