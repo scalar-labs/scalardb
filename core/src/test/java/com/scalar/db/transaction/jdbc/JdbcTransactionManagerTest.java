@@ -291,6 +291,7 @@ public class JdbcTransactionManagerTest {
   @Test
   public void whenCommitFails_shouldThrowCommitExceptionAndRollback() throws Exception {
     // Arrange
+    when(jdbcService.put(any(), any())).thenReturn(true);
     doThrow(sqlException).when(connection).commit();
 
     // Act Assert
@@ -315,6 +316,7 @@ public class JdbcTransactionManagerTest {
   @Test
   public void whenRollbackFails_shouldThrowAbortException() throws Exception {
     // Arrange
+    when(jdbcService.put(any(), any())).thenReturn(true);
     doThrow(sqlException).when(connection).rollback();
 
     // Act Assert
@@ -338,6 +340,7 @@ public class JdbcTransactionManagerTest {
   @Test
   public void whenRollbackFails_shouldThrowRollbackException() throws Exception {
     // Arrange
+    when(jdbcService.put(any(), any())).thenReturn(true);
     doThrow(sqlException).when(connection).rollback();
 
     // Act Assert
@@ -362,6 +365,7 @@ public class JdbcTransactionManagerTest {
   public void whenCommitAndRollbackFails_shouldThrowUnknownTransactionStatusException()
       throws Exception {
     // Arrange
+    when(jdbcService.put(any(), any())).thenReturn(true);
     doThrow(sqlException).when(connection).commit();
     doThrow(sqlException).when(connection).rollback();
 

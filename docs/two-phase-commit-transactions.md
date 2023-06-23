@@ -263,6 +263,15 @@ public class Sample {
         } catch (RollbackException ex) {
           // Rolling back the transaction failed. You can log it here
         }
+      } catch (UnsatisfiedConditionException e) {
+        // You need to handle UnsatisfiedConditionException only if a mutation operation specifies a condition.
+        // This exception indicates the condition for the mutation operation is not met, so you can
+        // retry the transaction once the exception cause is fixed
+        try {
+          tx.rollback();
+        } catch (RollbackException ex) {
+          // Rolling back the transaction failed. You can log it here
+        }
       } catch (CrudException | PreparationException | ValidationException | CommitException e) {
         // If you catch CrudException or PreparationException or ValidationException or
         // CommitException, it indicates some failure happens, so you should cancel the transaction

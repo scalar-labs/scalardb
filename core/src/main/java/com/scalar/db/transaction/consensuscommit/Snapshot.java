@@ -132,6 +132,10 @@ public class Snapshot {
     return readSet.containsKey(key);
   }
 
+  public Optional<TransactionResult> getFromReadSet(Key key) {
+    return readSet.containsKey(key) ? readSet.get(key) : Optional.empty();
+  }
+
   public Optional<TransactionResult> get(Key key) throws CrudException {
     if (deleteSet.containsKey(key)) {
       return Optional.empty();

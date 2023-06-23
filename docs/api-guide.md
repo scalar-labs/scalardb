@@ -607,6 +607,79 @@ Delete delete =
 transaction.delete(delete);
 ```
 
+#### Put and Delete with a condition
+You can write arbitrary conditions (e.g., a bank account balance must be equal to or more than zero) that you require a transaction to meet before being committed by having logic that checks the conditions in the transaction.
+Alternatively, you can write simple conditions in a mutation operation, such as Put and Delete.
+
+When a Put or Delete operation includes a condition, the operation is executed only if the specified condition is met.
+If the condition fails to be satisfied when the operation is executed, an exception called `UnsatisfiedConditionException` is thrown.
+
+##### Conditions for Put
+You can specify a condition in a Put operation as follows:
+
+```java
+// Build a condition
+MutationCondition condition =
+    ConditionBuilder.putIf(ConditionBuilder.column("c4").isEqualToFloat(0.0F))
+        .and(ConditionBuilder.column("c5").isEqualToDouble(0.0))
+        .build();
+
+Put put =
+    Put.newBuilder()
+        .namespace("ns")
+        .table("tbl")
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .floatValue("c4", 1.23F)
+        .doubleValue("c5", 4.56)
+        .condition(condition) // condition
+        .build();
+
+// Execute the Put operation
+transaction.put(put);
+```
+
+In addition to using the `putIf` condition, you can specify the `putIfExists` and `putIfNotExists` conditions as follows:
+
+```java
+// Build a putIfExists condition
+MutationCondition putIfExistsCondition = ConditionBuilder.putIfExists();
+
+// Build a putIfNotExists condition
+MutationCondition putIfNotExistsCondition = ConditionBuilder.putIfNotExists();
+```
+
+##### Conditions for Delete
+
+You can specify a condition in a Delete operation as follows:
+
+```java
+// Build a condition
+MutationCondition condition =
+    ConditionBuilder.deleteIf(ConditionBuilder.column("c4").isEqualToFloat(0.0F))
+        .and(ConditionBuilder.column("c5").isEqualToDouble(0.0))
+        .build();
+
+Delete delete =
+    Delete.newBuilder()
+        .namespace("ns")
+        .table("tbl")
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .condition(condition)  // condition
+        .build();
+
+// Execute the Delete operation
+transaction.delete(delete);
+```
+
+In addition to using the `deleteIf` condition, you can specify the `deleteIfExists` condition as follows:
+
+```java
+// Build a deleteIfExists condition
+MutationCondition deleteIfExistsCondition = ConditionBuilder.deleteIfExists();
+```
+
 #### Mutate operation
 
 Mutate is an operation to execute multiple mutations (Put and Delete operations).
@@ -672,9 +745,7 @@ Scan scanUsingSpecifiedNamespace =
 
 #### Notes
 
-- All the builders of the CRUD operations can specify consistency with the `consistency()` methods, but it's ignored, and the `LINEARIZABLE` consistency level is always used in transactions.
-- Also, the builders of the mutation operations (Put and Delete operations) can specify a condition with the `condition()` methods, but it's ignored, too. 
-Please program such conditions in a transaction if you want to implement conditional mutation.
+Although all the builders of the CRUD operations can specify consistency by using the `consistency()` methods, those methods are ignored. Instead, the `LINEARIZABLE` consistency level is always used in transactions.
 
 ### Commit a transaction
 
@@ -758,6 +829,15 @@ public class Sample {
         // If you catch CrudConflictException or CommitConflictException, it indicates a transaction
         // conflict occurs during the transaction, so you can retry the transaction from the 
         // beginning
+        try {
+          tx.rollback();
+        } catch (RollbackException ex) {
+          // Rolling back the transaction failed. You can log it here
+        }
+      } catch (UnsatisfiedConditionException e) {
+        // You need to handle UnsatisfiedConditionException only if a mutation operation specifies a condition.
+        // This exception indicates the condition for the mutation operation is not met, so you can
+        // retry the transaction once the exception cause is fixed
         try {
           tx.rollback();
         } catch (RollbackException ex) {
