@@ -354,6 +354,38 @@ jobs:
           name: gradle_jdbc_sqlite_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
 
+  integration-test-for-jdbc-mariadb:
+    runs-on: ubuntu-latest
+
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MYSQL_ROOT_PASSWORD: mysql
+        ports:
+          - 3306:3306
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestJdbc
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: gradle_jdbc_mariadb_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbc
+
   integration-test-for-multi-storage:
     runs-on: ubuntu-latest
 
