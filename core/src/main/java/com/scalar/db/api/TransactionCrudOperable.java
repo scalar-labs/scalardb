@@ -46,7 +46,7 @@ public interface TransactionCrudOperable {
    * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
    *     from the beginning in this case
    * @throws CrudException if the operation fails
-   * @throws UnsatisfiedConditionException if the operation condition is not satisfied
+   * @throws UnsatisfiedConditionException if the mutation condition is not satisfied
    */
   void put(Put put) throws CrudConflictException, CrudException, UnsatisfiedConditionException;
 
@@ -58,7 +58,7 @@ public interface TransactionCrudOperable {
    * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
    *     from the beginning in this case
    * @throws CrudException if the operation fails
-   * @throws UnsatisfiedConditionException if the operation condition is not satisfied
+   * @throws UnsatisfiedConditionException if the mutation condition is not satisfied
    */
   void put(List<Put> puts)
       throws CrudConflictException, CrudException, UnsatisfiedConditionException;
@@ -71,7 +71,7 @@ public interface TransactionCrudOperable {
    * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
    *     from the beginning in this case
    * @throws CrudException if the operation fails
-   * @throws UnsatisfiedConditionException if the operation condition is not satisfied
+   * @throws UnsatisfiedConditionException if the mutation condition is not satisfied
    */
   void delete(Delete delete)
       throws CrudConflictException, CrudException, UnsatisfiedConditionException;
@@ -84,7 +84,7 @@ public interface TransactionCrudOperable {
    * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
    *     from the beginning in this case
    * @throws CrudException if the operation fails
-   * @throws UnsatisfiedConditionException if the operation condition is not satisfied
+   * @throws UnsatisfiedConditionException if the mutation condition is not satisfied
    */
   void delete(List<Delete> deletes)
       throws CrudConflictException, CrudException, UnsatisfiedConditionException;
@@ -97,7 +97,7 @@ public interface TransactionCrudOperable {
    * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
    *     from the beginning in this case
    * @throws CrudException if the operation fails
-   * @throws UnsatisfiedConditionException if the operation condition is not satisfied
+   * @throws UnsatisfiedConditionException if the mutation condition is not satisfied
    */
   void mutate(List<? extends Mutation> mutations)
       throws CrudConflictException, CrudException, UnsatisfiedConditionException;
