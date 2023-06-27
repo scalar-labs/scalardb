@@ -2631,6 +2631,10 @@ private static final long serialVersionUID = 0L;
        * <code>OTHER = 3;</code>
        */
       OTHER(3),
+      /**
+       * <code>UNSATISFIED_CONDITION = 4;</code>
+       */
+      UNSATISFIED_CONDITION(4),
       UNRECOGNIZED(-1),
       ;
 
@@ -2650,6 +2654,10 @@ private static final long serialVersionUID = 0L;
        * <code>OTHER = 3;</code>
        */
       public static final int OTHER_VALUE = 3;
+      /**
+       * <code>UNSATISFIED_CONDITION = 4;</code>
+       */
+      public static final int UNSATISFIED_CONDITION_VALUE = 4;
 
 
       public final int getNumber() {
@@ -2680,6 +2688,7 @@ private static final long serialVersionUID = 0L;
           case 1: return TRANSACTION_CONFLICT;
           case 2: return UNKNOWN_TRANSACTION_STATUS;
           case 3: return OTHER;
+          case 4: return UNSATISFIED_CONDITION;
           default: return null;
         }
       }
