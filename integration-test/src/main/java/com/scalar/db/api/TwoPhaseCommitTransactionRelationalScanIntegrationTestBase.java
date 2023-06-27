@@ -270,9 +270,7 @@ public abstract class TwoPhaseCommitTransactionRelationalScanIntegrationTestBase
               })
           .doesNotThrowAnyException();
     } finally {
-      if (manager1WithDefaultNamespace != null) {
-        manager1WithDefaultNamespace.close();
-      }
+      manager1WithDefaultNamespace.close();
     }
   }
 

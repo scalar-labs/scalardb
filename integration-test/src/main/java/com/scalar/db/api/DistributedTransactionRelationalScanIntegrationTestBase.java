@@ -274,9 +274,7 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
               })
           .doesNotThrowAnyException();
     } finally {
-      if (managerWithDefaultNamespace != null) {
-        managerWithDefaultNamespace.close();
-      }
+      managerWithDefaultNamespace.close();
     }
   }
 
