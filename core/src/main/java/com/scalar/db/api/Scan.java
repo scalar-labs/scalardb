@@ -366,6 +366,7 @@ public class Scan extends Selection {
   @Override
   public String toString() {
     return super.toString()
+        + ", "
         + MoreObjects.toStringHelper(this)
             .add("startClusteringKey", startClusteringKey)
             .add("startInclusive", startInclusive)
