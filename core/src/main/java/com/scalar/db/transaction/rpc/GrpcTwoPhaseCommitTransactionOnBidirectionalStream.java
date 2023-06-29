@@ -417,7 +417,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     ResponseOrError responseOrError =
         sendRequest(
             TwoPhaseCommitTransactionRequest.newBuilder()
-                .setRollbackRequest(RollbackRequest.getDefaultInstance())
+                .setAbortRequest(TwoPhaseCommitTransactionRequest.AbortRequest.getDefaultInstance())
                 .build());
     finished.set(true);
     throwIfErrorForAbort(responseOrError);
