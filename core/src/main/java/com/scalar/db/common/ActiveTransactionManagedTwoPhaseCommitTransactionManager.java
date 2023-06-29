@@ -8,6 +8,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationException;
@@ -149,6 +150,15 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
     public synchronized void rollback() throws RollbackException {
       try {
         transaction.rollback();
+      } finally {
+        remove(getId());
+      }
+    }
+
+    @Override
+    public void abort() throws AbortException {
+      try {
+        transaction.abort();
       } finally {
         remove(getId());
       }

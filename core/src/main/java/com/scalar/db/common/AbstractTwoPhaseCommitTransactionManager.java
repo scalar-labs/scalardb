@@ -9,6 +9,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
+import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationException;
@@ -208,6 +209,18 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
       }
       try {
         transaction.rollback();
+      } finally {
+        status = Status.ROLLED_BACK;
+      }
+    }
+
+    @Override
+    public void abort() throws AbortException {
+      if (status == Status.COMMITTED || status == Status.ROLLED_BACK) {
+        throw new IllegalStateException("The transaction has already been committed or aborted");
+      }
+      try {
+        transaction.abort();
       } finally {
         status = Status.ROLLED_BACK;
       }
