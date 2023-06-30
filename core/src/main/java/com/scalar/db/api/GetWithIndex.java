@@ -1,6 +1,5 @@
 package com.scalar.db.api;
 
-import com.google.common.base.MoreObjects;
 import com.scalar.db.io.Key;
 import java.util.Collection;
 import java.util.Objects;
@@ -96,10 +95,5 @@ public class GetWithIndex extends Get {
   @Override
   public int hashCode() {
     return Objects.hash(super.hashCode());
-  }
-
-  @Override
-  public String toString() {
-    return super.toString() + MoreObjects.toStringHelper(this);
   }
 }
