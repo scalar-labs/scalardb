@@ -255,14 +255,19 @@ public class Scan extends Selection {
 
   @Override
   public String toString() {
-    return super.toString()
-        + MoreObjects.toStringHelper(this)
-            .add("startClusteringKey", startClusteringKey)
-            .add("startInclusive", startInclusive)
-            .add("endClusteringKey", endClusteringKey)
-            .add("endInclusive", endInclusive)
-            .add("orderings", orderings)
-            .add("limit", limit);
+    return MoreObjects.toStringHelper(this)
+        .add("namespace", forNamespace())
+        .add("table", forTable())
+        .add("partitionKey", getPartitionKey())
+        .add("projections", getProjections())
+        .add("consistency", getConsistency())
+        .add("startClusteringKey", startClusteringKey)
+        .add("startInclusive", startInclusive)
+        .add("endClusteringKey", endClusteringKey)
+        .add("endInclusive", endInclusive)
+        .add("orderings", orderings)
+        .add("limit", limit)
+        .toString();
   }
 
   /** An optional parameter of {@link Scan} command to specify ordering of returned results. */
