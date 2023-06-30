@@ -1,6 +1,5 @@
 package com.scalar.db.api;
 
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
@@ -108,17 +107,5 @@ public abstract class Selection extends Operation {
   @Override
   public int hashCode() {
     return Objects.hash(super.hashCode(), projections);
-  }
-
-  @Override
-  public String toString() {
-    return MoreObjects.toStringHelper(this)
-        .add("namespace", forNamespace())
-        .add("table", forTable())
-        .add("partitionKey", getPartitionKey())
-        .add("clusteringKey", getClusteringKey())
-        .add("projections", getProjections())
-        .add("consistency", getConsistency())
-        .toString();
   }
 }
