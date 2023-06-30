@@ -239,6 +239,39 @@ public class JdbcServiceTest {
   }
 
   @Test
+  public void whenScanExecuted_withRelationalScan_shouldCallQueryBuilder() throws Exception {
+    // Arrange
+    when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.where(any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.orderBy(any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.limit(anyInt())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.build()).thenReturn(selectQuery);
+
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
+    when(preparedStatement.executeQuery()).thenReturn(resultSet);
+    when(resultSet.next()).thenReturn(false);
+
+    // Act
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .all()
+            .where(ConditionBuilder.column("p1").isLessThanText("val"))
+            .build();
+    jdbcService.scan(scan, connection);
+
+    // Assert
+    verify(operationChecker).check(any(ScanAll.class));
+    verify(queryBuilder).select(any());
+    verify(selectQueryBuilder).from(any(), any(), any());
+    verify(selectQueryBuilder).where(any());
+    verify(selectQueryBuilder).orderBy(any());
+    verify(selectQueryBuilder).limit(anyInt());
+  }
+
+  @Test
   public void whenPutOperationExecuted_shouldReturnTrueAndCallQueryBuilder() throws Exception {
     // Arrange
     when(queryBuilder.upsertInto(any(), any(), any())).thenReturn(upsertQueryBuilder);

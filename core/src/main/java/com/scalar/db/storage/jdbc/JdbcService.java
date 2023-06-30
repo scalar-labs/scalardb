@@ -89,17 +89,7 @@ public class JdbcService {
 
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
 
-    SelectQuery selectQuery;
-    if (scan instanceof ScanAll) {
-      ScanAll scanAll = (ScanAll) scan;
-      if (ScalarDbUtils.isRelational(scan)) {
-        selectQuery = buildSelectQueryForRelationalScan(scanAll, tableMetadata);
-      } else {
-        selectQuery = buildSelectQueryForScanAll(scanAll, tableMetadata);
-      }
-    } else {
-      selectQuery = buildSelectQueryForScan(scan, tableMetadata);
-    }
+    SelectQuery selectQuery = buildSelectQuery(scan, tableMetadata);
     PreparedStatement preparedStatement = connection.prepareStatement(selectQuery.sql());
     selectQuery.bind(preparedStatement);
     ResultSet resultSet = preparedStatement.executeQuery();
@@ -116,10 +106,7 @@ public class JdbcService {
 
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
 
-    SelectQuery selectQuery =
-        scan instanceof ScanAll
-            ? buildSelectQueryForScanAll((ScanAll) scan, tableMetadata)
-            : buildSelectQueryForScan(scan, tableMetadata);
+    SelectQuery selectQuery = buildSelectQuery(scan, tableMetadata);
     try (PreparedStatement preparedStatement = connection.prepareStatement(selectQuery.sql())) {
       selectQuery.bind(preparedStatement);
       try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -131,6 +118,19 @@ public class JdbcService {
         }
         return ret;
       }
+    }
+  }
+
+  private SelectQuery buildSelectQuery(Scan scan, TableMetadata tableMetadata) {
+    if (scan instanceof ScanAll) {
+      ScanAll scanAll = (ScanAll) scan;
+      if (ScalarDbUtils.isRelational(scan)) {
+        return buildSelectQueryForRelationalScan(scanAll, tableMetadata);
+      } else {
+        return buildSelectQueryForScanAll(scanAll, tableMetadata);
+      }
+    } else {
+      return buildSelectQueryForScan(scan, tableMetadata);
     }
   }
 
