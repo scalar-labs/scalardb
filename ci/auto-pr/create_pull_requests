@@ -27,9 +27,16 @@ function cherry_pick_and_create_pull_request () {
   local branch=$1
   local new_branch=$2
 
+  # Cleanup just in case
+  git checkout .
+  git clean -f
+
   git checkout $branch
   git checkout -b $new_branch
-  git cherry-pick --no-rerere-autoupdate -m1 $commit_sha
+  if ! git cherry-pick --no-rerere-autoupdate -m1 $commit_sha; then
+      git cherry-pick --abort
+      return 1
+  fi
   git push origin $new_branch
   git status
   gh pr create --assignee $assignee \
@@ -39,6 +46,8 @@ function cherry_pick_and_create_pull_request () {
 }
 
 function create_issue () {
+  local branch=$1
+
   gh issue create --assignee $assignee \
     --title "Backport to branch($branch) failed: $pull_request_title" \
     --body "Backport of $pull_request_url to branch($branch) failed"
@@ -52,6 +61,6 @@ for branch in ${branches[@]}; do
 
   # Create a new temp branch, push it and create a PR for the change.
   # But create an issue if anything fails.
-  cherry_pick_and_create_pull_request $branch $new_branch || create_issue
+  cherry_pick_and_create_pull_request $branch $new_branch || create_issue $branch
 done
 
