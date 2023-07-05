@@ -1,8 +1,8 @@
 package com.scalar.db.exception.transaction;
 
 /**
- * An exception thrown when a transaction conflict occurs at the commit phase. You can retry the
- * transaction from the beginning in this case.
+ * An exception thrown when committing a transaction fails due to transient faults (e.g., a conflict
+ * error). You can retry the transaction from the beginning.
  */
 public class CommitConflictException extends CommitException {
 
