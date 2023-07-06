@@ -76,8 +76,8 @@ public interface TwoPhaseCommitTransaction extends TransactionCrudOperable {
    * @throws PreparationConflictException if the transaction fails to prepare due to transient
    *     faults (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws PreparationException if the transaction fails to prepare due to transient or
-   *     nontransient faults. You can try retrying the transaction from the beginning, but you may
-   *     not be able to retry the transaction due to nontransient faults
+   *     nontransient faults. You can try retrying the transaction from the beginning, but the
+   *     transaction may still fail if the cause is nontranient
    */
   void prepare() throws PreparationConflictException, PreparationException;
 
@@ -88,8 +88,8 @@ public interface TwoPhaseCommitTransaction extends TransactionCrudOperable {
    * @throws ValidationConflictException if the transaction fails to validate due to transient
    *     faults (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws ValidationException if the transaction fails to validate due to transient or
-   *     nontransient faults. You can try retrying the transaction from the beginning, but you may
-   *     not be able to retry the transaction due to nontransient faults
+   *     nontransient faults. You can try retrying the transaction from the beginning, but the
+   *     transaction may still fail if the cause is nontranient
    */
   void validate() throws ValidationConflictException, ValidationException;
 
@@ -99,8 +99,8 @@ public interface TwoPhaseCommitTransaction extends TransactionCrudOperable {
    * @throws CommitConflictException if the transaction fails to commit due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws CommitException if the transaction fails to commit due to transient or nontransient
-   *     faults. You can try retrying the transaction from the beginning, but you may not be able to
-   *     retry the transaction due to nontransient faults
+   *     faults. You can try retrying the transaction from the beginning, but the transaction may
+   *     still fail if the cause is nontranient
    * @throws UnknownTransactionStatusException if the status of the commit is unknown
    */
   void commit() throws CommitConflictException, CommitException, UnknownTransactionStatusException;
