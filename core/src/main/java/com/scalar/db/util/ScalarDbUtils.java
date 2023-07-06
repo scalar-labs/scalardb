@@ -28,6 +28,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import java.sql.JDBCType;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
@@ -248,5 +249,24 @@ public final class ScalarDbUtils {
   public static boolean isRelational(Scan scan) {
     return scan instanceof ScanAll
         && (!scan.getOrderings().isEmpty() || !scan.getConjunctions().isEmpty());
+  }
+
+  public static JDBCType getJdbcType(int sqlTypes) {
+    JDBCType type;
+    switch (sqlTypes) {
+      case 100:
+        type = JDBCType.REAL;
+        break;
+      case 101:
+        type = JDBCType.DOUBLE;
+        break;
+      default:
+        try {
+          type = JDBCType.valueOf(sqlTypes);
+        } catch (IllegalArgumentException e) {
+          type = JDBCType.OTHER;
+        }
+    }
+    return type;
   }
 }

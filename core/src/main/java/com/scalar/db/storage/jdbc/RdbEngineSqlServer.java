@@ -8,12 +8,16 @@ import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithTop;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Driver;
+import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class RdbEngineSqlServer implements RdbEngineStrategy {
+  private static final Logger logger = LoggerFactory.getLogger(RdbEngineSqlServer.class);
 
   @Override
   public String[] createNamespaceSqls(String fullNamespace) {
@@ -174,6 +178,75 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   public String getDataTypeForKey(DataType dataType) {
     // SQL Server does not require any change in column data types when making indices.
     return null;
+  }
+
+  @Override
+  public DataType getDataTypeForScalarDb(
+      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+    switch (type) {
+      case BIT:
+        if (columnSize != 1) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
+        }
+        return DataType.BOOLEAN;
+      case TINYINT:
+      case SMALLINT:
+        logger.info(
+            "data type larger than that of underlying database is assigned: {} ({} to INT)",
+            columnDescription,
+            typeName);
+        return DataType.INT;
+      case INTEGER:
+        return DataType.INT;
+      case BIGINT:
+        logger.warn(
+            String.format(
+                "data type that may be smaller than that of underlying database is assigned: %s (SQL Server %s to our BIGINT)",
+                columnDescription, typeName));
+        return DataType.BIGINT;
+      case REAL:
+        return DataType.FLOAT;
+      case DOUBLE:
+        return DataType.DOUBLE;
+      case CHAR:
+      case NCHAR:
+      case VARCHAR:
+      case NVARCHAR:
+        if (typeName.equalsIgnoreCase("uniqueidentifier")) {
+          throw new IllegalArgumentException(
+              String.format("data type %s is unsupported: %s", typeName, columnDescription));
+        }
+        logger.info(
+            "data type larger than that of underlying database is assigned: {} ({} to TEXT)",
+            columnDescription,
+            typeName);
+        return DataType.TEXT;
+      case LONGVARCHAR:
+      case LONGNVARCHAR:
+        if (typeName.equalsIgnoreCase("xml")) {
+          throw new IllegalArgumentException(
+              String.format("data type %s is unsupported: %s", typeName, columnDescription));
+        }
+        return DataType.TEXT;
+      case BINARY:
+      case VARBINARY:
+        if (typeName.equalsIgnoreCase("timestamp") || typeName.equalsIgnoreCase("hierarchyid")) {
+          throw new IllegalArgumentException(
+              String.format("data type %s is unsupported: %s", typeName, columnDescription));
+        }
+        logger.info(
+            "data type larger than that of underlying database is assigned: {} ({} to BLOB)",
+            columnDescription,
+            typeName);
+        return DataType.BLOB;
+      case LONGVARBINARY:
+        return DataType.BLOB;
+      default:
+        throw new IllegalArgumentException(
+            String.format("data type %s is unsupported: %s", typeName, columnDescription));
+    }
   }
 
   @Override

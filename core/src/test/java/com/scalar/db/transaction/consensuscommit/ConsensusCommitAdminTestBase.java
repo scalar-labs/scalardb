@@ -1,8 +1,14 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.TRANSACTION_META_COLUMNS;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getBeforeImageColumnName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -14,6 +20,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -583,5 +590,71 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin).addNewColumnToTable(NAMESPACE, TABLE, newColumn, DataType.TEXT);
     verify(distributedStorageAdmin)
         .addNewColumnToTable(NAMESPACE, TABLE, Attribute.BEFORE_PREFIX + newColumn, DataType.TEXT);
+  }
+
+  @Test
+  public void importTable_ShouldCallStorageAdminProperly() throws ExecutionException {
+    // Arrange
+    String primaryKeyColumn = "pk";
+    String column = "col";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn(primaryKeyColumn, DataType.INT)
+            .addColumn(column, DataType.INT)
+            .addPartitionKey(primaryKeyColumn)
+            .build();
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(null);
+    when(distributedStorageAdmin.getImportTableMetadata(NAMESPACE, TABLE)).thenReturn(metadata);
+    doNothing()
+        .when(distributedStorageAdmin)
+        .addRawColumnToTable(anyString(), anyString(), anyString(), any(DataType.class));
+
+    // Act
+    admin.importTable(NAMESPACE, TABLE);
+
+    // Assert
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin).getImportTableMetadata(NAMESPACE, TABLE);
+    for (Entry<String, DataType> entry : TRANSACTION_META_COLUMNS.entrySet()) {
+      verify(distributedStorageAdmin)
+          .addRawColumnToTable(NAMESPACE, TABLE, entry.getKey(), entry.getValue());
+    }
+    verify(distributedStorageAdmin)
+        .addRawColumnToTable(
+            NAMESPACE, TABLE, getBeforeImageColumnName(column, metadata), DataType.INT);
+    verify(distributedStorageAdmin, never())
+        .addRawColumnToTable(NAMESPACE, TABLE, primaryKeyColumn, DataType.INT);
+  }
+
+  @Test
+  public void importTable_WithTableAlreadyExists_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    // Arrange
+    String primaryKeyColumn = "pk";
+    String column = "col";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn(primaryKeyColumn, DataType.INT)
+            .addColumn(column, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + column, DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(primaryKeyColumn)
+            .build();
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(metadata);
+
+    // Act
+    Throwable thrown = catchThrowable(() -> admin.importTable(NAMESPACE, TABLE));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 }

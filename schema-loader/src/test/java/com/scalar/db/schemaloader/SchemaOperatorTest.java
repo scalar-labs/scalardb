@@ -39,6 +39,7 @@ public class SchemaOperatorTest {
   @Mock private DistributedTransactionAdmin transactionAdmin;
   @Mock private TableMetadataAlterationProcessor alterationProcessor;
   @Mock private TableSchema tableSchema;
+  @Mock private ImportTableSchema importTableSchema;
   @Mock private Map<String, String> options;
   @Mock private TableMetadataAlteration metadataAlteration;
   private SchemaOperator operator;
@@ -500,5 +501,39 @@ public class SchemaOperatorTest {
     // Assert
     verify(storageFactory, never()).getStorageAdmin();
     verify(transactionFactory).getTransactionAdmin();
+  }
+
+  @Test
+  public void importTables_WithTransactionTables_ShouldCallProperMethods() throws Exception {
+    // Arrange
+    List<ImportTableSchema> tableSchemaList =
+        Arrays.asList(importTableSchema, importTableSchema, importTableSchema);
+    when(importTableSchema.getNamespace()).thenReturn("ns");
+    when(importTableSchema.isTransactionTable()).thenReturn(true);
+    when(importTableSchema.getTable()).thenReturn("tb");
+
+    // Act
+    operator.importTables(tableSchemaList);
+
+    // Assert
+    verify(transactionAdmin, times(3)).importTable("ns", "tb");
+    verifyNoInteractions(storageAdmin);
+  }
+
+  @Test
+  public void importTables_WithoutTransactionTables_ShouldCallProperMethods() throws Exception {
+    // Arrange
+    List<ImportTableSchema> tableSchemaList =
+        Arrays.asList(importTableSchema, importTableSchema, importTableSchema);
+    when(importTableSchema.getNamespace()).thenReturn("ns");
+    when(importTableSchema.isTransactionTable()).thenReturn(false);
+    when(importTableSchema.getTable()).thenReturn("tb");
+
+    // Act
+    operator.importTables(tableSchemaList);
+
+    // Assert
+    verify(storageAdmin, times(3)).importTable("ns", "tb");
+    verifyNoInteractions(transactionAdmin);
   }
 }

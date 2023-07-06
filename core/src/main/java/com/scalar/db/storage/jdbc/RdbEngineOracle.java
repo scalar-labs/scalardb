@@ -10,13 +10,17 @@ import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Driver;
+import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RdbEngineOracle implements RdbEngineStrategy {
+  private static final Logger logger = LoggerFactory.getLogger(RdbEngineOracle.class);
 
   @Override
   public String[] createNamespaceSqls(String fullNamespace) {
@@ -199,6 +203,78 @@ public class RdbEngineOracle implements RdbEngineStrategy {
         return "RAW(64)";
       default:
         return null;
+    }
+  }
+
+  @Override
+  public DataType getDataTypeForScalarDb(
+      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+    String numericTypeDescription = String.format("%s(%d, %d)", typeName, columnSize, digits);
+    switch (type) {
+      case NUMERIC:
+        if (columnSize > 15) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "data type %s is unsupported: %s", numericTypeDescription, columnDescription));
+        }
+        if (digits == 0) {
+          logger.info(
+              "data type larger than that of underlying database is assigned: {} to BIGINT",
+              numericTypeDescription);
+          return DataType.BIGINT;
+        } else {
+          logger.info(
+              "fixed-point data type is casted, be aware round-up or round-off can be happen in underlying database: {} ({} to DOUBLE)",
+              columnDescription,
+              numericTypeDescription);
+          return DataType.DOUBLE;
+        }
+      case REAL:
+        return DataType.FLOAT;
+      case FLOAT:
+        if (columnSize > 53) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "data type %s is unsupported: %s", numericTypeDescription, columnDescription));
+        }
+        if (columnSize < 53) {
+          logger.info(
+              "data type larger than that of underlying database is assigned: {} to DOUBLE",
+              numericTypeDescription);
+        }
+        return DataType.DOUBLE;
+      case DOUBLE:
+        return DataType.DOUBLE;
+      case CHAR:
+      case NCHAR:
+      case VARCHAR:
+      case NVARCHAR:
+      case CLOB:
+      case NCLOB:
+        logger.info(
+            "data type larger than that of underlying database is assigned: {} ({} to TEXT)",
+            columnDescription,
+            typeName);
+        return DataType.TEXT;
+      case LONGVARCHAR:
+        return DataType.TEXT;
+      case VARBINARY:
+        logger.info(
+            "data type larger than that of underlying database is assigned: {} (Oracle {} to BLOB)",
+            columnDescription,
+            typeName);
+        return DataType.BLOB;
+      case LONGVARBINARY:
+        return DataType.BLOB;
+      case BLOB:
+        logger.info(
+            "data type that may be smaller than that of underlying database is assigned: {} ({} to BLOB)",
+            columnDescription,
+            typeName);
+        return DataType.BLOB;
+      default:
+        throw new IllegalArgumentException(
+            String.format("data type %s is unsupported: %s", typeName, columnDescription));
     }
   }
 

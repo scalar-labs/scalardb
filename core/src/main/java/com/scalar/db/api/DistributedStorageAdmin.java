@@ -1,5 +1,8 @@
 package com.scalar.db.api;
 
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.DataType;
+
 /**
  * An administrative interface for distributed storage implementations. The user can execute
  * administrative operations with it like createNamespace/createTable/getTableMetadata.
@@ -38,6 +41,28 @@ package com.scalar.db.api;
  * }</pre>
  */
 public interface DistributedStorageAdmin extends Admin {
+
+  /**
+   * Get import table metadata in the ScalarDB format.
+   *
+   * @param namespace namespace name of import table
+   * @param table import table name
+   * @throws IllegalArgumentException if the table does not exist
+   * @throws IllegalStateException if the table does not meet the requirement of ScalarDB table
+   * @throws ExecutionException if the operation fails
+   */
+  TableMetadata getImportTableMetadata(String namespace, String table) throws ExecutionException;
+
+  /**
+   * Add a column in the table without updating the metadata table in ScalarDB.
+   *
+   * @param namespace namespace name of import table
+   * @param table import table name
+   * @throws IllegalArgumentException if the table does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  void addRawColumnToTable(String namespace, String table, String columnName, DataType columnType)
+      throws ExecutionException;
 
   /** Closes connections to the storage. */
   void close();

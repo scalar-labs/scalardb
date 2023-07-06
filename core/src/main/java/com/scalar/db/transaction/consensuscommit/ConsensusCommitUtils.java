@@ -28,7 +28,7 @@ public final class ConsensusCommitUtils {
           .put(Attribute.COMMITTED_AT, DataType.BIGINT)
           .build();
 
-  private static final ImmutableMap<String, DataType> TRANSACTION_META_COLUMNS =
+  static final ImmutableMap<String, DataType> TRANSACTION_META_COLUMNS =
       ImmutableMap.<String, DataType>builder()
           .putAll(AFTER_IMAGE_META_COLUMNS)
           .putAll(BEFORE_IMAGE_META_COLUMNS)
@@ -127,7 +127,7 @@ public final class ConsensusCommitUtils {
     return true;
   }
 
-  private static Set<String> getNonPrimaryKeyColumns(TableMetadata tableMetadata) {
+  static Set<String> getNonPrimaryKeyColumns(TableMetadata tableMetadata) {
     return tableMetadata.getColumnNames().stream()
         .filter(c -> !tableMetadata.getPartitionKeyNames().contains(c))
         .filter(c -> !tableMetadata.getClusteringKeyNames().contains(c))

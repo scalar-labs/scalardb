@@ -4,6 +4,7 @@ import static com.datastax.driver.core.Metadata.quote;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -590,5 +591,26 @@ public class CassandraAdminTest {
             .type(com.datastax.driver.core.DataType.text())
             .getQueryString();
     verify(cassandraSession).execute(alterTableQuery);
+  }
+
+  @Test
+  public void unsupportedOperations_ShouldThrowUnsupportedException() {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "tbl";
+    String column = "col";
+
+    // Act
+    Throwable thrown1 =
+        catchThrowable(() -> cassandraAdmin.getImportTableMetadata(namespace, table));
+    Throwable thrown2 =
+        catchThrowable(
+            () -> cassandraAdmin.addRawColumnToTable(namespace, table, column, DataType.INT));
+    Throwable thrown3 = catchThrowable(() -> cassandraAdmin.importTable(namespace, table));
+
+    // Assert
+    assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
   }
 }

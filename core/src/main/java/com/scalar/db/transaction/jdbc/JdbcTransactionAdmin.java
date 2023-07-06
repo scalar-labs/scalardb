@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.jdbc;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
@@ -88,6 +89,14 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
     return jdbcAdmin.namespaceExists(namespace);
+  }
+
+  @Override
+  public void importTable(String namespace, String table) throws ExecutionException {
+    TableMetadata tableMetadata = jdbcAdmin.getImportTableMetadata(namespace, table);
+
+    // add ScalarDB metadata
+    jdbcAdmin.repairTable(namespace, table, tableMetadata, ImmutableMap.of());
   }
 
   @Override
