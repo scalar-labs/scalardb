@@ -59,7 +59,7 @@ public interface DistributedTransactionManager {
    * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
    *     You can retry the transaction
    * @throws TransactionException if the transaction fails to begin due to transient or nontransient
-   *     faults. You can try retrying the transaction, but you may not be able to start the
+   *     faults. You can try retrying the transaction, but you may not be able to begin the
    *     transaction due to nontransient faults
    */
   DistributedTransaction begin() throws TransactionNotFoundException, TransactionException;
@@ -74,7 +74,7 @@ public interface DistributedTransactionManager {
    * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
    *     You can retry the transaction
    * @throws TransactionException if the transaction fails to begin due to transient or nontransient
-   *     faults. You can try retrying the transaction, but you may not be able to start the
+   *     faults. You can try retrying the transaction, but you may not be able to begin the
    *     transaction due to nontransient faults
    */
   DistributedTransaction begin(String txId)
@@ -202,7 +202,7 @@ public interface DistributedTransactionManager {
    * @param txId the transaction ID
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction associated with the specified
-   *     transaction ID is not found. You can retry the transaction from the beginning in this case
+   *     transaction ID is not found. You can retry the transaction from the beginning
    */
   DistributedTransaction resume(String txId) throws TransactionNotFoundException;
 
