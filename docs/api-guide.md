@@ -862,20 +862,20 @@ public class Sample {
 ```
 
 The `begin()` API could throw `TransactionException` and `TransactionNotFoundException`.
-If you catch `TransactionException`, it indicates that the transaction fails to begin due to transient or nontransient faults. You can try retrying the transaction, but you may not be able to begin the transaction due to nontransient faults.
-If you catch `TransactionNotFoundException`, it indicates that the transaction fails to begin due to transient faults. You can retry the transaction.
+If you catch `TransactionException`, it indicates that the transaction has failed to begin due to transient or nontransient faults. You can try retrying the transaction, but you may not be able to begin the transaction due to nontransient faults.
+If you catch `TransactionNotFoundException`, it indicates that the transaction has failed to begin due to transient faults. You can retry the transaction.
 
 The APIs for CRUD operations (`get()`/`scan()`/`put()`/`delete()`/`mutate()`) could throw `CrudException` and `CrudConflictException`.
-If you catch `CrudException`, it indicates that the transaction CRUD operation fails due to transient or nontransient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is nontranient.
-If you catch `CrudConflictException`, it indicates that the transaction CRUD operation fails due to transient faults (e.g., a conflict error). You can retry the transaction from the beginning. 
+If you catch `CrudException`, it indicates that the transaction CRUD operation has failed due to transient or nontransient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is nontransient.
+If you catch `CrudConflictException`, it indicates that the transaction CRUD operation has failed due to transient faults (e.g., a conflict error). You can retry the transaction from the beginning. 
 
 The APIs for mutation operations (`put()`/`delete()`/`mutate()`) could also throw `UnsatisfiedConditionException`.
 If you can this exception, it indicates that the condition for the mutation operation is not met.
 You can handle this exception according to your application requirements.
 
 Also, the `commit()` API could throw `CommitException`, `CommitConflictException`, and `UnknownTransactionStatusException`.
-If you catch `CommitException`, it indicates that committing the transaction fails due to transient or nontransient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is nontranient.
-If you catch `CommitConflictException`, it indicates that committing the transaction fails due to transient faults (e.g., a conflict error). You can retry the transaction from the beginning.
+If you catch `CommitException`, it indicates that committing the transaction fails due to transient or nontransient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is nontransient.
+If you catch `CommitConflictException`, it indicates that committing the transaction has failed due to transient faults (e.g., a conflict error). You can retry the transaction from the beginning.
 If you catch `UnknownTransactionStatusException`, it indicates that you are not sure if the transaction succeeds or not.
 In such a case, you need to check if the transaction is committed successfully or not and retry it if it fails.
 How to identify a transaction status is delegated to users.
@@ -893,8 +893,8 @@ However, if the cause of the exception is nontransient, the transaction may stil
 In such a case, you will exhaust the number of retries.
 
 Please note that if you begin a transaction by specifying a transaction ID, you must use a different ID when you retry the transaction.
-And, in the sample code, the transaction retries three times maximum and sleeps fixed 100 milliseconds before it retries.
-But you can choose a retry policy according to your application requirements, such as exponential backoff.
+And, in the sample code, the transaction retries three times maximum and sleeps for 100 milliseconds before it retries.
+But you can choose a retry policy, such as exponential backoff, according to your application requirements.
 
 ## Transactional operations for Two-phase Commit Transaction
 
