@@ -3,6 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderImportIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
@@ -32,6 +33,7 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
     testUtils.createExistingDatabase(namespace);
   }
 
+  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   @Override
   protected void createImportableTable(String namespace, String table) throws Exception {
     testUtils.execute(
@@ -46,6 +48,7 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
             + "))");
   }
 
+  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   @Override
   protected void createNonImportableTable(String namespace, String table) throws Exception {
     testUtils.execute(
