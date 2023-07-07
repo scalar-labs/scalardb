@@ -244,6 +244,10 @@ public class RdbEngineOracle implements RdbEngineStrategy {
         }
         return DataType.DOUBLE;
       case DOUBLE:
+        logger.warn(
+            String.format(
+                "data type that may be smaller than that of underlying database is assigned: %s (Oracle %s to our BIGINT)",
+                columnDescription, typeName));
         return DataType.DOUBLE;
       case CHAR:
       case NCHAR:

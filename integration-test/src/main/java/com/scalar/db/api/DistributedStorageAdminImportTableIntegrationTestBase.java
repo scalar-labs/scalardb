@@ -113,7 +113,9 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
 
   private void importTable_ForNonImportableTable_ShouldThrowIllegalArgumentException(String table) {
     // Act Assert
-    assertThatThrownBy(() -> admin.importTable(getNamespace(), table))
+    assertThatThrownBy(
+            () -> admin.importTable(getNamespace(), table),
+            "non-importable data type test failed: " + table)
         .isInstanceOf(IllegalArgumentException.class);
   }
 

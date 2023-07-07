@@ -28,7 +28,7 @@ public class JdbcAdminImportTestUtils {
           "ENUM('a','b')",
           "SET('a','b')",
           "GEOMETRY",
-          "JSON",
+          "JSON", // we remove this for MariaDB because it is an alias of a supported type, LONGTEXT
           "NUMERIC",
           "TIME",
           "TIMESTAMP",
@@ -118,7 +118,16 @@ public class JdbcAdminImportTestUtils {
     if (rdbEngine instanceof RdbEngineMysql) {
       goodTableColumns = prepareColumnsForMysql();
       goodTableMetadata = prepareTableMetadataForMysql();
-      badTables = prepareCreateNonImportableTableSql(namespace, UNSUPPORTED_DATA_TYPES_MYSQL);
+      if (JdbcEnv.isMariaDB()) {
+        badTables =
+            prepareCreateNonImportableTableSql(
+                namespace,
+                UNSUPPORTED_DATA_TYPES_MYSQL.stream()
+                    .filter(type -> !type.equalsIgnoreCase("JSON"))
+                    .collect(Collectors.toList()));
+      } else {
+        badTables = prepareCreateNonImportableTableSql(namespace, UNSUPPORTED_DATA_TYPES_MYSQL);
+      }
     } else if (rdbEngine instanceof RdbEnginePostgresql) {
       goodTableColumns = prepareColumnsForPostgresql();
       goodTableMetadata = prepareTableMetadataForPostgresql();
@@ -211,37 +220,44 @@ public class JdbcAdminImportTestUtils {
     columns.put("col19", "MEDIUMBLOB");
     columns.put("col20", "LONGBLOB");
     columns.put("col21", "BINARY(255)");
+    if (JdbcEnv.isMariaDB()) {
+      columns.put("col22", "JSON");
+    }
     return columns;
   }
 
   private TableMetadata prepareTableMetadataForMysql() {
-    return TableMetadata.newBuilder()
-        .addColumn("pk1", DataType.INT)
-        .addColumn("pk2", DataType.INT)
-        .addColumn("col01", DataType.BOOLEAN)
-        .addColumn("col02", DataType.INT)
-        .addColumn("col03", DataType.BIGINT)
-        .addColumn("col04", DataType.INT)
-        .addColumn("col05", DataType.INT)
-        .addColumn("col06", DataType.INT)
-        .addColumn("col07", DataType.BIGINT)
-        .addColumn("col08", DataType.FLOAT)
-        .addColumn("col09", DataType.DOUBLE)
-        .addColumn("col10", DataType.TEXT)
-        .addColumn("col11", DataType.TEXT)
-        .addColumn("col12", DataType.TEXT)
-        .addColumn("col13", DataType.TEXT)
-        .addColumn("col14", DataType.TEXT)
-        .addColumn("col15", DataType.TEXT)
-        .addColumn("col16", DataType.BLOB)
-        .addColumn("col17", DataType.BLOB)
-        .addColumn("col18", DataType.BLOB)
-        .addColumn("col19", DataType.BLOB)
-        .addColumn("col20", DataType.BLOB)
-        .addColumn("col21", DataType.BLOB)
-        .addPartitionKey("pk1")
-        .addPartitionKey("pk2")
-        .build();
+    TableMetadata.Builder builder =
+        TableMetadata.newBuilder()
+            .addColumn("pk1", DataType.INT)
+            .addColumn("pk2", DataType.INT)
+            .addColumn("col01", DataType.BOOLEAN)
+            .addColumn("col02", DataType.INT)
+            .addColumn("col03", DataType.BIGINT)
+            .addColumn("col04", DataType.INT)
+            .addColumn("col05", DataType.INT)
+            .addColumn("col06", DataType.INT)
+            .addColumn("col07", DataType.BIGINT)
+            .addColumn("col08", DataType.FLOAT)
+            .addColumn("col09", DataType.DOUBLE)
+            .addColumn("col10", DataType.TEXT)
+            .addColumn("col11", DataType.TEXT)
+            .addColumn("col12", DataType.TEXT)
+            .addColumn("col13", DataType.TEXT)
+            .addColumn("col14", DataType.TEXT)
+            .addColumn("col15", DataType.TEXT)
+            .addColumn("col16", DataType.BLOB)
+            .addColumn("col17", DataType.BLOB)
+            .addColumn("col18", DataType.BLOB)
+            .addColumn("col19", DataType.BLOB)
+            .addColumn("col20", DataType.BLOB)
+            .addColumn("col21", DataType.BLOB)
+            .addPartitionKey("pk1")
+            .addPartitionKey("pk2");
+    if (JdbcEnv.isMariaDB()) {
+      builder.addColumn("col22", DataType.TEXT);
+    }
+    return builder.build();
   }
 
   private LinkedHashMap<String, String> prepareColumnsForPostgresql() {
