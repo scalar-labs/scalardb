@@ -876,7 +876,7 @@ You can handle this exception according to your application requirements.
 Also, the `commit()` API could throw `CommitException`, `CommitConflictException`, and `UnknownTransactionStatusException`.
 If you catch `CommitException`, it indicates that committing the transaction fails due to transient or nontransient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is nontransient.
 If you catch `CommitConflictException`, it indicates that committing the transaction has failed due to transient faults (e.g., a conflict error). You can retry the transaction from the beginning.
-If you catch `UnknownTransactionStatusException`, it indicates that you are not sure if the transaction succeeds or not.
+If you catch `UnknownTransactionStatusException`, it indicates that the status of the transaction, whether it has succeeded or not, is unknown.
 In such a case, you need to check if the transaction is committed successfully or not and retry it if it fails.
 How to identify a transaction status is delegated to users.
 You may want to create a transaction status table and update it transactionally with other application data so that you can get the status of a transaction from the status table.
