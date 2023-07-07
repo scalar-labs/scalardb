@@ -69,9 +69,11 @@ public interface DistributedTransaction extends TransactionCrudOperable {
   /**
    * Commits a transaction.
    *
-   * @throws CommitConflictException if a transaction conflict occurs, You can retry the transaction
-   *     from the beginning in this case
-   * @throws CommitException if the operation fails
+   * @throws CommitConflictException if the transaction fails to commit due to transient faults
+   *     (e.g., a conflict error). You can retry the transaction from the beginning
+   * @throws CommitException if the transaction fails to commit due to transient or nontransient
+   *     faults. You can try retrying the transaction from the beginning, but the transaction may
+   *     still fail if the cause is nontranient
    * @throws UnknownTransactionStatusException if the status of the commit is unknown
    */
   void commit() throws CommitConflictException, CommitException, UnknownTransactionStatusException;
@@ -79,14 +81,16 @@ public interface DistributedTransaction extends TransactionCrudOperable {
   /**
    * Rolls back a transaction.
    *
-   * @throws RollbackException if the operation fails
+   * @throws RollbackException if the transaction fails to roll back due to transient or
+   *     nontransient faults
    */
   void rollback() throws RollbackException;
 
   /**
    * Aborts a transaction. This method is an alias of {@link #rollback()}.
    *
-   * @throws AbortException if the operation fails
+   * @throws AbortException if the transaction fails to abort due to transient or nontransient
+   *     faults
    */
   default void abort() throws AbortException {
     try {
