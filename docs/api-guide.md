@@ -825,7 +825,8 @@ public class Sample {
         try {
           transaction.rollback();
         } catch (RollbackException ex) {
-          // Rolling back the transaction failed. You can log it here
+          // Rolling back the transaction failed. As the transaction should eventually recover, you
+          // don't need to do anything further. You can simply log the occurrence here
         }
 
         // You can handle the exception here, according to your application requirements
@@ -850,7 +851,8 @@ public class Sample {
           try {
             transaction.rollback();
           } catch (RollbackException ex) {
-            // Rolling back the transaction failed. You can log it here
+            // Rolling back the transaction failed. As the transaction should eventually recover,
+            // you don't need to do anything further. You can simply log the occurrence here
           }
         }
 
