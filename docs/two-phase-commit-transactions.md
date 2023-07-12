@@ -16,7 +16,7 @@ The transaction manager instances can be in the same process/applications or in 
 For example, if you have transaction manager instances in multiple microservices, you can execute a transaction that spans multiple microservices.
 
 In Two-phase Commit Transactions, there are two roles, a coordinator and a participant, that collaboratively execute a single transaction.
-A coordinator process and participant processes has another transaction manager instance.
+A coordinator process and participant processes all have different transaction manager instances.
 The coordinator process first begins a transaction, and the participant processes join the transaction.
 And after executing CRUD operations, the coordinator process and the participant processes execute the two-phase commit protocol to commit the transaction.
 
@@ -189,7 +189,7 @@ try {
 }
 ```
 
-For `preapre()`, if any one of the coordinator or participant processes fails to prepare the transaction, you need to call `rollback()` (or `abort()`) in all the coordinator/participant processes.
+For `prepare()`, if any one of the coordinator or participant processes fails to prepare the transaction, you need to call `rollback()` (or `abort()`) in all the coordinator/participant processes.
 
 For `commit()`, if any one of the coordinator or participant processes succeeds in committing the transaction, you can consider the transaction as committed.
 In other words, in that situation, you can ignore the errors in the other coordinator/participant processes.
