@@ -201,6 +201,7 @@ You can call `prepare()`, `commit()`, `rollback()` in the coordinator/participan
 #### Validate the transaction
 
 Depending on the concurrency control protocol, you need to call `validate()` in all the coordinator/participant processes after `prepare()` and before `commit()`:
+
 ```java
 // Prepare phase 1: Prepare the transaction in all the coordinator/participant processes
 tx.prepare();
@@ -282,16 +283,27 @@ try {
 } catch (Exception e) {
   // Rollback the transaction
   if (transaction1 != null) {
-    transaction1.rollback();
+    try {
+      transaction1.rollback();
+    } catch (RollbackException e1) {
+      // Handle the exception
+    }
   }
   if (transaction2 != null) {
+    try {
     transaction2.rollback();
+    } catch (RollbackException e1) {
+      // Handle the exception
+    }
   }
 }
 ```
 
-As described above, for `commit()`, if any one of the coordinator or participant processes succeeds in committing the transaction, you can regard the transaction as committed.
-Also, you can execute `prepare()`, `validate()`, `commit()` in parallel for better performance.
+For simplicity, the above example code doesn't handle the exceptions that can be thrown by the APIs.
+See [Handle exceptions](#handle-exceptions) for more details.
+
+As previously mentioned, for `commit()`, if any one of the coordinator or participant processes succeeds in committing the transaction, you can regard the transaction as committed.
+Also, for better performance, you can execute `prepare()`, `validate()`, `commit()` in parallel, respectively.
 
 ### Resume a transaction
 
@@ -503,10 +515,11 @@ public class Sample {
 
         return;
       } catch (UnknownTransactionStatusException e) {
-        // If you catch `UnknownTransactionStatusException` when committing the transaction, you are
-        // not sure if the transaction succeeds or not. In such a case, you need to check if the
-        // transaction is committed successfully or not and retry it if it failed. How to identify a
-        // transaction status is delegated to users
+        // If you catch `UnknownTransactionStatusException` when committing the transaction, it
+        // indicates that the status of the transaction, whether it has succeeded or not, is
+        // unknown. In such a case, you need to check if the transaction is committed successfully
+        // or not and retry it if it failed. How to identify a transaction status is delegated to
+        // users
         return;
       } catch (TransactionException e) {
         // For other exceptions, you can try retrying the transaction.
