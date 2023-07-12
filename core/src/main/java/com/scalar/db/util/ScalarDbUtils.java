@@ -251,18 +251,24 @@ public final class ScalarDbUtils {
         && (!scan.getOrderings().isEmpty() || !scan.getConjunctions().isEmpty());
   }
 
-  public static JDBCType getJdbcType(int sqlTypes) {
+  /**
+   * Get {@code JDBCType} of the specified {@code sqlType}.
+   *
+   * @param sqlType a type defined in {@code java.sql.Types}
+   * @return a JDBCType
+   */
+  public static JDBCType getJdbcType(int sqlType) {
     JDBCType type;
-    switch (sqlTypes) {
-      case 100:
+    switch (sqlType) {
+      case 100: // for Oracle BINARY_FLOAT
         type = JDBCType.REAL;
         break;
-      case 101:
+      case 101: // for Oracle BINARY_DOUBLE
         type = JDBCType.DOUBLE;
         break;
       default:
         try {
-          type = JDBCType.valueOf(sqlTypes);
+          type = JDBCType.valueOf(sqlType);
         } catch (IllegalArgumentException e) {
           type = JDBCType.OTHER;
         }

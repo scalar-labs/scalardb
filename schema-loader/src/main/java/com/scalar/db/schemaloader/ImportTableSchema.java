@@ -13,9 +13,10 @@ public class ImportTableSchema {
   public ImportTableSchema(String tableFullName, JsonObject tableDefinition)
       throws SchemaLoaderException {
     String[] fullName = tableFullName.split("\\.", -1);
-    if (fullName.length < 2) {
+    if (fullName.length != 2) {
       throw new SchemaLoaderException(
-          "Parsing the schema JSON failed. Table full name must contains table name and namespace");
+          "Parsing the schema JSON failed. Table full name must contains namespace and table: "
+              + tableFullName);
     }
     namespace = fullName[0];
     tableName = fullName[1];

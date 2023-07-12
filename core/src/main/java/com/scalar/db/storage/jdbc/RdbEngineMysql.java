@@ -233,7 +233,7 @@ class RdbEngineMysql implements RdbEngineStrategy {
               String.format("data type %s is unsupported: %s", typeName, columnDescription));
         }
         logger.warn(
-            "data type that may be smaller than that of underlying database is assigned: {} (MySQL {} to our BIGINT)",
+            "data type that may be smaller than that of underlying database is assigned: {} (MySQL {} to ScalarDB BIGINT)",
             columnDescription,
             typeName);
         return DataType.BIGINT;

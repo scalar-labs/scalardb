@@ -229,9 +229,9 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
               String.format("data type %s is unsupported: %s", typeName, columnDescription));
         }
         logger.warn(
-            String.format(
-                "data type that may be smaller than that of underlying database is assigned: %s (PostgreSQL %s to our BIGINT)",
-                columnDescription, typeName));
+            "data type that may be smaller than that of underlying database is assigned: {} (PostgreSQL {} to ScalarDB BIGINT)",
+            columnDescription,
+            typeName);
         return DataType.BIGINT;
       case REAL:
         return DataType.FLOAT;

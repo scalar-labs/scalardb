@@ -57,6 +57,7 @@ public class JdbcAdminImportTestUtils {
           "pg_snapshot", // after v14
           "point",
           "polygon",
+          "serial",
           "smallserial",
           "time",
           "time with time zone",

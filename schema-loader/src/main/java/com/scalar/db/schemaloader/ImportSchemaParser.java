@@ -34,7 +34,7 @@ public class ImportSchemaParser {
   }
 
   public List<ImportTableSchema> parse() throws SchemaLoaderException {
-    ArrayList<ImportTableSchema> tableSchemaList = new ArrayList<>();
+    List<ImportTableSchema> tableSchemaList = new ArrayList<>();
     for (Map.Entry<String, JsonElement> entry : schemaJson.entrySet()) {
       tableSchemaList.add(
           new ImportTableSchema(entry.getKey(), entry.getValue().getAsJsonObject()));

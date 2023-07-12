@@ -202,9 +202,9 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
         return DataType.INT;
       case BIGINT:
         logger.warn(
-            String.format(
-                "data type that may be smaller than that of underlying database is assigned: %s (SQL Server %s to our BIGINT)",
-                columnDescription, typeName));
+            "data type that may be smaller than that of underlying database is assigned: {} (SQL Server {} to ScalarDB BIGINT)",
+            columnDescription,
+            typeName);
         return DataType.BIGINT;
       case REAL:
         return DataType.FLOAT;

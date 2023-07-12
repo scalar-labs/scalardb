@@ -449,7 +449,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
     if (!rdbEngine.isImportable()) {
       throw new UnsupportedOperationException(
-          "Importing table is not allowed in this storage: " + rdbEngine);
+          "Importing table is not allowed in this storage: " + rdbEngine.getClass().getName());
     }
 
     try (Connection connection = dataSource.getConnection()) {

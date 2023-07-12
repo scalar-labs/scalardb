@@ -244,10 +244,6 @@ public class RdbEngineOracle implements RdbEngineStrategy {
         }
         return DataType.DOUBLE;
       case DOUBLE:
-        logger.warn(
-            String.format(
-                "data type that may be smaller than that of underlying database is assigned: %s (Oracle %s to our BIGINT)",
-                columnDescription, typeName));
         return DataType.DOUBLE;
       case CHAR:
       case NCHAR:
@@ -264,15 +260,15 @@ public class RdbEngineOracle implements RdbEngineStrategy {
         return DataType.TEXT;
       case VARBINARY:
         logger.info(
-            "data type larger than that of underlying database is assigned: {} (Oracle {} to BLOB)",
+            "data type larger than that of underlying database is assigned: {} ({} to BLOB)",
             columnDescription,
             typeName);
         return DataType.BLOB;
       case LONGVARBINARY:
         return DataType.BLOB;
       case BLOB:
-        logger.info(
-            "data type that may be smaller than that of underlying database is assigned: {} ({} to BLOB)",
+        logger.warn(
+            "data type that may be smaller than that of underlying database is assigned: {} (Oracle {} to ScalarDB BLOB)",
             columnDescription,
             typeName);
         return DataType.BLOB;
