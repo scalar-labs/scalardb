@@ -833,10 +833,11 @@ public class Sample {
 
         return;
       } catch (UnknownTransactionStatusException e) {
-        // If you catch `UnknownTransactionStatusException` when committing the transaction, you are
-        // not sure if the transaction succeeds or not. In such a case, you need to check if the
-        // transaction is committed successfully or not and retry it if it failed. How to identify a
-        // transaction status is delegated to users
+        // If you catch `UnknownTransactionStatusException` when committing the transaction, it
+        // indicates that the status of the transaction, whether it has succeeded or not, is
+        // unknown. In such a case, you need to check if the transaction is committed successfully
+        // or not and retry it if it failed. How to identify a transaction status is delegated to 
+        // users
         return;
       } catch (TransactionException e) {
         // For other exceptions, you can try retrying the transaction.
