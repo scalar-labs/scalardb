@@ -193,10 +193,9 @@ For `prepare()`, if any of the coordinator or participant processes fails to pre
 
 For `commit()`, if any of the coordinator or participant processes succeed in committing the transaction, you can consider the transaction as committed.
 In other words, in that situation, you can ignore the errors in the other coordinator/participant processes.
+If all the coordinator/participant processes fail to commit the transaction, you need to call `rollback()` (or `abort()`) in all the coordinator/participant processes.
 
-If an error happens, you need to call `rollback()` (or `abort()`) in all the coordinator/participant processes.
-
-You can call `prepare()`, `commit()`, `rollback()` in the coordinator/participant processes in parallel for better performance.
+For better performance, you can call `prepare()`, `commit()`, `rollback()` in the coordinator/participant processes in parallel, respectively. 
 
 #### Validate the transaction
 
