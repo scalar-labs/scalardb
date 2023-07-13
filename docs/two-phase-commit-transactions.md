@@ -704,7 +704,7 @@ In such a case, since a transaction processing in Two-phase Commit Transactions 
 
 ![](images/two_phase_commit_load_balancing.png)
 
-There are several approaches to achieve it depending on the protocol between the services. Here, we introduce some approaches for gRPC and HTTP/1.1.
+There are several approaches to achieve it depending on the protocol between the services. The next section introduces some approaches for gRPC and HTTP/1.1.
 
 ### gPRC
 
