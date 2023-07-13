@@ -10,15 +10,15 @@ This document briefly explains how to execute Two-phase Commit Transactions in S
 ScalarDB transactions normally execute in a single transaction manager instance.
 In that case, you begin a transaction, execute CRUD operations, and commit the transaction in the same transaction manager instance.
 
-In addition to the normal transactions, ScalarDB also supports two-phase commit style transactions called *Two-phase Commit Transactions*.
+In addition to normal transactions, ScalarDB also supports two-phase-commit-style transactions called *Two-phase Commit Transactions*.
 Two-phase Commit Transactions execute a transaction that spans multiple transaction manager instances.
-The transaction manager instances can be in the same process/applications or in different processes/applications.
+The transaction manager instances can be in the same process/application or in different processes/applications.
 For example, if you have transaction manager instances in multiple microservices, you can execute a transaction that spans multiple microservices.
 
 In Two-phase Commit Transactions, there are two roles, a coordinator and a participant, that collaboratively execute a single transaction.
 A coordinator process and participant processes all have different transaction manager instances.
 The coordinator process first begins a transaction, and the participant processes join the transaction.
-And after executing CRUD operations, the coordinator process and the participant processes execute the two-phase commit protocol to commit the transaction.
+After executing CRUD operations, the coordinator process and the participant processes execute the two-phase commit protocol to commit the transaction.
 
 ## Configuration
 
@@ -53,7 +53,7 @@ This section explains how to execute Two-phase Commit Transactions.
 Like a well-known two-phase commit protocol, there are two roles, a coordinator and a participant, that collaboratively execute a single transaction.
 The coordinator process first begins a transaction, and the participant processes join the transaction.
 
-### Get a TwoPhaseCommitTransactionManager instance
+### Get a `TwoPhaseCommitTransactionManager` instance
 
 First, you need to get a `TwoPhaseCommitTransactionManager` instance to execute Two-phase Commit Transactions.
 
@@ -189,9 +189,9 @@ try {
 }
 ```
 
-For `prepare()`, if any one of the coordinator or participant processes fails to prepare the transaction, you need to call `rollback()` (or `abort()`) in all the coordinator/participant processes.
+For `prepare()`, if any of the coordinator or participant processes fails to prepare the transaction, you will need to call `rollback()` (or `abort()`) in all the coordinator/participant processes.
 
-For `commit()`, if any one of the coordinator or participant processes succeeds in committing the transaction, you can consider the transaction as committed.
+For `commit()`, if any of the coordinator or participant processes succeed in committing the transaction, you can consider the transaction as committed.
 In other words, in that situation, you can ignore the errors in the other coordinator/participant processes.
 
 If an error happens, you need to call `rollback()` (or `abort()`) in all the coordinator/participant processes.
@@ -216,7 +216,7 @@ tx.commit();
 ...
 ```
 
-Similar to `prepare()`, if any one of the coordinator or participant processes fails to validate the transaction, you need to call `rollback()` (or `abort()`) in all the coordinator/participant processes. 
+Similar to `prepare()`, if any of the coordinator or participant processes fails to validate the transaction, you will need to call `rollback()` (or `abort()`) in all the coordinator/participant processes. 
 Also, you can call `validate()` in the coordinator/participant processes in parallel for better performance.
 
 Currently, you need to call `validate()` when you use the `Consensus Commit` transaction manager with `EXTRA_READ` serializable strategy in `SERIALIZABLE` isolation level.
@@ -224,16 +224,16 @@ In other cases, `validate()` does nothing.
 
 ### Execute a transaction with multiple transaction manager instances
 
-Let's execute a transaction with multiple transaction manager instances by using the APIs described above:
+By using the APIs described above, you can execute a transaction with multiple transaction manager instances as follows:
 
 ```java
 TransactionFactory factory1 =
-    TransactionFactory.create("<configuration file path for the transaction manager1>");
+    TransactionFactory.create("<PATH_TO_CONFIGURATION_FILE_FOR_TRANSACTION_MANAGER_1>");
 TwoPhaseCommitTransactionManager transactionManager1 =
     factory1.getTwoPhaseCommitTransactionManager();
 
 TransactionFactory factory2 =
-    TransactionFactory.create("<configuration file path for the transaction manager2>");
+    TransactionFactory.create("<PATH_TO_CONFIGURATION_FILE_FOR_TRANSACTION_MANAGER_2>");
 TwoPhaseCommitTransactionManager transactionManager2 =
     factory2.getTwoPhaseCommitTransactionManager();
 
@@ -300,15 +300,15 @@ try {
 ```
 
 For simplicity, the above example code doesn't handle the exceptions that can be thrown by the APIs.
-See [Handle exceptions](#handle-exceptions) for more details.
+For more details, see [Handle exceptions](#handle-exceptions).
 
-As previously mentioned, for `commit()`, if any one of the coordinator or participant processes succeeds in committing the transaction, you can regard the transaction as committed.
-Also, for better performance, you can execute `prepare()`, `validate()`, `commit()` in parallel, respectively.
+As previously mentioned, for `commit()`, if any of the coordinator or participant processes succeed in committing the transaction, you can regard the transaction as committed.
+Also, for better performance, you can execute `prepare()`, `validate()`, and `commit()` in parallel, respectively.
 
 ### Resume a transaction
 
 Given that processes or applications using Two-phase Commit Transactions usually involve multiple request/response exchanges, you might need to execute a transaction across various endpoints or APIs.
-For such scenarios, `resume()` is useful, which allows you to resume a transaction object (an instance of `TwoPhaseCommitTransaction`) that you previously began or joined, as follows:
+For such scenarios, you can use `resume()` to resume a transaction object (an instance of `TwoPhaseCommitTransaction`) that you previously began or joined. The following shows how `resume()` works:
 
 ```java
 // Join (or begin) the transaction
@@ -444,26 +444,26 @@ public class ServiceBImpl implements ServiceB {
 
 As you can see, by resuming the transaction, you can share the same transaction object across multiple endpoints in `ServiceB`.
 
-### Handle Exceptions
+### Handle exceptions
 
-We already showed [how to execute a transaction with multiple transaction manager instances](#execute-a-transaction-with-multiple-transaction-manager-instances) in the previous section, but we didn't handle exceptions properly there.
-In this section, we will show how to handle exceptions in Two-phase commit transactions.
+In the previous section, you saw [how to execute a transaction with multiple transaction manager instances](#execute-a-transaction-with-multiple-transaction-manager-instances). However, you may also need to handle exceptions properly.
+This section describes how to handle exceptions in Two-phase Commit Transactions.
 
 Two-phase commit transactions are basically executed by multiple processes/applications (a coordinator and participants).
-However, in this example code, we use multiple transaction managers (`transactionManager1` and `transactionManager2`) in a single process, for simplicity.
+However, in this example code, you can see multiple transaction managers (`transactionManager1` and `transactionManager2`) in a single process.
 
-Let's look at the following example code to see how to handle exceptions in Two-phase commit transactions:
+The following example code shows how to handle exceptions in Two-phase Commit Transactions:
 
 ```java
 public class Sample {
   public static void main(String[] args) throws Exception {
     TransactionFactory factory1 =
-        TransactionFactory.create("<configuration file path for the transaction manager1>");
+        TransactionFactory.create("<PATH_TO_CONFIGURATION_FILE_FOR_TRANSACTION_MANAGER_1>");
     TwoPhaseCommitTransactionManager transactionManager1 =
         factory1.getTwoPhaseCommitTransactionManager();
 
     TransactionFactory factory2 =
-        TransactionFactory.create("<configuration file path for the transaction manager2>");
+        TransactionFactory.create("<PATH_TO_CONFIGURATION_FILE_FOR_TRANSACTION_MANAGER_2>");
     TwoPhaseCommitTransactionManager transactionManager2 =
         factory2.getTwoPhaseCommitTransactionManager();
 
@@ -647,40 +647,40 @@ public class Sample {
 }
 ```
 
-The `begin()` API could throw `TransactionException` and `TransactionNotFoundException`.
+The `begin()` API could throw `TransactionException` or `TransactionNotFoundException`.
 If you catch `TransactionException`, it indicates that the transaction has failed to begin due to transient or nontransient faults. You can try retrying the transaction, but you may not be able to begin the transaction due to nontransient faults.
 If you catch `TransactionNotFoundException`, it indicates that the transaction has failed to begin due to transient faults. You can retry the transaction.
 
-The `join()` API could also throw a `TransactionException` and `TransactionNotFoundException`.
-And the way to handle them is the same as the `begin()` API.
+The `join()` API could also throw `TransactionException` or `TransactionNotFoundException`.
+You can handle these exceptions in the same way that you handle the exceptions for the `begin()` API.
 
-The APIs for CRUD operations (`get()`/`scan()`/`put()`/`delete()`/`mutate()`) could throw `CrudException` and `CrudConflictException`.
+The APIs for CRUD operations (`get()`, `scan()`, `put()`, `delete()`, and `mutate()`) could throw `CrudException` or `CrudConflictException`.
 If you catch `CrudException`, it indicates that the transaction CRUD operation has failed due to transient or nontransient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is nontransient.
 If you catch `CrudConflictException`, it indicates that the transaction CRUD operation has failed due to transient faults (e.g., a conflict error). You can retry the transaction from the beginning.
 
-The APIs for mutation operations (`put()`/`delete()`/`mutate()`) could also throw `UnsatisfiedConditionException`.
-If you can this exception, it indicates that the condition for the mutation operation is not met.
+The APIs for mutation operations (`put()`, `delete()`, and `mutate()`) could also throw `UnsatisfiedConditionException`.
+If you catch this exception, it indicates that the condition for the mutation operation is not met.
 You can handle this exception according to your application requirements.
 
-The `prepare()` API could throw `PreparationException` and `PreparationConflictException`.
+The `prepare()` API could throw `PreparationException` or `PreparationConflictException`.
 If you catch `PreparationException`, it indicates that preparing the transaction fails due to transient or nontransient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is nontransient.
 If you catch `PreparationConflictException`, it indicates that preparing the transaction has failed due to transient faults (e.g., a conflict error). You can retry the transaction from the beginning.
 
-The `validate()` API could throw `ValidationException` and `ValidationConflictException`.
+The `validate()` API could throw `ValidationException` or `ValidationConflictException`.
 If you catch `ValidationException`, it indicates that validating the transaction fails due to transient or nontransient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is nontransient.
 If you catch `ValidationConflictException`, it indicates that validating the transaction has failed due to transient faults (e.g., a conflict error). You can retry the transaction from the beginning.
 
-Also, the `commit()` API could throw `CommitException`, `CommitConflictException`, and `UnknownTransactionStatusException`.
+Also, the `commit()` API could throw `CommitException`, `CommitConflictException`, or `UnknownTransactionStatusException`.
 If you catch `CommitException`, it indicates that committing the transaction fails due to transient or nontransient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is nontransient.
 If you catch `CommitConflictException`, it indicates that committing the transaction has failed due to transient faults (e.g., a conflict error). You can retry the transaction from the beginning.
 If you catch `UnknownTransactionStatusException`, it indicates that the status of the transaction, whether it has succeeded or not, is unknown.
-In such a case, you need to check if the transaction is committed successfully or not and retry it if it fails.
+In such a case, you need to check if the transaction is committed successfully or retry the transaction if it has failed.
 How to identify a transaction status is delegated to users.
 You may want to create a transaction status table and update it transactionally with other application data so that you can get the status of a transaction from the status table.
 
-Although not illustrated in the sample code, the `resume()` API could also throw a `TransactionNotFoundException`.
-This exception indicates that the transaction associated with the specified ID was not found, and it might have been expired.
-In such cases, you can retry the transaction from the beginning since the cause of this exception is basically transient.
+Although not illustrated in the sample code, the `resume()` API could also throw `TransactionNotFoundException`.
+This exception indicates that the transaction associated with the specified ID was not found and/or the transaction might have expired.
+In either case, you can retry the transaction from the beginning since the cause of this exception is basically transient.
 
 In the sample code, for `UnknownTransactionStatusException`, the transaction doesn't retry because the cause of the exception is nontransient.
 Also, for `UnsatisfiedConditionException`, the transaction doesn't retry because how to handle this exception depends on your application requirements.
@@ -693,7 +693,7 @@ Please note that if you begin a transaction by specifying a transaction ID, you 
 And, in the sample code, the transaction retries three times maximum and sleeps for 100 milliseconds before it retries.
 But you can choose a retry policy, such as exponential backoff, according to your application requirements.
 
-## Request Routing in Two-phase Commit Transactions
+## Request routing in Two-phase Commit Transactions
 
 Services using Two-phase Commit Transactions usually execute a transaction by exchanging multiple requests and responses as follows:
 
@@ -708,22 +708,22 @@ There are several approaches to achieve it depending on the protocol between the
 
 ### gPRC
 
-Please see [this document](https://grpc.io/blog/grpc-load-balancing/) for the details of gRPC Load Balancing.
+For details about load balancing in gRPC, see [gRPC Load Balancing](https://grpc.io/blog/grpc-load-balancing/).
 
 When you use a client-side load balancer, you can use the same gRPC connection to send requests in a transaction, which guarantees that the requests go to the same servers.
 
-When you use a server-side (proxy) load balancer, solutions are different between when using L3/L4 (transport level) and L7 (application level) load balancer.
+When you use a server-side (proxy) load balancer, solutions are different between an L3/L4 (transport level) load balancer and an L7 (application level) load balancer.
 When using an L3/L4 load balancer, you can use the same gRPC connection to send requests in a transaction, similar to when you use a client-side load balancer.
 Requests in the same gRPC connection always go to the same server in L3/L4 load balancing.
-When using an L7 load balancer, since requests in the same gRPC connection do not necessarily go to the same server, you need to use cookies or similar for routing requests to correct server.
-For example, when you use [Envoy](https://www.envoyproxy.io/), you can use session affinity (sticky session) for gRPC.
-Or you can also use [Bidirectional streaming RPC in gRPC](https://grpc.io/docs/what-is-grpc/core-concepts/#bidirectional-streaming-rpc) since the L7 load balancer distributes requests in the same stream to the same server.
+When using an L7 load balancer, since requests in the same gRPC connection don't necessarily go to the same server, you need to use cookies or similar method to route requests to the correct server.
+For example, if you use [Envoy](https://www.envoyproxy.io/), you can use session affinity (sticky session) for gRPC.
+Alternatively, you can use [bidirectional streaming RPC in gRPC](https://grpc.io/docs/what-is-grpc/core-concepts/#bidirectional-streaming-rpc) since the L7 load balancer distributes requests in the same stream to the same server.
 
 ### HTTP/1.1
 
 Typically, you use a server-side (proxy) load balancer with HTTP/1.1.
 When using an L3/L4 load balancer, you can use the same HTTP connection to send requests in a transaction, which guarantees the requests go to the same server.
-When using an L7 load balancer, since requests in the same HTTP connection do not necessarily go to the same server, you need to use cookies or similar for routing requests to correct server.
+When using an L7 load balancer, since requests in the same HTTP connection don't necessarily go to the same server, you need to use cookies or similar method to route requests to the correct server.
 You can use session affinity (sticky session) in that case.
 
 ## Further reading
