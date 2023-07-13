@@ -19,9 +19,11 @@ public interface TransactionCrudOperable {
    *
    * @param get a {@code Get} command
    * @return an {@code Optional} with the returned result
-   * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
-   *     from the beginning in this case
-   * @throws CrudException if the operation fails
+   * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
+   *     (e.g., a conflict error). You can retry the transaction from the beginning
+   * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
+   *     faults. You can try retrying the transaction from the beginning, but the transaction may
+   *     still fail if the cause is nontranient
    */
   Optional<Result> get(Get get) throws CrudConflictException, CrudException;
 
@@ -32,9 +34,11 @@ public interface TransactionCrudOperable {
    *
    * @param scan a {@code Scan} command
    * @return a list of {@link Result}
-   * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
-   *     from the beginning in this case
-   * @throws CrudException if the operation fails
+   * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
+   *     (e.g., a conflict error). You can retry the transaction from the beginning
+   * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
+   *     faults. You can try retrying the transaction from the beginning, but the transaction may
+   *     still fail if the cause is nontranient
    */
   List<Result> scan(Scan scan) throws CrudConflictException, CrudException;
 
@@ -43,9 +47,11 @@ public interface TransactionCrudOperable {
    * command.
    *
    * @param put a {@code Put} command
-   * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
-   *     from the beginning in this case
-   * @throws CrudException if the operation fails
+   * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
+   *     (e.g., a conflict error). You can retry the transaction from the beginning
+   * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
+   *     faults. You can try retrying the transaction from the beginning, but the transaction may
+   *     still fail if the cause is nontranient
    * @throws UnsatisfiedConditionException if the mutation condition is not satisfied
    */
   void put(Put put) throws CrudConflictException, CrudException, UnsatisfiedConditionException;
@@ -55,9 +61,11 @@ public interface TransactionCrudOperable {
    * of {@link Put} commands.
    *
    * @param puts a list of {@code Put} commands
-   * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
-   *     from the beginning in this case
-   * @throws CrudException if the operation fails
+   * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
+   *     (e.g., a conflict error). You can retry the transaction from the beginning
+   * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
+   *     faults. You can try retrying the transaction from the beginning, but the transaction may
+   *     still fail if the cause is nontranient
    * @throws UnsatisfiedConditionException if the mutation condition is not satisfied
    */
   void put(List<Put> puts)
@@ -68,9 +76,11 @@ public interface TransactionCrudOperable {
    * command.
    *
    * @param delete a {@code Delete} command
-   * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
-   *     from the beginning in this case
-   * @throws CrudException if the operation fails
+   * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
+   *     (e.g., a conflict error). You can retry the transaction from the beginning
+   * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
+   *     faults. You can try retrying the transaction from the beginning, but the transaction may
+   *     still fail if the cause is nontranient
    * @throws UnsatisfiedConditionException if the mutation condition is not satisfied
    */
   void delete(Delete delete)
@@ -81,9 +91,11 @@ public interface TransactionCrudOperable {
    * Delete} commands.
    *
    * @param deletes a list of {@code Delete} commands
-   * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
-   *     from the beginning in this case
-   * @throws CrudException if the operation fails
+   * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
+   *     (e.g., a conflict error). You can retry the transaction from the beginning
+   * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
+   *     faults. You can try retrying the transaction from the beginning, but the transaction may
+   *     still fail if the cause is nontranient
    * @throws UnsatisfiedConditionException if the mutation condition is not satisfied
    */
   void delete(List<Delete> deletes)
@@ -94,9 +106,11 @@ public interface TransactionCrudOperable {
    * Mutation} commands.
    *
    * @param mutations a list of {@code Mutation} commands
-   * @throws CrudConflictException if a transaction conflict occurs. You can retry the transaction
-   *     from the beginning in this case
-   * @throws CrudException if the operation fails
+   * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
+   *     (e.g., a conflict error). You can retry the transaction from the beginning
+   * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
+   *     faults. You can try retrying the transaction from the beginning, but the transaction may
+   *     still fail if the cause is nontranient
    * @throws UnsatisfiedConditionException if the mutation condition is not satisfied
    */
   void mutate(List<? extends Mutation> mutations)
