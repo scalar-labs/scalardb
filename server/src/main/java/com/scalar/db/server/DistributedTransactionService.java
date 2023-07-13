@@ -175,6 +175,7 @@ public class DistributedTransactionService
     private final Function<StreamObserver<?>, Boolean> preProcessor;
     private final Runnable postProcessor;
     private final AtomicBoolean preProcessed = new AtomicBoolean();
+    private final AtomicBoolean postProcessed = new AtomicBoolean();
 
     private DistributedTransaction transaction;
 
@@ -319,6 +320,13 @@ public class DistributedTransactionService
       responseObserver.onNext(responseBuilder.build());
       if (completed) {
         responseObserver.onCompleted();
+        postProcess();
+      }
+    }
+
+    private void postProcess() {
+      // postProcessor is executed only once after preProcessor is executed
+      if (preProcessed.get() && postProcessed.compareAndSet(false, true)) {
         postProcessor.run();
       }
     }
@@ -440,7 +448,7 @@ public class DistributedTransactionService
         }
       }
 
-      postProcessor.run();
+      postProcess();
     }
 
     private void respondInternalError(String message) {
