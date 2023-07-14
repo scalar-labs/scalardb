@@ -261,7 +261,7 @@ try {
 
   // Commit the transaction. If any of the transactions succeeds to commit, you can regard the
   // transaction as committed
-  AtomicReference<Exception> exception = new AtomicReference<>();
+  AtomicReference<TransactionException> exception = new AtomicReference<>();
   boolean anyMatch =
       Stream.of(transaction1, transaction2)
           .anyMatch(
@@ -269,7 +269,7 @@ try {
                 try {
                   t.commit();
                   return true;
-                } catch (Exception e) {
+                } catch (TransactionException e) {
                   exception.set(e);
                   return false;
                 }
@@ -279,7 +279,7 @@ try {
   if (!anyMatch) {
     throw exception.get();
   }
-} catch (Exception e) {
+} catch (TransactionException e) {
   // Rollback the transaction
   if (transaction1 != null) {
     try {
@@ -682,7 +682,7 @@ This exception indicates that the transaction associated with the specified ID w
 In either case, you can retry the transaction from the beginning since the cause of this exception is basically transient.
 
 In the sample code, for `UnknownTransactionStatusException`, the transaction doesn't retry because the cause of the exception is nontransient.
-In the sample code, for `UnknownTransactionStatusException`, the transaction doesn't retry as mentioned earlier.
+Also, for `UnsatisfiedConditionException`, the transaction doesn't retry because how to handle this exception depends on your application requirements.
 For other exceptions, the transaction tries retrying because the cause of the exception is transient or nontransient.
 If the cause of the exception is transient, the transaction may succeed if you retry it.
 However, if the cause of the exception is nontransient, the transaction may still fail even if you retry it.
