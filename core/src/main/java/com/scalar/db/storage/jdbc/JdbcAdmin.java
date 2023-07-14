@@ -1,7 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.storage.jdbc.JdbcUtils.getJdbcType;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
-import static com.scalar.db.util.ScalarDbUtils.getJdbcType;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;

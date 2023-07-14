@@ -1,6 +1,5 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.TRANSACTION_META_COLUMNS;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.buildTransactionTableMetadata;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getBeforeImageColumnName;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getNonPrimaryKeyColumns;
@@ -203,7 +202,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     tableMetadata = admin.getImportTableMetadata(namespace, table);
 
     // add transaction metadata columns
-    for (Map.Entry<String, DataType> entry : TRANSACTION_META_COLUMNS.entrySet()) {
+    for (Map.Entry<String, DataType> entry :
+        ConsensusCommitUtils.getTransactionMetaColumns().entrySet()) {
       admin.addRawColumnToTable(namespace, table, entry.getKey(), entry.getValue());
     }
 

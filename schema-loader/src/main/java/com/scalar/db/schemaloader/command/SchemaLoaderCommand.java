@@ -93,8 +93,8 @@ public class SchemaLoaderCommand implements Callable<Integer> {
 
     @Option(
         names = {"-I", "--import"},
-        description = "",
-        defaultValue = "")
+        description = "Import tables : it will import existing non-ScalarDB tables to ScalarDB.",
+        defaultValue = "false")
     boolean importTables;
   }
 

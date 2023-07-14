@@ -28,7 +28,6 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import java.sql.JDBCType;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
@@ -249,30 +248,5 @@ public final class ScalarDbUtils {
   public static boolean isRelational(Scan scan) {
     return scan instanceof ScanAll
         && (!scan.getOrderings().isEmpty() || !scan.getConjunctions().isEmpty());
-  }
-
-  /**
-   * Get {@code JDBCType} of the specified {@code sqlType}.
-   *
-   * @param sqlType a type defined in {@code java.sql.Types}
-   * @return a JDBCType
-   */
-  public static JDBCType getJdbcType(int sqlType) {
-    JDBCType type;
-    switch (sqlType) {
-      case 100: // for Oracle BINARY_FLOAT
-        type = JDBCType.REAL;
-        break;
-      case 101: // for Oracle BINARY_DOUBLE
-        type = JDBCType.DOUBLE;
-        break;
-      default:
-        try {
-          type = JDBCType.valueOf(sqlType);
-        } catch (IllegalArgumentException e) {
-          type = JDBCType.OTHER;
-        }
-    }
-    return type;
   }
 }

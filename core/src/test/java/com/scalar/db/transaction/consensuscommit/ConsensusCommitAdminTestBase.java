@@ -1,6 +1,5 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.TRANSACTION_META_COLUMNS;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getBeforeImageColumnName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -615,7 +614,8 @@ public abstract class ConsensusCommitAdminTestBase {
     // Assert
     verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
     verify(distributedStorageAdmin).getImportTableMetadata(NAMESPACE, TABLE);
-    for (Entry<String, DataType> entry : TRANSACTION_META_COLUMNS.entrySet()) {
+    for (Entry<String, DataType> entry :
+        ConsensusCommitUtils.getTransactionMetaColumns().entrySet()) {
       verify(distributedStorageAdmin)
           .addRawColumnToTable(NAMESPACE, TABLE, entry.getKey(), entry.getValue());
     }

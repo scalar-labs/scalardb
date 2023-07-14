@@ -233,15 +233,11 @@ public class JdbcTransactionAdminTest {
     // Arrange
     String namespace = "ns";
     String table = "tbl";
-    TableMetadata metadata =
-        TableMetadata.newBuilder().addColumn("c1", DataType.INT).addPartitionKey("c1").build();
-    when(jdbcAdmin.getImportTableMetadata(namespace, table)).thenReturn(metadata);
 
     // Act
     admin.importTable(namespace, table);
 
     // Assert
-    verify(jdbcAdmin).getImportTableMetadata(namespace, table);
-    verify(jdbcAdmin).repairTable(namespace, table, metadata, ImmutableMap.of());
+    verify(jdbcAdmin).importTable(namespace, table);
   }
 }
