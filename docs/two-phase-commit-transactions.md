@@ -682,7 +682,7 @@ This exception indicates that the transaction associated with the specified ID w
 In either case, you can retry the transaction from the beginning since the cause of this exception is basically transient.
 
 In the sample code, for `UnknownTransactionStatusException`, the transaction doesn't retry because the cause of the exception is nontransient.
-Also, for `UnsatisfiedConditionException`, the transaction doesn't retry because how to handle this exception depends on your application requirements.
+In the sample code, for `UnknownTransactionStatusException`, the transaction doesn't retry as mentioned earlier.
 For other exceptions, the transaction tries retrying because the cause of the exception is transient or nontransient.
 If the cause of the exception is transient, the transaction may succeed if you retry it.
 However, if the cause of the exception is nontransient, the transaction may still fail even if you retry it.
