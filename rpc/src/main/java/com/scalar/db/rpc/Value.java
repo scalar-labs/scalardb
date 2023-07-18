@@ -112,7 +112,8 @@ private static final long serialVersionUID = 0L;
 
     private int bitField0_;
     public static final int VALUE_FIELD_NUMBER = 1;
-    private volatile java.lang.Object value_;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object value_ = "";
     /**
      * <code>optional string value = 1;</code>
      * @return Whether the value field is set.
@@ -349,8 +350,8 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public Builder clear() {
         super.clear();
+        bitField0_ = 0;
         value_ = "";
-        bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
 
@@ -377,15 +378,19 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.scalar.db.rpc.Value.TextValue buildPartial() {
         com.scalar.db.rpc.Value.TextValue result = new com.scalar.db.rpc.Value.TextValue(this);
+        if (bitField0_ != 0) { buildPartial0(result); }
+        onBuilt();
+        return result;
+      }
+
+      private void buildPartial0(com.scalar.db.rpc.Value.TextValue result) {
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.value_ = value_;
           to_bitField0_ |= 0x00000001;
         }
-        result.value_ = value_;
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
+        result.bitField0_ |= to_bitField0_;
       }
 
       @java.lang.Override
@@ -433,8 +438,8 @@ private static final long serialVersionUID = 0L;
       public Builder mergeFrom(com.scalar.db.rpc.Value.TextValue other) {
         if (other == com.scalar.db.rpc.Value.TextValue.getDefaultInstance()) return this;
         if (other.hasValue()) {
-          bitField0_ |= 0x00000001;
           value_ = other.value_;
+          bitField0_ |= 0x00000001;
           onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
@@ -533,11 +538,9 @@ private static final long serialVersionUID = 0L;
        */
       public Builder setValue(
           java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+        if (value == null) { throw new NullPointerException(); }
         value_ = value;
+        bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
@@ -546,8 +549,8 @@ private static final long serialVersionUID = 0L;
        * @return This builder for chaining.
        */
       public Builder clearValue() {
-        bitField0_ = (bitField0_ & ~0x00000001);
         value_ = getDefaultInstance().getValue();
+        bitField0_ = (bitField0_ & ~0x00000001);
         onChanged();
         return this;
       }
@@ -558,12 +561,10 @@ private static final long serialVersionUID = 0L;
        */
       public Builder setValueBytes(
           com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-        bitField0_ |= 0x00000001;
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
         value_ = value;
+        bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
@@ -689,7 +690,7 @@ private static final long serialVersionUID = 0L;
 
     private int bitField0_;
     public static final int VALUE_FIELD_NUMBER = 1;
-    private com.google.protobuf.ByteString value_;
+    private com.google.protobuf.ByteString value_ = com.google.protobuf.ByteString.EMPTY;
     /**
      * <code>optional bytes value = 1;</code>
      * @return Whether the value field is set.
@@ -900,8 +901,8 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public Builder clear() {
         super.clear();
+        bitField0_ = 0;
         value_ = com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
 
@@ -928,15 +929,19 @@ private static final long serialVersionUID = 0L;
       @java.lang.Override
       public com.scalar.db.rpc.Value.BlobValue buildPartial() {
         com.scalar.db.rpc.Value.BlobValue result = new com.scalar.db.rpc.Value.BlobValue(this);
+        if (bitField0_ != 0) { buildPartial0(result); }
+        onBuilt();
+        return result;
+      }
+
+      private void buildPartial0(com.scalar.db.rpc.Value.BlobValue result) {
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.value_ = value_;
           to_bitField0_ |= 0x00000001;
         }
-        result.value_ = value_;
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
+        result.bitField0_ |= to_bitField0_;
       }
 
       @java.lang.Override
@@ -1057,11 +1062,9 @@ private static final long serialVersionUID = 0L;
        * @return This builder for chaining.
        */
       public Builder setValue(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+        if (value == null) { throw new NullPointerException(); }
         value_ = value;
+        bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
@@ -1191,7 +1194,8 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int NAME_FIELD_NUMBER = 1;
-  private volatile java.lang.Object name_;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object name_ = "";
   /**
    * <code>string name = 1;</code>
    * @return The name.
@@ -1716,8 +1720,8 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       name_ = "";
-
       if (textValueBuilder_ != null) {
         textValueBuilder_.clear();
       }
@@ -1752,39 +1756,30 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.Value buildPartial() {
       com.scalar.db.rpc.Value result = new com.scalar.db.rpc.Value(this);
-      result.name_ = name_;
-      if (valueCase_ == 2) {
-        result.value_ = value_;
-      }
-      if (valueCase_ == 3) {
-        result.value_ = value_;
-      }
-      if (valueCase_ == 4) {
-        result.value_ = value_;
-      }
-      if (valueCase_ == 5) {
-        result.value_ = value_;
-      }
-      if (valueCase_ == 6) {
-        result.value_ = value_;
-      }
-      if (valueCase_ == 7) {
-        if (textValueBuilder_ == null) {
-          result.value_ = value_;
-        } else {
-          result.value_ = textValueBuilder_.build();
-        }
-      }
-      if (valueCase_ == 8) {
-        if (blobValueBuilder_ == null) {
-          result.value_ = value_;
-        } else {
-          result.value_ = blobValueBuilder_.build();
-        }
-      }
-      result.valueCase_ = valueCase_;
+      if (bitField0_ != 0) { buildPartial0(result); }
+      buildPartialOneofs(result);
       onBuilt();
       return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.Value result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.name_ = name_;
+      }
+    }
+
+    private void buildPartialOneofs(com.scalar.db.rpc.Value result) {
+      result.valueCase_ = valueCase_;
+      result.value_ = this.value_;
+      if (valueCase_ == 7 &&
+          textValueBuilder_ != null) {
+        result.value_ = textValueBuilder_.build();
+      }
+      if (valueCase_ == 8 &&
+          blobValueBuilder_ != null) {
+        result.value_ = blobValueBuilder_.build();
+      }
     }
 
     @java.lang.Override
@@ -1833,6 +1828,7 @@ private static final long serialVersionUID = 0L;
       if (other == com.scalar.db.rpc.Value.getDefaultInstance()) return this;
       if (!other.getName().isEmpty()) {
         name_ = other.name_;
+        bitField0_ |= 0x00000001;
         onChanged();
       }
       switch (other.getValueCase()) {
@@ -1896,7 +1892,7 @@ private static final long serialVersionUID = 0L;
               break;
             case 10: {
               name_ = input.readStringRequireUtf8();
-
+              bitField0_ |= 0x00000001;
               break;
             } // case 10
             case 16: {
@@ -1968,6 +1964,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
+    private int bitField0_;
 
     private java.lang.Object name_ = "";
     /**
@@ -2010,11 +2007,9 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setName(
         java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
+      if (value == null) { throw new NullPointerException(); }
       name_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
@@ -2023,8 +2018,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearName() {
-      
       name_ = getDefaultInstance().getName();
+      bitField0_ = (bitField0_ & ~0x00000001);
       onChanged();
       return this;
     }
@@ -2035,12 +2030,10 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setNameBytes(
         com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
       name_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
@@ -2068,6 +2061,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setBooleanValue(boolean value) {
+      
       valueCase_ = 2;
       value_ = value;
       onChanged();
@@ -2109,6 +2103,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setIntValue(int value) {
+      
       valueCase_ = 3;
       value_ = value;
       onChanged();
@@ -2150,6 +2145,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setBigintValue(long value) {
+      
       valueCase_ = 4;
       value_ = value;
       onChanged();
@@ -2191,6 +2187,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setFloatValue(float value) {
+      
       valueCase_ = 5;
       value_ = value;
       onChanged();
@@ -2232,6 +2229,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setDoubleValue(double value) {
+      
       valueCase_ = 6;
       value_ = value;
       onChanged();
@@ -2388,7 +2386,7 @@ private static final long serialVersionUID = 0L;
         value_ = null;
       }
       valueCase_ = 7;
-      onChanged();;
+      onChanged();
       return textValueBuilder_;
     }
 
@@ -2530,7 +2528,7 @@ private static final long serialVersionUID = 0L;
         value_ = null;
       }
       valueCase_ = 8;
-      onChanged();;
+      onChanged();
       return blobValueBuilder_;
     }
     @java.lang.Override

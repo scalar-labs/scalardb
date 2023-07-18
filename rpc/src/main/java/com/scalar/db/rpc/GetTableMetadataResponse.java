@@ -66,7 +66,7 @@ private static final long serialVersionUID = 0L;
    */
   @java.lang.Override
   public com.scalar.db.rpc.TableMetadataOrBuilder getTableMetadataOrBuilder() {
-    return getTableMetadata();
+    return tableMetadata_ == null ? com.scalar.db.rpc.TableMetadata.getDefaultInstance() : tableMetadata_;
   }
 
   private byte memoizedIsInitialized = -1;
@@ -262,10 +262,10 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
-      if (tableMetadataBuilder_ == null) {
-        tableMetadata_ = null;
-      } else {
-        tableMetadata_ = null;
+      bitField0_ = 0;
+      tableMetadata_ = null;
+      if (tableMetadataBuilder_ != null) {
+        tableMetadataBuilder_.dispose();
         tableMetadataBuilder_ = null;
       }
       return this;
@@ -294,13 +294,18 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.GetTableMetadataResponse buildPartial() {
       com.scalar.db.rpc.GetTableMetadataResponse result = new com.scalar.db.rpc.GetTableMetadataResponse(this);
-      if (tableMetadataBuilder_ == null) {
-        result.tableMetadata_ = tableMetadata_;
-      } else {
-        result.tableMetadata_ = tableMetadataBuilder_.build();
-      }
+      if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.GetTableMetadataResponse result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.tableMetadata_ = tableMetadataBuilder_ == null
+            ? tableMetadata_
+            : tableMetadataBuilder_.build();
+      }
     }
 
     @java.lang.Override
@@ -380,7 +385,7 @@ private static final long serialVersionUID = 0L;
               input.readMessage(
                   getTableMetadataFieldBuilder().getBuilder(),
                   extensionRegistry);
-
+              bitField0_ |= 0x00000001;
               break;
             } // case 10
             default: {
@@ -398,6 +403,7 @@ private static final long serialVersionUID = 0L;
       } // finally
       return this;
     }
+    private int bitField0_;
 
     private com.scalar.db.rpc.TableMetadata tableMetadata_;
     private com.google.protobuf.SingleFieldBuilderV3<
@@ -407,7 +413,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the tableMetadata field is set.
      */
     public boolean hasTableMetadata() {
-      return tableMetadataBuilder_ != null || tableMetadata_ != null;
+      return ((bitField0_ & 0x00000001) != 0);
     }
     /**
      * <code>.rpc.TableMetadata table_metadata = 1;</code>
@@ -429,11 +435,11 @@ private static final long serialVersionUID = 0L;
           throw new NullPointerException();
         }
         tableMetadata_ = value;
-        onChanged();
       } else {
         tableMetadataBuilder_.setMessage(value);
       }
-
+      bitField0_ |= 0x00000001;
+      onChanged();
       return this;
     }
     /**
@@ -443,11 +449,11 @@ private static final long serialVersionUID = 0L;
         com.scalar.db.rpc.TableMetadata.Builder builderForValue) {
       if (tableMetadataBuilder_ == null) {
         tableMetadata_ = builderForValue.build();
-        onChanged();
       } else {
         tableMetadataBuilder_.setMessage(builderForValue.build());
       }
-
+      bitField0_ |= 0x00000001;
+      onChanged();
       return this;
     }
     /**
@@ -455,38 +461,38 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeTableMetadata(com.scalar.db.rpc.TableMetadata value) {
       if (tableMetadataBuilder_ == null) {
-        if (tableMetadata_ != null) {
-          tableMetadata_ =
-            com.scalar.db.rpc.TableMetadata.newBuilder(tableMetadata_).mergeFrom(value).buildPartial();
+        if (((bitField0_ & 0x00000001) != 0) &&
+          tableMetadata_ != null &&
+          tableMetadata_ != com.scalar.db.rpc.TableMetadata.getDefaultInstance()) {
+          getTableMetadataBuilder().mergeFrom(value);
         } else {
           tableMetadata_ = value;
         }
-        onChanged();
       } else {
         tableMetadataBuilder_.mergeFrom(value);
       }
-
+      bitField0_ |= 0x00000001;
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.TableMetadata table_metadata = 1;</code>
      */
     public Builder clearTableMetadata() {
-      if (tableMetadataBuilder_ == null) {
-        tableMetadata_ = null;
-        onChanged();
-      } else {
-        tableMetadata_ = null;
+      bitField0_ = (bitField0_ & ~0x00000001);
+      tableMetadata_ = null;
+      if (tableMetadataBuilder_ != null) {
+        tableMetadataBuilder_.dispose();
         tableMetadataBuilder_ = null;
       }
-
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.TableMetadata table_metadata = 1;</code>
      */
     public com.scalar.db.rpc.TableMetadata.Builder getTableMetadataBuilder() {
-      
+      bitField0_ |= 0x00000001;
       onChanged();
       return getTableMetadataFieldBuilder().getBuilder();
     }

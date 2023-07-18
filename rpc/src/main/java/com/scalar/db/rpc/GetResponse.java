@@ -66,7 +66,7 @@ private static final long serialVersionUID = 0L;
    */
   @java.lang.Override
   public com.scalar.db.rpc.ResultOrBuilder getResultOrBuilder() {
-    return getResult();
+    return result_ == null ? com.scalar.db.rpc.Result.getDefaultInstance() : result_;
   }
 
   private byte memoizedIsInitialized = -1;
@@ -262,10 +262,10 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
-      if (resultBuilder_ == null) {
-        result_ = null;
-      } else {
-        result_ = null;
+      bitField0_ = 0;
+      result_ = null;
+      if (resultBuilder_ != null) {
+        resultBuilder_.dispose();
         resultBuilder_ = null;
       }
       return this;
@@ -294,13 +294,18 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.GetResponse buildPartial() {
       com.scalar.db.rpc.GetResponse result = new com.scalar.db.rpc.GetResponse(this);
-      if (resultBuilder_ == null) {
-        result.result_ = result_;
-      } else {
-        result.result_ = resultBuilder_.build();
-      }
+      if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.GetResponse result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.result_ = resultBuilder_ == null
+            ? result_
+            : resultBuilder_.build();
+      }
     }
 
     @java.lang.Override
@@ -380,7 +385,7 @@ private static final long serialVersionUID = 0L;
               input.readMessage(
                   getResultFieldBuilder().getBuilder(),
                   extensionRegistry);
-
+              bitField0_ |= 0x00000001;
               break;
             } // case 10
             default: {
@@ -398,6 +403,7 @@ private static final long serialVersionUID = 0L;
       } // finally
       return this;
     }
+    private int bitField0_;
 
     private com.scalar.db.rpc.Result result_;
     private com.google.protobuf.SingleFieldBuilderV3<
@@ -407,7 +413,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the result field is set.
      */
     public boolean hasResult() {
-      return resultBuilder_ != null || result_ != null;
+      return ((bitField0_ & 0x00000001) != 0);
     }
     /**
      * <code>.rpc.Result result = 1;</code>
@@ -429,11 +435,11 @@ private static final long serialVersionUID = 0L;
           throw new NullPointerException();
         }
         result_ = value;
-        onChanged();
       } else {
         resultBuilder_.setMessage(value);
       }
-
+      bitField0_ |= 0x00000001;
+      onChanged();
       return this;
     }
     /**
@@ -443,11 +449,11 @@ private static final long serialVersionUID = 0L;
         com.scalar.db.rpc.Result.Builder builderForValue) {
       if (resultBuilder_ == null) {
         result_ = builderForValue.build();
-        onChanged();
       } else {
         resultBuilder_.setMessage(builderForValue.build());
       }
-
+      bitField0_ |= 0x00000001;
+      onChanged();
       return this;
     }
     /**
@@ -455,38 +461,38 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeResult(com.scalar.db.rpc.Result value) {
       if (resultBuilder_ == null) {
-        if (result_ != null) {
-          result_ =
-            com.scalar.db.rpc.Result.newBuilder(result_).mergeFrom(value).buildPartial();
+        if (((bitField0_ & 0x00000001) != 0) &&
+          result_ != null &&
+          result_ != com.scalar.db.rpc.Result.getDefaultInstance()) {
+          getResultBuilder().mergeFrom(value);
         } else {
           result_ = value;
         }
-        onChanged();
       } else {
         resultBuilder_.mergeFrom(value);
       }
-
+      bitField0_ |= 0x00000001;
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.Result result = 1;</code>
      */
     public Builder clearResult() {
-      if (resultBuilder_ == null) {
-        result_ = null;
-        onChanged();
-      } else {
-        result_ = null;
+      bitField0_ = (bitField0_ & ~0x00000001);
+      result_ = null;
+      if (resultBuilder_ != null) {
+        resultBuilder_.dispose();
         resultBuilder_ = null;
       }
-
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.Result result = 1;</code>
      */
     public com.scalar.db.rpc.Result.Builder getResultBuilder() {
-      
+      bitField0_ |= 0x00000001;
       onChanged();
       return getResultFieldBuilder().getBuilder();
     }
