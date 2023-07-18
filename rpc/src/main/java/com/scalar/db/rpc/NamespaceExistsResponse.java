@@ -44,7 +44,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int EXISTS_FIELD_NUMBER = 1;
-  private boolean exists_;
+  private boolean exists_ = false;
   /**
    * <code>bool exists = 1;</code>
    * @return The exists.
@@ -243,8 +243,8 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       exists_ = false;
-
       return this;
     }
 
@@ -271,9 +271,16 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.NamespaceExistsResponse buildPartial() {
       com.scalar.db.rpc.NamespaceExistsResponse result = new com.scalar.db.rpc.NamespaceExistsResponse(this);
-      result.exists_ = exists_;
+      if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.NamespaceExistsResponse result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.exists_ = exists_;
+      }
     }
 
     @java.lang.Override
@@ -351,7 +358,7 @@ private static final long serialVersionUID = 0L;
               break;
             case 8: {
               exists_ = input.readBool();
-
+              bitField0_ |= 0x00000001;
               break;
             } // case 8
             default: {
@@ -369,6 +376,7 @@ private static final long serialVersionUID = 0L;
       } // finally
       return this;
     }
+    private int bitField0_;
 
     private boolean exists_ ;
     /**
@@ -387,6 +395,7 @@ private static final long serialVersionUID = 0L;
     public Builder setExists(boolean value) {
       
       exists_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
@@ -395,7 +404,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearExists() {
-      
+      bitField0_ = (bitField0_ & ~0x00000001);
       exists_ = false;
       onChanged();
       return this;

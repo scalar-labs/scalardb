@@ -96,7 +96,8 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int NAME_FIELD_NUMBER = 1;
-  private volatile java.lang.Object name_;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object name_ = "";
   /**
    * <code>string name = 1;</code>
    * @return The name.
@@ -629,8 +630,8 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       name_ = "";
-
       valueCase_ = 0;
       value_ = null;
       return this;
@@ -659,31 +660,22 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.Column buildPartial() {
       com.scalar.db.rpc.Column result = new com.scalar.db.rpc.Column(this);
-      result.name_ = name_;
-      if (valueCase_ == 2) {
-        result.value_ = value_;
-      }
-      if (valueCase_ == 3) {
-        result.value_ = value_;
-      }
-      if (valueCase_ == 4) {
-        result.value_ = value_;
-      }
-      if (valueCase_ == 5) {
-        result.value_ = value_;
-      }
-      if (valueCase_ == 6) {
-        result.value_ = value_;
-      }
-      if (valueCase_ == 7) {
-        result.value_ = value_;
-      }
-      if (valueCase_ == 8) {
-        result.value_ = value_;
-      }
-      result.valueCase_ = valueCase_;
+      if (bitField0_ != 0) { buildPartial0(result); }
+      buildPartialOneofs(result);
       onBuilt();
       return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.Column result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.name_ = name_;
+      }
+    }
+
+    private void buildPartialOneofs(com.scalar.db.rpc.Column result) {
+      result.valueCase_ = valueCase_;
+      result.value_ = this.value_;
     }
 
     @java.lang.Override
@@ -732,6 +724,7 @@ private static final long serialVersionUID = 0L;
       if (other == com.scalar.db.rpc.Column.getDefaultInstance()) return this;
       if (!other.getName().isEmpty()) {
         name_ = other.name_;
+        bitField0_ |= 0x00000001;
         onChanged();
       }
       switch (other.getValueCase()) {
@@ -797,7 +790,7 @@ private static final long serialVersionUID = 0L;
               break;
             case 10: {
               name_ = input.readStringRequireUtf8();
-
+              bitField0_ |= 0x00000001;
               break;
             } // case 10
             case 16: {
@@ -866,6 +859,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
+    private int bitField0_;
 
     private java.lang.Object name_ = "";
     /**
@@ -908,11 +902,9 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setName(
         java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
+      if (value == null) { throw new NullPointerException(); }
       name_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
@@ -921,8 +913,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearName() {
-      
       name_ = getDefaultInstance().getName();
+      bitField0_ = (bitField0_ & ~0x00000001);
       onChanged();
       return this;
     }
@@ -933,12 +925,10 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setNameBytes(
         com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
       name_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
@@ -966,6 +956,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setBooleanValue(boolean value) {
+      
       valueCase_ = 2;
       value_ = value;
       onChanged();
@@ -1007,6 +998,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setIntValue(int value) {
+      
       valueCase_ = 3;
       value_ = value;
       onChanged();
@@ -1048,6 +1040,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setBigintValue(long value) {
+      
       valueCase_ = 4;
       value_ = value;
       onChanged();
@@ -1089,6 +1082,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setFloatValue(float value) {
+      
       valueCase_ = 5;
       value_ = value;
       onChanged();
@@ -1130,6 +1124,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setDoubleValue(double value) {
+      
       valueCase_ = 6;
       value_ = value;
       onChanged();
@@ -1208,10 +1203,8 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setTextValue(
         java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  valueCase_ = 7;
+      if (value == null) { throw new NullPointerException(); }
+      valueCase_ = 7;
       value_ = value;
       onChanged();
       return this;
@@ -1235,10 +1228,8 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setTextValueBytes(
         com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
       valueCase_ = 7;
       value_ = value;
       onChanged();
@@ -1268,10 +1259,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setBlobValue(com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  valueCase_ = 8;
+      if (value == null) { throw new NullPointerException(); }
+      valueCase_ = 8;
       value_ = value;
       onChanged();
       return this;

@@ -208,7 +208,8 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int NAME_FIELD_NUMBER = 1;
-  private volatile java.lang.Object name_;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object name_ = "";
   /**
    * <code>string name = 1 [deprecated = true];</code>
    * @deprecated rpc.ConditionalExpression.name is deprecated.
@@ -276,11 +277,11 @@ private static final long serialVersionUID = 0L;
    */
   @java.lang.Override
   @java.lang.Deprecated public com.scalar.db.rpc.ValueOrBuilder getValueOrBuilder() {
-    return getValue();
+    return value_ == null ? com.scalar.db.rpc.Value.getDefaultInstance() : value_;
   }
 
   public static final int OPERATOR_FIELD_NUMBER = 3;
-  private int operator_;
+  private int operator_ = 0;
   /**
    * <code>.rpc.ConditionalExpression.Operator operator = 3;</code>
    * @return The enum numeric value on the wire for operator.
@@ -293,8 +294,7 @@ private static final long serialVersionUID = 0L;
    * @return The operator.
    */
   @java.lang.Override public com.scalar.db.rpc.ConditionalExpression.Operator getOperator() {
-    @SuppressWarnings("deprecation")
-    com.scalar.db.rpc.ConditionalExpression.Operator result = com.scalar.db.rpc.ConditionalExpression.Operator.valueOf(operator_);
+    com.scalar.db.rpc.ConditionalExpression.Operator result = com.scalar.db.rpc.ConditionalExpression.Operator.forNumber(operator_);
     return result == null ? com.scalar.db.rpc.ConditionalExpression.Operator.UNRECOGNIZED : result;
   }
 
@@ -321,7 +321,7 @@ private static final long serialVersionUID = 0L;
    */
   @java.lang.Override
   public com.scalar.db.rpc.ColumnOrBuilder getColumnOrBuilder() {
-    return getColumn();
+    return column_ == null ? com.scalar.db.rpc.Column.getDefaultInstance() : column_;
   }
 
   private byte memoizedIsInitialized = -1;
@@ -553,20 +553,17 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       name_ = "";
-
-      if (valueBuilder_ == null) {
-        value_ = null;
-      } else {
-        value_ = null;
+      value_ = null;
+      if (valueBuilder_ != null) {
+        valueBuilder_.dispose();
         valueBuilder_ = null;
       }
       operator_ = 0;
-
-      if (columnBuilder_ == null) {
-        column_ = null;
-      } else {
-        column_ = null;
+      column_ = null;
+      if (columnBuilder_ != null) {
+        columnBuilder_.dispose();
         columnBuilder_ = null;
       }
       return this;
@@ -595,20 +592,29 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.ConditionalExpression buildPartial() {
       com.scalar.db.rpc.ConditionalExpression result = new com.scalar.db.rpc.ConditionalExpression(this);
-      result.name_ = name_;
-      if (valueBuilder_ == null) {
-        result.value_ = value_;
-      } else {
-        result.value_ = valueBuilder_.build();
-      }
-      result.operator_ = operator_;
-      if (columnBuilder_ == null) {
-        result.column_ = column_;
-      } else {
-        result.column_ = columnBuilder_.build();
-      }
+      if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.ConditionalExpression result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.name_ = name_;
+      }
+      if (((from_bitField0_ & 0x00000002) != 0)) {
+        result.value_ = valueBuilder_ == null
+            ? value_
+            : valueBuilder_.build();
+      }
+      if (((from_bitField0_ & 0x00000004) != 0)) {
+        result.operator_ = operator_;
+      }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.column_ = columnBuilder_ == null
+            ? column_
+            : columnBuilder_.build();
+      }
     }
 
     @java.lang.Override
@@ -657,6 +663,7 @@ private static final long serialVersionUID = 0L;
       if (other == com.scalar.db.rpc.ConditionalExpression.getDefaultInstance()) return this;
       if (!other.getName().isEmpty()) {
         name_ = other.name_;
+        bitField0_ |= 0x00000001;
         onChanged();
       }
       if (other.hasValue()) {
@@ -696,26 +703,26 @@ private static final long serialVersionUID = 0L;
               break;
             case 10: {
               name_ = input.readStringRequireUtf8();
-
+              bitField0_ |= 0x00000001;
               break;
             } // case 10
             case 18: {
               input.readMessage(
                   getValueFieldBuilder().getBuilder(),
                   extensionRegistry);
-
+              bitField0_ |= 0x00000002;
               break;
             } // case 18
             case 24: {
               operator_ = input.readEnum();
-
+              bitField0_ |= 0x00000004;
               break;
             } // case 24
             case 34: {
               input.readMessage(
                   getColumnFieldBuilder().getBuilder(),
                   extensionRegistry);
-
+              bitField0_ |= 0x00000008;
               break;
             } // case 34
             default: {
@@ -733,6 +740,7 @@ private static final long serialVersionUID = 0L;
       } // finally
       return this;
     }
+    private int bitField0_;
 
     private java.lang.Object name_ = "";
     /**
@@ -781,11 +789,9 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Deprecated public Builder setName(
         java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
+      if (value == null) { throw new NullPointerException(); }
       name_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
@@ -796,8 +802,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     @java.lang.Deprecated public Builder clearName() {
-      
       name_ = getDefaultInstance().getName();
+      bitField0_ = (bitField0_ & ~0x00000001);
       onChanged();
       return this;
     }
@@ -810,12 +816,10 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Deprecated public Builder setNameBytes(
         com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
       name_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
@@ -830,7 +834,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the value field is set.
      */
     @java.lang.Deprecated public boolean hasValue() {
-      return valueBuilder_ != null || value_ != null;
+      return ((bitField0_ & 0x00000002) != 0);
     }
     /**
      * <code>.rpc.Value value = 2 [deprecated = true];</code>
@@ -854,11 +858,11 @@ private static final long serialVersionUID = 0L;
           throw new NullPointerException();
         }
         value_ = value;
-        onChanged();
       } else {
         valueBuilder_.setMessage(value);
       }
-
+      bitField0_ |= 0x00000002;
+      onChanged();
       return this;
     }
     /**
@@ -868,11 +872,11 @@ private static final long serialVersionUID = 0L;
         com.scalar.db.rpc.Value.Builder builderForValue) {
       if (valueBuilder_ == null) {
         value_ = builderForValue.build();
-        onChanged();
       } else {
         valueBuilder_.setMessage(builderForValue.build());
       }
-
+      bitField0_ |= 0x00000002;
+      onChanged();
       return this;
     }
     /**
@@ -880,38 +884,38 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Deprecated public Builder mergeValue(com.scalar.db.rpc.Value value) {
       if (valueBuilder_ == null) {
-        if (value_ != null) {
-          value_ =
-            com.scalar.db.rpc.Value.newBuilder(value_).mergeFrom(value).buildPartial();
+        if (((bitField0_ & 0x00000002) != 0) &&
+          value_ != null &&
+          value_ != com.scalar.db.rpc.Value.getDefaultInstance()) {
+          getValueBuilder().mergeFrom(value);
         } else {
           value_ = value;
         }
-        onChanged();
       } else {
         valueBuilder_.mergeFrom(value);
       }
-
+      bitField0_ |= 0x00000002;
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.Value value = 2 [deprecated = true];</code>
      */
     @java.lang.Deprecated public Builder clearValue() {
-      if (valueBuilder_ == null) {
-        value_ = null;
-        onChanged();
-      } else {
-        value_ = null;
+      bitField0_ = (bitField0_ & ~0x00000002);
+      value_ = null;
+      if (valueBuilder_ != null) {
+        valueBuilder_.dispose();
         valueBuilder_ = null;
       }
-
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.Value value = 2 [deprecated = true];</code>
      */
     @java.lang.Deprecated public com.scalar.db.rpc.Value.Builder getValueBuilder() {
-      
+      bitField0_ |= 0x00000002;
       onChanged();
       return getValueFieldBuilder().getBuilder();
     }
@@ -957,8 +961,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setOperatorValue(int value) {
-      
       operator_ = value;
+      bitField0_ |= 0x00000004;
       onChanged();
       return this;
     }
@@ -968,8 +972,7 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Override
     public com.scalar.db.rpc.ConditionalExpression.Operator getOperator() {
-      @SuppressWarnings("deprecation")
-      com.scalar.db.rpc.ConditionalExpression.Operator result = com.scalar.db.rpc.ConditionalExpression.Operator.valueOf(operator_);
+      com.scalar.db.rpc.ConditionalExpression.Operator result = com.scalar.db.rpc.ConditionalExpression.Operator.forNumber(operator_);
       return result == null ? com.scalar.db.rpc.ConditionalExpression.Operator.UNRECOGNIZED : result;
     }
     /**
@@ -981,7 +984,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) {
         throw new NullPointerException();
       }
-      
+      bitField0_ |= 0x00000004;
       operator_ = value.getNumber();
       onChanged();
       return this;
@@ -991,7 +994,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearOperator() {
-      
+      bitField0_ = (bitField0_ & ~0x00000004);
       operator_ = 0;
       onChanged();
       return this;
@@ -1005,7 +1008,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the column field is set.
      */
     public boolean hasColumn() {
-      return columnBuilder_ != null || column_ != null;
+      return ((bitField0_ & 0x00000008) != 0);
     }
     /**
      * <code>.rpc.Column column = 4;</code>
@@ -1027,11 +1030,11 @@ private static final long serialVersionUID = 0L;
           throw new NullPointerException();
         }
         column_ = value;
-        onChanged();
       } else {
         columnBuilder_.setMessage(value);
       }
-
+      bitField0_ |= 0x00000008;
+      onChanged();
       return this;
     }
     /**
@@ -1041,11 +1044,11 @@ private static final long serialVersionUID = 0L;
         com.scalar.db.rpc.Column.Builder builderForValue) {
       if (columnBuilder_ == null) {
         column_ = builderForValue.build();
-        onChanged();
       } else {
         columnBuilder_.setMessage(builderForValue.build());
       }
-
+      bitField0_ |= 0x00000008;
+      onChanged();
       return this;
     }
     /**
@@ -1053,38 +1056,38 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeColumn(com.scalar.db.rpc.Column value) {
       if (columnBuilder_ == null) {
-        if (column_ != null) {
-          column_ =
-            com.scalar.db.rpc.Column.newBuilder(column_).mergeFrom(value).buildPartial();
+        if (((bitField0_ & 0x00000008) != 0) &&
+          column_ != null &&
+          column_ != com.scalar.db.rpc.Column.getDefaultInstance()) {
+          getColumnBuilder().mergeFrom(value);
         } else {
           column_ = value;
         }
-        onChanged();
       } else {
         columnBuilder_.mergeFrom(value);
       }
-
+      bitField0_ |= 0x00000008;
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.Column column = 4;</code>
      */
     public Builder clearColumn() {
-      if (columnBuilder_ == null) {
-        column_ = null;
-        onChanged();
-      } else {
-        column_ = null;
+      bitField0_ = (bitField0_ & ~0x00000008);
+      column_ = null;
+      if (columnBuilder_ != null) {
+        columnBuilder_.dispose();
         columnBuilder_ = null;
       }
-
+      onChanged();
       return this;
     }
     /**
      * <code>.rpc.Column column = 4;</code>
      */
     public com.scalar.db.rpc.Column.Builder getColumnBuilder() {
-      
+      bitField0_ |= 0x00000008;
       onChanged();
       return getColumnFieldBuilder().getBuilder();
     }

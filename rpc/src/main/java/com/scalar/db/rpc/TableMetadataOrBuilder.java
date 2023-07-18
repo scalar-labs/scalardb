@@ -54,14 +54,12 @@ com.scalar.db.rpc.DataType         defaultValue);
   /**
    * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
    */
-
   int getColumnValueOrDefault(
       java.lang.String key,
       int defaultValue);
   /**
    * <code>map&lt;string, .rpc.DataType&gt; column = 1;</code>
    */
-
   int getColumnValueOrThrow(
       java.lang.String key);
 
@@ -162,14 +160,12 @@ com.scalar.db.rpc.Order         defaultValue);
   /**
    * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
    */
-
   int getClusteringOrderValueOrDefault(
       java.lang.String key,
       int defaultValue);
   /**
    * <code>map&lt;string, .rpc.Order&gt; clustering_order = 4;</code>
    */
-
   int getClusteringOrderValueOrThrow(
       java.lang.String key);
 

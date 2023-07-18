@@ -45,6 +45,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int RESULT_FIELD_NUMBER = 2;
+  @SuppressWarnings("serial")
   private java.util.List<com.scalar.db.rpc.Result> result_;
   /**
    * <code>repeated .rpc.Result result = 2;</code>
@@ -85,7 +86,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int HAS_MORE_RESULTS_FIELD_NUMBER = 3;
-  private boolean hasMoreResults_;
+  private boolean hasMoreResults_ = false;
   /**
    * <code>bool has_more_results = 3;</code>
    * @return The hasMoreResults.
@@ -297,6 +298,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       if (resultBuilder_ == null) {
         result_ = java.util.Collections.emptyList();
       } else {
@@ -305,7 +307,6 @@ private static final long serialVersionUID = 0L;
       }
       bitField0_ = (bitField0_ & ~0x00000001);
       hasMoreResults_ = false;
-
       return this;
     }
 
@@ -332,7 +333,13 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.ScanResponse buildPartial() {
       com.scalar.db.rpc.ScanResponse result = new com.scalar.db.rpc.ScanResponse(this);
-      int from_bitField0_ = bitField0_;
+      buildPartialRepeatedFields(result);
+      if (bitField0_ != 0) { buildPartial0(result); }
+      onBuilt();
+      return result;
+    }
+
+    private void buildPartialRepeatedFields(com.scalar.db.rpc.ScanResponse result) {
       if (resultBuilder_ == null) {
         if (((bitField0_ & 0x00000001) != 0)) {
           result_ = java.util.Collections.unmodifiableList(result_);
@@ -342,9 +349,13 @@ private static final long serialVersionUID = 0L;
       } else {
         result.result_ = resultBuilder_.build();
       }
-      result.hasMoreResults_ = hasMoreResults_;
-      onBuilt();
-      return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.ScanResponse result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000002) != 0)) {
+        result.hasMoreResults_ = hasMoreResults_;
+      }
     }
 
     @java.lang.Override
@@ -461,7 +472,7 @@ private static final long serialVersionUID = 0L;
             } // case 18
             case 24: {
               hasMoreResults_ = input.readBool();
-
+              bitField0_ |= 0x00000002;
               break;
             } // case 24
             default: {
@@ -738,6 +749,7 @@ private static final long serialVersionUID = 0L;
     public Builder setHasMoreResults(boolean value) {
       
       hasMoreResults_ = value;
+      bitField0_ |= 0x00000002;
       onChanged();
       return this;
     }
@@ -746,7 +758,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearHasMoreResults() {
-      
+      bitField0_ = (bitField0_ & ~0x00000002);
       hasMoreResults_ = false;
       onChanged();
       return this;
