@@ -48,7 +48,8 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int NAMESPACE_FIELD_NUMBER = 1;
-  private volatile java.lang.Object namespace_;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object namespace_ = "";
   /**
    * <code>string namespace = 1;</code>
    * @return The namespace.
@@ -86,7 +87,8 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int TABLE_FIELD_NUMBER = 2;
-  private volatile java.lang.Object table_;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object table_ = "";
   /**
    * <code>string table = 2;</code>
    * @return The table.
@@ -124,7 +126,8 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int COLUMN_NAME_FIELD_NUMBER = 3;
-  private volatile java.lang.Object columnName_;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object columnName_ = "";
   /**
    * <code>string column_name = 3;</code>
    * @return The columnName.
@@ -162,7 +165,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int COLUMN_TYPE_FIELD_NUMBER = 4;
-  private int columnType_;
+  private int columnType_ = 0;
   /**
    * <code>.rpc.DataType column_type = 4;</code>
    * @return The enum numeric value on the wire for columnType.
@@ -175,8 +178,7 @@ private static final long serialVersionUID = 0L;
    * @return The columnType.
    */
   @java.lang.Override public com.scalar.db.rpc.DataType getColumnType() {
-    @SuppressWarnings("deprecation")
-    com.scalar.db.rpc.DataType result = com.scalar.db.rpc.DataType.valueOf(columnType_);
+    com.scalar.db.rpc.DataType result = com.scalar.db.rpc.DataType.forNumber(columnType_);
     return result == null ? com.scalar.db.rpc.DataType.UNRECOGNIZED : result;
   }
 
@@ -397,14 +399,11 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       namespace_ = "";
-
       table_ = "";
-
       columnName_ = "";
-
       columnType_ = 0;
-
       return this;
     }
 
@@ -431,12 +430,25 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.AddNewColumnToTableRequest buildPartial() {
       com.scalar.db.rpc.AddNewColumnToTableRequest result = new com.scalar.db.rpc.AddNewColumnToTableRequest(this);
-      result.namespace_ = namespace_;
-      result.table_ = table_;
-      result.columnName_ = columnName_;
-      result.columnType_ = columnType_;
+      if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.AddNewColumnToTableRequest result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.namespace_ = namespace_;
+      }
+      if (((from_bitField0_ & 0x00000002) != 0)) {
+        result.table_ = table_;
+      }
+      if (((from_bitField0_ & 0x00000004) != 0)) {
+        result.columnName_ = columnName_;
+      }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.columnType_ = columnType_;
+      }
     }
 
     @java.lang.Override
@@ -485,14 +497,17 @@ private static final long serialVersionUID = 0L;
       if (other == com.scalar.db.rpc.AddNewColumnToTableRequest.getDefaultInstance()) return this;
       if (!other.getNamespace().isEmpty()) {
         namespace_ = other.namespace_;
+        bitField0_ |= 0x00000001;
         onChanged();
       }
       if (!other.getTable().isEmpty()) {
         table_ = other.table_;
+        bitField0_ |= 0x00000002;
         onChanged();
       }
       if (!other.getColumnName().isEmpty()) {
         columnName_ = other.columnName_;
+        bitField0_ |= 0x00000004;
         onChanged();
       }
       if (other.columnType_ != 0) {
@@ -526,22 +541,22 @@ private static final long serialVersionUID = 0L;
               break;
             case 10: {
               namespace_ = input.readStringRequireUtf8();
-
+              bitField0_ |= 0x00000001;
               break;
             } // case 10
             case 18: {
               table_ = input.readStringRequireUtf8();
-
+              bitField0_ |= 0x00000002;
               break;
             } // case 18
             case 26: {
               columnName_ = input.readStringRequireUtf8();
-
+              bitField0_ |= 0x00000004;
               break;
             } // case 26
             case 32: {
               columnType_ = input.readEnum();
-
+              bitField0_ |= 0x00000008;
               break;
             } // case 32
             default: {
@@ -559,6 +574,7 @@ private static final long serialVersionUID = 0L;
       } // finally
       return this;
     }
+    private int bitField0_;
 
     private java.lang.Object namespace_ = "";
     /**
@@ -601,11 +617,9 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setNamespace(
         java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
+      if (value == null) { throw new NullPointerException(); }
       namespace_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
@@ -614,8 +628,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearNamespace() {
-      
       namespace_ = getDefaultInstance().getNamespace();
+      bitField0_ = (bitField0_ & ~0x00000001);
       onChanged();
       return this;
     }
@@ -626,12 +640,10 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setNamespaceBytes(
         com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
       namespace_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
@@ -677,11 +689,9 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setTable(
         java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
+      if (value == null) { throw new NullPointerException(); }
       table_ = value;
+      bitField0_ |= 0x00000002;
       onChanged();
       return this;
     }
@@ -690,8 +700,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearTable() {
-      
       table_ = getDefaultInstance().getTable();
+      bitField0_ = (bitField0_ & ~0x00000002);
       onChanged();
       return this;
     }
@@ -702,12 +712,10 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setTableBytes(
         com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
       table_ = value;
+      bitField0_ |= 0x00000002;
       onChanged();
       return this;
     }
@@ -753,11 +761,9 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setColumnName(
         java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
+      if (value == null) { throw new NullPointerException(); }
       columnName_ = value;
+      bitField0_ |= 0x00000004;
       onChanged();
       return this;
     }
@@ -766,8 +772,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearColumnName() {
-      
       columnName_ = getDefaultInstance().getColumnName();
+      bitField0_ = (bitField0_ & ~0x00000004);
       onChanged();
       return this;
     }
@@ -778,12 +784,10 @@ private static final long serialVersionUID = 0L;
      */
     public Builder setColumnNameBytes(
         com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
       columnName_ = value;
+      bitField0_ |= 0x00000004;
       onChanged();
       return this;
     }
@@ -802,8 +806,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setColumnTypeValue(int value) {
-      
       columnType_ = value;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }
@@ -813,8 +817,7 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Override
     public com.scalar.db.rpc.DataType getColumnType() {
-      @SuppressWarnings("deprecation")
-      com.scalar.db.rpc.DataType result = com.scalar.db.rpc.DataType.valueOf(columnType_);
+      com.scalar.db.rpc.DataType result = com.scalar.db.rpc.DataType.forNumber(columnType_);
       return result == null ? com.scalar.db.rpc.DataType.UNRECOGNIZED : result;
     }
     /**
@@ -826,7 +829,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) {
         throw new NullPointerException();
       }
-      
+      bitField0_ |= 0x00000008;
       columnType_ = value.getNumber();
       onChanged();
       return this;
@@ -836,7 +839,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearColumnType() {
-      
+      bitField0_ = (bitField0_ & ~0x00000008);
       columnType_ = 0;
       onChanged();
       return this;
