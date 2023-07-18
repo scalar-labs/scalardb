@@ -45,6 +45,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int MUTATION_FIELD_NUMBER = 1;
+  @SuppressWarnings("serial")
   private java.util.List<com.scalar.db.rpc.Mutation> mutation_;
   /**
    * <code>repeated .rpc.Mutation mutation = 1;</code>
@@ -274,6 +275,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       if (mutationBuilder_ == null) {
         mutation_ = java.util.Collections.emptyList();
       } else {
@@ -307,7 +309,13 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.MutateRequest buildPartial() {
       com.scalar.db.rpc.MutateRequest result = new com.scalar.db.rpc.MutateRequest(this);
-      int from_bitField0_ = bitField0_;
+      buildPartialRepeatedFields(result);
+      if (bitField0_ != 0) { buildPartial0(result); }
+      onBuilt();
+      return result;
+    }
+
+    private void buildPartialRepeatedFields(com.scalar.db.rpc.MutateRequest result) {
       if (mutationBuilder_ == null) {
         if (((bitField0_ & 0x00000001) != 0)) {
           mutation_ = java.util.Collections.unmodifiableList(mutation_);
@@ -317,8 +325,10 @@ private static final long serialVersionUID = 0L;
       } else {
         result.mutation_ = mutationBuilder_.build();
       }
-      onBuilt();
-      return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.MutateRequest result) {
+      int from_bitField0_ = bitField0_;
     }
 
     @java.lang.Override

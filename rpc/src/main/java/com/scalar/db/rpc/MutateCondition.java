@@ -181,7 +181,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int TYPE_FIELD_NUMBER = 1;
-  private int type_;
+  private int type_ = 0;
   /**
    * <code>.rpc.MutateCondition.Type type = 1;</code>
    * @return The enum numeric value on the wire for type.
@@ -194,12 +194,12 @@ private static final long serialVersionUID = 0L;
    * @return The type.
    */
   @java.lang.Override public com.scalar.db.rpc.MutateCondition.Type getType() {
-    @SuppressWarnings("deprecation")
-    com.scalar.db.rpc.MutateCondition.Type result = com.scalar.db.rpc.MutateCondition.Type.valueOf(type_);
+    com.scalar.db.rpc.MutateCondition.Type result = com.scalar.db.rpc.MutateCondition.Type.forNumber(type_);
     return result == null ? com.scalar.db.rpc.MutateCondition.Type.UNRECOGNIZED : result;
   }
 
   public static final int EXPRESSION_FIELD_NUMBER = 2;
+  @SuppressWarnings("serial")
   private java.util.List<com.scalar.db.rpc.ConditionalExpression> expression_;
   /**
    * <code>repeated .rpc.ConditionalExpression expression = 2;</code>
@@ -439,15 +439,15 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
       type_ = 0;
-
       if (expressionBuilder_ == null) {
         expression_ = java.util.Collections.emptyList();
       } else {
         expression_ = null;
         expressionBuilder_.clear();
       }
-      bitField0_ = (bitField0_ & ~0x00000001);
+      bitField0_ = (bitField0_ & ~0x00000002);
       return this;
     }
 
@@ -474,19 +474,29 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.MutateCondition buildPartial() {
       com.scalar.db.rpc.MutateCondition result = new com.scalar.db.rpc.MutateCondition(this);
-      int from_bitField0_ = bitField0_;
-      result.type_ = type_;
+      buildPartialRepeatedFields(result);
+      if (bitField0_ != 0) { buildPartial0(result); }
+      onBuilt();
+      return result;
+    }
+
+    private void buildPartialRepeatedFields(com.scalar.db.rpc.MutateCondition result) {
       if (expressionBuilder_ == null) {
-        if (((bitField0_ & 0x00000001) != 0)) {
+        if (((bitField0_ & 0x00000002) != 0)) {
           expression_ = java.util.Collections.unmodifiableList(expression_);
-          bitField0_ = (bitField0_ & ~0x00000001);
+          bitField0_ = (bitField0_ & ~0x00000002);
         }
         result.expression_ = expression_;
       } else {
         result.expression_ = expressionBuilder_.build();
       }
-      onBuilt();
-      return result;
+    }
+
+    private void buildPartial0(com.scalar.db.rpc.MutateCondition result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.type_ = type_;
+      }
     }
 
     @java.lang.Override
@@ -540,7 +550,7 @@ private static final long serialVersionUID = 0L;
         if (!other.expression_.isEmpty()) {
           if (expression_.isEmpty()) {
             expression_ = other.expression_;
-            bitField0_ = (bitField0_ & ~0x00000001);
+            bitField0_ = (bitField0_ & ~0x00000002);
           } else {
             ensureExpressionIsMutable();
             expression_.addAll(other.expression_);
@@ -553,7 +563,7 @@ private static final long serialVersionUID = 0L;
             expressionBuilder_.dispose();
             expressionBuilder_ = null;
             expression_ = other.expression_;
-            bitField0_ = (bitField0_ & ~0x00000001);
+            bitField0_ = (bitField0_ & ~0x00000002);
             expressionBuilder_ = 
               com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                  getExpressionFieldBuilder() : null;
@@ -590,7 +600,7 @@ private static final long serialVersionUID = 0L;
               break;
             case 8: {
               type_ = input.readEnum();
-
+              bitField0_ |= 0x00000001;
               break;
             } // case 8
             case 18: {
@@ -637,8 +647,8 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setTypeValue(int value) {
-      
       type_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
@@ -648,8 +658,7 @@ private static final long serialVersionUID = 0L;
      */
     @java.lang.Override
     public com.scalar.db.rpc.MutateCondition.Type getType() {
-      @SuppressWarnings("deprecation")
-      com.scalar.db.rpc.MutateCondition.Type result = com.scalar.db.rpc.MutateCondition.Type.valueOf(type_);
+      com.scalar.db.rpc.MutateCondition.Type result = com.scalar.db.rpc.MutateCondition.Type.forNumber(type_);
       return result == null ? com.scalar.db.rpc.MutateCondition.Type.UNRECOGNIZED : result;
     }
     /**
@@ -661,7 +670,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) {
         throw new NullPointerException();
       }
-      
+      bitField0_ |= 0x00000001;
       type_ = value.getNumber();
       onChanged();
       return this;
@@ -671,7 +680,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearType() {
-      
+      bitField0_ = (bitField0_ & ~0x00000001);
       type_ = 0;
       onChanged();
       return this;
@@ -680,9 +689,9 @@ private static final long serialVersionUID = 0L;
     private java.util.List<com.scalar.db.rpc.ConditionalExpression> expression_ =
       java.util.Collections.emptyList();
     private void ensureExpressionIsMutable() {
-      if (!((bitField0_ & 0x00000001) != 0)) {
+      if (!((bitField0_ & 0x00000002) != 0)) {
         expression_ = new java.util.ArrayList<com.scalar.db.rpc.ConditionalExpression>(expression_);
-        bitField0_ |= 0x00000001;
+        bitField0_ |= 0x00000002;
        }
     }
 
@@ -832,7 +841,7 @@ private static final long serialVersionUID = 0L;
     public Builder clearExpression() {
       if (expressionBuilder_ == null) {
         expression_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000001);
+        bitField0_ = (bitField0_ & ~0x00000002);
         onChanged();
       } else {
         expressionBuilder_.clear();
@@ -909,7 +918,7 @@ private static final long serialVersionUID = 0L;
         expressionBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
             com.scalar.db.rpc.ConditionalExpression, com.scalar.db.rpc.ConditionalExpression.Builder, com.scalar.db.rpc.ConditionalExpressionOrBuilder>(
                 expression_,
-                ((bitField0_ & 0x00000001) != 0),
+                ((bitField0_ & 0x00000002) != 0),
                 getParentForChildren(),
                 isClean());
         expression_ = null;
