@@ -21,7 +21,7 @@ subprojects {
 
     ext {
         guiceVersion = '5.0.1'
-        guavaVersion = '31.1-jre'
+        guavaVersion = '32.1.1-jre'
         slf4jVersion = '1.7.30'
         cassandraDriverVersion = '3.6.0'
         azureCosmosVersion = '4.39.0'
