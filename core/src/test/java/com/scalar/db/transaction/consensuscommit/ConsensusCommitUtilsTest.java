@@ -192,7 +192,7 @@ public class ConsensusCommitUtilsTest {
     final String ACCOUNT_ID = "account_id";
     final String ACCOUNT_TYPE = "account_type";
     final String BALANCE = "balance";
-
+    // the 'Attribute.ID' column is missing
     TableMetadata metadata =
         TableMetadata.newBuilder()
             .addColumn(ACCOUNT_ID, DataType.INT)
@@ -221,12 +221,48 @@ public class ConsensusCommitUtilsTest {
 
   @Test
   public void
+      isTransactionTableMetadata_TransactionTableMetadataWithoutProperAfterColumnGiven_shouldReturnFalse() {
+    // Arrange
+    final String ACCOUNT_ID = "account_id";
+    final String ACCOUNT_TYPE = "account_type";
+    final String FOO = "foo";
+
+    // the 'before_foo' column exists but the 'foo' column is missing
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREFIX + FOO, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build();
+
+    // Act
+    boolean actual = ConsensusCommitUtils.isTransactionTableMetadata(metadata);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  public void
       isTransactionTableMetadata_TransactionTableMetadataWithoutProperBeforeColumnGiven_shouldReturnFalse() {
     // Arrange
     final String ACCOUNT_ID = "account_id";
     final String ACCOUNT_TYPE = "account_type";
     final String BALANCE = "balance";
 
+    // the 'balance' column exists but the 'before_balance' column is missing
     TableMetadata metadata =
         TableMetadata.newBuilder()
             .addColumn(ACCOUNT_ID, DataType.INT)
