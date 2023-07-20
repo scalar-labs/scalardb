@@ -118,10 +118,10 @@ public final class ConsensusCommitUtils {
       //   - the column name without the "before_" prefix
       // if both columns don't exist, the table metadata is not transactional
       if (!tableMetadata.getColumnNames().contains(Attribute.BEFORE_PREFIX + nonPrimaryKeyColumn)
-          && !nonPrimaryKeyColumn.startsWith(Attribute.BEFORE_PREFIX)
-          && !tableMetadata
-              .getColumnNames()
-              .contains(nonPrimaryKeyColumn.substring(Attribute.BEFORE_PREFIX.length()))) {
+          && !(nonPrimaryKeyColumn.startsWith(Attribute.BEFORE_PREFIX)
+              && tableMetadata
+                  .getColumnNames()
+                  .contains(nonPrimaryKeyColumn.substring(Attribute.BEFORE_PREFIX.length())))) {
         return false;
       }
     }
