@@ -305,18 +305,31 @@ DistributedTransaction transaction = transactionManager.start("<transaction ID>"
 
 Note that you must guarantee uniqueness of the transaction ID in this case.
 
+### Join a transaction
+
+You can join an ongoing transaction that has already begun with specifying a transaction ID as follows:
+
+```java
+// Join a transaction
+DistributedTransaction transaction = transactionManager.join("<transaction ID>");
+```
+
+This is particularly useful in a stateful application where a transaction spans across multiple client requests.
+In such a scenario, the application can start a transaction during the first client request.
+Then, in the subsequent client requests, it can join the ongoing transaction using the `join()` method.
+
 ### Resume a transaction
 
-You can resume a transaction you have already begun with specifying a transaction ID as follows:
+You can resume an ongoing transaction you have already begun with specifying a transaction ID as follows:
 
 ```java
 // Resume a transaction
 DistributedTransaction transaction = transactionManager.resume("<transaction ID>");
 ```
 
-It is helpful in a stateful application where a transaction spans multiple client requests.
-In that case, the application can begin a transaction in the first client request.
-And in the following client requests, it can resume the transaction with the `resume()` method.
+This is particularly useful in a stateful application where a transaction spans across multiple client requests.
+In such a scenario, the application can start a transaction during the first client request.
+Then, in the subsequent client requests, it can resume the ongoing transaction using the `resume()` method.
 
 ### CRUD operations
 
