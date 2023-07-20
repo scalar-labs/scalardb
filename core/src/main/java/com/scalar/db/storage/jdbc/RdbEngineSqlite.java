@@ -8,6 +8,7 @@ import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Driver;
+import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
@@ -122,6 +123,12 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
   public String getTextType(int charLength) {
     return "TEXT";
+  }
+
+  @Override
+  public DataType getDataTypeForScalarDb(
+      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+    throw new UnsupportedOperationException("SQLite is not supported");
   }
 
   @Override
@@ -258,5 +265,10 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
   public Driver getDriver() {
     return new org.sqlite.JDBC();
+  }
+
+  @Override
+  public boolean isImportable() {
+    return false;
   }
 }

@@ -377,7 +377,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: integrationTestJdbc
+          arguments: integrationTestJdbc -Dscalardb.jdbc.mariadb=true
 
       - name: Upload Gradle test reports
         if: always()

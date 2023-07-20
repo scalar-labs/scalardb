@@ -6,6 +6,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Driver;
+import java.sql.JDBCType;
 import java.sql.SQLException;
 
 /**
@@ -25,6 +26,9 @@ public interface RdbEngineStrategy {
   String getDataTypeForEngine(DataType dataType);
 
   String getDataTypeForKey(DataType dataType);
+
+  DataType getDataTypeForScalarDb(
+      JDBCType type, String typeName, int columnSize, int digits, String columnDescription);
 
   int getSqlTypes(DataType dataType);
 
@@ -90,4 +94,8 @@ public interface RdbEngineStrategy {
   UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder);
 
   Driver getDriver();
+
+  default boolean isImportable() {
+    return true;
+  }
 }

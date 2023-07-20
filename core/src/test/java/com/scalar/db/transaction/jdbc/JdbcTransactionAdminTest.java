@@ -227,4 +227,17 @@ public class JdbcTransactionAdminTest {
     // Assert
     verify(jdbcAdmin).addNewColumnToTable(namespace, table, column, dataType);
   }
+
+  @Test
+  public void importTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+
+    // Act
+    admin.importTable(namespace, table);
+
+    // Assert
+    verify(jdbcAdmin).importTable(namespace, table);
+  }
 }

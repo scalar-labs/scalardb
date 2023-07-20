@@ -187,6 +187,25 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     return builder.build();
   }
 
+  @Override
+  public TableMetadata getImportTableMetadata(String namespace, String table) {
+    throw new UnsupportedOperationException(
+        "import-related functionality is not supported in Cassandra");
+  }
+
+  @Override
+  public void addRawColumnToTable(
+      String namespace, String table, String columnName, DataType columnType) {
+    throw new UnsupportedOperationException(
+        "import-related functionality is not supported in Cassandra");
+  }
+
+  @Override
+  public void importTable(String namespace, String table) {
+    throw new UnsupportedOperationException(
+        "import-related functionality is not supported in Cassandra");
+  }
+
   private Scan.Ordering.Order convertOrder(ClusteringOrder clusteringOrder) {
     switch (clusteringOrder) {
       case ASC:

@@ -90,6 +90,12 @@ public class SchemaLoaderCommand implements Callable<Integer> {
                 + "It compares the provided table schema to the existing schema to decide which columns need to be added and which indexes need to be created or deleted",
         defaultValue = "false")
     boolean alterTables;
+
+    @Option(
+        names = {"-I", "--import"},
+        description = "Import tables : it will import existing non-ScalarDB tables to ScalarDB.",
+        defaultValue = "false")
+    boolean importTables;
   }
 
   @Override
@@ -105,6 +111,8 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       repairTables();
     } else if (mode.alterTables) {
       alterTables();
+    } else if (mode.importTables) {
+      importTables();
     }
     return 0;
   }
@@ -155,5 +163,20 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       options.put(DynamoAdmin.NO_SCALING, noScaling.toString());
     }
     SchemaLoader.alterTables(configPath, schemaFile, options);
+  }
+
+  private void importTables() throws SchemaLoaderException {
+    if (schemaFile == null) {
+      throw new IllegalArgumentException(
+          "Specifying the '--schema-file' option is required when using the '--import' option");
+    }
+
+    if (coordinator) {
+      throw new IllegalArgumentException(
+          "Specifying the '--coordinator' option with the '--import' option is not allowed."
+              + " Create coordinator tables separately.");
+    }
+
+    SchemaLoader.importTables(configPath, schemaFile);
   }
 }

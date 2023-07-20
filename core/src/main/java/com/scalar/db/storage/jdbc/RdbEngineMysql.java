@@ -8,12 +8,16 @@ import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Driver;
+import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class RdbEngineMysql implements RdbEngineStrategy {
+  private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
 
   @Override
   public String[] createNamespaceSqls(String fullNamespace) {
@@ -193,6 +197,84 @@ class RdbEngineMysql implements RdbEngineStrategy {
         return "VARBINARY(64)";
       default:
         return null;
+    }
+  }
+
+  @Override
+  public DataType getDataTypeForScalarDb(
+      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+    switch (type) {
+      case BIT:
+        if (columnSize != 1) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
+        }
+        return DataType.BOOLEAN;
+      case TINYINT:
+      case SMALLINT:
+        logger.info(
+            "data type larger than that of underlying database is assigned: {} ({} to INT)",
+            columnDescription,
+            typeName);
+        return DataType.INT;
+      case INTEGER:
+        if (typeName.toUpperCase().endsWith("UNSIGNED")) {
+          logger.info(
+              "data type larger than that of underlying database is assigned: {} ({} to BIGINT)",
+              columnDescription,
+              typeName);
+          return DataType.BIGINT;
+        }
+        return DataType.INT;
+      case BIGINT:
+        if (typeName.toUpperCase().endsWith("UNSIGNED")) {
+          throw new IllegalArgumentException(
+              String.format("data type %s is unsupported: %s", typeName, columnDescription));
+        }
+        logger.warn(
+            "data type that may be smaller than that of underlying database is assigned: {} (MySQL {} to ScalarDB BIGINT)",
+            columnDescription,
+            typeName);
+        return DataType.BIGINT;
+      case REAL:
+        return DataType.FLOAT;
+      case DOUBLE:
+        return DataType.DOUBLE;
+      case CHAR:
+      case VARCHAR:
+      case LONGVARCHAR:
+        if (typeName.equalsIgnoreCase("ENUM")
+            || typeName.equalsIgnoreCase("SET")
+            || typeName.equalsIgnoreCase("JSON")) {
+          throw new IllegalArgumentException(
+              String.format("data type %s is unsupported: %s", typeName, columnDescription));
+        }
+        if (!typeName.equalsIgnoreCase("LONGTEXT")) {
+          logger.info(
+              "data type larger than that of underlying database is assigned: {} ({} to TEXT)",
+              columnDescription,
+              typeName);
+        }
+        return DataType.TEXT;
+      case BINARY:
+      case VARBINARY:
+      case LONGVARBINARY:
+        if (!typeName.toUpperCase().endsWith("BINARY")
+            && !typeName.toUpperCase().endsWith("BLOB")) {
+          throw new IllegalArgumentException(
+              String.format("data type %s is unsupported: %s", typeName, columnDescription));
+        }
+        if (!typeName.equalsIgnoreCase("LONGBLOB")) {
+          logger.info(
+              "data type larger than that of underlying database is assigned: {} ({} to BLOB)",
+              columnDescription,
+              typeName);
+        }
+        return DataType.BLOB;
+      default:
+        throw new IllegalArgumentException(
+            String.format("data type %s is unsupported: %s", typeName, columnDescription));
     }
   }
 
