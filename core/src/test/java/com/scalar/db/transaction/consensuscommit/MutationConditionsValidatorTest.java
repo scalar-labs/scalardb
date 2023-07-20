@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -233,11 +234,11 @@ public class MutationConditionsValidatorTest {
       boolean isConditionSatisfied) {
     // Act Assert
     Column<?> existingRecordColumn = mock(Column.class);
-    Column conditionalExpressionColumn = mock(Column.class);
+    Column<?> conditionalExpressionColumn = mock(Column.class);
     when(conditionalExpressionColumn.getName()).thenReturn(C1);
     when(existingRecord.getColumns()).thenReturn(ImmutableMap.of(C1, existingRecordColumn));
     ConditionalExpression conditionalExpression = mock(ConditionalExpression.class);
-    when(conditionalExpression.getColumn()).thenReturn(conditionalExpressionColumn);
+    doReturn(conditionalExpressionColumn).when(conditionalExpression).getColumn();
     when(conditionalExpression.getOperator()).thenReturn(operator);
     // Assert on a Put operation with PutIf and Delete operation with DeleteIf
     for (Mutation mutation : prepareMutationOperations(ImmutableList.of(conditionalExpression))) {
@@ -269,9 +270,9 @@ public class MutationConditionsValidatorTest {
                 C1, existingRecordColumn1, C2, existingRecordColumn2, C3, existingRecordColumn3));
     // The first condition operator is 'Equal'
     ConditionalExpression conditionalExpression1 = mock(ConditionalExpression.class);
-    Column conditionalExpressionColumn1 = mock(Column.class);
+    Column<?> conditionalExpressionColumn1 = mock(Column.class);
     when(conditionalExpressionColumn1.getName()).thenReturn(C1);
-    when(conditionalExpression1.getColumn()).thenReturn(conditionalExpressionColumn1);
+    doReturn(conditionalExpressionColumn1).when(conditionalExpression1).getColumn();
     when(conditionalExpression1.getOperator()).thenReturn(Operator.EQ);
     if (isCondition1Satisfied) {
       when(existingRecordColumn1.compareTo(any())).thenReturn(0);
@@ -280,9 +281,9 @@ public class MutationConditionsValidatorTest {
     }
     // The second condition operator is 'GreaterThan'
     ConditionalExpression conditionalExpression2 = mock(ConditionalExpression.class);
-    Column conditionalExpressionColumn2 = mock(Column.class);
+    Column<?> conditionalExpressionColumn2 = mock(Column.class);
     when(conditionalExpressionColumn2.getName()).thenReturn(C2);
-    when(conditionalExpression2.getColumn()).thenReturn(conditionalExpressionColumn2);
+    doReturn(conditionalExpressionColumn2).when(conditionalExpression2).getColumn();
     when(conditionalExpression2.getOperator()).thenReturn(Operator.GT);
     if (isCondition2Satisfied) {
       when(existingRecordColumn2.compareTo(any())).thenReturn(1);
@@ -291,9 +292,9 @@ public class MutationConditionsValidatorTest {
     }
     // The third condition operator is 'IsNull'
     ConditionalExpression conditionalExpression3 = mock(ConditionalExpression.class);
-    Column conditionalExpressionColumn3 = mock(Column.class);
+    Column<?> conditionalExpressionColumn3 = mock(Column.class);
     when(conditionalExpressionColumn3.getName()).thenReturn(C3);
-    when(conditionalExpression3.getColumn()).thenReturn(conditionalExpressionColumn3);
+    doReturn(conditionalExpressionColumn3).when(conditionalExpression3).getColumn();
     when(conditionalExpression3.getOperator()).thenReturn(Operator.IS_NULL);
     if (isCondition3Satisfied) {
       when(existingRecordColumn3.hasNullValue()).thenReturn(true);
