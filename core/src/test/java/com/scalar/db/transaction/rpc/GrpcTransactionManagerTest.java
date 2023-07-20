@@ -220,6 +220,137 @@ public class GrpcTransactionManagerTest {
   }
 
   @Test
+  public void join_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
+    // Arrange
+    GrpcTransactionManager spiedManager = spy(manager);
+    GrpcTransactionOnBidirectionalStream bidirectionalStream =
+        mock(GrpcTransactionOnBidirectionalStream.class);
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
+    when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
+
+    DistributedTransaction transaction1 = spiedManager.begin(ANY_ID);
+
+    // Act
+    DistributedTransaction transaction2 = spiedManager.join(ANY_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void join_CalledWithStart_ReturnSameTransactionObject() throws TransactionException {
+    // Arrange
+    GrpcTransactionManager spiedManager = spy(manager);
+    GrpcTransactionOnBidirectionalStream bidirectionalStream =
+        mock(GrpcTransactionOnBidirectionalStream.class);
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
+    when(bidirectionalStream.startTransaction(ANY_ID)).thenReturn(ANY_ID);
+
+    DistributedTransaction transaction1 = spiedManager.start(ANY_ID);
+
+    // Act
+    DistributedTransaction transaction2 = spiedManager.join(ANY_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void join_CalledWithoutBeginOrStart_ThrowTransactionNotFoundException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.join(ANY_ID)).isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void join_CalledWithBeginAndCommit_ThrowTransactionNotFoundException()
+      throws TransactionException {
+    // Arrange
+    GrpcTransactionManager spiedManager = spy(manager);
+    GrpcTransactionOnBidirectionalStream bidirectionalStream =
+        mock(GrpcTransactionOnBidirectionalStream.class);
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
+    when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
+
+    DistributedTransaction transaction = spiedManager.begin(ANY_ID);
+    transaction.commit();
+
+    // Act Assert
+    assertThatThrownBy(() -> spiedManager.join(ANY_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void join_CalledWithBeginAndCommit_CommitExceptionThrown_ReturnSameTransactionObject()
+      throws TransactionException {
+    // Arrange
+    GrpcTransactionManager spiedManager = spy(manager);
+    GrpcTransactionOnBidirectionalStream bidirectionalStream =
+        mock(GrpcTransactionOnBidirectionalStream.class);
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
+    when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
+
+    doThrow(CommitException.class).when(bidirectionalStream).commit();
+
+    DistributedTransaction transaction1 = spiedManager.begin(ANY_ID);
+    try {
+      transaction1.commit();
+    } catch (CommitException ignored) {
+      // expected
+    }
+
+    // Act
+    DistributedTransaction transaction2 = spiedManager.join(ANY_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void join_CalledWithBeginAndRollback_ThrowTransactionNotFoundException()
+      throws TransactionException {
+    // Arrange
+    GrpcTransactionManager spiedManager = spy(manager);
+    GrpcTransactionOnBidirectionalStream bidirectionalStream =
+        mock(GrpcTransactionOnBidirectionalStream.class);
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
+    when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
+
+    DistributedTransaction transaction = spiedManager.begin(ANY_ID);
+    transaction.rollback();
+
+    // Act Assert
+    assertThatThrownBy(() -> spiedManager.join(ANY_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void
+      join_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowTransactionNotFoundException()
+          throws TransactionException {
+    // Arrange
+    GrpcTransactionManager spiedManager = spy(manager);
+    GrpcTransactionOnBidirectionalStream bidirectionalStream =
+        mock(GrpcTransactionOnBidirectionalStream.class);
+    doReturn(bidirectionalStream).when(spiedManager).getStream();
+    when(bidirectionalStream.beginTransaction(ANY_ID)).thenReturn(ANY_ID);
+
+    doThrow(RollbackException.class).when(bidirectionalStream).rollback();
+
+    DistributedTransaction transaction1 = spiedManager.begin(ANY_ID);
+    try {
+      transaction1.rollback();
+    } catch (RollbackException ignored) {
+      // expected
+    }
+
+    // Act Assert
+    assertThatThrownBy(() -> spiedManager.join(ANY_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
   public void getState_IsCalledWithoutAnyArguments_StubShouldBeCalledProperly()
       throws TransactionException {
     // Arrange
