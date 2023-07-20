@@ -402,4 +402,15 @@ public interface Admin {
    */
   void addNewColumnToTable(String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException;
+
+  /**
+   * Import an existing table that is not managed by ScalarDB.
+   *
+   * @param namespace an existing namespace
+   * @param table an existing table
+   * @throws IllegalArgumentException if the table is already managed by ScalarDB, if the target
+   *     table does not exist, or if the table does not meet the requirement of ScalarDB table
+   * @throws ExecutionException if the operation fails
+   */
+  void importTable(String namespace, String table) throws ExecutionException;
 }

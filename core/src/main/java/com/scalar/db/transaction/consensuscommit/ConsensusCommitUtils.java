@@ -5,6 +5,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -127,11 +128,25 @@ public final class ConsensusCommitUtils {
     return true;
   }
 
-  private static Set<String> getNonPrimaryKeyColumns(TableMetadata tableMetadata) {
+  /**
+   * Get non-primary key columns from the specified table metadata.
+   *
+   * @return a set of non-primary key column names
+   */
+  public static Set<String> getNonPrimaryKeyColumns(TableMetadata tableMetadata) {
     return tableMetadata.getColumnNames().stream()
         .filter(c -> !tableMetadata.getPartitionKeyNames().contains(c))
         .filter(c -> !tableMetadata.getClusteringKeyNames().contains(c))
         .collect(Collectors.toSet());
+  }
+
+  /**
+   * Get transaction meta columns.
+   *
+   * @return a map of transaction meta columns
+   */
+  public static Map<String, DataType> getTransactionMetaColumns() {
+    return TRANSACTION_META_COLUMNS;
   }
 
   /**

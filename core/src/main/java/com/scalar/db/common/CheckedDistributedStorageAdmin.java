@@ -5,6 +5,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.ScalarDbUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
@@ -23,6 +24,7 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
     this(admin, true);
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CheckedDistributedStorageAdmin(DistributedStorageAdmin admin, boolean checkNamespace) {
     this.admin = admin;
     this.checkNamespace = checkNamespace;
@@ -270,6 +272,49 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
               + ScalarDbUtils.getFullTableName(namespace, table)
               + ", "
               + columnName,
+          e);
+    }
+  }
+
+  @Override
+  public TableMetadata getImportTableMetadata(String namespace, String table)
+      throws ExecutionException {
+    try {
+      return admin.getImportTableMetadata(namespace, table);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          "Getting the table metadata of the importing table failed: "
+              + ScalarDbUtils.getFullTableName(namespace, table),
+          e);
+    }
+  }
+
+  @Override
+  public void importTable(String namespace, String table) throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata != null) {
+      throw new IllegalArgumentException(
+          "Table already exists: " + ScalarDbUtils.getFullTableName(namespace, table));
+    }
+
+    try {
+      admin.importTable(namespace, table);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          "Importing the table failed: " + ScalarDbUtils.getFullTableName(namespace, table), e);
+    }
+  }
+
+  @Override
+  public void addRawColumnToTable(
+      String namespace, String table, String columnName, DataType columnType)
+      throws ExecutionException {
+    try {
+      admin.addRawColumnToTable(namespace, table, columnName, columnType);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          "Adding the raw column to the table failed: "
+              + ScalarDbUtils.getFullTableName(namespace, table),
           e);
     }
   }

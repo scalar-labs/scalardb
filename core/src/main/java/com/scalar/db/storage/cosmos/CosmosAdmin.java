@@ -552,6 +552,25 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     }
   }
 
+  @Override
+  public TableMetadata getImportTableMetadata(String namespace, String table) {
+    throw new UnsupportedOperationException(
+        "import-related functionality is not supported in Cosmos DB");
+  }
+
+  @Override
+  public void addRawColumnToTable(
+      String namespace, String table, String columnName, DataType columnType) {
+    throw new UnsupportedOperationException(
+        "import-related functionality is not supported in Cosmos DB");
+  }
+
+  @Override
+  public void importTable(String namespace, String table) {
+    throw new UnsupportedOperationException(
+        "import-related functionality is not supported in Cosmos DB");
+  }
+
   private boolean metadataContainerExists() {
     try {
       client.getDatabase(metadataDatabase).getContainer(METADATA_CONTAINER).read();

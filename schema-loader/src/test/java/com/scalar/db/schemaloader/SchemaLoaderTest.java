@@ -27,6 +27,7 @@ public class SchemaLoaderTest {
 
   @Mock private SchemaOperator operator;
   @Mock private SchemaParser parser;
+  @Mock private ImportSchemaParser importSchemaParser;
 
   @Mock private Path configFilePath;
   @Mock private Properties configProperties;
@@ -44,8 +45,11 @@ public class SchemaLoaderTest {
     schemaLoaderMockedStatic
         .when(() -> SchemaLoader.getSchemaParser(any(), anyMap()))
         .thenReturn(parser);
-
+    schemaLoaderMockedStatic
+        .when(() -> SchemaLoader.getImportSchemaParser(any()))
+        .thenReturn(importSchemaParser);
     when(parser.parse()).thenReturn(Collections.emptyList());
+    when(importSchemaParser.parse()).thenReturn(Collections.emptyList());
   }
 
   @AfterEach
@@ -706,5 +710,60 @@ public class SchemaLoaderTest {
     // Assert
     verify(parser).parse();
     verify(operator).alterTables(anyList(), anyMap());
+  }
+
+  @Test
+  public void
+      importTable_WithConfigPropertiesAndSerializedSchema_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.importTables(configProperties, SERIALIZED_SCHEMA_JSON);
+
+    // Assert
+    verify(importSchemaParser).parse();
+    verify(operator).importTables(anyList());
+  }
+
+  @Test
+  public void
+      importTable_WithConfigFilePathAndSerializedSchema_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.importTables(configFilePath, SERIALIZED_SCHEMA_JSON);
+
+    // Assert
+    verify(importSchemaParser).parse();
+    verify(operator).importTables(anyList());
+  }
+
+  @Test
+  public void
+      importTable_WithConfigPropertiesAndSchemaFilePath_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.importTables(configProperties, schemaFilePath);
+
+    // Assert
+    verify(importSchemaParser).parse();
+    verify(operator).importTables(anyList());
+  }
+
+  @Test
+  public void importTable_WithConfigFilePathAndSchemaFilePath_ShouldCallParserAndOperatorProperly()
+      throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.importTables(configFilePath, schemaFilePath);
+
+    // Assert
+    verify(importSchemaParser).parse();
+    verify(operator).importTables(anyList());
   }
 }

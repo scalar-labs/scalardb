@@ -349,4 +349,46 @@ public class SchemaLoaderCommandTest {
     Assertions.assertThat(exitCode).isEqualTo(1);
     schemaLoaderMockedStatic.verifyNoInteractions();
   }
+
+  @Test
+  public void call_ImportOptionGivenWithProperArguments_ShouldCallRepairTableProperly() {
+    // Arrange
+    String schemaFile = "path_to_file";
+    String configFile = "path_to_config_file";
+
+    // Act
+    commandLine.execute("-f", schemaFile, "--import", "--config", configFile);
+
+    // Assert
+    schemaLoaderMockedStatic.verify(
+        () -> SchemaLoader.importTables(Paths.get(configFile), Paths.get(schemaFile)));
+  }
+
+  @Test
+  public void call_ImportOptionGivenWithoutSchemaFile_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    String configFile = "path_to_config_file";
+
+    // Act
+    int exitCode = commandLine.execute("--import", "--config", configFile);
+
+    // Assert
+    Assertions.assertThat(exitCode).isEqualTo(1);
+    schemaLoaderMockedStatic.verifyNoInteractions();
+  }
+
+  @Test
+  public void call_ImportOptionGivenWithCoordinatorArgument_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    String schemaFile = "path_to_file";
+    String configFile = "path_to_config_file";
+
+    // Act
+    int exitCode =
+        commandLine.execute("-f", schemaFile, "--import", "--config", configFile, "--coordinator");
+
+    // Assert
+    Assertions.assertThat(exitCode).isEqualTo(1);
+    schemaLoaderMockedStatic.verifyNoInteractions();
+  }
 }

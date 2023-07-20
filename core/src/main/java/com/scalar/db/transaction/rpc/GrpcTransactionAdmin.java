@@ -394,6 +394,12 @@ public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
                         .build()));
   }
 
+  @Override
+  public void importTable(String namespace, String table) {
+    throw new UnsupportedOperationException(
+        "import-related functionality is not supported in ScalarDB Server");
+  }
+
   private static <T> T execute(ThrowableSupplier<T, ExecutionException> supplier)
       throws ExecutionException {
     try {
