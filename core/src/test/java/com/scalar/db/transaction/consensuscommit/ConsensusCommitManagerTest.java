@@ -283,6 +283,71 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
+  public void join_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
+
+    // Act
+    DistributedTransaction transaction2 = manager.join(ANY_TX_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void join_CalledWithoutBegin_ThrowTransactionNotFoundException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.join(ANY_TX_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void join_CalledWithBeginAndCommit_ThrowTransactionNotFoundException()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin(ANY_TX_ID);
+    transaction.commit();
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.join(ANY_TX_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void join_CalledWithBeginAndCommit_CommitExceptionThrown_ReturnSameTransactionObject()
+      throws TransactionException {
+    // Arrange
+    doThrow(CommitException.class).when(commit).commit(any());
+
+    DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
+    try {
+      transaction1.commit();
+    } catch (CommitException ignored) {
+      // expected
+    }
+
+    // Act
+    DistributedTransaction transaction2 = manager.join(ANY_TX_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void join_CalledWithBeginAndRollback_ThrowTransactionNotFoundException()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin(ANY_TX_ID);
+    transaction.rollback();
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.join(ANY_TX_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
   public void check_StateReturned_ReturnTheState() throws CoordinatorException {
     // Arrange
     TransactionState expected = TransactionState.COMMITTED;
