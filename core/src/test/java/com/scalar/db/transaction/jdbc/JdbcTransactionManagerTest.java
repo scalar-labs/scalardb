@@ -490,4 +490,84 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(() -> manager.resume(ANY_ID))
         .isInstanceOf(TransactionNotFoundException.class);
   }
+
+  @Test
+  public void join_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction1 = manager.begin(ANY_ID);
+
+    // Act
+    DistributedTransaction transaction2 = manager.join(ANY_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void join_CalledWithoutBegin_ThrowTransactionNotFoundException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.join(ANY_ID)).isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void join_CalledWithBeginAndCommit_ThrowTransactionNotFoundException()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin(ANY_ID);
+    transaction.commit();
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.join(ANY_ID)).isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void join_CalledWithBeginAndCommit_CommitExceptionThrown_ReturnSameTransactionObject()
+      throws TransactionException, SQLException {
+    // Arrange
+    doThrow(SQLException.class).when(connection).commit();
+
+    DistributedTransaction transaction1 = manager.begin(ANY_ID);
+    try {
+      transaction1.commit();
+    } catch (CommitException ignored) {
+      // expected
+    }
+
+    // Act
+    DistributedTransaction transaction2 = manager.join(ANY_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void join_CalledWithBeginAndRollback_ThrowTransactionNotFoundException()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin(ANY_ID);
+    transaction.rollback();
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.join(ANY_ID)).isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void
+      join_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowTransactionNotFoundException()
+          throws TransactionException, SQLException {
+    // Arrange
+    doThrow(SQLException.class).when(connection).rollback();
+
+    DistributedTransaction transaction1 = manager.begin(ANY_ID);
+    try {
+      transaction1.rollback();
+    } catch (RollbackException ignored) {
+      // expected
+    }
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.join(ANY_ID)).isInstanceOf(TransactionNotFoundException.class);
+  }
 }
