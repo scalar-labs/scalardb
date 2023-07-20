@@ -21,6 +21,7 @@ import com.scalar.db.rpc.RepairTableRequest;
 import com.scalar.db.rpc.TruncateTableRequest;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableRunnable;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.util.Set;
@@ -38,6 +39,7 @@ public class DistributedStorageAdminService
   private final DistributedStorageAdmin admin;
   private final Metrics metrics;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public DistributedStorageAdminService(DistributedStorageAdmin admin, Metrics metrics) {
     this.admin = admin;
     this.metrics = metrics;

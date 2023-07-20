@@ -10,13 +10,17 @@ import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Driver;
+import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class RdbEnginePostgresql implements RdbEngineStrategy {
+  private static final Logger logger = LoggerFactory.getLogger(RdbEnginePostgresql.class);
 
   @Override
   public String[] createNamespaceSqls(String fullNamespace) {
@@ -188,6 +192,70 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
       return "VARCHAR(10485760)";
     }
     return null;
+  }
+
+  @Override
+  public DataType getDataTypeForScalarDb(
+      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+    switch (type) {
+      case BIT:
+        if (columnSize != 1) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
+        }
+        return DataType.BOOLEAN;
+      case SMALLINT:
+        if (typeName.equalsIgnoreCase("smallserial")) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
+        }
+        logger.info(
+            "data type larger than that of underlying database is assigned: {} ({} to INT)",
+            columnDescription,
+            typeName);
+        return DataType.INT;
+      case INTEGER:
+        if (typeName.equalsIgnoreCase("serial")) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
+        }
+        return DataType.INT;
+      case BIGINT:
+        if (typeName.equalsIgnoreCase("bigserial")) {
+          throw new IllegalArgumentException(
+              String.format("data type %s is unsupported: %s", typeName, columnDescription));
+        }
+        logger.warn(
+            "data type that may be smaller than that of underlying database is assigned: {} (PostgreSQL {} to ScalarDB BIGINT)",
+            columnDescription,
+            typeName);
+        return DataType.BIGINT;
+      case REAL:
+        return DataType.FLOAT;
+      case DOUBLE:
+        if (!typeName.equalsIgnoreCase("float8")) {
+          throw new IllegalArgumentException(
+              String.format("data type %s is unsupported: %s", typeName, columnDescription));
+        }
+        return DataType.DOUBLE;
+      case CHAR:
+      case VARCHAR:
+        if (!typeName.equalsIgnoreCase("text")) {
+          logger.info(
+              "data type larger than that of underlying database is assigned: {} ({} to TEXT)",
+              columnDescription,
+              typeName);
+        }
+        return DataType.TEXT;
+      case BINARY:
+        return DataType.BLOB;
+      default:
+        throw new IllegalArgumentException(
+            String.format("data type %s is unsupported: %s", typeName, columnDescription));
+    }
   }
 
   @Override
