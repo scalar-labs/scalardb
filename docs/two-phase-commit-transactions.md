@@ -445,7 +445,9 @@ As you can see, by resuming the transaction, you can share the same transaction 
 
 ### Handle exceptions
 
-In the previous section, you saw [how to execute a transaction with multiple transaction manager instances](#execute-a-transaction-with-multiple-transaction-manager-instances). However, you may also need to handle exceptions properly.
+In the previous section, you saw [how to execute a transaction with multiple transaction manager instances](#execute-a-transaction-with-multiple-transaction-manager-instances).
+However, you may also need to handle exceptions properly.
+If you don't handle exceptions properly, you may face anomalies or data inconsistency.
 This section describes how to handle exceptions in Two-phase Commit Transactions.
 
 Two-phase Commit Transactions are basically executed by multiple processes/applications (a coordinator and participants).
