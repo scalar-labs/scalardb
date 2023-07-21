@@ -7,10 +7,10 @@ This document briefly explains how to execute Two-phase Commit Transactions in S
 
 ## Overview
 
-ScalarDB transactions normally execute in a single transaction manager instance.
+ScalarDB normally executes transactions in a single transaction manager instance with a one-phase commit interface, which we call normal transactions.
 In that case, you begin a transaction, execute CRUD operations, and commit the transaction in the same transaction manager instance.
 
-In addition to normal transactions, ScalarDB also supports two-phase-commit-style transactions called *Two-phase Commit Transactions*.
+In addition to normal transactions, ScalarDB also supports *Two-phase Commit Transactions*, which execute transactions with a two-phase interface.
 Two-phase Commit Transactions execute a transaction that spans multiple transaction manager instances.
 The transaction manager instances can be in the same process/application or in different processes/applications.
 For example, if you have transaction manager instances in multiple microservices, you can execute a transaction that spans multiple microservices.
@@ -18,7 +18,7 @@ For example, if you have transaction manager instances in multiple microservices
 In Two-phase Commit Transactions, there are two roles, a coordinator and a participant, that collaboratively execute a single transaction.
 A coordinator process and participant processes all have different transaction manager instances.
 The coordinator process first begins a transaction, and the participant processes join the transaction.
-After executing CRUD operations, the coordinator process and the participant processes execute the two-phase commit protocol to commit the transaction.
+After executing CRUD operations, the coordinator process and the participant processes commit the transaction by using the two-phase interface.
 
 ## Configuration
 
@@ -448,8 +448,8 @@ As you can see, by resuming the transaction, you can share the same transaction 
 In the previous section, you saw [how to execute a transaction with multiple transaction manager instances](#execute-a-transaction-with-multiple-transaction-manager-instances). However, you may also need to handle exceptions properly.
 This section describes how to handle exceptions in Two-phase Commit Transactions.
 
-Two-phase commit transactions are basically executed by multiple processes/applications (a coordinator and participants).
-However, in this example code, you can see multiple transaction managers (`transactionManager1` and `transactionManager2`) in a single process.
+Two-phase Commit Transactions are basically executed by multiple processes/applications (a coordinator and participants).
+However, in this example code, we use multiple transaction managers (`transactionManager1` and `transactionManager2`) in a single process for ease of explanation.
 
 The following example code shows how to handle exceptions in Two-phase Commit Transactions:
 
@@ -681,15 +681,15 @@ Although not illustrated in the sample code, the `resume()` API could also throw
 This exception indicates that the transaction associated with the specified ID was not found and/or the transaction might have expired.
 In either case, you can retry the transaction from the beginning since the cause of this exception is basically transient.
 
-In the sample code, for `UnknownTransactionStatusException`, the transaction doesn't retry because the cause of the exception is nontransient.
-Also, for `UnsatisfiedConditionException`, the transaction doesn't retry because how to handle this exception depends on your application requirements.
-For other exceptions, the transaction tries retrying because the cause of the exception is transient or nontransient.
+In the sample code, for `UnknownTransactionStatusException`, the transaction is not retried because the cause of the exception is nontransient.
+Also, for `UnsatisfiedConditionException`, the transaction is not retried because how to handle this exception depends on your application requirements.
+For other exceptions, the transaction is retried because the cause of the exception is transient or nontransient.
 If the cause of the exception is transient, the transaction may succeed if you retry it.
 However, if the cause of the exception is nontransient, the transaction may still fail even if you retry it.
 In such a case, you will exhaust the number of retries.
 
 Please note that if you begin a transaction by specifying a transaction ID, you must use a different ID when you retry the transaction.
-And, in the sample code, the transaction retries three times maximum and sleeps for 100 milliseconds before it retries.
+And, in the sample code, the transaction is retried three times maximum and sleeps for 100 milliseconds before it is retried.
 But you can choose a retry policy, such as exponential backoff, according to your application requirements.
 
 ## Request routing in Two-phase Commit Transactions
