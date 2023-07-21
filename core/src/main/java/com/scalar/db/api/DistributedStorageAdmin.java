@@ -47,6 +47,7 @@ public interface DistributedStorageAdmin extends Admin {
    *
    * @param namespace namespace name of import table
    * @param table import table name
+   * @return table metadata for import table
    * @throws IllegalArgumentException if the table does not exist
    * @throws IllegalStateException if the table does not meet the requirement of ScalarDB table
    * @throws ExecutionException if the operation fails
@@ -58,10 +59,23 @@ public interface DistributedStorageAdmin extends Admin {
    *
    * @param namespace namespace name of import table
    * @param table import table name
+   * @param columnName column name to be added
+   * @param columnType column type of the column name to be added
    * @throws IllegalArgumentException if the table does not exist
    * @throws ExecutionException if the operation fails
    */
   void addRawColumnToTable(String namespace, String table, String columnName, DataType columnType)
+      throws ExecutionException;
+
+  /**
+   * Retrieves the metadata of the storage for the specified namespace.
+   *
+   * @param namespace the namespace
+   * @return the metadata of the storage
+   * @throws IllegalArgumentException if the namespace does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  DistributedStorageMetadata getDistributedStorageMetadata(String namespace)
       throws ExecutionException;
 
   /** Closes connections to the storage. */

@@ -3,6 +3,7 @@ package com.scalar.db.transaction.rpc;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedTransactionAdmin;
+import com.scalar.db.api.DistributedTransactionManagerMetadata;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -398,6 +399,12 @@ public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
   public void importTable(String namespace, String table) {
     throw new UnsupportedOperationException(
         "import-related functionality is not supported in ScalarDB Server");
+  }
+
+  @Override
+  public DistributedTransactionManagerMetadata getDistributedTransactionManagerMetadata() {
+    throw new UnsupportedOperationException(
+        "the distributed transaction manager metadata is not supported in ScalarDB Server");
   }
 
   private static <T> T execute(ThrowableSupplier<T, ExecutionException> supplier)

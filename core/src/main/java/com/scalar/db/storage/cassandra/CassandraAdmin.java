@@ -16,6 +16,8 @@ import com.datastax.driver.core.schemabuilder.TableOptions.CompactionOptions;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedStorageAtomicityLevel;
+import com.scalar.db.api.DistributedStorageMetadata;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
@@ -187,6 +189,17 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     return builder.build();
   }
 
+  private Scan.Ordering.Order convertOrder(ClusteringOrder clusteringOrder) {
+    switch (clusteringOrder) {
+      case ASC:
+        return Scan.Ordering.Order.ASC;
+      case DESC:
+        return Scan.Ordering.Order.DESC;
+      default:
+        throw new AssertionError();
+    }
+  }
+
   @Override
   public TableMetadata getImportTableMetadata(String namespace, String table) {
     throw new UnsupportedOperationException(
@@ -204,17 +217,6 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public void importTable(String namespace, String table) {
     throw new UnsupportedOperationException(
         "import-related functionality is not supported in Cassandra");
-  }
-
-  private Scan.Ordering.Order convertOrder(ClusteringOrder clusteringOrder) {
-    switch (clusteringOrder) {
-      case ASC:
-        return Scan.Ordering.Order.ASC;
-      case DESC:
-        return Scan.Ordering.Order.DESC;
-      default:
-        throw new AssertionError();
-    }
   }
 
   @Override
@@ -284,6 +286,15 @@ public class CassandraAdmin implements DistributedStorageAdmin {
               "Adding the new column %s to the %s.%s table failed", columnName, namespace, table),
           e);
     }
+  }
+
+  @Override
+  public DistributedStorageMetadata getDistributedStorageMetadata(String namespace) {
+    return DistributedStorageMetadata.newBuilder()
+        .type("cassandra")
+        .name("cassandra")
+        .atomicityLevel(DistributedStorageAtomicityLevel.PARTITION)
+        .build();
   }
 
   @VisibleForTesting

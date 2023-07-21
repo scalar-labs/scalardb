@@ -6,6 +6,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedStorageAtomicityLevel;
+import com.scalar.db.api.DistributedStorageMetadata;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
@@ -1217,6 +1219,15 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public void importTable(String namespace, String table) {
     throw new UnsupportedOperationException(
         "import-related functionality is not supported in DynamoDB");
+  }
+
+  @Override
+  public DistributedStorageMetadata getDistributedStorageMetadata(String namespace) {
+    return DistributedStorageMetadata.newBuilder()
+        .type("dynamo")
+        .name("dynamo")
+        .atomicityLevel(DistributedStorageAtomicityLevel.STORAGE)
+        .build();
   }
 
   private String getFullTableName(Namespace namespace, String table) {

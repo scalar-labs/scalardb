@@ -3,6 +3,7 @@ package com.scalar.db.storage.rpc;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedStorageMetadata;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -343,6 +344,12 @@ public class GrpcAdmin implements DistributedStorageAdmin {
   public void importTable(String namespace, String table) {
     throw new UnsupportedOperationException(
         "import-related functionality is not supported in ScalarDB Server");
+  }
+
+  @Override
+  public DistributedStorageMetadata getDistributedStorageMetadata(String namespace) {
+    throw new UnsupportedOperationException(
+        "the distributed storage metadata is not supported in ScalarDB Server");
   }
 
   private static <T> T execute(ThrowableSupplier<T, ExecutionException> supplier)

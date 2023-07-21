@@ -2,6 +2,7 @@ package com.scalar.db.service;
 
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedStorageMetadata;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -109,6 +110,12 @@ public class AdminService implements DistributedStorageAdmin {
   @Override
   public void importTable(String namespace, String table) throws ExecutionException {
     admin.importTable(namespace, table);
+  }
+
+  @Override
+  public DistributedStorageMetadata getDistributedStorageMetadata(String namespace)
+      throws ExecutionException {
+    return admin.getDistributedStorageMetadata(namespace);
   }
 
   @Override

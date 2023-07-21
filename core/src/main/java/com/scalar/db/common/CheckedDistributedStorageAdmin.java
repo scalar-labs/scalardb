@@ -1,6 +1,7 @@
 package com.scalar.db.common;
 
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedStorageMetadata;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -316,6 +317,21 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
           "Adding the raw column to the table failed: "
               + ScalarDbUtils.getFullTableName(namespace, table),
           e);
+    }
+  }
+
+  @Override
+  public DistributedStorageMetadata getDistributedStorageMetadata(String namespace)
+      throws ExecutionException {
+    if (checkNamespace && !namespaceExists(namespace)) {
+      throw new IllegalArgumentException("Namespace does not exist: " + namespace);
+    }
+
+    try {
+      return admin.getDistributedStorageMetadata(namespace);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          "Getting the distributed storage metadata failed: " + namespace, e);
     }
   }
 

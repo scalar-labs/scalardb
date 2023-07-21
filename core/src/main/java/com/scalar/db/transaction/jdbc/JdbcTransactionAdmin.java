@@ -4,6 +4,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
+import com.scalar.db.api.DistributedTransactionManagerMetadata;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CheckedDistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
@@ -133,6 +134,14 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {
     jdbcAdmin.addNewColumnToTable(namespace, table, columnName, columnType);
+  }
+
+  @Override
+  public DistributedTransactionManagerMetadata getDistributedTransactionManagerMetadata() {
+    return DistributedTransactionManagerMetadata.newBuilder()
+        .type("jdbc")
+        .distributedStorageAdmin(jdbcAdmin)
+        .build();
   }
 
   @Override

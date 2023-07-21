@@ -26,8 +26,8 @@ public class MultiStorageConfig {
 
   private final ImmutableMap<String, Properties> databasePropertiesMap;
   private final ImmutableMap<String, String> tableStorageMap;
-  private final ImmutableMap<String, String> namespaceStorageMap;
-  private final String defaultStorage;
+  private final ImmutableMap<String, String> namespaceStorageNameMap;
+  private final String defaultStorageName;
 
   public MultiStorageConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -38,10 +38,10 @@ public class MultiStorageConfig {
 
     databasePropertiesMap = loadDatabasePropertiesMapping(databaseConfig.getProperties());
     tableStorageMap = loadTableStorageMapping(databaseConfig.getProperties());
-    namespaceStorageMap = loadNamespaceStorageMapping(databaseConfig.getProperties());
+    namespaceStorageNameMap = loadNamespaceStorageMapping(databaseConfig.getProperties());
 
-    defaultStorage = getString(databaseConfig.getProperties(), DEFAULT_STORAGE, null);
-    checkIfStorageExists(defaultStorage);
+    defaultStorageName = getString(databaseConfig.getProperties(), DEFAULT_STORAGE, null);
+    checkIfStorageExists(defaultStorageName);
   }
 
   private ImmutableMap<String, Properties> loadDatabasePropertiesMapping(Properties properties) {
@@ -131,11 +131,11 @@ public class MultiStorageConfig {
     return tableStorageMap;
   }
 
-  public Map<String, String> getNamespaceStorageMap() {
-    return namespaceStorageMap;
+  public Map<String, String> getNamespaceStorageNameMap() {
+    return namespaceStorageNameMap;
   }
 
-  public String getDefaultStorage() {
-    return defaultStorage;
+  public String getDefaultStorageName() {
+    return defaultStorageName;
   }
 }

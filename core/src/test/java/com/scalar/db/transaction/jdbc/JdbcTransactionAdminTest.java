@@ -8,6 +8,9 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.scalar.db.api.DistributedStorageAtomicityLevel;
+import com.scalar.db.api.DistributedStorageMetadata;
+import com.scalar.db.api.DistributedTransactionManagerMetadata;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -28,6 +31,16 @@ public class JdbcTransactionAdminTest {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+
+    // Arrange
+    when(jdbcAdmin.getDistributedStorageMetadata(any()))
+        .thenReturn(
+            DistributedStorageMetadata.newBuilder()
+                .type("jdbc")
+                .name("jdbc")
+                .linearizableScanAllSupported()
+                .atomicityLevel(DistributedStorageAtomicityLevel.STORAGE)
+                .build());
     admin = new JdbcTransactionAdmin(jdbcAdmin);
   }
 
@@ -239,5 +252,26 @@ public class JdbcTransactionAdminTest {
 
     // Assert
     verify(jdbcAdmin).importTable(namespace, table);
+  }
+
+  @Test
+  public void getDistributedTransactionManagerMetadata_ShouldReturnAppropriateMetadata()
+      throws ExecutionException {
+    // Arrange
+
+    // Act
+    DistributedTransactionManagerMetadata actual = admin.getDistributedTransactionManagerMetadata();
+
+    // Assert
+    assertThat(actual).isNotNull();
+    assertThat(actual.isDistributedStorageMetadataAvailable()).isTrue();
+    assertThat(actual.getDistributedStorageMetadata("ns"))
+        .isEqualTo(
+            DistributedStorageMetadata.newBuilder()
+                .type("jdbc")
+                .name("jdbc")
+                .linearizableScanAllSupported()
+                .atomicityLevel(DistributedStorageAtomicityLevel.STORAGE)
+                .build());
   }
 }

@@ -65,12 +65,12 @@ public class MultiStorage extends AbstractDistributedStorage {
 
     namespaceStorageMap = new HashMap<>();
     config
-        .getNamespaceStorageMap()
+        .getNamespaceStorageNameMap()
         .forEach(
             (table, storageName) ->
                 namespaceStorageMap.put(table, nameStorageMap.get(storageName)));
 
-    defaultStorage = nameStorageMap.get(config.getDefaultStorage());
+    defaultStorage = nameStorageMap.get(config.getDefaultStorageName());
   }
 
   @VisibleForTesting

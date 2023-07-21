@@ -10,6 +10,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedStorageAtomicityLevel;
+import com.scalar.db.api.DistributedStorageMetadata;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
@@ -753,6 +755,16 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               "Adding the new column %s to the %s.%s table failed", columnName, namespace, table),
           e);
     }
+  }
+
+  @Override
+  public DistributedStorageMetadata getDistributedStorageMetadata(String namespace) {
+    return DistributedStorageMetadata.newBuilder()
+        .type("jdbc")
+        .name("jdbc")
+        .linearizableScanAllSupported()
+        .atomicityLevel(DistributedStorageAtomicityLevel.STORAGE)
+        .build();
   }
 
   private void createIndex(Connection connection, String schema, String table, String indexedColumn)

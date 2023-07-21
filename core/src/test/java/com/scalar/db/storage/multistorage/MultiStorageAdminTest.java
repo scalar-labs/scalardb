@@ -1,9 +1,13 @@
 package com.scalar.db.storage.multistorage;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedStorageAtomicityLevel;
+import com.scalar.db.api.DistributedStorageMetadata;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -16,12 +20,14 @@ import org.mockito.MockitoAnnotations;
 
 public class MultiStorageAdminTest {
 
-  protected static final String NAMESPACE1 = "test_ns1";
-  protected static final String NAMESPACE2 = "test_ns2";
-  protected static final String NAMESPACE3 = "test_ns3";
-  protected static final String TABLE1 = "test_table1";
-  protected static final String TABLE2 = "test_table2";
-  protected static final String TABLE3 = "test_table3";
+  private static final String NAMESPACE1 = "test_ns1";
+  private static final String NAMESPACE2 = "test_ns2";
+  private static final String NAMESPACE3 = "test_ns3";
+  private static final String TABLE1 = "test_table1";
+  private static final String TABLE2 = "test_table2";
+  private static final String TABLE3 = "test_table3";
+  private static final String STORAGE_NAME2 = "straoge_name2";
+  private static final String STORAGE_NAME3 = "straoge_name3";
 
   @Mock private DistributedStorageAdmin admin1;
   @Mock private DistributedStorageAdmin admin2;
@@ -35,13 +41,34 @@ public class MultiStorageAdminTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
+    when(admin2.getDistributedStorageMetadata(NAMESPACE2))
+        .thenReturn(
+            DistributedStorageMetadata.newBuilder()
+                .type("cassandra")
+                .name("cassandra")
+                .atomicityLevel(DistributedStorageAtomicityLevel.PARTITION)
+                .build());
+
+    when(admin3.getDistributedStorageMetadata(NAMESPACE3))
+        .thenReturn(
+            DistributedStorageMetadata.newBuilder()
+                .type("jdbc")
+                .name("jdbc")
+                .linearizableScanAllSupported()
+                .atomicityLevel(DistributedStorageAtomicityLevel.STORAGE)
+                .build());
+
     Map<String, DistributedStorageAdmin> tableAdminMap = new HashMap<>();
     tableAdminMap.put(NAMESPACE1 + "." + TABLE1, admin1);
     tableAdminMap.put(NAMESPACE1 + "." + TABLE2, admin2);
     Map<String, DistributedStorageAdmin> namespaceAdminMap = new HashMap<>();
     namespaceAdminMap.put(NAMESPACE2, admin2);
     DistributedStorageAdmin defaultAdmin = admin3;
-    multiStorageAdmin = new MultiStorageAdmin(tableAdminMap, namespaceAdminMap, defaultAdmin);
+    Map<String, String> namespaceStorageNameMap = new HashMap<>();
+    namespaceStorageNameMap.put(NAMESPACE2, STORAGE_NAME2);
+    multiStorageAdmin =
+        new MultiStorageAdmin(
+            tableAdminMap, namespaceAdminMap, defaultAdmin, namespaceStorageNameMap, STORAGE_NAME3);
   }
 
   @Test
@@ -487,5 +514,30 @@ public class MultiStorageAdminTest {
 
     // Assert
     verify(admin2).addNewColumnToTable(namespace, table, column, dataType);
+  }
+
+  @Test
+  public void getDistributedStorageMetadata_ShouldReturnAppropriateMetadata()
+      throws ExecutionException {
+    // Arrange
+
+    // Act
+    DistributedStorageMetadata metadata1 =
+        multiStorageAdmin.getDistributedStorageMetadata(NAMESPACE2);
+    DistributedStorageMetadata metadata2 =
+        multiStorageAdmin.getDistributedStorageMetadata(NAMESPACE3);
+
+    // Assert
+    assertThat(metadata1).isNotNull();
+    assertThat(metadata1.getType()).isEqualTo("cassandra");
+    assertThat(metadata1.getName()).isEqualTo(STORAGE_NAME2);
+    assertThat(metadata1.isLinearizableScanAllSupported()).isFalse();
+    assertThat(metadata1.getAtomicityLevel()).isEqualTo(DistributedStorageAtomicityLevel.PARTITION);
+
+    assertThat(metadata2).isNotNull();
+    assertThat(metadata2.getType()).isEqualTo("jdbc");
+    assertThat(metadata2.getName()).isEqualTo(STORAGE_NAME3);
+    assertThat(metadata2.isLinearizableScanAllSupported()).isTrue();
+    assertThat(metadata2.getAtomicityLevel()).isEqualTo(DistributedStorageAtomicityLevel.STORAGE);
   }
 }

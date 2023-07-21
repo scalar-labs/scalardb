@@ -25,6 +25,8 @@ import com.azure.cosmos.util.CosmosPagedIterable;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedStorageAtomicityLevel;
+import com.scalar.db.api.DistributedStorageMetadata;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
@@ -535,6 +537,19 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     }
   }
 
+  private boolean metadataContainerExists() {
+    try {
+      client.getDatabase(metadataDatabase).getContainer(METADATA_CONTAINER).read();
+    } catch (RuntimeException e) {
+      if (e instanceof CosmosException
+          && ((CosmosException) e).getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
+        return false;
+      }
+      throw e;
+    }
+    return true;
+  }
+
   @Override
   public void addNewColumnToTable(
       String namespace, String table, String columnName, DataType columnType)
@@ -571,16 +586,12 @@ public class CosmosAdmin implements DistributedStorageAdmin {
         "import-related functionality is not supported in Cosmos DB");
   }
 
-  private boolean metadataContainerExists() {
-    try {
-      client.getDatabase(metadataDatabase).getContainer(METADATA_CONTAINER).read();
-    } catch (RuntimeException e) {
-      if (e instanceof CosmosException
-          && ((CosmosException) e).getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
-        return false;
-      }
-      throw e;
-    }
-    return true;
+  @Override
+  public DistributedStorageMetadata getDistributedStorageMetadata(String namespace) {
+    return DistributedStorageMetadata.newBuilder()
+        .type("cosmos")
+        .name("cosmos")
+        .atomicityLevel(DistributedStorageAtomicityLevel.PARTITION)
+        .build();
   }
 }

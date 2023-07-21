@@ -24,6 +24,8 @@ import com.datastax.driver.core.schemabuilder.SchemaStatement;
 import com.datastax.driver.core.schemabuilder.TableOptions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.scalar.db.api.DistributedStorageAtomicityLevel;
+import com.scalar.db.api.DistributedStorageMetadata;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -612,5 +614,21 @@ public class CassandraAdminTest {
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getDistributedStorageMetadata_ShouldReturnAppropriateMetadata() {
+    // Arrange
+    String namespace = "any_ns";
+
+    // Act
+    DistributedStorageMetadata metadata = cassandraAdmin.getDistributedStorageMetadata(namespace);
+
+    // Assert
+    assertThat(metadata).isNotNull();
+    assertThat(metadata.getType()).isEqualTo("cassandra");
+    assertThat(metadata.getName()).isEqualTo("cassandra");
+    assertThat(metadata.isLinearizableScanAllSupported()).isFalse();
+    assertThat(metadata.getAtomicityLevel()).isEqualTo(DistributedStorageAtomicityLevel.PARTITION);
   }
 }

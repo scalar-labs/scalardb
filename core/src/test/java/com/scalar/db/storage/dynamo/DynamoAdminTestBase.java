@@ -13,6 +13,8 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.scalar.db.api.DistributedStorageAtomicityLevel;
+import com.scalar.db.api.DistributedStorageMetadata;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -1189,5 +1191,20 @@ public abstract class DynamoAdminTestBase {
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getDistributedStorageMetadata_ShouldReturnAppropriateMetadata() {
+    // Arrange
+
+    // Act
+    DistributedStorageMetadata metadata = admin.getDistributedStorageMetadata(NAMESPACE);
+
+    // Assert
+    assertThat(metadata).isNotNull();
+    assertThat(metadata.getType()).isEqualTo("dynamo");
+    assertThat(metadata.getName()).isEqualTo("dynamo");
+    assertThat(metadata.isLinearizableScanAllSupported()).isFalse();
+    assertThat(metadata.getAtomicityLevel()).isEqualTo(DistributedStorageAtomicityLevel.STORAGE);
   }
 }

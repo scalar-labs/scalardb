@@ -68,11 +68,11 @@ public class MultiStorageConfigTest {
     assertThat(config.getTableStorageMap().get("user.customer")).isEqualTo("mysql");
     assertThat(config.getTableStorageMap().get("coordinator.state")).isEqualTo("cassandra");
 
-    assertThat(config.getNamespaceStorageMap().size()).isEqualTo(2);
-    assertThat(config.getNamespaceStorageMap().get("namespace1")).isEqualTo("cassandra");
-    assertThat(config.getNamespaceStorageMap().get("namespace2")).isEqualTo("mysql");
+    assertThat(config.getNamespaceStorageNameMap().size()).isEqualTo(2);
+    assertThat(config.getNamespaceStorageNameMap().get("namespace1")).isEqualTo("cassandra");
+    assertThat(config.getNamespaceStorageNameMap().get("namespace2")).isEqualTo("mysql");
 
-    assertThat(config.getDefaultStorage()).isEqualTo("cassandra");
+    assertThat(config.getDefaultStorageName()).isEqualTo("cassandra");
   }
 
   @Test

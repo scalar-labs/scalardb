@@ -131,6 +131,7 @@ public final class ConsensusCommitUtils {
   /**
    * Get non-primary key columns from the specified table metadata.
    *
+   * @param tableMetadata a table metadata
    * @return a set of non-primary key column names
    */
   public static Set<String> getNonPrimaryKeyColumns(TableMetadata tableMetadata) {

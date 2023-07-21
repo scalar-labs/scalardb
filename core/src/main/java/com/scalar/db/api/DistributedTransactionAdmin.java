@@ -114,6 +114,15 @@ public interface DistributedTransactionAdmin extends Admin {
    */
   void repairCoordinatorTables(Map<String, String> options) throws ExecutionException;
 
+  /**
+   * Retrieves the metadata for the transaction manager.
+   *
+   * @return the metadata for the transaction manager
+   * @throws ExecutionException if the operation fails
+   */
+  DistributedTransactionManagerMetadata getDistributedTransactionManagerMetadata()
+      throws ExecutionException;
+
   /** Closes connections to the storage. */
   void close();
 }

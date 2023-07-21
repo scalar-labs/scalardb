@@ -10,6 +10,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
+import com.scalar.db.api.DistributedTransactionManagerMetadata;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -218,6 +219,14 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     // add ScalarDB metadata
     admin.repairTable(
         namespace, table, buildTransactionTableMetadata(tableMetadata), ImmutableMap.of());
+  }
+
+  @Override
+  public DistributedTransactionManagerMetadata getDistributedTransactionManagerMetadata() {
+    return DistributedTransactionManagerMetadata.newBuilder()
+        .type("consensus-commit")
+        .distributedStorageAdmin(admin)
+        .build();
   }
 
   @Override

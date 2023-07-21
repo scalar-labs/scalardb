@@ -25,6 +25,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
+import com.scalar.db.api.DistributedStorageAtomicityLevel;
+import com.scalar.db.api.DistributedStorageMetadata;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -2537,6 +2539,22 @@ public abstract class JdbcAdminTestBase {
 
     // Assert
     assertThat(thrown).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getDistributedStorageMetadata_ShouldReturnAppropriateMetadata() {
+    // Arrange
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    DistributedStorageMetadata metadata = admin.getDistributedStorageMetadata(NAMESPACE);
+
+    // Assert
+    assertThat(metadata).isNotNull();
+    assertThat(metadata.getType()).isEqualTo("jdbc");
+    assertThat(metadata.getName()).isEqualTo("jdbc");
+    assertThat(metadata.isLinearizableScanAllSupported()).isTrue();
+    assertThat(metadata.getAtomicityLevel()).isEqualTo(DistributedStorageAtomicityLevel.STORAGE);
   }
 
   private PreparedStatement prepareStatementForNamespaceCheck() throws SQLException {
