@@ -20,6 +20,8 @@ jobs:
         with:
           # This is necessary to avoid unexpected auto-merge in git cherry-pick
           fetch-depth: 0
+          # This is necessary for git-push
+          token: ${{ secrets.GH_PR_PAT }}
 
       - name: Create pull requests
         run: |
