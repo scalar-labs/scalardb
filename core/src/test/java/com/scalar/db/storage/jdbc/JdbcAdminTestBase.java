@@ -1,11 +1,20 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_COLUMN_NAME;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_COLUMN_SIZE;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_DATA_TYPE;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_DECIMAL_DIGITS;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_TYPE_NAME;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.description;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
@@ -13,21 +22,27 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.apache.commons.dbcp2.BasicDataSource;
@@ -38,6 +53,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.postgresql.util.PSQLException;
 import org.postgresql.util.PSQLState;
 import org.sqlite.SQLiteErrorCode;
@@ -49,6 +65,16 @@ import org.sqlite.SQLiteException;
  * {@link JdbcConfig#METADATA_SCHEMA}.
  */
 public abstract class JdbcAdminTestBase {
+  private static final String NAMESPACE = "namespace";
+  private static final String TABLE = "table";
+  private static final String COLUMN_1 = "c1";
+  private static final ImmutableMap<RdbEngine, RdbEngineStrategy> RDB_ENGINES =
+      ImmutableMap.of(
+          RdbEngine.MYSQL, RdbEngineFactory.create("jdbc:mysql:"),
+          RdbEngine.ORACLE, RdbEngineFactory.create("jdbc:oracle:"),
+          RdbEngine.POSTGRESQL, RdbEngineFactory.create("jdbc:postgresql:"),
+          RdbEngine.SQL_SERVER, RdbEngineFactory.create("jdbc:sqlserver:"),
+          RdbEngine.SQLITE, RdbEngineFactory.create("jdbc:sqlite:"));
 
   @Mock private BasicDataSource dataSource;
   @Mock private Connection connection;
@@ -236,6 +262,35 @@ public abstract class JdbcAdminTestBase {
         .when(resultSet)
         .next();
     return resultSet;
+  }
+
+  @Test
+  public void getTableMetadata_MetadataSchemaNotExistsForX_ShouldReturnNull()
+      throws SQLException, ExecutionException {
+    for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
+      getTableMetadata_MetadataTableNotExistsForX_ShouldReturnNull(rdbEngine);
+    }
+  }
+
+  private void getTableMetadata_MetadataTableNotExistsForX_ShouldReturnNull(RdbEngine rdbEngine)
+      throws SQLException, ExecutionException {
+    // Arrange
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    Connection connection = mock(Connection.class);
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    SQLException sqlException = mock(SQLException.class);
+    mockUndefinedTableError(rdbEngine, sqlException);
+    when(selectStatement.executeQuery()).thenThrow(sqlException);
+
+    // Act
+    TableMetadata actual = admin.getTableMetadata("my_ns", "my_tbl");
+
+    // Assert
+    assertThat(actual).isNull();
   }
 
   @Test
@@ -2639,6 +2694,522 @@ public abstract class JdbcAdminTestBase {
     return statements;
   }
 
+  @Test
+  public void getImportTableMetadata_ForX_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
+      if (rdbEngine.equals(RdbEngine.SQLITE)) {
+        getImportTableMetadata_ForSQLite_ShouldThrowUnsupportedOperationException(rdbEngine);
+      } else {
+        getImportTableMetadata_ForOtherThanSQLite_ShouldWorkProperly(
+            rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
+      }
+    }
+  }
+
+  private void getImportTableMetadata_ForOtherThanSQLite_ShouldWorkProperly(
+      RdbEngine rdbEngine, String expectedCheckTableExistStatement)
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement checkTableExistStatement = mock(Statement.class);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    ResultSet columnResults = mock(ResultSet.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(checkTableExistStatement);
+    when(connection.getMetaData()).thenReturn(metadata);
+    when(primaryKeyResults.next()).thenReturn(true).thenReturn(true).thenReturn(false);
+    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk1").thenReturn("pk2");
+    when(columnResults.next())
+        .thenAnswer(
+            new Answer<Boolean>() {
+              private int i = 0;
+
+              @Override
+              public Boolean answer(InvocationOnMock invocation) {
+                // two primary key columns + one regular column
+                return i++ < 3;
+              }
+            });
+    when(columnResults.getString(JDBC_COL_COLUMN_NAME))
+        .thenReturn("pk1")
+        .thenReturn("pk2")
+        .thenReturn("col");
+    when(columnResults.getInt(JDBC_COL_DATA_TYPE))
+        .thenReturn(Types.VARCHAR)
+        .thenReturn(Types.VARCHAR)
+        .thenReturn(Types.REAL);
+    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("").thenReturn("").thenReturn("");
+    when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0).thenReturn(0).thenReturn(0);
+    when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0).thenReturn(0).thenReturn(0);
+    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+    when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+
+    Map<String, DataType> expectedColumns = new LinkedHashMap<>();
+    expectedColumns.put("pk1", DataType.TEXT);
+    expectedColumns.put("pk2", DataType.TEXT);
+    expectedColumns.put("col", DataType.FLOAT);
+
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    String description = "database engine specific test failed: " + rdbEngine;
+
+    // Act
+    TableMetadata actual = admin.getImportTableMetadata(NAMESPACE, TABLE);
+
+    // Assert
+    verify(checkTableExistStatement, description(description))
+        .execute(expectedCheckTableExistStatement);
+    assertThat(actual.getPartitionKeyNames()).hasSameElementsAs(ImmutableSet.of("pk1", "pk2"));
+    assertThat(actual.getColumnDataTypes()).containsExactlyEntriesOf(expectedColumns);
+  }
+
+  private void getImportTableMetadata_ForSQLite_ShouldThrowUnsupportedOperationException(
+      RdbEngine rdbEngine) {
+    // Arrange
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE))
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getImportTableMetadata_PrimaryKeyNotExistsForX_ShouldThrowExecutionException()
+      throws SQLException {
+    for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
+      if (!rdbEngine.equals(RdbEngine.SQLITE)) {
+        getImportTableMetadata_PrimaryKeyNotExistsForX_ShouldThrowIllegalStateException(
+            rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
+      }
+    }
+  }
+
+  @Test
+  public void getImportTableMetadata_WithNonExistingTableForX_ShouldThrowIllegalArgumentException()
+      throws SQLException {
+    for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
+      if (!rdbEngine.equals(RdbEngine.SQLITE)) {
+        getImportTableMetadata_WithNonExistingTableForX_ShouldThrowIllegalArgumentException(
+            rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
+      }
+    }
+  }
+
+  private void getImportTableMetadata_WithNonExistingTableForX_ShouldThrowIllegalArgumentException(
+      RdbEngine rdbEngine, String expectedCheckTableExistStatement) throws SQLException {
+    // Arrange
+    Statement checkTableExistStatement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(checkTableExistStatement);
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    SQLException sqlException = mock(SQLException.class);
+    mockUndefinedTableError(rdbEngine, sqlException);
+    when(checkTableExistStatement.execute(any())).thenThrow(sqlException);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE))
+        .isInstanceOf(IllegalArgumentException.class);
+    verify(
+            checkTableExistStatement,
+            description("database engine specific test failed: " + rdbEngine))
+        .execute(expectedCheckTableExistStatement);
+  }
+
+  private void getImportTableMetadata_PrimaryKeyNotExistsForX_ShouldThrowIllegalStateException(
+      RdbEngine rdbEngine, String expectedCheckTableExistStatement) throws SQLException {
+    // Arrange
+    Statement checkTableExistStatement = mock(Statement.class);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(checkTableExistStatement);
+    when(connection.getMetaData()).thenReturn(metadata);
+    when(primaryKeyResults.next()).thenReturn(false);
+    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    String description = "database engine specific test failed: " + rdbEngine;
+
+    // Act
+    Throwable thrown = catchThrowable(() -> admin.getImportTableMetadata(NAMESPACE, TABLE));
+
+    // Assert
+    verify(checkTableExistStatement, description(description))
+        .execute(expectedCheckTableExistStatement);
+    assertThat(thrown).as(description).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void getImportTableMetadata_UnsupportedDataTypeGivenForX_ShouldThrowExecutionException()
+      throws SQLException {
+    for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
+      if (!rdbEngine.equals(RdbEngine.SQLITE)) {
+        getImportTableMetadata_UnsupportedDataTypeGivenForX_ShouldThrowExecutionException(
+            rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
+      }
+    }
+  }
+
+  private void getImportTableMetadata_UnsupportedDataTypeGivenForX_ShouldThrowExecutionException(
+      RdbEngine rdbEngine, String expectedCheckTableExistStatement) throws SQLException {
+    // Arrange
+    Statement checkTableExistStatement = mock(Statement.class);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    ResultSet columnResults = mock(ResultSet.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(checkTableExistStatement);
+    when(connection.getMetaData()).thenReturn(metadata);
+    when(primaryKeyResults.next()).thenReturn(true).thenReturn(false);
+    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk1");
+    when(columnResults.next()).thenReturn(true).thenReturn(false);
+    when(columnResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk1");
+    when(columnResults.getInt(JDBC_COL_DATA_TYPE)).thenReturn(Types.TIMESTAMP);
+    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("timestamp");
+    when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0);
+    when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0);
+    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+    when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    String description = "database engine specific test failed: " + rdbEngine;
+
+    // Act
+    Throwable thrown = catchThrowable(() -> admin.getImportTableMetadata(NAMESPACE, TABLE));
+
+    // Assert
+    verify(checkTableExistStatement, description(description))
+        .execute(expectedCheckTableExistStatement);
+    assertThat(thrown).as(description).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void addRawColumnToTable_ForX_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
+      addRawColumnToTable_ForX_ShouldWorkProperly(
+          rdbEngine,
+          prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE),
+          prepareSqlForAlterTableAddColumn(rdbEngine, COLUMN_1));
+    }
+  }
+
+  private void addRawColumnToTable_ForX_ShouldWorkProperly(
+      RdbEngine rdbEngine, String... expectedSqlStatements)
+      throws SQLException, ExecutionException {
+    // Arrange
+    List<Statement> expectedStatements = new ArrayList<>();
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      Statement expectedStatement = mock(Statement.class);
+      expectedStatements.add(expectedStatement);
+    }
+    when(connection.createStatement())
+        .thenReturn(
+            expectedStatements.get(0),
+            expectedStatements.subList(1, expectedStatements.size()).toArray(new Statement[0]));
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    admin.addRawColumnToTable(NAMESPACE, TABLE, COLUMN_1, DataType.INT);
+
+    // Assert
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      verify(
+              expectedStatements.get(i),
+              description("database engine specific test failed: " + rdbEngine))
+          .execute(expectedSqlStatements[i]);
+    }
+  }
+
+  @Test
+  public void addRawColumnToTable_WithNonExistingTableForX_ShouldThrowIllegalArgumentException()
+      throws SQLException {
+    for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
+      addRawColumnToTable_WithNonExistingTableForX_ShouldThrowIllegalArgumentException(
+          rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
+    }
+  }
+
+  private void addRawColumnToTable_WithNonExistingTableForX_ShouldThrowIllegalArgumentException(
+      RdbEngine rdbEngine, String expectedCheckTableExistStatement) throws SQLException {
+    // Arrange
+    Statement checkTableExistStatement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(checkTableExistStatement);
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    SQLException sqlException = mock(SQLException.class);
+    mockUndefinedTableError(rdbEngine, sqlException);
+    when(checkTableExistStatement.execute(any())).thenThrow(sqlException);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.addRawColumnToTable(NAMESPACE, TABLE, COLUMN_1, DataType.INT))
+        .isInstanceOf(IllegalArgumentException.class);
+    verify(
+            checkTableExistStatement,
+            description("database engine specific test failed: " + rdbEngine))
+        .execute(expectedCheckTableExistStatement);
+  }
+
+  @Test
+  public void importTable_ForX_ShouldWorkProperly() throws SQLException, ExecutionException {
+    for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
+      if (!rdbEngine.equals(RdbEngine.SQLITE)) {
+        List<String> statements = new ArrayList<>();
+        statements.add(prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
+        statements.add(prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
+        statements.add(prepareSqlForMetadataTableCheck(rdbEngine));
+        statements.addAll(prepareSqlForCreateSchemaStatements(rdbEngine));
+        statements.add(prepareSqlForCreateMetadataTable(rdbEngine));
+        statements.add(
+            prepareSqlForInsertMetadata(
+                rdbEngine, COLUMN_1, "TEXT", "PARTITION", "NULL", false, 1));
+        importTable_ForX_ShouldWorkProperly(rdbEngine, statements);
+      }
+    }
+  }
+
+  private void importTable_ForX_ShouldWorkProperly(
+      RdbEngine rdbEngine, List<String> expectedSqlStatements)
+      throws SQLException, ExecutionException {
+    // Arrange
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    ResultSet columnResults = mock(ResultSet.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.getMetaData()).thenReturn(metadata);
+    when(primaryKeyResults.next()).thenReturn(true).thenReturn(false);
+    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn(COLUMN_1);
+    when(columnResults.next()).thenReturn(true).thenReturn(false);
+    when(columnResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn(COLUMN_1);
+    when(columnResults.getInt(JDBC_COL_DATA_TYPE)).thenReturn(Types.VARCHAR);
+    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("");
+    when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0);
+    when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0);
+    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+    when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    List<Statement> expectedStatements = new ArrayList<>();
+    for (int i = 0; i < expectedSqlStatements.size(); i++) {
+      Statement expectedStatement = mock(Statement.class);
+      expectedStatements.add(expectedStatement);
+    }
+    when(connection.createStatement())
+        .thenReturn(
+            expectedStatements.get(0),
+            expectedStatements.subList(1, expectedStatements.size()).toArray(new Statement[0]));
+
+    // prepare the situation where metadata table does not exist
+    SQLException sqlException = mock(SQLException.class);
+    mockUndefinedTableError(rdbEngine, sqlException);
+    when(expectedStatements.get(2).execute(any())).thenThrow(sqlException);
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    admin.importTable(NAMESPACE, TABLE);
+
+    // Assert
+    for (int i = 0; i < expectedSqlStatements.size(); i++) {
+      verify(
+              expectedStatements.get(i),
+              description("database engine specific test failed: " + rdbEngine))
+          .execute(expectedSqlStatements.get(i));
+    }
+  }
+
+  @Test
+  public void importTable_ForSQLite_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.SQLITE);
+
+    // Act
+    Throwable thrown = catchThrowable(() -> admin.importTable(NAMESPACE, TABLE));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  private PreparedStatement prepareStatementForNamespaceCheck(boolean exists) throws SQLException {
+    PreparedStatement statement = mock(PreparedStatement.class);
+    ResultSet results = mock(ResultSet.class);
+    doNothing().when(statement).setString(anyInt(), anyString());
+    when(statement.executeQuery()).thenReturn(results);
+    when(results.next()).thenReturn(exists);
+    return statement;
+  }
+
+  private String prepareSqlForMetadataTableCheck(RdbEngine rdbEngine) {
+    return prepareSqlForTableCheck(rdbEngine, metadataSchemaName, "metadata");
+  }
+
+  private String prepareSqlForTableCheck(RdbEngine rdbEngine, String namespace, String table) {
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    StringBuilder sql =
+        new StringBuilder("SELECT ")
+            .append(rdbEngine.equals(RdbEngine.SQL_SERVER) ? "TOP 1 1" : "1")
+            .append(" FROM ")
+            .append(rdbEngineStrategy.encloseFullTableName(namespace, table));
+
+    switch (rdbEngine) {
+      case ORACLE:
+        sql.append(" FETCH FIRST 1 ROWS ONLY");
+        break;
+      case SQL_SERVER:
+        break;
+      default:
+        sql.append(" LIMIT 1");
+    }
+
+    return sql.toString();
+  }
+
+  private String prepareSqlForAlterTableAddColumn(RdbEngine rdbEngine, String column) {
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    return "ALTER TABLE "
+        + rdbEngineStrategy.encloseFullTableName(NAMESPACE, TABLE)
+        + " ADD "
+        + rdbEngineStrategy.enclose(column)
+        + " INT";
+  }
+
+  private List<String> prepareSqlForCreateSchemaStatements(RdbEngine rdbEngine) {
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    List<String> statements = new ArrayList<>();
+
+    switch (rdbEngine) {
+      case MYSQL:
+      case POSTGRESQL:
+      case SQL_SERVER:
+        statements.add(
+            "CREATE SCHEMA "
+                + (rdbEngine.equals(RdbEngine.SQL_SERVER) ? "" : "IF NOT EXISTS ")
+                + rdbEngineStrategy.enclose(metadataSchemaName));
+        break;
+      case ORACLE:
+        statements.add(
+            "CREATE USER "
+                + rdbEngineStrategy.enclose(metadataSchemaName)
+                + " IDENTIFIED BY "
+                + rdbEngineStrategy.enclose("oracle"));
+        statements.add(
+            "ALTER USER "
+                + rdbEngineStrategy.enclose(metadataSchemaName)
+                + " quota unlimited on USERS");
+        break;
+      default:
+        break;
+    }
+
+    return statements;
+  }
+
+  private String prepareSqlForCreateMetadataTable(RdbEngine rdbEngine) {
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    StringBuilder sql = new StringBuilder("CREATE TABLE ");
+    if (!rdbEngine.equals(RdbEngine.ORACLE) && !rdbEngine.equals(RdbEngine.SQL_SERVER)) {
+      sql.append("IF NOT EXISTS ");
+    }
+
+    sql.append(rdbEngineStrategy.encloseFullTableName(metadataSchemaName, "metadata"))
+        .append("(")
+        .append(rdbEngineStrategy.enclose("full_table_name"))
+        .append(" ")
+        .append(getVarcharString(rdbEngine, 128))
+        .append(",")
+        .append(rdbEngineStrategy.enclose("column_name"))
+        .append(" ")
+        .append(getVarcharString(rdbEngine, 128))
+        .append(",")
+        .append(rdbEngineStrategy.enclose("data_type"))
+        .append(" ")
+        .append(getVarcharString(rdbEngine, 20))
+        .append(" NOT NULL,")
+        .append(rdbEngineStrategy.enclose("key_type"))
+        .append(" ")
+        .append(getVarcharString(rdbEngine, 20))
+        .append(",")
+        .append(rdbEngineStrategy.enclose("clustering_order"))
+        .append(" ")
+        .append(getVarcharString(rdbEngine, 10))
+        .append(",")
+        .append(rdbEngineStrategy.enclose("indexed"));
+
+    switch (rdbEngine) {
+      case ORACLE:
+        sql.append(" NUMBER(1) NOT NULL,");
+        break;
+      case SQL_SERVER:
+        sql.append(" BIT NOT NULL,");
+        break;
+      default:
+        sql.append(" BOOLEAN NOT NULL,");
+        break;
+    }
+
+    sql.append(rdbEngineStrategy.enclose("ordinal_position"))
+        .append(" INTEGER NOT NULL,PRIMARY KEY (")
+        .append(rdbEngineStrategy.enclose("full_table_name"))
+        .append(", ")
+        .append(rdbEngineStrategy.enclose("column_name"))
+        .append("))");
+
+    return sql.toString();
+  }
+
+  private String getVarcharString(RdbEngine rdbEngine, int size) {
+    switch (rdbEngine) {
+      case ORACLE:
+        return "VARCHAR2(" + size + ")";
+      case SQLITE:
+        return "TEXT";
+      default:
+        return "VARCHAR(" + size + ")";
+    }
+  }
+
+  private String prepareSqlForInsertMetadata(
+      RdbEngine rdbEngine,
+      String column,
+      String dataType,
+      String keyType,
+      String clusteringOrder,
+      boolean indexed,
+      int ordinal) {
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    List<String> values =
+        ImmutableList.of(
+            "'" + NAMESPACE + "." + TABLE + "'",
+            "'" + column + "'",
+            "'" + dataType + "'",
+            "'" + keyType + "'",
+            clusteringOrder,
+            getBooleanString(rdbEngine, indexed),
+            Integer.toString(ordinal));
+
+    return "INSERT INTO "
+        + rdbEngineStrategy.encloseFullTableName(metadataSchemaName, "metadata")
+        + " VALUES ("
+        + String.join(",", values)
+        + ")";
+  }
+
+  private String getBooleanString(RdbEngine rdbEngine, boolean value) {
+    switch (rdbEngine) {
+      case ORACLE:
+      case SQL_SERVER:
+        return value ? "1" : "0";
+      case SQLITE:
+        return value ? "TRUE" : "FALSE";
+      default:
+        return value ? "true" : "false";
+    }
+  }
+
+  private RdbEngineStrategy getRdbEngineStrategy(RdbEngine rdbEngine) {
+    return RDB_ENGINES.getOrDefault(rdbEngine, RdbEngineFactory.create("jdbc:mysql:"));
+  }
   // Utility class used to mock ResultSet for a "select * from" query on the metadata table
   static class SelectAllFromMetadataTableResultSetMocker
       implements org.mockito.stubbing.Answer<Object> {

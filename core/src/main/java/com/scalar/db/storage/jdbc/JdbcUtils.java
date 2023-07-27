@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import java.sql.Connection;
+import java.sql.JDBCType;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 public final class JdbcUtils {
@@ -105,5 +106,30 @@ public final class JdbcUtils {
 
   public static boolean isSqlite(JdbcConfig config) {
     return config.getJdbcUrl().startsWith("jdbc:sqlite:");
+  }
+
+  /**
+   * Get {@code JDBCType} of the specified {@code sqlType}.
+   *
+   * @param sqlType a type defined in {@code java.sql.Types}
+   * @return a JDBCType
+   */
+  public static JDBCType getJdbcType(int sqlType) {
+    JDBCType type;
+    switch (sqlType) {
+      case 100: // for Oracle BINARY_FLOAT
+        type = JDBCType.REAL;
+        break;
+      case 101: // for Oracle BINARY_DOUBLE
+        type = JDBCType.DOUBLE;
+        break;
+      default:
+        try {
+          type = JDBCType.valueOf(sqlType);
+        } catch (IllegalArgumentException e) {
+          type = JDBCType.OTHER;
+        }
+    }
+    return type;
   }
 }

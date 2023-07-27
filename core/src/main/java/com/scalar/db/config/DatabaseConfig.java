@@ -88,7 +88,7 @@ public class DatabaseConfig {
     metadataCacheExpirationTimeSecs =
         getLong(getProperties(), METADATA_CACHE_EXPIRATION_TIME_SECS, -1);
     activeTransactionManagementExpirationTimeMillis =
-        getLong(getProperties(), ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS, 0);
+        getLong(getProperties(), ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS, -1);
     defaultNamespaceName = getString(getProperties(), DEFAULT_NAMESPACE_NAME, null);
   }
 

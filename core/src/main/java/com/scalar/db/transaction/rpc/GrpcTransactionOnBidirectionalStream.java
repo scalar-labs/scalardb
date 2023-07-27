@@ -17,6 +17,7 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.rpc.DistributedTransactionGrpc.DistributedTransactionStub;
 import com.scalar.db.rpc.TransactionRequest;
 import com.scalar.db.rpc.TransactionRequest.AbortRequest;
@@ -244,6 +245,8 @@ public class GrpcTransactionOnBidirectionalStream
           throw new IllegalArgumentException(error.getMessage());
         case TRANSACTION_CONFLICT:
           throw new CrudConflictException(error.getMessage(), transactionId);
+        case UNSATISFIED_CONDITION:
+          throw new UnsatisfiedConditionException(error.getMessage(), transactionId);
         default:
           throw new CrudException(error.getMessage(), transactionId);
       }

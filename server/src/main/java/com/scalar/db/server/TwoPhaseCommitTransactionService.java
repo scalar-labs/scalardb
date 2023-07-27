@@ -15,6 +15,7 @@ import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
@@ -531,6 +532,12 @@ public class TwoPhaseCommitTransactionService
         responseBuilder.setError(
             TwoPhaseCommitTransactionResponse.Error.newBuilder()
                 .setErrorCode(ErrorCode.TRANSACTION_CONFLICT)
+                .setMessage(e.getMessage())
+                .build());
+      } catch (UnsatisfiedConditionException e) {
+        responseBuilder.setError(
+            TwoPhaseCommitTransactionResponse.Error.newBuilder()
+                .setErrorCode(ErrorCode.UNSATISFIED_CONDITION)
                 .setMessage(e.getMessage())
                 .build());
       } catch (UnknownTransactionStatusException e) {

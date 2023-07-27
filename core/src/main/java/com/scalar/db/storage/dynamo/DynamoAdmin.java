@@ -1270,6 +1270,25 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public TableMetadata getImportTableMetadata(String namespace, String table) {
+    throw new UnsupportedOperationException(
+        "import-related functionality is not supported in DynamoDB");
+  }
+
+  @Override
+  public void addRawColumnToTable(
+      String namespace, String table, String columnName, DataType columnType) {
+    throw new UnsupportedOperationException(
+        "import-related functionality is not supported in DynamoDB");
+  }
+
+  @Override
+  public void importTable(String namespace, String table) {
+    throw new UnsupportedOperationException(
+        "import-related functionality is not supported in DynamoDB");
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     try {
       Set<String> namespaceNames = new HashSet<>();

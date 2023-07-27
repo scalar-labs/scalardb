@@ -21,7 +21,7 @@ TransactionFactory transactionFactory = TransactionFactory.create("<configuratio
 DistributedTransactionAdmin admin = transactionFactory.getTransactionAdmin();
 ```
 
-Please see [Getting Started](getting-started.md) for the details of the configuration file.
+For details about configurations, see [ScalarDB Configurations](configurations.md).
 
 Once you have executed all administrative operations, you should close the `DistributedTransactionAdmin` instance as follows:
 
@@ -305,18 +305,31 @@ DistributedTransaction transaction = transactionManager.start("<transaction ID>"
 
 Note that you must guarantee uniqueness of the transaction ID in this case.
 
+### Join a transaction
+
+You can join an ongoing transaction that has already begun with specifying a transaction ID as follows:
+
+```java
+// Join a transaction
+DistributedTransaction transaction = transactionManager.join("<transaction ID>");
+```
+
+This is particularly useful in a stateful application where a transaction spans across multiple client requests.
+In such a scenario, the application can start a transaction during the first client request.
+Then, in the subsequent client requests, it can join the ongoing transaction using the `join()` method.
+
 ### Resume a transaction
 
-You can resume a transaction you have already begun with specifying a transaction ID as follows:
+You can resume an ongoing transaction you have already begun with specifying a transaction ID as follows:
 
 ```java
 // Resume a transaction
 DistributedTransaction transaction = transactionManager.resume("<transaction ID>");
 ```
 
-It is helpful in a stateful application where a transaction spans multiple client requests.
-In that case, the application can begin a transaction in the first client request.
-And in the following client requests, it can resume the transaction with the `resume()` method.
+This is particularly useful in a stateful application where a transaction spans across multiple client requests.
+In such a scenario, the application can start a transaction during the first client request.
+Then, in the subsequent client requests, it can resume the ongoing transaction using the `resume()` method.
 
 ### CRUD operations
 
@@ -607,6 +620,79 @@ Delete delete =
 transaction.delete(delete);
 ```
 
+#### Put and Delete with a condition
+You can write arbitrary conditions (e.g., a bank account balance must be equal to or more than zero) that you require a transaction to meet before being committed by having logic that checks the conditions in the transaction.
+Alternatively, you can write simple conditions in a mutation operation, such as Put and Delete.
+
+When a Put or Delete operation includes a condition, the operation is executed only if the specified condition is met.
+If the condition fails to be satisfied when the operation is executed, an exception called `UnsatisfiedConditionException` is thrown.
+
+##### Conditions for Put
+You can specify a condition in a Put operation as follows:
+
+```java
+// Build a condition
+MutationCondition condition =
+    ConditionBuilder.putIf(ConditionBuilder.column("c4").isEqualToFloat(0.0F))
+        .and(ConditionBuilder.column("c5").isEqualToDouble(0.0))
+        .build();
+
+Put put =
+    Put.newBuilder()
+        .namespace("ns")
+        .table("tbl")
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .floatValue("c4", 1.23F)
+        .doubleValue("c5", 4.56)
+        .condition(condition) // condition
+        .build();
+
+// Execute the Put operation
+transaction.put(put);
+```
+
+In addition to using the `putIf` condition, you can specify the `putIfExists` and `putIfNotExists` conditions as follows:
+
+```java
+// Build a putIfExists condition
+MutationCondition putIfExistsCondition = ConditionBuilder.putIfExists();
+
+// Build a putIfNotExists condition
+MutationCondition putIfNotExistsCondition = ConditionBuilder.putIfNotExists();
+```
+
+##### Conditions for Delete
+
+You can specify a condition in a Delete operation as follows:
+
+```java
+// Build a condition
+MutationCondition condition =
+    ConditionBuilder.deleteIf(ConditionBuilder.column("c4").isEqualToFloat(0.0F))
+        .and(ConditionBuilder.column("c5").isEqualToDouble(0.0))
+        .build();
+
+Delete delete =
+    Delete.newBuilder()
+        .namespace("ns")
+        .table("tbl")
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .condition(condition)  // condition
+        .build();
+
+// Execute the Delete operation
+transaction.delete(delete);
+```
+
+In addition to using the `deleteIf` condition, you can specify the `deleteIfExists` condition as follows:
+
+```java
+// Build a deleteIfExists condition
+MutationCondition deleteIfExistsCondition = ConditionBuilder.deleteIfExists();
+```
+
 #### Mutate operation
 
 Mutate is an operation to execute multiple mutations (Put and Delete operations).
@@ -672,9 +758,7 @@ Scan scanUsingSpecifiedNamespace =
 
 #### Notes
 
-- All the builders of the CRUD operations can specify consistency with the `consistency()` methods, but it's ignored, and the `LINEARIZABLE` consistency level is always used in transactions.
-- Also, the builders of the mutation operations (Put and Delete operations) can specify a condition with the `condition()` methods, but it's ignored, too. 
-Please program such conditions in a transaction if you want to implement conditional mutation.
+Although all the builders of the CRUD operations can specify consistency by using the `consistency()` methods, those methods are ignored. Instead, the `LINEARIZABLE` consistency level is always used in transactions.
 
 ### Commit a transaction
 
@@ -703,9 +787,9 @@ Or
 transaction.abort();
 ```
 
-Please see [Handle Exceptions](#handle-exceptions) for the details of how to handle exceptions in ScalarDB.
+Please see [Handle exceptions](#handle-exceptions) for the details of how to handle exceptions in ScalarDB.
 
-## Handle Exceptions
+## Handle exceptions
 
 Handling exceptions correctly in ScalarDB is very important.
 If you mishandle exceptions, your data could become inconsistent.
@@ -715,84 +799,118 @@ Let's look at the following example code to see how to handle exceptions in Scal
 
 ```java
 public class Sample {
-  public static void main(String[] args) throws IOException, InterruptedException {
+  public static void main(String[] args) throws Exception {
     TransactionFactory factory = TransactionFactory.create("<configuration file path>");
     DistributedTransactionManager transactionManager = factory.getTransactionManager();
 
     int retryCount = 0;
+    TransactionException lastException = null;
 
     while (true) {
       if (retryCount++ > 0) {
         // Retry the transaction three times maximum in this sample code
         if (retryCount >= 3) {
-          return;
+          // Throw the last exception if the number of retries exceeds the maximum
+          throw lastException;
         }
+
         // Sleep 100 milliseconds before retrying the transaction in this sample code
         TimeUnit.MILLISECONDS.sleep(100);
       }
 
-      // Begin a transaction
-      DistributedTransaction tx;
+      DistributedTransaction transaction = null;
       try {
-        tx = transactionManager.begin();
-      } catch (TransactionException e) {
-        // If beginning a transaction failed, it indicates some failure happens during the
-        // transaction, so you should cancel the transaction or retry the transaction after the
-        // failure/error is fixed
-        return;
-      }
+        // Begin a transaction
+        transaction = transactionManager.begin();
 
-      try {
         // Execute CRUD operations in the transaction
-        Optional<Result> result = tx.get(...);
-        List<Result> results = tx.scan(...);
-        tx.put(...);
-        tx.delete(...);
+        Optional<Result> result = transaction.get(...);
+        List<Result> results = transaction.scan(...);
+        transaction.put(...);
+        transaction.delete(...);
 
         // Commit the transaction
-        tx.commit();
-      } catch (CrudConflictException | CommitConflictException e) {
-        // If you catch CrudConflictException or CommitConflictException, it indicates a transaction
-        // conflict occurs during the transaction so that you can retry the transaction from the
-        // beginning
+        transaction.commit();
+      } catch (UnsatisfiedConditionException e) {
+        // You need to handle `UnsatisfiedConditionException` only if a mutation operation specifies
+        // a condition. This exception indicates the condition for the mutation operation is not met
+
         try {
-          tx.rollback();
+          transaction.rollback();
         } catch (RollbackException ex) {
-          // Rolling back the transaction failed. You can log it here
+          // Rolling back the transaction failed. As the transaction should eventually recover, you
+          // don't need to do anything further. You can simply log the occurrence here
         }
-      } catch (CrudException | CommitException e) {
-        // If you catch CrudException or CommitException, it indicates some failure happens, so you
-        // should cancel the transaction or retry the transaction after the failure/error is fixed
-        try {
-          tx.rollback();
-        } catch (RollbackException ex) {
-          // Rolling back the transaction failed. You can log it here
-        }
+
+        // You can handle the exception here, according to your application requirements
+
         return;
       } catch (UnknownTransactionStatusException e) {
-        // If you catch `UnknownTransactionStatusException` when committing the transaction, you are
-        // not sure if the transaction succeeds or not. In such a case, you need to check if the
-        // transaction is committed successfully or not and retry it if it failed. How to identify a
-        // transaction status is delegated to users
+        // If you catch `UnknownTransactionStatusException` when committing the transaction, it
+        // indicates that the status of the transaction, whether it has succeeded or not, is
+        // unknown. In such a case, you need to check if the transaction is committed successfully
+        // or not and retry it if it failed. How to identify a transaction status is delegated to 
+        // users
         return;
+      } catch (TransactionException e) {
+        // For other exceptions, you can try retrying the transaction.
+
+        // For `CrudConflictException` and `CommitConflictException` and
+        // `TransactionNotFoundException`, you can basically retry the transaction. However, for the
+        // other exceptions, the transaction may still fail if the cause of the exception is
+        // nontransient. In such a case, you will exhaust the number of retries and throw the last
+        // exception
+
+        if (transaction != null) {
+          try {
+            transaction.rollback();
+          } catch (RollbackException ex) {
+            // Rolling back the transaction failed. As the transaction should eventually recover,
+            // you don't need to do anything further. You can simply log the occurrence here
+          }
+        }
+
+        lastException = e;
       }
     }
   }
 }
 ```
 
-The APIs for CRUD operations (`get()`/`scan()`/`put()`/`delete()`/`mutate()`) could throw `CrudException` and `CrudConflictException`.
-If you catch `CrudException`, it indicates some failure (e.g., database failure and network error) happens during a transaction, so you should cancel the transaction or retry the transaction after the failure/error is fixed.
-If you catch `CrudConflictException`, it indicates a transaction conflict occurs during the transaction so that you can retry the transaction from the beginning, preferably with well-adjusted exponential backoff based on your application and environment.
-The sample code retries three times maximum and sleeps 100 milliseconds before retrying the transaction.
+The `begin()` API could throw `TransactionException` or `TransactionNotFoundException`.
+If you catch `TransactionException`, it indicates that the transaction has failed to begin due to transient or nontransient faults. You can try retrying the transaction, but you may not be able to begin the transaction due to nontransient faults.
+If you catch `TransactionNotFoundException`, it indicates that the transaction has failed to begin due to transient faults. You can retry the transaction.
 
-Also, the `commit()` API could throw `CommitException`, `CommitConflictException`, and `UnknownTransactionStatusException`.
-If you catch `CommitException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure/error is fixed.
-If you catch `CommitConflictException`, like the `CrudConflictException` case, you can retry the transaction from the beginning.
-If you catch `UnknownTransactionStatusException`, you are not sure if the transaction succeeds or not.
-In such a case, you need to check if the transaction is committed successfully or not and retry it if it fails.
+The APIs for CRUD operations (`get()`, `scan()`, `put()`, `delete()`, and `mutate()`) could throw `CrudException` or `CrudConflictException`.
+If you catch `CrudException`, it indicates that the transaction CRUD operation has failed due to transient or nontransient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is nontransient.
+If you catch `CrudConflictException`, it indicates that the transaction CRUD operation has failed due to transient faults (e.g., a conflict error). You can retry the transaction from the beginning.
+
+The APIs for mutation operations (`put()`, `delete()`, and `mutate()`) could also throw `UnsatisfiedConditionException`.
+If you catch this exception, it indicates that the condition for the mutation operation is not met.
+You can handle this exception according to your application requirements.
+
+Also, the `commit()` API could throw `CommitException`, `CommitConflictException`, or `UnknownTransactionStatusException`.
+If you catch `CommitException`, it indicates that committing the transaction fails due to transient or nontransient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is nontransient.
+If you catch `CommitConflictException`, it indicates that committing the transaction has failed due to transient faults (e.g., a conflict error). You can retry the transaction from the beginning.
+If you catch `UnknownTransactionStatusException`, it indicates that the status of the transaction, whether it has succeeded or not, is unknown.
+In such a case, you need to check if the transaction is committed successfully and retry the transaction if it has failed.
 How to identify a transaction status is delegated to users.
 You may want to create a transaction status table and update it transactionally with other application data so that you can get the status of a transaction from the status table.
+
+Although not illustrated in the sample code, the `resume()` API could also throw `TransactionNotFoundException`.
+This exception indicates that the transaction associated with the specified ID was not found and/or the transaction might have expired.
+In either case, you can retry the transaction from the beginning since the cause of this exception is basically transient.
+
+In the sample code, for `UnknownTransactionStatusException`, the transaction is not retried because the cause of the exception is nontransient.
+Also, for `UnsatisfiedConditionException`, the transaction is not retried because how to handle this exception depends on your application requirements.
+For other exceptions, the transaction is retried because the cause of the exception is transient or nontransient.
+If the cause of the exception is transient, the transaction may succeed if you retry it.
+However, if the cause of the exception is nontransient, the transaction may still fail even if you retry it.
+In such a case, you will exhaust the number of retries.
+
+Please note that if you begin a transaction by specifying a transaction ID, you must use a different ID when you retry the transaction.
+And, in the sample code, the transaction is retried three times maximum and sleeps for 100 milliseconds before it is retried.
+But you can choose a retry policy, such as exponential backoff, according to your application requirements.
 
 ## Transactional operations for Two-phase Commit Transaction
 

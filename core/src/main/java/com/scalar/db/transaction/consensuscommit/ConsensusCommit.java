@@ -12,6 +12,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.common.AbstractDistributedTransaction;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -41,13 +42,19 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   private final CrudHandler crud;
   private final CommitHandler commit;
   private final RecoveryHandler recovery;
+  private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
   private Runnable beforeRecoveryHook;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public ConsensusCommit(CrudHandler crud, CommitHandler commit, RecoveryHandler recovery) {
+  public ConsensusCommit(
+      CrudHandler crud,
+      CommitHandler commit,
+      RecoveryHandler recovery,
+      ConsensusCommitMutationOperationChecker mutationOperationChecker) {
     this.crud = checkNotNull(crud);
     this.commit = checkNotNull(commit);
     this.recovery = checkNotNull(recovery);
+    this.mutationOperationChecker = mutationOperationChecker;
     this.beforeRecoveryHook = () -> {};
   }
 
@@ -79,40 +86,45 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   }
 
   @Override
-  public void put(Put put) {
+  public void put(Put put) throws CrudException {
     put = copyAndSetTargetToIfNot(put);
+    checkMutation(put);
     crud.put(put);
   }
 
   @Override
-  public void put(List<Put> puts) {
+  public void put(List<Put> puts) throws CrudException {
     checkArgument(puts.size() != 0);
-    puts.forEach(this::put);
+    for (Put p : puts) {
+      put(p);
+    }
   }
 
   @Override
-  public void delete(Delete delete) {
+  public void delete(Delete delete) throws CrudException {
     delete = copyAndSetTargetToIfNot(delete);
+    checkMutation(delete);
     crud.delete(delete);
   }
 
   @Override
-  public void delete(List<Delete> deletes) {
+  public void delete(List<Delete> deletes) throws CrudException {
     checkArgument(deletes.size() != 0);
-    deletes.forEach(this::delete);
+    for (Delete d : deletes) {
+      delete(d);
+    }
   }
 
   @Override
-  public void mutate(List<? extends Mutation> mutations) {
+  public void mutate(List<? extends Mutation> mutations) throws CrudException {
     checkArgument(mutations.size() != 0);
-    mutations.forEach(
-        m -> {
-          if (m instanceof Put) {
-            put((Put) m);
-          } else if (m instanceof Delete) {
-            delete((Delete) m);
-          }
-        });
+    for (Mutation m : mutations) {
+      if (m instanceof Put) {
+        put((Put) m);
+      } else if (m instanceof Delete) {
+        delete((Delete) m);
+      }
+    }
   }
 
   @Override
@@ -149,5 +161,13 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     logger.debug("recover uncommitted records: {}", results);
     beforeRecoveryHook.run();
     results.forEach(r -> recovery.recover(selection, r));
+  }
+
+  private void checkMutation(Mutation mutation) throws CrudException {
+    try {
+      mutationOperationChecker.check(mutation);
+    } catch (ExecutionException e) {
+      throw new CrudException("Checking the operation failed", e, getId());
+    }
   }
 }

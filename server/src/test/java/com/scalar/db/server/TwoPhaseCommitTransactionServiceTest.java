@@ -2,13 +2,17 @@ package com.scalar.db.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
+import com.scalar.db.api.ConditionBuilder;
+import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
@@ -18,6 +22,7 @@ import com.scalar.db.common.ResultImpl;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
@@ -26,6 +31,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
@@ -36,20 +42,24 @@ import com.scalar.db.rpc.RollbackRequest;
 import com.scalar.db.rpc.RollbackResponse;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.GetResponse;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ScanResponse;
 import com.scalar.db.rpc.Value;
 import com.scalar.db.rpc.Value.BlobValue;
 import com.scalar.db.rpc.Value.TextValue;
 import com.scalar.db.server.TwoPhaseCommitTransactionService.TwoPhaseCommitTransactionStreamObserver;
+import com.scalar.db.util.ProtoUtils;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -859,5 +869,51 @@ public class TwoPhaseCommitTransactionServiceTest {
     // Assert
     verify(responseObserver).onError(exceptionCaptor.capture());
     assertThat(exceptionCaptor.getValue().getStatus().getCode()).isEqualTo(Code.UNAVAILABLE);
+  }
+
+  @Test
+  public void
+      mutate_ThrowsUnsatisfiedConditionException_ShouldRespondWithUnsatisfiedConditionError()
+          throws TransactionException {
+    // Arrange
+    @SuppressWarnings("unchecked")
+    StreamObserver<TwoPhaseCommitTransactionResponse> responseObserver = mock(StreamObserver.class);
+    TwoPhaseCommitTransactionStreamObserver twoPhaseCommitTransactionStreamObserver =
+        new TwoPhaseCommitTransactionStreamObserver(
+            manager, tableMetadataManager, responseObserver, new Metrics(), s -> true, () -> {});
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("c1", "foo"))
+            .condition(ConditionBuilder.putIfExists())
+            .build();
+    TwoPhaseCommitTransactionRequest putRequest =
+        TwoPhaseCommitTransactionRequest.newBuilder()
+            .setMutateRequest(MutateRequest.newBuilder().addMutations(ProtoUtils.toMutation(put)))
+            .build();
+    UnsatisfiedConditionException exception = mock(UnsatisfiedConditionException.class);
+    when(exception.getMessage()).thenReturn("error_msg");
+    doThrow(exception).when(transaction).mutate(anyList());
+
+    twoPhaseCommitTransactionStreamObserver.onNext(
+        TwoPhaseCommitTransactionRequest.newBuilder()
+            .setStartRequest(TwoPhaseCommitTransactionRequest.StartRequest.getDefaultInstance())
+            .build());
+
+    // Act
+    twoPhaseCommitTransactionStreamObserver.onNext(putRequest);
+
+    // Assert
+    verify(transaction).mutate(Collections.singletonList(put));
+    verify(responseObserver)
+        .onNext(
+            TwoPhaseCommitTransactionResponse.newBuilder()
+                .setError(
+                    TwoPhaseCommitTransactionResponse.Error.newBuilder()
+                        .setErrorCode(ErrorCode.UNSATISFIED_CONDITION)
+                        .setMessage("error_msg")
+                        .build())
+                .build());
   }
 }

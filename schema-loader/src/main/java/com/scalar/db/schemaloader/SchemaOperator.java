@@ -376,6 +376,24 @@ public class SchemaOperator implements AutoCloseable {
     }
   }
 
+  public void importTables(List<ImportTableSchema> tableSchemaList) throws SchemaLoaderException {
+    for (ImportTableSchema tableSchema : tableSchemaList) {
+      String namespace = tableSchema.getNamespace();
+      String table = tableSchema.getTable();
+      try {
+        if (tableSchema.isTransactionTable()) {
+          transactionAdmin.get().importTable(namespace, table);
+        } else {
+          storageAdmin.get().importTable(namespace, table);
+        }
+        logger.info("Importing the table {} in the namespace {} succeeded.", table, namespace);
+      } catch (ExecutionException e) {
+        throw new SchemaLoaderException(
+            String.format("Importing the table %s.%s failed.", namespace, table), e);
+      }
+    }
+  }
+
   @Override
   public void close() {
     if (storageAdminLoaded.get()) {

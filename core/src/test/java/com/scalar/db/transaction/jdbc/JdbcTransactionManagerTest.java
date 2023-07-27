@@ -291,6 +291,7 @@ public class JdbcTransactionManagerTest {
   @Test
   public void whenCommitFails_shouldThrowCommitExceptionAndRollback() throws Exception {
     // Arrange
+    when(jdbcService.put(any(), any())).thenReturn(true);
     doThrow(sqlException).when(connection).commit();
 
     // Act Assert
@@ -315,6 +316,7 @@ public class JdbcTransactionManagerTest {
   @Test
   public void whenRollbackFails_shouldThrowAbortException() throws Exception {
     // Arrange
+    when(jdbcService.put(any(), any())).thenReturn(true);
     doThrow(sqlException).when(connection).rollback();
 
     // Act Assert
@@ -338,6 +340,7 @@ public class JdbcTransactionManagerTest {
   @Test
   public void whenRollbackFails_shouldThrowRollbackException() throws Exception {
     // Arrange
+    when(jdbcService.put(any(), any())).thenReturn(true);
     doThrow(sqlException).when(connection).rollback();
 
     // Act Assert
@@ -362,6 +365,7 @@ public class JdbcTransactionManagerTest {
   public void whenCommitAndRollbackFails_shouldThrowUnknownTransactionStatusException()
       throws Exception {
     // Arrange
+    when(jdbcService.put(any(), any())).thenReturn(true);
     doThrow(sqlException).when(connection).commit();
     doThrow(sqlException).when(connection).rollback();
 
@@ -485,5 +489,85 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(() -> manager.resume(ANY_ID))
         .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void join_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction1 = manager.begin(ANY_ID);
+
+    // Act
+    DistributedTransaction transaction2 = manager.join(ANY_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void join_CalledWithoutBegin_ThrowTransactionNotFoundException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.join(ANY_ID)).isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void join_CalledWithBeginAndCommit_ThrowTransactionNotFoundException()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin(ANY_ID);
+    transaction.commit();
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.join(ANY_ID)).isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void join_CalledWithBeginAndCommit_CommitExceptionThrown_ReturnSameTransactionObject()
+      throws TransactionException, SQLException {
+    // Arrange
+    doThrow(SQLException.class).when(connection).commit();
+
+    DistributedTransaction transaction1 = manager.begin(ANY_ID);
+    try {
+      transaction1.commit();
+    } catch (CommitException ignored) {
+      // expected
+    }
+
+    // Act
+    DistributedTransaction transaction2 = manager.join(ANY_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void join_CalledWithBeginAndRollback_ThrowTransactionNotFoundException()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin(ANY_ID);
+    transaction.rollback();
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.join(ANY_ID)).isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void
+      join_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowTransactionNotFoundException()
+          throws TransactionException, SQLException {
+    // Arrange
+    doThrow(SQLException.class).when(connection).rollback();
+
+    DistributedTransaction transaction1 = manager.begin(ANY_ID);
+    try {
+      transaction1.rollback();
+    } catch (RollbackException ignored) {
+      // expected
+    }
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.join(ANY_ID)).isInstanceOf(TransactionNotFoundException.class);
   }
 }

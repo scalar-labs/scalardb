@@ -10,17 +10,21 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
@@ -66,11 +70,14 @@ public class CrudHandlerTest {
   @Mock private ParallelExecutor parallelExecutor;
   @Mock private Scanner scanner;
   @Mock private Result result;
+  @Mock private MutationConditionsValidator mutationConditionsValidator;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    handler = new CrudHandler(storage, snapshot, tableMetadataManager, false);
+    handler =
+        new CrudHandler(
+            storage, snapshot, tableMetadataManager, false, mutationConditionsValidator);
 
     // Arrange
     when(tableMetadataManager.getTransactionTableMetadata(any()))
@@ -90,6 +97,15 @@ public class CrudHandlerTest {
   private Scan prepareScan() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     return new Scan(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+  }
+
+  private Scan prepareRelationalScan() {
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .all()
+        .where(ConditionBuilder.column("column").isEqualToInt(10))
+        .build();
   }
 
   private TransactionResult prepareResult(TransactionState state) {
@@ -219,6 +235,7 @@ public class CrudHandlerTest {
     // Assert
     TransactionResult expected = new TransactionResult(result);
     verify(snapshot).put(key, Optional.of(expected));
+    verify(snapshot).verify(scan);
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
@@ -410,5 +427,133 @@ public class CrudHandlerTest {
     Snapshot.Key key2 = new Snapshot.Key(scan, result2);
     assertThat(readSet.get(key2).isPresent()).isTrue();
     assertThat(readSet.get(key2).get()).isEqualTo(new TransactionResult(result2));
+  }
+
+  @Test
+  public void
+      scan_RelationalScanAndResultFromStorageGiven_ShouldUpdateSnapshotAndValidateThenReturn()
+          throws ExecutionException, CrudException {
+    // Arrange
+    Scan scan = prepareRelationalScan();
+    result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result);
+    when(snapshot.get(key)).thenReturn(Optional.of((TransactionResult) result));
+    doNothing()
+        .when(snapshot)
+        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
+    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    when(storage.scan(any(ScanAll.class))).thenReturn(scanner);
+
+    // Act
+    List<Result> results = handler.scan(scan);
+
+    // Assert
+    TransactionResult expected = new TransactionResult(result);
+    verify(snapshot).put(key, Optional.of(expected));
+    verify(snapshot).verify(scan);
+    assertThat(results.size()).isEqualTo(1);
+    assertThat(results.get(0))
+        .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
+  }
+
+  @Test
+  public void
+      scan_RelationalScanAndPreparedResultFromStorageGiven_ShouldNeverUpdateSnapshotNorValidateButThrowUncommittedRecordException()
+          throws ExecutionException {
+    // Arrange
+    Scan scan = prepareRelationalScan();
+    result = prepareResult(TransactionState.PREPARED);
+    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    when(storage.scan(any(ScanAll.class))).thenReturn(scanner);
+
+    // Act
+    assertThatThrownBy(() -> handler.scan(scan)).isInstanceOf(UncommittedRecordException.class);
+
+    // Assert
+    verify(snapshot, never())
+        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
+    verify(snapshot, never()).verify(any());
+  }
+
+  @Test
+  public void put_WithResultInReadSet_shouldCallAppropriateMethods()
+      throws UnsatisfiedConditionException {
+    // Arrange
+    Put put =
+        Put.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "foo")).build();
+    Snapshot.Key key = new Snapshot.Key(put);
+    TransactionResult result = mock(TransactionResult.class);
+    when(snapshot.getFromReadSet(any())).thenReturn(Optional.of(result));
+
+    // Act
+    handler.put(put);
+
+    // Assert
+    verify(snapshot).getFromReadSet(key);
+    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, result);
+    verify(snapshot).put(key, put);
+  }
+
+  @Test
+  public void put_WithoutResultInReadSet_shouldCallAppropriateMethods()
+      throws UnsatisfiedConditionException {
+    // Arrange
+    Put put =
+        Put.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "foo")).build();
+    Snapshot.Key key = new Snapshot.Key(put);
+    when(snapshot.getFromReadSet(any())).thenReturn(Optional.empty());
+
+    // Act
+    handler.put(put);
+
+    // Assert
+    verify(snapshot).getFromReadSet(key);
+    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, null);
+    verify(snapshot).put(key, put);
+  }
+
+  @Test
+  public void delete_WithResultInReadSet_shouldCallAppropriateMethods()
+      throws UnsatisfiedConditionException {
+    // Arrange
+    Delete delete =
+        Delete.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("c1", "foo"))
+            .build();
+    Snapshot.Key key = new Snapshot.Key(delete);
+    TransactionResult result = mock(TransactionResult.class);
+    when(snapshot.getFromReadSet(any())).thenReturn(Optional.of(result));
+
+    // Act
+    handler.delete(delete);
+
+    // Assert
+    verify(snapshot).getFromReadSet(key);
+    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(delete, result);
+    verify(snapshot).put(key, delete);
+  }
+
+  @Test
+  public void delete_WithoutResultInReadSet_shouldCallAppropriateMethods()
+      throws UnsatisfiedConditionException {
+    // Arrange
+    Delete delete =
+        Delete.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("c1", "foo"))
+            .build();
+    Snapshot.Key key = new Snapshot.Key(delete);
+    when(snapshot.getFromReadSet(any())).thenReturn(Optional.empty());
+
+    // Act
+    handler.delete(delete);
+
+    // Assert
+    verify(snapshot).getFromReadSet(key);
+    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(delete, null);
+    verify(snapshot).put(key, delete);
   }
 }

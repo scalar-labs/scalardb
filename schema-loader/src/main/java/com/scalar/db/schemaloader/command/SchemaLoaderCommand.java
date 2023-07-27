@@ -92,6 +92,12 @@ public class SchemaLoaderCommand implements Callable<Integer> {
     boolean alterTables;
 
     @Option(
+        names = {"-I", "--import"},
+        description = "Import tables : it will import existing non-ScalarDB tables to ScalarDB.",
+        defaultValue = "false")
+    boolean importTables;
+
+    @Option(
         names = {"--upgrade"},
         description =
             "Upgrades the Scalar DB environment to support the latest version of the Scalar DB API. Typically, you will be requested, as indicated on the release notes, to run this command after"
@@ -115,6 +121,8 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       alterTables();
     } else if (mode.upgrade) {
       upgrade();
+    } else if (mode.importTables) {
+      importTables();
     }
     return 0;
   }
@@ -173,5 +181,20 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       options.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
     }
     SchemaLoader.upgrade(configPath, options);
+  }
+
+  private void importTables() throws SchemaLoaderException {
+    if (schemaFile == null) {
+      throw new IllegalArgumentException(
+          "Specifying the '--schema-file' option is required when using the '--import' option");
+    }
+
+    if (coordinator) {
+      throw new IllegalArgumentException(
+          "Specifying the '--coordinator' option with the '--import' option is not allowed."
+              + " Create coordinator tables separately.");
+    }
+
+    SchemaLoader.importTables(configPath, schemaFile);
   }
 }

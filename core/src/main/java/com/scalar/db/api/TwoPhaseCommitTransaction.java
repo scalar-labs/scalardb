@@ -73,9 +73,11 @@ public interface TwoPhaseCommitTransaction extends TransactionCrudOperable {
   /**
    * Prepares a transaction.
    *
-   * @throws PreparationConflictException if a transaction conflict occurs. You can retry the
-   *     transaction from the beginning in this case
-   * @throws PreparationException if the operation fails
+   * @throws PreparationConflictException if the transaction fails to prepare due to transient
+   *     faults (e.g., a conflict error). You can retry the transaction from the beginning
+   * @throws PreparationException if the transaction fails to prepare due to transient or
+   *     nontransient faults. You can try retrying the transaction from the beginning, but the
+   *     transaction may still fail if the cause is nontranient
    */
   void prepare() throws PreparationConflictException, PreparationException;
 
@@ -83,18 +85,22 @@ public interface TwoPhaseCommitTransaction extends TransactionCrudOperable {
    * Validates a transaction. Depending on the concurrency control algorithm, you need a validation
    * phase for a transaction.
    *
-   * @throws ValidationConflictException if a transaction conflict occurs. You can retry the
-   *     transaction from the beginning in this case
-   * @throws ValidationException if the operation fails
+   * @throws ValidationConflictException if the transaction fails to validate due to transient
+   *     faults (e.g., a conflict error). You can retry the transaction from the beginning
+   * @throws ValidationException if the transaction fails to validate due to transient or
+   *     nontransient faults. You can try retrying the transaction from the beginning, but the
+   *     transaction may still fail if the cause is nontranient
    */
   void validate() throws ValidationConflictException, ValidationException;
 
   /**
    * Commits a transaction.
    *
-   * @throws CommitConflictException if a transaction conflict occurs. You can retry the transaction
-   *     from the beginning in this case
-   * @throws CommitException if the operation fails
+   * @throws CommitConflictException if the transaction fails to commit due to transient faults
+   *     (e.g., a conflict error). You can retry the transaction from the beginning
+   * @throws CommitException if the transaction fails to commit due to transient or nontransient
+   *     faults. You can try retrying the transaction from the beginning, but the transaction may
+   *     still fail if the cause is nontranient
    * @throws UnknownTransactionStatusException if the status of the commit is unknown
    */
   void commit() throws CommitConflictException, CommitException, UnknownTransactionStatusException;
@@ -102,14 +108,16 @@ public interface TwoPhaseCommitTransaction extends TransactionCrudOperable {
   /**
    * Rolls back a transaction.
    *
-   * @throws RollbackException if the operation fails
+   * @throws RollbackException if the transaction fails to roll back due to transient or
+   *     nontransient faults
    */
   void rollback() throws RollbackException;
 
   /**
    * Aborts a transaction. This method is an alias of {@link #rollback()}.
    *
-   * @throws AbortException if the operation fails
+   * @throws AbortException if the transaction fails to abort due to transient or nontransient
+   *     faults
    */
   default void abort() throws AbortException {
     try {

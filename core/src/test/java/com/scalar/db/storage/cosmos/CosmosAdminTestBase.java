@@ -3,6 +3,7 @@ package com.scalar.db.storage.cosmos;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -927,6 +928,25 @@ public abstract class CosmosAdminTestBase {
         ImmutableMap.of(currentColumn, "text", newColumn, "int"));
 
     verify(container).upsertItem(expectedCosmosTableMetadata);
+  }
+
+  @Test
+  public void unsupportedOperations_ShouldThrowUnsupportedException() {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "tbl";
+    String column = "col";
+
+    // Act
+    Throwable thrown1 = catchThrowable(() -> admin.getImportTableMetadata(namespace, table));
+    Throwable thrown2 =
+        catchThrowable(() -> admin.addRawColumnToTable(namespace, table, column, DataType.INT));
+    Throwable thrown3 = catchThrowable(() -> admin.importTable(namespace, table));
+
+    // Assert
+    assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

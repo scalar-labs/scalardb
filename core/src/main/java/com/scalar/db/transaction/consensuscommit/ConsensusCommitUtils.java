@@ -5,6 +5,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -117,21 +118,35 @@ public final class ConsensusCommitUtils {
       //   - the column name without the "before_" prefix
       // if both columns don't exist, the table metadata is not transactional
       if (!tableMetadata.getColumnNames().contains(Attribute.BEFORE_PREFIX + nonPrimaryKeyColumn)
-          && !nonPrimaryKeyColumn.startsWith(Attribute.BEFORE_PREFIX)
-          && !tableMetadata
-              .getColumnNames()
-              .contains(nonPrimaryKeyColumn.substring(Attribute.BEFORE_PREFIX.length()))) {
+          && !(nonPrimaryKeyColumn.startsWith(Attribute.BEFORE_PREFIX)
+              && tableMetadata
+                  .getColumnNames()
+                  .contains(nonPrimaryKeyColumn.substring(Attribute.BEFORE_PREFIX.length())))) {
         return false;
       }
     }
     return true;
   }
 
-  private static Set<String> getNonPrimaryKeyColumns(TableMetadata tableMetadata) {
+  /**
+   * Get non-primary key columns from the specified table metadata.
+   *
+   * @return a set of non-primary key column names
+   */
+  public static Set<String> getNonPrimaryKeyColumns(TableMetadata tableMetadata) {
     return tableMetadata.getColumnNames().stream()
         .filter(c -> !tableMetadata.getPartitionKeyNames().contains(c))
         .filter(c -> !tableMetadata.getClusteringKeyNames().contains(c))
         .collect(Collectors.toSet());
+  }
+
+  /**
+   * Get transaction meta columns.
+   *
+   * @return a map of transaction meta columns
+   */
+  public static Map<String, DataType> getTransactionMetaColumns() {
+    return TRANSACTION_META_COLUMNS;
   }
 
   /**

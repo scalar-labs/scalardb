@@ -1,9 +1,11 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.storage.jdbc.JdbcUtils.getJdbcType;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -17,6 +19,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -47,6 +50,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String METADATA_COL_CLUSTERING_ORDER = "clustering_order";
   @VisibleForTesting static final String METADATA_COL_INDEXED = "indexed";
   @VisibleForTesting static final String METADATA_COL_ORDINAL_POSITION = "ordinal_position";
+  @VisibleForTesting static final String JDBC_COL_COLUMN_NAME = "COLUMN_NAME";
+  @VisibleForTesting static final String JDBC_COL_DATA_TYPE = "DATA_TYPE";
+  @VisibleForTesting static final String JDBC_COL_TYPE_NAME = "TYPE_NAME";
+  @VisibleForTesting static final String JDBC_COL_COLUMN_SIZE = "COLUMN_SIZE";
+  @VisibleForTesting static final String JDBC_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
   public static final String NAMESPACES_TABLE = "namespaces";
   @VisibleForTesting static final String NAMESPACE_COL_NAMESPACE_NAME = "namespace_name";
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
@@ -428,6 +436,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         }
       }
     } catch (SQLException e) {
+      // An exception will be thrown if the namespace table does not exist when executing the select
+      // query
+      if (rdbEngine.isUndefinedTableError(e)) {
+        return null;
+      }
       throw new ExecutionException("getting a table metadata failed", e);
     }
 
@@ -436,6 +449,62 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     return builder.build();
+  }
+
+  @Override
+  public TableMetadata getImportTableMetadata(String namespace, String table)
+      throws ExecutionException {
+    TableMetadata.Builder builder = TableMetadata.newBuilder();
+    boolean primaryKeyExists = false;
+
+    if (!rdbEngine.isImportable()) {
+      throw new UnsupportedOperationException(
+          "Importing table is not allowed in this storage: " + rdbEngine.getClass().getName());
+    }
+
+    try (Connection connection = dataSource.getConnection()) {
+      if (!tableExistsInternal(connection, namespace, table)) {
+        throw new IllegalArgumentException(
+            "The table " + getFullTableName(namespace, table) + "  does not exist");
+      }
+
+      DatabaseMetaData metadata = connection.getMetaData();
+      ResultSet resultSet = metadata.getPrimaryKeys(null, namespace, table);
+      while (resultSet.next()) {
+        primaryKeyExists = true;
+        String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
+        builder.addPartitionKey(columnName);
+      }
+
+      if (!primaryKeyExists) {
+        throw new IllegalStateException("The table must have a primary key");
+      }
+
+      resultSet = metadata.getColumns(null, namespace, table, "%");
+      while (resultSet.next()) {
+        String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
+        builder.addColumn(
+            columnName,
+            rdbEngine.getDataTypeForScalarDb(
+                getJdbcType(resultSet.getInt(JDBC_COL_DATA_TYPE)),
+                resultSet.getString(JDBC_COL_TYPE_NAME),
+                resultSet.getInt(JDBC_COL_COLUMN_SIZE),
+                resultSet.getInt(JDBC_COL_DECIMAL_DIGITS),
+                getFullTableName(namespace, table) + " " + columnName));
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException("getting a table metadata failed", e);
+    }
+
+    return builder.build();
+  }
+
+  @Override
+  public void importTable(String namespace, String table) throws ExecutionException {
+    TableMetadata tableMetadata = getImportTableMetadata(namespace, table);
+
+    // add ScalarDB metadata
+    repairTable(namespace, table, tableMetadata, ImmutableMap.of());
   }
 
   private String getSelectColumnsStatement() {
@@ -672,6 +741,33 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         execute(connection, getDeleteTableMetadataStatement(namespace, table));
         addTableMetadata(connection, namespace, table, updatedTableMetadata, false);
       }
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          String.format(
+              "Adding the new column %s to the %s.%s table failed", columnName, namespace, table),
+          e);
+    }
+  }
+
+  @Override
+  public void addRawColumnToTable(
+      String namespace, String table, String columnName, DataType columnType)
+      throws ExecutionException {
+    try (Connection connection = dataSource.getConnection()) {
+      if (!tableExistsInternal(connection, namespace, table)) {
+        throw new IllegalArgumentException(
+            "The table " + getFullTableName(namespace, table) + "  does not exist");
+      }
+
+      String addNewColumnStatement =
+          "ALTER TABLE "
+              + encloseFullTableName(namespace, table)
+              + " ADD "
+              + enclose(columnName)
+              + " "
+              + rdbEngine.getDataTypeForEngine(columnType);
+
+      execute(connection, addNewColumnStatement);
     } catch (SQLException e) {
       throw new ExecutionException(
           String.format(

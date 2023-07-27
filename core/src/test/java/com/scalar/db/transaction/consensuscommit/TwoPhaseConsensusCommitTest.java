@@ -14,6 +14,8 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TransactionState;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationException;
@@ -27,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -46,6 +49,8 @@ public class TwoPhaseConsensusCommitTest {
   @Mock private CrudHandler crud;
   @Mock private CommitHandler commit;
   @Mock private RecoveryHandler recovery;
+  @Mock private ConsensusCommitMutationOperationChecker mutationOperationChecker;
+  @InjectMocks private TwoPhaseConsensusCommit transaction;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -86,7 +91,6 @@ public class TwoPhaseConsensusCommitTest {
   public void get_GetGiven_ShouldCallCrudHandlerGet() throws CrudException {
     // Arrange
     Get get = prepareGet();
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     TransactionResult result = mock(TransactionResult.class);
     when(crud.get(get)).thenReturn(Optional.of(result));
     when(crud.getSnapshot()).thenReturn(snapshot);
@@ -104,7 +108,6 @@ public class TwoPhaseConsensusCommitTest {
   public void get_GetForUncommittedRecordGiven_ShouldRecoverRecord() throws CrudException {
     // Arrange
     Get get = prepareGet();
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     TransactionResult result = mock(TransactionResult.class);
     UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
     when(crud.get(get)).thenThrow(toThrow);
@@ -122,7 +125,6 @@ public class TwoPhaseConsensusCommitTest {
   public void scan_ScanGiven_ShouldCallCrudHandlerScan() throws CrudException {
     // Arrange
     Scan scan = prepareScan();
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     TransactionResult result = mock(TransactionResult.class);
     List<Result> results = Collections.singletonList(result);
     when(crud.scan(scan)).thenReturn(results);
@@ -137,10 +139,9 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void put_PutGiven_ShouldCallCrudHandlerPut() {
+  public void put_PutGiven_ShouldCallCrudHandlerPut() throws ExecutionException, CrudException {
     // Arrange
     Put put = preparePut();
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
@@ -148,13 +149,14 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     verify(crud).put(put);
+    verify(mutationOperationChecker).check(put);
   }
 
   @Test
-  public void put_TwoPutsGiven_ShouldCallCrudHandlerPutTwice() {
+  public void put_TwoPutsGiven_ShouldCallCrudHandlerPutTwice()
+      throws ExecutionException, CrudException {
     // Arrange
     Put put = preparePut();
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
@@ -162,13 +164,14 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     verify(crud, times(2)).put(put);
+    verify(mutationOperationChecker, times(2)).check(put);
   }
 
   @Test
-  public void delete_DeleteGiven_ShouldCallCrudHandlerDelete() {
+  public void delete_DeleteGiven_ShouldCallCrudHandlerDelete()
+      throws CrudException, ExecutionException {
     // Arrange
     Delete delete = prepareDelete();
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
@@ -176,13 +179,14 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     verify(crud).delete(delete);
+    verify(mutationOperationChecker).check(delete);
   }
 
   @Test
-  public void delete_TwoDeletesGiven_ShouldCallCrudHandlerDeleteTwice() {
+  public void delete_TwoDeletesGiven_ShouldCallCrudHandlerDeleteTwice()
+      throws CrudException, ExecutionException {
     // Arrange
     Delete delete = prepareDelete();
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
@@ -190,14 +194,15 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     verify(crud, times(2)).delete(delete);
+    verify(mutationOperationChecker, times(2)).check(delete);
   }
 
   @Test
-  public void mutate_PutAndDeleteGiven_ShouldCallCrudHandlerPutAndDelete() {
+  public void mutate_PutAndDeleteGiven_ShouldCallCrudHandlerPutAndDelete()
+      throws CrudException, ExecutionException {
     // Arrange
     Put put = preparePut();
     Delete delete = prepareDelete();
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
@@ -206,12 +211,13 @@ public class TwoPhaseConsensusCommitTest {
     // Assert
     verify(crud).put(put);
     verify(crud).delete(delete);
+    verify(mutationOperationChecker).check(put);
+    verify(mutationOperationChecker).check(delete);
   }
 
   @Test
   public void prepare_ProcessedCrudGiven_ShouldPrepareWithSnapshot() throws PreparationException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
@@ -225,7 +231,6 @@ public class TwoPhaseConsensusCommitTest {
   public void validate_ProcessedCrudGiven_ShouldPerformValidationWithSnapshot()
       throws ValidationException, PreparationException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     transaction.prepare();
     when(crud.getSnapshot()).thenReturn(snapshot);
 
@@ -240,7 +245,6 @@ public class TwoPhaseConsensusCommitTest {
   public void commit_ShouldCommitStateAndRecords()
       throws CommitException, UnknownTransactionStatusException, PreparationException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     transaction.prepare();
     when(crud.getSnapshot()).thenReturn(snapshot);
 
@@ -257,7 +261,6 @@ public class TwoPhaseConsensusCommitTest {
       throws CommitException, UnknownTransactionStatusException, PreparationException,
           ValidationException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     transaction.prepare();
     transaction.validate();
     when(crud.getSnapshot()).thenReturn(snapshot);
@@ -276,7 +279,6 @@ public class TwoPhaseConsensusCommitTest {
   public void commit_ExtraReadUsedAndPreparedState_ShouldThrowIllegalStateException()
       throws PreparationException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     transaction.prepare();
     when(crud.getSnapshot()).thenReturn(snapshot);
     when(snapshot.getId()).thenReturn(ANY_TX_ID);
@@ -290,7 +292,6 @@ public class TwoPhaseConsensusCommitTest {
   public void rollback_ShouldAbortStateAndRollbackRecords()
       throws RollbackException, UnknownTransactionStatusException, PreparationException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     transaction.prepare();
     when(crud.getSnapshot()).thenReturn(snapshot);
 
@@ -306,7 +307,6 @@ public class TwoPhaseConsensusCommitTest {
   public void rollback_CalledAfterPrepareFails_ShouldAbortStateAndRollbackRecords()
       throws PreparationException, UnknownTransactionStatusException, RollbackException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     when(crud.getSnapshot()).thenReturn(snapshot);
     doThrow(PreparationException.class).when(commit).prepare(snapshot);
 
@@ -324,7 +324,6 @@ public class TwoPhaseConsensusCommitTest {
       throws CommitException, UnknownTransactionStatusException, RollbackException,
           PreparationException {
     // Arrange
-    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, recovery);
     transaction.prepare();
     when(crud.getSnapshot()).thenReturn(snapshot);
     doThrow(CommitException.class).when(commit).commitState(snapshot);
@@ -335,6 +334,35 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     verify(commit, never()).abortState(snapshot.getId());
+    verify(commit, never()).rollbackRecords(snapshot);
+  }
+
+  @Test
+  public void
+      rollback_UnknownTransactionStatusExceptionThrownByAbortState_ShouldThrowRollbackException()
+          throws UnknownTransactionStatusException, PreparationException {
+    // Arrange
+    transaction.prepare();
+    when(crud.getSnapshot()).thenReturn(snapshot);
+    when(commit.abortState(snapshot.getId())).thenThrow(UnknownTransactionStatusException.class);
+
+    // Act Assert
+    assertThatThrownBy(transaction::rollback).isInstanceOf(RollbackException.class);
+
+    verify(commit, never()).rollbackRecords(snapshot);
+  }
+
+  @Test
+  public void rollback_CommittedStateReturnedByAbortState_ShouldThrowRollbackException()
+      throws UnknownTransactionStatusException, PreparationException {
+    // Arrange
+    transaction.prepare();
+    when(crud.getSnapshot()).thenReturn(snapshot);
+    when(commit.abortState(snapshot.getId())).thenReturn(TransactionState.COMMITTED);
+
+    // Act Assert
+    assertThatThrownBy(transaction::rollback).isInstanceOf(RollbackException.class);
+
     verify(commit, never()).rollbackRecords(snapshot);
   }
 }

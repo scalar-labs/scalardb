@@ -2,6 +2,7 @@ package com.scalar.db.storage.dynamo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -1550,5 +1551,19 @@ public abstract class DynamoAdminTestBase {
                         DynamoAdmin.NAMESPACES_ATTR_NAME,
                         AttributeValue.builder().s("ns2").build()))
                 .build());
+  }
+
+  @Test
+  public void unsupportedOperations_ShouldThrowUnsupportedException() {
+    // Arrange Act
+    Throwable thrown1 = catchThrowable(() -> admin.getImportTableMetadata(NAMESPACE, TABLE));
+    Throwable thrown2 =
+        catchThrowable(() -> admin.addRawColumnToTable(NAMESPACE, TABLE, "c1", DataType.INT));
+    Throwable thrown3 = catchThrowable(() -> admin.importTable(NAMESPACE, TABLE));
+
+    // Assert
+    assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
   }
 }

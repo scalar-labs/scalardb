@@ -395,6 +395,7 @@ message TransactionResponse {
       TRANSACTION_CONFLICT = 1;
       UNKNOWN_TRANSACTION_STATUS = 2;
       OTHER = 3;
+      UNSATISFIED_CONDITION = 4;
     }
     ErrorCode error_code = 1;
     string message = 2;
@@ -530,6 +531,7 @@ message TwoPhaseCommitTransactionResponse {
       TRANSACTION_CONFLICT = 1;
       UNKNOWN_TRANSACTION_STATUS = 2;
       OTHER = 3;
+      UNSATISFIED_CONDITION = 4;
     }
     ErrorCode error_code = 1;
     string message = 2;

@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -13,6 +14,7 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
@@ -32,6 +34,7 @@ public class CrudHandler {
   private final Snapshot snapshot;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final boolean isIncludeMetadataEnabled;
+  private final MutationConditionsValidator mutationConditionsValidator;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CrudHandler(
@@ -43,6 +46,21 @@ public class CrudHandler {
     this.snapshot = checkNotNull(snapshot);
     this.tableMetadataManager = tableMetadataManager;
     this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
+    this.mutationConditionsValidator = new MutationConditionsValidator(snapshot.getId());
+  }
+
+  @VisibleForTesting
+  CrudHandler(
+      DistributedStorage storage,
+      Snapshot snapshot,
+      TransactionTableMetadataManager tableMetadataManager,
+      boolean isIncludeMetadataEnabled,
+      MutationConditionsValidator mutationConditionsValidator) {
+    this.storage = checkNotNull(storage);
+    this.snapshot = checkNotNull(snapshot);
+    this.tableMetadataManager = tableMetadataManager;
+    this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
+    this.mutationConditionsValidator = mutationConditionsValidator;
   }
 
   public Optional<Result> get(Get get) throws CrudException {
@@ -73,6 +91,20 @@ public class CrudHandler {
   }
 
   public List<Result> scan(Scan scan) throws CrudException {
+    List<Result> results = scanInternal(scan);
+
+    // We verify if this scan does not overlap previous writes after the actual scan. For a
+    // relational scan, this must be done here, using the obtained keys in the scan set and scan
+    // condition. This is because the condition (i.e., where clause) is arbitrary in the relational
+    // scan, and thus, the write command may not have columns used in the condition, which are
+    // necessary to determine overlaps. For a scan with clustering keys, we can determine overlaps
+    // without the actual scan, but we also check it here for consistent logic and readability.
+    snapshot.verify(scan);
+
+    return results;
+  }
+
+  private List<Result> scanInternal(Scan scan) throws CrudException {
     List<String> originalProjections = new ArrayList<>(scan.getProjections());
 
     List<Result> results = new ArrayList<>();
@@ -127,11 +159,15 @@ public class CrudHandler {
         .collect(Collectors.toList());
   }
 
-  public void put(Put put) {
+  public void put(Put put) throws UnsatisfiedConditionException {
+    mutationConditionsValidator.checkIfConditionIsSatisfied(
+        put, snapshot.getFromReadSet(new Snapshot.Key(put)).orElse(null));
     snapshot.put(new Snapshot.Key(put), put);
   }
 
-  public void delete(Delete delete) {
+  public void delete(Delete delete) throws UnsatisfiedConditionException {
+    mutationConditionsValidator.checkIfConditionIsSatisfied(
+        delete, snapshot.getFromReadSet(new Snapshot.Key(delete)).orElse(null));
     snapshot.put(new Snapshot.Key(delete), delete);
   }
 

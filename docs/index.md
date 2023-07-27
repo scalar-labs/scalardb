@@ -13,7 +13,7 @@ You can install it in your application using your build tool such as Gradle and 
 To add a dependency on ScalarDB using Gradle, use the following:
 ```gradle
 dependencies {
-    implementation 'com.scalar-labs:scalardb:3.9.0'
+    implementation 'com.scalar-labs:scalardb:3.10.0'
 }
 ```
 
@@ -22,7 +22,7 @@ To add a dependency using Maven:
 <dependency>
   <groupId>com.scalar-labs</groupId>
   <artifactId>scalardb</artifactId>
-  <version>3.9.0</version>
+  <version>3.10.0</version>
 </dependency>
 ```
 
@@ -38,7 +38,7 @@ To add a dependency using Maven:
 * [Requirements in the underlying databases](requirements.md)
 * [How to Back up and Restore](backup-restore.md)
 * [ScalarDB supported databases](scalardb-supported-databases.md)
-* [Configurations for Consensus Commit](configurations-for-consensus-commit.md)
+* [Configurations](configurations.md)
 * [Storage abstraction](storage-abstraction.md)
 * Slides
     * [Making Cassandra more capable, faster, and more reliable](https://speakerdeck.com/scalar/making-cassandra-more-capable-faster-and-more-reliable-at-apachecon-at-home-2020) at ApacheCon@Home 2020

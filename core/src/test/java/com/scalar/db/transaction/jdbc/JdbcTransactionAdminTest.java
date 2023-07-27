@@ -229,6 +229,19 @@ public class JdbcTransactionAdminTest {
   }
 
   @Test
+  public void importTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+
+    // Act
+    admin.importTable(namespace, table);
+
+    // Assert
+    verify(jdbcAdmin).importTable(namespace, table);
+  }
+
+  @Test
   public void getNamespaceNames_ShouldCallJdbcAdminProperly() throws ExecutionException {
     // Arrange
     Set<String> namespaceNames = ImmutableSet.of("n1", "n2");

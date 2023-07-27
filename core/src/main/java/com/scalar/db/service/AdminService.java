@@ -5,6 +5,7 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
@@ -16,6 +17,7 @@ public class AdminService implements DistributedStorageAdmin {
 
   private final DistributedStorageAdmin admin;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
   public AdminService(DistributedStorageAdmin admin) {
     this.admin = admin;
@@ -89,6 +91,24 @@ public class AdminService implements DistributedStorageAdmin {
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {
     admin.addNewColumnToTable(namespace, table, columnName, columnType);
+  }
+
+  @Override
+  public TableMetadata getImportTableMetadata(String namespace, String table)
+      throws ExecutionException {
+    return admin.getImportTableMetadata(namespace, table);
+  }
+
+  @Override
+  public void addRawColumnToTable(
+      String namespace, String table, String columnName, DataType columnType)
+      throws ExecutionException {
+    admin.addRawColumnToTable(namespace, table, columnName, columnType);
+  }
+
+  @Override
+  public void importTable(String namespace, String table) throws ExecutionException {
+    admin.importTable(namespace, table);
   }
 
   @Override

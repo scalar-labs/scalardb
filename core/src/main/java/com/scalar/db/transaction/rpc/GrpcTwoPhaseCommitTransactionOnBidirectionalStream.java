@@ -19,6 +19,7 @@ import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionGrpc;
@@ -272,6 +273,8 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
           throw new IllegalArgumentException(error.getMessage());
         case TRANSACTION_CONFLICT:
           throw new CrudConflictException(error.getMessage(), transactionId);
+        case UNSATISFIED_CONDITION:
+          throw new UnsatisfiedConditionException(error.getMessage(), transactionId);
         default:
           throw new CrudException(error.getMessage(), transactionId);
       }
@@ -414,7 +417,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     ResponseOrError responseOrError =
         sendRequest(
             TwoPhaseCommitTransactionRequest.newBuilder()
-                .setRollbackRequest(RollbackRequest.getDefaultInstance())
+                .setAbortRequest(TwoPhaseCommitTransactionRequest.AbortRequest.getDefaultInstance())
                 .build());
     finished.set(true);
     throwIfErrorForAbort(responseOrError);

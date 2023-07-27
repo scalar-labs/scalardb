@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+
+set -e -o pipefail; [[ -n "$DEBUG" ]] && set -x
+
+if [[ $# -lt 5 ]]; then
+    echo "usage: $0 pull_request_id pull_request_url pull_request_title commit_sha assignee branches"
+    exit 1
+fi
+
+pull_request_id=$1
+shift
+pull_request_url=$1
+shift
+pull_request_title=$1
+shift
+commit_sha=$1
+shift
+assignee=$1
+shift
+branches=("$@")
+
+# Use the author info of the original Git commit
+git config --global user.email $(git show -s --format='%ae' $commit_sha)
+git config --global user.name $(git show -s --format='%an' $commit_sha)
+
+function cherry_pick_and_create_pull_request () {
+  local branch=$1
+  local new_branch=$2
+
+  # Cleanup just in case
+  git checkout .
+  git clean -f
+
+  git checkout $branch
+  git checkout -b $new_branch
+  if ! git cherry-pick --no-rerere-autoupdate -m1 $commit_sha; then
+      git cherry-pick --abort
+      return 1
+  fi
+  git push origin $new_branch
+  git status
+  gh pr create --assignee $assignee \
+    --base "$branch" \
+    --title "Backport to branch($branch) : $pull_request_title" \
+    --body "Backport of $pull_request_url"
+}
+
+function create_issue () {
+  local branch=$1
+
+  gh issue create --assignee $assignee \
+    --title "Backport to branch($branch) failed: $pull_request_title" \
+    --body "Backport of $pull_request_url to branch($branch) failed"
+}
+
+git fetch origin
+
+# Create PRs based on the target support branches and release branches
+for branch in ${branches[@]}; do
+  new_branch="$branch-pull-$pull_request_id"
+
+  # Create a new temp branch, push it and create a PR for the change.
+  # But create an issue if anything fails.
+  cherry_pick_and_create_pull_request $branch $new_branch || create_issue $branch
+done
+

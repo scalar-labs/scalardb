@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -e -o pipefail; [[ -n "$DEBUG" ]] && set -x
+
+if [[ $# -ne 3 ]]; then
+    echo "usage: $0 repo_owner repo_name user"
+    exit 1
+fi
+
+repo_owner=$1
+repo_name=$2
+user=$3
+
+# Get the author of the merged PR
+author_json=$(gh api graphql -F owner=$repo_owner -F repoName=$repo_name -F userName=$user -f query='
+  query($owner: String!, $repoName: String!, $userName: String!) {
+    repository(owner: $owner, name: $repoName) {
+      assignableUsers(first: 100, query: $userName) {
+        nodes {
+          name,
+          email
+        }
+      }
+    }
+  }
+')
+
+# Return empty string not "null" if it's not found
+echo $author_json | jq -r '.data.repository.assignableUsers.nodes[0] // empty'
+

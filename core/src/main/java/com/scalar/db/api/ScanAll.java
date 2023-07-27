@@ -1,6 +1,5 @@
 package com.scalar.db.api;
 
-import com.google.common.base.MoreObjects;
 import com.scalar.db.io.Key;
 import java.util.Collection;
 import java.util.Objects;
@@ -88,15 +87,18 @@ public class ScanAll extends Scan {
   }
 
   /**
-   * Guaranteed to throw an exception.
+   * Sets the specified scan ordering. Ordering can only be specified with arbitrary columns. To
+   * sort results by multiple columns, call this method multiple times in the order of sorting.
    *
-   * @throws UnsupportedOperationException always
-   * @deprecated Unsupported operation.
+   * @param ordering a scan ordering
+   * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Deprecated
   @Override
   public ScanAll withOrdering(Ordering ordering) {
-    throw new UnsupportedOperationException();
+    return (ScanAll) super.withOrdering(ordering);
   }
 
   /**
@@ -160,6 +162,11 @@ public class ScanAll extends Scan {
   }
 
   @Override
+  ScanAll withConjunctions(Collection<Conjunction> conjunctions) {
+    return (ScanAll) super.withConjunctions(conjunctions);
+  }
+
+  @Override
   public boolean equals(Object o) {
     if (!super.equals(o)) {
       return false;
@@ -173,10 +180,5 @@ public class ScanAll extends Scan {
   @Override
   public int hashCode() {
     return Objects.hash(super.hashCode());
-  }
-
-  @Override
-  public String toString() {
-    return super.toString() + MoreObjects.toStringHelper(this);
   }
 }

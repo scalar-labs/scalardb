@@ -398,6 +398,12 @@ public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
+  public void importTable(String namespace, String table) {
+    throw new UnsupportedOperationException(
+        "import-related functionality is not supported in ScalarDB Server");
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     return execute(
         () -> {

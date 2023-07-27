@@ -2,10 +2,14 @@ package com.scalar.db.transaction.jdbc;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.PutIf;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.common.AbstractDistributedTransaction;
@@ -16,12 +20,14 @@ import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,14 +87,10 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   public void put(Put put) throws CrudException {
     put = copyAndSetTargetToIfNot(put);
 
-    // Ignore the condition in the put
-    if (put.getCondition().isPresent()) {
-      logger.warn("ignoring the condition of the mutation: {}", put);
-      put.withCondition(null);
-    }
-
     try {
-      jdbcService.put(put, connection);
+      if (!jdbcService.put(put, connection)) {
+        throwUnsatisfiedConditionException(put);
+      }
     } catch (SQLException e) {
       throw createCrudException(e, "put operation failed");
     } catch (ExecutionException e) {
@@ -108,14 +110,10 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   public void delete(Delete delete) throws CrudException {
     delete = copyAndSetTargetToIfNot(delete);
 
-    // Ignore the condition in the delete
-    if (delete.getCondition().isPresent()) {
-      logger.warn("ignoring the condition of the mutation: {}", delete);
-      delete.withCondition(null);
-    }
-
     try {
-      jdbcService.delete(delete, connection);
+      if (!jdbcService.delete(delete, connection)) {
+        throwUnsatisfiedConditionException(delete);
+      }
     } catch (SQLException e) {
       throw createCrudException(e, "delete operation failed");
     } catch (ExecutionException e) {
@@ -161,6 +159,42 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
         logger.warn("failed to close the connection", e);
       }
     }
+  }
+
+  private void throwUnsatisfiedConditionException(Mutation mutation)
+      throws UnsatisfiedConditionException {
+    assert mutation.getCondition().isPresent();
+
+    // Build the exception message
+    MutationCondition condition = mutation.getCondition().get();
+    String conditionColumns = null;
+    // For PutIf and DeleteIf, aggregate the condition columns to the message
+    if (condition instanceof PutIf || condition instanceof DeleteIf) {
+      List<ConditionalExpression> expressions = condition.getExpressions();
+      conditionColumns =
+          expressions.stream()
+              .map(expr -> expr.getColumn().getName())
+              .collect(Collectors.joining(", "));
+    }
+
+    StringBuilder exceptionMessage =
+        new StringBuilder("The ")
+            .append(condition.getClass().getSimpleName())
+            .append(" condition ");
+    if (conditionColumns != null) {
+      // To write 'column' in the plural or singular form
+      if (condition.getExpressions().size() > 1) {
+        exceptionMessage.append("targeting the columns '").append(conditionColumns).append("' ");
+      } else {
+        exceptionMessage.append("targeting the column '").append(conditionColumns).append("' ");
+      }
+    }
+    exceptionMessage
+        .append("of the ")
+        .append(mutation.getClass().getSimpleName())
+        .append(" operation is not satisfied");
+
+    throw new UnsatisfiedConditionException(exceptionMessage.toString(), txId);
   }
 
   @Override

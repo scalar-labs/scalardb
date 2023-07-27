@@ -2,9 +2,11 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.buildTransactionTableMetadata;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getBeforeImageColumnName;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getNonPrimaryKeyColumns;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.removeTransactionMetaColumns;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
@@ -14,6 +16,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.ScalarDbUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -27,6 +30,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   private final String coordinatorNamespace;
   private final boolean isIncludeMetadataEnabled;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
   public ConsensusCommitAdmin(DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
     this.admin = admin;
@@ -199,6 +203,34 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
     admin.upgrade(options);
+  }
+
+  @Override
+  public void importTable(String namespace, String table) throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata != null) {
+      throw new IllegalArgumentException(
+          "Table already exists: " + ScalarDbUtils.getFullTableName(namespace, table));
+    }
+    tableMetadata = admin.getImportTableMetadata(namespace, table);
+
+    // add transaction metadata columns
+    for (Map.Entry<String, DataType> entry :
+        ConsensusCommitUtils.getTransactionMetaColumns().entrySet()) {
+      admin.addRawColumnToTable(namespace, table, entry.getKey(), entry.getValue());
+    }
+
+    // add before image columns
+    Set<String> nonPrimaryKeyColumns = getNonPrimaryKeyColumns(tableMetadata);
+    for (String columnName : nonPrimaryKeyColumns) {
+      String beforeColumnName = getBeforeImageColumnName(columnName, tableMetadata);
+      DataType columnType = tableMetadata.getColumnDataType(columnName);
+      admin.addRawColumnToTable(namespace, table, beforeColumnName, columnType);
+    }
+
+    // add ScalarDB metadata
+    admin.repairTable(
+        namespace, table, buildTransactionTableMetadata(tableMetadata), ImmutableMap.of());
   }
 
   @Override

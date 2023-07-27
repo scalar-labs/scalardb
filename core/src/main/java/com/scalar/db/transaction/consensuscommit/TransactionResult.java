@@ -6,7 +6,9 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.AbstractResult;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Optional;
@@ -106,11 +108,17 @@ public class TransactionResult extends AbstractResult {
     return result.getColumns();
   }
 
+  @Nullable
   public String getId() {
     return getText(Attribute.ID);
   }
 
   public TransactionState getState() {
+    if (isNull(Attribute.STATE)) {
+      // To handle existing databases that do not have transaction metadata, the record is deemed as
+      // committed if the state is NULL.
+      return TransactionState.COMMITTED;
+    }
     return TransactionState.getInstance(getInt(Attribute.STATE));
   }
 
@@ -128,5 +136,24 @@ public class TransactionResult extends AbstractResult {
 
   public boolean isCommitted() {
     return getState().equals(TransactionState.COMMITTED);
+  }
+
+  public boolean isDeemedAsCommitted() {
+    return getId() == null;
+  }
+
+  public boolean hasBeforeImage() {
+    // We need to check not only before_id but also before_version to determine if the record has
+    // the before image or not since we set before_version to 0 for the prepared record when
+    // updating the record deemed as the committed state (cf. PrepareMutationComposer).
+    return !getBeforeIdColumn().hasNullValue() || !getBeforeVersionColumn().hasNullValue();
+  }
+
+  private TextColumn getBeforeIdColumn() {
+    return (TextColumn) result.getColumns().get(Attribute.BEFORE_ID);
+  }
+
+  private IntColumn getBeforeVersionColumn() {
+    return (IntColumn) result.getColumns().get(Attribute.BEFORE_VERSION);
   }
 }

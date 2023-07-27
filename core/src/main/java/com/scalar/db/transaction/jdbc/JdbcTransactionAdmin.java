@@ -91,6 +91,11 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
+  public void importTable(String namespace, String table) throws ExecutionException {
+    jdbcAdmin.importTable(namespace, table);
+  }
+
+  @Override
   public void createCoordinatorTables(Map<String, String> options) {
     // Do nothing since JDBC transactions don't have coordinator tables
   }
