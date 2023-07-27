@@ -1226,6 +1226,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     return DistributedStorageMetadata.newBuilder()
         .type("dynamo")
         .name("dynamo")
+        .linearizableScanAllSupported()
         .atomicityLevel(DistributedStorageAtomicityLevel.STORAGE)
         .build();
   }

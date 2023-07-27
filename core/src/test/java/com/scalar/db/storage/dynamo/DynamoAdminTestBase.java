@@ -1204,7 +1204,7 @@ public abstract class DynamoAdminTestBase {
     assertThat(metadata).isNotNull();
     assertThat(metadata.getType()).isEqualTo("dynamo");
     assertThat(metadata.getName()).isEqualTo("dynamo");
-    assertThat(metadata.isLinearizableScanAllSupported()).isFalse();
+    assertThat(metadata.isLinearizableScanAllSupported()).isTrue();
     assertThat(metadata.getAtomicityLevel()).isEqualTo(DistributedStorageAtomicityLevel.STORAGE);
   }
 }
