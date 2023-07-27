@@ -703,9 +703,9 @@ Or
 transaction.abort();
 ```
 
-Please see [Handle Exceptions](#handle-exceptions) for the details of how to handle exceptions in ScalarDB.
+Please see [Handle exceptions](#handle-exceptions) for the details of how to handle exceptions in ScalarDB.
 
-## Handle Exceptions
+## Handle exceptions
 
 Handling exceptions correctly in ScalarDB is very important.
 If you mishandle exceptions, your data could become inconsistent.
@@ -779,34 +779,34 @@ public class Sample {
 }
 ```
 
-The `begin()` API could throw `TransactionException` and `TransactionNotFoundException`.
+The `begin()` API could throw `TransactionException` or `TransactionNotFoundException`.
 If you catch `TransactionException`, it indicates that the transaction has failed to begin due to transient or nontransient faults. You can try retrying the transaction, but you may not be able to begin the transaction due to nontransient faults.
 If you catch `TransactionNotFoundException`, it indicates that the transaction has failed to begin due to transient faults. You can retry the transaction.
 
-The APIs for CRUD operations (`get()`/`scan()`/`put()`/`delete()`/`mutate()`) could throw `CrudException` and `CrudConflictException`.
+The APIs for CRUD operations (`get()`, `scan()`, `put()`, `delete()`, and `mutate()`) could throw `CrudException` or `CrudConflictException`.
 If you catch `CrudException`, it indicates that the transaction CRUD operation has failed due to transient or nontransient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is nontransient.
 If you catch `CrudConflictException`, it indicates that the transaction CRUD operation has failed due to transient faults (e.g., a conflict error). You can retry the transaction from the beginning.
 
-Also, the `commit()` API could throw `CommitException`, `CommitConflictException`, and `UnknownTransactionStatusException`.
+Also, the `commit()` API could throw `CommitException`, `CommitConflictException`, or `UnknownTransactionStatusException`.
 If you catch `CommitException`, it indicates that committing the transaction fails due to transient or nontransient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is nontransient.
 If you catch `CommitConflictException`, it indicates that committing the transaction has failed due to transient faults (e.g., a conflict error). You can retry the transaction from the beginning.
 If you catch `UnknownTransactionStatusException`, it indicates that the status of the transaction, whether it has succeeded or not, is unknown.
-In such a case, you need to check if the transaction is committed successfully or not and retry it if it fails.
+In such a case, you need to check if the transaction is committed successfully and retry the transaction if it has failed.
 How to identify a transaction status is delegated to users.
 You may want to create a transaction status table and update it transactionally with other application data so that you can get the status of a transaction from the status table.
 
-Although not illustrated in the sample code, the `resume()` API could also throw a `TransactionNotFoundException`.
-This exception indicates that the transaction associated with the specified ID was not found, and it might have been expired.
-In such cases, you can retry the transaction from the beginning since the cause of this exception is basically transient.
+Although not illustrated in the sample code, the `resume()` API could also throw `TransactionNotFoundException`.
+This exception indicates that the transaction associated with the specified ID was not found and/or the transaction might have expired.
+In either case, you can retry the transaction from the beginning since the cause of this exception is basically transient.
 
-In the sample code, for `UnknownTransactionStatusException`, the transaction doesn't retry because the cause of the exception is nontransient.
-For other exceptions, the transaction tries retrying because the cause of the exception is transient or nontransient.
+In the sample code, for `UnknownTransactionStatusException`, the transaction is not retried because the cause of the exception is nontransient.
+For other exceptions, the transaction is retried because the cause of the exception is transient or nontransient.
 If the cause of the exception is transient, the transaction may succeed if you retry it.
 However, if the cause of the exception is nontransient, the transaction may still fail even if you retry it.
 In such a case, you will exhaust the number of retries.
 
 Please note that if you begin a transaction by specifying a transaction ID, you must use a different ID when you retry the transaction.
-And, in the sample code, the transaction retries three times maximum and sleeps for 100 milliseconds before it retries.
+And, in the sample code, the transaction is retried three times maximum and sleeps for 100 milliseconds before it is retried.
 But you can choose a retry policy, such as exponential backoff, according to your application requirements.
 
 ## Transactional operations for Two-phase Commit Transaction
