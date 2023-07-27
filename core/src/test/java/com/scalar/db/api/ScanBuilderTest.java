@@ -852,6 +852,45 @@ public class ScanBuilderTest {
 
   @Test
   public void
+      buildScanAll_ScanWithSetOfConditionalExpressionSet_ShouldBuildScanWithConditionsCorrectly() {
+    // Arrange Act
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .all()
+            .where(
+                ImmutableSet.of(
+                    ImmutableSet.of(
+                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck2").isGreaterThanInt(10)),
+                    ImmutableSet.of(ConditionBuilder.column("ck3").isGreaterThanInt(10))))
+            .limit(10)
+            .projections(Arrays.asList("pk1", "ck1"))
+            .projection("ck2")
+            .projections("ck3", "ck4")
+            .consistency(Consistency.EVENTUAL)
+            .build();
+
+    // Assert
+    assertThat(scan)
+        .isEqualTo(
+            new ScanAll()
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(
+                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck2").isGreaterThanInt(10)),
+                        Conjunction.of(ConditionBuilder.column("ck3").isGreaterThanInt(10))))
+                .withLimit(10)
+                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
+                .withConsistency(Consistency.EVENTUAL));
+  }
+
+  @Test
+  public void
       buildScanAll_FromExistingWithConditionsAndUpdateAllParameters_ShouldBuildScanWithUpdatedParameters() {
     // Arrange
     Scan scan =
@@ -1140,6 +1179,40 @@ public class ScanBuilderTest {
                 .withOrdering(ordering5)
                 .withOrdering(ordering1)
                 .withOrdering(ordering2)
+                .withConsistency(Consistency.SEQUENTIAL));
+  }
+
+  @Test
+  public void
+      buildScanAll_FromExistingWithSetOfConditionalExpressionSet_ShouldBuildScanWithUpdatedParameters() {
+    // Arrange
+    Scan scan = Scan.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).all().build();
+
+    // Act
+    Scan newScan =
+        Scan.newBuilder(scan)
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .where(
+                ImmutableSet.of(
+                    ImmutableSet.of(
+                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck2").isGreaterThanInt(10)),
+                    ImmutableSet.of(ConditionBuilder.column("ck3").isGreaterThanInt(10))))
+            .build();
+
+    // Assert
+    assertThat(newScan)
+        .isEqualTo(
+            new ScanAll()
+                .forNamespace(NAMESPACE_1)
+                .forTable(TABLE_1)
+                .withConjunctions(
+                    ImmutableSet.of(
+                        Conjunction.of(
+                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                            ConditionBuilder.column("ck2").isGreaterThanInt(10)),
+                        Conjunction.of(ConditionBuilder.column("ck3").isGreaterThanInt(10))))
                 .withConsistency(Consistency.SEQUENTIAL));
   }
 

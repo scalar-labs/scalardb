@@ -24,6 +24,7 @@ import com.scalar.db.api.OperationBuilder.Projection;
 import com.scalar.db.api.OperationBuilder.TableBuilder;
 import com.scalar.db.api.OperationBuilder.Where;
 import com.scalar.db.api.OperationBuilder.WhereAnd;
+import com.scalar.db.api.OperationBuilder.WhereConditions;
 import com.scalar.db.api.OperationBuilder.WhereOr;
 import com.scalar.db.api.Scan.Conjunction;
 import com.scalar.db.io.Key;
@@ -279,6 +280,7 @@ public class ScanBuilder {
           Where<BuildableScanAllWithOngoingWhere>,
           WhereAnd<BuildableScanAllWithOngoingWhereAnd>,
           WhereOr<BuildableScanAllWithOngoingWhereOr>,
+          WhereConditions<BuildableScanAllWithWhere>,
           Limit<BuildableScanAll> {
     private final String namespaceName;
     private final String tableName;
@@ -347,6 +349,12 @@ public class ScanBuilder {
     public BuildableScanAllWithOngoingWhere where(ConditionalExpression condition) {
       checkNotNull(condition);
       return new BuildableScanAllWithOngoingWhere(this, condition);
+    }
+
+    @Override
+    public BuildableScanAllWithWhere where(Set<Set<ConditionalExpression>> conditions) {
+      checkNotNull(conditions);
+      return new BuildableScanAllWithWhere(this, conditions);
     }
 
     @Override
@@ -496,7 +504,7 @@ public class ScanBuilder {
     @Nullable protected com.scalar.db.api.Consistency consistency;
 
     private BuildableScanAllWithWhere(BuildableScanAll buildable) {
-      this(buildable, null);
+      this(buildable, (ConditionalExpression) null);
     }
 
     private BuildableScanAllWithWhere(
@@ -508,6 +516,12 @@ public class ScanBuilder {
       this.orderings.addAll(buildable.orderings);
       this.projections.addAll(buildable.projections);
       this.consistency = buildable.consistency;
+    }
+
+    private BuildableScanAllWithWhere(
+        BuildableScanAll buildable, Set<Set<ConditionalExpression>> conditions) {
+      this(buildable);
+      this.conjunctions.addAll(conditions);
     }
 
     private BuildableScanAllWithWhere(BuildableScanAllWithOngoingWhere buildable) {
@@ -591,6 +605,7 @@ public class ScanBuilder {
           Where<BuildableScanAllFromExistingWithOngoingWhere>,
           WhereAnd<BuildableScanAllFromExistingWithOngoingWhereAnd>,
           WhereOr<BuildableScanAllFromExistingWithOngoingWhereOr>,
+          WhereConditions<BuildableScanAllFromExistingWithWhere>,
           ClearConditions<BuildableScanOrScanAllFromExisting>,
           ClearProjections<BuildableScanOrScanAllFromExisting>,
           ClearOrderings<BuildableScanOrScanAllFromExisting>,
@@ -753,6 +768,14 @@ public class ScanBuilder {
       checkConditionsEmpty();
       checkNotNull(condition);
       return new BuildableScanAllFromExistingWithOngoingWhere(this, condition);
+    }
+
+    @Override
+    public BuildableScanAllFromExistingWithWhere where(Set<Set<ConditionalExpression>> conditions) {
+      checkScanAll();
+      checkConditionsEmpty();
+      checkNotNull(conditions);
+      return new BuildableScanAllFromExistingWithWhere(this, conditions);
     }
 
     @Override
@@ -922,6 +945,12 @@ public class ScanBuilder {
       this.consistency = buildable.consistency;
     }
 
+    private BuildableScanAllFromExistingWithWhere(
+        BuildableScanOrScanAllFromExisting buildable, Set<Set<ConditionalExpression>> conditions) {
+      this(buildable, (ConditionalExpression) null);
+      this.conjunctions.addAll(conditions);
+    }
+
     @Override
     public BuildableScanAllFromExistingWithWhere namespace(String namespaceName) {
       checkNotNull(namespaceName);
@@ -1027,7 +1056,7 @@ public class ScanBuilder {
 
     private BuildableScanAllFromExistingWithOngoingWhere(
         BuildableScanOrScanAllFromExisting buildable) {
-      super(buildable, null);
+      super(buildable, (ConditionalExpression) null);
     }
 
     private BuildableScanAllFromExistingWithOngoingWhere(
