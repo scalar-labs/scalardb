@@ -22,6 +22,6 @@ public class CassandraSchemaLoaderIntegrationTest extends SchemaLoaderIntegratio
   protected void waitForNamespacesTableCreation() {
     // After the keyspaces metadata table is created, since it is not readable right away using the
     // Cluster API of the Cassandra driver, we need to wait a bit.
-    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+    Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
   }
 }
