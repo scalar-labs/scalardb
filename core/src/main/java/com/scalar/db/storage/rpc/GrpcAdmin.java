@@ -15,8 +15,6 @@ import com.scalar.db.rpc.DistributedStorageAdminGrpc;
 import com.scalar.db.rpc.DropIndexRequest;
 import com.scalar.db.rpc.DropNamespaceRequest;
 import com.scalar.db.rpc.DropTableRequest;
-import com.scalar.db.rpc.GetNamespaceNamesRequest;
-import com.scalar.db.rpc.GetNamespaceNamesResponse;
 import com.scalar.db.rpc.GetNamespaceTableNamesRequest;
 import com.scalar.db.rpc.GetNamespaceTableNamesResponse;
 import com.scalar.db.rpc.GetTableMetadataRequest;
@@ -25,7 +23,6 @@ import com.scalar.db.rpc.NamespaceExistsRequest;
 import com.scalar.db.rpc.NamespaceExistsResponse;
 import com.scalar.db.rpc.RepairTableRequest;
 import com.scalar.db.rpc.TruncateTableRequest;
-import com.scalar.db.rpc.UpgradeRequest;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableSupplier;
 import io.grpc.ManagedChannel;
@@ -325,21 +322,14 @@ public class GrpcAdmin implements DistributedStorageAdmin {
 
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
-    return execute(
-        () -> {
-          GetNamespaceNamesResponse response =
-              stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
-                  .getNamespaceNames(GetNamespaceNamesRequest.newBuilder().build());
-          return new HashSet<>(response.getNamespaceNamesList());
-        });
+    throw new UnsupportedOperationException(
+        "retrieving the namespace names is not supported in ScalarDB Server");
   }
 
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
-    execute(
-        () ->
-            stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
-                .upgrade(UpgradeRequest.newBuilder().putAllOptions(options).build()));
+    throw new UnsupportedOperationException(
+        "upgrading the ScalarDB environment is not supported in ScalarDB Server");
   }
 
   @Override

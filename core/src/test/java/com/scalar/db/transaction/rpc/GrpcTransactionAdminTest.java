@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.rpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
@@ -26,8 +27,6 @@ import com.scalar.db.rpc.DropCoordinatorTablesRequest;
 import com.scalar.db.rpc.DropIndexRequest;
 import com.scalar.db.rpc.DropNamespaceRequest;
 import com.scalar.db.rpc.DropTableRequest;
-import com.scalar.db.rpc.GetNamespaceNamesRequest;
-import com.scalar.db.rpc.GetNamespaceNamesResponse;
 import com.scalar.db.rpc.GetNamespaceTableNamesRequest;
 import com.scalar.db.rpc.GetNamespaceTableNamesResponse;
 import com.scalar.db.rpc.GetTableMetadataRequest;
@@ -38,7 +37,6 @@ import com.scalar.db.rpc.RepairCoordinatorTablesRequest;
 import com.scalar.db.rpc.RepairTableRequest;
 import com.scalar.db.rpc.TruncateCoordinatorTablesRequest;
 import com.scalar.db.rpc.TruncateTableRequest;
-import com.scalar.db.rpc.UpgradeRequest;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.util.ProtoUtils;
 import java.util.Collections;
@@ -416,32 +414,17 @@ public class GrpcTransactionAdminTest {
   }
 
   @Test
-  public void getNamespaceNames_StubShouldBeCalledProperly() throws ExecutionException {
+  public void unsupportedOperations_ShouldThrowUnsupportedException() {
     // Arrange
-    LazyStringArrayList namespaceNames = new LazyStringArrayList();
-    namespaceNames.add("n1");
-    namespaceNames.add("n2");
-    GetNamespaceNamesResponse response = mock(GetNamespaceNamesResponse.class);
-    when(response.getNamespaceNamesList()).thenReturn(namespaceNames);
-    when(stub.getNamespaceNames(any())).thenReturn(response);
+    String namespace = "sample_ns";
+    String table = "tbl";
 
-    // Act
-    Set<String> actualNamespaces = admin.getNamespaceNames();
-
-    // Assert
-    verify(stub).getNamespaceNames(GetNamespaceNamesRequest.newBuilder().build());
-    assertThat(actualNamespaces).containsOnly("n1", "n2");
-  }
-
-  @Test
-  public void upgrade_StubShouldBeCalledProperly() throws ExecutionException {
-    // Arrange
-    Map<String, String> options = ImmutableMap.of("foo", "bar");
-
-    // Act
-    admin.upgrade(options);
-
-    // Assert
-    verify(stub).upgrade(UpgradeRequest.newBuilder().putAllOptions(options).build());
+    // Act Assert
+    assertThatThrownBy(() -> admin.importTable(namespace, table))
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> admin.upgrade(Collections.emptyMap()))
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> admin.getNamespaceNames())
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 }

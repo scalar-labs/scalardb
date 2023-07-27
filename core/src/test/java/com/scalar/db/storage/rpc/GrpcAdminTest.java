@@ -23,8 +23,6 @@ import com.scalar.db.rpc.DistributedStorageAdminGrpc;
 import com.scalar.db.rpc.DropIndexRequest;
 import com.scalar.db.rpc.DropNamespaceRequest;
 import com.scalar.db.rpc.DropTableRequest;
-import com.scalar.db.rpc.GetNamespaceNamesRequest;
-import com.scalar.db.rpc.GetNamespaceNamesResponse;
 import com.scalar.db.rpc.GetNamespaceTableNamesRequest;
 import com.scalar.db.rpc.GetNamespaceTableNamesResponse;
 import com.scalar.db.rpc.GetTableMetadataRequest;
@@ -33,7 +31,6 @@ import com.scalar.db.rpc.NamespaceExistsRequest;
 import com.scalar.db.rpc.NamespaceExistsResponse;
 import com.scalar.db.rpc.RepairTableRequest;
 import com.scalar.db.rpc.TruncateTableRequest;
-import com.scalar.db.rpc.UpgradeRequest;
 import com.scalar.db.util.ProtoUtils;
 import java.util.Collections;
 import java.util.Map;
@@ -337,37 +334,6 @@ public class GrpcAdminTest {
   }
 
   @Test
-  public void getNamespaceNames_StubShouldBeCalledProperly() throws ExecutionException {
-    // Arrange
-
-    LazyStringArrayList namespaceNames = new LazyStringArrayList();
-    namespaceNames.add("n1");
-    namespaceNames.add("n2");
-    GetNamespaceNamesResponse response = mock(GetNamespaceNamesResponse.class);
-    when(response.getNamespaceNamesList()).thenReturn(namespaceNames);
-    when(stub.getNamespaceNames(any())).thenReturn(response);
-
-    // Act
-    Set<String> actualNamespaces = admin.getNamespaceNames();
-
-    // Assert
-    verify(stub).getNamespaceNames(GetNamespaceNamesRequest.newBuilder().build());
-    assertThat(actualNamespaces).containsOnly("n1", "n2");
-  }
-
-  @Test
-  public void upgrade_StubShouldBeCalledProperly() throws ExecutionException {
-    // Arrange
-    Map<String, String> options = ImmutableMap.of("foo", "bar");
-
-    // Act
-    admin.upgrade(options);
-
-    // Assert
-    verify(stub).upgrade(UpgradeRequest.newBuilder().putAllOptions(options).build());
-  }
-
-  @Test
   public void unsupportedOperations_ShouldThrowUnsupportedException() {
     // Arrange
     String namespace = "sample_ns";
@@ -379,10 +345,14 @@ public class GrpcAdminTest {
     Throwable thrown2 =
         catchThrowable(() -> admin.addRawColumnToTable(namespace, table, column, DataType.INT));
     Throwable thrown3 = catchThrowable(() -> admin.importTable(namespace, table));
+    Throwable thrown4 = catchThrowable(() -> admin.upgrade(Collections.emptyMap()));
+    Throwable thrown5 = catchThrowable(() -> admin.getNamespaceNames());
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown4).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown5).isInstanceOf(UnsupportedOperationException.class);
   }
 }

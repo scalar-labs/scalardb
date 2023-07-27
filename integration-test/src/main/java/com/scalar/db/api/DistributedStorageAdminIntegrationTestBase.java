@@ -215,7 +215,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
       // Assert
       assertThat(admin.namespaceExists(namespace3)).isTrue();
-      assertThat(admin.getNamespaceNames()).contains(namespace3);
     } finally {
       admin.dropNamespace(namespace3, true);
     }
@@ -251,7 +250,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
       // Assert
       assertThat(admin.namespaceExists(namespace3)).isFalse();
-      assertThat(admin.getNamespaceNames()).doesNotContain(namespace3);
     } finally {
       admin.dropNamespace(namespace3, true);
     }

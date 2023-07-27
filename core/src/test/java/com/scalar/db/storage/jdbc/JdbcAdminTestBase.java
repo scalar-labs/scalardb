@@ -10,11 +10,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.description;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
@@ -3029,15 +3027,6 @@ public abstract class JdbcAdminTestBase {
 
     // Assert
     assertThat(thrown).isInstanceOf(UnsupportedOperationException.class);
-  }
-
-  private PreparedStatement prepareStatementForNamespaceCheck(boolean exists) throws SQLException {
-    PreparedStatement statement = mock(PreparedStatement.class);
-    ResultSet results = mock(ResultSet.class);
-    doNothing().when(statement).setString(anyInt(), anyString());
-    when(statement.executeQuery()).thenReturn(results);
-    when(results.next()).thenReturn(exists);
-    return statement;
   }
 
   private String prepareSqlForMetadataTableCheck(RdbEngine rdbEngine) {
