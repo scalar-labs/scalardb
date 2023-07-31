@@ -142,7 +142,7 @@ public class CrudHandler {
         try {
           scanner.close();
         } catch (IOException e) {
-          logger.warn("failed to close the scanner", e);
+          logger.warn("Failed to close the scanner", e);
         }
       }
     }

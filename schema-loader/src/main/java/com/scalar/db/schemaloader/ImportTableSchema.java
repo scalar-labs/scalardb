@@ -15,7 +15,7 @@ public class ImportTableSchema {
     String[] fullName = tableFullName.split("\\.", -1);
     if (fullName.length != 2) {
       throw new SchemaLoaderException(
-          "Parsing the schema JSON failed. Table full name must contains namespace and table: "
+          "parsing the schema JSON failed. Table full name must contains namespace and table: "
               + tableFullName);
     }
     namespace = fullName[0];

@@ -120,18 +120,18 @@ public class JdbcTransactionTest {
     return Stream.of(
         Arguments.of(
             ConditionBuilder.putIf(ConditionBuilder.column("c1").isNullText()).build(),
-            "The PutIf condition targeting the column 'c1' of the Put operation is not satisfied"),
+            "the PutIf condition targeting the column 'c1' of the Put operation is not satisfied"),
         Arguments.of(
             ConditionBuilder.putIf(ConditionBuilder.column("c1").isNullText())
                 .and(ConditionBuilder.column("c2").isEqualToText("a"))
                 .build(),
-            "The PutIf condition targeting the columns 'c1, c2' of the Put operation is not satisfied"),
+            "the PutIf condition targeting the columns 'c1, c2' of the Put operation is not satisfied"),
         Arguments.of(
             ConditionBuilder.putIfExists(),
-            "The PutIfExists condition of the Put operation is not satisfied"),
+            "the PutIfExists condition of the Put operation is not satisfied"),
         Arguments.of(
             ConditionBuilder.putIfNotExists(),
-            "The PutIfNotExists condition of the Put operation is not satisfied"));
+            "the PutIfNotExists condition of the Put operation is not satisfied"));
   }
 
   @ParameterizedTest
@@ -155,14 +155,14 @@ public class JdbcTransactionTest {
     return Stream.of(
         Arguments.of(
             ConditionBuilder.deleteIf(ConditionBuilder.column("c1").isNullText()).build(),
-            "The DeleteIf condition targeting the column 'c1' of the Delete operation is not satisfied"),
+            "the DeleteIf condition targeting the column 'c1' of the Delete operation is not satisfied"),
         Arguments.of(
             ConditionBuilder.deleteIf(ConditionBuilder.column("c1").isNullText())
                 .and(ConditionBuilder.column("c2").isEqualToText("a"))
                 .build(),
-            "The DeleteIf condition targeting the columns 'c1, c2' of the Delete operation is not satisfied"),
+            "the DeleteIf condition targeting the columns 'c1, c2' of the Delete operation is not satisfied"),
         Arguments.of(
             ConditionBuilder.deleteIfExists(),
-            "The DeleteIfExists condition of the Delete operation is not satisfied"));
+            "the DeleteIfExists condition of the Delete operation is not satisfied"));
   }
 }

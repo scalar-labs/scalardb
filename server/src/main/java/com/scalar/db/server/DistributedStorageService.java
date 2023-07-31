@@ -143,7 +143,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
       responseObserver.onError(
           Status.FAILED_PRECONDITION.withDescription(e.getMessage()).asRuntimeException());
     } catch (Throwable t) {
-      logger.error("an internal error happened during the execution", t);
+      logger.error("An internal error happened during the execution", t);
       responseObserver.onError(
           Status.INTERNAL.withDescription(t.getMessage()).asRuntimeException());
       if (t instanceof Error) {
@@ -265,7 +265,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
       } catch (IllegalArgumentException e) {
         respondInvalidArgumentError(e.getMessage());
       } catch (Throwable t) {
-        logger.error("an internal error happened when opening a scanner", t);
+        logger.error("An internal error happened when opening a scanner", t);
         respondInternalError(t.getMessage());
         if (t instanceof Error) {
           throw (Error) t;
@@ -298,7 +298,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
               return builder.setHasMoreResults(resultIterator.hasNext()).build();
             });
       } catch (Throwable t) {
-        logger.error("an internal error happened during the execution", t);
+        logger.error("An internal error happened during the execution", t);
         respondInternalError(t.getMessage());
         if (t instanceof Error) {
           throw (Error) t;
@@ -320,7 +320,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
 
     @Override
     public void onError(Throwable t) {
-      logger.error("an error received", t);
+      logger.error("An error was received", t);
       cleanUp();
     }
 
@@ -338,7 +338,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
           scanner.close();
         }
       } catch (IOException e) {
-        logger.warn("failed to close the scanner");
+        logger.warn("Failed to close the scanner");
       }
 
       postProcessor.run();

@@ -125,9 +125,9 @@ public class ScalarDbServer implements Callable<Integer> {
                 () -> {
                   logger.info("Signal received. Decommissioning ...");
                   decommission();
-                  logger.info("Decommissioned. Shutting down.");
+                  logger.info("Decommissioned. Shutting down");
                   shutdown(MAX_SHUTDOWN_WAIT_TIME_MILLIS, TimeUnit.MILLISECONDS);
-                  logger.info("ScalarDB Server shut down.");
+                  logger.info("ScalarDB Server shut down");
                 }));
   }
 

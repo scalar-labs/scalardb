@@ -212,7 +212,7 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
                   "data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
         }
         logger.info(
-            "data type larger than that of underlying database is assigned: {} ({} to INT)",
+            "Data type larger than that of underlying database is assigned: {} ({} to INT)",
             columnDescription,
             typeName);
         return DataType.INT;
@@ -229,7 +229,7 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
               String.format("data type %s is unsupported: %s", typeName, columnDescription));
         }
         logger.warn(
-            "data type that may be smaller than that of underlying database is assigned: {} (PostgreSQL {} to ScalarDB BIGINT)",
+            "Data type that may be smaller than that of underlying database is assigned: {} (PostgreSQL {} to ScalarDB BIGINT)",
             columnDescription,
             typeName);
         return DataType.BIGINT;
@@ -245,7 +245,7 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
       case VARCHAR:
         if (!typeName.equalsIgnoreCase("text")) {
           logger.info(
-              "data type larger than that of underlying database is assigned: {} ({} to TEXT)",
+              "Data type larger than that of underlying database is assigned: {} ({} to TEXT)",
               columnDescription,
               typeName);
         }

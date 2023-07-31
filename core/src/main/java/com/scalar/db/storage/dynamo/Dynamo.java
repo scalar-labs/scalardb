@@ -77,7 +77,7 @@ public class Dynamo extends AbstractDistributedStorage {
         new DeleteStatementHandler(client, metadataManager, config.getNamespacePrefix());
     batchHandler = new BatchHandler(client, metadataManager, config.getNamespacePrefix());
 
-    logger.info("DynamoDB object is created properly.");
+    logger.info("DynamoDB object is created properly");
   }
 
   @VisibleForTesting
@@ -117,7 +117,7 @@ public class Dynamo extends AbstractDistributedStorage {
         try {
           scanner.close();
         } catch (IOException e) {
-          logger.warn("failed to close the scanner", e);
+          logger.warn("Failed to close the scanner", e);
         }
       }
     }

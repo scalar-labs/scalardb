@@ -81,17 +81,17 @@ public class ScannerImpl implements Scanner {
     try {
       resultSet.close();
     } catch (SQLException e) {
-      logger.warn("failed to close the resultSet", e);
+      logger.warn("Failed to close the resultSet", e);
     }
     try {
       preparedStatement.close();
     } catch (SQLException e) {
-      logger.warn("failed to close the preparedStatement", e);
+      logger.warn("Failed to close the preparedStatement", e);
     }
     try {
       connection.close();
     } catch (SQLException e) {
-      logger.warn("failed to close the connection", e);
+      logger.warn("Failed to close the connection", e);
     }
   }
 }

@@ -148,7 +148,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   public void commit() throws CommitException, UnknownTransactionStatusException {
     if (crud.getSnapshot().isValidationRequired() && !validated) {
       throw new IllegalStateException(
-          "The transaction is not validated."
+          "the transaction is not validated."
               + " When using the EXTRA_READ serializable strategy, you need to call validate()"
               + " before calling commit()");
     }
@@ -205,7 +205,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   }
 
   private void lazyRecovery(Selection selection, List<TransactionResult> results) {
-    logger.debug("recover uncommitted records: {}", results);
+    logger.debug("Recover uncommitted records: {}", results);
     beforeRecoveryHook.run();
     results.forEach(r -> recovery.recover(selection, r));
   }
@@ -214,7 +214,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     try {
       mutationOperationChecker.check(mutation);
     } catch (ExecutionException e) {
-      throw new CrudException("Checking the operation failed", e, getId());
+      throw new CrudException("checking the operation failed", e, getId());
     }
   }
 }

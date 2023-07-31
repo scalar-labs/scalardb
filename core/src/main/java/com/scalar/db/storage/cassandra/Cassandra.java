@@ -57,7 +57,7 @@ public class Cassandra extends AbstractDistributedStorage {
             .build();
 
     batch = new BatchHandler(session, handlers);
-    logger.info("Cassandra object is created properly.");
+    logger.info("Cassandra object is created properly");
 
     metadataManager =
         new TableMetadataManager(

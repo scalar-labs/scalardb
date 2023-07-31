@@ -48,7 +48,7 @@ public abstract class MutateStatementHandler extends StatementHandler {
       return results;
 
     } catch (WriteTimeoutException e) {
-      logger.warn("write timeout happened during mutate operation.", e);
+      logger.warn("Write timeout happened during mutate operation", e);
       if (e.getWriteType() == WriteType.CAS) {
         // retry needs to be done if applications need to do the operation exactly
         throw new RetriableExecutionException("paxos phase in CAS operation failed.", e);

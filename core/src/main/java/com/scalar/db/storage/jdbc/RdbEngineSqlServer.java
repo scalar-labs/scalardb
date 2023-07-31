@@ -194,7 +194,7 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
       case TINYINT:
       case SMALLINT:
         logger.info(
-            "data type larger than that of underlying database is assigned: {} ({} to INT)",
+            "Data type larger than that of underlying database is assigned: {} ({} to INT)",
             columnDescription,
             typeName);
         return DataType.INT;
@@ -202,7 +202,7 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
         return DataType.INT;
       case BIGINT:
         logger.warn(
-            "data type that may be smaller than that of underlying database is assigned: {} (SQL Server {} to ScalarDB BIGINT)",
+            "Data type that may be smaller than that of underlying database is assigned: {} (SQL Server {} to ScalarDB BIGINT)",
             columnDescription,
             typeName);
         return DataType.BIGINT;
@@ -219,7 +219,7 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
               String.format("data type %s is unsupported: %s", typeName, columnDescription));
         }
         logger.info(
-            "data type larger than that of underlying database is assigned: {} ({} to TEXT)",
+            "Data type larger than that of underlying database is assigned: {} ({} to TEXT)",
             columnDescription,
             typeName);
         return DataType.TEXT;
@@ -237,7 +237,7 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
               String.format("data type %s is unsupported: %s", typeName, columnDescription));
         }
         logger.info(
-            "data type larger than that of underlying database is assigned: {} ({} to BLOB)",
+            "Data type larger than that of underlying database is assigned: {} ({} to BLOB)",
             columnDescription,
             typeName);
         return DataType.BLOB;

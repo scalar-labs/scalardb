@@ -82,7 +82,7 @@ public class MultiStorageConfig {
             + "\" is deprecated and will be removed in 5.0.0. "
             + "Please use the namespace mapping property \""
             + NAMESPACE_MAPPING
-            + "\" instead.");
+            + "\" instead");
 
     ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
     for (String tableAndStorage : tableMapping) {

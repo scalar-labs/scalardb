@@ -214,14 +214,14 @@ class RdbEngineMysql implements RdbEngineStrategy {
       case TINYINT:
       case SMALLINT:
         logger.info(
-            "data type larger than that of underlying database is assigned: {} ({} to INT)",
+            "Data type larger than that of underlying database is assigned: {} ({} to INT)",
             columnDescription,
             typeName);
         return DataType.INT;
       case INTEGER:
         if (typeName.toUpperCase().endsWith("UNSIGNED")) {
           logger.info(
-              "data type larger than that of underlying database is assigned: {} ({} to BIGINT)",
+              "Data type larger than that of underlying database is assigned: {} ({} to BIGINT)",
               columnDescription,
               typeName);
           return DataType.BIGINT;
@@ -233,7 +233,7 @@ class RdbEngineMysql implements RdbEngineStrategy {
               String.format("data type %s is unsupported: %s", typeName, columnDescription));
         }
         logger.warn(
-            "data type that may be smaller than that of underlying database is assigned: {} (MySQL {} to ScalarDB BIGINT)",
+            "Data type that may be smaller than that of underlying database is assigned: {} (MySQL {} to ScalarDB BIGINT)",
             columnDescription,
             typeName);
         return DataType.BIGINT;
@@ -252,7 +252,7 @@ class RdbEngineMysql implements RdbEngineStrategy {
         }
         if (!typeName.equalsIgnoreCase("LONGTEXT")) {
           logger.info(
-              "data type larger than that of underlying database is assigned: {} ({} to TEXT)",
+              "Data type larger than that of underlying database is assigned: {} ({} to TEXT)",
               columnDescription,
               typeName);
         }
@@ -267,7 +267,7 @@ class RdbEngineMysql implements RdbEngineStrategy {
         }
         if (!typeName.equalsIgnoreCase("LONGBLOB")) {
           logger.info(
-              "data type larger than that of underlying database is assigned: {} ({} to BLOB)",
+              "Data type larger than that of underlying database is assigned: {} ({} to BLOB)",
               columnDescription,
               typeName);
         }

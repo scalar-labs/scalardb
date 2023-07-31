@@ -60,7 +60,7 @@ public class TableSchema {
     String[] fullName = tableFullName.split("\\.", -1);
     if (fullName.length < 2) {
       throw new SchemaLoaderException(
-          "Parsing the schema JSON failed. Table full name must contains table name and namespace");
+          "parsing the schema JSON failed. The table full name must contains table name and namespace");
     }
     namespace = fullName[0];
     tableName = fullName[1];
@@ -75,7 +75,7 @@ public class TableSchema {
     // Add partition keys
     if (!tableDefinition.keySet().contains(PARTITION_KEY)) {
       throw new SchemaLoaderException(
-          "Parsing the schema JSON failed. Table must contains partition key");
+          "parsing the schema JSON failed. Table must contains partition key");
     }
     JsonArray partitionKeys = tableDefinition.get(PARTITION_KEY).getAsJsonArray();
     traveledKeys.add(PARTITION_KEY);
@@ -102,7 +102,7 @@ public class TableSchema {
           tableBuilder.addClusteringKey(clusteringKey, ORDER_MAP.get(order.toUpperCase()));
         } else {
           throw new SchemaLoaderException(
-              "Parsing the schema JSON failed. Invalid clustering keys");
+              "parsing the schema JSON failed. Invalid clustering keys");
         }
       }
     }
@@ -115,7 +115,7 @@ public class TableSchema {
     // Add columns
     if (!tableDefinition.keySet().contains(COLUMNS)) {
       throw new SchemaLoaderException(
-          "Parsing the schema JSON failed. Table must contains columns");
+          "parsing the schema JSON failed. Table must contains columns");
     }
     JsonObject columns = tableDefinition.get(COLUMNS).getAsJsonObject();
     traveledKeys.add(COLUMNS);
@@ -124,7 +124,7 @@ public class TableSchema {
       DataType columnDataType = DATA_MAP_TYPE.get(column.getValue().getAsString().toUpperCase());
       if (columnDataType == null) {
         throw new SchemaLoaderException(
-            "Parsing the schema JSON failed. Invalid column type for column " + columnName);
+            "parsing the schema JSON failed. Invalid column type for column " + columnName);
       }
       tableBuilder.addColumn(columnName, columnDataType);
     }

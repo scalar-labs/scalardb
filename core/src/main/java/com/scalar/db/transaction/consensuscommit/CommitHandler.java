@@ -115,7 +115,7 @@ public class CommitHandler {
       Coordinator.State state = new Coordinator.State(id, TransactionState.COMMITTED);
       coordinator.putState(state);
       logger.debug(
-          "transaction {} is committed successfully at {}", id, System.currentTimeMillis());
+          "Transaction {} is committed successfully at {}", id, System.currentTimeMillis());
     } catch (CoordinatorConflictException e) {
       try {
         Optional<Coordinator.State> s = coordinator.getState(id);
@@ -153,7 +153,7 @@ public class CommitHandler {
       }
       parallelExecutor.commitRecords(tasks, snapshot.getId());
     } catch (Exception e) {
-      logger.warn("committing records failed. transaction ID: {}", snapshot.getId(), e);
+      logger.warn("Committing records failed. transaction ID: {}", snapshot.getId(), e);
       // ignore since records are recovered lazily
     }
   }
@@ -183,7 +183,7 @@ public class CommitHandler {
   }
 
   public void rollbackRecords(Snapshot snapshot) {
-    logger.debug("rollback from snapshot for {}", snapshot.getId());
+    logger.debug("Rollback from snapshot for {}", snapshot.getId());
     try {
       RollbackMutationComposer composer =
           new RollbackMutationComposer(snapshot.getId(), storage, tableMetadataManager);
@@ -197,7 +197,7 @@ public class CommitHandler {
       }
       parallelExecutor.rollbackRecords(tasks, snapshot.getId());
     } catch (Exception e) {
-      logger.warn("rolling back records failed. transaction ID: {}", snapshot.getId(), e);
+      logger.warn("Rolling back records failed. transaction ID: {}", snapshot.getId(), e);
       // ignore since records are recovered lazily
     }
   }

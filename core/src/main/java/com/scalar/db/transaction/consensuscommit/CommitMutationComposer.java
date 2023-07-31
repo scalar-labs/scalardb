@@ -72,7 +72,7 @@ public class CommitMutationComposer extends AbstractMutationComposer {
       mutations.add(composeDelete(base, result));
     } else {
       logger.debug(
-          "the record was committed by the originated one "
+          "The record was committed by the originated one "
               + "or rolled forward by another transaction: {}",
           result);
     }

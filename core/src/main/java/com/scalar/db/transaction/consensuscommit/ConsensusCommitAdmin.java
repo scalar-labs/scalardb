@@ -184,7 +184,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata == null) {
       throw new IllegalArgumentException(
-          "Table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
+          "table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
     }
     String beforeColumnName = getBeforeImageColumnName(columnName, tableMetadata);
 

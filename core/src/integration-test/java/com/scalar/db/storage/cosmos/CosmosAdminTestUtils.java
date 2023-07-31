@@ -45,7 +45,7 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
       client.getDatabase(metadataDatabase).read();
     } catch (CosmosException e) {
       if (e.getStatusCode() != 404) {
-        throw new RuntimeException("Dropping the metadata table failed", e);
+        throw new RuntimeException("dropping the metadata table failed", e);
       }
     }
   }

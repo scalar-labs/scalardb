@@ -138,7 +138,7 @@ public class DistributedTransactionService
       responseObserver.onError(
           Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
     } catch (Throwable t) {
-      logger.error("an internal error happened during the execution", t);
+      logger.error("An internal error happened during the execution", t);
       responseObserver.onError(
           Status.INTERNAL.withDescription(t.getMessage()).asRuntimeException());
       if (t instanceof Error) {
@@ -240,7 +240,7 @@ public class DistributedTransactionService
       } catch (IllegalArgumentException e) {
         respondInvalidArgumentError(e.getMessage());
       } catch (Throwable t) {
-        logger.error("an internal error happened when beginning a transaction", t);
+        logger.error("An internal error happened when beginning a transaction", t);
         respondInternalError(t.getMessage());
         if (t instanceof Error) {
           throw (Error) t;
@@ -274,7 +274,7 @@ public class DistributedTransactionService
       } catch (IllegalArgumentException e) {
         respondInvalidArgumentError(e.getMessage());
       } catch (Throwable t) {
-        logger.error("an internal error happened when starting a transaction", t);
+        logger.error("An internal error happened when starting a transaction", t);
         respondInternalError(t.getMessage());
         if (t instanceof Error) {
           throw (Error) t;
@@ -338,7 +338,7 @@ public class DistributedTransactionService
 
     @Override
     public void onError(Throwable t) {
-      logger.error("an error received", t);
+      logger.error("An error received", t);
       cleanUp();
     }
 
@@ -445,7 +445,7 @@ public class DistributedTransactionService
         try {
           transaction.rollback();
         } catch (RollbackException e) {
-          logger.warn("rollback failed", e);
+          logger.warn("Rollback failed", e);
         }
       }
 
@@ -489,7 +489,7 @@ public class DistributedTransactionService
                 .build());
       } catch (UnknownTransactionStatusException e) {
         logger.error(
-            "the transaction status is unknown. transaction ID: {}",
+            "The transaction status is unknown. transaction ID: {}",
             e.getTransactionId().orElse("null"),
             e);
         responseBuilder.setError(
@@ -498,7 +498,7 @@ public class DistributedTransactionService
                 .setMessage(e.getMessage())
                 .build());
       } catch (Throwable t) {
-        logger.error("an internal error happened during the execution", t);
+        logger.error("An internal error happened during the execution", t);
         if (t instanceof Error) {
           throw (Error) t;
         }

@@ -417,7 +417,7 @@ public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
     try {
       channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     } catch (InterruptedException e) {
-      logger.warn("failed to shutdown the channel", e);
+      logger.warn("Failed to shutdown the channel", e);
     }
   }
 }

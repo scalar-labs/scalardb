@@ -35,13 +35,13 @@ public class RecoveryHandler {
 
   // lazy recovery in read phase
   public void recover(Selection selection, TransactionResult result) {
-    logger.debug("recovering for {}", result.getId());
+    logger.debug("Recovering for {}", result.getId());
 
     Optional<Coordinator.State> state;
     try {
       state = coordinator.getState(result.getId());
     } catch (CoordinatorException e) {
-      logger.warn("can't get coordinator state. transaction ID: {}", result.getId(), e);
+      logger.warn("Can't get coordinator state. transaction ID: {}", result.getId(), e);
       return;
     }
 
@@ -59,7 +59,7 @@ public class RecoveryHandler {
   @VisibleForTesting
   void rollbackRecord(Selection selection, TransactionResult result) {
     logger.debug(
-        "rollback for {}, {} mutated by {}",
+        "Rollback for {}, {} mutated by {}",
         selection.getPartitionKey(),
         selection.getClusteringKey(),
         result.getId());
@@ -69,7 +69,7 @@ public class RecoveryHandler {
       composer.add(selection, result);
       mutate(composer.get(), result.getId());
     } catch (Exception e) {
-      logger.warn("rolling back a record failed. transaction ID: {}", result.getId(), e);
+      logger.warn("Rolling back a record failed. transaction ID: {}", result.getId(), e);
       // ignore since the record is recovered lazily
     }
   }
@@ -77,7 +77,7 @@ public class RecoveryHandler {
   @VisibleForTesting
   void rollforwardRecord(Selection selection, TransactionResult result) {
     logger.debug(
-        "rollforward for {}, {} mutated by {}",
+        "Rollforward for {}, {} mutated by {}",
         selection.getPartitionKey(),
         selection.getClusteringKey(),
         result.getId());
@@ -96,7 +96,7 @@ public class RecoveryHandler {
       coordinator.putState(new Coordinator.State(result.getId(), TransactionState.ABORTED));
       rollbackRecord(selection, result);
     } catch (CoordinatorException e) {
-      logger.warn("coordinator tries to abort {}, but failed", result.getId(), e);
+      logger.warn("Coordinator tries to abort {}, but failed", result.getId(), e);
     }
   }
 
@@ -108,7 +108,7 @@ public class RecoveryHandler {
       storage.mutate(mutations);
     } catch (ExecutionException e) {
       logger.warn(
-          "mutation in recovery failed. the record will be eventually recovered. transaction ID: {}",
+          "Mutation in recovery failed. the record will be eventually recovered. transaction ID: {}",
           transactionId,
           e);
     }

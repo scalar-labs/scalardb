@@ -159,7 +159,7 @@ public class Snapshot {
           tableMetadataManager.getTransactionTableMetadata(key.getNamespace(), key.getTable());
       if (metadata == null) {
         throw new IllegalArgumentException(
-            "The specified table is not found: "
+            "the specified table is not found: "
                 + ScalarDbUtils.getFullTableName(key.getNamespace(), key.getTable()));
       }
       return metadata.getTableMetadata();
@@ -175,7 +175,7 @@ public class Snapshot {
               scan.forNamespace().get(), scan.forTable().get());
       if (metadata == null) {
         throw new IllegalArgumentException(
-            "The specified table is not found: "
+            "the specified table is not found: "
                 + ScalarDbUtils.getFullTableName(scan.forNamespace().get(), scan.forTable().get()));
       }
       return metadata.getTableMetadata();
@@ -432,7 +432,7 @@ public class Snapshot {
                 try {
                   scanner.close();
                 } catch (IOException e) {
-                  logger.warn("failed to close the scanner", e);
+                  logger.warn("Failed to close the scanner", e);
                 }
               }
             }
@@ -512,7 +512,7 @@ public class Snapshot {
   }
 
   private void throwExceptionDueToAntiDependency() throws ValidationConflictException {
-    throw new ValidationConflictException("Anti-dependency found. Aborting the transaction", id);
+    throw new ValidationConflictException("anti-dependency found. Aborting the transaction", id);
   }
 
   private boolean isExtraReadEnabled() {

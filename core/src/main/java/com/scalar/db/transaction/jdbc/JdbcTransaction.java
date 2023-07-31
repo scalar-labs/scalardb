@@ -156,7 +156,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
       try {
         connection.close();
       } catch (SQLException e) {
-        logger.warn("failed to close the connection", e);
+        logger.warn("Failed to close the connection", e);
       }
     }
   }
@@ -178,7 +178,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     }
 
     StringBuilder exceptionMessage =
-        new StringBuilder("The ")
+        new StringBuilder("the ")
             .append(condition.getClass().getSimpleName())
             .append(" condition ");
     if (conditionColumns != null) {
@@ -212,7 +212,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
       try {
         connection.close();
       } catch (SQLException e) {
-        logger.warn("failed to close the connection", e);
+        logger.warn("Failed to close the connection", e);
       }
     }
   }

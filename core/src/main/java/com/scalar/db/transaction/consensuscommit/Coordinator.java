@@ -91,7 +91,7 @@ public class Coordinator {
           return Optional.empty();
         }
       } catch (ExecutionException e) {
-        logger.warn("can't get coordinator state.", e);
+        logger.warn("Can't get coordinator state", e);
       }
       exponentialBackoff(counter++);
     }
@@ -118,9 +118,9 @@ public class Coordinator {
         storage.put(put);
         break;
       } catch (NoMutationException e) {
-        throw new CoordinatorConflictException("mutation seems applied already.", e);
+        throw new CoordinatorConflictException("mutation seems applied already", e);
       } catch (ExecutionException e) {
-        logger.warn("putting state in coordinator failed.", e);
+        logger.warn("Putting state in coordinator failed", e);
       }
       exponentialBackoff(counter++);
     }

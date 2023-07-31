@@ -219,12 +219,12 @@ public class RdbEngineOracle implements RdbEngineStrategy {
         }
         if (digits == 0) {
           logger.info(
-              "data type larger than that of underlying database is assigned: {} to BIGINT",
+              "Data type larger than that of underlying database is assigned: {} to BIGINT",
               numericTypeDescription);
           return DataType.BIGINT;
         } else {
           logger.info(
-              "fixed-point data type is casted, be aware round-up or round-off can be happen in underlying database: {} ({} to DOUBLE)",
+              "Fixed-point data type is casted, be aware round-up or round-off can be happen in underlying database: {} ({} to DOUBLE)",
               columnDescription,
               numericTypeDescription);
           return DataType.DOUBLE;
@@ -239,7 +239,7 @@ public class RdbEngineOracle implements RdbEngineStrategy {
         }
         if (columnSize < 53) {
           logger.info(
-              "data type larger than that of underlying database is assigned: {} to DOUBLE",
+              "Data type larger than that of underlying database is assigned: {} to DOUBLE",
               numericTypeDescription);
         }
         return DataType.DOUBLE;
@@ -252,7 +252,7 @@ public class RdbEngineOracle implements RdbEngineStrategy {
       case CLOB:
       case NCLOB:
         logger.info(
-            "data type larger than that of underlying database is assigned: {} ({} to TEXT)",
+            "Data type larger than that of underlying database is assigned: {} ({} to TEXT)",
             columnDescription,
             typeName);
         return DataType.TEXT;
@@ -260,7 +260,7 @@ public class RdbEngineOracle implements RdbEngineStrategy {
         return DataType.TEXT;
       case VARBINARY:
         logger.info(
-            "data type larger than that of underlying database is assigned: {} ({} to BLOB)",
+            "Data type larger than that of underlying database is assigned: {} ({} to BLOB)",
             columnDescription,
             typeName);
         return DataType.BLOB;
@@ -268,7 +268,7 @@ public class RdbEngineOracle implements RdbEngineStrategy {
         return DataType.BLOB;
       case BLOB:
         logger.warn(
-            "data type that may be smaller than that of underlying database is assigned: {} (Oracle {} to ScalarDB BLOB)",
+            "Data type that may be smaller than that of underlying database is assigned: {} (Oracle {} to ScalarDB BLOB)",
             columnDescription,
             typeName);
         return DataType.BLOB;

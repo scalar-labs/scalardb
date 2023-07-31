@@ -153,7 +153,7 @@ public class ParallelExecutor {
                     t.run();
                   } catch (Exception e) {
                     logger.warn(
-                        "failed to run a {} task. transaction ID: {}", taskName, transactionId, e);
+                        "Failed to run a {} task. transaction ID: {}", taskName, transactionId, e);
                     throw e;
                   }
                   return null;
@@ -207,7 +207,7 @@ public class ParallelExecutor {
       try {
         task.run();
       } catch (ExecutionException | ValidationConflictException e) {
-        logger.warn("failed to run a {} task. transaction ID: {}", taskName, transactionId, e);
+        logger.warn("Failed to run a {} task. transaction ID: {}", taskName, transactionId, e);
 
         if (!stopOnError) {
           exception = e;

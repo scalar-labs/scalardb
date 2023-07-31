@@ -202,7 +202,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
         connection.close();
       }
     } catch (SQLException e) {
-      logger.warn("failed to close the connection", e);
+      logger.warn("Failed to close the connection", e);
     }
   }
 
@@ -211,12 +211,12 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     try {
       dataSource.close();
     } catch (SQLException e) {
-      logger.error("failed to close the dataSource", e);
+      logger.error("Failed to close the dataSource", e);
     }
     try {
       tableMetadataDataSource.close();
     } catch (SQLException e) {
-      logger.warn("failed to close the table metadata dataSource", e);
+      logger.warn("Failed to close the table metadata dataSource", e);
     }
   }
 }

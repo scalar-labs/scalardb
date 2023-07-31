@@ -49,7 +49,7 @@ public class ResultImpl extends AbstractResult {
     for (String name : names) {
       Column<?> column = columns.get(name);
       if (column == null) {
-        logger.warn("full key doesn't seem to be projected into the result");
+        logger.warn("Full key doesn't seem to be projected into the result");
         return Optional.empty();
       }
       builder.add(column);

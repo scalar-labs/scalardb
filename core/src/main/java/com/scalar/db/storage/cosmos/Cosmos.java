@@ -67,7 +67,7 @@ public class Cosmos extends AbstractDistributedStorage {
     deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
     batchHandler = new BatchHandler(client, metadataManager);
 
-    logger.info("Cosmos DB object is created properly.");
+    logger.info("Cosmos DB object is created properly");
   }
 
   @VisibleForTesting

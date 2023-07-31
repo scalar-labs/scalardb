@@ -153,12 +153,12 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
     try {
       dataSource.close();
     } catch (SQLException e) {
-      logger.warn("failed to close the dataSource", e);
+      logger.warn("Failed to close the dataSource", e);
     }
     try {
       tableMetadataDataSource.close();
     } catch (SQLException e) {
-      logger.warn("failed to close the table metadata dataSource", e);
+      logger.warn("Failed to close the table metadata dataSource", e);
     }
   }
 }

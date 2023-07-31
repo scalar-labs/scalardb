@@ -144,7 +144,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
   private void repairTables() throws SchemaLoaderException {
     if (schemaFile == null) {
       throw new IllegalArgumentException(
-          "Specifying the '--schema-file' option is required when using the '--repair-all' option");
+          "specifying the '--schema-file' option is required when using the '--repair-all' option");
     }
     Map<String, String> options = new HashMap<>();
     if (noBackup != null) {
@@ -156,7 +156,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
   private void alterTables() throws SchemaLoaderException {
     if (schemaFile == null) {
       throw new IllegalArgumentException(
-          "Specifying the '--schema-file' option is required when using the '--alter' option");
+          "specifying the '--schema-file' option is required when using the '--alter' option");
     }
     Map<String, String> options = new HashMap<>();
     if (noScaling != null) {
@@ -168,13 +168,13 @@ public class SchemaLoaderCommand implements Callable<Integer> {
   private void importTables() throws SchemaLoaderException {
     if (schemaFile == null) {
       throw new IllegalArgumentException(
-          "Specifying the '--schema-file' option is required when using the '--import' option");
+          "specifying the '--schema-file' option is required when using the '--import' option");
     }
 
     if (coordinator) {
       throw new IllegalArgumentException(
-          "Specifying the '--coordinator' option with the '--import' option is not allowed."
-              + " Create coordinator tables separately.");
+          "specifying the '--coordinator' option with the '--import' option is not allowed."
+              + " Create coordinator tables separately");
     }
 
     SchemaLoader.importTables(configPath, schemaFile);

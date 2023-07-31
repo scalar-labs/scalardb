@@ -59,7 +59,7 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
             .tableName(getFullTableName(metadataNamespace, DynamoAdmin.METADATA_TABLE))
             .build());
     if (!waitForTableDeletion(metadataNamespace, DynamoAdmin.METADATA_TABLE)) {
-      throw new RuntimeException("Deleting the metadata table timed out");
+      throw new RuntimeException("deleting the metadata table timed out");
     }
   }
 
