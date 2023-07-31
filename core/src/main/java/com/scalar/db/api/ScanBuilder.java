@@ -24,7 +24,6 @@ import com.scalar.db.api.OperationBuilder.Projection;
 import com.scalar.db.api.OperationBuilder.TableBuilder;
 import com.scalar.db.api.OperationBuilder.Where;
 import com.scalar.db.api.OperationBuilder.WhereAnd;
-import com.scalar.db.api.OperationBuilder.WhereConditions;
 import com.scalar.db.api.OperationBuilder.WhereOr;
 import com.scalar.db.api.Scan.Conjunction;
 import com.scalar.db.io.Key;
@@ -280,7 +279,6 @@ public class ScanBuilder {
           Where<BuildableScanAllWithOngoingWhere>,
           WhereAnd<BuildableScanAllWithOngoingWhereAnd>,
           WhereOr<BuildableScanAllWithOngoingWhereOr>,
-          WhereConditions<BuildableScanAllWithWhere>,
           Limit<BuildableScanAll> {
     private final String namespaceName;
     private final String tableName;
@@ -352,12 +350,6 @@ public class ScanBuilder {
     }
 
     @Override
-    public BuildableScanAllWithWhere where(Set<Set<ConditionalExpression>> conditions) {
-      checkNotNull(conditions);
-      return new BuildableScanAllWithWhere(this, conditions);
-    }
-
-    @Override
     public BuildableScanAllWithOngoingWhereAnd where(OrConditionSet orConditionSet) {
       checkNotNull(orConditionSet);
       return new BuildableScanAllWithOngoingWhereAnd(this, orConditionSet);
@@ -367,6 +359,12 @@ public class ScanBuilder {
     public BuildableScanAllWithOngoingWhereOr where(AndConditionSet andConditionSet) {
       checkNotNull(andConditionSet);
       return new BuildableScanAllWithOngoingWhereOr(this, andConditionSet);
+    }
+
+    @Override
+    public BuildableScanAllWithOngoingWhereOr where(Set<AndConditionSet> andConditionSets) {
+      checkNotNull(andConditionSets);
+      return new BuildableScanAllWithOngoingWhereOr(this, andConditionSets);
     }
 
     public Scan build() {
@@ -472,6 +470,15 @@ public class ScanBuilder {
       conjunctions.add(andConditionSet.getConditions());
     }
 
+    private BuildableScanAllWithOngoingWhereOr(
+        BuildableScanAll buildable, Set<AndConditionSet> andConditionSets) {
+      super(buildable);
+      conjunctions.addAll(
+          andConditionSets.stream()
+              .map(AndConditionSet::getConditions)
+              .collect(Collectors.toSet()));
+    }
+
     @Override
     public BuildableScanAllWithOngoingWhereOr or(ConditionalExpression condition) {
       checkNotNull(condition);
@@ -504,7 +511,7 @@ public class ScanBuilder {
     @Nullable protected com.scalar.db.api.Consistency consistency;
 
     private BuildableScanAllWithWhere(BuildableScanAll buildable) {
-      this(buildable, (ConditionalExpression) null);
+      this(buildable, null);
     }
 
     private BuildableScanAllWithWhere(
@@ -516,12 +523,6 @@ public class ScanBuilder {
       this.orderings.addAll(buildable.orderings);
       this.projections.addAll(buildable.projections);
       this.consistency = buildable.consistency;
-    }
-
-    private BuildableScanAllWithWhere(
-        BuildableScanAll buildable, Set<Set<ConditionalExpression>> conditions) {
-      this(buildable);
-      this.conjunctions.addAll(conditions);
     }
 
     private BuildableScanAllWithWhere(BuildableScanAllWithOngoingWhere buildable) {
@@ -605,7 +606,6 @@ public class ScanBuilder {
           Where<BuildableScanAllFromExistingWithOngoingWhere>,
           WhereAnd<BuildableScanAllFromExistingWithOngoingWhereAnd>,
           WhereOr<BuildableScanAllFromExistingWithOngoingWhereOr>,
-          WhereConditions<BuildableScanAllFromExistingWithWhere>,
           ClearConditions<BuildableScanOrScanAllFromExisting>,
           ClearProjections<BuildableScanOrScanAllFromExisting>,
           ClearOrderings<BuildableScanOrScanAllFromExisting>,
@@ -771,14 +771,6 @@ public class ScanBuilder {
     }
 
     @Override
-    public BuildableScanAllFromExistingWithWhere where(Set<Set<ConditionalExpression>> conditions) {
-      checkScanAll();
-      checkConditionsEmpty();
-      checkNotNull(conditions);
-      return new BuildableScanAllFromExistingWithWhere(this, conditions);
-    }
-
-    @Override
     public BuildableScanAllFromExistingWithOngoingWhereAnd where(OrConditionSet orConditionSet) {
       checkScanAll();
       checkConditionsEmpty();
@@ -792,6 +784,15 @@ public class ScanBuilder {
       checkConditionsEmpty();
       checkNotNull(andConditionSet);
       return new BuildableScanAllFromExistingWithOngoingWhereOr(this, andConditionSet);
+    }
+
+    @Override
+    public BuildableScanAllFromExistingWithOngoingWhereOr where(
+        Set<AndConditionSet> andConditionSets) {
+      checkScanAll();
+      checkConditionsEmpty();
+      checkNotNull(andConditionSets);
+      return new BuildableScanAllFromExistingWithOngoingWhereOr(this, andConditionSets);
     }
 
     @Override
@@ -945,12 +946,6 @@ public class ScanBuilder {
       this.consistency = buildable.consistency;
     }
 
-    private BuildableScanAllFromExistingWithWhere(
-        BuildableScanOrScanAllFromExisting buildable, Set<Set<ConditionalExpression>> conditions) {
-      this(buildable, (ConditionalExpression) null);
-      this.conjunctions.addAll(conditions);
-    }
-
     @Override
     public BuildableScanAllFromExistingWithWhere namespace(String namespaceName) {
       checkNotNull(namespaceName);
@@ -1056,7 +1051,7 @@ public class ScanBuilder {
 
     private BuildableScanAllFromExistingWithOngoingWhere(
         BuildableScanOrScanAllFromExisting buildable) {
-      super(buildable, (ConditionalExpression) null);
+      super(buildable, null);
     }
 
     private BuildableScanAllFromExistingWithOngoingWhere(
@@ -1119,6 +1114,15 @@ public class ScanBuilder {
         BuildableScanOrScanAllFromExisting buildable, AndConditionSet andConditionSet) {
       super(buildable);
       conjunctions.add(andConditionSet.getConditions());
+    }
+
+    private BuildableScanAllFromExistingWithOngoingWhereOr(
+        BuildableScanOrScanAllFromExisting buildable, Set<AndConditionSet> andConditionSets) {
+      super(buildable);
+      conjunctions.addAll(
+          andConditionSets.stream()
+              .map(AndConditionSet::getConditions)
+              .collect(Collectors.toSet()));
     }
 
     @Override

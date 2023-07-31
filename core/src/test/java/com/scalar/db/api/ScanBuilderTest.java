@@ -861,10 +861,14 @@ public class ScanBuilderTest {
             .all()
             .where(
                 ImmutableSet.of(
-                    ImmutableSet.of(
-                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck2").isGreaterThanInt(10)),
-                    ImmutableSet.of(ConditionBuilder.column("ck3").isGreaterThanInt(10))))
+                    ConditionSetBuilder.andConditionSet(
+                            ImmutableSet.of(
+                                ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                                ConditionBuilder.column("ck2").isGreaterThanInt(10)))
+                        .build(),
+                    ConditionSetBuilder.andConditionSet(
+                            ImmutableSet.of(ConditionBuilder.column("ck3").isGreaterThanInt(10)))
+                        .build()))
             .limit(10)
             .projections(Arrays.asList("pk1", "ck1"))
             .projection("ck2")
@@ -1195,10 +1199,14 @@ public class ScanBuilderTest {
             .table(TABLE_1)
             .where(
                 ImmutableSet.of(
-                    ImmutableSet.of(
-                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck2").isGreaterThanInt(10)),
-                    ImmutableSet.of(ConditionBuilder.column("ck3").isGreaterThanInt(10))))
+                    ConditionSetBuilder.andConditionSet(
+                            ImmutableSet.of(
+                                ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                                ConditionBuilder.column("ck2").isGreaterThanInt(10)))
+                        .build(),
+                    ConditionSetBuilder.andConditionSet(
+                            ImmutableSet.of(ConditionBuilder.column("ck3").isGreaterThanInt(10)))
+                        .build()))
             .build();
 
     // Assert

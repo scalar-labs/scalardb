@@ -417,30 +417,28 @@ class OperationBuilder {
     /**
      * Appends the specified set of or-wise conditions.
      *
-     * @param conditions a set of conditions
+     * @param orConditionSet a set of or-wise conditions
      * @return the operation builder
      */
-    T where(ScanBuilder.OrConditionSet conditions);
+    T where(ScanBuilder.OrConditionSet orConditionSet);
   }
 
   interface WhereOr<T> {
     /**
      * Appends the specified set of and-wise conditions.
      *
-     * @param conditions a set of conditions
+     * @param andConditionSet a set of and-wise conditions
      * @return the operation builder
      */
-    T where(ScanBuilder.AndConditionSet conditions);
-  }
+    T where(ScanBuilder.AndConditionSet andConditionSet);
 
-  interface WhereConditions<T> {
     /**
-     * Appends the specified conditions.
+     * Appends the specified sets of and-wise condition set.
      *
-     * @param conditions an or-wise set of and-wise conditions.
+     * @param andConditionSets sets of and-wise condition set
      * @return the operation builder
      */
-    T where(Set<Set<ConditionalExpression>> conditions);
+    T where(Set<ScanBuilder.AndConditionSet> andConditionSets);
   }
 
   interface And<T> {
