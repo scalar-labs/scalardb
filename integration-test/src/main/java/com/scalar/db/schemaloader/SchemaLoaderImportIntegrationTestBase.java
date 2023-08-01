@@ -124,8 +124,6 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
     storageAdmin.dropNamespace(namespace2, true);
   }
 
-  protected abstract void createExistingDatabase(String namespace) throws Exception;
-
   protected abstract void createImportableTable(String namespace, String table) throws Exception;
 
   protected abstract void createNonImportableTable(String namespace, String table) throws Exception;
@@ -135,8 +133,8 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
   @Test
   public void importTables_ImportableTablesGiven_ShouldImportProperly() throws Exception {
     // Arrange
-    createExistingDatabase(namespace1);
-    createExistingDatabase(namespace2);
+    transactionAdmin.createNamespace(namespace1);
+    storageAdmin.createNamespace(namespace2);
     createImportableTable(namespace1, TABLE_1);
     createImportableTable(namespace2, TABLE_2);
 
@@ -155,8 +153,8 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
   public void importTables_NonImportableTablesGiven_ShouldThrowIllegalArgumentException()
       throws Exception {
     // Arrange
-    createExistingDatabase(namespace1);
-    createExistingDatabase(namespace2);
+    transactionAdmin.createNamespace(namespace1);
+    storageAdmin.createNamespace(namespace2);
     createNonImportableTable(namespace1, TABLE_1);
     createNonImportableTable(namespace2, TABLE_2);
 

@@ -5,8 +5,8 @@ import com.scalar.db.schemaloader.SchemaLoaderImportIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Properties;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
 
 public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportIntegrationTestBase {
 
@@ -26,11 +26,6 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
   @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new JdbcAdminTestUtils(getProperties(testName));
-  }
-
-  @Override
-  protected void createExistingDatabase(String namespace) throws Exception {
-    testUtils.createExistingDatabase(namespace);
   }
 
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
@@ -70,7 +65,7 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
 
   @Test
   @Override
-  @Disabled("Disable this test until the admin.repairNamespace() API is created")
+  @DisabledIf("isSqlite")
   public void importTables_ImportableTablesGiven_ShouldImportProperly() throws Exception {
     super.importTables_ImportableTablesGiven_ShouldImportProperly();
   }

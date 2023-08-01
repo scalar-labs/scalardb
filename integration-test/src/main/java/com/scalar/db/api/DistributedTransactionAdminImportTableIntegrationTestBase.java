@@ -14,7 +14,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
@@ -78,9 +77,9 @@ public abstract class DistributedTransactionAdminImportTableIntegrationTestBase 
   protected abstract void dropNonImportableTable(String table) throws Exception;
 
   @Test
-  @Disabled("Disable this test until the admin.repairNamespace() API is created")
   public void importTable_ShouldWorkProperly() throws Exception {
     // Arrange
+    admin.createNamespace(getNamespace(), getCreationOptions());
     tables.putAll(createExistingDatabaseWithAllDataTypes());
 
     // Act Assert
@@ -97,7 +96,11 @@ public abstract class DistributedTransactionAdminImportTableIntegrationTestBase 
   }
 
   @Test
-  public void importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException() {
+  public void importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException()
+      throws ExecutionException {
+    // Arrange
+    admin.createNamespace(getNamespace(), getCreationOptions());
+
     // Act Assert
     assertThatThrownBy(() -> admin.importTable(getNamespace(), "unsupported_db"))
         .isInstanceOf(UnsupportedOperationException.class);
