@@ -23,7 +23,7 @@ subprojects {
         guiceVersion = '5.1.0'
         guavaVersion = '32.1.1-jre'
         slf4jVersion = '1.7.36'
-        cassandraDriverVersion = '3.11.3'
+        cassandraDriverVersion = '3.11.4'
         azureCosmosVersion = '4.48.0'
         jooqVersion = '3.14.16'
         awssdkVersion = '2.20.54'
