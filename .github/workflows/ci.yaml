@@ -327,32 +327,32 @@ jobs:
           name: gradle_jdbc_sqlserver_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
 
-#  integration-test-for-jdbc-sqlite:
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - uses: actions/checkout@v3
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v3
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Set up SQLite3
-#        run: sudo apt-get install -y sqlite3
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: gradle_jdbc_sqlite_integration_test_reports
-#          path: core/build/reports/tests/integrationTestJdbc
+  integration-test-for-jdbc-sqlite:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Set up SQLite3
+        run: sudo apt-get install -y sqlite3
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: gradle_jdbc_sqlite_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-mariadb:
     runs-on: ubuntu-latest

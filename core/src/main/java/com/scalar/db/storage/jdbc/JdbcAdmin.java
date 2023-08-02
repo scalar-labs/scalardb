@@ -82,6 +82,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
+    if (!rdbEngine.isValidNamespaceOrTableName(namespace)) {
+      throw new ExecutionException("Namespace name is not acceptable: " + namespace);
+    }
     String fullNamespace = enclose(namespace);
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, rdbEngine.createNamespaceSqls(fullNamespace));
@@ -96,7 +99,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    if (!rdbEngine.isValidTableName(table)) {
+    if (!rdbEngine.isValidNamespaceOrTableName(table)) {
       throw new ExecutionException("table name is not acceptable: " + table);
     }
 
@@ -571,7 +574,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + " = ?";
     try (Connection connection = dataSource.getConnection();
         PreparedStatement statement = connection.prepareStatement(selectQuery); ) {
-      statement.setString(1, rdbEngine.namespaceExistsPlaceholder(namespace));
+      statement.setString(1, namespace);
       try (ResultSet resultSet = statement.executeQuery()) {
         return resultSet.next();
       }
@@ -896,7 +899,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         String namespaceName = fullTableName.substring(0, fullTableName.indexOf('.'));
         namespaceOfExistingTables.add(namespaceName);
       }
-      // Insert only namespaces that are not already present
+      // Because performing an UPSERT is not straightforward or has complicated syntax in some DBs.
+      // We INSERT
+      // only namespaces that are not already present in the namespace table
       Set<String> namespacesToInsert =
           Sets.difference(namespaceOfExistingTables, getNamespaceNames());
       for (String namespace : namespacesToInsert) {

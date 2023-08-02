@@ -1442,8 +1442,7 @@ public abstract class JdbcAdminTestBase {
   public void namespaceExists_forMysqlWithExistingNamespace_shouldReturnTrue() throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
         RdbEngine.MYSQL,
-        "SELECT 1 FROM `" + metadataSchemaName + "`.`namespaces` WHERE `namespace_name` = ?",
-        "");
+        "SELECT 1 FROM `" + metadataSchemaName + "`.`namespaces` WHERE `namespace_name` = ?");
   }
 
   @Test
@@ -1451,8 +1450,7 @@ public abstract class JdbcAdminTestBase {
       throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
         RdbEngine.POSTGRESQL,
-        "SELECT 1 FROM \"" + metadataSchemaName + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
-        "");
+        "SELECT 1 FROM \"" + metadataSchemaName + "\".\"namespaces\" WHERE \"namespace_name\" = ?");
   }
 
   @Test
@@ -1460,29 +1458,25 @@ public abstract class JdbcAdminTestBase {
       throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
         RdbEngine.SQL_SERVER,
-        "SELECT 1 FROM [" + metadataSchemaName + "].[namespaces] WHERE [namespace_name] = ?",
-        "");
+        "SELECT 1 FROM [" + metadataSchemaName + "].[namespaces] WHERE [namespace_name] = ?");
   }
 
   @Test
   public void namespaceExists_forOracleWithExistingNamespace_shouldReturnTrue() throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
         RdbEngine.ORACLE,
-        "SELECT 1 FROM \"" + metadataSchemaName + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
-        "");
+        "SELECT 1 FROM \"" + metadataSchemaName + "\".\"namespaces\" WHERE \"namespace_name\" = ?");
   }
 
   @Test
   public void namespaceExists_forSqliteWithExistingNamespace_shouldReturnTrue() throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
         RdbEngine.SQLITE,
-        "SELECT 1 FROM \"" + metadataSchemaName + "$namespaces\" WHERE \"namespace_name\" = ?",
-        "$%");
+        "SELECT 1 FROM \"" + metadataSchemaName + "$namespaces\" WHERE \"namespace_name\" = ?");
   }
 
   private void namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
-      RdbEngine rdbEngine, String expectedSelectStatement, String namespacePlaceholderSuffix)
-      throws SQLException, ExecutionException {
+      RdbEngine rdbEngine, String expectedSelectStatement) throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
@@ -1502,7 +1496,7 @@ public abstract class JdbcAdminTestBase {
 
     verify(selectStatement).executeQuery();
     verify(connection).prepareStatement(expectedSelectStatement);
-    verify(selectStatement).setString(1, namespace + namespacePlaceholderSuffix);
+    verify(selectStatement).setString(1, namespace);
   }
 
   @Test
@@ -2373,6 +2367,12 @@ public abstract class JdbcAdminTestBase {
         RdbEngine.ORACLE, "SELECT * FROM \"" + metadataSchemaName + "\".\"namespaces\"");
   }
 
+  @Test
+  public void getNamespaceNames_forSqlLite_ShouldReturnNamespaceNames() throws Exception {
+    getNamespaceNames_forX_ShouldReturnNamespaceNames(
+        RdbEngine.SQLITE, "SELECT * FROM \"" + metadataSchemaName + "$" + "namespaces\"");
+  }
+
   private void getNamespaceNames_forX_ShouldReturnNamespaceNames(
       RdbEngine rdbEngine, String expectedSelectStatement) throws Exception {
     // Arrange
@@ -2469,6 +2469,24 @@ public abstract class JdbcAdminTestBase {
         ImmutableList.of(
             "INSERT INTO [" + metadataSchemaName + "].[namespaces] VALUES ('ns2')",
             "INSERT INTO [" + metadataSchemaName + "].[namespaces] VALUES ('ns3')"));
+  }
+
+  @Test
+  public void
+      upgrade_WithExistingNamespacesTableForSqlLite_ShouldInsertOnlyRequiredNamespacesFromMetadataTable()
+          throws SQLException, ExecutionException {
+    upgrade_WithNonExistingNamespacesTableForX_ShouldInsertAllNamespacesFromMetadataTable(
+        RdbEngine.SQLITE,
+        "SELECT 1 FROM \"" + metadataSchemaName + "$metadata\" LIMIT 1",
+        Collections.emptyList(),
+        "CREATE TABLE IF NOT EXISTS \""
+            + metadataSchemaName
+            + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
+        "SELECT \"full_table_name\" FROM \"" + metadataSchemaName + "$metadata\"",
+        "SELECT * FROM \"" + metadataSchemaName + "$namespaces\"",
+        ImmutableList.of(
+            "INSERT INTO \"" + metadataSchemaName + "$namespaces\" VALUES ('ns2')",
+            "INSERT INTO \"" + metadataSchemaName + "$namespaces\" VALUES ('ns3')"));
   }
 
   private void
@@ -2614,6 +2632,25 @@ public abstract class JdbcAdminTestBase {
             "INSERT INTO [" + metadataSchemaName + "].[namespaces] VALUES ('ns2')",
             "INSERT INTO [" + metadataSchemaName + "].[namespaces] VALUES ('ns1')",
             "INSERT INTO [" + metadataSchemaName + "].[namespaces] VALUES ('ns3')"));
+  }
+
+  @Test
+  public void
+      upgrade_WithExistingNamespacesTableForSqlLite_ShouldInsertAllNamespacesFromMetadataTable()
+          throws SQLException, ExecutionException {
+    upgrade_WithNonExistingNamespacesTableForX_ShouldInsertAllNamespacesFromMetadataTable(
+        RdbEngine.SQLITE,
+        "SELECT 1 FROM \"" + metadataSchemaName + "$metadata\" LIMIT 1",
+        Collections.emptyList(),
+        "CREATE TABLE IF NOT EXISTS \""
+            + metadataSchemaName
+            + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
+        "SELECT \"full_table_name\" FROM \"" + metadataSchemaName + "$metadata\"",
+        "SELECT * FROM \"" + metadataSchemaName + "$namespaces\"",
+        ImmutableList.of(
+            "INSERT INTO \"" + metadataSchemaName + "$namespaces\" VALUES ('ns2')",
+            "INSERT INTO \"" + metadataSchemaName + "$namespaces\" VALUES ('ns1')",
+            "INSERT INTO \"" + metadataSchemaName + "$namespaces\" VALUES ('ns3')"));
   }
 
   private void
