@@ -8,6 +8,7 @@ import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 
@@ -94,16 +95,16 @@ public class ConsensusCommitAdminIntegrationTestWithServer
         .getTableMetadata_WhenIncludeMetadataIsEnabled_ShouldReturnCorrectMetadataWithTransactionMetadataColumns();
   }
 
-  /** This test is disabled if {@link #isExternalServerUsed()} return true */
   @Override
   @Test
-  @DisabledIf("isExternalServerUsed")
+  @Disabled("Upgrade is not supported in ScalarDB server")
   public void
-      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces()
-          throws Exception {
-    super
-        .upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces();
-  }
+      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
+
+  @Override
+  @Test
+  @Disabled("Retrieving the namespace names is not supported in ScalarDB server")
+  public void getNamespaceNames_ShouldReturnCreatedNamespaces() {}
 
   @SuppressWarnings("unused")
   private boolean isExternalServerUsed() {

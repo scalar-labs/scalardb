@@ -15,8 +15,6 @@ import com.scalar.db.rpc.DropCoordinatorTablesRequest;
 import com.scalar.db.rpc.DropIndexRequest;
 import com.scalar.db.rpc.DropNamespaceRequest;
 import com.scalar.db.rpc.DropTableRequest;
-import com.scalar.db.rpc.GetNamespaceNamesRequest;
-import com.scalar.db.rpc.GetNamespaceNamesResponse;
 import com.scalar.db.rpc.GetNamespaceTableNamesRequest;
 import com.scalar.db.rpc.GetNamespaceTableNamesResponse;
 import com.scalar.db.rpc.GetTableMetadataRequest;
@@ -27,7 +25,6 @@ import com.scalar.db.rpc.RepairCoordinatorTablesRequest;
 import com.scalar.db.rpc.RepairTableRequest;
 import com.scalar.db.rpc.TruncateCoordinatorTablesRequest;
 import com.scalar.db.rpc.TruncateTableRequest;
-import com.scalar.db.rpc.UpgradeRequest;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableRunnable;
 import io.grpc.Status;
@@ -299,33 +296,6 @@ public class DistributedTransactionAdminService
         },
         responseObserver,
         "add_new_column_to_table");
-  }
-
-  @Override
-  public void getNamespaceNames(
-      GetNamespaceNamesRequest request,
-      StreamObserver<GetNamespaceNamesResponse> responseObserver) {
-    execute(
-        () -> {
-          Set<String> namespaceNames = admin.getNamespaceNames();
-          responseObserver.onNext(
-              GetNamespaceNamesResponse.newBuilder().addAllNamespaceNames(namespaceNames).build());
-          responseObserver.onCompleted();
-        },
-        responseObserver,
-        "get_namespaces_names");
-  }
-
-  @Override
-  public void upgrade(UpgradeRequest request, StreamObserver<Empty> responseObserver) {
-    execute(
-        () -> {
-          admin.upgrade(request.getOptionsMap());
-          responseObserver.onNext(Empty.getDefaultInstance());
-          responseObserver.onCompleted();
-        },
-        responseObserver,
-        "upgrade");
   }
 
   private void execute(

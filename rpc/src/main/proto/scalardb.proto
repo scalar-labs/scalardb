@@ -198,10 +198,6 @@ service DistributedStorageAdmin {
   }
   rpc AddNewColumnToTable(AddNewColumnToTableRequest) returns (google.protobuf.Empty){
   }
-  rpc GetNamespaceNames(GetNamespaceNamesRequest) returns (GetNamespaceNamesResponse) {
-  }
-  rpc Upgrade(UpgradeRequest) returns (google.protobuf.Empty){
-  }
 }
 
 enum DataType {
@@ -304,17 +300,6 @@ message AddNewColumnToTableRequest {
   string table = 2;
   string column_name = 3;
   DataType column_type = 4;
-}
-
-message GetNamespaceNamesRequest {
-}
-
-message GetNamespaceNamesResponse {
-  repeated string namespace_names = 1;
-}
-
-message UpgradeRequest {
-  map<string, string> options = 1;
 }
 
 // DistributedTransaction
@@ -582,10 +567,6 @@ service DistributedTransactionAdmin {
   rpc RepairCoordinatorTables(RepairCoordinatorTablesRequest) returns (google.protobuf.Empty){
   }
   rpc AddNewColumnToTable(AddNewColumnToTableRequest) returns (google.protobuf.Empty){
-  }
-  rpc GetNamespaceNames(GetNamespaceNamesRequest) returns (GetNamespaceNamesResponse) {
-  }
-  rpc Upgrade(UpgradeRequest) returns (google.protobuf.Empty){
   }
 }
 

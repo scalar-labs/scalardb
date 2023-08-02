@@ -7,14 +7,13 @@ import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIf;
 
 public class DistributedStorageAdminIntegrationTestWithServer
     extends DistributedStorageAdminIntegrationTestBase {
 
   private ScalarDbServer server;
-  private boolean isExternalServerUsed;
 
   @Override
   protected void initialize(String testName) throws IOException {
@@ -22,8 +21,6 @@ public class DistributedStorageAdminIntegrationTestWithServer
     if (properties != null) {
       server = new ScalarDbServer(properties);
       server.start();
-    } else {
-      isExternalServerUsed = true;
     }
   }
 
@@ -45,23 +42,16 @@ public class DistributedStorageAdminIntegrationTestWithServer
     return new ServerAdminTestUtils(properties);
   }
 
-  /** This test is disabled if {@link #isExternalServerUsed()} return true */
   @Override
   @Test
-  @DisabledIf("isExternalServerUsed")
+  @Disabled("Upgrade is not supported in ScalarDB server")
   public void
-      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces()
-          throws Exception {
-    super
-        .upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces();
-  }
+      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
 
-  @SuppressWarnings("unused")
-  private boolean isExternalServerUsed() {
-    // An external server is used, so we don't have access to the configuration to connect to the
-    // underlying storage which makes it impossible to run these tests
-    return isExternalServerUsed;
-  }
+  @Override
+  @Test
+  @Disabled("Retrieving the namespace names is not supported in ScalarDB server")
+  public void getNamespaceNames_ShouldReturnCreatedNamespaces() {}
 
   @AfterAll
   @Override
