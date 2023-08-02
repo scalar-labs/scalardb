@@ -362,7 +362,13 @@ public class ScanBuilder {
     }
 
     @Override
-    public BuildableScanAllWithOngoingWhereOr where(Set<AndConditionSet> andConditionSets) {
+    public BuildableScanAllWithOngoingWhereAnd whereAnd(Set<OrConditionSet> orConditionSets) {
+      checkNotNull(orConditionSets);
+      return new BuildableScanAllWithOngoingWhereAnd(this, orConditionSets);
+    }
+
+    @Override
+    public BuildableScanAllWithOngoingWhereOr whereOr(Set<AndConditionSet> andConditionSets) {
       checkNotNull(andConditionSets);
       return new BuildableScanAllWithOngoingWhereOr(this, andConditionSets);
     }
@@ -440,6 +446,13 @@ public class ScanBuilder {
         BuildableScanAll buildable, OrConditionSet orConditionSet) {
       super(buildable);
       disjunctions.add(orConditionSet.getConditions());
+    }
+
+    private BuildableScanAllWithOngoingWhereAnd(
+        BuildableScanAll buildable, Set<OrConditionSet> orConditionSets) {
+      super(buildable);
+      disjunctions.addAll(
+          orConditionSets.stream().map(OrConditionSet::getConditions).collect(Collectors.toSet()));
     }
 
     @Override
@@ -787,7 +800,16 @@ public class ScanBuilder {
     }
 
     @Override
-    public BuildableScanAllFromExistingWithOngoingWhereOr where(
+    public BuildableScanAllFromExistingWithOngoingWhereAnd whereAnd(
+        Set<OrConditionSet> orConditionSets) {
+      checkScanAll();
+      checkConditionsEmpty();
+      checkNotNull(orConditionSets);
+      return new BuildableScanAllFromExistingWithOngoingWhereAnd(this, orConditionSets);
+    }
+
+    @Override
+    public BuildableScanAllFromExistingWithOngoingWhereOr whereOr(
         Set<AndConditionSet> andConditionSets) {
       checkScanAll();
       checkConditionsEmpty();
@@ -1153,6 +1175,13 @@ public class ScanBuilder {
         BuildableScanOrScanAllFromExisting buildable, OrConditionSet orConditionSet) {
       super(buildable);
       disjunctions.add(orConditionSet.getConditions());
+    }
+
+    private BuildableScanAllFromExistingWithOngoingWhereAnd(
+        BuildableScanOrScanAllFromExisting buildable, Set<OrConditionSet> orConditionSets) {
+      super(buildable);
+      disjunctions.addAll(
+          orConditionSets.stream().map(OrConditionSet::getConditions).collect(Collectors.toSet()));
     }
 
     @Override
