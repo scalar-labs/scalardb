@@ -5,7 +5,6 @@ import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 
@@ -67,12 +66,6 @@ public class SchemaLoaderIntegrationTestWithServer extends SchemaLoaderIntegrati
           throws Exception {
     super.createTableThenDropMetadataTableThenRepairTablesWithCoordinator_ShouldExecuteProperly();
   }
-
-  @Override
-  @Test
-  @Disabled("Upgrade is not supported in ScalarDB server")
-  public void
-      upgrade_CreateThenDropNamespacesTableThenUpgrade_ShouldCreateNamespacesTableCorrectly() {}
 
   @SuppressWarnings("unused")
   private boolean isExternalServerUsed() {

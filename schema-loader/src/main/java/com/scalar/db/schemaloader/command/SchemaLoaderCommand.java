@@ -96,14 +96,6 @@ public class SchemaLoaderCommand implements Callable<Integer> {
         description = "Import tables : it will import existing non-ScalarDB tables to ScalarDB.",
         defaultValue = "false")
     boolean importTables;
-
-    @Option(
-        names = {"--upgrade"},
-        description =
-            "Upgrades the Scalar DB environment to support the latest version of the Scalar DB API. Typically, you will be requested, as indicated on the release notes, to run this command after"
-                + " updating the Scalar DB version of your application environment.",
-        defaultValue = "false")
-    boolean upgrade;
   }
 
   @Override
@@ -119,8 +111,6 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       repairTables();
     } else if (mode.alterTables) {
       alterTables();
-    } else if (mode.upgrade) {
-      upgrade();
     } else if (mode.importTables) {
       importTables();
     }
@@ -173,14 +163,6 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       options.put(DynamoAdmin.NO_SCALING, noScaling.toString());
     }
     SchemaLoader.alterTables(configPath, schemaFile, options);
-  }
-
-  private void upgrade() throws SchemaLoaderException {
-    Map<String, String> options = new HashMap<>();
-    if (noBackup != null) {
-      options.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
-    }
-    SchemaLoader.upgrade(configPath, options);
   }
 
   private void importTables() throws SchemaLoaderException {

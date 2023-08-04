@@ -501,14 +501,15 @@ public class MultiStorageAdminTest {
     // Arrange
     Map<String, DistributedStorageAdmin> namespaceAdminMap = new HashMap<>();
     namespaceAdminMap.put("ns1", admin1);
-    namespaceAdminMap.put("ns2", admin1);
-    namespaceAdminMap.put("ns4", admin2);
+    namespaceAdminMap.put("ns2", admin2);
+    namespaceAdminMap.put("ns3", admin2);
     DistributedStorageAdmin defaultAdmin = admin3;
-    multiStorageAdmin = new MultiStorageAdmin(null, namespaceAdminMap, defaultAdmin);
+    multiStorageAdmin =
+        new MultiStorageAdmin(Collections.emptyMap(), namespaceAdminMap, defaultAdmin);
 
-    when(admin1.getNamespaceNames()).thenReturn(ImmutableSet.of("ns1", "ns2", "ns3"));
-    when(admin2.getNamespaceNames()).thenReturn(ImmutableSet.of("ns4", "ns5"));
-    when(admin3.getNamespaceNames()).thenReturn(ImmutableSet.of("ns6", "ns7"));
+    when(admin1.getNamespaceNames()).thenReturn(ImmutableSet.of("ns1", "ns2"));
+    when(admin2.getNamespaceNames()).thenReturn(ImmutableSet.of("ns3"));
+    when(admin3.getNamespaceNames()).thenReturn(ImmutableSet.of("ns4", "ns5"));
 
     // Act
     Set<String> actualNamespaces = multiStorageAdmin.getNamespaceNames();
@@ -517,7 +518,7 @@ public class MultiStorageAdminTest {
     verify(admin1).getNamespaceNames();
     verify(admin2).getNamespaceNames();
     verify(admin3).getNamespaceNames();
-    assertThat(actualNamespaces).containsOnly("ns1", "ns2", "ns4", "ns6", "ns7");
+    assertThat(actualNamespaces).containsOnly("ns1", "ns3", "ns4", "ns5");
   }
 
   @Test
@@ -528,7 +529,8 @@ public class MultiStorageAdminTest {
     namespaceAdminMap.put("ns1", admin1);
     namespaceAdminMap.put("ns2", admin2);
     DistributedStorageAdmin defaultAdmin = admin3;
-    multiStorageAdmin = new MultiStorageAdmin(null, namespaceAdminMap, defaultAdmin);
+    multiStorageAdmin =
+        new MultiStorageAdmin(Collections.emptyMap(), namespaceAdminMap, defaultAdmin);
 
     when(admin1.getNamespaceNames()).thenReturn(Collections.emptySet());
     when(admin2.getNamespaceNames()).thenReturn(Collections.emptySet());
@@ -552,7 +554,8 @@ public class MultiStorageAdminTest {
     namespaceAdminMap.put("ns1", admin1);
     namespaceAdminMap.put("ns2", admin2);
     DistributedStorageAdmin defaultAdmin = admin3;
-    multiStorageAdmin = new MultiStorageAdmin(null, namespaceAdminMap, defaultAdmin);
+    multiStorageAdmin =
+        new MultiStorageAdmin(Collections.emptyMap(), namespaceAdminMap, defaultAdmin);
 
     when(admin1.getNamespaceNames()).thenReturn(ImmutableSet.of("ns2"));
     when(admin2.getNamespaceNames()).thenReturn(Collections.emptySet());
@@ -566,23 +569,5 @@ public class MultiStorageAdminTest {
     verify(admin2).getNamespaceNames();
     verify(admin3).getNamespaceNames();
     assertThat(actualNamespaces).isEmpty();
-  }
-
-  @Test
-  public void upgrade_ShouldCallNamespaceAndDefaultAdmins() throws ExecutionException {
-    // Arrange
-    Map<String, String> options = ImmutableMap.of("foo", "bar");
-    Map<String, DistributedStorageAdmin> namespaceAdminMap =
-        ImmutableMap.of("ns1", admin1, "ns2", admin2);
-    DistributedStorageAdmin defaultAdmin = admin2;
-    multiStorageAdmin =
-        new MultiStorageAdmin(Collections.emptyMap(), namespaceAdminMap, defaultAdmin);
-
-    // Act
-    multiStorageAdmin.upgrade(options);
-
-    // Assert
-    verify(admin1).upgrade(options);
-    verify(admin2).upgrade(options);
   }
 }

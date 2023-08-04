@@ -275,15 +275,6 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void upgrade(Map<String, String> options) throws ExecutionException {
-    try {
-      admin.upgrade(options);
-    } catch (ExecutionException e) {
-      throw new ExecutionException("Upgrading failed", e);
-    }
-  }
-
-  @Override
   public TableMetadata getImportTableMetadata(String namespace, String table)
       throws ExecutionException {
     try {

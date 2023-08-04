@@ -79,7 +79,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     } catch (IllegalArgumentException e) {
       throw e;
     } catch (RuntimeException e) {
-      throw new ExecutionException(String.format("creating the keyspace %s failed", namespace), e);
+      throw new ExecutionException(String.format("Creating the keyspace %s failed", namespace), e);
     }
   }
 
@@ -550,28 +550,6 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     @Override
     public String toString() {
       return strategyName;
-    }
-  }
-
-  @Override
-  public void upgrade(Map<String, String> options) throws ExecutionException {
-    createMetadataKeyspaceIfNotExists();
-    createKeyspacesTableIfNotExists();
-    // Retrieve user keyspace and filter out system ones. A downside is that this may include
-    // keyspace not created by Scalar DB.
-    Set<String> userKeyspaces =
-        clusterManager.getSession().getCluster().getMetadata().getKeyspaces().stream()
-            .map(KeyspaceMetadata::getName)
-            .filter(name -> !name.startsWith("system") && !name.equals(metadataKeyspace))
-            .collect(Collectors.toSet());
-    for (String userKeyspace : userKeyspaces) {
-      String insertQuery =
-          QueryBuilder.insertInto(
-                  quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
-              .ifNotExists()
-              .value(KEYSPACES_NAME_COL, quoteIfNecessary(userKeyspace))
-              .toString();
-      clusterManager.getSession().execute(insertQuery);
     }
   }
 }

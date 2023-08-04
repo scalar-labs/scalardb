@@ -110,9 +110,6 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   private void createContainer(String database, String table, TableMetadata metadata)
       throws ExecutionException {
-    if (!databaseExists(database)) {
-      throw new ExecutionException("the database does not exists");
-    }
     CosmosDatabase cosmosDatabase = client.getDatabase(database);
     CosmosContainerProperties properties = computeContainerProperties(table, metadata);
     cosmosDatabase.createContainer(properties);
@@ -496,7 +493,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
           && ((CosmosException) e).getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
         return false;
       }
-      throw new ExecutionException("checking if the namespace exists failed", e);
+      throw new ExecutionException("Checking if the namespace exists failed", e);
     }
   }
 
@@ -612,30 +609,8 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
       return allNamespaces.stream().map(CosmosNamespace::getId).collect(Collectors.toSet());
     } catch (RuntimeException e) {
-      throw new ExecutionException("retrieving the namespaces names failed", e);
+      throw new ExecutionException("Retrieving the namespaces names failed", e);
     }
-  }
-
-  @Override
-  public void upgrade(Map<String, String> options) throws ExecutionException {
-    if (!tableMetadataContainerExists()) {
-      return;
-    }
-    createMetadataDatabaseAndNamespaceContainerIfNotExists();
-
-    // Upsert namespace of existing tables in the "namespaces" container
-    getTableMetadataContainer()
-        .queryItems(
-            "SELECT container.id FROM container",
-            new CosmosQueryRequestOptions(),
-            CosmosTableMetadata.class)
-        .stream()
-        .map(
-            tableMetadata -> tableMetadata.getId().substring(0, tableMetadata.getId().indexOf('.')))
-        .distinct()
-        .forEach(
-            namespaceName ->
-                getNamespacesContainer().upsertItem(new CosmosNamespace(namespaceName)));
   }
 
   private void createMetadataDatabaseAndNamespaceContainerIfNotExists() {

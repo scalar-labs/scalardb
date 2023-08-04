@@ -522,16 +522,4 @@ public class SchemaOperatorTest {
     verify(storageAdmin, times(3)).importTable("ns", "tb");
     verifyNoInteractions(transactionAdmin);
   }
-
-  @Test
-  public void upgrade_ShouldCallTransactionAdminProperly() throws Exception {
-    // Arrange
-
-    // Act
-    operator.upgrade(options);
-
-    // Assert
-    verify(transactionAdmin).upgrade(options);
-    verifyNoInteractions(storageAdmin);
-  }
 }

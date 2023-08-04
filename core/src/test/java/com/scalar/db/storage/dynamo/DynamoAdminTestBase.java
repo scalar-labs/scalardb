@@ -64,7 +64,6 @@ import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import software.amazon.awssdk.services.dynamodb.model.TableDescription;
 import software.amazon.awssdk.services.dynamodb.model.TableStatus;
 import software.amazon.awssdk.services.dynamodb.model.UpdateContinuousBackupsRequest;
-import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.UpdateTableRequest;
 
 /**
@@ -1439,117 +1438,6 @@ public abstract class DynamoAdminTestBase {
             ScanRequest.builder()
                 .tableName(getFullNamespaceTableName())
                 .exclusiveStartKey(null)
-                .build());
-  }
-
-  @Test
-  public void upgrade_WithExistingTables_ShouldUpsertNamespaceNames() throws ExecutionException {
-    // Arrange
-    when(client.describeTable(any(DescribeTableRequest.class)))
-        .thenReturn(mock(DescribeTableResponse.class))
-        .thenThrow(mock(ResourceNotFoundException.class))
-        .thenReturn(tableIsActiveResponse);
-
-    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
-        .thenReturn(backupIsEnabledResponse);
-    ScanResponse scanResponse = mock(ScanResponse.class);
-    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
-    Map<String, AttributeValue> lastEvaluatedKeyFirstIteration =
-        ImmutableMap.of("", AttributeValue.builder().build());
-    Map<String, AttributeValue> lastEvaluatedKeySecondIteration = ImmutableMap.of();
-    when(scanResponse.lastEvaluatedKey())
-        .thenReturn(lastEvaluatedKeyFirstIteration)
-        .thenReturn(lastEvaluatedKeySecondIteration);
-    when(scanResponse.items())
-        .thenReturn(
-            ImmutableList.of(
-                ImmutableMap.of(
-                    DynamoAdmin.METADATA_ATTR_TABLE,
-                    AttributeValue.builder().s("ns1.tbl1").build())))
-        .thenReturn(
-            ImmutableList.of(
-                ImmutableMap.of(
-                    DynamoAdmin.METADATA_ATTR_TABLE,
-                    AttributeValue.builder().s("ns1.tbl2").build()),
-                ImmutableMap.of(
-                    DynamoAdmin.METADATA_ATTR_TABLE,
-                    AttributeValue.builder().s("ns2.tbl3").build())));
-
-    // Act
-    admin.upgrade(Collections.emptyMap());
-
-    // Assert
-    verify(client)
-        .describeTable(
-            DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build());
-    verify(client, times(2))
-        .describeTable(
-            DescribeTableRequest.builder().tableName(getFullNamespaceTableName()).build());
-    CreateTableRequest createNamespaceTableRequest =
-        CreateTableRequest.builder()
-            .attributeDefinitions(
-                ImmutableList.of(
-                    AttributeDefinition.builder()
-                        .attributeName(DynamoAdmin.NAMESPACES_ATTR_NAME)
-                        .attributeType(ScalarAttributeType.S)
-                        .build()))
-            .keySchema(
-                KeySchemaElement.builder()
-                    .attributeName(DynamoAdmin.NAMESPACES_ATTR_NAME)
-                    .keyType(KeyType.HASH)
-                    .build())
-            .provisionedThroughput(
-                ProvisionedThroughput.builder()
-                    .readCapacityUnits(DynamoAdmin.METADATA_TABLES_REQUEST_UNIT)
-                    .writeCapacityUnits(DynamoAdmin.METADATA_TABLES_REQUEST_UNIT)
-                    .build())
-            .tableName(getFullNamespaceTableName())
-            .build();
-    verify(client).createTable(createNamespaceTableRequest);
-    verify(client)
-        .describeContinuousBackups(
-            DescribeContinuousBackupsRequest.builder()
-                .tableName(getFullNamespaceTableName())
-                .build());
-    verify(client)
-        .updateContinuousBackups(
-            UpdateContinuousBackupsRequest.builder()
-                .tableName(getFullNamespaceTableName())
-                .pointInTimeRecoverySpecification(
-                    PointInTimeRecoverySpecification.builder()
-                        .pointInTimeRecoveryEnabled(true)
-                        .build())
-                .build());
-    verify(client)
-        .scan(
-            ScanRequest.builder()
-                .tableName(getFullMetadataTableName())
-                .exclusiveStartKey(null)
-                .build());
-    verify(client)
-        .scan(
-            ScanRequest.builder()
-                .tableName(getFullMetadataTableName())
-                .exclusiveStartKey(lastEvaluatedKeyFirstIteration)
-                .build());
-
-    verify(client)
-        .updateItem(
-            UpdateItemRequest.builder()
-                .tableName(getFullNamespaceTableName())
-                .key(
-                    ImmutableMap.of(
-                        DynamoAdmin.NAMESPACES_ATTR_NAME,
-                        AttributeValue.builder().s("ns1").build()))
-                .build());
-    verify(client)
-        .updateItem(
-            UpdateItemRequest.builder()
-                .tableName(getFullNamespaceTableName())
-                .key(
-                    ImmutableMap.of(
-                        DynamoAdmin.NAMESPACES_ATTR_NAME,
-                        AttributeValue.builder().s("ns2").build()))
                 .build());
   }
 

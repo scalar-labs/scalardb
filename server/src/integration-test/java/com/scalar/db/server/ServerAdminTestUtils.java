@@ -55,13 +55,6 @@ public class ServerAdminTestUtils extends AdminTestUtils {
     execute(insertCorruptedMetadataStatement);
   }
 
-  @Override
-  public void dropNamespacesTable() throws Exception {
-    execute(
-        "DROP TABLE "
-            + rdbEngine.encloseFullTableName(metadataNamespace, JdbcAdmin.NAMESPACES_TABLE));
-  }
-
   private void execute(String sql) throws SQLException {
     try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
         Connection connection = dataSource.getConnection();

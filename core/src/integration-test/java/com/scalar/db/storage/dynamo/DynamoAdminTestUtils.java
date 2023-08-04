@@ -135,15 +135,4 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
             .item(itemValues)
             .build());
   }
-
-  @Override
-  public void dropNamespacesTable() {
-    client.deleteTable(
-        DeleteTableRequest.builder()
-            .tableName(getFullTableName(metadataNamespace, DynamoAdmin.NAMESPACES_TABLE))
-            .build());
-    if (!waitForTableDeletion(metadataNamespace, DynamoAdmin.NAMESPACES_TABLE)) {
-      throw new RuntimeException("Deleting the namespaces table timed out");
-    }
-  }
 }

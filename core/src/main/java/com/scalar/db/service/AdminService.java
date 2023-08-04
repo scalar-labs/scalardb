@@ -117,11 +117,6 @@ public class AdminService implements DistributedStorageAdmin {
   }
 
   @Override
-  public void upgrade(Map<String, String> options) throws ExecutionException {
-    admin.upgrade(options);
-  }
-
-  @Override
   public void close() {
     admin.close();
   }

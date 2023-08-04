@@ -67,7 +67,7 @@ public class DynamoConfig {
               + TABLE_METADATA_NAMESPACE
               + "\" is deprecated and will be removed in 5.0.0. Please use \""
               + METADATA_NAMESPACE
-              + "\" instead.");
+              + "\" instead");
 
       metadataNamespace = getString(databaseConfig.getProperties(), TABLE_METADATA_NAMESPACE, null);
     } else {

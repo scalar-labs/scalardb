@@ -1,7 +1,6 @@
 package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
-import com.scalar.db.util.AdminTestUtils;
 import java.util.Map;
 import java.util.Properties;
 
@@ -15,11 +14,6 @@ public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrati
   @Override
   protected Map<String, String> getCreationOptions() {
     return DynamoEnv.getCreationOptions();
-  }
-
-  @Override
-  protected AdminTestUtils getAdminTestUtils(String testName) {
-    return new DynamoAdminTestUtils(getProperties(testName));
   }
 
   @Override

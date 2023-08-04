@@ -54,10 +54,4 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
       JdbcAdmin.execute(connection, sql);
     }
   }
-
-  @Override
-  public void dropNamespacesTable() throws Exception {
-    execute(
-        "DROP TABLE " + rdbEngine.encloseFullTableName(metadataSchema, JdbcAdmin.NAMESPACES_TABLE));
-  }
 }

@@ -3,6 +3,7 @@ package com.scalar.db.storage.cosmos;
 import com.google.common.base.MoreObjects;
 import java.util.Objects;
 
+/** An entity class to store namespace metadata in a CosmosDB container */
 public class CosmosNamespace {
   private String id;
 

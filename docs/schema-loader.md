@@ -76,12 +76,6 @@ Create/Delete schemas in the storage defined in the config file
                       The replication strategy, must be SimpleStrategy or
                         NetworkTopologyStrategy (supported in Cassandra)
       --ru=<ru>       Base resource unit (supported in DynamoDB, Cosmos DB)
-      --upgrade       Upgrades the Scalar DB environment to support the latest
-                        version of the Scalar DB API. Typically, you will be
-                        requested, as indicated on the release notes, to run
-                        this command after updating the Scalar DB version of
-                        your application environment.
-
 
 ```
 
@@ -319,15 +313,6 @@ $ java -jar scalardb-schema-loader-<version>.jar --cassandra -h <CASSANDRA_IP> [
 $ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json --repair-all
 ```
 
-### Upgrade the Scalar DB environment
-This command will upgrade the Scalar DB environment to support the latest version of the Scalar DB API. Typically, you will be requested, as indicated on the release notes, to run
-this command after updating the Scalar DB version of your application environment.
-
-Running the command requires a Scalar DB config file (a sample config file can be found [here](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties))
-```console
-$ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> --upgrade
-```
-
 ### Sample schema file
 
 The sample schema is as follows (Sample schema file can be found [here](https://github.com/scalar-labs/scalardb/blob/master/schema-loader/sample/schema_sample.json)):
@@ -481,7 +466,7 @@ dependencies {
 }
 ```
 
-### Code sample
+### Create, alter, repair and delete
 
 You can create, alter, delete and repair tables that are defined in the schema using SchemaLoader by
 simply passing ScalarDB configuration file, schema, and additional options if needed as shown
@@ -514,10 +499,7 @@ public class SchemaLoaderSample {
 
     Map<String, String> tableReparationOptions = new HashMap<>();
     indexCreationOptions.put(DynamoAdmin.NO_BACKUP, "true");
-
-    Map<String, String> upgradeOptions = new HashMap<>();
-    upgradeOptions.put(DynamoAdmin.NO_BACKUP, "true");
-
+    
     // Create tables
     SchemaLoader.load(configFilePath, schemaFilePath, tableCreationOptions, createCoordinatorTables);
 
@@ -526,9 +508,6 @@ public class SchemaLoaderSample {
 
     // Repair tables
     SchemaLoader.repairTables(configFilePath, schemaFilePath, tableReparationOptions, repairCoordinatorTables);
-    
-    // Upgrade the environment
-    SchemaLoader.upgrade(configFilePath, upgradeOptions);
     
     // Delete tables
     SchemaLoader.unload(configFilePath, schemaFilePath, deleteCoordinatorTables);
@@ -564,9 +543,6 @@ SchemaLoader.alterTables(properties, serializedAlteredSchemaFilePath, indexCreat
 
 // Repair tables
 SchemaLoader.repairTables(properties, serializedSchemaJson, tableReparationOptions, repairCoordinatorTables);
-
-// Upgrade the environment
-SchemaLoader.upgrade(properties, upgradeOptions);
 
 // Delete tables
 SchemaLoader.unload(properties, serializedSchemaJson, deleteCoordinatorTables);

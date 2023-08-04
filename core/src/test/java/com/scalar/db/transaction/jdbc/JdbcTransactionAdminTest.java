@@ -254,16 +254,4 @@ public class JdbcTransactionAdminTest {
     verify(jdbcAdmin).getNamespaceNames();
     assertThat(actualNamespaces).containsOnly("n1", "n2");
   }
-
-  @Test
-  public void upgrade_ShouldCallJdbcAdminProperly() throws ExecutionException {
-    // Arrange
-    Map<String, String> options = ImmutableMap.of("foo", "bar");
-
-    // Act
-    admin.upgrade(options);
-
-    // Assert
-    verify(jdbcAdmin).upgrade(options);
-  }
 }

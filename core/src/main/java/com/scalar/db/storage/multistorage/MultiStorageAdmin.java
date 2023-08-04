@@ -1,6 +1,7 @@
 package com.scalar.db.storage.multistorage;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
@@ -71,7 +72,11 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
     this.tableAdminMap = tableAdminMap;
     this.namespaceAdminMap = namespaceAdminMap;
     this.defaultAdmin = defaultAdmin;
-    admins = null;
+    ImmutableSet.Builder<DistributedStorageAdmin> adminsSet = ImmutableSet.builder();
+    adminsSet.addAll(tableAdminMap.values());
+    adminsSet.addAll(namespaceAdminMap.values());
+    adminsSet.add(defaultAdmin);
+    this.admins = adminsSet.build().asList();
   }
 
   @Override
@@ -204,29 +209,44 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
 
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
+    // Only return existing namespaces that are listed in the namespace mapping configuration or
+    // when they belong to the default storage
+    //
+    // For example, if the storages contain the following namespaces :
+    // - mysql : mysqlStorageAdmin.getNamespaceNames() = [ns1, ns2]
+    // - cassandra : cassandraStorageAdmin.getNamespaceNames() = [ns3]
+    // - cosmos : cosmosStrorageAdmin.getNamespaceNames() = [ns4, ns5]
+    // And the default storage is cassandra :
+    // - scalar.db.multi_storage.default_storage=cosmos
+    // And the namespace mapping set in the configuration is :
+    // - scalar.db.multi_storage.namespace_mapping=ns1:mysql,ns2:cassandra,ns3:cassandra
+    //
+    // Then multiStorageAdmin.getNamespaceNames() = [ns1, ns3, ns4, ns5]
+    // The reasoning is:
+    // - ns1 is present in the mysql storage and listed in the mapping belonging to mysql
+    //     => returned
+    // - ns2 is present in the mysql storage but listed in the mapping belonging to cassandra
+    //     => not returned
+    // - ns3 is present in the cassandra storage and listed in the mapping belonging to cassandra
+    //     => returned
+    // - ns4 and ns5 are in the default storage (cosmos)
+    //     => returned
     Set<String> namespaceNames = new HashSet<>();
-    for (DistributedStorageAdmin admin : new HashSet<>(namespaceAdminMap.values())) {
+    for (DistributedStorageAdmin admin : admins) {
       Set<String> existingNamespaces = admin.getNamespaceNames();
-      // Only keep namespaces that are present in the namespace mapping
-      for (String existingNamespace : existingNamespaces) {
-        if (admin.equals(namespaceAdminMap.get(existingNamespace))) {
-          namespaceNames.add(existingNamespace);
+      if (admin.equals(defaultAdmin)) {
+        namespaceNames.addAll(existingNamespaces);
+      } else {
+        // Filter out namespace not in the mapping
+        for (String existingNamespace : existingNamespaces) {
+          if (admin.equals(namespaceAdminMap.get(existingNamespace))) {
+            namespaceNames.add(existingNamespace);
+          }
         }
       }
     }
-    namespaceNames.addAll(defaultAdmin.getNamespaceNames());
 
     return namespaceNames;
-  }
-
-  @Override
-  public void upgrade(Map<String, String> options) throws ExecutionException {
-    Set<DistributedStorageAdmin> admins = new HashSet<>(namespaceAdminMap.values());
-    admins.add(defaultAdmin);
-
-    for (DistributedStorageAdmin admin : admins) {
-      admin.upgrade(options);
-    }
   }
 
   private DistributedStorageAdmin getAdmin(String namespace) {

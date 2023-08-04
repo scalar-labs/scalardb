@@ -86,9 +86,4 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
         .getScripts()
         .getStoredProcedure(CosmosAdmin.STORED_PROCEDURE_FILE_NAME);
   }
-
-  @Override
-  public void dropNamespacesTable() {
-    client.getDatabase(metadataDatabase).getContainer(CosmosAdmin.NAMESPACES_CONTAINER).delete();
-  }
 }

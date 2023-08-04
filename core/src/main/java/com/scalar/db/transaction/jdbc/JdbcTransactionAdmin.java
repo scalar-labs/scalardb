@@ -136,11 +136,6 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
-  public void upgrade(Map<String, String> options) throws ExecutionException {
-    jdbcAdmin.upgrade(options);
-  }
-
-  @Override
   public void close() {
     jdbcAdmin.close();
   }

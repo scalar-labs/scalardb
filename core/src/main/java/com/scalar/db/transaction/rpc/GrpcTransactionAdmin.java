@@ -403,13 +403,7 @@ public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     throw new UnsupportedOperationException(
-        "retrieving the namespace names is not supported in ScalarDB Server");
-  }
-
-  @Override
-  public void upgrade(Map<String, String> options) throws ExecutionException {
-    throw new UnsupportedOperationException(
-        "upgrading the ScalarDB environment is not supported in ScalarDB Server");
+        "Retrieving the namespace names is not supported in ScalarDB Server");
   }
 
   private static <T> T execute(ThrowableSupplier<T, ExecutionException> supplier)

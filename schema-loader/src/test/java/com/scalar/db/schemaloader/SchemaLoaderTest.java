@@ -766,26 +766,4 @@ public class SchemaLoaderTest {
     verify(importSchemaParser).parse();
     verify(operator).importTables(anyList());
   }
-
-  @Test
-  public void upgrade_WithConfigProperties_ShouldCallOperatorProperly() throws Exception {
-    // Arrange
-
-    // Act
-    SchemaLoader.upgrade(configProperties, options);
-
-    // Assert
-    verify(operator).upgrade(options);
-  }
-
-  @Test
-  public void upgrade_WithConfigFilePath_ShouldCallOperatorProperly() throws Exception {
-    // Arrange
-
-    // Act
-    SchemaLoader.upgrade(configFilePath, options);
-
-    // Assert
-    verify(operator).upgrade(options);
-  }
 }

@@ -3,9 +3,7 @@ package com.scalar.db.transaction.jdbc;
 import com.scalar.db.api.DistributedTransactionAdminIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.storage.jdbc.JdbcAdminTestUtils;
 import com.scalar.db.storage.jdbc.JdbcEnv;
-import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -19,11 +17,6 @@ public class JdbcTransactionAdminIntegrationTest
     properties.putAll(JdbcEnv.getProperties(testName));
     properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "jdbc");
     return properties;
-  }
-
-  @Override
-  protected AdminTestUtils getAdminTestUtils(String testName) {
-    return new JdbcAdminTestUtils(JdbcEnv.getProperties(testName));
   }
 
   // Since SQLite doesn't have persistent namespaces, some behaviors around the namespace are

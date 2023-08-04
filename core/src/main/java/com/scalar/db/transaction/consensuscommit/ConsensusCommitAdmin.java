@@ -201,11 +201,6 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
-  public void upgrade(Map<String, String> options) throws ExecutionException {
-    admin.upgrade(options);
-  }
-
-  @Override
   public void importTable(String namespace, String table) throws ExecutionException {
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata != null) {

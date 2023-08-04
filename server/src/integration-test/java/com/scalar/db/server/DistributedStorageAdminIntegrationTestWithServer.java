@@ -1,9 +1,6 @@
 package com.scalar.db.server;
 
 import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
-import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
@@ -28,25 +25,6 @@ public class DistributedStorageAdminIntegrationTestWithServer
   protected Properties getProperties(String testName) {
     return ServerEnv.getClient1Properties(testName);
   }
-
-  @Override
-  protected AdminTestUtils getAdminTestUtils(String testName) {
-    Properties properties = ServerEnv.getServer1Properties(testName);
-
-    // Add testName as a coordinator namespace suffix
-    String coordinatorNamespace =
-        properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
-    properties.setProperty(
-        ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
-
-    return new ServerAdminTestUtils(properties);
-  }
-
-  @Override
-  @Test
-  @Disabled("Upgrade is not supported in ScalarDB server")
-  public void
-      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
 
   @Override
   @Test

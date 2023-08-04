@@ -11,7 +11,6 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Properties;
 import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
@@ -353,23 +352,5 @@ public class MultiStorageAdminIntegrationTest {
 
     // Assert
     assertThat(namespaces).containsExactlyInAnyOrder(NAMESPACE1, NAMESPACE2);
-  }
-
-  @Test
-  public void
-      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces()
-          throws Exception {
-    // Arrange
-    MultiStorageAdminTestUtils adminTestUtils =
-        new MultiStorageAdminTestUtils(
-            MultiStorageEnv.getPropertiesForCassandra(TEST_NAME),
-            MultiStorageEnv.getPropertiesForJdbc(TEST_NAME));
-    adminTestUtils.dropNamespacesTable();
-
-    // Act
-    multiStorageAdmin.upgrade(Collections.emptyMap());
-
-    // Assert
-    assertThat(multiStorageAdmin.getNamespaceNames()).containsOnly(NAMESPACE1, NAMESPACE2);
   }
 }

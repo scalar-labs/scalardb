@@ -172,7 +172,7 @@ public class JdbcConfig {
               + TABLE_METADATA_SCHEMA
               + "\" is deprecated and will be removed in 5.0.0. Please use \""
               + METADATA_SCHEMA
-              + "\" instead.");
+              + "\" instead");
 
       metadataSchema = getString(databaseConfig.getProperties(), TABLE_METADATA_SCHEMA, null);
     } else {

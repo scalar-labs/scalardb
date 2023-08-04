@@ -8,7 +8,6 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -86,8 +85,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   protected void initialize(String testName) throws Exception {}
 
   protected abstract Properties getProperties(String testName);
-
-  protected abstract AdminTestUtils getAdminTestUtils(String testName);
 
   protected String getNamespace1() {
     return NAMESPACE1;
@@ -746,20 +743,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
     // Assert
     assertThat(namespaces).containsOnly(namespace1, namespace2);
-  }
-
-  @Test
-  public void
-      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces()
-          throws Exception {
-    // Arrange
-    getAdminTestUtils(TEST_NAME).dropNamespacesTable();
-
-    // Act
-    admin.upgrade(getCreationOptions());
-
-    // Assert
-    assertThat(admin.getNamespaceNames()).containsOnly(namespace1, namespace2);
   }
 
   @Test

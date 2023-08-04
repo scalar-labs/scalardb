@@ -5,7 +5,6 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
-import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Disabled;
@@ -59,19 +58,6 @@ public class ConsensusCommitAdminIntegrationTestWithServer
     return properties;
   }
 
-  @Override
-  protected AdminTestUtils getAdminTestUtils(String testName) {
-    Properties properties = ServerEnv.getServer1Properties(testName);
-
-    // Add testName as a coordinator namespace suffix
-    String coordinatorNamespace =
-        properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
-    properties.setProperty(
-        ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
-
-    return new ServerAdminTestUtils(properties);
-  }
-
   @AfterAll
   @Override
   public void afterAll() throws Exception {
@@ -94,12 +80,6 @@ public class ConsensusCommitAdminIntegrationTestWithServer
     super
         .getTableMetadata_WhenIncludeMetadataIsEnabled_ShouldReturnCorrectMetadataWithTransactionMetadataColumns();
   }
-
-  @Override
-  @Test
-  @Disabled("Upgrade is not supported in ScalarDB server")
-  public void
-      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
 
   @Override
   @Test
