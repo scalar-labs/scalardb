@@ -52,7 +52,7 @@ subprojects {
         gsonVersion = '2.10.1'
         log4jVersion = '2.20.0'
         stefanbirknerSystemLambdaVersion = '1.2.1'
-        spotbugsPluginVersion = '5.0.14'
+        spotbugsPluginVersion = '5.1.1'
         errorpronePluginVersion = '2.0.2'
         protobufPluginVersion = '0.8.19'
         shadowPluginVersion = '7.1.2'
