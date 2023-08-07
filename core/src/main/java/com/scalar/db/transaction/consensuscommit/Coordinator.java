@@ -81,7 +81,7 @@ public class Coordinator {
     int counter = 0;
     while (true) {
       if (counter >= MAX_RETRY_COUNT) {
-        throw new CoordinatorException("can't get coordinator state.");
+        throw new CoordinatorException("Can't get coordinator state");
       }
       try {
         Optional<Result> result = storage.get(get);
@@ -112,13 +112,13 @@ public class Coordinator {
     int counter = 0;
     while (true) {
       if (counter >= MAX_RETRY_COUNT) {
-        throw new CoordinatorException("couldn't put coordinator state.");
+        throw new CoordinatorException("Couldn't put coordinator state");
       }
       try {
         storage.put(put);
         break;
       } catch (NoMutationException e) {
-        throw new CoordinatorConflictException("mutation seems applied already", e);
+        throw new CoordinatorConflictException("Mutation seems applied already", e);
       } catch (ExecutionException e) {
         logger.warn("Putting state in coordinator failed", e);
       }

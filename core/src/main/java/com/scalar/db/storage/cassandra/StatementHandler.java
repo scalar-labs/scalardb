@@ -143,7 +143,7 @@ public abstract class StatementHandler {
             .join(
                 new String[] {
                   actual.getClass().toString(), "is passed where something like",
-                  expected[0].toString(), "is expected."
+                  expected[0].toString(), "is expected"
                 }));
   }
 }

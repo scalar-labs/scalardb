@@ -60,7 +60,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public void createCoordinatorTables(Map<String, String> options) throws ExecutionException {
     if (coordinatorTablesExist()) {
-      throw new IllegalArgumentException("coordinator tables already exist");
+      throw new IllegalArgumentException("Coordinator tables already exist");
     }
 
     admin.createNamespace(coordinatorNamespace, options);
@@ -70,7 +70,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public void dropCoordinatorTables() throws ExecutionException {
     if (!coordinatorTablesExist()) {
-      throw new IllegalArgumentException("coordinator tables do not exist");
+      throw new IllegalArgumentException("Coordinator tables do not exist");
     }
 
     admin.dropTable(coordinatorNamespace, Coordinator.TABLE);
@@ -80,7 +80,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public void truncateCoordinatorTables() throws ExecutionException {
     if (!coordinatorTablesExist()) {
-      throw new IllegalArgumentException("coordinator tables do not exist");
+      throw new IllegalArgumentException("Coordinator tables do not exist");
     }
 
     admin.truncateTable(coordinatorNamespace, Coordinator.TABLE);
@@ -184,7 +184,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata == null) {
       throw new IllegalArgumentException(
-          "table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
+          "Table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
     }
     String beforeColumnName = getBeforeImageColumnName(columnName, tableMetadata);
 

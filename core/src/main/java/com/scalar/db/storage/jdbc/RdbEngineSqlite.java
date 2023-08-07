@@ -208,7 +208,7 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public void dropNamespaceTranslateSQLException(SQLException e, String namespace) {
-    throw new AssertionError("dropNamespace never happen in SQLite implementation");
+    throw new AssertionError("DropNamespace never happen in SQLite implementation");
   }
 
   @Override

@@ -96,7 +96,7 @@ public class MutationConditionsValidator {
   private void throwWhenRecordDoesNotExist(MutationCondition condition)
       throws UnsatisfiedConditionException {
     throw new UnsatisfiedConditionException(
-        "the record does not exist so the "
+        "The record does not exist so the "
             + condition.getClass().getSimpleName()
             + " condition is not satisfied",
         transactionId);
@@ -105,7 +105,7 @@ public class MutationConditionsValidator {
   private void throwWhenRecordExists(MutationCondition condition)
       throws UnsatisfiedConditionException {
     throw new UnsatisfiedConditionException(
-        "the record exists so the "
+        "The record exists so the "
             + condition.getClass().getSimpleName()
             + " condition is not satisfied",
         transactionId);
@@ -120,7 +120,7 @@ public class MutationConditionsValidator {
           conditionalExpression.getColumn(),
           conditionalExpression.getOperator())) {
         throw new UnsatisfiedConditionException(
-            "the condition on the column '"
+            "The condition on the column '"
                 + conditionalExpression.getColumn().getName()
                 + "' is not satisfied",
             transactionId);

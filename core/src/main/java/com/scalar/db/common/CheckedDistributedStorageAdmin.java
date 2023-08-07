@@ -34,13 +34,13 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
     if (checkNamespace && namespaceExists(namespace)) {
-      throw new IllegalArgumentException("namespace already exists: " + namespace);
+      throw new IllegalArgumentException("Namespace already exists: " + namespace);
     }
 
     try {
       admin.createNamespace(namespace, options);
     } catch (ExecutionException e) {
-      throw new ExecutionException("creating the namespace failed: " + namespace, e);
+      throw new ExecutionException("Creating the namespace failed: " + namespace, e);
     }
   }
 
@@ -49,18 +49,18 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     if (checkNamespace && !namespaceExists(namespace)) {
-      throw new IllegalArgumentException("namespace does not exist: " + namespace);
+      throw new IllegalArgumentException("Namespace does not exist: " + namespace);
     }
     if (tableExists(namespace, table)) {
       throw new IllegalArgumentException(
-          "table already exists: " + ScalarDbUtils.getFullTableName(namespace, table));
+          "Table already exists: " + ScalarDbUtils.getFullTableName(namespace, table));
     }
 
     try {
       admin.createTable(namespace, table, metadata, options);
     } catch (ExecutionException e) {
       throw new ExecutionException(
-          "creating the table failed: " + ScalarDbUtils.getFullTableName(namespace, table), e);
+          "Creating the table failed: " + ScalarDbUtils.getFullTableName(namespace, table), e);
     }
   }
 
@@ -68,31 +68,31 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   public void dropTable(String namespace, String table) throws ExecutionException {
     if (!tableExists(namespace, table)) {
       throw new IllegalArgumentException(
-          "table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
+          "Table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
     }
 
     try {
       admin.dropTable(namespace, table);
     } catch (ExecutionException e) {
       throw new ExecutionException(
-          "dropping the table failed: " + ScalarDbUtils.getFullTableName(namespace, table), e);
+          "Dropping the table failed: " + ScalarDbUtils.getFullTableName(namespace, table), e);
     }
   }
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
     if (checkNamespace && !namespaceExists(namespace)) {
-      throw new IllegalArgumentException("namespace does not exist: " + namespace);
+      throw new IllegalArgumentException("Namespace does not exist: " + namespace);
     }
     if (!getNamespaceTableNames(namespace).isEmpty()) {
       throw new IllegalArgumentException(
-          "namespace is not empty: " + namespace + ", " + getNamespaceTableNames(namespace));
+          "Namespace is not empty: " + namespace + ", " + getNamespaceTableNames(namespace));
     }
 
     try {
       admin.dropNamespace(namespace);
     } catch (ExecutionException e) {
-      throw new ExecutionException("dropping the namespace failed: " + namespace, e);
+      throw new ExecutionException("Dropping the namespace failed: " + namespace, e);
     }
   }
 
@@ -100,14 +100,14 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   public void truncateTable(String namespace, String table) throws ExecutionException {
     if (!tableExists(namespace, table)) {
       throw new IllegalArgumentException(
-          "table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
+          "Table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
     }
 
     try {
       admin.truncateTable(namespace, table);
     } catch (ExecutionException e) {
       throw new ExecutionException(
-          "truncating the table failed: " + ScalarDbUtils.getFullTableName(namespace, table), e);
+          "Truncating the table failed: " + ScalarDbUtils.getFullTableName(namespace, table), e);
     }
   }
 
@@ -118,7 +118,7 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata == null) {
       throw new IllegalArgumentException(
-          "table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
+          "Table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
     }
     if (!tableMetadata.getColumnNames().contains(columnName)) {
       throw new IllegalArgumentException(

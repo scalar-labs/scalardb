@@ -352,7 +352,7 @@ public class DistributedTransactionService
                 tableMetadataManager.getTableMetadata(
                     request.getGet().getNamespace(), request.getGet().getTable());
             if (metadata == null) {
-              throw new IllegalArgumentException("the specified table is not found");
+              throw new IllegalArgumentException("The specified table is not found");
             }
 
             Get get = ProtoUtils.toGet(request.getGet(), metadata);
@@ -380,7 +380,7 @@ public class DistributedTransactionService
                 tableMetadataManager.getTableMetadata(
                     request.getScan().getNamespace(), request.getScan().getTable());
             if (metadata == null) {
-              throw new IllegalArgumentException("the specified table is not found");
+              throw new IllegalArgumentException("The specified table is not found");
             }
 
             Scan scan = ProtoUtils.toScan(request.getScan(), metadata);
@@ -410,7 +410,7 @@ public class DistributedTransactionService
                       request.getMutationsList().get(0).getNamespace(),
                       request.getMutationsList().get(0).getTable());
               if (metadata == null) {
-                throw new IllegalArgumentException("the specified table is not found");
+                throw new IllegalArgumentException("The specified table is not found");
               }
 
               mutations =

@@ -582,7 +582,7 @@ public class SchemaLoader {
         assert config.getLeft() != null;
         return new SchemaOperator(config.getLeft());
       } catch (IOException e) {
-        throw new SchemaLoaderException("initializing schema operator failed", e);
+        throw new SchemaLoaderException("Initializing schema operator failed", e);
       }
     } else {
       assert config.getRight() != null;

@@ -90,7 +90,7 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   @Override
   public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException {
-    throw new ExecutionException("dropping the schema failed: " + namespace, e);
+    throw new ExecutionException("Dropping the schema failed: " + namespace, e);
   }
 
   @Override
@@ -202,14 +202,14 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
         if (columnSize != 1) {
           throw new IllegalArgumentException(
               String.format(
-                  "data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
+                  "Data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
         }
         return DataType.BOOLEAN;
       case SMALLINT:
         if (typeName.equalsIgnoreCase("smallserial")) {
           throw new IllegalArgumentException(
               String.format(
-                  "data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
+                  "Data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
         }
         logger.info(
             "Data type larger than that of underlying database is assigned: {} ({} to INT)",
@@ -220,13 +220,13 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
         if (typeName.equalsIgnoreCase("serial")) {
           throw new IllegalArgumentException(
               String.format(
-                  "data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
+                  "Data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
         }
         return DataType.INT;
       case BIGINT:
         if (typeName.equalsIgnoreCase("bigserial")) {
           throw new IllegalArgumentException(
-              String.format("data type %s is unsupported: %s", typeName, columnDescription));
+              String.format("Data type %s is unsupported: %s", typeName, columnDescription));
         }
         logger.warn(
             "Data type that may be smaller than that of underlying database is assigned: {} (PostgreSQL {} to ScalarDB BIGINT)",
@@ -238,7 +238,7 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
       case DOUBLE:
         if (!typeName.equalsIgnoreCase("float8")) {
           throw new IllegalArgumentException(
-              String.format("data type %s is unsupported: %s", typeName, columnDescription));
+              String.format("Data type %s is unsupported: %s", typeName, columnDescription));
         }
         return DataType.DOUBLE;
       case CHAR:
@@ -254,7 +254,7 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
         return DataType.BLOB;
       default:
         throw new IllegalArgumentException(
-            String.format("data type %s is unsupported: %s", typeName, columnDescription));
+            String.format("Data type %s is unsupported: %s", typeName, columnDescription));
     }
   }
 

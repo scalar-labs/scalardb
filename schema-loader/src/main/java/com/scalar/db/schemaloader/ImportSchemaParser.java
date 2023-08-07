@@ -21,7 +21,7 @@ public class ImportSchemaParser {
     try (Reader reader = Files.newBufferedReader(jsonFilePath)) {
       schemaJson = JsonParser.parseReader(reader).getAsJsonObject();
     } catch (IOException | JsonParseException e) {
-      throw new SchemaLoaderException("parsing the schema JSON failed", e);
+      throw new SchemaLoaderException("Parsing the schema JSON failed", e);
     }
   }
 
@@ -29,7 +29,7 @@ public class ImportSchemaParser {
     try {
       schemaJson = JsonParser.parseString(serializedSchemaJson).getAsJsonObject();
     } catch (JsonParseException e) {
-      throw new SchemaLoaderException("parsing the schema JSON failed", e);
+      throw new SchemaLoaderException("Parsing the schema JSON failed", e);
     }
   }
 

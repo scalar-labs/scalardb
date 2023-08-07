@@ -50,7 +50,7 @@ public class ScannerImpl implements Scanner {
       }
       return Optional.empty();
     } catch (SQLException e) {
-      throw new ExecutionException("failed to fetch the next result", e);
+      throw new ExecutionException("Failed to fetch the next result", e);
     }
   }
 
@@ -63,7 +63,7 @@ public class ScannerImpl implements Scanner {
       }
       return ret;
     } catch (SQLException e) {
-      throw new ExecutionException("failed to fetch the next result", e);
+      throw new ExecutionException("Failed to fetch the next result", e);
     }
   }
 

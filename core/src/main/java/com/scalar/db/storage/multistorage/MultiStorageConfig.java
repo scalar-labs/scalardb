@@ -114,7 +114,7 @@ public class MultiStorageConfig {
 
   private void checkIfStorageExists(String storage) {
     if (storage == null || !databasePropertiesMap.containsKey(storage)) {
-      throw new IllegalArgumentException("storage not found: " + storage);
+      throw new IllegalArgumentException("Storage not found: " + storage);
     }
   }
 

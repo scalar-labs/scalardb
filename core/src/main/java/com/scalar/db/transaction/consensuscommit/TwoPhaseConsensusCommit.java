@@ -148,7 +148,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   public void commit() throws CommitException, UnknownTransactionStatusException {
     if (crud.getSnapshot().isValidationRequired() && !validated) {
       throw new IllegalStateException(
-          "the transaction is not validated."
+          "The transaction is not validated."
               + " When using the EXTRA_READ serializable strategy, you need to call validate()"
               + " before calling commit()");
     }
@@ -175,10 +175,10 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
       TransactionState state = commit.abortState(crud.getSnapshot().getId());
       if (state == TransactionState.COMMITTED) {
         throw new RollbackException(
-            "rollback failed because the transaction has already been committed", getId());
+            "Rollback failed because the transaction has already been committed", getId());
       }
     } catch (UnknownTransactionStatusException e) {
-      throw new RollbackException("rollback failed", e, getId());
+      throw new RollbackException("Rollback failed", e, getId());
     }
 
     commit.rollbackRecords(crud.getSnapshot());
@@ -214,7 +214,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     try {
       mutationOperationChecker.check(mutation);
     } catch (ExecutionException e) {
-      throw new CrudException("checking the operation failed", e, getId());
+      throw new CrudException("Checking the operation failed", e, getId());
     }
   }
 }

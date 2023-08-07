@@ -112,7 +112,7 @@ public class Snapshot {
 
   public void put(Key key, Put put) {
     if (deleteSet.containsKey(key)) {
-      throw new IllegalArgumentException("writing already deleted data is not allowed");
+      throw new IllegalArgumentException("Writing already deleted data is not allowed");
     }
     if (writeSet.containsKey(key)) {
       // merge the previous put in the write set and the new put
@@ -150,7 +150,7 @@ public class Snapshot {
       }
     }
     throw new IllegalArgumentException(
-        "getting data neither in the read set nor the delete set is not allowed");
+        "Getting data neither in the read set nor the delete set is not allowed");
   }
 
   private TableMetadata getTableMetadata(Key key) throws CrudException {
@@ -159,12 +159,12 @@ public class Snapshot {
           tableMetadataManager.getTransactionTableMetadata(key.getNamespace(), key.getTable());
       if (metadata == null) {
         throw new IllegalArgumentException(
-            "the specified table is not found: "
+            "The specified table is not found: "
                 + ScalarDbUtils.getFullTableName(key.getNamespace(), key.getTable()));
       }
       return metadata.getTableMetadata();
     } catch (ExecutionException e) {
-      throw new CrudException("getting a table metadata failed", e, id);
+      throw new CrudException("Getting a table metadata failed", e, id);
     }
   }
 
@@ -175,12 +175,12 @@ public class Snapshot {
               scan.forNamespace().get(), scan.forTable().get());
       if (metadata == null) {
         throw new IllegalArgumentException(
-            "the specified table is not found: "
+            "The specified table is not found: "
                 + ScalarDbUtils.getFullTableName(scan.forNamespace().get(), scan.forTable().get()));
       }
       return metadata.getTableMetadata();
     } catch (ExecutionException e) {
-      throw new ExecutionException("getting a table metadata failed", e);
+      throw new ExecutionException("Getting a table metadata failed", e);
     }
   }
 
@@ -195,7 +195,7 @@ public class Snapshot {
     boolean isRelational = ScalarDbUtils.isRelational(scan);
     if ((isRelational && isWriteSetOverlappedWithRelational(scan))
         || (!isRelational && isWriteSetOverlappedWith(scan))) {
-      throw new IllegalArgumentException("reading already written data is not allowed");
+      throw new IllegalArgumentException("Reading already written data is not allowed");
     }
   }
 
@@ -349,7 +349,7 @@ public class Snapshot {
       case LTE:
         return column.compareTo((Column<T>) condition.getColumn()) <= 0;
       default:
-        throw new IllegalArgumentException("unknown operator: " + condition.getOperator());
+        throw new IllegalArgumentException("Unknown operator: " + condition.getOperator());
     }
   }
 
@@ -507,12 +507,12 @@ public class Snapshot {
 
   private void throwExceptionDueToPotentialAntiDependency() throws PreparationConflictException {
     throw new PreparationConflictException(
-        "reading empty records might cause write skew anomaly so aborting the transaction for safety",
+        "Reading empty records might cause write skew anomaly so aborting the transaction for safety",
         id);
   }
 
   private void throwExceptionDueToAntiDependency() throws ValidationConflictException {
-    throw new ValidationConflictException("anti-dependency found. Aborting the transaction", id);
+    throw new ValidationConflictException("Anti-dependency found. Aborting the transaction", id);
   }
 
   private boolean isExtraReadEnabled() {

@@ -101,7 +101,7 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException {
-    throw new ExecutionException("dropping the user failed: " + namespace, e);
+    throw new ExecutionException("Dropping the user failed: " + namespace, e);
   }
 
   @Override
@@ -215,7 +215,7 @@ public class RdbEngineOracle implements RdbEngineStrategy {
         if (columnSize > 15) {
           throw new IllegalArgumentException(
               String.format(
-                  "data type %s is unsupported: %s", numericTypeDescription, columnDescription));
+                  "Data type %s is unsupported: %s", numericTypeDescription, columnDescription));
         }
         if (digits == 0) {
           logger.info(
@@ -235,7 +235,7 @@ public class RdbEngineOracle implements RdbEngineStrategy {
         if (columnSize > 53) {
           throw new IllegalArgumentException(
               String.format(
-                  "data type %s is unsupported: %s", numericTypeDescription, columnDescription));
+                  "Data type %s is unsupported: %s", numericTypeDescription, columnDescription));
         }
         if (columnSize < 53) {
           logger.info(
@@ -274,7 +274,7 @@ public class RdbEngineOracle implements RdbEngineStrategy {
         return DataType.BLOB;
       default:
         throw new IllegalArgumentException(
-            String.format("data type %s is unsupported: %s", typeName, columnDescription));
+            String.format("Data type %s is unsupported: %s", typeName, columnDescription));
     }
   }
 

@@ -22,7 +22,7 @@ public class Right<L, R> extends Either<L, R> {
   @Nullable
   @Override
   public L getLeft() {
-    throw new IllegalStateException("no left");
+    throw new IllegalStateException("No left");
   }
 
   @Nullable
