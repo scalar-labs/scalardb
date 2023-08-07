@@ -45,7 +45,7 @@ public class CosmosConfig {
               + TABLE_METADATA_DATABASE
               + "\" is deprecated and will be removed in 5.0.0. Please use \""
               + METADATA_DATABASE
-              + "\" instead.");
+              + "\" instead");
       metadataDatabase = getString(databaseConfig.getProperties(), TABLE_METADATA_DATABASE, null);
     } else {
       metadataDatabase = getString(databaseConfig.getProperties(), METADATA_DATABASE, null);

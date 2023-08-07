@@ -76,7 +76,6 @@ Create/Delete schemas in the storage defined in the config file
                       The replication strategy, must be SimpleStrategy or
                         NetworkTopologyStrategy (supported in Cassandra)
       --ru=<ru>       Base resource unit (supported in DynamoDB, Cosmos DB)
-
 ```
 
 For Cosmos DB for NoSQL (Deprecated. Please use the command using a config file instead):

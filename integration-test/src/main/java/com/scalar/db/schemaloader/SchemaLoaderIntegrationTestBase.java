@@ -267,10 +267,6 @@ public abstract class SchemaLoaderIntegrationTestBase {
         .build();
   }
 
-  protected List<String> getCommandArgsForUpgrade(Path configFilePath) {
-    return ImmutableList.of("--config", configFilePath.toString(), "--upgrade");
-  }
-
   @AfterAll
   public void afterAll() throws Exception {
     dropTablesIfExist();

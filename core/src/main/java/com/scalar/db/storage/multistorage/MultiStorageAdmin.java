@@ -215,7 +215,7 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
     // For example, if the storages contain the following namespaces :
     // - mysql : mysqlStorageAdmin.getNamespaceNames() = [ns1, ns2]
     // - cassandra : cassandraStorageAdmin.getNamespaceNames() = [ns3]
-    // - cosmos : cosmosStrorageAdmin.getNamespaceNames() = [ns4, ns5]
+    // - cosmos : cosmosStorageAdmin.getNamespaceNames() = [ns4, ns5]
     // And the default storage is cassandra :
     // - scalar.db.multi_storage.default_storage=cosmos
     // And the namespace mapping set in the configuration is :
@@ -231,17 +231,17 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
     //     => returned
     // - ns4 and ns5 are in the default storage (cosmos)
     //     => returned
-    Set<String> namespaceNames = new HashSet<>();
-    for (DistributedStorageAdmin admin : admins) {
+    Set<String> namespaceNames = new HashSet<>(defaultAdmin.getNamespaceNames());
+
+    Set<DistributedStorageAdmin> adminsWithoutDefaultAdmin =
+        new HashSet<>(namespaceAdminMap.values());
+    adminsWithoutDefaultAdmin.remove(defaultAdmin);
+    for (DistributedStorageAdmin admin : adminsWithoutDefaultAdmin) {
       Set<String> existingNamespaces = admin.getNamespaceNames();
-      if (admin.equals(defaultAdmin)) {
-        namespaceNames.addAll(existingNamespaces);
-      } else {
-        // Filter out namespace not in the mapping
-        for (String existingNamespace : existingNamespaces) {
-          if (admin.equals(namespaceAdminMap.get(existingNamespace))) {
-            namespaceNames.add(existingNamespace);
-          }
+      // Filter out namespace not in the mapping
+      for (String existingNamespace : existingNamespaces) {
+        if (admin.equals(namespaceAdminMap.get(existingNamespace))) {
+          namespaceNames.add(existingNamespace);
         }
       }
     }
