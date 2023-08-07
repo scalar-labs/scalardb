@@ -49,14 +49,14 @@ The following describes the configurations available for each storage.
 
 - For Cassandra, the following configurations are available:
 
-| Name                                     | Description                                                           | Default    |
-|------------------------------------------|-----------------------------------------------------------------------|------------|
-| `scalar.db.storage`                      | `cassandra` must be specified.                                        | -          |
-| `scalar.db.contact_points`               | Comma-separated contact points.                                       |            |
-| `scalar.db.contact_port`                 | Port number for all the contact points.                               |            |
-| `scalar.db.username`                     | Username to access the database.                                      |            |
-| `scalar.db.password`                     | Password to access the database.                                      |            |
-| `scalar.db.cassandra.metadata.keyspaces` | Keyspace name for the namespace and table metadata used for ScalarDB. | `scalardb` |
+| Name                                    | Description                                                           | Default    |
+|-----------------------------------------|-----------------------------------------------------------------------|------------|
+| `scalar.db.storage`                     | `cassandra` must be specified.                                        | -          |
+| `scalar.db.contact_points`              | Comma-separated contact points.                                       |            |
+| `scalar.db.contact_port`                | Port number for all the contact points.                               |            |
+| `scalar.db.username`                    | Username to access the database.                                      |            |
+| `scalar.db.password`                    | Password to access the database.                                      |            |
+| `scalar.db.cassandra.metadata.keyspace` | Keyspace name for the namespace and table metadata used for ScalarDB. | `scalardb` |
 
 - For Cosmos DB for NoSQL, the following configurations are available:
 
