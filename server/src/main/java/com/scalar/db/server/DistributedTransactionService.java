@@ -338,7 +338,7 @@ public class DistributedTransactionService
 
     @Override
     public void onError(Throwable t) {
-      logger.error("An error received", t);
+      logger.error("An error was received", t);
       cleanUp();
     }
 
