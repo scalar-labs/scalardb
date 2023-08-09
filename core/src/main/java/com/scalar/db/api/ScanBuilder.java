@@ -361,6 +361,18 @@ public class ScanBuilder {
       return new BuildableScanAllWithOngoingWhereOr(this, andConditionSet);
     }
 
+    @Override
+    public BuildableScanAllWithOngoingWhereAnd whereAnd(Set<OrConditionSet> orConditionSets) {
+      checkNotNull(orConditionSets);
+      return new BuildableScanAllWithOngoingWhereAnd(this, orConditionSets);
+    }
+
+    @Override
+    public BuildableScanAllWithOngoingWhereOr whereOr(Set<AndConditionSet> andConditionSets) {
+      checkNotNull(andConditionSets);
+      return new BuildableScanAllWithOngoingWhereOr(this, andConditionSets);
+    }
+
     public Scan build() {
       Scan scan = new ScanAll();
       scan.forNamespace(namespaceName).forTable(tableName).withLimit(limit);
@@ -436,6 +448,13 @@ public class ScanBuilder {
       disjunctions.add(orConditionSet.getConditions());
     }
 
+    private BuildableScanAllWithOngoingWhereAnd(
+        BuildableScanAll buildable, Set<OrConditionSet> orConditionSets) {
+      super(buildable);
+      disjunctions.addAll(
+          orConditionSets.stream().map(OrConditionSet::getConditions).collect(Collectors.toSet()));
+    }
+
     @Override
     public BuildableScanAllWithOngoingWhereAnd and(ConditionalExpression condition) {
       checkNotNull(condition);
@@ -462,6 +481,15 @@ public class ScanBuilder {
         BuildableScanAll buildable, AndConditionSet andConditionSet) {
       super(buildable);
       conjunctions.add(andConditionSet.getConditions());
+    }
+
+    private BuildableScanAllWithOngoingWhereOr(
+        BuildableScanAll buildable, Set<AndConditionSet> andConditionSets) {
+      super(buildable);
+      conjunctions.addAll(
+          andConditionSets.stream()
+              .map(AndConditionSet::getConditions)
+              .collect(Collectors.toSet()));
     }
 
     @Override
@@ -769,6 +797,24 @@ public class ScanBuilder {
       checkConditionsEmpty();
       checkNotNull(andConditionSet);
       return new BuildableScanAllFromExistingWithOngoingWhereOr(this, andConditionSet);
+    }
+
+    @Override
+    public BuildableScanAllFromExistingWithOngoingWhereAnd whereAnd(
+        Set<OrConditionSet> orConditionSets) {
+      checkScanAll();
+      checkConditionsEmpty();
+      checkNotNull(orConditionSets);
+      return new BuildableScanAllFromExistingWithOngoingWhereAnd(this, orConditionSets);
+    }
+
+    @Override
+    public BuildableScanAllFromExistingWithOngoingWhereOr whereOr(
+        Set<AndConditionSet> andConditionSets) {
+      checkScanAll();
+      checkConditionsEmpty();
+      checkNotNull(andConditionSets);
+      return new BuildableScanAllFromExistingWithOngoingWhereOr(this, andConditionSets);
     }
 
     @Override
@@ -1092,6 +1138,15 @@ public class ScanBuilder {
       conjunctions.add(andConditionSet.getConditions());
     }
 
+    private BuildableScanAllFromExistingWithOngoingWhereOr(
+        BuildableScanOrScanAllFromExisting buildable, Set<AndConditionSet> andConditionSets) {
+      super(buildable);
+      conjunctions.addAll(
+          andConditionSets.stream()
+              .map(AndConditionSet::getConditions)
+              .collect(Collectors.toSet()));
+    }
+
     @Override
     public BuildableScanAllFromExistingWithOngoingWhereOr or(ConditionalExpression condition) {
       checkNotNull(condition);
@@ -1120,6 +1175,13 @@ public class ScanBuilder {
         BuildableScanOrScanAllFromExisting buildable, OrConditionSet orConditionSet) {
       super(buildable);
       disjunctions.add(orConditionSet.getConditions());
+    }
+
+    private BuildableScanAllFromExistingWithOngoingWhereAnd(
+        BuildableScanOrScanAllFromExisting buildable, Set<OrConditionSet> orConditionSets) {
+      super(buildable);
+      disjunctions.addAll(
+          orConditionSets.stream().map(OrConditionSet::getConditions).collect(Collectors.toSet()));
     }
 
     @Override
