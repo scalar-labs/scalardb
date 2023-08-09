@@ -1,4 +1,4 @@
-# Getting Started with ScalarDB
+# Configure ScalarDB for Your Database
 
 This getting started tutorial explains how to configure your preferred database in ScalarDB and set up a basic electronic money application.
 
