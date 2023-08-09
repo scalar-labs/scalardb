@@ -4,6 +4,7 @@ import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Set;
 import javax.annotation.Nullable;
 
 /**
@@ -416,20 +417,36 @@ class OperationBuilder {
     /**
      * Appends the specified set of or-wise conditions.
      *
-     * @param conditions a set of conditions
+     * @param orConditionSet a set of or-wise conditions
      * @return the operation builder
      */
-    T where(ScanBuilder.OrConditionSet conditions);
+    T where(ScanBuilder.OrConditionSet orConditionSet);
+
+    /**
+     * Appends the specified sets of or-wise condition set.
+     *
+     * @param orConditionSets sets of or-wise condition set
+     * @return the operation builder
+     */
+    T whereAnd(Set<ScanBuilder.OrConditionSet> orConditionSets);
   }
 
   interface WhereOr<T> {
     /**
      * Appends the specified set of and-wise conditions.
      *
-     * @param conditions a set of conditions
+     * @param andConditionSet a set of and-wise conditions
      * @return the operation builder
      */
-    T where(ScanBuilder.AndConditionSet conditions);
+    T where(ScanBuilder.AndConditionSet andConditionSet);
+
+    /**
+     * Appends the specified sets of and-wise condition set.
+     *
+     * @param andConditionSets sets of and-wise condition set
+     * @return the operation builder
+     */
+    T whereOr(Set<ScanBuilder.AndConditionSet> andConditionSets);
   }
 
   interface And<T> {
