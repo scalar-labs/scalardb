@@ -272,7 +272,7 @@ public class SchemaOperator implements AutoCloseable {
           alterTable(namespace, table, isTransactional, metadataAlteration, options);
         } else {
           logger.info(
-              String.format("No alterations were detected for the table %s.%s.", namespace, table));
+              String.format("No alterations were detected for the table %s.%s", namespace, table));
         }
       } catch (ExecutionException e) {
         throw new SchemaLoaderException(
@@ -373,7 +373,7 @@ public class SchemaOperator implements AutoCloseable {
         } else {
           storageAdmin.get().importTable(namespace, table);
         }
-        logger.info("Importing the table {} in the namespace {} succeeded.", table, namespace);
+        logger.info("Importing the table {} in the namespace {} succeeded", table, namespace);
       } catch (ExecutionException e) {
         throw new SchemaLoaderException(
             String.format("Importing the table %s.%s failed", namespace, table), e);
