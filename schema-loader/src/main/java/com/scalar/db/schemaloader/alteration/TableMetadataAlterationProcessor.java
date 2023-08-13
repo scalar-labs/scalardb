@@ -75,7 +75,7 @@ public class TableMetadataAlterationProcessor {
       if (!oldMetadata.getColumnDataType(column).equals(newMetadata.getColumnDataType(column))) {
         throw new UnsupportedOperationException(
             String.format(
-                "Uhe data type of the column %s of the table %s.%s was modified, altering it is not supported",
+                "The data type of the column %s of the table %s.%s was modified, altering it is not supported",
                 column, namespace, table));
       }
     }
