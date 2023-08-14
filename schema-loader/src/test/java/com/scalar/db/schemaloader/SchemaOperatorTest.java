@@ -441,6 +441,20 @@ public class SchemaOperatorTest {
   }
 
   @Test
+  public void constructor_ShouldNotCreateAdmins() {
+    // Arrange
+    StorageFactory storageFactory = mock(StorageFactory.class);
+    TransactionFactory transactionFactory = mock(TransactionFactory.class);
+
+    // Act
+    operator = new SchemaOperator(storageFactory, transactionFactory);
+
+    // Assert
+    verify(storageFactory, never()).getStorageAdmin();
+    verify(transactionFactory, never()).getTransactionAdmin();
+  }
+
+  @Test
   public void createTables_ForNonTransactionTable_ShouldCreateBothAdmins()
       throws SchemaLoaderException {
     // Arrange

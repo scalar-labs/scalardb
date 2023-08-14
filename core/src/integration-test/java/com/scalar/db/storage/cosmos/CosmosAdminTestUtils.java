@@ -1,4 +1,4 @@
-package com.scalar.db.util;
+package com.scalar.db.storage.cosmos;
 
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
@@ -13,10 +13,7 @@ import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.util.CosmosPagedIterable;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.cosmos.CosmosAdmin;
-import com.scalar.db.storage.cosmos.CosmosConfig;
-import com.scalar.db.storage.cosmos.CosmosTableMetadata;
-import com.scalar.db.storage.cosmos.Record;
+import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 
 public class CosmosAdminTestUtils extends AdminTestUtils {

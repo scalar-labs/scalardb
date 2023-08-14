@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import com.scalar.db.api.DistributedStorageAdminRepairTableIntegrationTestBase;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.util.AdminTestUtils;
-import com.scalar.db.util.CosmosAdminTestUtils;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;

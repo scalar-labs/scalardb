@@ -19,14 +19,6 @@ public class JdbcTransactionAdminIntegrationTest
     return properties;
   }
 
-  // Since SQLite doesn't have persistent namespaces, some behaviors around the namespace are
-  // different from the other adapters. So disable several tests that check such behaviors.
-
-  @SuppressWarnings("unused")
-  private boolean isSqlite() {
-    return JdbcEnv.isSqlite();
-  }
-
   // Disable several tests for the coordinator tables since JDBC transaction doesn't have
   // coordinator tables
   @Disabled("JDBC transaction doesn't have coordinator tables")

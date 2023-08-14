@@ -2,7 +2,6 @@ package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
-import com.scalar.db.util.CosmosAdminTestUtils;
 import java.util.Optional;
 import java.util.Properties;
 

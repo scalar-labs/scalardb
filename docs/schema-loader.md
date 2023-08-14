@@ -498,7 +498,7 @@ public class SchemaLoaderSample {
 
     Map<String, String> tableReparationOptions = new HashMap<>();
     indexCreationOptions.put(DynamoAdmin.NO_BACKUP, "true");
-    
+
     // Create tables
     SchemaLoader.load(configFilePath, schemaFilePath, tableCreationOptions, createCoordinatorTables);
 
@@ -507,7 +507,7 @@ public class SchemaLoaderSample {
 
     // Repair tables
     SchemaLoader.repairTables(configFilePath, schemaFilePath, tableReparationOptions, repairCoordinatorTables);
-    
+
     // Delete tables
     SchemaLoader.unload(configFilePath, schemaFilePath, deleteCoordinatorTables);
 

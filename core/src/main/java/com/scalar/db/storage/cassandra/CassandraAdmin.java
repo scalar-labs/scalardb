@@ -40,8 +40,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public static final String COMPACTION_STRATEGY = "compaction-strategy";
   public static final String REPLICATION_FACTOR = "replication-factor";
   public static final String METADATA_KEYSPACE = "scalardb";
-  public static final String KEYSPACES_TABLE = "keyspaces";
-  public static final String KEYSPACES_NAME_COL = "name";
+  public static final String NAMESPACES_TABLE = "namespaces";
+  public static final String NAMESPACES_NAME_COL = "name";
   @VisibleForTesting static final String INDEX_NAME_PREFIX = "index";
   private final ClusterManager clusterManager;
   private final String metadataKeyspace;
@@ -71,8 +71,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     try {
       createKeyspace(namespace, options, false);
       createKeyspace(metadataKeyspace, options, true);
-      createKeyspacesTableIfNotExists();
-      insertIntoKeyspacesTable(namespace);
+      createNamespacesTableIfNotExists();
+      insertIntoNamespacesTable(namespace);
     } catch (IllegalArgumentException e) {
       // thrown by ReplicationStrategy.fromString() when the replication strategy is unknown
       throw e;
@@ -104,11 +104,11 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     clusterManager.getSession().execute(queryString);
   }
 
-  private void insertIntoKeyspacesTable(String keyspace) {
+  private void insertIntoNamespacesTable(String keyspace) {
     String insertQuery =
         QueryBuilder.insertInto(
-                quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
-            .value(KEYSPACES_NAME_COL, quoteIfNecessary(keyspace))
+                quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
+            .value(NAMESPACES_NAME_COL, quoteIfNecessary(keyspace))
             .toString();
     clusterManager.getSession().execute(insertQuery);
   }
@@ -130,8 +130,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public void dropNamespace(String namespace) throws ExecutionException {
     try {
       dropKeyspace(namespace);
-      deleteFromKeyspacesTable(namespace);
-      dropKeyspacesTableIfEmpty();
+      deleteFromNamespacesTable(namespace);
+      dropNamespacesTableIfEmpty();
     } catch (RuntimeException e) {
       throw new ExecutionException(String.format("dropping the %s keyspace failed", namespace), e);
     }
@@ -143,11 +143,11 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     clusterManager.getSession().execute(dropKeyspaceQuery);
   }
 
-  private void deleteFromKeyspacesTable(String keyspace) {
+  private void deleteFromNamespacesTable(String keyspace) {
     String deleteQuery =
         QueryBuilder.delete()
-            .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
-            .where(QueryBuilder.eq(KEYSPACES_NAME_COL, quoteIfNecessary(keyspace)))
+            .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
+            .where(QueryBuilder.eq(NAMESPACES_NAME_COL, quoteIfNecessary(keyspace)))
             .toString();
     clusterManager.getSession().execute(deleteQuery);
   }
@@ -286,14 +286,14 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
     try {
-      if (clusterManager.getMetadata(metadataKeyspace, KEYSPACES_TABLE) == null) {
+      if (clusterManager.getMetadata(metadataKeyspace, NAMESPACES_TABLE) == null) {
         return false;
       }
 
       String query =
-          QueryBuilder.select(KEYSPACES_NAME_COL)
-              .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
-              .where(QueryBuilder.eq(KEYSPACES_NAME_COL, quoteIfNecessary(namespace)))
+          QueryBuilder.select(NAMESPACES_NAME_COL)
+              .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
+              .where(QueryBuilder.eq(NAMESPACES_NAME_COL, quoteIfNecessary(namespace)))
               .toString();
       ResultSet resultSet = clusterManager.getSession().execute(query);
 
@@ -340,17 +340,17 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     try {
-      if (clusterManager.getMetadata(metadataKeyspace, KEYSPACES_TABLE) == null) {
+      if (clusterManager.getMetadata(metadataKeyspace, NAMESPACES_TABLE) == null) {
         return Collections.emptySet();
       }
 
       Set<String> keyspaceNames = new HashSet<>();
       String selectQuery =
-          QueryBuilder.select(KEYSPACES_NAME_COL)
-              .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
+          QueryBuilder.select(NAMESPACES_NAME_COL)
+              .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
               .getQueryString();
       for (Row row : clusterManager.getSession().execute(selectQuery).all()) {
-        keyspaceNames.add(row.getString(KEYSPACES_NAME_COL));
+        keyspaceNames.add(row.getString(NAMESPACES_NAME_COL));
       }
 
       return keyspaceNames;
@@ -359,20 +359,20 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void createKeyspacesTableIfNotExists() {
+  private void createNamespacesTableIfNotExists() {
     String createTableQuery =
         SchemaBuilder.createTable(
-                quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
+                quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
             .ifNotExists()
-            .addPartitionKey(KEYSPACES_NAME_COL, com.datastax.driver.core.DataType.text())
+            .addPartitionKey(NAMESPACES_NAME_COL, com.datastax.driver.core.DataType.text())
             .getQueryString();
     clusterManager.getSession().execute(createTableQuery);
   }
 
-  private void dropKeyspacesTableIfEmpty() {
+  private void dropNamespacesTableIfEmpty() {
     String selectQuery =
-        QueryBuilder.select(KEYSPACES_NAME_COL)
-            .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(KEYSPACES_TABLE))
+        QueryBuilder.select(NAMESPACES_NAME_COL)
+            .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
             .limit(1)
             .getQueryString();
     boolean isKeyspacesTableEmpty = clusterManager.getSession().execute(selectQuery).one() == null;

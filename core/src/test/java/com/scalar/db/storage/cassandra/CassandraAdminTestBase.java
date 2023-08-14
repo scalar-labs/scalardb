@@ -229,10 +229,10 @@ public abstract class CassandraAdminTestBase {
     String query =
         SchemaBuilder.createTable(
                 quoteIfNecessary(metadataKeyspaceName),
-                quoteIfNecessary(CassandraAdmin.KEYSPACES_TABLE))
+                quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
             .ifNotExists()
             .addPartitionKey(
-                CassandraAdmin.KEYSPACES_NAME_COL, com.datastax.driver.core.DataType.text())
+                CassandraAdmin.NAMESPACES_NAME_COL, com.datastax.driver.core.DataType.text())
             .getQueryString();
     verify(cassandraSession).execute(query);
   }
@@ -241,8 +241,8 @@ public abstract class CassandraAdminTestBase {
     String query =
         QueryBuilder.insertInto(
                 quoteIfNecessary(metadataKeyspaceName),
-                quoteIfNecessary(CassandraAdmin.KEYSPACES_TABLE))
-            .value(CassandraAdmin.KEYSPACES_NAME_COL, quoteIfNecessary(keyspace))
+                quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
+            .value(CassandraAdmin.NAMESPACES_NAME_COL, quoteIfNecessary(keyspace))
             .toString();
     verify(cassandraSession).execute(query);
   }
@@ -520,18 +520,18 @@ public abstract class CassandraAdminTestBase {
         QueryBuilder.delete()
             .from(
                 quoteIfNecessary(metadataKeyspaceName),
-                quoteIfNecessary(CassandraAdmin.KEYSPACES_TABLE))
-            .where(QueryBuilder.eq(CassandraAdmin.KEYSPACES_NAME_COL, quoteIfNecessary(keyspace)))
+                quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
+            .where(QueryBuilder.eq(CassandraAdmin.NAMESPACES_NAME_COL, quoteIfNecessary(keyspace)))
             .toString();
     verify(cassandraSession).execute(query);
   }
 
   private void verifySelectOneFromKeyspacesTableQuery() {
     String query =
-        QueryBuilder.select(CassandraAdmin.KEYSPACES_NAME_COL)
+        QueryBuilder.select(CassandraAdmin.NAMESPACES_NAME_COL)
             .from(
                 quoteIfNecessary(metadataKeyspaceName),
-                quoteIfNecessary(CassandraAdmin.KEYSPACES_TABLE))
+                quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
             .limit(1)
             .getQueryString();
     verify(cassandraSession).execute(query);
@@ -613,13 +613,13 @@ public abstract class CassandraAdminTestBase {
     // Assert
     assertThat(cassandraAdmin.namespaceExists(namespace)).isTrue();
 
-    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.KEYSPACES_TABLE);
+    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.NAMESPACES_TABLE);
     String query =
-        QueryBuilder.select(CassandraAdmin.KEYSPACES_NAME_COL)
+        QueryBuilder.select(CassandraAdmin.NAMESPACES_NAME_COL)
             .from(
                 quoteIfNecessary(metadataKeyspaceName),
-                quoteIfNecessary(CassandraAdmin.KEYSPACES_TABLE))
-            .where(QueryBuilder.eq(CassandraAdmin.KEYSPACES_NAME_COL, quoteIfNecessary(namespace)))
+                quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
+            .where(QueryBuilder.eq(CassandraAdmin.NAMESPACES_NAME_COL, quoteIfNecessary(namespace)))
             .toString();
     verify(cassandraSession).execute(query);
   }
@@ -639,13 +639,13 @@ public abstract class CassandraAdminTestBase {
     // Assert
     assertThat(cassandraAdmin.namespaceExists(namespace)).isFalse();
 
-    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.KEYSPACES_TABLE);
+    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.NAMESPACES_TABLE);
     String query =
-        QueryBuilder.select(CassandraAdmin.KEYSPACES_NAME_COL)
+        QueryBuilder.select(CassandraAdmin.NAMESPACES_NAME_COL)
             .from(
                 quoteIfNecessary(metadataKeyspaceName),
-                quoteIfNecessary(CassandraAdmin.KEYSPACES_TABLE))
-            .where(QueryBuilder.eq(CassandraAdmin.KEYSPACES_NAME_COL, quoteIfNecessary(namespace)))
+                quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
+            .where(QueryBuilder.eq(CassandraAdmin.NAMESPACES_NAME_COL, quoteIfNecessary(namespace)))
             .toString();
     verify(cassandraSession).execute(query);
   }
@@ -661,7 +661,7 @@ public abstract class CassandraAdminTestBase {
     // Assert
     assertThat(cassandraAdmin.namespaceExists(namespace)).isFalse();
 
-    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.KEYSPACES_TABLE);
+    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.NAMESPACES_TABLE);
   }
 
   @Test
@@ -786,7 +786,7 @@ public abstract class CassandraAdminTestBase {
 
     // Assert
     assertThat(actualKeyspaceNames).isEmpty();
-    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.KEYSPACES_TABLE);
+    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.NAMESPACES_TABLE);
   }
 
   @Test
@@ -798,8 +798,8 @@ public abstract class CassandraAdminTestBase {
     ResultSet resultSet = mock(ResultSet.class);
     Row row1 = mock(Row.class);
     Row row2 = mock(Row.class);
-    when(row1.getString(CassandraAdmin.KEYSPACES_NAME_COL)).thenReturn("ns1");
-    when(row2.getString(CassandraAdmin.KEYSPACES_NAME_COL)).thenReturn("ns2");
+    when(row1.getString(CassandraAdmin.NAMESPACES_NAME_COL)).thenReturn("ns1");
+    when(row2.getString(CassandraAdmin.NAMESPACES_NAME_COL)).thenReturn("ns2");
     when(resultSet.all()).thenReturn(Arrays.asList(row1, row2));
     when(cassandraSession.execute(anyString())).thenReturn(resultSet);
 
@@ -808,12 +808,12 @@ public abstract class CassandraAdminTestBase {
 
     // Assert
     assertThat(actualKeyspaceNames).containsOnly("ns1", "ns2");
-    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.KEYSPACES_TABLE);
+    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.NAMESPACES_TABLE);
     String selectQuery =
-        QueryBuilder.select(CassandraAdmin.KEYSPACES_NAME_COL)
+        QueryBuilder.select(CassandraAdmin.NAMESPACES_NAME_COL)
             .from(
                 quoteIfNecessary(metadataKeyspaceName),
-                quoteIfNecessary(CassandraAdmin.KEYSPACES_TABLE))
+                quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
             .getQueryString();
     verify(cassandraSession).execute(selectQuery);
   }

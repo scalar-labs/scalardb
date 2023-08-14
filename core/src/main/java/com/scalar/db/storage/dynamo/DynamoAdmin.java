@@ -224,13 +224,13 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     try {
       boolean noBackup = Boolean.parseBoolean(options.getOrDefault(NO_BACKUP, DEFAULT_NO_BACKUP));
       createNamespacesTableIfNotExists(noBackup);
-      insertIntoNamespaceTable(namespace);
+      insertIntoNamespacesTable(namespace);
     } catch (ExecutionException e) {
       throw new ExecutionException("Creating the namespace " + namespace + " failed", e);
     }
   }
 
-  private void insertIntoNamespaceTable(Namespace namespace) throws ExecutionException {
+  private void insertIntoNamespacesTable(Namespace namespace) throws ExecutionException {
     Map<String, AttributeValue> itemValues = new HashMap<>();
     itemValues.put(NAMESPACES_ATTR_NAME, AttributeValue.builder().s(namespace.prefixed()).build());
     try {
@@ -773,8 +773,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public void dropNamespace(String nonPrefixedNamespace) throws ExecutionException {
     Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
     try {
-      deleteFromNamespaceTable(namespace);
-      dropNamespaceTableIfEmpty();
+      deleteFromNamespacesTable(namespace);
+      dropNamespacesTableIfEmpty();
     } catch (Exception e) {
       throw new ExecutionException(
           "Dropping the namespace "
@@ -784,7 +784,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void dropNamespaceTableIfEmpty() throws ExecutionException {
+  private void dropNamespacesTableIfEmpty() throws ExecutionException {
     String NamespaceTableFullName =
         ScalarDbUtils.getFullTableName(metadataNamespace, NAMESPACES_TABLE);
     ScanResponse scanResponse =
@@ -795,7 +795,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void deleteFromNamespaceTable(Namespace namespace) throws ExecutionException {
+  private void deleteFromNamespacesTable(Namespace namespace) throws ExecutionException {
     Map<String, AttributeValue> keyToDelete = new HashMap<>();
     keyToDelete.put(NAMESPACES_ATTR_NAME, AttributeValue.builder().s(namespace.prefixed()).build());
     String namespacesTableFullName =
