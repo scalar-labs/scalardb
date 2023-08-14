@@ -199,9 +199,9 @@ class RdbEngineMysql implements RdbEngineStrategy {
   public String getDataTypeForKey(DataType dataType) {
     switch (dataType) {
       case TEXT:
-        return "VARCHAR(64)";
+        return "VARCHAR(128)";
       case BLOB:
-        return "VARBINARY(64)";
+        return "VARBINARY(128)";
       default:
         return null;
     }

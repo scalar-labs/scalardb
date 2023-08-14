@@ -1,13 +1,18 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.DataType;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.KeyManipulator;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public final class ConsensusCommitUtils {
@@ -231,5 +236,89 @@ public final class ConsensusCommitUtils {
       return false;
     }
     return !isBeforeImageColumn(columnName, tableMetadata);
+  }
+
+  ////////////// For group commit >>>>>>>>>>>>>>>>>
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED =
+      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_ENABLED";
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES =
+      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES";
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS =
+      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS";
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS =
+      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS";
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS =
+      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS";
+
+  // FIXME: GroupCommitter3 should be abstract
+  @VisibleForTesting
+  public static Optional<GroupCommitter3<String, Snapshot>> prepareGroupCommitter() {
+    // TODO: Make this configurable
+    // TODO: Take care of lazy recovery
+    if (!"true".equalsIgnoreCase(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED))) {
+      return Optional.empty();
+    }
+
+    int groupCommitNumOfRetentionValues = 32;
+    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES) != null) {
+      groupCommitNumOfRetentionValues =
+          Integer.parseInt(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES));
+    }
+
+    int groupCommitSizeFixExpirationInMillis = 200;
+    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS) != null) {
+      groupCommitSizeFixExpirationInMillis =
+          Integer.parseInt(
+              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS));
+    }
+
+    int groupCommitTimeoutExpirationInMillis = 2000;
+    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS) != null) {
+      groupCommitTimeoutExpirationInMillis =
+          Integer.parseInt(
+              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS));
+    }
+
+    int groupCommitExpirationCheckIntervalInMillis = 20;
+    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS)
+        != null) {
+      groupCommitExpirationCheckIntervalInMillis =
+          Integer.parseInt(
+              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS));
+    }
+
+    return Optional.of(
+        new GroupCommitter3<>(
+            "coordinator-writer",
+            groupCommitSizeFixExpirationInMillis,
+            groupCommitTimeoutExpirationInMillis,
+            groupCommitNumOfRetentionValues,
+            groupCommitExpirationCheckIntervalInMillis,
+            new KeyManipulator<String>() {
+              @Override
+              public String createParentKey() {
+                return UUID.randomUUID().toString();
+              }
+
+              @Override
+              public String createFullKey(String parentKey, String childKey) {
+                return parentKey + ":" + childKey;
+              }
+
+              @Override
+              public boolean isFullKey(String fullKey) {
+                String[] parts = fullKey.split(":");
+                return parts.length == 2;
+              }
+
+              @Override
+              public Keys<String> fromFullKey(String fullKey) {
+                String[] parts = fullKey.split(":");
+                if (parts.length != 2) {
+                  throw new IllegalArgumentException("Invalid full key. key:" + fullKey);
+                }
+                return new Keys<>(parts[0], parts[1]);
+              }
+            }));
   }
 }

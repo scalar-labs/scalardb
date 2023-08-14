@@ -184,7 +184,7 @@ public class Snapshot {
       }
       return metadata.getTableMetadata();
     } catch (ExecutionException e) {
-      throw new CrudException(e.getMessage(), e, id);
+      throw new CrudException(e.getMessage(), e, getId());
     }
   }
 
@@ -520,12 +520,12 @@ public class Snapshot {
 
   private void throwExceptionDueToPotentialAntiDependency() throws PreparationConflictException {
     throw new PreparationConflictException(
-        CoreError.CONSENSUS_COMMIT_READING_EMPTY_RECORDS_IN_EXTRA_WRITE.buildMessage(), id);
+        CoreError.CONSENSUS_COMMIT_READING_EMPTY_RECORDS_IN_EXTRA_WRITE.buildMessage(), getId());
   }
 
   private void throwExceptionDueToAntiDependency() throws ValidationConflictException {
     throw new ValidationConflictException(
-        CoreError.CONSENSUS_COMMIT_ANTI_DEPENDENCY_FOUND_IN_EXTRA_READ.buildMessage(), id);
+        CoreError.CONSENSUS_COMMIT_ANTI_DEPENDENCY_FOUND_IN_EXTRA_READ.buildMessage(), getId());
   }
 
   private boolean isExtraReadEnabled() {

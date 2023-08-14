@@ -18,6 +18,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,7 @@ public class ConsensusCommitManagerTest {
   @Mock private ParallelExecutor parallelExecutor;
   @Mock private RecoveryHandler recovery;
   @Mock private CommitHandler commit;
+  @Mock private GroupCommitter3 groupCommitter;
 
   private ConsensusCommitManager manager;
 
@@ -51,7 +53,8 @@ public class ConsensusCommitManagerTest {
             coordinator,
             parallelExecutor,
             recovery,
-            commit);
+            commit,
+            groupCommitter);
 
     when(consensusCommitConfig.getIsolation()).thenReturn(Isolation.SNAPSHOT);
     when(consensusCommitConfig.getSerializableStrategy())

@@ -206,9 +206,9 @@ class RdbEngineOracle implements RdbEngineStrategy {
   public String getDataTypeForKey(DataType dataType) {
     switch (dataType) {
       case TEXT:
-        return "VARCHAR2(64)";
+        return "VARCHAR2(128)";
       case BLOB:
-        return "RAW(64)";
+        return "RAW(128)";
       default:
         return null;
     }

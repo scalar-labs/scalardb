@@ -1,6 +1,8 @@
 plugins {
     id 'com.github.spotbugs-base' version "${spotbugsPluginVersion}"
     id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
+    // TODO: This is for replication test. Remove this.
+    id 'application'
 }
 
 sourceSets {
@@ -82,6 +84,14 @@ configurations {
 }
 
 dependencies {
+    // TODO: Delete this.
+    // For debug in Semi-Sync Replication development
+    // `logback-classic` is too slow to output a lot of debug logs...
+    // implementation 'ch.qos.logback:logback-classic:1.3.11'
+    implementation 'org.slf4j:slf4j-simple:2.0.7'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.3'
+
+
     implementation project(':rpc')
     implementation "com.google.guava:guava:${guavaVersion}"
     implementation "com.google.inject:guice:${guiceVersion}"
@@ -231,4 +241,21 @@ if (!project.gradle.startParameter.taskNames.isEmpty() &&
         (project.gradle.startParameter.taskNames[0].endsWith('publish') ||
                 project.gradle.startParameter.taskNames[0].endsWith('publishToMavenLocal'))) {
     apply from: 'archive.gradle'
+}
+
+// TODO: This is for replication test. Remove this.
+application {
+    mainClassName = 'com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitterBench'
+    // mainClassName = 'com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitterBenchWithReentrantLock'
+    applicationDefaultJvmArgs = [
+      '-Dorg.slf4j.simpleLogger.defaultLogLevel=INFO',
+      '-Dorg.slf4j.simpleLogger.showDateTime=true',
+      '-Dorg.slf4j.simpleLogger.dateTimeFormat=yyyy-MM-dd HH:mm:ss:SSS Z'
+      // '-XX:+FlightRecorder',
+      // '-XX:StartFlightRecording=duration=60s,filename=myrecording.jfr',
+      // '-XX:+UnlockDiagnosticVMOptions',
+      // '-XX:+LogCompilation',
+      // '-XX:+PrintGCDateStamps',
+      // '-Xloggc:gc.log'
+    ]
 }

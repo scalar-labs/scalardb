@@ -13,6 +13,12 @@ public class TransactionException extends Exception {
   private final boolean superuserRequired;
   @Nullable private final AuthAdmin.Privilege requiredPrivilege;
 
+  // TODO: This is only for scalardb-benchmark. Remove this later. >>>>>>>>
+  public TransactionException(String message) {
+    this(message, null, false, false, false, null);
+  }
+  // TODO: This is only for scalardb-benchmark. Remove this later. >>>>>>>>
+
   public TransactionException(String message, @Nullable String transactionId) {
     this(message, transactionId, false, false, false, null);
   }

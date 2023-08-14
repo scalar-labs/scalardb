@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.DistributedStorage;
@@ -16,7 +17,10 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextValue;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -34,6 +38,8 @@ public class Coordinator {
           .addColumn(Attribute.ID, DataType.TEXT)
           .addColumn(Attribute.STATE, DataType.INT)
           .addColumn(Attribute.CREATED_AT, DataType.BIGINT)
+          // For PoC
+          .addColumn("child_ids", DataType.TEXT)
           .addPartitionKey(Attribute.ID)
           .build();
 
@@ -60,13 +66,101 @@ public class Coordinator {
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(NAMESPACE);
   }
 
+  private static class IdForGroupCommit {
+    public final String parentId;
+    public final String childId;
+
+    public IdForGroupCommit(String parentId, String childId) {
+      this.parentId = parentId;
+      this.childId = childId;
+    }
+  }
+
+  private boolean isIdForGroupCommit(String id) {
+    // TODO: Move these logics to an expert class
+    return id.contains(":");
+  }
+
+  private IdForGroupCommit idForGroupCommit(String id) {
+    if (!isIdForGroupCommit(id)) {
+      throw new IllegalArgumentException("'id' isn't for group commit. id:" + id);
+    }
+    String[] parts = id.split(":");
+    return new IdForGroupCommit(parts[0], parts[1]);
+  }
+
   public Optional<Coordinator.State> getState(String id) throws CoordinatorException {
+    if (isIdForGroupCommit(id)) {
+      Get get = createGetWith(id);
+      Optional<State> state = get(get);
+      if (state.isPresent()) {
+        return state;
+      }
+      return getStateForGroupCommit(id);
+    }
+
     Get get = createGetWith(id);
     return get(get);
   }
 
+  public Optional<Coordinator.State> getStateForGroupCommit(String id) throws CoordinatorException {
+    IdForGroupCommit idForGroupCommit = idForGroupCommit(id);
+
+    String parentId = idForGroupCommit.parentId;
+    String childId = idForGroupCommit.childId;
+    Get get = createGetWith(parentId);
+    Optional<State> state = get(get);
+    return state.flatMap(
+        s -> {
+          if (!s.getState().equals(TransactionState.COMMITTED)) {
+            return state;
+          }
+
+          boolean isTheChildIdContained = Arrays.asList(s.childIds).contains(childId);
+          if (isTheChildIdContained) {
+            return state;
+          } else {
+            State partiallyCommittedState = state.get();
+            return Optional.of(
+                new State(
+                    partiallyCommittedState.getId(),
+                    TransactionState.ABORTED,
+                    partiallyCommittedState.getCreatedAt()));
+          }
+        });
+  }
+
   public void putState(Coordinator.State state) throws CoordinatorException {
     Put put = createPutWith(state);
+    put(put);
+  }
+
+  // For PoC
+  public void putStateForGroupCommit(
+      String parentId, Collection<String> ids, TransactionState transactionState, long createdAt)
+      throws CoordinatorException {
+    boolean isFirst = true;
+    StringBuilder sb = new StringBuilder();
+    for (String id : ids) {
+      IdForGroupCommit idForGroupCommit = idForGroupCommit(id);
+      // TODO: Verify the parentId
+      if (isFirst) {
+        isFirst = false;
+      } else {
+        sb.append(",");
+      }
+      sb.append(idForGroupCommit.childId);
+    }
+
+    Put put =
+        new Put(new Key(Attribute.toIdValue(parentId)))
+            .withValue(Attribute.toStateValue(transactionState))
+            .withValue(Attribute.toCreatedAtValue(createdAt))
+            .withValue(new TextValue("child_ids", sb.toString()))
+            .withConsistency(Consistency.LINEARIZABLE)
+            .withCondition(new PutIfNotExists())
+            .forNamespace(coordinatorNamespace)
+            .forTable(TABLE);
     put(put);
   }
 
@@ -136,12 +230,16 @@ public class Coordinator {
     private final String id;
     private final TransactionState state;
     private final long createdAt;
+    private final String[] childIds;
 
     public State(Result result) throws CoordinatorException {
       checkNotMissingRequired(result);
       id = result.getValue(Attribute.ID).get().getAsString().get();
       state = TransactionState.getInstance(result.getValue(Attribute.STATE).get().getAsInt());
       createdAt = result.getValue(Attribute.CREATED_AT).get().getAsLong();
+      // For PoC
+      Optional<String> childIdsOpt = result.getValue("child_ids").get().getAsString();
+      childIds = childIdsOpt.map(s -> s.split(",")).orElse(null);
     }
 
     public State(String id, TransactionState state) {
@@ -157,6 +255,7 @@ public class Coordinator {
       this.id = checkNotNull(id);
       this.state = checkNotNull(state);
       this.createdAt = createdAt;
+      this.childIds = new String[] {};
     }
 
     @Nonnull
@@ -171,6 +270,21 @@ public class Coordinator {
 
     public long getCreatedAt() {
       return createdAt;
+    }
+
+    public String[] childIds() {
+      return childIds;
+    }
+
+    /// FIXME: DEBUG
+    @Override
+    public String toString() {
+      return MoreObjects.toStringHelper(this)
+          .add("id", id)
+          .add("state", state)
+          .add("createdAt", createdAt)
+          .add("childIds", childIds)
+          .toString();
     }
 
     @Override

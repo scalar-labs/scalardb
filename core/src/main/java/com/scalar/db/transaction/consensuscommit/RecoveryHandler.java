@@ -93,6 +93,13 @@ public class RecoveryHandler {
     }
 
     try {
+      ///// FIXME: DEBUG LOG
+      logger.info(
+          "ABORT FROM RECOVER: result.id={}, result.partitionKey={}, selection={}",
+          result.getId(),
+          result.getPartitionKey(),
+          selection.getPartitionKey());
+      ///// FIXME: DEBUG LOG
       coordinator.putState(new Coordinator.State(result.getId(), TransactionState.ABORTED));
       rollbackRecord(selection, result);
     } catch (CoordinatorException e) {
