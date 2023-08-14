@@ -517,19 +517,6 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private boolean databaseExists(String id) throws ExecutionException {
-    try {
-      client.getDatabase(id).read();
-    } catch (RuntimeException e) {
-      if (e instanceof CosmosException
-          && ((CosmosException) e).getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
-        return false;
-      }
-      throw new ExecutionException(String.format("reading the database %s failed", id), e);
-    }
-    return true;
-  }
-
   @Override
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
     try {
@@ -624,11 +611,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     return client.getDatabase(metadataDatabase).getContainer(NAMESPACES_CONTAINER);
   }
 
-  private boolean tableMetadataContainerExists() throws RuntimeException {
+  private boolean tableMetadataContainerExists() {
     return containerExists(metadataDatabase, TABLE_METADATA_CONTAINER);
   }
 
-  private boolean namespacesContainerExists() throws RuntimeException {
+  private boolean namespacesContainerExists() {
     return containerExists(metadataDatabase, NAMESPACES_CONTAINER);
   }
 

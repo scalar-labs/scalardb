@@ -25,7 +25,6 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -49,9 +48,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   @Inject
   public CassandraAdmin(DatabaseConfig config) {
-    clusterManager = new ClusterManager(config);
-    CassandraConfig cassandraConfig = new CassandraConfig(config);
-    metadataKeyspace = cassandraConfig.getMetadataKeyspace().orElse(METADATA_KEYSPACE);
+    this(new ClusterManager(config), config);
   }
 
   CassandraAdmin(ClusterManager clusterManager, DatabaseConfig config) {
@@ -72,19 +69,23 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
     try {
-      createKeyspace(namespace, options);
-      createMetadataKeyspaceIfNotExists();
+      createKeyspace(namespace, options, false);
+      createKeyspace(metadataKeyspace, options, true);
       createKeyspacesTableIfNotExists();
       insertIntoKeyspacesTable(namespace);
     } catch (IllegalArgumentException e) {
+      // thrown by ReplicationStrategy.fromString() when the replication strategy is unknown
       throw e;
     } catch (RuntimeException e) {
       throw new ExecutionException(String.format("Creating the keyspace %s failed", namespace), e);
     }
   }
 
-  private void createKeyspace(String keyspace, Map<String, String> options) {
+  private void createKeyspace(String keyspace, Map<String, String> options, boolean ifNotExists) {
     CreateKeyspace query = SchemaBuilder.createKeyspace(quoteIfNecessary(keyspace));
+    if (ifNotExists) {
+      query = query.ifNotExists();
+    }
     String replicationFactor = options.getOrDefault(REPLICATION_FACTOR, "1");
     ReplicationStrategy replicationStrategy =
         options.containsKey(REPLICATION_STRATEGY)
@@ -98,17 +99,6 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       replicationOptions.put("class", ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
       replicationOptions.put("dc1", replicationFactor);
     }
-    String queryString = query.with().replication(replicationOptions).getQueryString();
-
-    clusterManager.getSession().execute(queryString);
-  }
-
-  private void createMetadataKeyspaceIfNotExists() {
-    CreateKeyspace query =
-        SchemaBuilder.createKeyspace(quoteIfNecessary(metadataKeyspace)).ifNotExists();
-    Map<String, Object> replicationOptions = new HashMap<>();
-    replicationOptions.put("class", ReplicationStrategy.SIMPLE_STRATEGY.toString());
-    replicationOptions.put("replication_factor", "1");
     String queryString = query.with().replication(replicationOptions).getQueryString();
 
     clusterManager.getSession().execute(queryString);

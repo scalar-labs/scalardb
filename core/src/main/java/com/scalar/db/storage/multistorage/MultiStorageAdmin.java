@@ -216,7 +216,7 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
     // - mysql : mysqlStorageAdmin.getNamespaceNames() = [ns1, ns2]
     // - cassandra : cassandraStorageAdmin.getNamespaceNames() = [ns3]
     // - cosmos : cosmosStorageAdmin.getNamespaceNames() = [ns4, ns5]
-    // And the default storage is cassandra :
+    // And the default storage is cosmos :
     // - scalar.db.multi_storage.default_storage=cosmos
     // And the namespace mapping set in the configuration is :
     // - scalar.db.multi_storage.namespace_mapping=ns1:mysql,ns2:cassandra,ns3:cassandra

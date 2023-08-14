@@ -226,7 +226,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       createNamespacesTableIfNotExists(noBackup);
       insertIntoNamespaceTable(namespace);
     } catch (ExecutionException e) {
-      throw new ExecutionException("creating the namespace " + namespace + " failed", e);
+      throw new ExecutionException("Creating the namespace " + namespace + " failed", e);
     }
   }
 

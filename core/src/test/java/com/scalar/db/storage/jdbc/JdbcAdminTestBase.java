@@ -301,7 +301,7 @@ public abstract class JdbcAdminTestBase {
         "CREATE TABLE IF NOT EXISTS `"
             + metadataSchemaName
             + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
-        "INSERT INTO `" + metadataSchemaName + "`.`namespaces` VALUES ('my_ns')");
+        "INSERT INTO `" + metadataSchemaName + "`.`namespaces` VALUES (?)");
   }
 
   @Test
@@ -314,7 +314,7 @@ public abstract class JdbcAdminTestBase {
         "CREATE TABLE IF NOT EXISTS \""
             + metadataSchemaName
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
-        "INSERT INTO \"" + metadataSchemaName + "\".\"namespaces\" VALUES ('my_ns')");
+        "INSERT INTO \"" + metadataSchemaName + "\".\"namespaces\" VALUES (?)");
   }
 
   @Test
@@ -327,7 +327,7 @@ public abstract class JdbcAdminTestBase {
         "CREATE TABLE ["
             + metadataSchemaName
             + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
-        "INSERT INTO [" + metadataSchemaName + "].[namespaces] VALUES ('my_ns')");
+        "INSERT INTO [" + metadataSchemaName + "].[namespaces] VALUES (?)");
   }
 
   @Test
@@ -336,12 +336,22 @@ public abstract class JdbcAdminTestBase {
     createNamespace_forX_shouldExecuteCreateNamespaceStatement(
         RdbEngine.ORACLE,
         "CREATE USER \"my_ns\" IDENTIFIED BY \"oracle\"",
-        "ALTER USER \"my_ns\" quota unlimited on USERS");
+        "ALTER USER \"my_ns\" quota unlimited on USERS",
+        "CREATE TABLE \""
+            + metadataSchemaName
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
+        "INSERT INTO \"" + metadataSchemaName + "\".\"namespaces\" VALUES (?)");
   }
 
   @Test
-  public void createNamespace_forSqlite_shouldExecuteCreateNamespaceStatement() {
-    // no sql is executed
+  public void createNamespace_forSqlite_shouldExecuteCreateNamespaceStatement()
+      throws SQLException, ExecutionException {
+    createNamespace_forX_shouldExecuteCreateNamespaceStatement(
+        RdbEngine.SQLITE,
+        "CREATE TABLE IF NOT EXISTS \""
+            + metadataSchemaName
+            + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
+        "INSERT INTO \"" + metadataSchemaName + "$namespaces\" VALUES (?)");
   }
 
   private void createNamespace_forX_shouldExecuteCreateNamespaceStatement(
@@ -352,22 +362,26 @@ public abstract class JdbcAdminTestBase {
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
     List<Statement> mockedStatements = new ArrayList<>();
 
-    for (int i = 0; i < expectedSqlStatements.length; i++) {
+    for (int i = 0; i < expectedSqlStatements.length - 1; i++) {
       mockedStatements.add(mock(Statement.class));
     }
+    PreparedStatement preparedStatement = mock(PreparedStatement.class);
     when(connection.createStatement())
         .thenReturn(
             mockedStatements.get(0),
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
+    when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
     when(dataSource.getConnection()).thenReturn(connection);
 
     // Act
     admin.createNamespace(namespace);
 
     // Assert
-    for (int i = 0; i < expectedSqlStatements.length; i++) {
+    for (int i = 0; i < expectedSqlStatements.length - 1; i++) {
       verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
     }
+    verify(connection).prepareStatement(expectedSqlStatements[expectedSqlStatements.length - 1]);
+    verify(preparedStatement).execute();
   }
 
   @Test
@@ -1199,7 +1213,7 @@ public abstract class JdbcAdminTestBase {
     dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespacesTable(
         RdbEngine.MYSQL,
         "DROP SCHEMA `my_ns`",
-        "DELETE FROM `" + metadataSchemaName + "`.`namespaces` WHERE `namespace_name` = 'my_ns'",
+        "DELETE FROM `" + metadataSchemaName + "`.`namespaces` WHERE `namespace_name` = ?",
         "SELECT * FROM `" + metadataSchemaName + "`.`namespaces`",
         "DROP TABLE `" + metadataSchemaName + "`.`namespaces`",
         "DROP SCHEMA `" + metadataSchemaName + "`");
@@ -1211,9 +1225,7 @@ public abstract class JdbcAdminTestBase {
     dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespacesTable(
         RdbEngine.POSTGRESQL,
         "DROP SCHEMA \"my_ns\"",
-        "DELETE FROM \""
-            + metadataSchemaName
-            + "\".\"namespaces\" WHERE \"namespace_name\" = 'my_ns'",
+        "DELETE FROM \"" + metadataSchemaName + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
         "SELECT * FROM \"" + metadataSchemaName + "\".\"namespaces\"",
         "DROP TABLE \"" + metadataSchemaName + "\".\"namespaces\"",
         "DROP SCHEMA \"" + metadataSchemaName + "\"");
@@ -1225,7 +1237,7 @@ public abstract class JdbcAdminTestBase {
     dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespacesTable(
         RdbEngine.SQL_SERVER,
         "DROP SCHEMA [my_ns]",
-        "DELETE FROM [" + metadataSchemaName + "].[namespaces] WHERE [namespace_name] = 'my_ns'",
+        "DELETE FROM [" + metadataSchemaName + "].[namespaces] WHERE [namespace_name] = ?",
         "SELECT * FROM [" + metadataSchemaName + "].[namespaces]",
         "DROP TABLE [" + metadataSchemaName + "].[namespaces]",
         "DROP SCHEMA [" + metadataSchemaName + "]");
@@ -1237,49 +1249,89 @@ public abstract class JdbcAdminTestBase {
     dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespacesTable(
         RdbEngine.ORACLE,
         "DROP USER \"my_ns\"",
-        "DELETE FROM \""
-            + metadataSchemaName
-            + "\".\"namespaces\" WHERE \"namespace_name\" = 'my_ns'",
+        "DELETE FROM \"" + metadataSchemaName + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
         "SELECT * FROM \"" + metadataSchemaName + "\".\"namespaces\"",
         "DROP TABLE \"" + metadataSchemaName + "\".\"namespaces\"",
         "DROP USER \"" + metadataSchemaName + "\"");
   }
 
   @Test
-  public void dropNamespace_forSqlite_shouldDropNamespace() {
-    // no SQL is executed
-  }
-
-  private void dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespacesTable(
-      RdbEngine rdbEngine, String... expectedStatements) throws Exception {
+  public void dropNamespace_forSqlite_shouldDropNamespace() throws Exception {
     // Arrange
+    String deleteFromNamespaceTableQuery =
+        "DELETE FROM \"" + metadataSchemaName + "$namespaces\" WHERE \"namespace_name\" = ?";
+    String selectAllFromNamespaceTableQuery =
+        "SELECT * FROM \"" + metadataSchemaName + "$namespaces\"";
+    String dropNamespaceTableQuery = "DROP TABLE \"" + metadataSchemaName + "$namespaces\"";
+
     String namespace = "my_ns";
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.SQLITE);
 
     Connection connection = mock(Connection.class);
-    List<Statement> mockedStatements = prepareMockStatements(expectedStatements.length);
+    PreparedStatement deleteFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
+    PreparedStatement selectAllFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
+    Statement dropNamespaceTableStmt = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
-    when(connection.createStatement())
-        .thenReturn(
-            mockedStatements.get(0),
-            mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
+    when(connection.createStatement()).thenReturn(dropNamespaceTableStmt);
+    when(connection.prepareStatement(anyString()))
+        .thenReturn(deleteFromNamespaceTablePrepStmt, selectAllFromNamespaceTablePrepStmt);
     when(dataSource.getConnection()).thenReturn(connection);
     // Namespaces table is empty
     ResultSet resultSet =
         mockResultSet(new SelectFullTableNameFromMetadataTableResultSetMocker.Row[0]);
-    when(mockedStatements.get(2).executeQuery(anyString())).thenReturn(resultSet);
+    when(selectAllFromNamespaceTablePrepStmt.executeQuery()).thenReturn(resultSet);
 
     // Act
     admin.dropNamespace(namespace);
 
     // Assert
-    for (int i = 0; i < mockedStatements.size(); i++) {
-      if (i != 2) {
-        verify(mockedStatements.get(i)).execute(expectedStatements[i]);
-      } else {
-        verify(mockedStatements.get(i)).executeQuery(expectedStatements[i]);
-      }
-    }
+    verify(deleteFromNamespaceTablePrepStmt).setString(1, namespace);
+    verify(connection).prepareStatement(deleteFromNamespaceTableQuery);
+    verify(connection).prepareStatement(selectAllFromNamespaceTableQuery);
+    verify(dropNamespaceTableStmt).execute(dropNamespaceTableQuery);
+  }
+
+  private void dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespacesTable(
+      RdbEngine rdbEngine,
+      String dropNamespaceQuery,
+      String deleteFromNamespaceTableQuery,
+      String selectAllFromNamespaceTableQuery,
+      String dropNamespaceTableQuery,
+      String dropMetadataSchemaQuery)
+      throws Exception {
+    // Arrange
+    String namespace = "my_ns";
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    Connection connection = mock(Connection.class);
+    Statement dropNamespaceStmt = mock(Statement.class);
+    PreparedStatement deleteFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
+    PreparedStatement selectAllFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
+    Statement dropNamespaceTableStmt = mock(Statement.class);
+    Statement dropMetadataSchemaStmt = mock(Statement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement())
+        .thenReturn(dropNamespaceStmt, dropNamespaceTableStmt, dropMetadataSchemaStmt);
+    when(connection.prepareStatement(anyString()))
+        .thenReturn(deleteFromNamespaceTablePrepStmt, selectAllFromNamespaceTablePrepStmt);
+    when(dataSource.getConnection()).thenReturn(connection);
+    // Namespaces table is empty
+    ResultSet resultSet =
+        mockResultSet(new SelectFullTableNameFromMetadataTableResultSetMocker.Row[0]);
+    when(selectAllFromNamespaceTablePrepStmt.executeQuery()).thenReturn(resultSet);
+
+    // Act
+    admin.dropNamespace(namespace);
+
+    // Assert
+    verify(dropNamespaceStmt).execute(dropNamespaceQuery);
+    verify(deleteFromNamespaceTablePrepStmt).setString(1, namespace);
+    verify(connection).prepareStatement(deleteFromNamespaceTableQuery);
+    verify(deleteFromNamespaceTablePrepStmt).execute();
+    verify(connection).prepareStatement(selectAllFromNamespaceTableQuery);
+    verify(selectAllFromNamespaceTablePrepStmt).executeQuery();
+    verify(dropNamespaceTableStmt).execute(dropNamespaceTableQuery);
+    verify(dropMetadataSchemaStmt).execute(dropMetadataSchemaQuery);
   }
 
   @Test
@@ -1288,7 +1340,7 @@ public abstract class JdbcAdminTestBase {
     dropNamespace_WithOtherNamespaceLeftForX_shouldOnlyDropNamespace(
         RdbEngine.MYSQL,
         "DROP SCHEMA `my_ns`",
-        "DELETE FROM `" + metadataSchemaName + "`.`namespaces` WHERE `namespace_name` = 'my_ns'",
+        "DELETE FROM `" + metadataSchemaName + "`.`namespaces` WHERE `namespace_name` = ?",
         "SELECT * FROM `" + metadataSchemaName + "`.`namespaces`");
   }
 
@@ -1298,9 +1350,7 @@ public abstract class JdbcAdminTestBase {
     dropNamespace_WithOtherNamespaceLeftForX_shouldOnlyDropNamespace(
         RdbEngine.POSTGRESQL,
         "DROP SCHEMA \"my_ns\"",
-        "DELETE FROM \""
-            + metadataSchemaName
-            + "\".\"namespaces\" WHERE \"namespace_name\" = 'my_ns'",
+        "DELETE FROM \"" + metadataSchemaName + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
         "SELECT * FROM \"" + metadataSchemaName + "\".\"namespaces\"");
   }
 
@@ -1310,7 +1360,7 @@ public abstract class JdbcAdminTestBase {
     dropNamespace_WithOtherNamespaceLeftForX_shouldOnlyDropNamespace(
         RdbEngine.SQL_SERVER,
         "DROP SCHEMA [my_ns]",
-        "DELETE FROM [" + metadataSchemaName + "].[namespaces] WHERE [namespace_name] = 'my_ns'",
+        "DELETE FROM [" + metadataSchemaName + "].[namespaces] WHERE [namespace_name] = ?",
         "SELECT * FROM [" + metadataSchemaName + "].[namespaces]");
   }
 
@@ -1320,10 +1370,18 @@ public abstract class JdbcAdminTestBase {
     dropNamespace_WithOtherNamespaceLeftForX_shouldOnlyDropNamespace(
         RdbEngine.ORACLE,
         "DROP USER \"my_ns\"",
-        "DELETE FROM \""
-            + metadataSchemaName
-            + "\".\"namespaces\" WHERE \"namespace_name\" = 'my_ns'",
+        "DELETE FROM \"" + metadataSchemaName + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
         "SELECT * FROM \"" + metadataSchemaName + "\".\"namespaces\"");
+  }
+
+  @Test
+  public void dropNamespace_WithOtherNamespaceLeftForSqlLite_shouldOnlyDropNamespace()
+      throws Exception {
+    dropNamespace_WithOtherNamespaceLeftForX_shouldOnlyDropNamespace(
+        RdbEngine.SQLITE,
+        "unused",
+        "DELETE FROM \"" + metadataSchemaName + "$namespaces\" WHERE \"namespace_name\" = ?",
+        "SELECT * FROM \"" + metadataSchemaName + "$namespaces\"");
   }
 
   private void dropNamespace_WithOtherNamespaceLeftForX_shouldOnlyDropNamespace(
@@ -1338,25 +1396,32 @@ public abstract class JdbcAdminTestBase {
 
     Connection connection = mock(Connection.class);
     Statement dropNamespaceStatementMock = mock(Statement.class);
-    Statement deleteFromNamespaceTableMock = mock(Statement.class);
-    Statement selectNamespaceStatementMock = mock(Statement.class);
-    when(connection.createStatement())
-        .thenReturn(
-            dropNamespaceStatementMock, deleteFromNamespaceTableMock, selectNamespaceStatementMock);
+    PreparedStatement deleteFromNamespaceTableMock = mock(PreparedStatement.class);
+    PreparedStatement selectNamespaceStatementMock = mock(PreparedStatement.class);
+    if (rdbEngine != RdbEngine.SQLITE) {
+      when(connection.createStatement()).thenReturn(dropNamespaceStatementMock);
+    }
+    when(connection.prepareStatement(anyString()))
+        .thenReturn(deleteFromNamespaceTableMock, selectNamespaceStatementMock);
     when(dataSource.getConnection()).thenReturn(connection);
     // Namespaces table contains other namespaces
     ResultSet resultSet =
         mockResultSet(
             new SelectFullTableNameFromMetadataTableResultSetMocker.Row(namespace + ".tbl1"));
-    when(selectNamespaceStatementMock.executeQuery(anyString())).thenReturn(resultSet);
+    when(selectNamespaceStatementMock.executeQuery()).thenReturn(resultSet);
 
     // Act
     admin.dropNamespace(namespace);
 
     // Assert
-    verify(dropNamespaceStatementMock).execute(dropNamespaceStatement);
-    verify(deleteFromNamespaceTableMock).execute(deleteFromNamespaceTable);
-    verify(selectNamespaceStatementMock).executeQuery(selectNamespaceStatement);
+    if (rdbEngine != RdbEngine.SQLITE) {
+      verify(dropNamespaceStatementMock).execute(dropNamespaceStatement);
+    }
+    verify(connection).prepareStatement(deleteFromNamespaceTable);
+    verify(deleteFromNamespaceTableMock).setString(1, namespace);
+    verify(deleteFromNamespaceTableMock).execute();
+    verify(connection).prepareStatement(selectNamespaceStatement);
+    verify(selectNamespaceStatementMock).executeQuery();
   }
 
   @Test
@@ -2382,10 +2447,10 @@ public abstract class JdbcAdminTestBase {
         mockResultSet(
             new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row(namespace1),
             new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row(namespace2));
-    Statement mockStatement = mock(Statement.class);
+    PreparedStatement mockPreparedStatement = mock(PreparedStatement.class);
     when(dataSource.getConnection()).thenReturn(connection);
-    when(connection.createStatement()).thenReturn(mockStatement);
-    when(mockStatement.executeQuery(any())).thenReturn(resultSet);
+    when(connection.prepareStatement(anyString())).thenReturn(mockPreparedStatement);
+    when(mockPreparedStatement.executeQuery()).thenReturn(resultSet);
 
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
@@ -2393,7 +2458,8 @@ public abstract class JdbcAdminTestBase {
     Set<String> actualNamespaceNames = admin.getNamespaceNames();
 
     // Assert
-    verify(mockStatement).executeQuery(expectedSelectStatement);
+    verify(connection).prepareStatement(expectedSelectStatement);
+    verify(mockPreparedStatement).executeQuery();
     assertThat(actualNamespaceNames).containsOnly(namespace1, namespace2);
   }
 

@@ -122,10 +122,11 @@ public abstract class CassandraAdminTestBase {
       throws ExecutionException {
     // Arrange
     String namespace = "sample_ns";
+    String replicationFactor = "3";
     Map<String, String> options = new HashMap<>();
     options.put(
         CassandraAdmin.REPLICATION_STRATEGY, ReplicationStrategy.SIMPLE_STRATEGY.toString());
-    options.put(CassandraAdmin.REPLICATION_FACTOR, "3");
+    options.put(CassandraAdmin.REPLICATION_FACTOR, replicationFactor);
 
     // Act
     cassandraAdmin.createNamespace(namespace, options);
@@ -133,11 +134,11 @@ public abstract class CassandraAdminTestBase {
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
     replicationOptions.put("class", ReplicationStrategy.SIMPLE_STRATEGY.toString());
-    replicationOptions.put("replication_factor", "3");
+    replicationOptions.put("replication_factor", replicationFactor);
     KeyspaceOptions query =
         SchemaBuilder.createKeyspace(namespace).with().replication(replicationOptions);
     verify(cassandraSession).execute(query.getQueryString());
-    verifyCreateMetadataKeyspaceQuery();
+    verifyCreateMetadataKeyspaceQuery(replicationOptions);
     verifyCreateKeyspacesTableQuery();
     verifyInsertIntoKeyspacesTableQuery(namespace);
   }
@@ -147,11 +148,14 @@ public abstract class CassandraAdminTestBase {
       throws ExecutionException {
     // Arrange
     String namespace = "sample_ns";
+    String replicationFactor = "5";
+
     Map<String, String> options = new HashMap<>();
     options.put(
         CassandraAdmin.REPLICATION_STRATEGY,
         ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
-    options.put(CassandraAdmin.REPLICATION_FACTOR, "5");
+
+    options.put(CassandraAdmin.REPLICATION_FACTOR, replicationFactor);
 
     // Act
     cassandraAdmin.createNamespace(namespace, options);
@@ -159,11 +163,11 @@ public abstract class CassandraAdminTestBase {
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
     replicationOptions.put("class", ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
-    replicationOptions.put("dc1", "5");
+    replicationOptions.put("dc1", replicationFactor);
     KeyspaceOptions query =
         SchemaBuilder.createKeyspace(namespace).with().replication(replicationOptions);
     verify(cassandraSession).execute(query.getQueryString());
-    verifyCreateMetadataKeyspaceQuery();
+    verifyCreateMetadataKeyspaceQuery(replicationOptions);
     verifyCreateKeyspacesTableQuery();
     verifyInsertIntoKeyspacesTableQuery(namespace);
   }
@@ -186,7 +190,7 @@ public abstract class CassandraAdminTestBase {
     KeyspaceOptions query =
         SchemaBuilder.createKeyspace(namespace).with().replication(replicationOptions);
     verify(cassandraSession).execute(query.getQueryString());
-    verifyCreateMetadataKeyspaceQuery();
+    verifyCreateMetadataKeyspaceQuery(replicationOptions);
     verifyCreateKeyspacesTableQuery();
     verifyInsertIntoKeyspacesTableQuery(namespace);
   }
@@ -209,17 +213,14 @@ public abstract class CassandraAdminTestBase {
         SchemaBuilder.createKeyspace(quote(namespace)).with().replication(replicationOptions);
 
     verify(cassandraSession).execute(query.getQueryString());
-    verifyCreateMetadataKeyspaceQuery();
+    verifyCreateMetadataKeyspaceQuery(replicationOptions);
     verifyCreateKeyspacesTableQuery();
     verifyInsertIntoKeyspacesTableQuery(namespace);
   }
 
-  private void verifyCreateMetadataKeyspaceQuery() {
+  private void verifyCreateMetadataKeyspaceQuery(Map<String, Object> replicationOptions) {
     CreateKeyspace query =
         SchemaBuilder.createKeyspace(quoteIfNecessary(metadataKeyspaceName)).ifNotExists();
-    Map<String, Object> replicationOptions = new HashMap<>();
-    replicationOptions.put("class", "SimpleStrategy");
-    replicationOptions.put("replication_factor", "1");
     String queryString = query.with().replication(replicationOptions).getQueryString();
     verify(cassandraSession).execute(queryString);
   }

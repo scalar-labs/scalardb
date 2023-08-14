@@ -5,15 +5,13 @@ import java.util.Objects;
 
 /** An entity class to store namespace metadata in a CosmosDB container */
 public class CosmosNamespace {
-  private String id;
+  private final String id;
 
-  public CosmosNamespace() {}
-
-  public CosmosNamespace(String id) {
-    this.id = id;
+  public CosmosNamespace() {
+    this.id = null;
   }
 
-  public void setId(String id) {
+  public CosmosNamespace(String id) {
     this.id = id;
   }
 

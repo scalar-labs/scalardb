@@ -855,8 +855,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String selectQuery =
           "SELECT * FROM " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE);
       Set<String> namespaces = new HashSet<>();
-      try (Statement statement = connection.createStatement();
-          ResultSet resultSet = statement.executeQuery(selectQuery)) {
+      try (PreparedStatement preparedStatement = connection.prepareStatement(selectQuery);
+          ResultSet resultSet = preparedStatement.executeQuery()) {
         while (resultSet.next()) {
           namespaces.add(resultSet.getString(NAMESPACE_COL_NAMESPACE_NAME));
         }
@@ -895,12 +895,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void insertIntoNamespacesTable(Connection connection, String namespaceName)
       throws SQLException {
     String insertStatement =
-        "INSERT INTO "
-            + encloseFullTableName(metadataSchema, NAMESPACES_TABLE)
-            + " VALUES ('"
-            + namespaceName
-            + "')";
-    execute(connection, insertStatement);
+        "INSERT INTO " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE) + " VALUES (?)";
+    try (PreparedStatement preparedStatement = connection.prepareStatement(insertStatement); ) {
+      preparedStatement.setString(1, namespaceName);
+      preparedStatement.execute();
+    }
   }
 
   private void deleteFromNamespacesTable(Connection connection, String namespaceName)
@@ -910,10 +909,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + encloseFullTableName(metadataSchema, NAMESPACES_TABLE)
             + " WHERE "
             + enclose(NAMESPACE_COL_NAMESPACE_NAME)
-            + " = '"
-            + namespaceName
-            + "'";
-    execute(connection, deleteStatement);
+            + " = ?";
+    try (PreparedStatement preparedStatement = connection.prepareStatement(deleteStatement)) {
+      preparedStatement.setString(1, namespaceName);
+      preparedStatement.execute();
+    }
   }
 
   private void deleteNamespacesTableIfEmpty(Connection connection) throws SQLException {
@@ -926,8 +926,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private boolean isNamespacesTableEmpty(Connection connection) throws SQLException {
     String selectAllTables =
         "SELECT * FROM " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE);
-    try (Statement statement = connection.createStatement();
-        ResultSet results = statement.executeQuery(selectAllTables)) {
+    try (PreparedStatement preparedStatement = connection.prepareStatement(selectAllTables);
+        ResultSet results = preparedStatement.executeQuery()) {
       return !results.next();
     }
   }
