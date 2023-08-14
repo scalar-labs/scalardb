@@ -158,7 +158,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   }
 
   private void lazyRecovery(Selection selection, List<TransactionResult> results) {
-    logger.debug("recover uncommitted records: {}", results);
+    logger.debug("Recover uncommitted records: {}", results);
     beforeRecoveryHook.run();
     results.forEach(r -> recovery.recover(selection, r));
   }

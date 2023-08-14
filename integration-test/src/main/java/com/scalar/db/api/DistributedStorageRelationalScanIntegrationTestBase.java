@@ -207,7 +207,7 @@ public abstract class DistributedStorageRelationalScanIntegrationTestBase {
               try {
                 storage.put(preparePut(key, prepareNonKeyColumns(i)));
               } catch (ExecutionException e) {
-                throw new RuntimeException("put data to database failed", e);
+                throw new RuntimeException("Put data to database failed", e);
               }
             });
   }
@@ -221,7 +221,7 @@ public abstract class DistributedStorageRelationalScanIntegrationTestBase {
                 storage.put(
                     preparePut(key, i % 2 == 0 ? prepareNullColumns() : prepareNonKeyColumns(i)));
               } catch (ExecutionException e) {
-                throw new RuntimeException("put data to database failed", e);
+                throw new RuntimeException("Put data to database failed", e);
               }
             });
   }
@@ -260,7 +260,7 @@ public abstract class DistributedStorageRelationalScanIntegrationTestBase {
         storage.put(put);
       }
     } catch (ExecutionException e) {
-      throw new ExecutionException("put data to database failed", e);
+      throw new ExecutionException("Put data to database failed", e);
     }
     return ret;
   }

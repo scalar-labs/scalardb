@@ -78,7 +78,7 @@ public class SchemaOperator implements AutoCloseable {
 
       createNamespace(namespace, tableSchema.getOptions());
       if (tableExists(namespace, tableName, tableSchema.isTransactionTable())) {
-        logger.warn("Table {} in the namespace {} already exists.", tableName, namespace);
+        logger.warn("Table {} in the namespace {} already exists", tableName, namespace);
       } else {
         createTable(tableSchema);
       }
@@ -101,10 +101,10 @@ public class SchemaOperator implements AutoCloseable {
               .repairTable(
                   namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
         }
-        logger.info("Repairing the table {} in the namespace {} succeeded.", tableName, namespace);
+        logger.info("Repairing the table {} in the namespace {} succeeded", tableName, namespace);
       } catch (ExecutionException e) {
         throw new SchemaLoaderException(
-            "Repairing the table " + tableName + " in the namespace " + namespace + " failed.", e);
+            "Repairing the table " + tableName + " in the namespace " + namespace + " failed", e);
       }
     }
   }
@@ -116,7 +116,7 @@ public class SchemaOperator implements AutoCloseable {
       // storage
       transactionAdmin.get().createNamespace(namespace, true, options);
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException("Creating the namespace " + namespace + " failed.", e);
+      throw new SchemaLoaderException("Creating the namespace " + namespace + " failed", e);
     }
   }
 
@@ -135,10 +135,10 @@ public class SchemaOperator implements AutoCloseable {
             .createTable(
                 namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
       }
-      logger.info("Creating the table {} in the namespace {} succeeded.", tableName, namespace);
+      logger.info("Creating the table {} in the namespace {} succeeded", tableName, namespace);
     } catch (ExecutionException e) {
       throw new SchemaLoaderException(
-          "Creating the table " + tableName + " in the namespace " + namespace + " failed.", e);
+          "Creating the table " + tableName + " in the namespace " + namespace + " failed", e);
     }
   }
 
@@ -150,7 +150,7 @@ public class SchemaOperator implements AutoCloseable {
       boolean isTransactional = tableSchema.isTransactionTable();
 
       if (!tableExists(namespace, tableName, isTransactional)) {
-        logger.warn("Table {} in the namespace {} doesn't exist.", tableName, namespace);
+        logger.warn("Table {} in the namespace {} doesn't exist", tableName, namespace);
       } else {
         dropTable(namespace, tableName, isTransactional);
         namespaces.add(namespace);
@@ -167,10 +167,10 @@ public class SchemaOperator implements AutoCloseable {
       } else {
         storageAdmin.get().dropTable(namespace, tableName);
       }
-      logger.info("Deleting the table {} in the namespace {} succeeded.", tableName, namespace);
+      logger.info("Deleting the table {} in the namespace {} succeeded", tableName, namespace);
     } catch (ExecutionException e) {
       throw new SchemaLoaderException(
-          "Deleting the table " + tableName + " in the namespace " + namespace + " failed.", e);
+          "Deleting the table " + tableName + " in the namespace " + namespace + " failed", e);
     }
   }
 
@@ -183,7 +183,7 @@ public class SchemaOperator implements AutoCloseable {
           transactionAdmin.get().dropNamespace(namespace, true);
         }
       } catch (ExecutionException e) {
-        throw new SchemaLoaderException("Deleting the namespace " + namespace + " failed.", e);
+        throw new SchemaLoaderException("Deleting the namespace " + namespace + " failed", e);
       }
     }
   }
@@ -202,34 +202,34 @@ public class SchemaOperator implements AutoCloseable {
               + tableName
               + " in the namespace "
               + namespace
-              + " failed.",
+              + " failed",
           e);
     }
   }
 
   public void createCoordinatorTables(Map<String, String> options) throws SchemaLoaderException {
     if (coordinatorTablesExist()) {
-      logger.warn("The coordinator tables already exist.");
+      logger.warn("The coordinator tables already exist");
       return;
     }
     try {
       transactionAdmin.get().createCoordinatorTables(options);
-      logger.info("Creating the coordinator tables succeeded.");
+      logger.info("Creating the coordinator tables succeeded");
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException("Creating the coordinator tables failed.", e);
+      throw new SchemaLoaderException("Creating the coordinator tables failed", e);
     }
   }
 
   public void dropCoordinatorTables() throws SchemaLoaderException {
     if (!coordinatorTablesExist()) {
-      logger.warn("The coordinator tables don't exist.");
+      logger.warn("The coordinator tables don't exist");
       return;
     }
     try {
       transactionAdmin.get().dropCoordinatorTables();
-      logger.info("Deleting the coordinator tables succeeded.");
+      logger.info("Deleting the coordinator tables succeeded");
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException("Deleting the coordinator tables failed.", e);
+      throw new SchemaLoaderException("Deleting the coordinator tables failed", e);
     }
   }
 
@@ -237,17 +237,16 @@ public class SchemaOperator implements AutoCloseable {
     try {
       return transactionAdmin.get().coordinatorTablesExist();
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException(
-          "Checking the existence of the coordinator tables failed.", e);
+      throw new SchemaLoaderException("Checking the existence of the coordinator tables failed", e);
     }
   }
 
   public void repairCoordinatorTables(Map<String, String> options) throws SchemaLoaderException {
     try {
       transactionAdmin.get().repairCoordinatorTables(options);
-      logger.info("Repairing the coordinator tables succeeded.");
+      logger.info("Repairing the coordinator tables succeeded");
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException("Repairing the coordinator tables failed.", e);
+      throw new SchemaLoaderException("Repairing the coordinator tables failed", e);
     }
   }
 
@@ -262,7 +261,7 @@ public class SchemaOperator implements AutoCloseable {
         if (!tableExists(namespace, table, isTransactional)) {
           throw new UnsupportedOperationException(
               String.format(
-                  "Altering the table %s.%s is not possible as the table was not created beforehand.",
+                  "Altering the table %s.%s is not possible as the table was not created beforehand",
                   namespace, table));
         }
         TableMetadata currentMetadata = getCurrentTableMetadata(namespace, table, isTransactional);
@@ -273,11 +272,11 @@ public class SchemaOperator implements AutoCloseable {
           alterTable(namespace, table, isTransactional, metadataAlteration, options);
         } else {
           logger.info(
-              String.format("No alterations were detected for the table %s.%s.", namespace, table));
+              String.format("No alterations were detected for the table %s.%s", namespace, table));
         }
       } catch (ExecutionException e) {
         throw new SchemaLoaderException(
-            String.format("Altering the table %s.%s failed.", namespace, table), e);
+            String.format("Altering the table %s.%s failed", namespace, table), e);
       }
     }
   }
@@ -317,7 +316,7 @@ public class SchemaOperator implements AutoCloseable {
       }
       logger.info(
           String.format(
-              "Deleting the secondary index %s from the table %s.%s succeeded.",
+              "Deleting the secondary index %s from the table %s.%s succeeded",
               deletedIndex, namespace, table));
     }
   }
@@ -337,7 +336,7 @@ public class SchemaOperator implements AutoCloseable {
       }
       logger.info(
           String.format(
-              "Adding the secondary index %s to the table %s.%s succeeded.",
+              "Adding the secondary index %s to the table %s.%s succeeded",
               addedIndex, namespace, table));
     }
   }
@@ -359,7 +358,7 @@ public class SchemaOperator implements AutoCloseable {
       }
       logger.info(
           String.format(
-              "Adding the column %s of type %s to the table %s.%s succeeded.",
+              "Adding the column %s of type %s to the table %s.%s succeeded",
               addedColumn, addedColumnDataType, namespace, table));
     }
   }
@@ -374,10 +373,10 @@ public class SchemaOperator implements AutoCloseable {
         } else {
           storageAdmin.get().importTable(namespace, table);
         }
-        logger.info("Importing the table {} in the namespace {} succeeded.", table, namespace);
+        logger.info("Importing the table {} in the namespace {} succeeded", table, namespace);
       } catch (ExecutionException e) {
         throw new SchemaLoaderException(
-            String.format("Importing the table %s.%s failed.", namespace, table), e);
+            String.format("Importing the table %s.%s failed", namespace, table), e);
       }
     }
   }

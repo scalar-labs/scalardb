@@ -53,7 +53,7 @@ public class TableMetadataManager {
    */
   public TableMetadata getTableMetadata(Operation operation) throws ExecutionException {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
-      throw new IllegalArgumentException("operation has no target namespace and table name");
+      throw new IllegalArgumentException("Operation has no target namespace and table name");
     }
     return getTableMetadata(operation.forNamespace().get(), operation.forTable().get());
   }
@@ -71,7 +71,7 @@ public class TableMetadataManager {
       TableKey key = new TableKey(namespace, table);
       return tableMetadataCache.get(key).orElse(null);
     } catch (java.util.concurrent.ExecutionException e) {
-      throw new ExecutionException("getting a table metadata failed", e);
+      throw new ExecutionException("Getting a table metadata failed", e);
     }
   }
 

@@ -289,14 +289,14 @@ public class GetBuilder {
     private void checkNotGet() {
       if (!isGetWithIndex) {
         throw new UnsupportedOperationException(
-            "This operation is not supported when getting records of a database without using a secondary index.");
+            "This operation is not supported when getting records of a database without using a secondary index");
       }
     }
 
     private void checkNotGetWithIndex() {
       if (isGetWithIndex) {
         throw new UnsupportedOperationException(
-            "This operation is not supported when getting records of a database using a secondary index.");
+            "This operation is not supported when getting records of a database using a secondary index");
       }
     }
 

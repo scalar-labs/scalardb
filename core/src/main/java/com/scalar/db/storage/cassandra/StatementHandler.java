@@ -126,7 +126,7 @@ public abstract class StatementHandler {
           return ConsistencyLevel.QUORUM;
         }
       default:
-        logger.warn("Unsupported consistency is specified. SEQUENTIAL is being used instead.");
+        logger.warn("Unsupported consistency is specified. SEQUENTIAL is being used instead");
         return ConsistencyLevel.QUORUM;
     }
   }
@@ -143,7 +143,7 @@ public abstract class StatementHandler {
             .join(
                 new String[] {
                   actual.getClass().toString(), "is passed where something like",
-                  expected[0].toString(), "is expected."
+                  expected[0].toString(), "is expected"
                 }));
   }
 }

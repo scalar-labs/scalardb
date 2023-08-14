@@ -79,7 +79,7 @@ final class ProviderManager {
   private static DistributedStorageProvider getDistributedStorageProvider(String name) {
     String lowerCaseName = name.toLowerCase(Locale.ROOT);
     if (!DISTRIBUTED_STORAGE_PROVIDERS.containsKey(lowerCaseName)) {
-      throw new IllegalArgumentException("storage '" + name + "' is not found");
+      throw new IllegalArgumentException("Storage '" + name + "' is not found");
     }
     return DISTRIBUTED_STORAGE_PROVIDERS.get(lowerCaseName);
   }
@@ -123,7 +123,7 @@ final class ProviderManager {
   private static DistributedTransactionProvider getDistributedTransactionProvider(String name) {
     String lowerCaseName = name.toLowerCase(Locale.ROOT);
     if (!DISTRIBUTED_TRANSACTION_PROVIDERS.containsKey(lowerCaseName)) {
-      throw new IllegalArgumentException("transaction manager '" + name + "' is not found");
+      throw new IllegalArgumentException("Transaction manager '" + name + "' is not found");
     }
     return DISTRIBUTED_TRANSACTION_PROVIDERS.get(lowerCaseName);
   }

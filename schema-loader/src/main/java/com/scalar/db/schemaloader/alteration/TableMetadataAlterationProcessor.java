@@ -48,26 +48,26 @@ public class TableMetadataAlterationProcessor {
     if (!newMetadata.getPartitionKeyNames().equals(oldMetadata.getPartitionKeyNames())) {
       throw new UnsupportedOperationException(
           String.format(
-              "The partition keys of the table %s.%s were modified, altering them is not supported.",
+              "The partition keys of the table %s.%s were modified, altering them is not supported",
               namespace, table));
     }
     if (!newMetadata.getClusteringKeyNames().equals(oldMetadata.getClusteringKeyNames())) {
       throw new UnsupportedOperationException(
           String.format(
-              "The clustering keys of the table %s.%s were modified, altering them is not supported.",
+              "The clustering keys of the table %s.%s were modified, altering them is not supported",
               namespace, table));
     }
     if (!newMetadata.getClusteringOrders().equals(oldMetadata.getClusteringOrders())) {
       throw new UnsupportedOperationException(
           String.format(
-              "The clustering key sort ordering of the table %s.%s were modified, altering them is not supported.",
+              "The clustering key sort ordering of the table %s.%s were modified, altering them is not supported",
               namespace, table));
     }
     for (String oldColumn : oldMetadata.getColumnNames()) {
       if (!newMetadata.getColumnNames().contains(oldColumn)) {
         throw new UnsupportedOperationException(
             String.format(
-                "The column %s of the table %s.%s has been deleted. Column deletion is not supported when altering a table.",
+                "The column %s of the table %s.%s has been deleted. Column deletion is not supported when altering a table",
                 oldColumn, namespace, table));
       }
     }
@@ -75,7 +75,7 @@ public class TableMetadataAlterationProcessor {
       if (!oldMetadata.getColumnDataType(column).equals(newMetadata.getColumnDataType(column))) {
         throw new UnsupportedOperationException(
             String.format(
-                "The data type of the column %s of the table %s.%s was modified, altering it is not supported.",
+                "The data type of the column %s of the table %s.%s was modified, altering it is not supported",
                 column, namespace, table));
       }
     }

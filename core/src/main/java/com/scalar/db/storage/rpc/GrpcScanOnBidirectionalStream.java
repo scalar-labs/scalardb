@@ -80,7 +80,7 @@ public class GrpcScanOnBidirectionalStream
 
   private void throwIfScannerHasNoMoreResults() {
     if (!hasMoreResults.get()) {
-      throw new IllegalStateException("the scan operation has no more results");
+      throw new IllegalStateException("The scan operation has no more results");
     }
   }
 
@@ -119,7 +119,7 @@ public class GrpcScanOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new ExecutionException("failed to open scanner", error);
+      throw new ExecutionException("Failed to open scanner", error);
     }
   }
 
@@ -151,7 +151,7 @@ public class GrpcScanOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new ExecutionException("failed to next", error);
+      throw new ExecutionException("Failed to next", error);
     }
   }
 
@@ -163,7 +163,7 @@ public class GrpcScanOnBidirectionalStream
       hasMoreResults.set(false);
       requestStream.onCompleted();
     } catch (StatusRuntimeException e) {
-      throw new ExecutionException("failed to close the scanner", e);
+      throw new ExecutionException("Failed to close the scanner", e);
     }
   }
 

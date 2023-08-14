@@ -77,7 +77,7 @@ public class Dynamo extends AbstractDistributedStorage {
         new DeleteStatementHandler(client, metadataManager, config.getNamespacePrefix());
     batchHandler = new BatchHandler(client, metadataManager, config.getNamespacePrefix());
 
-    logger.info("DynamoDB object is created properly.");
+    logger.info("DynamoDB object is created properly");
   }
 
   @VisibleForTesting
@@ -109,7 +109,7 @@ public class Dynamo extends AbstractDistributedStorage {
       scanner = selectStatementHandler.handle(get);
       Optional<Result> ret = scanner.one();
       if (scanner.one().isPresent()) {
-        throw new IllegalArgumentException("please use scan() for non-exact match selection");
+        throw new IllegalArgumentException("Please use scan() for non-exact match selection");
       }
       return ret;
     } finally {
@@ -117,7 +117,7 @@ public class Dynamo extends AbstractDistributedStorage {
         try {
           scanner.close();
         } catch (IOException e) {
-          logger.warn("failed to close the scanner", e);
+          logger.warn("Failed to close the scanner", e);
         }
       }
     }
@@ -130,7 +130,7 @@ public class Dynamo extends AbstractDistributedStorage {
 
     if (ScalarDbUtils.isRelational(scan)) {
       throw new UnsupportedOperationException(
-          "scanning all records with orderings or conditions is not supported in DynamoDB");
+          "Scanning all records with orderings or conditions is not supported in DynamoDB");
     }
 
     return selectStatementHandler.handle(scan);
