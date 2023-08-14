@@ -1,134 +1,173 @@
-# Getting Started with Scalar DB
+# Getting Started with ScalarDB
 
-Here we assume Oracle JDK 8 and the underlying storage/database such as Cassandra are properly configured.
-If you haven't done it, please configure them first by following [this](getting-started.md).
+This getting started tutorial explains how to configure your preferred database in ScalarDB and set up a basic electronic money application.
 
-## Build
+{% capture notice--warning %}
+**Warning**
 
-For building Scalar DB, what you will need to do is as follows.
-```
-$ SCALARDB_HOME=/path/to/scalardb
-$ cd $SCALARDB_HOME
-$ ./gradlew installDist
-$ sudo mkdir /var/log/scalar
-$ sudo chmod 777 /var/log/scalar
-```
-Or you can download from [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb).
-For example in Gradle, you can add the following dependency to your build.gradle. Please replace the `<version>` with the version you want to use.
-```
-dependencies {
-    implementation group: 'com.scalar-labs', name: 'scalardb', version: '<version>'
-}
-```
+This electronic money application is simplified for this tutorial and isn't suitable for a production environment.
+{% endcapture %}
 
-Let's move to the `getting-started` directory so that we can avoid too much copy-and-paste.
-```
-$ cd docs/getting-started
-```
+<div class="notice--warning">{{ notice--warning | markdownify }}</div>
 
-## Set up database schema
+## Install a JDK
 
-First of all, you need to define how the data will be organized (a.k.a database schema) in the application with Scalar DB database schema.
-Here is a database schema for the sample application. For the supported data types, please see [this doc](schema.md) for more details.
-You can create a JSON file `emoney-storage.json` with the JSON below.
+Because ScalarDB is written in Java, you must have one of the following Java Development Kits (JDKs) installed in your environment.
 
-```json
-{
-  "emoney.account": {
-    "transaction": false,
-    "partition-key": [
-      "id"
-    ],
-    "clustering-key": [],
-    "columns": {
-      "id": "TEXT",
-      "balance": "INT"
-    }
-  }
-}
+* [Oracle JDK 8](https://www.oracle.com/java/technologies/downloads/#java8)
+* [Oracle JDK 11](https://www.oracle.com/java/technologies/downloads/#java11)
+* [OpenJDK 8](https://openjdk.org/install/)
+
+## Clone the `scalardb` repository
+ 
+Open a terminal window, and go to your working directory. Then, clone the [scalardb](https://github.com/scalar-labs/scalardb) repository by running the following command:
+
+```shell
+$ git clone https://github.com/scalar-labs/scalardb
 ```
 
-To apply the schema, download the Schema Loader that matches with the version you use from [scalardb releases](https://github.com/scalar-labs/scalardb/releases), and run the following command to load the schema.
+Then, go to the `scalardb/docs/getting-started` directory in the cloned repository by running the following command: 
 
-```
-$ java -jar scalardb-schema-loader-<version>.jar --config /path/to/database.properties -f emoney-storage.json
-```
-
-## Store & retrieve data with storage API
-
-[`ElectronicMoneyWithStorage.java`](./getting-started/src/main/java/sample/ElectronicMoneyWithStorage.java)
-is a simple electronic money application with storage API.
-(Be careful: it is simplified for ease of reading and far from practical and is certainly not production-ready.)
-
-```java
-public class ElectronicMoneyWithStorage extends ElectronicMoney {
-
-  private final DistributedStorage storage;
-
-  public ElectronicMoneyWithStorage() throws IOException {
-    StorageFactory factory = new StorageFactory(dbConfig);
-    storage = factory.getStorage();
-    storage.with(NAMESPACE, TABLENAME);
-  }
-
-  @Override
-  public void charge(String id, int amount) throws ExecutionException {
-    // Retrieve the current balance for id
-    Get get = new Get(new Key(ID, id));
-    Optional<Result> result = storage.get(get);
-
-    // Calculate the balance
-    int balance = amount;
-    if (result.isPresent()) {
-      int current = result.get().getValue(BALANCE).get().getAsInt();
-      balance += current;
-    }
-
-    // Update the balance
-    Put put = new Put(new Key(ID, id)).withValue(BALANCE, balance);
-    storage.put(put);
-  }
-
-  @Override
-  public void pay(String fromId, String toId, int amount) throws ExecutionException {
-    // Retrieve the current balances for ids
-    Get fromGet = new Get(new Key(ID, fromId));
-    Get toGet = new Get(new Key(ID, toId));
-    Optional<Result> fromResult = storage.get(fromGet);
-    Optional<Result> toResult = storage.get(toGet);
-
-    // Calculate the balances (it assumes that both accounts exist)
-    int newFromBalance = fromResult.get().getValue(BALANCE).get().getAsInt() - amount;
-    int newToBalance = toResult.get().getValue(BALANCE).get().getAsInt() + amount;
-    if (newFromBalance < 0) {
-      throw new RuntimeException(fromId + " doesn't have enough balance.");
-    }
-
-    // Update the balances
-    Put fromPut = new Put(new Key(ID, fromId)).withValue(BALANCE, newFromBalance);
-    Put toPut = new Put(new Key(ID, toId)).withValue(BALANCE, newToBalance);
-    storage.put(fromPut);
-    storage.put(toPut);
-  }
-
-  @Override
-  public void close() {
-    storage.close();
-  }
-}
+```shell
+$ cd scalardb/docs/getting-started
 ```
 
-Now we can run the application.
+## Set up your database for ScalarDB
+
+Select your database, and follow the instructions to configure it for ScalarDB.
+
+For a list of databases that ScalarDB supports, see [Supported Databases](scalardb-supported-databases.md).
+
+<div id="tabset-1">
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'Cassandra', 'tabset-1')" id="defaultOpen-1">Cassandra</button>
+  <button class="tablinks" onclick="openTab(event, 'Cosmos_DB_for_NoSQL', 'tabset-1')">Cosmos DB for NoSQL</button>
+  <button class="tablinks" onclick="openTab(event, 'DynamoDB', 'tabset-1')">DynamoDB</button>
+  <button class="tablinks" onclick="openTab(event, 'JDBC_databases', 'tabset-1')">JDBC databases</button>
+</div>
+
+<div id="Cassandra" class="tabcontent" markdown="1">
+
+Confirm that you have Cassandra installed. If Cassandra isn't installed, visit [Downloading Cassandra](https://cassandra.apache.org/_/download.html).
+
+### Configure Cassandra
+{:.no_toc}
+
+Open **cassandra.yaml** in your preferred IDE. Then, change `commitlog_sync` from `periodic` to `batch` so that you don't lose data if a quorum of replica nodes goes down.
+
+### Configure ScalarDB
+{:.no_toc}
+
+The following instructions assume that you have properly installed and configured the JDK and Cassandra in your local environment, and Cassandra is running on your localhost.
+
+The **scalardb.properties** file in the `docs/getting-started` directory holds database configurations for ScalarDB. The following is a basic configuration for Cassandra. Be sure to change the values for `scalar.db.username` and `scalar.db.password` as described.
+
+```properties
+# The Cassandra storage implementation is used for Consensus Commit.
+scalar.db.storage=cassandra
+
+# Comma-separated contact points.
+scalar.db.contact_points=localhost
+
+# The port number for all the contact points.
+scalar.db.contact_port=9042
+
+# The username and password to access the database.
+scalar.db.username=<USER_NAME>
+scalar.db.password=<USER_PASSWORD>
 ```
-$ ../../gradlew run --args="-mode storage -action charge -amount 1000 -to user1"
-$ ../../gradlew run --args="-mode storage -action charge -amount 0 -to merchant1"
-$ ../../gradlew run --args="-mode storage -action pay -amount 100 -to merchant1 -from user1"
+</div>
+<div id="Cosmos_DB_for_NoSQL" class="tabcontent" markdown="1">
+
+To use Azure Cosmos DB for NoSQL, you must have an Azure account. If you don't have an Azure account, visit [Create an Azure Cosmos DB account](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/quickstart-portal#create-account).
+
+### Configure Cosmos DB for NoSQL
+{:.no_toc}
+
+Set the **default consistency level** to **Strong** according to the official document at [Configure the default consistency level](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/how-to-manage-consistency#configure-the-default-consistency-level).
+
+### Configure ScalarDB
+{:.no_toc}
+
+The following instructions assume that you have properly installed and configured the JDK in your local environment and properly configured your Cosmos DB for NoSQL account in Azure. 
+
+The **scalardb.properties** file in the `docs/getting-started` directory holds database configurations for ScalarDB. Be sure to change the values for `scalar.db.contact_points` and `scalar.db.password` as described.
+    
+```properties
+# The Cosmos DB for NoSQL storage implementation is used for Consensus Commit.
+scalar.db.storage=cosmos
+
+# The Cosmos DB for NoSQL URI.
+scalar.db.contact_points=<COSMOS_DB_FOR_NOSQL_URI>
+
+# The Cosmos DB for NoSQL key to access the database.
+scalar.db.password=<COSMOS_DB_FOR_NOSQL_KEY>
 ```
 
-## Set up database schema for transaction
+{% capture notice--info %}
+**Note**
 
-To use transaction, we can just add a key `transaction` and value as `true` in the Scalar DB schema we used.
-You can create a JSON file `emoney-transaction.json` with the JSON bellow.
+You can use a primary key or a secondary key as the value for `scalar.db.password`.
+{% endcapture %}
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+</div>
+<div id="DynamoDB" class="tabcontent" markdown="1">
+
+To use Amazon DynamoDB, you must have an AWS account. If you don't have an AWS account, visit [Getting started: Are you a first-time AWS user?](https://docs.aws.amazon.com/accounts/latest/reference/welcome-first-time-user.html).
+
+### Configure ScalarDB
+{:.no_toc}
+
+The following instructions assume that you have properly installed and configured the JDK in your local environment.
+
+The **scalardb.properties** file in the `docs/getting-started` directory holds database configurations for ScalarDB. Be sure to change the values for `scalar.db.contact_points`, `scalar.db.username`, and  `scalar.db.password` as described.
+
+```properties
+# The DynamoDB storage implementation is used for Consensus Commit.
+scalar.db.storage=dynamo
+
+# The AWS region.
+scalar.db.contact_points=<REGION>
+
+# The AWS access key ID and secret access key to access the database.
+scalar.db.username=<ACCESS_KEY_ID>
+scalar.db.password=<SECRET_ACCESS_KEY>
+```
+</div>
+<div id="JDBC_databases" class="tabcontent" markdown="1">
+
+Confirm that you have a JDBC database installed. For a list of supported JDBC databases, see [Supported databases](#supported-databases).
+
+### Configure ScalarDB
+{:.no_toc}
+
+The following instructions assume that you have properly installed and configured the JDK and JDBC database in your local environment, and the JDBC database is running on your localhost.
+
+The **scalardb.properties** file in the `docs/getting-started` directory holds database configurations for ScalarDB. The following is a basic configuration for JDBC databases. Be sure to uncomment the `scalar.db.contact_points` variable and change the value of the JDBC database you are using, and change the values for `scalar.db.username` and `scalar.db.password` as described.
+
+```properties
+# The JDBC database storage implementation is used for Consensus Commit.
+scalar.db.storage=jdbc
+
+# The JDBC database URL for the type of database you are using.
+# scalar.db.contact_points=jdbc:mysql://localhost:3306/
+# scalar.db.contact_points=jdbc:oracle:thin:@//localhost:1521/
+# scalar.db.contact_points=jdbc:postgresql://localhost:5432/
+# scalar.db.contact_points=jdbc:sqlserver://localhost:1433;
+# scalar.db.contact_points=jdbc:sqlite://localhost:3306.sqlite3?busy_timeout=10000
+
+# The username and password for connecting to the database.
+scalar.db.username=<USER_NAME>
+scalar.db.password=<PASSWORD>
+```
+</div>
+</div>
+
+## Create and load the database schema
+
+You need to define the database schema (the method in which the data will be organized) in the application. For details about the supported data types, see [Data type mapping between ScalarDB and other databases](schema-loader.md#data-type-mapping-between-scalardb-and-the-other-databases).
+
+For this tutorial, create a file named **emoney.json** in the `scalardb/docs/getting-started` directory. Then, add the following JSON code to define the schema.
 
 ```json
 {
@@ -146,139 +185,59 @@ You can create a JSON file `emoney-transaction.json` with the JSON bellow.
 }
 ```
 
-Before reapplying the schema, please drop the existing namespace first by issuing the following. 
+To apply the schema, go to the [`scalardb` Releases](https://github.com/scalar-labs/scalardb/releases) page and download the ScalarDB Schema Loader that matches the version of ScalarDB that you are using to the `getting-started` folder. 
 
-```
-$ java -jar scalardb-schema-loader-<version>.jar --config /path/to/database.properties -f emoney-storage.json -D
-$ java -jar scalardb-schema-loader-<version>.jar --config /path/to/database.properties --coordinator -f emoney-transaction.json
-```
-- The `--coordinator` is specified because we have a table with transaction enabled in the schema.
+Then, run the following command, replacing `<VERSION>` with the version of the ScalarDB Schema Loader that you downloaded:
 
-## Store & retrieve data with transaction API
-
-The previous application seems fine under ideal conditions, but it is problematic when some failure happens during its operation or when multiple operations occur at the same time because it is not transactional.
-For example, money transfer (pay) from `A's balance` to `B's balance` is not done atomically in the application, and there might be a case where only `A's balance` is decreased (and `B's balance` is not increased) if a failure happens right after the first `put` and some money will be lost.
-
-With the transaction capability of Scalar DB, we can make such operations to be executed with ACID properties.
-
-Now we can update the code as follows to make it transactional.
-```java
-public class ElectronicMoneyWithTransaction extends ElectronicMoney {
-
-  private final DistributedTransactionManager manager;
-
-  public ElectronicMoneyWithTransaction() throws IOException {
-    TransactionFactory factory = new TransactionFactory(dbConfig);
-    manager = factory.getTransactionManager();
-    manager.with(NAMESPACE, TABLENAME);
-  }
-
-  @Override
-  public void charge(String id, int amount) throws TransactionException {
-    // Start a transaction
-    DistributedTransaction tx = manager.start();
-
-    try {
-      // Retrieve the current balance for id
-      Get get = new Get(new Key(ID, id));
-      Optional<Result> result = tx.get(get);
-
-      // Calculate the balance
-      int balance = amount;
-      if (result.isPresent()) {
-        int current = result.get().getValue(BALANCE).get().getAsInt();
-        balance += current;
-      }
-
-      // Update the balance
-      Put put = new Put(new Key(ID, id)).withValue(BALANCE, balance);
-      tx.put(put);
-
-      // Commit the transaction (records are automatically recovered in case of failure)
-      tx.commit();
-    } catch (Exception e) {
-      tx.abort();
-      throw e;
-    }
-  }
-
-  @Override
-  public void pay(String fromId, String toId, int amount) throws TransactionException {
-    // Start a transaction
-    DistributedTransaction tx = manager.start();
-
-    try {
-      // Retrieve the current balances for ids
-      Get fromGet = new Get(new Key(ID, fromId));
-      Get toGet = new Get(new Key(ID, toId));
-      Optional<Result> fromResult = tx.get(fromGet);
-      Optional<Result> toResult = tx.get(toGet);
-
-      // Calculate the balances (it assumes that both accounts exist)
-      int newFromBalance = fromResult.get().getValue(BALANCE).get().getAsInt() - amount;
-      int newToBalance = toResult.get().getValue(BALANCE).get().getAsInt() + amount;
-      if (newFromBalance < 0) {
-        throw new RuntimeException(fromId + " doesn't have enough balance.");
-      }
-
-      // Update the balances
-      Put fromPut = new Put(new Key(ID, fromId)).withValue(BALANCE, newFromBalance);
-      Put toPut = new Put(new Key(ID, toId)).withValue(BALANCE, newToBalance);
-      tx.put(fromPut);
-      tx.put(toPut);
-
-      // Commit the transaction (records are automatically recovered in case of failure)
-      tx.commit();
-    } catch (Exception e) {
-      tx.abort();
-      throw e;
-    }
-  }
-
-  @Override
-  public void close() {
-    manager.close();
-  }
-}
+```shell
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config scalardb.properties --schema-file emoney.json --coordinator
 ```
 
-As you can see, it's not very different from the code with `DistributedStorage`.
-This code instead uses `DistributedTransactionManager` and all the CRUD operations are done through the `DistributedTransaction` object returned from `DistributedTransactionManager.start()`.
+{% capture notice--info %}
+**Note**
 
-Now let's run the application with transaction mode.
+The `--coordinator` option is specified because a table with `transaction` set to `true` exists in the schema. For details about configuring and loading a schema, see [ScalarDB Schema Loader](schema-loader.md).
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
+## Execute transactions and retrieve data
+
+After loading the schema, you can execute transactions and retrieve data.
+
+{% capture notice--info %}
+**Note**
+
+When you first execute a Gradle command, Gradle will automatically install the necessary libraries.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
+- Credit **1000** to **customer1** by running the following command:
+```shell
+$ ./gradlew run --args="-action charge -amount 1000 -to customer1"
 ```
-$ ../../gradlew run --args="-mode transaction -action charge -amount 1000 -to user1"
-$ ../../gradlew run --args="-mode transaction -action charge -amount 0 -to merchant1"
-$ ../../gradlew run --args="-mode transaction -action pay -amount 100 -to merchant1 -from user1"
+
+- Create an account for **merchant1** that has a balance of **0** by running the following command:
+```shell
+$ ./gradlew run --args="-action charge -amount 0 -to merchant1"
 ```
 
-## Use JDBC transaction
-
-When you use a JDBC database as a backend database, you can optionally use the native transaction manager of a JDBC database instead of the default `ConsensusCommit` transaction manager.
-
-To use the native transaction manager, you need to set `jdbc` to a transaction manager type in **scalardb.properties** as follows.
-
-```
-scalar.db.transaction_manager=jdbc
+- Charge **100** from **customer1** to **merchant1** by running the following command:
+```shell
+$ ./gradlew run --args="-action pay -amount 100 -from customer1 -to merchant1"
 ```
 
-You don't need to set a key `transaction` to `true` in Scalar DB schema for the native transaction manager.
-So you can use the same schema file as **emoney-storage.json**.
+- Get the balance of **customer1** by running the following command:
+```shell
+$ ./gradlew run --args="-action getBalance -id customer1"
+```
 
-## Further documentation
+- Get the balance of **merchant1** by running the following command:
+```shell
+$ ./gradlew run --args="-action getBalance -id merchant1"
+```
 
-These are just simple examples of how Scalar DB is used. For more information, please take a look at the following documents.
+## Reference
 
-* [Design Document](design.md)
-* Javadoc
-    * [scalardb](https://javadoc.io/doc/com.scalar-labs/scalardb/latest/index.html) - A library that makes non-ACID distributed databases/storages ACID-compliant
-    * [scalardb-rpc](https://javadoc.io/doc/com.scalar-labs/scalardb-rpc/latest/index.html) - Scalar DB RPC libraries
-    * [scalardb-server](https://javadoc.io/doc/com.scalar-labs/scalardb-server/latest/index.html) - Scalar DB Server that is the gRPC interfarce of Scalar DB
-* [Requirements in the underlining databases](requirements.md)
-* [Database schema in Scalar DB](schema.md)
-* [Schema Loader](https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md)
-* [How to Back up and Restore](backup-restore.md)
-* [Multi-storage Transactions](multi-storage-transactions.md)
-* [Two-phase Commit Transactions](two-phase-commit-transactions.md)
-* [Scalar DB server](scalardb-server.md)
-* [A Guide on How to Handle Exceptions](how-to-handle-exceptions.md)
+To see the source code for the electronic money application used in this tutorial, see [`ElectronicMoney.java`](./getting-started/src/main/java/sample/ElectronicMoney.java).
