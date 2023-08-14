@@ -39,11 +39,11 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
             config.getActiveTransactionManagementExpirationTimeMillis(),
             TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
             (id, t) -> {
-              logger.warn("the transaction is expired. transaction ID: {}", id);
+              logger.warn("The transaction is expired. transaction ID: {}", id);
               try {
                 t.rollback();
               } catch (Exception e) {
-                logger.warn("rollback failed. transaction ID: {}", id, e);
+                logger.warn("Rollback failed. transaction ID: {}", id, e);
               }
             });
   }

@@ -43,26 +43,26 @@ public abstract class MutateStatementHandler extends StatementHandler {
 
       Mutation mutation = (Mutation) operation;
       if (mutation.getCondition().isPresent() && !results.one().getBool(0)) {
-        throw new NoMutationException("no mutation was applied.");
+        throw new NoMutationException("No mutation was applied");
       }
       return results;
 
     } catch (WriteTimeoutException e) {
-      logger.warn("write timeout happened during mutate operation.", e);
+      logger.warn("Write timeout happened during mutate operation", e);
       if (e.getWriteType() == WriteType.CAS) {
         // retry needs to be done if applications need to do the operation exactly
-        throw new RetriableExecutionException("paxos phase in CAS operation failed.", e);
+        throw new RetriableExecutionException("Paxos phase in CAS operation failed", e);
       } else if (e.getWriteType() == WriteType.SIMPLE) {
         Mutation mutation = (Mutation) operation;
         if (mutation.getCondition().isPresent()) {
           // learn phase needs to be repaired (by re-reading)
-          throw new ReadRepairableExecutionException("learn phase in CAS operation failed.", e);
+          throw new ReadRepairableExecutionException("Learn phase in CAS operation failed", e);
         } else {
           // retry needs to be done if applications need to do the operation exactly
-          throw new RetriableExecutionException("simple write operation failed.", e);
+          throw new RetriableExecutionException("Simple write operation failed", e);
         }
       } else {
-        throw new ExecutionException("something wrong because it is neither CAS nor SIMPLE", e);
+        throw new ExecutionException("Something wrong because it is neither CAS nor SIMPLE", e);
       }
     } catch (RuntimeException e) {
       logger.warn(e.getMessage(), e);

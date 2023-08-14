@@ -65,9 +65,9 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     try {
       return jdbcService.get(get, connection);
     } catch (SQLException e) {
-      throw createCrudException(e, "get operation failed");
+      throw createCrudException(e, "Get operation failed");
     } catch (ExecutionException e) {
-      throw new CrudException("get operation failed", e, txId);
+      throw new CrudException("Get operation failed", e, txId);
     }
   }
 
@@ -77,9 +77,9 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     try {
       return jdbcService.scan(scan, connection);
     } catch (SQLException e) {
-      throw createCrudException(e, "scan operation failed");
+      throw createCrudException(e, "Scan operation failed");
     } catch (ExecutionException e) {
-      throw new CrudException("scan operation failed", e, txId);
+      throw new CrudException("Scan operation failed", e, txId);
     }
   }
 
@@ -92,9 +92,9 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
         throwUnsatisfiedConditionException(put);
       }
     } catch (SQLException e) {
-      throw createCrudException(e, "put operation failed");
+      throw createCrudException(e, "Put operation failed");
     } catch (ExecutionException e) {
-      throw new CrudException("put operation failed", e, txId);
+      throw new CrudException("Put operation failed", e, txId);
     }
   }
 
@@ -115,9 +115,9 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
         throwUnsatisfiedConditionException(delete);
       }
     } catch (SQLException e) {
-      throw createCrudException(e, "delete operation failed");
+      throw createCrudException(e, "Delete operation failed");
     } catch (ExecutionException e) {
-      throw new CrudException("delete operation failed", e, txId);
+      throw new CrudException("Delete operation failed", e, txId);
     }
   }
 
@@ -149,14 +149,14 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
       try {
         connection.rollback();
       } catch (SQLException sqlException) {
-        throw new UnknownTransactionStatusException("failed to rollback", sqlException, txId);
+        throw new UnknownTransactionStatusException("Failed to rollback", sqlException, txId);
       }
       throw createCommitException(e);
     } finally {
       try {
         connection.close();
       } catch (SQLException e) {
-        logger.warn("failed to close the connection", e);
+        logger.warn("Failed to close the connection", e);
       }
     }
   }
@@ -207,27 +207,27 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
       connection.rollback();
     } catch (SQLException e) {
-      throw new RollbackException("failed to rollback", e, txId);
+      throw new RollbackException("Failed to rollback", e, txId);
     } finally {
       try {
         connection.close();
       } catch (SQLException e) {
-        logger.warn("failed to close the connection", e);
+        logger.warn("Failed to close the connection", e);
       }
     }
   }
 
   private CrudException createCrudException(SQLException e, String message) {
     if (rdbEngine.isConflictError(e)) {
-      return new CrudConflictException("conflict happened; try restarting transaction", e, txId);
+      return new CrudConflictException("Conflict happened; try restarting transaction", e, txId);
     }
     return new CrudException(message, e, txId);
   }
 
   private CommitException createCommitException(SQLException e) {
     if (rdbEngine.isConflictError(e)) {
-      return new CommitConflictException("conflict happened; try restarting transaction", e, txId);
+      return new CommitConflictException("Conflict happened; try restarting transaction", e, txId);
     }
-    return new CommitException("failed to commit", e, txId);
+    return new CommitException("Failed to commit", e, txId);
   }
 }

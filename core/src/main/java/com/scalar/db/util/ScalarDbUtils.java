@@ -109,7 +109,7 @@ public final class ScalarDbUtils {
       operation.forTable(tableName.orElse(null));
     }
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
-      throw new IllegalArgumentException("operation has no target namespace and table name");
+      throw new IllegalArgumentException("Operation has no target namespace and table name");
     }
   }
 

@@ -23,6 +23,6 @@ public enum TransactionState {
         return state;
       }
     }
-    throw new IllegalArgumentException("invalid id specified.");
+    throw new IllegalArgumentException("Invalid id specified");
   }
 }

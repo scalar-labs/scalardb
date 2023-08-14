@@ -174,7 +174,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
     if (coordinator) {
       throw new IllegalArgumentException(
           "Specifying the '--coordinator' option with the '--import' option is not allowed."
-              + " Create coordinator tables separately.");
+              + " Create coordinator tables separately");
     }
 
     SchemaLoader.importTables(configPath, schemaFile);

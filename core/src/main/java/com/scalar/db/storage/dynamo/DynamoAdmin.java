@@ -268,7 +268,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     try {
       client.createTable(requestBuilder.build());
     } catch (Exception e) {
-      throw new ExecutionException("creating the table failed", e);
+      throw new ExecutionException("Creating the table failed", e);
     }
     waitForTableCreation(namespace, table);
 
@@ -450,7 +450,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
               .build());
     } catch (Exception e) {
       throw new ExecutionException(
-          "adding the meta data for table " + getFullTableName(namespace, table) + " failed", e);
+          "Adding the meta data for table " + getFullTableName(namespace, table) + " failed", e);
     }
   }
 
@@ -482,7 +482,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
               .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, METADATA_TABLE))
               .build());
     } catch (Exception e) {
-      throw new ExecutionException("creating the metadata table failed", e);
+      throw new ExecutionException("Creating the metadata table failed", e);
     }
     waitForTableCreation(Namespace.of(metadataNamespace), METADATA_TABLE);
 
@@ -526,7 +526,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         }
       }
     } catch (Exception e) {
-      throw new ExecutionException("waiting for the table creation failed", e);
+      throw new ExecutionException("Waiting for the table creation failed", e);
     }
   }
 
@@ -639,7 +639,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         }
       }
     } catch (Exception e) {
-      throw new ExecutionException("waiting for the table backup enabled at creation failed", e);
+      throw new ExecutionException("Waiting for the table backup enabled at creation failed", e);
     }
   }
 
@@ -664,7 +664,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     try {
       client.deleteTable(DeleteTableRequest.builder().tableName(fullTableName).build());
     } catch (Exception e) {
-      throw new ExecutionException("deleting table " + fullTableName + " failed", e);
+      throw new ExecutionException("Deleting table " + fullTableName + " failed", e);
     }
     waitForTableDeletion(namespace, table);
     deleteTableMetadata(namespace, table);
@@ -734,21 +734,21 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       client.deleteItem(
           DeleteItemRequest.builder().tableName(metadataTable).key(keyToDelete).build());
     } catch (Exception e) {
-      throw new ExecutionException("deleting the metadata failed", e);
+      throw new ExecutionException("Deleting the metadata failed", e);
     }
 
     ScanResponse scanResponse;
     try {
       scanResponse = client.scan(ScanRequest.builder().tableName(metadataTable).limit(1).build());
     } catch (Exception e) {
-      throw new ExecutionException("scanning the metadata table failed", e);
+      throw new ExecutionException("Scanning the metadata table failed", e);
     }
 
     if (scanResponse.count() == 0) {
       try {
         client.deleteTable(DeleteTableRequest.builder().tableName(metadataTable).build());
       } catch (Exception e) {
-        throw new ExecutionException("deleting the empty metadata table failed", e);
+        throw new ExecutionException("Deleting the empty metadata table failed", e);
       }
       waitForTableDeletion(Namespace.of(metadataNamespace), METADATA_TABLE);
     }
@@ -765,7 +765,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         }
       }
     } catch (Exception e) {
-      throw new ExecutionException("waiting for the table deletion failed", e);
+      throw new ExecutionException("Waiting for the table deletion failed", e);
     }
   }
 
@@ -825,7 +825,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
                     .exclusiveStartKey(lastKeyEvaluated)
                     .build());
       } catch (Exception e) {
-        throw new ExecutionException("scanning items from table " + fullTableName + " failed.", e);
+        throw new ExecutionException("Scanning items from table " + fullTableName + " failed", e);
       }
 
       for (Map<String, AttributeValue> item : scanResponse.items()) {
@@ -838,7 +838,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           client.deleteItem(
               DeleteItemRequest.builder().tableName(fullTableName).key(keyToDelete).build());
         } catch (Exception e) {
-          throw new ExecutionException("deleting item from table " + fullTableName + " failed.", e);
+          throw new ExecutionException("Deleting item from table " + fullTableName + " failed", e);
         }
       }
       lastKeyEvaluated = scanResponse.lastEvaluatedKey();
@@ -854,7 +854,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
     if (metadata == null) {
       throw new IllegalArgumentException(
-          "Table " + getFullTableName(namespace, table) + " does not exist.");
+          "Table " + getFullTableName(namespace, table) + " does not exist");
     }
 
     if (metadata.getColumnDataType(columnName) == DataType.BOOLEAN) {
@@ -896,7 +896,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
                       .build())
               .build());
     } catch (Exception e) {
-      throw new ExecutionException("creating the secondary index failed", e);
+      throw new ExecutionException("Creating the secondary index failed", e);
     }
 
     waitForIndexCreation(namespace, table, columnName);
@@ -950,7 +950,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         }
       }
     } catch (Exception e) {
-      throw new ExecutionException("waiting for the secondary index creation failed", e);
+      throw new ExecutionException("Waiting for the secondary index creation failed", e);
     }
   }
 
@@ -998,7 +998,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
                       .build())
               .build());
     } catch (Exception e) {
-      throw new ExecutionException("dropping the secondary index failed", e);
+      throw new ExecutionException("Dropping the secondary index failed", e);
     }
 
     waitForIndexDeletion(namespace, table, columnName);
@@ -1051,7 +1051,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         }
       }
     } catch (Exception e) {
-      throw new ExecutionException("waiting for the secondary index deletion failed", e);
+      throw new ExecutionException("Waiting for the secondary index deletion failed", e);
     }
   }
 
@@ -1100,7 +1100,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           getFullTableName(Namespace.of(namespacePrefix, nonPrefixedNamespace), table);
       return readMetadata(fullName);
     } catch (RuntimeException e) {
-      throw new ExecutionException("getting a table metadata failed", e);
+      throw new ExecutionException("Getting a table metadata failed", e);
     }
   }
 
@@ -1167,7 +1167,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       case "blob":
         return DataType.BLOB;
       default:
-        throw new ExecutionException("unknown column type: " + columnType);
+        throw new ExecutionException("Unknown column type: " + columnType);
     }
   }
 
@@ -1193,7 +1193,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
       return tableSet;
     } catch (Exception e) {
-      throw new ExecutionException("getting list of tables failed", e);
+      throw new ExecutionException("Getting list of tables failed", e);
     }
   }
 
@@ -1245,7 +1245,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       throw e;
     } catch (RuntimeException e) {
       throw new ExecutionException(
-          String.format("repairing the table %s.%s failed", namespace, table), e);
+          String.format("Repairing the table %s.%s failed", namespace, table), e);
     }
   }
 
@@ -1271,20 +1271,20 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   @Override
   public TableMetadata getImportTableMetadata(String namespace, String table) {
     throw new UnsupportedOperationException(
-        "import-related functionality is not supported in DynamoDB");
+        "Import-related functionality is not supported in DynamoDB");
   }
 
   @Override
   public void addRawColumnToTable(
       String namespace, String table, String columnName, DataType columnType) {
     throw new UnsupportedOperationException(
-        "import-related functionality is not supported in DynamoDB");
+        "Import-related functionality is not supported in DynamoDB");
   }
 
   @Override
   public void importTable(String namespace, String table) {
     throw new UnsupportedOperationException(
-        "import-related functionality is not supported in DynamoDB");
+        "Import-related functionality is not supported in DynamoDB");
   }
 
   @Override

@@ -46,7 +46,7 @@ public class DynamoConfig {
           "The property \"scalar.db.dynamo.endpoint-override\" is deprecated and will be removed in 5.0.0. "
               + "Please use \""
               + ENDPOINT_OVERRIDE
-              + "\" instead.");
+              + "\" instead");
     }
     endpointOverride =
         getString(
