@@ -63,7 +63,7 @@ public final class ConsensusCommitUtils {
             c -> {
               if (columnNames.contains(c)) {
                 throw new IllegalArgumentException(
-                    "column \"" + c + "\" is reserved as transaction metadata");
+                    "Column \"" + c + "\" is reserved as transaction metadata");
               }
             });
   }
@@ -75,7 +75,7 @@ public final class ConsensusCommitUtils {
           String beforePrefixed = Attribute.BEFORE_PREFIX + c;
           if (tableMetadata.getColumnNames().contains(beforePrefixed)) {
             throw new IllegalArgumentException(
-                "non-primary key column with the \""
+                "Non-primary key column with the \""
                     + Attribute.BEFORE_PREFIX
                     + "\" prefix, \""
                     + beforePrefixed

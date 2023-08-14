@@ -237,7 +237,7 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
         storage.put(put);
       }
     } catch (ExecutionException e) {
-      throw new ExecutionException("put data to database failed", e);
+      throw new ExecutionException("Put data to database failed", e);
     }
     return ret;
   }

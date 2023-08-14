@@ -778,7 +778,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
         storage.mutate(buffer);
       }
     } catch (ExecutionException e) {
-      throw new ExecutionException("put data to database failed", e);
+      throw new ExecutionException("Put data to database failed", e);
     }
 
     ret.sort(

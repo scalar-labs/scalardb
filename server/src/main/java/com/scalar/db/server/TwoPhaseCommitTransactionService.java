@@ -144,7 +144,7 @@ public class TwoPhaseCommitTransactionService
       responseObserver.onError(
           Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
     } catch (Throwable t) {
-      logger.error("an internal error happened during the execution", t);
+      logger.error("An internal error happened during the execution", t);
       responseObserver.onError(
           Status.INTERNAL.withDescription(t.getMessage()).asRuntimeException());
       if (t instanceof Error) {
@@ -249,7 +249,7 @@ public class TwoPhaseCommitTransactionService
       } catch (IllegalArgumentException e) {
         respondInvalidArgumentError(e.getMessage());
       } catch (Throwable t) {
-        logger.error("an internal error happened when Beginning a transaction", t);
+        logger.error("An internal error happened when Beginning a transaction", t);
         respondInternalError(t.getMessage());
         if (t instanceof Error) {
           throw (Error) t;
@@ -283,7 +283,7 @@ public class TwoPhaseCommitTransactionService
       } catch (IllegalArgumentException e) {
         respondInvalidArgumentError(e.getMessage());
       } catch (Throwable t) {
-        logger.error("an internal error happened when starting a transaction", t);
+        logger.error("An internal error happened when starting a transaction", t);
         respondInternalError(t.getMessage());
         if (t instanceof Error) {
           throw (Error) t;
@@ -309,7 +309,7 @@ public class TwoPhaseCommitTransactionService
       } catch (IllegalArgumentException e) {
         respondInvalidArgumentError(e.getMessage());
       } catch (Throwable t) {
-        logger.error("an internal error happened when joining a transaction", t);
+        logger.error("An internal error happened when joining a transaction", t);
         respondInternalError(t.getMessage());
         if (t instanceof Error) {
           throw (Error) t;
@@ -373,7 +373,7 @@ public class TwoPhaseCommitTransactionService
 
     @Override
     public void onError(Throwable t) {
-      logger.error("an error received", t);
+      logger.error("An error was received", t);
       cleanUp();
     }
 
@@ -388,7 +388,7 @@ public class TwoPhaseCommitTransactionService
                 tableMetadataManager.getTableMetadata(
                     request.getGet().getNamespace(), request.getGet().getTable());
             if (metadata == null) {
-              throw new IllegalArgumentException("the specified table is not found");
+              throw new IllegalArgumentException("The specified table is not found");
             }
 
             Get get = ProtoUtils.toGet(request.getGet(), metadata);
@@ -416,7 +416,7 @@ public class TwoPhaseCommitTransactionService
                 tableMetadataManager.getTableMetadata(
                     request.getScan().getNamespace(), request.getScan().getTable());
             if (metadata == null) {
-              throw new IllegalArgumentException("the specified table is not found");
+              throw new IllegalArgumentException("The specified table is not found");
             }
 
             Scan scan = ProtoUtils.toScan(request.getScan(), metadata);
@@ -447,7 +447,7 @@ public class TwoPhaseCommitTransactionService
                       request.getMutationsList().get(0).getNamespace(),
                       request.getMutationsList().get(0).getTable());
               if (metadata == null) {
-                throw new IllegalArgumentException("the specified table is not found");
+                throw new IllegalArgumentException("The specified table is not found");
               }
 
               mutations =
@@ -495,7 +495,7 @@ public class TwoPhaseCommitTransactionService
         try {
           transaction.rollback();
         } catch (RollbackException e) {
-          logger.warn("rollback failed", e);
+          logger.warn("Rollback failed", e);
         }
       }
 
@@ -542,7 +542,7 @@ public class TwoPhaseCommitTransactionService
                 .build());
       } catch (UnknownTransactionStatusException e) {
         logger.error(
-            "the transaction status is unknown. transaction ID: {}",
+            "The transaction status is unknown. transaction ID: {}",
             e.getTransactionId().orElse("null"),
             e);
         responseBuilder.setError(
@@ -551,7 +551,7 @@ public class TwoPhaseCommitTransactionService
                 .setMessage(e.getMessage())
                 .build());
       } catch (Throwable t) {
-        logger.error("an internal error happened during the execution", t);
+        logger.error("An internal error happened during the execution", t);
         if (t instanceof Error) {
           throw (Error) t;
         }

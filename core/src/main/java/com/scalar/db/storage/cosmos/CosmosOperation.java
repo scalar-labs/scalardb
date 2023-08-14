@@ -87,7 +87,7 @@ public class CosmosOperation {
             .join(
                 new String[] {
                   operation.getClass().toString(), "is passed where something like",
-                  expected[0].toString(), "is expected."
+                  expected[0].toString(), "is expected"
                 }));
   }
 }

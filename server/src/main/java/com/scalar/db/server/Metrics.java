@@ -80,7 +80,7 @@ public class Metrics {
       server.start();
       logger.info("Prometheus exporter started, listening on {}", prometheusExporterPort);
     } catch (Exception e) {
-      logger.error("failed to start Jetty server", e);
+      logger.error("Failed to start Jetty server", e);
     }
   }
 

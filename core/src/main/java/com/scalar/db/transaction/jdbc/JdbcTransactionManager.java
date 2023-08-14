@@ -82,7 +82,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
       getTable().ifPresent(transaction::withTable);
       return decorate(transaction);
     } catch (SQLException e) {
-      throw new TransactionException("failed to start the transaction", e, null);
+      throw new TransactionException("Failed to start the transaction", e, null);
     }
   }
 
@@ -140,12 +140,12 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
 
   @Override
   public TransactionState getState(String txId) {
-    throw new UnsupportedOperationException("this method is not supported in JDBC transaction");
+    throw new UnsupportedOperationException("This method is not supported in JDBC transaction");
   }
 
   @Override
   public TransactionState rollback(String txId) {
-    throw new UnsupportedOperationException("this method is not supported in JDBC transaction");
+    throw new UnsupportedOperationException("This method is not supported in JDBC transaction");
   }
 
   @Override
@@ -153,12 +153,12 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
     try {
       dataSource.close();
     } catch (SQLException e) {
-      logger.warn("failed to close the dataSource", e);
+      logger.warn("Failed to close the dataSource", e);
     }
     try {
       tableMetadataDataSource.close();
     } catch (SQLException e) {
-      logger.warn("failed to close the table metadata dataSource", e);
+      logger.warn("Failed to close the table metadata dataSource", e);
     }
   }
 }

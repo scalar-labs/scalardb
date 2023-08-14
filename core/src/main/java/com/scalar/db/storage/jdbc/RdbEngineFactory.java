@@ -30,7 +30,7 @@ public final class RdbEngineFactory {
     } else if (jdbcUrl.startsWith("jdbc:sqlite:")) {
       return new RdbEngineSqlite();
     } else {
-      throw new IllegalArgumentException("the rdb engine is not supported: " + jdbcUrl);
+      throw new IllegalArgumentException("The rdb engine is not supported: " + jdbcUrl);
     }
   }
 }

@@ -230,16 +230,16 @@ public class TableMetadata {
 
     public TableMetadata build() {
       if (columns.isEmpty()) {
-        throw new IllegalStateException("need to specify one or more columns");
+        throw new IllegalStateException("Need to specify one or more columns");
       }
       if (partitionKeyNames.isEmpty()) {
-        throw new IllegalStateException("need to specify one or more partition keys");
+        throw new IllegalStateException("Need to specify one or more partition keys");
       }
       partitionKeyNames.forEach(
           k -> {
             if (!columns.containsKey(k)) {
               throw new IllegalStateException(
-                  "need to specify the column definition of "
+                  "Need to specify the column definition of "
                       + k
                       + " specified as a partition key");
             }
@@ -248,7 +248,7 @@ public class TableMetadata {
           k -> {
             if (!columns.containsKey(k)) {
               throw new IllegalStateException(
-                  "need to specify the column definition of "
+                  "Need to specify the column definition of "
                       + k
                       + " specified as a clustering key");
             }

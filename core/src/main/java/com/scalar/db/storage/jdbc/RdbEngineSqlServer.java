@@ -82,7 +82,7 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   @Override
   public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException {
-    throw new ExecutionException("dropping the schema failed: " + namespace, e);
+    throw new ExecutionException("Dropping the schema failed: " + namespace, e);
   }
 
   @Override
@@ -188,13 +188,13 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
         if (columnSize != 1) {
           throw new IllegalArgumentException(
               String.format(
-                  "data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
+                  "Data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
         }
         return DataType.BOOLEAN;
       case TINYINT:
       case SMALLINT:
         logger.info(
-            "data type larger than that of underlying database is assigned: {} ({} to INT)",
+            "Data type larger than that of underlying database is assigned: {} ({} to INT)",
             columnDescription,
             typeName);
         return DataType.INT;
@@ -202,7 +202,7 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
         return DataType.INT;
       case BIGINT:
         logger.warn(
-            "data type that may be smaller than that of underlying database is assigned: {} (SQL Server {} to ScalarDB BIGINT)",
+            "Data type that may be smaller than that of underlying database is assigned: {} (SQL Server {} to ScalarDB BIGINT)",
             columnDescription,
             typeName);
         return DataType.BIGINT;
@@ -216,10 +216,10 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
       case NVARCHAR:
         if (typeName.equalsIgnoreCase("uniqueidentifier")) {
           throw new IllegalArgumentException(
-              String.format("data type %s is unsupported: %s", typeName, columnDescription));
+              String.format("Data type %s is unsupported: %s", typeName, columnDescription));
         }
         logger.info(
-            "data type larger than that of underlying database is assigned: {} ({} to TEXT)",
+            "Data type larger than that of underlying database is assigned: {} ({} to TEXT)",
             columnDescription,
             typeName);
         return DataType.TEXT;
@@ -227,17 +227,17 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
       case LONGNVARCHAR:
         if (typeName.equalsIgnoreCase("xml")) {
           throw new IllegalArgumentException(
-              String.format("data type %s is unsupported: %s", typeName, columnDescription));
+              String.format("Data type %s is unsupported: %s", typeName, columnDescription));
         }
         return DataType.TEXT;
       case BINARY:
       case VARBINARY:
         if (typeName.equalsIgnoreCase("timestamp") || typeName.equalsIgnoreCase("hierarchyid")) {
           throw new IllegalArgumentException(
-              String.format("data type %s is unsupported: %s", typeName, columnDescription));
+              String.format("Data type %s is unsupported: %s", typeName, columnDescription));
         }
         logger.info(
-            "data type larger than that of underlying database is assigned: {} ({} to BLOB)",
+            "Data type larger than that of underlying database is assigned: {} ({} to BLOB)",
             columnDescription,
             typeName);
         return DataType.BLOB;
@@ -245,7 +245,7 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
         return DataType.BLOB;
       default:
         throw new IllegalArgumentException(
-            String.format("data type %s is unsupported: %s", typeName, columnDescription));
+            String.format("Data type %s is unsupported: %s", typeName, columnDescription));
     }
   }
 

@@ -40,7 +40,7 @@ public class CosmosOperationChecker extends OperationChecker {
             && expression.getOperator() != ConditionalExpression.Operator.IS_NULL
             && expression.getOperator() != ConditionalExpression.Operator.IS_NOT_NULL) {
           throw new IllegalArgumentException(
-              "Cosmos DB only supports EQ, NE, IS_NULL, and IS_NOT_NULL operations for BLOB type in conditions.");
+              "Cosmos DB only supports EQ, NE, IS_NULL, and IS_NOT_NULL operations for BLOB type in conditions");
         }
       }
     }

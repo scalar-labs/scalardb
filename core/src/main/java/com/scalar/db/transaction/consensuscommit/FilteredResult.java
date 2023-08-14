@@ -69,7 +69,7 @@ public class FilteredResult extends AbstractResult {
     }
     for (Value<?> value : key.get()) {
       if (!containedColumnNames.contains(value.getName())) {
-        logger.warn("full key doesn't seem to be projected into the result");
+        logger.warn("Full key doesn't seem to be projected into the result");
         return Optional.empty();
       }
     }

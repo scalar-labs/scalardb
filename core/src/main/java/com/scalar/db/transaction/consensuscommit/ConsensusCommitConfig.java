@@ -60,7 +60,7 @@ public class ConsensusCommitConfig {
           "The property \"scalar.db.isolation_level\" is deprecated and will be removed in 5.0.0. "
               + "Please use \""
               + ISOLATION_LEVEL
-              + "\" instead.");
+              + "\" instead");
     }
     isolation =
         Isolation.valueOf(

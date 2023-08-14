@@ -73,7 +73,7 @@ public class JdbcService {
               Optional.of(
                   new ResultInterpreter(get.getProjections(), tableMetadata).interpret(resultSet));
           if (resultSet.next()) {
-            throw new IllegalArgumentException("please use scan() for non-exact match selection");
+            throw new IllegalArgumentException("Please use scan() for non-exact match selection");
           }
           return ret;
         }

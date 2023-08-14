@@ -67,7 +67,7 @@ public class Cosmos extends AbstractDistributedStorage {
     deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
     batchHandler = new BatchHandler(client, metadataManager);
 
-    logger.info("Cosmos DB object is created properly.");
+    logger.info("Cosmos DB object is created properly");
   }
 
   @VisibleForTesting
@@ -97,7 +97,7 @@ public class Cosmos extends AbstractDistributedStorage {
     Scanner scanner = selectStatementHandler.handle(get);
     Optional<Result> ret = scanner.one();
     if (scanner.one().isPresent()) {
-      throw new IllegalArgumentException("please use scan() for non-exact match selection");
+      throw new IllegalArgumentException("Please use scan() for non-exact match selection");
     }
 
     return ret;
@@ -110,7 +110,7 @@ public class Cosmos extends AbstractDistributedStorage {
 
     if (ScalarDbUtils.isRelational(scan)) {
       throw new UnsupportedOperationException(
-          "scanning all records with orderings or conditions is not supported in Cosmos DB");
+          "Scanning all records with orderings or conditions is not supported in Cosmos DB");
     }
 
     return selectStatementHandler.handle(scan);

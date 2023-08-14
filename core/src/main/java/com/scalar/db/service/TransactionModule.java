@@ -70,7 +70,7 @@ public class TransactionModule extends AbstractModule {
         storageAdminClass = GrpcAdmin.class;
         break;
       default:
-        throw new IllegalArgumentException("storage '" + config.getStorage() + "' isn't supported");
+        throw new IllegalArgumentException("Storage '" + config.getStorage() + "' isn't supported");
     }
 
     bind(DistributedStorage.class).to(storageClass);
@@ -97,7 +97,7 @@ public class TransactionModule extends AbstractModule {
         break;
       default:
         throw new IllegalArgumentException(
-            "transaction manager '" + config.getTransactionManager() + "' isn't supported");
+            "Transaction manager '" + config.getTransactionManager() + "' isn't supported");
     }
 
     bind(DistributedTransactionManager.class).to(transactionManagerClass);

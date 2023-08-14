@@ -48,7 +48,7 @@ public class DeleteStatementHandler {
     try {
       delete(delete, tableMetadata);
     } catch (ConditionalCheckFailedException e) {
-      throw new NoMutationException("no mutation was applied.", e);
+      throw new NoMutationException("No mutation was applied", e);
     } catch (TransactionConflictException e) {
       throw new RetriableExecutionException(e.getMessage(), e);
     } catch (DynamoDbException e) {

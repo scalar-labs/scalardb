@@ -281,7 +281,7 @@ public class SelectStatementHandler extends StatementHandler {
       case DESC:
         return QueryBuilder.desc(quoteIfNecessary(ordering.getColumnName()));
       default:
-        logger.warn("Unsupported ordering specified. Using Order.ASC.");
+        logger.warn("Unsupported ordering specified. Using Order.ASC");
         return QueryBuilder.asc(quoteIfNecessary(ordering.getColumnName()));
     }
   }

@@ -103,7 +103,7 @@ public class GrpcTransactionOnBidirectionalStream
 
   private void throwIfTransactionFinished() {
     if (finished.get()) {
-      throw new IllegalStateException("the transaction is finished");
+      throw new IllegalStateException("The transaction is finished");
     }
   }
 
@@ -158,7 +158,7 @@ public class GrpcTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new TransactionException("failed to " + command, error, null);
+      throw new TransactionException("Failed to " + command, error, null);
     }
   }
 
@@ -201,7 +201,7 @@ public class GrpcTransactionOnBidirectionalStream
     try {
       return metadataManager.getTableMetadata(operation);
     } catch (ExecutionException e) {
-      throw new CrudException("getting a metadata failed", e, transactionId);
+      throw new CrudException("Getting a metadata failed", e, transactionId);
     }
   }
 
@@ -234,7 +234,7 @@ public class GrpcTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new CrudException("failed to execute crud", error, transactionId);
+      throw new CrudException("Failed to execute crud", error, transactionId);
     }
 
     TransactionResponse response = responseOrError.getResponse();
@@ -272,7 +272,7 @@ public class GrpcTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new CommitException("failed to commit", error, transactionId);
+      throw new CommitException("Failed to commit", error, transactionId);
     }
 
     TransactionResponse response = responseOrError.getResponse();
@@ -309,7 +309,7 @@ public class GrpcTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new RollbackException("failed to rollback", error, transactionId);
+      throw new RollbackException("Failed to rollback", error, transactionId);
     }
 
     TransactionResponse response = responseOrError.getResponse();
@@ -338,7 +338,7 @@ public class GrpcTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new AbortException("failed to abort", error, transactionId);
+      throw new AbortException("Failed to abort", error, transactionId);
     }
 
     TransactionResponse response = responseOrError.getResponse();

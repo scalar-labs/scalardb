@@ -84,7 +84,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, rdbEngine.createNamespaceSqls(fullNamespace));
     } catch (SQLException e) {
-      throw new ExecutionException("creating the schema failed", e);
+      throw new ExecutionException("Creating the schema failed", e);
     }
   }
 
@@ -93,7 +93,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     if (!rdbEngine.isValidTableName(table)) {
-      throw new ExecutionException("table name is not acceptable: " + table);
+      throw new ExecutionException("Table name is not acceptable: " + table);
     }
 
     try (Connection connection = dataSource.getConnection()) {
@@ -102,7 +102,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       addTableMetadata(connection, namespace, table, metadata, true);
     } catch (SQLException e) {
       throw new ExecutionException(
-          "creating the table failed: " + getFullTableName(namespace, table), e);
+          "Creating the table failed: " + getFullTableName(namespace, table), e);
     }
   }
 
@@ -300,7 +300,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       deleteTableMetadata(connection, namespace, table);
     } catch (SQLException e) {
       throw new ExecutionException(
-          "dropping the table failed: " + getFullTableName(namespace, table), e);
+          "Dropping the table failed: " + getFullTableName(namespace, table), e);
     }
   }
 
@@ -380,7 +380,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       execute(connection, truncateTableStatement);
     } catch (SQLException e) {
       throw new ExecutionException(
-          "truncating the table failed: " + getFullTableName(namespace, table), e);
+          "Truncating the table failed: " + getFullTableName(namespace, table), e);
     }
   }
 
@@ -426,12 +426,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               builder.addClusteringKey(columnName, clusteringOrder);
               break;
             default:
-              throw new AssertionError("invalid key type: " + keyType);
+              throw new AssertionError("Invalid key type: " + keyType);
           }
         }
       }
     } catch (SQLException e) {
-      throw new ExecutionException("getting a table metadata failed", e);
+      throw new ExecutionException("Getting a table metadata failed", e);
     }
 
     if (!tableExists) {
@@ -483,7 +483,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                 getFullTableName(namespace, table) + " " + columnName));
       }
     } catch (SQLException e) {
-      throw new ExecutionException("getting a table metadata failed", e);
+      throw new ExecutionException("Getting a table metadata failed", e);
     }
 
     return builder.build();
@@ -547,7 +547,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       if (rdbEngine.isUndefinedTableError(e)) {
         return Collections.emptySet();
       }
-      throw new ExecutionException("retrieving the namespace table names failed", e);
+      throw new ExecutionException("Retrieving the namespace table names failed", e);
     }
   }
 
@@ -560,7 +560,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       preparedStatement.setString(1, rdbEngine.namespaceExistsPlaceholder(namespace));
       return preparedStatement.executeQuery().next();
     } catch (SQLException e) {
-      throw new ExecutionException("checking if the namespace exists failed", e);
+      throw new ExecutionException("Checking if the namespace exists failed", e);
     }
   }
 
@@ -569,7 +569,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try {
       dataSource.close();
     } catch (SQLException e) {
-      logger.error("failed to close the dataSource", e);
+      logger.error("Failed to close the dataSource", e);
     }
   }
 
@@ -612,7 +612,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       createIndex(connection, namespace, table, columnName);
       updateTableMetadata(connection, namespace, table, columnName, true);
     } catch (ExecutionException | SQLException e) {
-      throw new ExecutionException("creating the secondary index failed", e);
+      throw new ExecutionException("Creating the secondary index failed", e);
     }
   }
 
@@ -654,7 +654,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       alterToRegularColumnTypeIfNecessary(connection, namespace, table, columnName);
       updateTableMetadata(connection, namespace, table, columnName, false);
     } catch (SQLException e) {
-      throw new ExecutionException("dropping the secondary index failed", e);
+      throw new ExecutionException("Dropping the secondary index failed", e);
     }
   }
 
@@ -672,7 +672,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         return false;
       }
       throw new ExecutionException(
-          String.format("checking if the table %s.%s exists failed", namespace, table), e);
+          String.format("Checking if the table %s.%s exists failed", namespace, table), e);
     }
   }
 
@@ -696,7 +696,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       }
     } catch (ExecutionException | SQLException e) {
       throw new ExecutionException(
-          String.format("repairing the table %s.%s failed", namespace, table), e);
+          String.format("Repairing the table %s.%s failed", namespace, table), e);
     }
   }
 

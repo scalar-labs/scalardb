@@ -85,7 +85,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       connection = dataSource.getConnection();
       return jdbcService.get(get, connection);
     } catch (SQLException e) {
-      throw new ExecutionException("get operation failed", e);
+      throw new ExecutionException("Get operation failed", e);
     } finally {
       close(connection);
     }
@@ -100,7 +100,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       return jdbcService.getScanner(scan, connection);
     } catch (SQLException e) {
       close(connection);
-      throw new ExecutionException("scan operation failed", e);
+      throw new ExecutionException("Scan operation failed", e);
     }
   }
 
@@ -111,10 +111,10 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     try {
       connection = dataSource.getConnection();
       if (!jdbcService.put(put, connection)) {
-        throw new NoMutationException("no mutation was applied");
+        throw new NoMutationException("No mutation was applied");
       }
     } catch (SQLException e) {
-      throw new ExecutionException("put operation failed", e);
+      throw new ExecutionException("Put operation failed", e);
     } finally {
       close(connection);
     }
@@ -132,10 +132,10 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     try {
       connection = dataSource.getConnection();
       if (!jdbcService.delete(delete, connection)) {
-        throw new NoMutationException("no mutation was applied");
+        throw new NoMutationException("No mutation was applied");
       }
     } catch (SQLException e) {
-      throw new ExecutionException("delete operation failed", e);
+      throw new ExecutionException("Delete operation failed", e);
     } finally {
       close(connection);
     }
@@ -165,7 +165,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       connection.setAutoCommit(false);
     } catch (SQLException e) {
       close(connection);
-      throw new ExecutionException("mutate operation failed", e);
+      throw new ExecutionException("Mutate operation failed", e);
     }
 
     try {
@@ -173,9 +173,9 @@ public class JdbcDatabase extends AbstractDistributedStorage {
         try {
           connection.rollback();
         } catch (SQLException e) {
-          throw new ExecutionException("failed to rollback", e);
+          throw new ExecutionException("Failed to rollback", e);
         }
-        throw new NoMutationException("no mutation was applied");
+        throw new NoMutationException("No mutation was applied");
       } else {
         connection.commit();
       }
@@ -183,14 +183,14 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       try {
         connection.rollback();
       } catch (SQLException sqlException) {
-        throw new ExecutionException("failed to rollback", sqlException);
+        throw new ExecutionException("Failed to rollback", sqlException);
       }
       if (rdbEngine.isConflictError(e)) {
         // Since a mutate operation executes multiple put/delete operations in a transaction,
         // conflicts can happen. Throw RetriableExecutionException in that case.
-        throw new RetriableExecutionException("conflict happened in a mutate operation", e);
+        throw new RetriableExecutionException("Conflict happened in a mutate operation", e);
       }
-      throw new ExecutionException("mutate operation failed", e);
+      throw new ExecutionException("Mutate operation failed", e);
     } finally {
       close(connection);
     }
@@ -202,7 +202,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
         connection.close();
       }
     } catch (SQLException e) {
-      logger.warn("failed to close the connection", e);
+      logger.warn("Failed to close the connection", e);
     }
   }
 
@@ -211,12 +211,12 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     try {
       dataSource.close();
     } catch (SQLException e) {
-      logger.error("failed to close the dataSource", e);
+      logger.error("Failed to close the dataSource", e);
     }
     try {
       tableMetadataDataSource.close();
     } catch (SQLException e) {
-      logger.warn("failed to close the table metadata dataSource", e);
+      logger.warn("Failed to close the table metadata dataSource", e);
     }
   }
 }

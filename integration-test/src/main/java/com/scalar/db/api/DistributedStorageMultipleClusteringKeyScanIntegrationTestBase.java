@@ -1663,7 +1663,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
         storage.mutate(buffer);
       }
     } catch (ExecutionException e) {
-      throw new ExecutionException("put data to database failed", e);
+      throw new ExecutionException("Put data to database failed", e);
     }
     ret.sort(getClusteringKeyComparator(firstClusteringOrder, secondClusteringOrder));
     return ret;

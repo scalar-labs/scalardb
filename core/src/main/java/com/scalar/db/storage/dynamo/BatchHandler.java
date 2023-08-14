@@ -66,7 +66,7 @@ public class BatchHandler {
    */
   public void handle(List<? extends Mutation> mutations) throws ExecutionException {
     if (mutations.size() > 100) {
-      throw new IllegalArgumentException("DynamoDB cannot batch more than 100 mutations at once.");
+      throw new IllegalArgumentException("DynamoDB cannot batch more than 100 mutations at once");
     }
 
     TableMetadata tableMetadata = metadataManager.getTableMetadata(mutations.get(0));
@@ -83,7 +83,7 @@ public class BatchHandler {
       boolean allReasonsAreTransactionConflicts = true;
       for (CancellationReason reason : e.cancellationReasons()) {
         if (reason.code().equals("ConditionalCheckFailed")) {
-          throw new NoMutationException("no mutation was applied.", e);
+          throw new NoMutationException("No mutation was applied", e);
         }
         if (!reason.code().equals("TransactionConflict") && !reason.code().equals("None")) {
           allReasonsAreTransactionConflicts = false;
@@ -187,7 +187,7 @@ public class BatchHandler {
                 return copyAndAppendNamespacePrefix((com.scalar.db.api.Delete) m);
               } else {
                 throw new IllegalArgumentException(
-                    "unexpected mutation type: " + m.getClass().getName());
+                    "Unexpected mutation type: " + m.getClass().getName());
               }
             })
         .collect(Collectors.toList());

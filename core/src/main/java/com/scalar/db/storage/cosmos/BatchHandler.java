@@ -88,7 +88,7 @@ public class BatchHandler {
     int statusCode = exception.getSubStatusCode();
 
     if (statusCode == CosmosErrorCode.PRECONDITION_FAILED.get()) {
-      throw new NoMutationException("no mutation was applied.");
+      throw new NoMutationException("No mutation was applied");
     } else if (statusCode == CosmosErrorCode.RETRY_WITH.get()) {
       throw new RetriableExecutionException(exception.getMessage(), exception);
     }

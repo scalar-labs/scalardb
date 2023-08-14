@@ -75,7 +75,7 @@ public class ClusterManager {
   private void initialize(DatabaseConfig config) {
     cluster = getCluster(config);
     session = cluster.connect();
-    logger.info("session to the cluster is created.");
+    logger.info("Session to the cluster is created");
   }
 
   private Cluster getCluster(DatabaseConfig config) {

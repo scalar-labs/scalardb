@@ -48,7 +48,7 @@ public class SchemaLoader {
           logger.warn(
               "Storage-specific options (--cassandra, --cosmos, --dynamo, --jdbc) "
                   + "are deprecated and will be removed in 5.0.0. Please use "
-                  + "the --config option along with your config file instead.");
+                  + "the --config option along with your config file instead");
           // Remove the storage specific option from args
           commandArgs = Arrays.stream(args).filter(a -> !a.equals(arg)).toArray(String[]::new);
         }
@@ -582,7 +582,7 @@ public class SchemaLoader {
         assert config.getLeft() != null;
         return new SchemaOperator(config.getLeft());
       } catch (IOException e) {
-        throw new SchemaLoaderException("Initializing schema operator failed.", e);
+        throw new SchemaLoaderException("Initializing schema operator failed", e);
       }
     } else {
       assert config.getRight() != null;

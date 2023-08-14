@@ -59,7 +59,7 @@ public class StorageModule extends AbstractModule {
         storageAdminClass = GrpcAdmin.class;
         break;
       default:
-        throw new IllegalArgumentException("storage '" + config.getStorage() + "' isn't supported");
+        throw new IllegalArgumentException("Storage '" + config.getStorage() + "' isn't supported");
     }
 
     bind(DistributedStorage.class).to(storageClass);

@@ -338,7 +338,7 @@ public class KeyBytesEncoderTest {
   private static Comparator<Key> getComparator(Map<String, Order> keyOrders) {
     return (o1, o2) -> {
       if (o1.size() != o2.size()) {
-        throw new IllegalArgumentException("the key size is different");
+        throw new IllegalArgumentException("The key size is different");
       }
 
       ComparisonChain comparisonChain = ComparisonChain.start();
@@ -346,7 +346,7 @@ public class KeyBytesEncoderTest {
         Value<?> left = o1.get().get(i);
         Value<?> right = o2.get().get(i);
         if (!left.getName().equals(right.getName())) {
-          throw new IllegalArgumentException("the value name is different");
+          throw new IllegalArgumentException("The value name is different");
         }
         Order order = keyOrders.get(left.getName());
         comparisonChain =

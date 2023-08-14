@@ -78,7 +78,7 @@ public class ParallelExecutor {
           transactionId);
     } catch (ValidationConflictException e) {
       throw new AssertionError(
-          "tasks for preparation should not throw ValidationConflictException", e);
+          "Tasks for preparation should not throw ValidationConflictException", e);
     }
   }
 
@@ -99,7 +99,7 @@ public class ParallelExecutor {
           "commitRecords",
           transactionId);
     } catch (ValidationConflictException e) {
-      throw new AssertionError("tasks for commit should not throw ValidationConflictException", e);
+      throw new AssertionError("Tasks for commit should not throw ValidationConflictException", e);
     }
   }
 
@@ -115,7 +115,7 @@ public class ParallelExecutor {
           transactionId);
     } catch (ValidationConflictException e) {
       throw new AssertionError(
-          "tasks for rollback should not throw ValidationConflictException", e);
+          "Tasks for rollback should not throw ValidationConflictException", e);
     }
   }
 
@@ -153,7 +153,7 @@ public class ParallelExecutor {
                     t.run();
                   } catch (Exception e) {
                     logger.warn(
-                        "failed to run a {} task. transaction ID: {}", taskName, transactionId, e);
+                        "Failed to run a {} task. transaction ID: {}", taskName, transactionId, e);
                     throw e;
                   }
                   return null;
@@ -207,7 +207,7 @@ public class ParallelExecutor {
       try {
         task.run();
       } catch (ExecutionException | ValidationConflictException e) {
-        logger.warn("failed to run a {} task. transaction ID: {}", taskName, transactionId, e);
+        logger.warn("Failed to run a {} task. transaction ID: {}", taskName, transactionId, e);
 
         if (!stopOnError) {
           exception = e;

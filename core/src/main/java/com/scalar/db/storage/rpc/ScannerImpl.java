@@ -62,7 +62,7 @@ public class ScannerImpl implements Scanner {
     try {
       stream.closeScanner();
     } catch (ExecutionException e) {
-      throw new IOException("close failed", e);
+      throw new IOException("Close failed", e);
     }
   }
 

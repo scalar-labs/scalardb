@@ -79,7 +79,7 @@ public class CrudHandler {
       return createGetResult(key, originalProjections);
     }
     throw new UncommittedRecordException(
-        result.get(), "this record needs recovery", snapshot.getId());
+        result.get(), "This record needs recovery", snapshot.getId());
   }
 
   private Optional<Result> createGetResult(Snapshot.Key key, List<String> projections)
@@ -125,7 +125,7 @@ public class CrudHandler {
         TransactionResult result = new TransactionResult(r);
         if (!result.isCommitted()) {
           throw new UncommittedRecordException(
-              result, "the record needs recovery", snapshot.getId());
+              result, "The record needs recovery", snapshot.getId());
         }
 
         Snapshot.Key key = new Snapshot.Key(scan, r);
@@ -142,7 +142,7 @@ public class CrudHandler {
         try {
           scanner.close();
         } catch (IOException e) {
-          logger.warn("failed to close the scanner", e);
+          logger.warn("Failed to close the scanner", e);
         }
       }
     }
@@ -184,7 +184,7 @@ public class CrudHandler {
       get.withConsistency(Consistency.LINEARIZABLE);
       return storage.get(get).map(TransactionResult::new);
     } catch (ExecutionException e) {
-      throw new CrudException("get failed", e, snapshot.getId());
+      throw new CrudException("Get failed", e, snapshot.getId());
     }
   }
 
@@ -201,7 +201,7 @@ public class CrudHandler {
       scan.withConsistency(Consistency.LINEARIZABLE);
       return storage.scan(scan);
     } catch (ExecutionException e) {
-      throw new CrudException("scan failed", e, snapshot.getId());
+      throw new CrudException("Scan failed", e, snapshot.getId());
     }
   }
 
@@ -216,7 +216,7 @@ public class CrudHandler {
       }
       return metadata.getTableMetadata();
     } catch (ExecutionException e) {
-      throw new CrudException("getting a table metadata failed", e, snapshot.getId());
+      throw new CrudException("Getting a table metadata failed", e, snapshot.getId());
     }
   }
 

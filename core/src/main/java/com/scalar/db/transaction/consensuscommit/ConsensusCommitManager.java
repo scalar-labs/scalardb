@@ -179,7 +179,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
         || !config.getSerializableStrategy().equals(strategy)) {
       logger.warn(
           "Setting different isolation level or serializable strategy from the ones"
-              + "in DatabaseConfig might cause unexpected anomalies.");
+              + "in DatabaseConfig might cause unexpected anomalies");
     }
     Snapshot snapshot =
         new Snapshot(txId, isolation, strategy, tableMetadataManager, parallelExecutor);
