@@ -57,15 +57,15 @@ public class BatchHandler {
       ResultSet results = execute(mutations);
       // it's for conditional update. non-conditional update always return true
       if (!results.wasApplied()) {
-        throw new NoMutationException("no mutation was applied.");
+        throw new NoMutationException("No mutation was applied");
       }
     } catch (WriteTimeoutException e) {
-      logger.warn("write timeout happened during batch mutate operation.", e);
+      logger.warn("Write timeout happened during batch mutate operation", e);
       WriteType writeType = e.getWriteType();
       if (writeType == WriteType.BATCH_LOG) {
-        throw new RetriableExecutionException("logging failed in the batch.", e);
+        throw new RetriableExecutionException("Logging failed in the batch", e);
       } else if (writeType == WriteType.BATCH) {
-        logger.warn("logging was succeeded, but mutations in the batch partially failed.", e);
+        logger.warn("Logging succeeded, but mutations in the batch partially failed", e);
       } else {
         throw new RetriableExecutionException(
             "operation failed in the batch with type " + writeType, e);

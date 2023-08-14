@@ -199,7 +199,7 @@ public final class ProtoUtils {
           return BlobColumn.ofNull(columnName);
         }
       case VALUE_NOT_SET:
-        throw new IllegalArgumentException("the value is not set");
+        throw new IllegalArgumentException("The value is not set");
       default:
         throw new AssertionError();
     }
@@ -257,7 +257,7 @@ public final class ProtoUtils {
       case CONSISTENCY_LINEARIZABLE:
         return Consistency.LINEARIZABLE;
       case UNRECOGNIZED:
-        throw new IllegalArgumentException("the consistency is not set");
+        throw new IllegalArgumentException("The consistency is not set");
       default:
         throw new AssertionError();
     }
@@ -363,7 +363,7 @@ public final class ProtoUtils {
       case ORDER_DESC:
         return Scan.Ordering.desc(ordering.getName());
       case UNRECOGNIZED:
-        throw new IllegalArgumentException("the order is unrecognized");
+        throw new IllegalArgumentException("The order is unrecognized");
       default:
         throw new AssertionError();
     }
@@ -383,7 +383,7 @@ public final class ProtoUtils {
       case ORDER_DESC:
         return Scan.Ordering.Order.DESC;
       case UNRECOGNIZED:
-        throw new IllegalArgumentException("the order is unrecognized");
+        throw new IllegalArgumentException("The order is unrecognized");
       default:
         throw new AssertionError();
     }
@@ -483,7 +483,7 @@ public final class ProtoUtils {
       case DELETE_IF_EXISTS:
         return ConditionBuilder.deleteIfExists();
       case UNRECOGNIZED:
-        throw new IllegalArgumentException("the condition type is unrecognized");
+        throw new IllegalArgumentException("The condition type is unrecognized");
       default:
         throw new AssertionError();
     }
@@ -560,7 +560,7 @@ public final class ProtoUtils {
       case IS_NOT_NULL:
         return ConditionalExpression.Operator.IS_NOT_NULL;
       case UNRECOGNIZED:
-        throw new IllegalArgumentException("the condition operator is unrecognized");
+        throw new IllegalArgumentException("The condition operator is unrecognized");
       default:
         throw new AssertionError();
     }
@@ -697,7 +697,7 @@ public final class ProtoUtils {
       case DATA_TYPE_BLOB:
         return DataType.BLOB;
       case UNRECOGNIZED:
-        throw new IllegalArgumentException("the data type is unrecognized");
+        throw new IllegalArgumentException("The data type is unrecognized");
       default:
         throw new AssertionError();
     }
@@ -746,7 +746,7 @@ public final class ProtoUtils {
       case TRANSACTION_STATE_UNKNOWN:
         return TransactionState.UNKNOWN;
       case UNRECOGNIZED:
-        throw new IllegalArgumentException("the transaction state is unrecognized");
+        throw new IllegalArgumentException("The transaction state is unrecognized");
       default:
         throw new AssertionError();
     }

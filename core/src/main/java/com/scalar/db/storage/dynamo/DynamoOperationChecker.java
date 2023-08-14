@@ -53,7 +53,7 @@ public class DynamoOperationChecker extends OperationChecker {
             && expression.getOperator() != ConditionalExpression.Operator.IS_NULL
             && expression.getOperator() != ConditionalExpression.Operator.IS_NOT_NULL) {
           throw new IllegalArgumentException(
-              "DynamoDB only supports EQ, NE, IS_NULL, and IS_NOT_NULL operations for BOOLEAN type in conditions.");
+              "DynamoDB only supports EQ, NE, IS_NULL, and IS_NOT_NULL operations for BOOLEAN type in conditions");
         }
       }
     }

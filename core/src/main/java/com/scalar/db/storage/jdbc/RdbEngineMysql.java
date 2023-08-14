@@ -81,7 +81,7 @@ class RdbEngineMysql implements RdbEngineStrategy {
   @Override
   public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException {
-    throw new ExecutionException("dropping the schema failed: " + namespace, e);
+    throw new ExecutionException("Dropping the schema failed: " + namespace, e);
   }
 
   @Override
@@ -208,20 +208,20 @@ class RdbEngineMysql implements RdbEngineStrategy {
         if (columnSize != 1) {
           throw new IllegalArgumentException(
               String.format(
-                  "data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
+                  "Data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
         }
         return DataType.BOOLEAN;
       case TINYINT:
       case SMALLINT:
         logger.info(
-            "data type larger than that of underlying database is assigned: {} ({} to INT)",
+            "Data type larger than that of underlying database is assigned: {} ({} to INT)",
             columnDescription,
             typeName);
         return DataType.INT;
       case INTEGER:
         if (typeName.toUpperCase().endsWith("UNSIGNED")) {
           logger.info(
-              "data type larger than that of underlying database is assigned: {} ({} to BIGINT)",
+              "Data type larger than that of underlying database is assigned: {} ({} to BIGINT)",
               columnDescription,
               typeName);
           return DataType.BIGINT;
@@ -230,10 +230,10 @@ class RdbEngineMysql implements RdbEngineStrategy {
       case BIGINT:
         if (typeName.toUpperCase().endsWith("UNSIGNED")) {
           throw new IllegalArgumentException(
-              String.format("data type %s is unsupported: %s", typeName, columnDescription));
+              String.format("Data type %s is unsupported: %s", typeName, columnDescription));
         }
         logger.warn(
-            "data type that may be smaller than that of underlying database is assigned: {} (MySQL {} to ScalarDB BIGINT)",
+            "Data type that may be smaller than that of underlying database is assigned: {} (MySQL {} to ScalarDB BIGINT)",
             columnDescription,
             typeName);
         return DataType.BIGINT;
@@ -248,11 +248,11 @@ class RdbEngineMysql implements RdbEngineStrategy {
             || typeName.equalsIgnoreCase("SET")
             || typeName.equalsIgnoreCase("JSON")) {
           throw new IllegalArgumentException(
-              String.format("data type %s is unsupported: %s", typeName, columnDescription));
+              String.format("Data type %s is unsupported: %s", typeName, columnDescription));
         }
         if (!typeName.equalsIgnoreCase("LONGTEXT")) {
           logger.info(
-              "data type larger than that of underlying database is assigned: {} ({} to TEXT)",
+              "Data type larger than that of underlying database is assigned: {} ({} to TEXT)",
               columnDescription,
               typeName);
         }
@@ -263,18 +263,18 @@ class RdbEngineMysql implements RdbEngineStrategy {
         if (!typeName.toUpperCase().endsWith("BINARY")
             && !typeName.toUpperCase().endsWith("BLOB")) {
           throw new IllegalArgumentException(
-              String.format("data type %s is unsupported: %s", typeName, columnDescription));
+              String.format("Data type %s is unsupported: %s", typeName, columnDescription));
         }
         if (!typeName.equalsIgnoreCase("LONGBLOB")) {
           logger.info(
-              "data type larger than that of underlying database is assigned: {} ({} to BLOB)",
+              "Data type larger than that of underlying database is assigned: {} ({} to BLOB)",
               columnDescription,
               typeName);
         }
         return DataType.BLOB;
       default:
         throw new IllegalArgumentException(
-            String.format("data type %s is unsupported: %s", typeName, columnDescription));
+            String.format("Data type %s is unsupported: %s", typeName, columnDescription));
     }
   }
 

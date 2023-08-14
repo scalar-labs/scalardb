@@ -60,7 +60,7 @@ public class TableSchema {
     String[] fullName = tableFullName.split("\\.", -1);
     if (fullName.length < 2) {
       throw new SchemaLoaderException(
-          "Parsing the schema JSON failed. Table full name must contains table name and namespace");
+          "Parsing the schema JSON failed. The table full name must contains table name and namespace");
     }
     namespace = fullName[0];
     tableName = fullName[1];

@@ -94,7 +94,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       createContainer(namespace, table, metadata);
       putTableMetadata(namespace, table, metadata);
     } catch (RuntimeException e) {
-      throw new ExecutionException("creating the container failed", e);
+      throw new ExecutionException("Creating the container failed", e);
     }
   }
 
@@ -157,7 +157,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
             bufferedReader.lines().reduce("", (prev, cur) -> prev + cur + System.lineSeparator());
       }
     } catch (IOException e) {
-      throw new ExecutionException("reading the stored procedure failed", e);
+      throw new ExecutionException("Reading the stored procedure failed", e);
     }
 
     return new CosmosStoredProcedureProperties(STORED_PROCEDURE_FILE_NAME, storedProcedure);
@@ -224,7 +224,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
           convertToCosmosTableMetadata(getFullTableName(namespace, table), metadata);
       getMetadataContainer().upsertItem(cosmosTableMetadata);
     } catch (RuntimeException e) {
-      throw new ExecutionException("putting the table metadata failed", e);
+      throw new ExecutionException("Putting the table metadata failed", e);
     }
   }
 
@@ -269,7 +269,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     try {
       client.createDatabase(namespace, calculateThroughput(options));
     } catch (RuntimeException e) {
-      throw new ExecutionException("creating the database failed", e);
+      throw new ExecutionException("Creating the database failed", e);
     }
   }
 
@@ -280,7 +280,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       database.getContainer(table).delete();
       deleteTableMetadata(namespace, table);
     } catch (RuntimeException e) {
-      throw new ExecutionException("deleting the container failed", e);
+      throw new ExecutionException("Deleting the container failed", e);
     }
   }
 
@@ -303,7 +303,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
         client.getDatabase(metadataDatabase).delete();
       }
     } catch (RuntimeException e) {
-      throw new ExecutionException("deleting the table metadata failed", e);
+      throw new ExecutionException("Deleting the table metadata failed", e);
     }
   }
 
@@ -312,7 +312,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     try {
       client.getDatabase(namespace).delete();
     } catch (RuntimeException e) {
-      throw new ExecutionException("deleting the database failed", e);
+      throw new ExecutionException("Deleting the database failed", e);
     }
   }
 
@@ -334,7 +334,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
                   new PartitionKey(record.getConcatenatedPartitionKey()),
                   new CosmosItemRequestOptions()));
     } catch (RuntimeException e) {
-      throw new ExecutionException("truncating the container failed", e);
+      throw new ExecutionException("Truncating the container failed", e);
     }
   }
 
@@ -381,7 +381,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       // update the container properties
       database.getContainer(containerName).replace(properties);
     } catch (RuntimeException e) {
-      throw new ExecutionException("updating the indexing policy failed", e);
+      throw new ExecutionException("Updating the indexing policy failed", e);
     }
   }
 
@@ -395,7 +395,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       }
       return convertToTableMetadata(cosmosTableMetadata);
     } catch (RuntimeException e) {
-      throw new ExecutionException("getting the container metadata failed", e);
+      throw new ExecutionException("Getting the container metadata failed", e);
     }
   }
 
@@ -445,7 +445,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       case "blob":
         return DataType.BLOB;
       default:
-        throw new ExecutionException("unknown column type: " + columnType);
+        throw new ExecutionException("Unknown column type: " + columnType);
     }
   }
 
@@ -491,7 +491,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       }
     } catch (ExecutionException | CosmosException e) {
       throw new ExecutionException(
-          String.format("repairing the table %s.%s failed", namespace, table), e);
+          String.format("Repairing the table %s.%s failed", namespace, table), e);
     }
   }
 
@@ -503,7 +503,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
           && ((CosmosException) e).getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
         return false;
       }
-      throw new ExecutionException(String.format("reading the database %s failed", id), e);
+      throw new ExecutionException(String.format("Reading the database %s failed", id), e);
     }
     return true;
   }
@@ -531,7 +531,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
           .map(tableMetadata -> tableMetadata.getId().replaceFirst("^" + namespace + ".", ""))
           .collect(Collectors.toSet());
     } catch (RuntimeException e) {
-      throw new ExecutionException("retrieving the container names of the database failed", e);
+      throw new ExecutionException("Retrieving the container names of the database failed", e);
     }
   }
 
@@ -555,20 +555,20 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   @Override
   public TableMetadata getImportTableMetadata(String namespace, String table) {
     throw new UnsupportedOperationException(
-        "import-related functionality is not supported in Cosmos DB");
+        "Import-related functionality is not supported in Cosmos DB");
   }
 
   @Override
   public void addRawColumnToTable(
       String namespace, String table, String columnName, DataType columnType) {
     throw new UnsupportedOperationException(
-        "import-related functionality is not supported in Cosmos DB");
+        "Import-related functionality is not supported in Cosmos DB");
   }
 
   @Override
   public void importTable(String namespace, String table) {
     throw new UnsupportedOperationException(
-        "import-related functionality is not supported in Cosmos DB");
+        "Import-related functionality is not supported in Cosmos DB");
   }
 
   private boolean metadataContainerExists() {

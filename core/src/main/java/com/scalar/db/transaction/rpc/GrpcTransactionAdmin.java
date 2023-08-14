@@ -397,7 +397,7 @@ public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
   @Override
   public void importTable(String namespace, String table) {
     throw new UnsupportedOperationException(
-        "import-related functionality is not supported in ScalarDB Server");
+        "Import-related functionality is not supported in ScalarDB Server");
   }
 
   private static <T> T execute(ThrowableSupplier<T, ExecutionException> supplier)
@@ -417,7 +417,7 @@ public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
     try {
       channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     } catch (InterruptedException e) {
-      logger.warn("failed to shutdown the channel", e);
+      logger.warn("Failed to shutdown the channel", e);
     }
   }
 }

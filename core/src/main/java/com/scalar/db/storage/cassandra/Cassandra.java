@@ -57,7 +57,7 @@ public class Cassandra extends AbstractDistributedStorage {
             .build();
 
     batch = new BatchHandler(session, handlers);
-    logger.info("Cassandra object is created properly.");
+    logger.info("Cassandra object is created properly");
 
     metadataManager =
         new TableMetadataManager(
@@ -94,7 +94,7 @@ public class Cassandra extends AbstractDistributedStorage {
     }
     Row next = resultSet.one();
     if (next != null) {
-      throw new IllegalArgumentException("please use scan() for non-exact match selection");
+      throw new IllegalArgumentException("Please use scan() for non-exact match selection");
     }
     return Optional.of(
         new ResultInterpreter(get.getProjections(), metadataManager.getTableMetadata(get))
@@ -109,7 +109,7 @@ public class Cassandra extends AbstractDistributedStorage {
 
     if (ScalarDbUtils.isRelational(scan)) {
       throw new UnsupportedOperationException(
-          "scanning all records with orderings or conditions is not supported in Cassandra");
+          "Scanning all records with orderings or conditions is not supported in Cassandra");
     }
 
     ResultSet results = handlers.select().handle(scan);

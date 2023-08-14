@@ -71,7 +71,7 @@ public abstract class Operation {
   @Nonnull
   public Optional<String> forFullTableName() {
     if (!namespace.isPresent() || !tableName.isPresent()) {
-      logger.warn("namespace or table name isn't specified");
+      logger.warn("Namespace or table name isn't specified");
       return Optional.empty();
     }
     return Optional.of(namespace.get() + "." + tableName.get());

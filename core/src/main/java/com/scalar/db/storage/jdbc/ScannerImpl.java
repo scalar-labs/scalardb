@@ -50,7 +50,7 @@ public class ScannerImpl implements Scanner {
       }
       return Optional.empty();
     } catch (SQLException e) {
-      throw new ExecutionException("failed to fetch the next result", e);
+      throw new ExecutionException("Failed to fetch the next result", e);
     }
   }
 
@@ -63,7 +63,7 @@ public class ScannerImpl implements Scanner {
       }
       return ret;
     } catch (SQLException e) {
-      throw new ExecutionException("failed to fetch the next result", e);
+      throw new ExecutionException("Failed to fetch the next result", e);
     }
   }
 
@@ -81,17 +81,17 @@ public class ScannerImpl implements Scanner {
     try {
       resultSet.close();
     } catch (SQLException e) {
-      logger.warn("failed to close the resultSet", e);
+      logger.warn("Failed to close the resultSet", e);
     }
     try {
       preparedStatement.close();
     } catch (SQLException e) {
-      logger.warn("failed to close the preparedStatement", e);
+      logger.warn("Failed to close the preparedStatement", e);
     }
     try {
       connection.close();
     } catch (SQLException e) {
-      logger.warn("failed to close the connection", e);
+      logger.warn("Failed to close the connection", e);
     }
   }
 }

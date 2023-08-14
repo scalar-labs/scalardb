@@ -143,7 +143,7 @@ public class SimpleSelectQuery implements SelectQuery {
       case IS_NOT_NULL:
         return " IS NOT NULL";
       default:
-        throw new IllegalArgumentException("unknown operator: " + operator);
+        throw new IllegalArgumentException("Unknown operator: " + operator);
     }
   }
 

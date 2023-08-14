@@ -855,28 +855,28 @@ public class ScanBuilder {
       if (isScanWithIndex || isScanAll) {
         throw new UnsupportedOperationException(
             "This operation is not supported when scanning all the records of a database "
-                + "or scanning records of a database using a secondary index.");
+                + "or scanning records of a database using a secondary index");
       }
     }
 
     private void checkScanWithIndex() {
       if (!isScanWithIndex) {
         throw new UnsupportedOperationException(
-            "This operation is supported only when scanning records of a database using a secondary index.");
+            "This operation is supported only when scanning records of a database using a secondary index");
       }
     }
 
     private void checkNotScanWithIndex() {
       if (isScanWithIndex) {
         throw new UnsupportedOperationException(
-            "This operation is not supported when scanning records of a database using a secondary index.");
+            "This operation is not supported when scanning records of a database using a secondary index");
       }
     }
 
     private void checkScanAll() {
       if (!isScanAll) {
         throw new UnsupportedOperationException(
-            "This operation is supported only when scanning all the records of a database.");
+            "This operation is supported only when scanning all the records of a database");
       }
     }
 
@@ -884,7 +884,7 @@ public class ScanBuilder {
       if (!conjunctions.isEmpty()) {
         throw new IllegalStateException(
             "This operation is supported only when no conditions are specified at all. "
-                + "If you want to modify the condition, please use clearConditions() to remove all existing conditions first.");
+                + "If you want to modify the condition, please use clearConditions() to remove all existing conditions first");
       }
     }
 
