@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit.replication;
 
 import com.scalar.db.api.ConditionBuilder;
+import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
@@ -81,6 +82,41 @@ public class Main {
     }
   }
 
+  private void deleteRecords() {
+    for (int i = 0; i < 100; i++) {
+      DistributedTransactionManager transactionManager = transactionFactory.getTransactionManager();
+      try {
+        DistributedTransaction tx = transactionManager.begin();
+        for (int j = 0; j < 2; j++) {
+          int id = i * 10 + j * 5;
+          Optional<Result> result =
+              tx.get(
+                  Get.newBuilder()
+                      .namespace("sample")
+                      .table("customers")
+                      .partitionKey(Key.ofInt("customer_id", id))
+                      .build());
+          if (!result.isPresent()) {
+            throw new IllegalStateException("Customer not found: customer_id=" + id);
+          }
+
+          tx.delete(
+              Delete.newBuilder()
+                  .namespace("sample")
+                  .table("customers")
+                  .partitionKey(Key.ofInt("customer_id", id))
+                  .condition(ConditionBuilder.deleteIfExists())
+                  .build());
+        }
+        tx.commit();
+      } catch (TransactionException e) {
+        e.printStackTrace();
+      } finally {
+        transactionManager.close();
+      }
+    }
+  }
+
   public static void main(String[] args) throws IOException {
     if (args.length < 1) {
       throw new IllegalArgumentException("ScalarDB config file path isn't specified");
@@ -91,5 +127,6 @@ public class Main {
     Main main = new Main(transactionFactory);
     main.insertRecords();
     main.updateRecords();
+    main.deleteRecords();
   }
 }
