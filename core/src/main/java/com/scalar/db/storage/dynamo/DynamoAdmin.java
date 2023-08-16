@@ -785,12 +785,12 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   private void dropNamespacesTableIfEmpty() throws ExecutionException {
-    String NamespaceTableFullName =
+    String namespaceTableFullName =
         ScalarDbUtils.getFullTableName(metadataNamespace, NAMESPACES_TABLE);
     ScanResponse scanResponse =
-        client.scan(ScanRequest.builder().tableName(NamespaceTableFullName).limit(1).build());
+        client.scan(ScanRequest.builder().tableName(namespaceTableFullName).limit(1).build());
     if (scanResponse.count() == 0) {
-      client.deleteTable(DeleteTableRequest.builder().tableName(NamespaceTableFullName).build());
+      client.deleteTable(DeleteTableRequest.builder().tableName(namespaceTableFullName).build());
       waitForTableDeletion(Namespace.of(metadataNamespace), NAMESPACES_TABLE);
     }
   }
