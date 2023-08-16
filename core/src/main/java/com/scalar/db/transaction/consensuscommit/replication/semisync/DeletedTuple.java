@@ -1,10 +1,11 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisync;
 
-import com.scalar.db.io.Key;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.scalar.db.transaction.consensuscommit.replication.semisync.columns.Key;
 import javax.annotation.Nullable;
 
 public class DeletedTuple extends WrittenTuple {
-  final String prevTxId;
+  @JsonProperty public final String prevTxId;
 
   DeletedTuple(
       String namespace,
@@ -12,7 +13,7 @@ public class DeletedTuple extends WrittenTuple {
       Key partitionKey,
       @Nullable Key clusteringKey,
       String prevTxId) {
-    super(namespace, table, partitionKey, clusteringKey);
+    super("delete", namespace, table, partitionKey, clusteringKey);
     this.prevTxId = prevTxId;
   }
 }

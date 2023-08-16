@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -16,10 +17,13 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
+import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
+import com.scalar.db.transaction.consensuscommit.replication.semisync.DefaultLogRecorder;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +36,8 @@ public class CommitHandler {
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
 
+  private final LogRecorder logRecorder;
+
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
       DistributedStorage storage,
@@ -42,6 +48,15 @@ public class CommitHandler {
     this.coordinator = checkNotNull(coordinator);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
+
+    // FIXME: This is only for PoC.
+    Properties replicationProps = new Properties();
+    replicationProps.put("scalar.db.storage", "jdbc");
+    replicationProps.put("scalar.db.contact_points", "jdbc:mysql://localhost/replication");
+    replicationProps.put("scalar.db.username", "root");
+    replicationProps.put("scalar.db.password", "mysql");
+    this.logRecorder =
+        new DefaultLogRecorder(tableMetadataManager, new DatabaseConfig(replicationProps));
   }
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
@@ -73,6 +88,8 @@ public class CommitHandler {
 
   public void prepare(Snapshot snapshot) throws PreparationException {
     try {
+      // TODO: Asynchronous
+      logRecorder.record(snapshot);
       prepareRecords(snapshot);
     } catch (NoMutationException e) {
       throw new PreparationConflictException("Preparing record exists", e, snapshot.getId());

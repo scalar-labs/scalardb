@@ -1,0 +1,37 @@
+{
+  "replication.transactions": {
+    "transaction": false,
+    "partition-key": [
+      "partition_id"
+    ],
+    "clustering-key": [
+      "created_at"
+    ],
+    "secondary-index": [
+      "transaction_id"
+    ],
+    "columns": {
+      "partition_id": "INT",
+      "transaction_id": "TEXT",
+      "write_set": "TEXT",
+      "created_at": "BIGINT"
+    }
+  },
+  "replication.records": {
+    "transaction": false,
+    "partition-key": [
+      "namespace",
+      "table",
+      "keys"
+    ],
+    "columns": {
+      "namespace": "TEXT",
+      "table": "TEXT",
+      "keys": "TEXT",
+      "current_tx_id": "TEXT",
+      "values": "TEXT",
+      "appended_at": "BIGINT",
+      "shrinked_at": "BIGINT"
+    }
+  }
+}
