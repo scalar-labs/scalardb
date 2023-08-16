@@ -1,13 +1,14 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisync;
 
-import com.scalar.db.io.Column;
-import com.scalar.db.io.Key;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.scalar.db.transaction.consensuscommit.replication.semisync.columns.Column;
+import com.scalar.db.transaction.consensuscommit.replication.semisync.columns.Key;
 import java.util.List;
 import javax.annotation.Nullable;
 
 public class UpdatedTuple extends WrittenTuple {
-  final List<Column<?>> columns;
-  final String prevTxId;
+  @JsonProperty public final List<Column<?>> columns;
+  @JsonProperty public final String prevTxId;
 
   UpdatedTuple(
       String namespace,
@@ -16,7 +17,7 @@ public class UpdatedTuple extends WrittenTuple {
       @Nullable Key clusteringKey,
       String prevTxId,
       List<Column<?>> columns) {
-    super(namespace, table, partitionKey, clusteringKey);
+    super("update", namespace, table, partitionKey, clusteringKey);
     this.prevTxId = prevTxId;
     this.columns = columns;
   }
