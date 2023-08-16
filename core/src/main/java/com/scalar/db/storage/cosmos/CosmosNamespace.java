@@ -2,8 +2,10 @@ package com.scalar.db.storage.cosmos;
 
 import com.google.common.base.MoreObjects;
 import java.util.Objects;
+import javax.annotation.concurrent.Immutable;
 
 /** An entity class to store namespace metadata in a CosmosDB container */
+@Immutable
 public class CosmosNamespace {
   private final String id;
 
