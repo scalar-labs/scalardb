@@ -1,7 +1,7 @@
 # Storage abstraction
 
-Scalar DB is middleware on top of existing storage/database systems and provides storage/database-agnostic ACID transactions on top of the systems.
-One of the keys to achieving the storage/database-agnostic ACID transactions is a storage abstraction that Scalar DB provides.
+ScalarDB is middleware on top of existing storage/database systems and provides storage/database-agnostic ACID transactions on top of the systems.
+One of the keys to achieving the storage/database-agnostic ACID transactions is a storage abstraction that ScalarDB provides.
 The storage abstraction defines [a data model](design.md#data-model) and APIs (Storage API) that issue operations on the basis of the data model.
 Although you use the [Transaction API](api-guide.md) in most cases, you can also directly use the Storage API.
 There are a few benefits of using the Storage API.
@@ -12,22 +12,22 @@ However, directly using the Storage API or mixing the Transaction API and the St
 For example, since the Storage API cannot provide transaction capability, it could cause data inconsistencies/anomalies when failures occur during the execution of the operations.
 Therefore, you should be very careful about using the Storage API, and please use it only if you know exactly what you are doing.
 
-In this document, we explain how to use the Storage API for users who are experts in Scalar DB.
+In this document, we explain how to use the Storage API for users who are experts in ScalarDB.
 
 ## Storage API Example
 
 This section explains how the Storage API can be used in a simple electronic money example application.
 
-### Scalar DB configuration
+### ScalarDB configuration
 
 The configuration is the same as when you use the ACID transaction manager.
-Please see [Getting Started](getting-started.md) for the details of the configuration.
+Please see [Getting Started](getting-started-with-scalardb.md) for the details of the configuration.
 
 From here, we assume that the configuration file **scalardb.properties** exists.
 
 ### Set up database schema
 
-First, you need to define how the data will be organized (a.k.a database schema) in the application with Scalar DB database schema.
+First, you need to define how the data will be organized (a.k.a database schema) in the application with ScalarDB database schema.
 Here is a database schema for the sample application.
 You can create a JSON file emoney-storage.json with the JSON below.
 
@@ -183,7 +183,7 @@ This section explains how to use them.
 
 ### Administrative API
 
-You can execute administrative operations programmatically as follows, but you can also execute those operations through [Schema Loader](https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md).
+You can execute administrative operations programmatically as follows, but you can also execute those operations through [Schema Loader](schema-loader.md).
 
 #### Get a DistributedStorageAdmin instance
 
@@ -195,7 +195,7 @@ StorageFactory storageFactory = StorageFactory.create("<configuration file path>
 DistributedStorageAdmin admin = storageFactory.getStorageAdmin();
 ```
 
-Please see [Getting Started](getting-started.md) for the details of the configuration file.
+For details about configurations, see [ScalarDB Configurations](configurations.md).
 
 Once you have executed all administrative operations, you should close the `DistributedStorageAdmin` instance as follows:
 
@@ -247,7 +247,7 @@ TableMetadata tableMetadata =
 
 Here you define columns, a partition key, a clustering key including clustering orders, and secondary indexes of a table.
 
-Please see [Scalar DB design document - Data Model](design.md#data-model) for the details of the Scalar DB Data Model.
+Please see [ScalarDB design document - Data Model](design.md#data-model) for the details of the ScalarDB Data Model.
 
 And then, you can create a table as follows:
 
@@ -291,7 +291,7 @@ admin.addNewColumnToTable("ns", "tbl", "c6", DataType.INT)
 
 This should be executed with significant consideration as the execution time may vary greatly
 depending on the underlying storage. Please plan accordingly especially if the database runs in production:
-- For Cosmos and Dynamo DB: this operation is almost instantaneous as the table
+- For Cosmos DB for NoSQL and DynamoDB: this operation is almost instantaneous as the table
   schema is not modified. Only the table metadata stored in a separated table are updated.
 - For Cassandra: adding a column will only update the schema metadata and do not modify existing
   schema records. The cluster topology is the main factor for the execution time. Since the schema
@@ -742,10 +742,37 @@ Note that a Mutate operation only accepts mutations for a single partition; othe
 
 And if you specify multiple conditions in a Mutate operation, the operation is executed only when all the conditions match.
 
+#### Use a default namespace for CRUD operations
+
+A default namespace for all the CRUD operations can be set with a property of the ScalarDB configuration.
+If you would like to use this setting with ScalarDB server, it needs to be set on the client-side configuration.
+
+```properties
+scalar.db.default_namespace_name=<a_namespace_name>
+```
+
+Any operation that does not specify a namespace will use the default namespace set in the configuration.
+
+```java
+//This operation will target the default namespace
+Scan scanUsingDefaultNamespace =
+    Scan.newBuilder()
+        .table("tbl")
+        .all()
+        .build();
+//This operation will target the "ns" namespace
+Scan scanUsingSpecifiedNamespace =
+    Scan.newBuilder()
+        .namespace("ns")
+        .table("tbl")
+        .all()
+        .build();
+```
+
 ## References
 
 * [Java API Guide](api-guide.md)
 * [Design document](design.md)
-* [Getting started](getting-started.md)
-* [Scalar DB Server](scalardb-server.md)
-* [Schema Loader](https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md)
+* [Getting started](getting-started-with-scalardb.md)
+* [ScalarDB Server](scalardb-server.md)
+* [Schema Loader](schema-loader.md)
