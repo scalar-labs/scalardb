@@ -797,7 +797,7 @@ scalar.db.consensus_commit.include_metadata.enabled=true
 ## References
 
 * [Design document](design.md)
-* [Getting started](getting-started.md)
+* [Getting started](getting-started-with-scalardb.md)
 * [Multi-storage Transactions](multi-storage-transactions.md)
 * [Two-phase Commit Transactions](two-phase-commit-transactions.md)
 * [ScalarDB Server](scalardb-server.md)
