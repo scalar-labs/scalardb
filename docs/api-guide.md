@@ -729,7 +729,7 @@ If you catch `ValidationConflictException`, like the `CrudConflictException` cas
 ## References
 
 * [Design document](design.md)
-* [Getting started](getting-started.md)
+* [Getting started](getting-started-with-scalardb.md)
 * [Multi-storage Transactions](multi-storage-transactions.md)
 * [Two-phase Commit Transactions](two-phase-commit-transactions.md)
 * [Scalar DB server](scalardb-server.md)
