@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.ThreadSafe;
+import javax.annotation.concurrent.Immutable;
 
 /**
  * A metadata class for a table of ScalarDB to know the type of each column
@@ -16,7 +16,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * @author Yuji Ito
  */
 @SuppressFBWarnings({"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
-@ThreadSafe
+@Immutable
 public class CosmosTableMetadata {
   private final String id;
   private final LinkedHashSet<String> partitionKeyNames;

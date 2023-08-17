@@ -5,7 +5,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.ThreadSafe;
+import javax.annotation.concurrent.Immutable;
 
 /**
  * A record class that Cosmos DB uses for storing a document based on ScalarDB data model.
@@ -13,7 +13,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * @author Yuji Ito
  */
 @SuppressFBWarnings({"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
-@ThreadSafe
+@Immutable
 public class Record {
   private final String id;
   private final String concatenatedPartitionKey;
