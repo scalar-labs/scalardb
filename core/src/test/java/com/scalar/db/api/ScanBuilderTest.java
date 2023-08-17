@@ -852,6 +852,40 @@ public class ScanBuilderTest {
 
   @Test
   public void
+      buildScanAll_ScanWithEmptyOrConditionSet_ShouldBuildScanWithoutConjunctionCorrectly() {
+    // Arrange Act
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .all()
+            .where(ConditionSetBuilder.orConditionSet(ImmutableSet.of()).build())
+            .and(ConditionSetBuilder.orConditionSet(ImmutableSet.of()).build())
+            .build();
+
+    // Assert
+    assertThat(scan).isEqualTo(new ScanAll().forNamespace(NAMESPACE_1).forTable(TABLE_1));
+  }
+
+  @Test
+  public void
+      buildScanAll_ScanWithEmptyAndConditionSet_ShouldBuildScanWithoutConjunctionCorrectly() {
+    // Arrange Act
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .all()
+            .where(ConditionSetBuilder.andConditionSet(ImmutableSet.of()).build())
+            .or(ConditionSetBuilder.andConditionSet(ImmutableSet.of()).build())
+            .build();
+
+    // Assert
+    assertThat(scan).isEqualTo(new ScanAll().forNamespace(NAMESPACE_1).forTable(TABLE_1));
+  }
+
+  @Test
+  public void
       buildScanAll_FromExistingWithConditionsAndUpdateAllParameters_ShouldBuildScanWithUpdatedParameters() {
     // Arrange
     Scan scan =
