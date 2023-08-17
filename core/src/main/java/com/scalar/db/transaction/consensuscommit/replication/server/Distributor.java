@@ -62,6 +62,7 @@ class Distributor {
                         Scan.newBuilder()
                             .namespace(replicationDbNamespace)
                             .table(replicationDbTransactionsTable)
+                            // TODO: Provision for performance
                             .partitionKey(Key.ofInt("partition_id", partitionId))
                             .ordering(Ordering.asc("created_at"))
                             .limit(fetchTransactionSize)
@@ -69,11 +70,12 @@ class Distributor {
                 scan.all()
                     .forEach(
                         result -> {
-                          // TODO: Implement the transfer from `transactions` table to `records`
-                          // table
+                          // TODO
+                          String transactionId = result.getText("transaction_id");
+                          String writeSet = result.getText("write_set");
                         });
               } catch (Throwable e) {
-                // FIXME: These error handlings
+                // FIXME: Error handling
                 e.printStackTrace();
                 try {
                   TimeUnit.SECONDS.sleep(2);
