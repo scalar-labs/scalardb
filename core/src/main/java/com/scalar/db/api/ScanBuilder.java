@@ -1395,10 +1395,15 @@ public class ScanBuilder {
     } else if (conjunctions.isEmpty()) {
       scan.withConjunctions(
           Sets.cartesianProduct(new ArrayList<>(disjunctions)).stream()
+              .filter(conditions -> conditions.size() > 0)
               .map(Scan.Conjunction::of)
               .collect(Collectors.toSet()));
     } else {
-      scan.withConjunctions(conjunctions.stream().map(Conjunction::of).collect(Collectors.toSet()));
+      scan.withConjunctions(
+          conjunctions.stream()
+              .filter(conditions -> conditions.size() > 0)
+              .map(Conjunction::of)
+              .collect(Collectors.toSet()));
     }
 
     if (!projections.isEmpty()) {
