@@ -5,7 +5,7 @@ This getting started tutorial explains how to configure your preferred database 
 {% capture notice--warning %}
 **Warning**
 
-This electronic money application is simplified for this tutorial and isn't suitable for a production environment.
+The electronic money application is simplified for this tutorial and isn't suitable for a production environment.
 {% endcapture %}
 
 <div class="notice--warning">{{ notice--warning | markdownify }}</div>
