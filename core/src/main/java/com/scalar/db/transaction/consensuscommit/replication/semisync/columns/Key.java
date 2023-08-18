@@ -7,9 +7,9 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 public class Key {
-  @JsonProperty private final List<Column<?>> columns;
+  public final List<Column<?>> columns;
 
-  public Key(List<Column<?>> columns) {
+  public Key(@JsonProperty("columns") List<Column<?>> columns) {
     this.columns = columns;
   }
 

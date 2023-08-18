@@ -45,7 +45,9 @@ public class DefaultLogRecorder implements LogRecorder {
             .namespace(REPLICATION_DB_NAMESPACE)
             .table(REPLICATION_DB_TABLE)
             .partitionKey(
-                Key.ofInt("partition_id", extractor.hashCode() % REPLICATION_DB_PARTITION_SIZE))
+                Key.ofInt(
+                    "partition_id",
+                    Math.abs(extractor.txId().hashCode()) % REPLICATION_DB_PARTITION_SIZE))
             .clusteringKey(Key.ofBigInt("created_at", System.currentTimeMillis()))
             .textValue("transaction_id", extractor.txId())
             // TODO: Revisit here

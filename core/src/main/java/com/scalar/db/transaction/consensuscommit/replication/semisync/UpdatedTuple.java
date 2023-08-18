@@ -5,19 +5,22 @@ import com.scalar.db.transaction.consensuscommit.replication.semisync.columns.Co
 import com.scalar.db.transaction.consensuscommit.replication.semisync.columns.Key;
 import java.util.List;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.Immutable;
 
+@Immutable
 public class UpdatedTuple extends WrittenTuple {
-  @JsonProperty public final List<Column<?>> columns;
-  @JsonProperty public final String prevTxId;
+  public final List<Column<?>> columns;
+  public final String prevTxId;
 
-  UpdatedTuple(
-      String namespace,
-      String table,
-      Key partitionKey,
-      @Nullable Key clusteringKey,
-      String prevTxId,
-      List<Column<?>> columns) {
-    super("update", namespace, table, partitionKey, clusteringKey);
+  public UpdatedTuple(
+      @JsonProperty("namespace") String namespace,
+      @JsonProperty("table") String table,
+      @JsonProperty("partitionKey") Key partitionKey,
+      @JsonProperty("clusteringKey") @Nullable Key clusteringKey,
+      @JsonProperty("prevTxId") String prevTxId,
+      @JsonProperty("columns") List<Column<?>> columns) {
+    //    super("update", namespace, table, partitionKey, clusteringKey);
+    super(namespace, table, partitionKey, clusteringKey);
     this.prevTxId = prevTxId;
     this.columns = columns;
   }
