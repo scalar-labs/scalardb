@@ -245,7 +245,7 @@ public class Distributor implements Closeable {
     replicationDbProps.put("scalar.db.username", "root");
     replicationDbProps.put("scalar.db.password", "mysql");
     Distributor distributor =
-        new Distributor("replication", "transactions", "records", 256, 1, 1, replicationDbProps)
+        new Distributor("replication", "transactions", "records", 256, 8, 8, replicationDbProps)
             .run();
     Runtime.getRuntime().addShutdownHook(new Thread(distributor::close));
   }
