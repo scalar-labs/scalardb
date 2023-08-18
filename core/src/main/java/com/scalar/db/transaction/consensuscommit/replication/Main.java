@@ -21,7 +21,7 @@ public class Main {
   }
 
   private void insertRecords() {
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 10; i++) {
       DistributedTransactionManager transactionManager = transactionFactory.getTransactionManager();
       try {
         DistributedTransaction tx = transactionManager.begin();
@@ -47,7 +47,7 @@ public class Main {
   }
 
   private void updateRecords() {
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 10; i++) {
       DistributedTransactionManager transactionManager = transactionFactory.getTransactionManager();
       try {
         DistributedTransaction tx = transactionManager.begin();
@@ -83,7 +83,7 @@ public class Main {
   }
 
   private void deleteRecords() {
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 10; i++) {
       DistributedTransactionManager transactionManager = transactionFactory.getTransactionManager();
       try {
         DistributedTransaction tx = transactionManager.begin();
