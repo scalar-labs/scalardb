@@ -136,7 +136,7 @@ scalar.db.password=<SECRET_ACCESS_KEY>
 </div>
 <div id="JDBC_databases" class="tabcontent" markdown="1">
 
-Confirm that you have a JDBC database installed. For a list of supported JDBC databases, see [Supported databases](#supported-databases).
+Confirm that you have a JDBC database installed. For a list of supported JDBC databases, see [Supported Databases](scalardb-supported-databases.md).
 
 ### Configure ScalarDB
 {:.no_toc}
