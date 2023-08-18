@@ -48,8 +48,11 @@ public class DefaultLogRecorder implements LogRecorder {
                 Key.ofInt(
                     "partition_id",
                     Math.abs(extractor.txId().hashCode()) % REPLICATION_DB_PARTITION_SIZE))
-            .clusteringKey(Key.ofBigInt("created_at", System.currentTimeMillis()))
-            .textValue("transaction_id", extractor.txId())
+            .clusteringKey(
+                Key.newBuilder()
+                    .addBigInt("created_at", System.currentTimeMillis())
+                    .addText("transaction_id", extractor.txId())
+                    .build())
             // TODO: Revisit here
             /*
             .condition(
