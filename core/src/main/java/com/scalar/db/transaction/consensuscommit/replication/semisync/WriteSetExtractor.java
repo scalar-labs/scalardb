@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisync;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Mutation;
@@ -24,6 +25,8 @@ class WriteSetExtractor implements MutationComposer {
   private final String defaultNamespace;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final List<WrittenTuple> writtenTuples = new ArrayList<>();
+  private final TypeReference<List<WrittenTuple>> typeReference =
+      new TypeReference<List<WrittenTuple>>() {};
 
   public WriteSetExtractor(
       TransactionTableMetadataManager tableMetadataManager, String defaultNamespace, String id) {
@@ -114,7 +117,7 @@ class WriteSetExtractor implements MutationComposer {
 
   public String writtenTuplesAsJson() {
     try {
-      return objectMapper.writeValueAsString(writtenTuples);
+      return objectMapper.writerFor(typeReference).writeValueAsString(writtenTuples);
     } catch (JsonProcessingException e) {
       throw new RuntimeException("Failed to convert write tuples into JSON string", e);
     }

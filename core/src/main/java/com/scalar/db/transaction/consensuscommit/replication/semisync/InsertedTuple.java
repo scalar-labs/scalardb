@@ -5,17 +5,20 @@ import com.scalar.db.transaction.consensuscommit.replication.semisync.columns.Co
 import com.scalar.db.transaction.consensuscommit.replication.semisync.columns.Key;
 import java.util.List;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.Immutable;
 
+@Immutable
 public class InsertedTuple extends WrittenTuple {
-  @JsonProperty public final List<Column<?>> columns;
+  public final List<Column<?>> columns;
 
-  InsertedTuple(
-      String namespace,
-      String table,
-      Key partitionKey,
-      @Nullable Key clusteringKey,
-      List<Column<?>> columns) {
-    super("insert", namespace, table, partitionKey, clusteringKey);
+  public InsertedTuple(
+      @JsonProperty("namespace") String namespace,
+      @JsonProperty("table") String table,
+      @JsonProperty("partitionKey") Key partitionKey,
+      @JsonProperty("clusteringKey") @Nullable Key clusteringKey,
+      @JsonProperty("columns") List<Column<?>> columns) {
+    //    super("insert", namespace, table, partitionKey, clusteringKey);
+    super(namespace, table, partitionKey, clusteringKey);
     this.columns = columns;
   }
 }

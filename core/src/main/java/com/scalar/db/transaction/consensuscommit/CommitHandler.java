@@ -50,13 +50,13 @@ public class CommitHandler {
     this.parallelExecutor = checkNotNull(parallelExecutor);
 
     // FIXME: This is only for PoC.
-    Properties replicationProps = new Properties();
-    replicationProps.put("scalar.db.storage", "jdbc");
-    replicationProps.put("scalar.db.contact_points", "jdbc:mysql://localhost/replication");
-    replicationProps.put("scalar.db.username", "root");
-    replicationProps.put("scalar.db.password", "mysql");
+    Properties replicationDbProps = new Properties();
+    replicationDbProps.put("scalar.db.storage", "jdbc");
+    replicationDbProps.put("scalar.db.contact_points", "jdbc:mysql://localhost/replication");
+    replicationDbProps.put("scalar.db.username", "root");
+    replicationDbProps.put("scalar.db.password", "mysql");
     this.logRecorder =
-        new DefaultLogRecorder(tableMetadataManager, new DatabaseConfig(replicationProps));
+        new DefaultLogRecorder(tableMetadataManager, new DatabaseConfig(replicationDbProps));
   }
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
