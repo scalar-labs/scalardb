@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Streams;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.scalar.db.api.ConditionBuilder;
+import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
@@ -180,16 +181,17 @@ public class Distributor implements Closeable {
                     "values", objectMapper.writeValueAsString(Collections.singletonList(newValue)));
           }
           storage.put(putBuilder.build());
-          // TODO: Delete the record from `transactions` table by specifying `transaction_id`
-          /*
           storage.delete(
               Delete.newBuilder()
                   .namespace(replicationDbNamespace)
                   .table(replicationDbTransactionsTable)
                   .partitionKey(Key.ofInt("partition_id", partitionId))
-                  .clusteringKey(Key.ofBigInt("created_at", createdAt))
+                  .clusteringKey(
+                      Key.newBuilder()
+                          .addBigInt("created_at", createdAt)
+                          .addText("transaction_id", transactionId)
+                          .build())
                   .build());
-           */
         }
       }
     } catch (Throwable e) {

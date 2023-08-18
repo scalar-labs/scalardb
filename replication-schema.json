@@ -5,7 +5,8 @@
       "partition_id"
     ],
     "clustering-key": [
-      "created_at"
+      "created_at",
+      "transaction_id"
     ],
     "secondary-index": [
       "transaction_id"
