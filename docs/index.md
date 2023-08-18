@@ -1,3 +1,5 @@
+{% include end-of-support.html %}
+
 ## Scalar DB
 
 [![CI](https://github.com/scalar-labs/scalardb/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/scalar-labs/scalardb/actions/workflows/ci.yaml)

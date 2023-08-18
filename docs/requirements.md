@@ -1,3 +1,5 @@
+{% include end-of-support.html %}
+
 # Requirements in the Underlining Databases of Scalar DB
 
 This document explains the requirements in the underlining databases of Scalar DB to make Scalar DB applications work correctly.
