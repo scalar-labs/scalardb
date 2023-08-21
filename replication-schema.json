@@ -23,12 +23,14 @@
     "partition-key": [
       "namespace",
       "table",
-      "keys"
+      "pk",
+      "ck"
     ],
     "columns": {
       "namespace": "TEXT",
       "table": "TEXT",
-      "keys": "TEXT",
+      "pk": "TEXT",
+      "ck": "TEXT",
       "current_tx_id": "TEXT",
       "values": "TEXT",
       "appended_at": "BIGINT",

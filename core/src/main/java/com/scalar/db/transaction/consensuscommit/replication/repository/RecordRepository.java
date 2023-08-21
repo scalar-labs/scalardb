@@ -1,0 +1,168 @@
+package com.scalar.db.transaction.consensuscommit.replication.repository;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.scalar.db.api.ConditionBuilder;
+import com.scalar.db.api.ConditionalExpression.Operator;
+import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.Put;
+import com.scalar.db.api.PutBuilder.Buildable;
+import com.scalar.db.api.Result;
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
+import com.scalar.db.transaction.consensuscommit.replication.model.Record;
+import com.scalar.db.transaction.consensuscommit.replication.model.Record.Value;
+import java.time.Instant;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class RecordRepository {
+  private static final Logger logger = LoggerFactory.getLogger(RecordRepository.class);
+  private static final TypeReference<Set<Value>> typeRefForValueInRecords =
+      new TypeReference<Set<Value>>() {};
+
+  private final DistributedStorage storage;
+  private final ObjectMapper objectMapper;
+  private final String replicationDbNamespace;
+  private final String replicationDbRecordsTable;
+
+  public RecordRepository(
+      DistributedStorage storage,
+      ObjectMapper objectMapper,
+      String replicationDbNamespace,
+      String replicationDbRecordsTable) {
+    this.storage = storage;
+    this.objectMapper = objectMapper;
+    this.replicationDbNamespace = replicationDbNamespace;
+    this.replicationDbRecordsTable = replicationDbRecordsTable;
+  }
+
+  public Key createKey(
+      String namespace,
+      String table,
+      com.scalar.db.transaction.consensuscommit.replication.model.Key partitionKey,
+      com.scalar.db.transaction.consensuscommit.replication.model.Key clusteringKey)
+      throws JsonProcessingException {
+    return Key.newBuilder()
+        .addText("namespace", namespace)
+        .addText("table", table)
+        .addText("pk", objectMapper.writeValueAsString(partitionKey))
+        .addText("ck", objectMapper.writeValueAsString(clusteringKey))
+        .build();
+  }
+
+  public Optional<Record> get(Key key) throws ExecutionException {
+    Optional<Result> result =
+        storage.get(
+            Get.newBuilder()
+                .namespace(replicationDbNamespace)
+                .table(replicationDbRecordsTable)
+                // TODO: Provision for performance
+                .partitionKey(key)
+                .build());
+
+    return result.flatMap(
+        r -> {
+          try {
+            return Optional.of(
+                new Record(
+                    Objects.requireNonNull(r.getText("namespace")),
+                    Objects.requireNonNull(r.getText("table")),
+                    objectMapper.readValue(
+                        r.getText("pk"),
+                        com.scalar.db.transaction.consensuscommit.replication.model.Key.class),
+                    objectMapper.readValue(
+                        r.getText("ck"),
+                        com.scalar.db.transaction.consensuscommit.replication.model.Key.class),
+                    r.getText("current_tx_id"),
+                    objectMapper.readValue(r.getText("values"), typeRefForValueInRecords),
+                    Instant.ofEpochMilli(r.getBigInt("appended_at")),
+                    Instant.ofEpochMilli(r.getBigInt("shrinked_at"))));
+          } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to deserialize `values` for key:" + key, e);
+          }
+        });
+  }
+
+  // TODO: Maybe `txId` should be replaced with `version`
+  public void appendValue(Key key, Value newValue) throws ExecutionException {
+    Buildable putBuilder =
+        Put.newBuilder()
+            .namespace(replicationDbNamespace)
+            .table(replicationDbRecordsTable)
+            .partitionKey(key);
+
+    Optional<Record> recordOpt = get(key);
+
+    Set<Value> values;
+    if (recordOpt.isPresent()) {
+      Record record = recordOpt.get();
+      values = record.values();
+      if (record.currentTxId() == null) {
+        putBuilder.condition(
+            ConditionBuilder.putIf(
+                    ConditionBuilder.buildConditionalExpression(
+                        TextColumn.of("current_tx_id", null), Operator.IS_NULL))
+                .build());
+      } else {
+        putBuilder.condition(
+            ConditionBuilder.putIf(
+                    ConditionBuilder.buildConditionalExpression(
+                        TextColumn.of("current_tx_id", recordOpt.get().currentTxId()), Operator.EQ))
+                .build());
+      }
+    } else {
+      values = new HashSet<>();
+      putBuilder.condition(ConditionBuilder.putIfNotExists());
+    }
+    values.add(newValue);
+
+    try {
+      storage.put(putBuilder.textValue("values", objectMapper.writeValueAsString(values)).build());
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException("Failed to serialize `values` for key:" + key, e);
+    }
+  }
+
+  // TODO: Maybe `txId` should be replaced with `version`
+  public void updateValues(Key key, String currentTxId, String newTxId, Collection<Value> values)
+      throws ExecutionException {
+    Buildable putBuilder =
+        Put.newBuilder()
+            .namespace(replicationDbNamespace)
+            .table(replicationDbRecordsTable)
+            .partitionKey(key);
+
+    if (currentTxId == null) {
+      putBuilder.condition(
+          ConditionBuilder.putIf(
+                  ConditionBuilder.buildConditionalExpression(
+                      TextColumn.of("current_tx_id", null), Operator.IS_NULL))
+              .build());
+    } else {
+      putBuilder.condition(
+          ConditionBuilder.putIf(
+                  ConditionBuilder.buildConditionalExpression(
+                      TextColumn.of("current_tx_id", currentTxId), Operator.EQ))
+              .build());
+    }
+
+    try {
+      storage.put(
+          putBuilder
+              .textValue("values", objectMapper.writeValueAsString(values))
+              .textValue("current_tx_id", newTxId)
+              .build());
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException("Failed to serialize `values` for key:" + key, e);
+    }
+  }
+}

@@ -11,8 +11,12 @@ import com.scalar.db.transaction.consensuscommit.MutationComposer;
 import com.scalar.db.transaction.consensuscommit.TransactionResult;
 import com.scalar.db.transaction.consensuscommit.TransactionTableMetadata;
 import com.scalar.db.transaction.consensuscommit.TransactionTableMetadataManager;
-import com.scalar.db.transaction.consensuscommit.replication.semisync.columns.Column;
-import com.scalar.db.transaction.consensuscommit.replication.semisync.columns.Key;
+import com.scalar.db.transaction.consensuscommit.replication.model.Column;
+import com.scalar.db.transaction.consensuscommit.replication.model.Key;
+import com.scalar.db.transaction.consensuscommit.replication.semisync.model.DeletedTuple;
+import com.scalar.db.transaction.consensuscommit.replication.semisync.model.InsertedTuple;
+import com.scalar.db.transaction.consensuscommit.replication.semisync.model.UpdatedTuple;
+import com.scalar.db.transaction.consensuscommit.replication.semisync.model.WrittenTuple;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nullable;
@@ -57,15 +61,15 @@ class WriteSetExtractor implements MutationComposer {
             .forEach(
                 column -> {
                   if (tableMetadata.getAfterImageColumnNames().contains(column.getName())) {
-                    columns.add(Column.of(column));
+                    columns.add(Column.fromScalarDbColumn(column));
                   }
                 });
         writtenTuples.add(
             new InsertedTuple(
                 namespace,
                 table,
-                Key.of(put.getPartitionKey()),
-                Key.of(put.getClusteringKey().orElse(null)),
+                Key.fromScalarDbKey(put.getPartitionKey()),
+                Key.fromScalarDbKey(put.getClusteringKey().orElse(null)),
                 columns));
 
       } else {
@@ -75,15 +79,15 @@ class WriteSetExtractor implements MutationComposer {
             .forEach(
                 column -> {
                   if (tableMetadata.getAfterImageColumnNames().contains(column.getName())) {
-                    columns.add(Column.of(column));
+                    columns.add(Column.fromScalarDbColumn(column));
                   }
                 });
         writtenTuples.add(
             new UpdatedTuple(
                 namespace,
                 table,
-                Key.of(put.getPartitionKey()),
-                Key.of(put.getClusteringKey().orElse(null)),
+                Key.fromScalarDbKey(put.getPartitionKey()),
+                Key.fromScalarDbKey(put.getClusteringKey().orElse(null)),
                 result.getId(),
                 columns));
       }
@@ -94,8 +98,8 @@ class WriteSetExtractor implements MutationComposer {
           new DeletedTuple(
               namespace,
               table,
-              Key.of(delete.getPartitionKey()),
-              Key.of(delete.getClusteringKey().orElse(null)),
+              Key.fromScalarDbKey(delete.getPartitionKey()),
+              Key.fromScalarDbKey(delete.getClusteringKey().orElse(null)),
               result.getId()));
     } else {
       throw new IllegalArgumentException("Unexpected operation: " + op);
