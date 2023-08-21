@@ -1,7 +1,7 @@
-package com.scalar.db.transaction.consensuscommit.replication.semisync;
+package com.scalar.db.transaction.consensuscommit.replication.semisync.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.scalar.db.transaction.consensuscommit.replication.semisync.columns.Key;
+import com.scalar.db.transaction.consensuscommit.replication.model.Key;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 

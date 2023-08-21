@@ -1,8 +1,8 @@
-package com.scalar.db.transaction.consensuscommit.replication.semisync;
+package com.scalar.db.transaction.consensuscommit.replication.semisync.model;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.scalar.db.transaction.consensuscommit.replication.semisync.columns.Key;
+import com.scalar.db.transaction.consensuscommit.replication.model.Key;
 import javax.annotation.Nullable;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
