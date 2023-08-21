@@ -13,7 +13,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.ClusteringOrder;
 import com.datastax.driver.core.ColumnMetadata;
+import com.datastax.driver.core.IndexMetadata;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.ResultSet;
@@ -47,6 +49,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import org.assertj.core.api.Assertions;
+import org.assertj.core.data.MapEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -102,6 +105,75 @@ public abstract class CassandraAdminTestBase {
 
     // Assert
     verify(clusterManager).getMetadata(namespace, table);
+  }
+
+  @Test
+  public void getTableMetadata_ForCassandraTableMetadata_ShouldConvertToScalarDBTableMetadata()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "sample_table";
+    com.datastax.driver.core.TableMetadata metadata =
+        mock(com.datastax.driver.core.TableMetadata.class);
+    KeyspaceMetadata keyspaceMetadata = mock(KeyspaceMetadata.class);
+    when(keyspaceMetadata.getName()).thenReturn(namespace);
+    when(metadata.getKeyspace()).thenReturn(keyspaceMetadata);
+    when(metadata.getName()).thenReturn(table);
+    // Partition key : c1, c2
+    // Clustering key : c3 DESC, c4 ASC
+    // Secondary index : c5, c7
+    // Regular columns : c6
+    ColumnMetadata c1 = mockColumnMetadata("c1", com.datastax.driver.core.DataType.text());
+    ColumnMetadata c2 = mockColumnMetadata("c2", com.datastax.driver.core.DataType.cboolean());
+    ColumnMetadata c3 = mockColumnMetadata("c3", com.datastax.driver.core.DataType.bigint());
+    ColumnMetadata c4 = mockColumnMetadata("c4", com.datastax.driver.core.DataType.cfloat());
+    ColumnMetadata c5 = mockColumnMetadata("c5", com.datastax.driver.core.DataType.blob());
+    ColumnMetadata c6 = mockColumnMetadata("c6", com.datastax.driver.core.DataType.cint());
+    ColumnMetadata c7 = mockColumnMetadata("c7", com.datastax.driver.core.DataType.cdouble());
+    when(metadata.getColumns()).thenReturn(ImmutableList.of(c1, c2, c3, c4, c5, c6, c7));
+    when(metadata.getColumn("c5")).thenReturn(c5);
+    when(metadata.getColumn("c7")).thenReturn(c7);
+    when(metadata.getPartitionKey()).thenReturn(ImmutableList.of(c1, c2));
+    when(metadata.getClusteringColumns()).thenReturn(ImmutableList.of(c3, c4));
+    when(metadata.getClusteringOrder())
+        .thenReturn(ImmutableList.of(ClusteringOrder.DESC, ClusteringOrder.ASC));
+    IndexMetadata c5Index = mock(IndexMetadata.class);
+    when(c5Index.getTarget()).thenReturn("c5");
+    IndexMetadata c7Index = mock(IndexMetadata.class);
+    when(c7Index.getTarget()).thenReturn("c7");
+    when(metadata.getIndexes()).thenReturn(ImmutableList.of(c5Index, c7Index));
+    when(clusterManager.getMetadata(any(), any())).thenReturn(metadata);
+
+    // Act
+    TableMetadata actual = cassandraAdmin.getTableMetadata(namespace, table);
+
+    // Assert
+    verify(clusterManager).getMetadata(namespace, table);
+    assertThat(actual).isNotNull();
+    assertThat(actual.getPartitionKeyNames()).containsExactly("c1", "c2");
+    assertThat(actual.getClusteringKeyNames()).containsExactly("c3", "c4");
+    assertThat(actual.getClusteringOrders())
+        .containsOnly(MapEntry.entry("c3", Order.DESC), MapEntry.entry("c4", Order.ASC));
+    assertThat(actual.getSecondaryIndexNames()).containsOnly("c5", "c7");
+    assertThat(actual.getColumnNames()).containsExactly("c1", "c2", "c3", "c4", "c5", "c6", "c7");
+    assertThat(actual.getColumnDataTypes())
+        .containsOnly(
+            MapEntry.entry("c1", DataType.TEXT),
+            MapEntry.entry("c2", DataType.BOOLEAN),
+            MapEntry.entry("c3", DataType.BIGINT),
+            MapEntry.entry("c4", DataType.FLOAT),
+            MapEntry.entry("c5", DataType.BLOB),
+            MapEntry.entry("c6", DataType.INT),
+            MapEntry.entry("c7", DataType.DOUBLE));
+  }
+
+  private ColumnMetadata mockColumnMetadata(
+      String name, com.datastax.driver.core.DataType dataType) {
+    ColumnMetadata columnMetadata = mock(ColumnMetadata.class);
+    when(columnMetadata.getName()).thenReturn(name);
+    when(columnMetadata.getType()).thenReturn(dataType);
+
+    return columnMetadata;
   }
 
   @Test

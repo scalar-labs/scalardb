@@ -6,6 +6,7 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import com.datastax.driver.core.ClusteringOrder;
 import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.ParseUtils;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
@@ -229,7 +230,16 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       ClusteringOrder clusteringOrder = metadata.getClusteringOrder().get(i);
       builder.addClusteringKey(clusteringColumnName, convertOrder(clusteringOrder));
     }
-    metadata.getIndexes().forEach(i -> builder.addSecondaryIndex(i.getTarget()));
+    metadata
+        .getIndexes()
+        .forEach(
+            i -> {
+              // On Cassandra 2.2 only, the indexed column will be in a quoted format so we need to
+              // unquote it. For this purpose, we use the Cassandra SDK `ParseUtils.unDoubleQuote()`
+              // which reverses the effect of `Metadata.quoteIfNecessary()`
+              String indexedColumn = ParseUtils.unDoubleQuote(i.getTarget());
+              builder.addSecondaryIndex(indexedColumn);
+            });
     return builder.build();
   }
 
