@@ -51,7 +51,7 @@ For requirements when using Cassandra or Cassandra-compatible databases, see [Ca
 {% capture notice--info %}
 **Note**
 
-For recommendations when configuring JDBC databases, see [JDBC database recommendations](requirements/#jdbc-database-requirements).
+For recommendations when using JDBC databases, see [JDBC database recommendations](requirements/#jdbc-database-requirements).
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
