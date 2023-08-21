@@ -24,7 +24,8 @@ public class CosmosTableMetadata {
   private final Map<String, String> clusteringOrders;
   private final Set<String> secondaryIndexNames;
   private final Map<String, String> columns;
-
+  // The default constructor  is required by the Cosmos SDK which uses Jackson to deserialize JSON
+  // object
   public CosmosTableMetadata() {
     this(null, null, null, null, null, null);
   }

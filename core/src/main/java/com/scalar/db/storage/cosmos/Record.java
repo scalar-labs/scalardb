@@ -21,6 +21,8 @@ public class Record {
   private final Map<String, Object> clusteringKey;
   private final Map<String, Object> values;
 
+  // The default constructor  is required by the Cosmos SDK which uses Jackson to deserialize JSON
+  // object
   public Record() {
     this(null, null, null, null, null);
   }
