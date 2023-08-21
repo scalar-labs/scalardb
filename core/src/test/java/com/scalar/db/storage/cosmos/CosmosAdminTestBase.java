@@ -33,20 +33,19 @@ import com.azure.cosmos.models.IndexingPolicy;
 import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.models.ThroughputProperties;
 import com.azure.cosmos.util.CosmosPagedIterable;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
+import org.assertj.core.util.Sets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -105,11 +104,11 @@ public abstract class CosmosAdminTestBase {
             ArgumentMatchers.<Class<CosmosTableMetadata>>any()))
         .thenReturn(response);
 
-    CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
-    cosmosTableMetadata.setColumns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"));
-    cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c1"));
-    cosmosTableMetadata.setClusteringKeyNames(Collections.emptyList());
-    cosmosTableMetadata.setSecondaryIndexNames(Collections.emptySet());
+    CosmosTableMetadata cosmosTableMetadata =
+        CosmosTableMetadata.newBuilder()
+            .partitionKeyNames(Sets.newLinkedHashSet("c1"))
+            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"))
+            .build();
 
     when(response.getItem()).thenReturn(cosmosTableMetadata);
 
@@ -264,22 +263,24 @@ public abstract class CosmosAdminTestBase {
         .isEqualTo(CosmosAdmin.METADATA_CONTAINER);
     assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getPaths())
         .containsExactly("/id");
-    CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
-    cosmosTableMetadata.setId(getFullTableName(namespace, table));
-    cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c3"));
-    cosmosTableMetadata.setClusteringKeyNames(Arrays.asList("c1", "c2"));
-    cosmosTableMetadata.setClusteringOrders(ImmutableMap.of("c1", "DESC", "c2", "ASC"));
-    cosmosTableMetadata.setColumns(
-        new ImmutableMap.Builder<String, String>()
-            .put("c1", "text")
-            .put("c2", "bigint")
-            .put("c3", "boolean")
-            .put("c4", "blob")
-            .put("c5", "int")
-            .put("c6", "double")
-            .put("c7", "float")
-            .build());
-    cosmosTableMetadata.setSecondaryIndexNames(ImmutableSet.of("c4"));
+    CosmosTableMetadata cosmosTableMetadata =
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("c3"))
+            .clusteringKeyNames(Sets.newLinkedHashSet("c1", "c2"))
+            .clusteringOrders(ImmutableMap.of("c1", "DESC", "c2", "ASC"))
+            .columns(
+                new ImmutableMap.Builder<String, String>()
+                    .put("c1", "text")
+                    .put("c2", "bigint")
+                    .put("c3", "boolean")
+                    .put("c4", "blob")
+                    .put("c5", "int")
+                    .put("c6", "double")
+                    .put("c7", "float")
+                    .build())
+            .secondaryIndexNames(ImmutableSet.of("c4"))
+            .build();
     verify(metadataContainer).upsertItem(cosmosTableMetadata);
   }
 
@@ -346,22 +347,22 @@ public abstract class CosmosAdminTestBase {
         .isEqualTo(CosmosAdmin.METADATA_CONTAINER);
     assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getPaths())
         .containsExactly("/id");
-    CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
-    cosmosTableMetadata.setId(getFullTableName(namespace, table));
-    cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c3"));
-    cosmosTableMetadata.setClusteringOrders(Collections.emptyMap());
-    cosmosTableMetadata.setClusteringKeyNames(Collections.emptyList());
-    cosmosTableMetadata.setColumns(
-        new ImmutableMap.Builder<String, String>()
-            .put("c1", "text")
-            .put("c2", "bigint")
-            .put("c3", "boolean")
-            .put("c4", "blob")
-            .put("c5", "int")
-            .put("c6", "double")
-            .put("c7", "float")
-            .build());
-    cosmosTableMetadata.setSecondaryIndexNames(ImmutableSet.of("c4"));
+    CosmosTableMetadata cosmosTableMetadata =
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("c3"))
+            .secondaryIndexNames(ImmutableSet.of("c4"))
+            .columns(
+                new ImmutableMap.Builder<String, String>()
+                    .put("c1", "text")
+                    .put("c2", "bigint")
+                    .put("c3", "boolean")
+                    .put("c4", "blob")
+                    .put("c5", "int")
+                    .put("c6", "double")
+                    .put("c7", "float")
+                    .build())
+            .build();
     verify(metadataContainer).upsertItem(cosmosTableMetadata);
   }
 
@@ -519,10 +520,10 @@ public abstract class CosmosAdminTestBase {
     // Arrange
     String namespace = "ns";
 
-    CosmosTableMetadata t1 = new CosmosTableMetadata();
-    t1.setId(getFullTableName(namespace, "t1"));
-    CosmosTableMetadata t2 = new CosmosTableMetadata();
-    t2.setId(getFullTableName(namespace, "t2"));
+    CosmosTableMetadata t1 =
+        CosmosTableMetadata.newBuilder().id(getFullTableName(namespace, "t1")).build();
+    CosmosTableMetadata t2 =
+        CosmosTableMetadata.newBuilder().id(getFullTableName(namespace, "t2")).build();
 
     when(client.getDatabase(metadataDatabaseName)).thenReturn(database);
     when(database.getContainer(CosmosAdmin.METADATA_CONTAINER)).thenReturn(container);
@@ -574,13 +575,13 @@ public abstract class CosmosAdminTestBase {
             ArgumentMatchers.<Class<CosmosTableMetadata>>any()))
         .thenReturn(itemResponse);
 
-    CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
-    cosmosTableMetadata.setId(getFullTableName(namespace, table));
-    cosmosTableMetadata.setColumns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"));
-    cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c1"));
-    cosmosTableMetadata.setClusteringKeyNames(Collections.emptyList());
-    cosmosTableMetadata.setClusteringOrders(Collections.emptyMap());
-    cosmosTableMetadata.setSecondaryIndexNames(ImmutableSet.of("c2"));
+    CosmosTableMetadata cosmosTableMetadata =
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("c1"))
+            .secondaryIndexNames(ImmutableSet.of("c2"))
+            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"))
+            .build();
     when(itemResponse.getItem()).thenReturn(cosmosTableMetadata);
 
     // Act
@@ -605,13 +606,13 @@ public abstract class CosmosAdminTestBase {
     verify(container).replace(properties);
 
     // for metadata table
-    CosmosTableMetadata expected = new CosmosTableMetadata();
-    expected.setId(getFullTableName(namespace, table));
-    expected.setColumns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"));
-    expected.setPartitionKeyNames(Collections.singletonList("c1"));
-    expected.setClusteringKeyNames(Collections.emptyList());
-    expected.setClusteringOrders(Collections.emptyMap());
-    expected.setSecondaryIndexNames(ImmutableSet.of("c2", "c3"));
+    CosmosTableMetadata expected =
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("c1"))
+            .secondaryIndexNames(ImmutableSet.of("c2", "c3"))
+            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"))
+            .build();
     verify(metadataContainer).upsertItem(expected);
   }
 
@@ -643,13 +644,13 @@ public abstract class CosmosAdminTestBase {
             ArgumentMatchers.<Class<CosmosTableMetadata>>any()))
         .thenReturn(itemResponse);
 
-    CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
-    cosmosTableMetadata.setId(getFullTableName(namespace, table));
-    cosmosTableMetadata.setColumns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"));
-    cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c1"));
-    cosmosTableMetadata.setClusteringKeyNames(Collections.emptyList());
-    cosmosTableMetadata.setClusteringOrders(Collections.emptyMap());
-    cosmosTableMetadata.setSecondaryIndexNames(ImmutableSet.of("c2", "c3"));
+    CosmosTableMetadata cosmosTableMetadata =
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("c1"))
+            .secondaryIndexNames(ImmutableSet.of("c2", "c3"))
+            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"))
+            .build();
     when(itemResponse.getItem()).thenReturn(cosmosTableMetadata);
 
     // Act
@@ -673,13 +674,13 @@ public abstract class CosmosAdminTestBase {
     verify(container).replace(properties);
 
     // for metadata table
-    CosmosTableMetadata expected = new CosmosTableMetadata();
-    expected.setId(getFullTableName(namespace, table));
-    expected.setColumns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"));
-    expected.setPartitionKeyNames(Collections.singletonList("c1"));
-    expected.setClusteringKeyNames(Collections.emptyList());
-    expected.setClusteringOrders(Collections.emptyMap());
-    expected.setSecondaryIndexNames(ImmutableSet.of("c3"));
+    CosmosTableMetadata expected =
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("c1"))
+            .secondaryIndexNames(ImmutableSet.of("c3"))
+            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"))
+            .build();
     verify(metadataContainer).upsertItem(expected);
   }
 
@@ -705,7 +706,6 @@ public abstract class CosmosAdminTestBase {
     // Arrange
     String namespace = "ns";
     String table = "tbl";
-    String fullTableName = getFullTableName(namespace, table);
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()
             .addColumn("c1", DataType.INT)
@@ -713,13 +713,12 @@ public abstract class CosmosAdminTestBase {
             .addColumn("c3", DataType.BIGINT)
             .addPartitionKey("c1")
             .build();
-    CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
-    cosmosTableMetadata.setColumns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"));
-    cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c1"));
-    cosmosTableMetadata.setClusteringKeyNames(Collections.emptyList());
-    cosmosTableMetadata.setSecondaryIndexNames(Collections.emptySet());
-    cosmosTableMetadata.setClusteringOrders(Collections.emptyMap());
-    cosmosTableMetadata.setId(fullTableName);
+    CosmosTableMetadata cosmosTableMetadata =
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("c1"))
+            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"))
+            .build();
 
     when(client.getDatabase(namespace)).thenReturn(database);
     when(database.getContainer(table)).thenReturn(container);
@@ -754,7 +753,6 @@ public abstract class CosmosAdminTestBase {
     // Arrange
     String namespace = "ns";
     String table = "tbl";
-    String fullTableName = getFullTableName(namespace, table);
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()
             .addColumn("c1", DataType.INT)
@@ -762,13 +760,12 @@ public abstract class CosmosAdminTestBase {
             .addColumn("c3", DataType.BIGINT)
             .addPartitionKey("c1")
             .build();
-    CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
-    cosmosTableMetadata.setColumns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"));
-    cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c1"));
-    cosmosTableMetadata.setClusteringKeyNames(Collections.emptyList());
-    cosmosTableMetadata.setSecondaryIndexNames(Collections.emptySet());
-    cosmosTableMetadata.setClusteringOrders(Collections.emptyMap());
-    cosmosTableMetadata.setId(fullTableName);
+    CosmosTableMetadata cosmosTableMetadata =
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("c1"))
+            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"))
+            .build();
 
     when(client.getDatabase(namespace)).thenReturn(database);
     when(database.getContainer(table)).thenReturn(container);
@@ -822,11 +819,11 @@ public abstract class CosmosAdminTestBase {
             ArgumentMatchers.<Class<CosmosTableMetadata>>any()))
         .thenReturn(response);
 
-    CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
-    cosmosTableMetadata.setColumns(ImmutableMap.of(currentColumn, "text"));
-    cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList(currentColumn));
-    cosmosTableMetadata.setSecondaryIndexNames(Collections.emptySet());
-    cosmosTableMetadata.setClusteringKeyNames(Collections.emptyList());
+    CosmosTableMetadata cosmosTableMetadata =
+        CosmosTableMetadata.newBuilder()
+            .partitionKeyNames(Sets.newLinkedHashSet(currentColumn))
+            .columns(ImmutableMap.of(currentColumn, "text"))
+            .build();
 
     when(response.getItem()).thenReturn(cosmosTableMetadata);
 
@@ -837,15 +834,12 @@ public abstract class CosmosAdminTestBase {
     verify(container)
         .readItem(fullTableName, new PartitionKey(fullTableName), CosmosTableMetadata.class);
 
-    CosmosTableMetadata expectedCosmosTableMetadata = new CosmosTableMetadata();
-    expectedCosmosTableMetadata.setId(fullTableName);
-    expectedCosmosTableMetadata.setPartitionKeyNames(ImmutableList.of(currentColumn));
-    expectedCosmosTableMetadata.setClusteringKeyNames(Collections.emptyList());
-    expectedCosmosTableMetadata.setClusteringOrders(Collections.emptyMap());
-    expectedCosmosTableMetadata.setSecondaryIndexNames(Collections.emptySet());
-    expectedCosmosTableMetadata.setColumns(
-        ImmutableMap.of(currentColumn, "text", newColumn, "int"));
-
+    CosmosTableMetadata expectedCosmosTableMetadata =
+        CosmosTableMetadata.newBuilder()
+            .id(fullTableName)
+            .partitionKeyNames(Sets.newLinkedHashSet(currentColumn))
+            .columns(ImmutableMap.of(currentColumn, "text", newColumn, "int"))
+            .build();
     verify(container).upsertItem(expectedCosmosTableMetadata);
   }
 

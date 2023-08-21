@@ -14,6 +14,7 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
@@ -53,20 +54,18 @@ public class CosmosMutation extends CosmosOperation {
   @Nonnull
   public Record makeRecord() {
     Mutation mutation = (Mutation) getOperation();
-    Record record = new Record();
 
     if (mutation instanceof Delete) {
-      return record;
+      return new Record();
     }
     Put put = (Put) mutation;
 
-    record.setId(getId());
-    record.setConcatenatedPartitionKey(getConcatenatedPartitionKey());
-    record.setPartitionKey(toMap(put.getPartitionKey().getColumns()));
-    put.getClusteringKey().ifPresent(k -> record.setClusteringKey(toMap(k.getColumns())));
-    record.setValues(toMapForPut(put));
-
-    return record;
+    return new Record(
+        getId(),
+        getConcatenatedPartitionKey(),
+        toMap(put.getPartitionKey().getColumns()),
+        put.getClusteringKey().map(k -> toMap(k.getColumns())).orElse(Collections.emptyMap()),
+        toMapForPut(put));
   }
 
   @Nonnull
