@@ -4,7 +4,8 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
-import javax.annotation.concurrent.NotThreadSafe;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.Immutable;
 
 /**
  * A record class that Cosmos DB uses for storing a document based on ScalarDB data model.
@@ -12,34 +13,32 @@ import javax.annotation.concurrent.NotThreadSafe;
  * @author Yuji Ito
  */
 @SuppressFBWarnings({"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
-@NotThreadSafe
+@Immutable
 public class Record {
-  private String id = "";
-  private String concatenatedPartitionKey = "";
-  private Map<String, Object> partitionKey = Collections.emptyMap();
-  private Map<String, Object> clusteringKey = Collections.emptyMap();
-  private Map<String, Object> values = Collections.emptyMap();
+  private final String id;
+  private final String concatenatedPartitionKey;
+  private final Map<String, Object> partitionKey;
+  private final Map<String, Object> clusteringKey;
+  private final Map<String, Object> values;
 
-  public Record() {}
-
-  public void setId(String id) {
-    this.id = id;
+  // The default constructor  is required by the Cosmos SDK which uses Jackson to deserialize JSON
+  // object
+  public Record() {
+    this(null, null, null, null, null);
   }
 
-  public void setConcatenatedPartitionKey(String concatenatedPartitionKey) {
-    this.concatenatedPartitionKey = concatenatedPartitionKey;
-  }
-
-  public void setPartitionKey(Map<String, Object> partitionKey) {
-    this.partitionKey = partitionKey;
-  }
-
-  public void setClusteringKey(Map<String, Object> clusteringKey) {
-    this.clusteringKey = clusteringKey;
-  }
-
-  public void setValues(Map<String, Object> values) {
-    this.values = values;
+  public Record(
+      @Nullable String id,
+      @Nullable String concatenatedPartitionKey,
+      @Nullable Map<String, Object> partitionKey,
+      @Nullable Map<String, Object> clusteringKey,
+      @Nullable Map<String, Object> values) {
+    this.id = id != null ? id : "";
+    this.concatenatedPartitionKey =
+        concatenatedPartitionKey != null ? concatenatedPartitionKey : "";
+    this.partitionKey = partitionKey != null ? partitionKey : Collections.emptyMap();
+    this.clusteringKey = clusteringKey != null ? clusteringKey : Collections.emptyMap();
+    this.values = values != null ? values : Collections.emptyMap();
   }
 
   public String getId() {

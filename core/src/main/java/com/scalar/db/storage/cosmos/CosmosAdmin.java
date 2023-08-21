@@ -243,15 +243,9 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   private CosmosTableMetadata convertToCosmosTableMetadata(
       String fullTableName, TableMetadata tableMetadata) {
-    CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
-    cosmosTableMetadata.setId(fullTableName);
-    cosmosTableMetadata.setPartitionKeyNames(new ArrayList<>(tableMetadata.getPartitionKeyNames()));
-    cosmosTableMetadata.setClusteringKeyNames(
-        new ArrayList<>(tableMetadata.getClusteringKeyNames()));
-    cosmosTableMetadata.setClusteringOrders(
+    Map<String, String> clusteringOrders =
         tableMetadata.getClusteringKeyNames().stream()
-            .collect(Collectors.toMap(c -> c, c -> tableMetadata.getClusteringOrder(c).name())));
-    cosmosTableMetadata.setSecondaryIndexNames(tableMetadata.getSecondaryIndexNames());
+            .collect(Collectors.toMap(c -> c, c -> tableMetadata.getClusteringOrder(c).name()));
     Map<String, String> columnTypeByName = new HashMap<>();
     tableMetadata
         .getColumnNames()
@@ -259,8 +253,14 @@ public class CosmosAdmin implements DistributedStorageAdmin {
             columnName ->
                 columnTypeByName.put(
                     columnName, tableMetadata.getColumnDataType(columnName).name().toLowerCase()));
-    cosmosTableMetadata.setColumns(columnTypeByName);
-    return cosmosTableMetadata;
+    return CosmosTableMetadata.newBuilder()
+        .id(fullTableName)
+        .partitionKeyNames(tableMetadata.getPartitionKeyNames())
+        .clusteringKeyNames(tableMetadata.getClusteringKeyNames())
+        .clusteringOrders(clusteringOrders)
+        .secondaryIndexNames(tableMetadata.getSecondaryIndexNames())
+        .columns(columnTypeByName)
+        .build();
   }
 
   @Override
