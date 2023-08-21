@@ -1,4 +1,4 @@
-# Requirements and Recommendations in the Underlying Databases of ScalarDB
+# Requirements and Recommendations for the Underlying Databases of ScalarDB
 
 This document explains the requirements and recommendations in the underlying databases of ScalarDB to make ScalarDB applications work correctly.
 
