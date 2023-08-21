@@ -35,7 +35,7 @@ To add a dependency using Maven:
 * [Two-phase Commit Transactions](two-phase-commit-transactions.md)
 * [Design document](design.md)
 * [Schema Loader](schema-loader.md)
-* [Requirements in the underlying databases](requirements.md)
+* [Requirements and Recommendations for the Underlying Databases of ScalarDB](docs/requirements.md)
 * [How to Back up and Restore](backup-restore.md)
 * [ScalarDB supported databases](scalardb-supported-databases.md)
 * [Configurations](configurations.md)
