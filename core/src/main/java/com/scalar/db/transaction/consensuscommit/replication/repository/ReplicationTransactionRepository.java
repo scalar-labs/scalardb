@@ -7,17 +7,18 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder.Buildable;
-import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.transaction.consensuscommit.replication.model.Transaction;
 import com.scalar.db.transaction.consensuscommit.replication.model.WrittenTuple;
 import java.io.IOException;
-import java.util.Collection;
+import java.time.Instant;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +47,7 @@ public class ReplicationTransactionRepository {
     this.fetchTransactionSize = fetchTransactionSize;
   }
 
-  public List<Result> scan(int partitionId) throws ExecutionException, IOException {
+  public List<Transaction> scan(int partitionId) throws ExecutionException, IOException {
     try (Scanner scan =
         replicationDbStorage.scan(
             Scan.newBuilder()
@@ -56,29 +57,43 @@ public class ReplicationTransactionRepository {
                 .ordering(Ordering.asc("created_at"))
                 .limit(fetchTransactionSize)
                 .build())) {
-      return scan.all();
+      return scan.all().stream()
+          .map(
+              result -> {
+                String transactionId = result.getText("transaction_id");
+                Instant createdAt = Instant.ofEpochMilli(result.getBigInt("created_at"));
+                List<WrittenTuple> writtenTuples;
+                String writeSet = result.getText("write_set");
+                try {
+                  writtenTuples = objectMapper.readValue(writeSet, typeReference);
+                } catch (JsonProcessingException e) {
+                  throw new RuntimeException(
+                      "Failed to deserialize write tuples into JSON string", e);
+                }
+                return new Transaction(partitionId, createdAt, transactionId, writtenTuples);
+              })
+          .collect(Collectors.toList());
     }
   }
 
-  public void add(
-      int partitionId, long createdAt, String transactionId, Collection<WrittenTuple> writtenTuples)
-      throws ExecutionException {
+  public void add(Transaction transaction) throws ExecutionException {
     String writeSet;
     try {
-      writeSet = objectMapper.writerFor(typeReference).writeValueAsString(writtenTuples);
+      writeSet =
+          objectMapper.writerFor(typeReference).writeValueAsString(transaction.writtenTuples());
     } catch (JsonProcessingException e) {
-      throw new RuntimeException("Failed to convert write tuples into JSON string", e);
+      throw new RuntimeException("Failed to serialize write tuples into JSON string", e);
     }
 
     Buildable builder =
         Put.newBuilder()
             .namespace(replicationDbNamespace)
             .table(replicationDbTransactionTable)
-            .partitionKey(Key.ofInt("partition_id", partitionId))
+            .partitionKey(Key.ofInt("partition_id", transaction.partitionId()))
             .clusteringKey(
                 Key.newBuilder()
-                    .addBigInt("created_at", createdAt)
-                    .addText("transaction_id", transactionId)
+                    .addBigInt("created_at", transaction.createdAt().toEpochMilli())
+                    .addText("transaction_id", transaction.transactionId())
                     .build())
             // TODO: Revisit here
             /*
@@ -94,17 +109,16 @@ public class ReplicationTransactionRepository {
     replicationDbStorage.put(builder.build());
   }
 
-  public void delete(int partitionId, long createdAt, String transactionId)
-      throws ExecutionException {
+  public void delete(Transaction transaction) throws ExecutionException {
     replicationDbStorage.delete(
         Delete.newBuilder()
             .namespace(replicationDbNamespace)
             .table(replicationDbTransactionTable)
-            .partitionKey(Key.ofInt("partition_id", partitionId))
+            .partitionKey(Key.ofInt("partition_id", transaction.partitionId()))
             .clusteringKey(
                 Key.newBuilder()
-                    .addBigInt("created_at", createdAt)
-                    .addText("transaction_id", transactionId)
+                    .addBigInt("created_at", transaction.createdAt().toEpochMilli())
+                    .addText("transaction_id", transaction.transactionId())
                     .build())
             .build());
   }
