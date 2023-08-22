@@ -2,10 +2,10 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -16,8 +16,10 @@ import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
+import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
+import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationTransactionRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisync.DefaultLogRecorder;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
@@ -55,8 +57,15 @@ public class CommitHandler {
     replicationDbProps.put("scalar.db.contact_points", "jdbc:mysql://localhost/replication");
     replicationDbProps.put("scalar.db.username", "root");
     replicationDbProps.put("scalar.db.password", "mysql");
+    ReplicationTransactionRepository replicationTransactionRepository =
+        new ReplicationTransactionRepository(
+            StorageFactory.create(replicationDbProps).getStorage(),
+            new ObjectMapper(),
+            "replication",
+            "transactions",
+            4);
     this.logRecorder =
-        new DefaultLogRecorder(tableMetadataManager, new DatabaseConfig(replicationDbProps));
+        new DefaultLogRecorder(tableMetadataManager, replicationTransactionRepository);
   }
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {

@@ -3,13 +3,13 @@ package com.scalar.db.transaction.consensuscommit.replication.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.scalar.db.api.Result;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.replication.model.DeletedTuple;
 import com.scalar.db.transaction.consensuscommit.replication.model.InsertedTuple;
 import com.scalar.db.transaction.consensuscommit.replication.model.Record.Value;
+import com.scalar.db.transaction.consensuscommit.replication.model.Transaction;
 import com.scalar.db.transaction.consensuscommit.replication.model.UpdatedTuple;
 import com.scalar.db.transaction.consensuscommit.replication.model.WrittenTuple;
 import com.scalar.db.transaction.consensuscommit.replication.repository.CoordinatorStateRepository;
@@ -66,16 +66,11 @@ public class DistributorThread implements Closeable {
 
   private void fetchAndHandleTransactionRecord(int partitionId)
       throws IOException, ExecutionException {
-    for (Result result : replicationTransactionRepository.scan(partitionId)) {
-      String transactionId = result.getText("transaction_id");
-      if (!coordinatorStateRepository.isCommitted(transactionId)) {
+    for (Transaction transaction : replicationTransactionRepository.scan(partitionId)) {
+      if (!coordinatorStateRepository.isCommitted(transaction.transactionId())) {
         continue;
       }
-      long createdAt = result.getBigInt("created_at");
-      String writeSet = result.getText("write_set");
-      List<WrittenTuple> writtenTuples =
-          objectMapper.readValue(writeSet, typeRefForWrittenTupleInTransactions);
-      for (WrittenTuple writtenTuple : writtenTuples) {
+      for (WrittenTuple writtenTuple : transaction.writtenTuples()) {
         Key key =
             replicationRecordRepository.createKey(
                 writtenTuple.namespace,
@@ -86,13 +81,14 @@ public class DistributorThread implements Closeable {
         Value newValue;
         if (writtenTuple instanceof InsertedTuple) {
           InsertedTuple tuple = (InsertedTuple) writtenTuple;
-          newValue = new Value(null, transactionId, "insert", tuple.columns);
+          newValue = new Value(null, transaction.transactionId(), "insert", tuple.columns);
         } else if (writtenTuple instanceof UpdatedTuple) {
           UpdatedTuple tuple = (UpdatedTuple) writtenTuple;
-          newValue = new Value(tuple.prevTxId, transactionId, "update", tuple.columns);
+          newValue =
+              new Value(tuple.prevTxId, transaction.transactionId(), "update", tuple.columns);
         } else if (writtenTuple instanceof DeletedTuple) {
           DeletedTuple tuple = (DeletedTuple) writtenTuple;
-          newValue = new Value(tuple.prevTxId, transactionId, "delete", null);
+          newValue = new Value(tuple.prevTxId, transaction.transactionId(), "delete", null);
         } else {
           throw new AssertionError();
         }
@@ -100,7 +96,7 @@ public class DistributorThread implements Closeable {
         replicationRecordRepository.appendValue(key, newValue);
         recordWriterQueue.add(key);
 
-        replicationTransactionRepository.delete(partitionId, createdAt, transactionId);
+        replicationTransactionRepository.delete(transaction);
       }
     }
   }

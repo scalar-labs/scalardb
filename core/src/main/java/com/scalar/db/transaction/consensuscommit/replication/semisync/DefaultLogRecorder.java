@@ -1,17 +1,13 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisync;
 
-import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.Put;
-import com.scalar.db.api.PutBuilder.Buildable;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
-import com.scalar.db.io.Key;
-import com.scalar.db.io.TextColumn;
-import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.Snapshot;
 import com.scalar.db.transaction.consensuscommit.TransactionTableMetadataManager;
 import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
+import com.scalar.db.transaction.consensuscommit.replication.model.Transaction;
+import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationTransactionRepository;
+import java.time.Instant;
 
 public class DefaultLogRecorder implements LogRecorder {
   // TODO: Make these configurable
@@ -20,7 +16,7 @@ public class DefaultLogRecorder implements LogRecorder {
   private static final int REPLICATION_DB_PARTITION_SIZE = 256;
 
   private final TransactionTableMetadataManager tableMetadataManager;
-  private final DistributedStorage storage;
+  private final ReplicationTransactionRepository replicationTransactionRepository;
 
   private String defaultNamespace;
 
@@ -29,9 +25,10 @@ public class DefaultLogRecorder implements LogRecorder {
   }
 
   public DefaultLogRecorder(
-      TransactionTableMetadataManager tableMetadataManager, DatabaseConfig config) {
+      TransactionTableMetadataManager tableMetadataManager,
+      ReplicationTransactionRepository replicationTransactionRepository) {
     this.tableMetadataManager = tableMetadataManager;
-    storage = new StorageFactory(config).getStorage();
+    this.replicationTransactionRepository = replicationTransactionRepository;
   }
 
   @Override
@@ -40,31 +37,9 @@ public class DefaultLogRecorder implements LogRecorder {
         new WriteSetExtractor(tableMetadataManager, defaultNamespace, snapshot.getId());
     snapshot.to(extractor);
 
-    Buildable builder =
-        Put.newBuilder()
-            .namespace(REPLICATION_DB_NAMESPACE)
-            .table(REPLICATION_DB_TABLE)
-            .partitionKey(
-                Key.ofInt(
-                    "partition_id",
-                    Math.abs(extractor.txId().hashCode()) % REPLICATION_DB_PARTITION_SIZE))
-            .clusteringKey(
-                Key.newBuilder()
-                    .addBigInt("created_at", System.currentTimeMillis())
-                    .addText("transaction_id", extractor.txId())
-                    .build())
-            // TODO: Revisit here
-            /*
-            .condition(
-                ConditionBuilder.putIf(
-                        ConditionBuilder.column("transaction_id")
-                            .isNotEqualToText(extractor.txId()))
-                    .build())
-             */
-            // TODO: Revisit here as this would be slow. Schemaful serialization should be better
-            .value(TextColumn.of("write_set", extractor.writtenTuplesAsJson()));
-
-    storage.put(builder.build());
+    int partitionId = Math.abs(extractor.txId().hashCode()) % REPLICATION_DB_PARTITION_SIZE;
+    replicationTransactionRepository.add(
+        new Transaction(partitionId, Instant.now(), extractor.txId(), extractor.writtenTuples()));
   }
 
   @Override
