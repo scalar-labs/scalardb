@@ -24,8 +24,8 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RecordRepository {
-  private static final Logger logger = LoggerFactory.getLogger(RecordRepository.class);
+public class ReplicationRecordRepository {
+  private static final Logger logger = LoggerFactory.getLogger(ReplicationRecordRepository.class);
   private static final TypeReference<Set<Value>> typeRefForValueInRecords =
       new TypeReference<Set<Value>>() {};
 
@@ -34,7 +34,7 @@ public class RecordRepository {
   private final String replicationDbNamespace;
   private final String replicationDbRecordsTable;
 
-  public RecordRepository(
+  public ReplicationRecordRepository(
       DistributedStorage replicationDbStorage,
       ObjectMapper objectMapper,
       String replicationDbNamespace,

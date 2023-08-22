@@ -8,12 +8,12 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import java.util.Optional;
 
-public class TransactionStateRepository {
+public class CoordinatorStateRepository {
   private final DistributedStorage coordinatorDbStorage;
   private final String coordinatorDbNamespace;
   private final String coordinatorDbTable;
 
-  public TransactionStateRepository(
+  public CoordinatorStateRepository(
       DistributedStorage coordinatorDbStorage,
       String coordinatorDbNamespace,
       String coordinatorDbTable) {
