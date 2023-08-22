@@ -8,9 +8,9 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.replication.model.Record.Value;
-import com.scalar.db.transaction.consensuscommit.replication.repository.RecordRepository;
-import com.scalar.db.transaction.consensuscommit.replication.repository.TransactionRepository;
-import com.scalar.db.transaction.consensuscommit.replication.repository.TransactionStateRepository;
+import com.scalar.db.transaction.consensuscommit.replication.repository.CoordinatorStateRepository;
+import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationRecordRepository;
+import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationTransactionRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisync.model.DeletedTuple;
 import com.scalar.db.transaction.consensuscommit.replication.semisync.model.InsertedTuple;
 import com.scalar.db.transaction.consensuscommit.replication.semisync.model.UpdatedTuple;
@@ -35,17 +35,17 @@ public class DistributorThread implements Closeable {
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final TypeReference<List<WrittenTuple>> typeRefForWrittenTupleInTransactions =
       new TypeReference<List<WrittenTuple>>() {};
-  private final RecordRepository recordRepository;
-  private final TransactionRepository transactionRepository;
-  private final TransactionStateRepository transactionStateRepository;
+  private final ReplicationRecordRepository replicationRecordRepository;
+  private final ReplicationTransactionRepository replicationTransactionRepository;
+  private final CoordinatorStateRepository coordinatorStateRepository;
   private final Queue<Key> recordWriterQueue;
 
   public DistributorThread(
       int replicationDbPartitionSize,
       int threadSize,
-      TransactionStateRepository transactionStateRepository,
-      TransactionRepository transactionRepository,
-      RecordRepository recordRepository,
+      CoordinatorStateRepository coordinatorStateRepository,
+      ReplicationTransactionRepository replicationTransactionRepository,
+      ReplicationRecordRepository replicationRecordRepository,
       Queue<Key> recordWriterQueue) {
     if (replicationDbPartitionSize % threadSize != 0) {
       throw new IllegalArgumentException(
@@ -58,17 +58,17 @@ public class DistributorThread implements Closeable {
     this.executorService =
         Executors.newFixedThreadPool(
             threadSize, new ThreadFactoryBuilder().setNameFormat("log-distributor-%d").build());
-    this.transactionRepository = transactionRepository;
-    this.transactionStateRepository = transactionStateRepository;
-    this.recordRepository = recordRepository;
+    this.replicationTransactionRepository = replicationTransactionRepository;
+    this.coordinatorStateRepository = coordinatorStateRepository;
+    this.replicationRecordRepository = replicationRecordRepository;
     this.recordWriterQueue = recordWriterQueue;
   }
 
   private void fetchAndHandleTransactionRecord(int partitionId)
       throws IOException, ExecutionException {
-    for (Result result : transactionRepository.scan(partitionId)) {
+    for (Result result : replicationTransactionRepository.scan(partitionId)) {
       String transactionId = result.getText("transaction_id");
-      if (!transactionStateRepository.isCommitted(transactionId)) {
+      if (!coordinatorStateRepository.isCommitted(transactionId)) {
         continue;
       }
       long createdAt = result.getBigInt("created_at");
@@ -77,7 +77,7 @@ public class DistributorThread implements Closeable {
           objectMapper.readValue(writeSet, typeRefForWrittenTupleInTransactions);
       for (WrittenTuple writtenTuple : writtenTuples) {
         Key key =
-            recordRepository.createKey(
+            replicationRecordRepository.createKey(
                 writtenTuple.namespace,
                 writtenTuple.table,
                 writtenTuple.partitionKey,
@@ -97,10 +97,10 @@ public class DistributorThread implements Closeable {
           throw new AssertionError();
         }
 
-        recordRepository.appendValue(key, newValue);
+        replicationRecordRepository.appendValue(key, newValue);
         recordWriterQueue.add(key);
 
-        transactionRepository.delete(partitionId, createdAt, transactionId);
+        replicationTransactionRepository.delete(partitionId, createdAt, transactionId);
       }
     }
   }
@@ -171,35 +171,35 @@ public class DistributorThread implements Closeable {
 
     ObjectMapper objectMapper = new ObjectMapper();
 
-    TransactionStateRepository transactionStateRepository =
-        new TransactionStateRepository(
+    CoordinatorStateRepository coordinatorStateRepository =
+        new CoordinatorStateRepository(
             StorageFactory.create(coordinatorDbProps).getStorage(), "coordinator", "state");
 
-    TransactionRepository transactionRepository =
-        new TransactionRepository(
+    ReplicationTransactionRepository replicationTransactionRepository =
+        new ReplicationTransactionRepository(
             StorageFactory.create(replicationDbProps).getStorage(),
             objectMapper,
             "replication",
             "transactions",
             4);
 
-    RecordRepository recordRepository =
-        new RecordRepository(
+    ReplicationRecordRepository replicationRecordRepository =
+        new ReplicationRecordRepository(
             StorageFactory.create(replicationDbProps).getStorage(),
             objectMapper,
             "replication",
             "records");
 
     RecordWriterThread recordWriter =
-        new RecordWriterThread(8, recordRepository, backupScalarDbProps).run();
+        new RecordWriterThread(8, replicationRecordRepository, backupScalarDbProps).run();
 
     DistributorThread distributorThread =
         new DistributorThread(
                 256,
                 8,
-                transactionStateRepository,
-                transactionRepository,
-                recordRepository,
+                coordinatorStateRepository,
+                replicationTransactionRepository,
+                replicationRecordRepository,
                 recordWriter.queue())
             .run();
 

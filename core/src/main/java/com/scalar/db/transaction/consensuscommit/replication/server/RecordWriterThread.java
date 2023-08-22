@@ -13,7 +13,7 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.replication.model.Column;
 import com.scalar.db.transaction.consensuscommit.replication.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.model.Record.Value;
-import com.scalar.db.transaction.consensuscommit.replication.repository.RecordRepository;
+import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationRecordRepository;
 import java.io.Closeable;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -34,26 +34,28 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RecordWriterThread implements Closeable {
-  private static final Logger logger = LoggerFactory.getLogger(RecordRepository.class);
+  private static final Logger logger = LoggerFactory.getLogger(ReplicationRecordRepository.class);
 
   private final ExecutorService executorService;
   private final int threadSize;
   private final DistributedStorage backupScalarDbStorage;
   private final BlockingQueue<Key> queue = new LinkedBlockingQueue<>();
-  private final RecordRepository recordRepository;
+  private final ReplicationRecordRepository replicationRecordRepository;
 
   public RecordWriterThread(
-      int threadSize, RecordRepository recordRepository, Properties backupScalarDbProperties) {
+      int threadSize,
+      ReplicationRecordRepository replicationRecordRepository,
+      Properties backupScalarDbProperties) {
     this.threadSize = threadSize;
     this.executorService =
         Executors.newFixedThreadPool(
             threadSize, new ThreadFactoryBuilder().setNameFormat("log-record-writer-%d").build());
     this.backupScalarDbStorage = StorageFactory.create(backupScalarDbProperties).getStorage();
-    this.recordRepository = recordRepository;
+    this.replicationRecordRepository = replicationRecordRepository;
   }
 
   private void handleKey(Key key) throws ExecutionException {
-    Optional<Record> recordOpt = recordRepository.get(key);
+    Optional<Record> recordOpt = replicationRecordRepository.get(key);
     if (!recordOpt.isPresent()) {
       logger.warn("key:{} is not found", key);
       return;
@@ -144,7 +146,7 @@ public class RecordWriterThread implements Closeable {
       backupScalarDbStorage.put(pubBuilder.build());
     }
 
-    recordRepository.updateValues(
+    replicationRecordRepository.updateValues(
         key,
         record.currentTxId(),
         lastValue.txId,
