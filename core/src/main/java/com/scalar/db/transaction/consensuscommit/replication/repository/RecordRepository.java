@@ -29,17 +29,17 @@ public class RecordRepository {
   private static final TypeReference<Set<Value>> typeRefForValueInRecords =
       new TypeReference<Set<Value>>() {};
 
-  private final DistributedStorage storage;
+  private final DistributedStorage replicationDbStorage;
   private final ObjectMapper objectMapper;
   private final String replicationDbNamespace;
   private final String replicationDbRecordsTable;
 
   public RecordRepository(
-      DistributedStorage storage,
+      DistributedStorage replicationDbStorage,
       ObjectMapper objectMapper,
       String replicationDbNamespace,
       String replicationDbRecordsTable) {
-    this.storage = storage;
+    this.replicationDbStorage = replicationDbStorage;
     this.objectMapper = objectMapper;
     this.replicationDbNamespace = replicationDbNamespace;
     this.replicationDbRecordsTable = replicationDbRecordsTable;
@@ -61,7 +61,7 @@ public class RecordRepository {
 
   public Optional<Record> get(Key key) throws ExecutionException {
     Optional<Result> result =
-        storage.get(
+        replicationDbStorage.get(
             Get.newBuilder()
                 .namespace(replicationDbNamespace)
                 .table(replicationDbRecordsTable)
@@ -126,7 +126,8 @@ public class RecordRepository {
     values.add(newValue);
 
     try {
-      storage.put(putBuilder.textValue("values", objectMapper.writeValueAsString(values)).build());
+      replicationDbStorage.put(
+          putBuilder.textValue("values", objectMapper.writeValueAsString(values)).build());
     } catch (JsonProcessingException e) {
       throw new RuntimeException("Failed to serialize `values` for key:" + key, e);
     }
@@ -156,7 +157,7 @@ public class RecordRepository {
     }
 
     try {
-      storage.put(
+      replicationDbStorage.put(
           putBuilder
               .textValue("values", objectMapper.writeValueAsString(values))
               .textValue("current_tx_id", newTxId)
