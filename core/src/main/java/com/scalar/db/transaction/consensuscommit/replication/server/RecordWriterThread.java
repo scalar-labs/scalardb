@@ -7,6 +7,7 @@ import com.scalar.db.api.DeleteBuilder;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder.Buildable;
+import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
@@ -125,7 +126,7 @@ public class RecordWriterThread implements Closeable {
       // TODO: Consider partial commit issues
       backupScalarDbStorage.delete(deleteBuilder.build());
     } else {
-      Buildable pubBuilder =
+      Buildable putBuilder =
           Put.newBuilder()
               .namespace(record.namespace())
               .table(record.table())
@@ -133,17 +134,19 @@ public class RecordWriterThread implements Closeable {
                   com.scalar.db.transaction.consensuscommit.replication.model.Key.toScalarDbKey(
                       record.pk()));
       if (!record.ck().columns.isEmpty()) {
-        pubBuilder.clusteringKey(
+        putBuilder.clusteringKey(
             com.scalar.db.transaction.consensuscommit.replication.model.Key.toScalarDbKey(
                 record.ck()));
       }
+      putBuilder.textValue("tx_id", lastValue.txId);
+      putBuilder.intValue("tx_state", TransactionState.COMMITTED.get());
       for (Column<?> column : updatedColumns) {
-        pubBuilder.value(Column.toScalarDbColumn(column));
+        putBuilder.value(Column.toScalarDbColumn(column));
       }
 
       // TODO: Consider partial commit issues
-      // FIXME: Support `tx_id | tx_state | tx_version | tx_prepared_at | tx_committed_at`
-      backupScalarDbStorage.put(pubBuilder.build());
+      // FIXME: Support `tx_version | tx_prepared_at | tx_committed_at`
+      backupScalarDbStorage.put(putBuilder.build());
     }
 
     replicationRecordRepository.updateValues(
