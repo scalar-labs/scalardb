@@ -1,18 +1,30 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisync;
 
+import com.scalar.db.api.Delete;
+import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
+import com.scalar.db.api.Put;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
-import com.scalar.db.transaction.consensuscommit.Snapshot;
+import com.scalar.db.transaction.consensuscommit.TransactionResult;
+import com.scalar.db.transaction.consensuscommit.TransactionTableMetadata;
 import com.scalar.db.transaction.consensuscommit.TransactionTableMetadataManager;
 import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
+import com.scalar.db.transaction.consensuscommit.replication.model.Column;
+import com.scalar.db.transaction.consensuscommit.replication.model.DeletedTuple;
+import com.scalar.db.transaction.consensuscommit.replication.model.InsertedTuple;
+import com.scalar.db.transaction.consensuscommit.replication.model.Key;
 import com.scalar.db.transaction.consensuscommit.replication.model.Transaction;
+import com.scalar.db.transaction.consensuscommit.replication.model.UpdatedTuple;
+import com.scalar.db.transaction.consensuscommit.replication.model.WrittenTuple;
 import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationTransactionRepository;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 public class DefaultLogRecorder implements LogRecorder {
   // TODO: Make these configurable
-  private static final String REPLICATION_DB_NAMESPACE = "replication";
-  private static final String REPLICATION_DB_TABLE = "transactions";
   private static final int REPLICATION_DB_PARTITION_SIZE = 256;
 
   private final TransactionTableMetadataManager tableMetadataManager;
@@ -32,14 +44,98 @@ public class DefaultLogRecorder implements LogRecorder {
   }
 
   @Override
-  public void record(Snapshot snapshot) throws PreparationConflictException, ExecutionException {
-    WriteSetExtractor extractor =
-        new WriteSetExtractor(tableMetadataManager, defaultNamespace, snapshot.getId());
-    snapshot.to(extractor);
+  public void record(PrepareMutationComposerForReplication composer)
+      throws PreparationConflictException, ExecutionException {
+    List<Mutation> mutations = composer.get();
+    List<Operation> operations = composer.operations();
+    List<TransactionResult> txResults = composer.transactionResultList();
+    if (!(mutations.size() == operations.size() && mutations.size() == txResults.size())) {
+      throw new AssertionError(
+          String.format(
+              "The sizes of the mutations, operations and transaction results aren't same. mutations.size=%d, operations.size=%d, transactionResults.size=%d",
+              mutations.size(), operations.size(), txResults.size()));
+    }
 
-    int partitionId = Math.abs(extractor.txId().hashCode()) % REPLICATION_DB_PARTITION_SIZE;
+    List<WrittenTuple> writtenTuples = new ArrayList<>();
+    Iterator<Mutation> mutationsIterator = mutations.iterator();
+    Iterator<Operation> operationsIterator = operations.iterator();
+    Iterator<TransactionResult> txResultIterator = txResults.iterator();
+    while (mutationsIterator.hasNext()) {
+      Put mutation = (Put) mutationsIterator.next();
+      Operation op = operationsIterator.next();
+      TransactionResult result = txResultIterator.next();
+
+      String namespace = op.forNamespace().get();
+      String table = op.forTable().get();
+      int version = mutation.getIntValue("tx_version");
+      long txPreparedAtInMillis = mutation.getBigIntValue("tx_prepared_at");
+
+      TransactionTableMetadata tableMetadata = tableMetadataManager.getTransactionTableMetadata(op);
+
+      if (op instanceof Put) {
+        Put put = (Put) op;
+
+        if (result == null) {
+          List<Column<?>> columns = new ArrayList<>();
+          put.getColumns()
+              .values()
+              .forEach(
+                  column -> {
+                    if (tableMetadata.getAfterImageColumnNames().contains(column.getName())) {
+                      columns.add(Column.fromScalarDbColumn(column));
+                    }
+                  });
+          writtenTuples.add(
+              new InsertedTuple(
+                  namespace,
+                  table,
+                  version,
+                  txPreparedAtInMillis,
+                  Key.fromScalarDbKey(put.getPartitionKey()),
+                  Key.fromScalarDbKey(put.getClusteringKey().orElse(null)),
+                  columns));
+
+        } else {
+          List<Column<?>> columns = new ArrayList<>();
+          put.getColumns()
+              .values()
+              .forEach(
+                  column -> {
+                    if (tableMetadata.getAfterImageColumnNames().contains(column.getName())) {
+                      columns.add(Column.fromScalarDbColumn(column));
+                    }
+                  });
+          writtenTuples.add(
+              new UpdatedTuple(
+                  namespace,
+                  table,
+                  version,
+                  txPreparedAtInMillis,
+                  Key.fromScalarDbKey(put.getPartitionKey()),
+                  Key.fromScalarDbKey(put.getClusteringKey().orElse(null)),
+                  result.getId(),
+                  columns));
+        }
+      } else if (op instanceof Delete) {
+        Delete delete = (Delete) op;
+        assert result != null;
+        writtenTuples.add(
+            new DeletedTuple(
+                namespace,
+                table,
+                version,
+                txPreparedAtInMillis,
+                Key.fromScalarDbKey(delete.getPartitionKey()),
+                Key.fromScalarDbKey(delete.getClusteringKey().orElse(null)),
+                result.getId()));
+      } else {
+        throw new IllegalArgumentException("Unexpected operation: " + op);
+      }
+    }
+
+    int partitionId = Math.abs(composer.transactionId().hashCode()) % REPLICATION_DB_PARTITION_SIZE;
     replicationTransactionRepository.add(
-        new Transaction(partitionId, Instant.now(), extractor.txId(), extractor.writtenTuples()));
+        new Transaction(partitionId, Instant.now(), composer.transactionId(), writtenTuples));
   }
 
   @Override
