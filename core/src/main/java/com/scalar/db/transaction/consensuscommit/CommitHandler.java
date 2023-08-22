@@ -23,6 +23,7 @@ import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecut
 import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationTransactionRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisync.DefaultLogRecorder;
+import com.scalar.db.transaction.consensuscommit.replication.semisync.PrepareMutationComposerForReplication;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
@@ -99,8 +100,6 @@ public class CommitHandler {
 
   public void prepare(Snapshot snapshot) throws PreparationException {
     try {
-      // TODO: Asynchronous
-      logRecorder.record(snapshot);
       prepareRecords(snapshot);
     } catch (NoMutationException e) {
       throw new PreparationConflictException(
@@ -118,9 +117,16 @@ public class CommitHandler {
 
   private void prepareRecords(Snapshot snapshot)
       throws ExecutionException, PreparationConflictException {
-    PrepareMutationComposer composer =
-        new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
-    snapshot.to(composer);
+    PrepareMutationComposer composer;
+    // FIXME: This should be configured
+    if (true) {
+      composer = new PrepareMutationComposerForReplication(snapshot.getId(), tableMetadataManager);
+      snapshot.to(composer);
+      logRecorder.record((PrepareMutationComposerForReplication) composer);
+    } else {
+      composer = new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
+      snapshot.to(composer);
+    }
     PartitionedMutations mutations = new PartitionedMutations(composer.get());
 
     ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();

@@ -11,11 +11,12 @@ public class DeletedTuple extends WrittenTuple {
   public DeletedTuple(
       @JsonProperty("namespace") String namespace,
       @JsonProperty("table") String table,
+      @JsonProperty("txVersion") int txVersion,
+      @JsonProperty("txPreparedAtInMillis") long txPreparedAtInMillis,
       @JsonProperty("partitionKey") Key partitionKey,
       @JsonProperty("clusteringKey") @Nullable Key clusteringKey,
       @JsonProperty("prevTxId") String prevTxId) {
-    //    super("delete", namespace, table, partitionKey, clusteringKey);
-    super(namespace, table, partitionKey, clusteringKey);
+    super(namespace, table, txVersion, txPreparedAtInMillis, partitionKey, clusteringKey);
     this.prevTxId = prevTxId;
   }
 }
