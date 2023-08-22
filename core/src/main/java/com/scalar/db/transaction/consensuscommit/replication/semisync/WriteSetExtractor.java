@@ -1,6 +1,5 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisync;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scalar.db.api.Delete;
@@ -117,13 +116,5 @@ class WriteSetExtractor implements MutationComposer {
 
   public List<WrittenTuple> writtenTuples() {
     return writtenTuples;
-  }
-
-  public String writtenTuplesAsJson() {
-    try {
-      return objectMapper.writerFor(typeReference).writeValueAsString(writtenTuples);
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException("Failed to convert write tuples into JSON string", e);
-    }
   }
 }
