@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
@@ -114,6 +115,7 @@ public class SchemaOperatorTest {
     when(tableSchema.getTable()).thenReturn("tb");
     TableMetadata tableMetadata = mock(TableMetadata.class);
     when(tableSchema.getTableMetadata()).thenReturn(tableMetadata);
+    when(storageAdmin.getNamespaceTableNames("ns")).thenReturn(ImmutableSet.of());
     when(storageAdmin.tableExists("ns", "tb")).thenReturn(true);
 
     // Act
@@ -122,7 +124,31 @@ public class SchemaOperatorTest {
     // Assert
     verify(storageAdmin, times(3)).tableExists("ns", "tb");
     verify(storageAdmin, times(3)).dropTable("ns", "tb");
+    verify(storageAdmin).getNamespaceTableNames("ns");
     verify(storageAdmin).dropNamespace("ns", true);
+  }
+
+  @Test
+  public void deleteTables_TableStillInNamespace_ShouldNotDropNamespace() throws Exception {
+    // Arrange
+    List<TableSchema> tableSchemaList = Arrays.asList(tableSchema, tableSchema, tableSchema);
+    when(tableSchema.getNamespace()).thenReturn("ns");
+    when(tableSchema.getOptions()).thenReturn(options);
+    when(tableSchema.isTransactionTable()).thenReturn(true);
+    when(tableSchema.getTable()).thenReturn("tb");
+    TableMetadata tableMetadata = mock(TableMetadata.class);
+    when(tableSchema.getTableMetadata()).thenReturn(tableMetadata);
+    when(storageAdmin.tableExists("ns", "tb")).thenReturn(true);
+    when(storageAdmin.getNamespaceTableNames("ns")).thenReturn(ImmutableSet.of("tbl"));
+
+    // Act
+    operator.deleteTables(tableSchemaList);
+
+    // Assert
+    verify(storageAdmin, times(3)).tableExists("ns", "tb");
+    verify(storageAdmin, times(3)).dropTable("ns", "tb");
+    verify(storageAdmin).getNamespaceTableNames("ns");
+    verify(storageAdmin, never()).dropNamespace("ns", true);
   }
 
   @Test
