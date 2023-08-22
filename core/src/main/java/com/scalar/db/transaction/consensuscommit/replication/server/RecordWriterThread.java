@@ -1,6 +1,5 @@
 package com.scalar.db.transaction.consensuscommit.replication.server;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Streams;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.scalar.db.api.Delete;
@@ -39,27 +38,18 @@ public class RecordWriterThread implements Closeable {
 
   private final ExecutorService executorService;
   private final int threadSize;
-  private final DistributedStorage replicationDbStorage;
-  private final DistributedStorage scalarDbStorage;
-  private final ObjectMapper objectMapper = new ObjectMapper();
+  private final DistributedStorage backupScalarDbStorage;
   private final BlockingQueue<Key> queue = new LinkedBlockingQueue<>();
   private final RecordRepository recordRepository;
 
   public RecordWriterThread(
-      String replicationDbNamespace,
-      String replicationDbRecordsTable,
-      int threadSize,
-      Properties replicationDbProperties,
-      Properties scalarDbProperties) {
+      int threadSize, RecordRepository recordRepository, Properties backupScalarDbProperties) {
     this.threadSize = threadSize;
     this.executorService =
         Executors.newFixedThreadPool(
             threadSize, new ThreadFactoryBuilder().setNameFormat("log-record-writer-%d").build());
-    this.replicationDbStorage = StorageFactory.create(replicationDbProperties).getStorage();
-    this.scalarDbStorage = StorageFactory.create(scalarDbProperties).getStorage();
-    this.recordRepository =
-        new RecordRepository(
-            replicationDbStorage, objectMapper, replicationDbNamespace, replicationDbRecordsTable);
+    this.backupScalarDbStorage = StorageFactory.create(backupScalarDbProperties).getStorage();
+    this.recordRepository = recordRepository;
   }
 
   private void handleKey(Key key) throws ExecutionException {
@@ -131,7 +121,7 @@ public class RecordWriterThread implements Closeable {
                 record.ck()));
       }
       // TODO: Consider partial commit issues
-      scalarDbStorage.delete(deleteBuilder.build());
+      backupScalarDbStorage.delete(deleteBuilder.build());
     } else {
       Buildable pubBuilder =
           Put.newBuilder()
@@ -148,8 +138,10 @@ public class RecordWriterThread implements Closeable {
       for (Column<?> column : updatedColumns) {
         pubBuilder.value(Column.toScalarDbColumn(column));
       }
+
       // TODO: Consider partial commit issues
-      scalarDbStorage.put(pubBuilder.build());
+      // FIXME: Support `tx_id | tx_state | tx_version | tx_prepared_at | tx_committed_at`
+      backupScalarDbStorage.put(pubBuilder.build());
     }
 
     recordRepository.updateValues(
@@ -177,7 +169,7 @@ public class RecordWriterThread implements Closeable {
                 }
               } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                logger.warn("Interrupted");
+                logger.warn("Interrupted", e);
                 break;
               }
 
@@ -193,7 +185,7 @@ public class RecordWriterThread implements Closeable {
                   TimeUnit.MILLISECONDS.sleep(500);
                 } catch (InterruptedException ex) {
                   Thread.currentThread().interrupt();
-                  logger.warn("Interrupted");
+                  logger.warn("Interrupted", ex);
                   break;
                 }
               }
@@ -213,27 +205,7 @@ public class RecordWriterThread implements Closeable {
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      throw new RuntimeException(e);
+      logger.warn("Interrupted", e);
     }
-  }
-
-  public static void main(String[] args) {
-    // FIXME: This is only for PoC.
-    Properties replicationDbProps = new Properties();
-    replicationDbProps.put("scalar.db.storage", "jdbc");
-    replicationDbProps.put("scalar.db.contact_points", "jdbc:mysql://localhost/replication");
-    replicationDbProps.put("scalar.db.username", "root");
-    replicationDbProps.put("scalar.db.password", "mysql");
-
-    Properties scalarDbProps = new Properties();
-    replicationDbProps.put("scalar.db.storage", "jdbc");
-    replicationDbProps.put("scalar.db.contact_points", "jdbc:mysql://localhost/backup");
-    replicationDbProps.put("scalar.db.username", "root");
-    replicationDbProps.put("scalar.db.password", "mysql");
-
-    RecordWriterThread recordWriter =
-        new RecordWriterThread("replication", "records", 8, replicationDbProps, scalarDbProps)
-            .run();
-    Runtime.getRuntime().addShutdownHook(new Thread(recordWriter::close));
   }
 }
