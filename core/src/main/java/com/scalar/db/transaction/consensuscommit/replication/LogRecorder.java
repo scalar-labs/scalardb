@@ -2,8 +2,9 @@ package com.scalar.db.transaction.consensuscommit.replication;
 
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
-import com.scalar.db.transaction.consensuscommit.Snapshot;
+import com.scalar.db.transaction.consensuscommit.replication.semisync.PrepareMutationComposerForReplication;
 
 public interface LogRecorder extends AutoCloseable {
-  void record(Snapshot snapshot) throws PreparationConflictException, ExecutionException;
+  void record(PrepareMutationComposerForReplication composer)
+      throws PreparationConflictException, ExecutionException;
 }

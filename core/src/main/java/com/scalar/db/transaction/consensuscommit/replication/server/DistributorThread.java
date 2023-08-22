@@ -81,14 +81,34 @@ public class DistributorThread implements Closeable {
         Value newValue;
         if (writtenTuple instanceof InsertedTuple) {
           InsertedTuple tuple = (InsertedTuple) writtenTuple;
-          newValue = new Value(null, transaction.transactionId(), "insert", tuple.columns);
+          newValue =
+              new Value(
+                  null,
+                  transaction.transactionId(),
+                  writtenTuple.txVersion,
+                  writtenTuple.txPreparedAtInMillis,
+                  "insert",
+                  tuple.columns);
         } else if (writtenTuple instanceof UpdatedTuple) {
           UpdatedTuple tuple = (UpdatedTuple) writtenTuple;
           newValue =
-              new Value(tuple.prevTxId, transaction.transactionId(), "update", tuple.columns);
+              new Value(
+                  tuple.prevTxId,
+                  transaction.transactionId(),
+                  writtenTuple.txVersion,
+                  writtenTuple.txPreparedAtInMillis,
+                  "update",
+                  tuple.columns);
         } else if (writtenTuple instanceof DeletedTuple) {
           DeletedTuple tuple = (DeletedTuple) writtenTuple;
-          newValue = new Value(tuple.prevTxId, transaction.transactionId(), "delete", null);
+          newValue =
+              new Value(
+                  tuple.prevTxId,
+                  transaction.transactionId(),
+                  writtenTuple.txVersion,
+                  writtenTuple.txPreparedAtInMillis,
+                  "delete",
+                  null);
         } else {
           throw new AssertionError();
         }

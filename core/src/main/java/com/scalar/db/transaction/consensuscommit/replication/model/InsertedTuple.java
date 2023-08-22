@@ -12,11 +12,12 @@ public class InsertedTuple extends WrittenTuple {
   public InsertedTuple(
       @JsonProperty("namespace") String namespace,
       @JsonProperty("table") String table,
+      @JsonProperty("txVersion") int txVersion,
+      @JsonProperty("txPreparedAtInMillis") long txPreparedAtInMillis,
       @JsonProperty("partitionKey") Key partitionKey,
       @JsonProperty("clusteringKey") @Nullable Key clusteringKey,
       @JsonProperty("columns") List<Column<?>> columns) {
-    //    super("insert", namespace, table, partitionKey, clusteringKey);
-    super(namespace, table, partitionKey, clusteringKey);
+    super(namespace, table, txVersion, txPreparedAtInMillis, partitionKey, clusteringKey);
     this.columns = columns;
   }
 }

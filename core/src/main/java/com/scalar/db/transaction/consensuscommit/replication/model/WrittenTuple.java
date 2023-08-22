@@ -11,18 +11,24 @@ import javax.annotation.Nullable;
   @JsonSubTypes.Type(value = DeletedTuple.class, name = "delete"),
 })
 public class WrittenTuple {
-  //  @JsonProperty public final String type;
   public final String namespace;
   public final String table;
+  public final int txVersion;
+  public final long txPreparedAtInMillis;
   public final Key partitionKey;
   public final Key clusteringKey;
 
   public WrittenTuple(
-      //    String type,
-      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey) {
-    //    this.type = type;
+      String namespace,
+      String table,
+      int txVersion,
+      long txPreparedAtInMillis,
+      Key partitionKey,
+      @Nullable Key clusteringKey) {
     this.namespace = namespace;
     this.table = table;
+    this.txVersion = txVersion;
+    this.txPreparedAtInMillis = txPreparedAtInMillis;
     this.partitionKey = partitionKey;
     this.clusteringKey = clusteringKey;
   }

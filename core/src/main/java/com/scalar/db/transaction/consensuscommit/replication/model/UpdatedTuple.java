@@ -13,12 +13,13 @@ public class UpdatedTuple extends WrittenTuple {
   public UpdatedTuple(
       @JsonProperty("namespace") String namespace,
       @JsonProperty("table") String table,
+      @JsonProperty("txVersion") int txVersion,
+      @JsonProperty("txPreparedAtInMillis") long txPreparedAtInMillis,
       @JsonProperty("partitionKey") Key partitionKey,
       @JsonProperty("clusteringKey") @Nullable Key clusteringKey,
       @JsonProperty("prevTxId") String prevTxId,
       @JsonProperty("columns") List<Column<?>> columns) {
-    //    super("update", namespace, table, partitionKey, clusteringKey);
-    super(namespace, table, partitionKey, clusteringKey);
+    super(namespace, table, txVersion, txPreparedAtInMillis, partitionKey, clusteringKey);
     this.prevTxId = prevTxId;
     this.columns = columns;
   }
