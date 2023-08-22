@@ -1,3 +1,5 @@
+{% include end-of-support.html %}
+
 # Getting Started with Scalar DB on DynamoDB
 
 ## Overview

@@ -1,3 +1,5 @@
+{% include end-of-support.html %}
+
 # Two-phase Commit Transactions
 
 Scalar DB also supports two-phase commit style transactions called *Two-phase Commit Transactions*.

@@ -1,3 +1,5 @@
+{% include end-of-support.html %}
+
 # Database schema in Scalar DB
 
 Scalar DB has its own data model and schema, that maps to the implementation specific data model and schema.
