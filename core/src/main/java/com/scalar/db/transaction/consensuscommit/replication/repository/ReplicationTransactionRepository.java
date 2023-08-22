@@ -18,8 +18,9 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TransactionRepository {
-  private static final Logger logger = LoggerFactory.getLogger(TransactionRepository.class);
+public class ReplicationTransactionRepository {
+  private static final Logger logger =
+      LoggerFactory.getLogger(ReplicationTransactionRepository.class);
   private static final TypeReference<Set<Value>> typeRefForValueInRecords =
       new TypeReference<Set<Value>>() {};
 
@@ -29,7 +30,7 @@ public class TransactionRepository {
   private final String replicationDbTransactionTable;
   private final int fetchTransactionSize;
 
-  public TransactionRepository(
+  public ReplicationTransactionRepository(
       DistributedStorage replicationDbStorage,
       ObjectMapper objectMapper,
       String replicationDbNamespace,
