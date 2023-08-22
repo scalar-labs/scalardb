@@ -5,7 +5,7 @@ This getting started tutorial explains how to configure your preferred database 
 {% capture notice--warning %}
 **Warning**
 
-This electronic money application is simplified for this tutorial and isn't suitable for a production environment.
+The electronic money application is simplified for this tutorial and isn't suitable for a production environment.
 {% endcapture %}
 
 <div class="notice--warning">{{ notice--warning | markdownify }}</div>
@@ -136,14 +136,22 @@ scalar.db.password=<SECRET_ACCESS_KEY>
 </div>
 <div id="JDBC_databases" class="tabcontent" markdown="1">
 
-Confirm that you have a JDBC database installed. For a list of supported JDBC databases, see [Supported databases](#supported-databases).
+Confirm that you have a JDBC database installed. For a list of supported JDBC databases, see [Supported Databases](scalardb-supported-databases.md).
 
 ### Configure ScalarDB
 {:.no_toc}
 
 The following instructions assume that you have properly installed and configured the JDK and JDBC database in your local environment, and the JDBC database is running on your localhost.
 
-The **scalardb.properties** file in the `docs/getting-started` directory holds database configurations for ScalarDB. The following is a basic configuration for JDBC databases. Be sure to uncomment the `scalar.db.contact_points` variable and change the value of the JDBC database you are using, and change the values for `scalar.db.username` and `scalar.db.password` as described.
+The **scalardb.properties** file in the `docs/getting-started` directory holds database configurations for ScalarDB. The following is a basic configuration for JDBC databases. 
+
+{% capture notice--info %}
+**Note**
+
+Be sure to uncomment the `scalar.db.contact_points` variable and change the value of the JDBC database you are using, and change the values for `scalar.db.username` and `scalar.db.password` as described.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 ```properties
 # The JDBC database storage implementation is used for Consensus Commit.
@@ -201,9 +209,16 @@ The `--coordinator` option is specified because a table with `transaction` set t
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
-## Execute transactions and retrieve data
+## Execute transactions and retrieve data in the basic electronic money application
 
-After loading the schema, you can execute transactions and retrieve data.
+After loading the schema, you can execute transactions and retrieve data in the basic electronic money application that is included in the repository that you cloned.
+
+The application supports the following types of transactions:
+
+- Create an account.
+- Add funds to an account.
+- Send funds between two accounts.
+- Get an account balance.
 
 {% capture notice--info %}
 **Note**
@@ -213,29 +228,78 @@ When you first execute a Gradle command, Gradle will automatically install the n
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
-- Credit **1000** to **customer1** by running the following command:
+### Create an account with a balance
+
+You need an account with a balance so that you can send funds between accounts.
+
+To create an account for **customer1** that has a balance of **500**, run the following command:
+
 ```shell
-$ ./gradlew run --args="-action charge -amount 1000 -to customer1"
+$ ./gradlew run --args="-action charge -amount 500 -to customer1"
 ```
 
-- Create an account for **merchant1** that has a balance of **0** by running the following command:
+### Create an account without a balance
+
+After setting up an account that has a balance, you need another account for sending funds to.
+
+To create an account for **merchant1** that has a balance of **0**, run the following command:
+
 ```shell
 $ ./gradlew run --args="-action charge -amount 0 -to merchant1"
 ```
 
-- Charge **100** from **customer1** to **merchant1** by running the following command:
+### Add funds to an account
+
+You can add funds to an account in the same way that you created and added funds to an account in [Create an account with a balance](#create-an-account-with-a-balance).
+
+To add **500** to the account for **customer1**, run the following command:
+
+```shell
+$ ./gradlew run --args="-action charge -amount 500 -to customer1"
+```
+
+The account for **customer1** will now have a balance of **1000**.
+
+### Send electronic money between two accounts
+
+Now that you have created two accounts, with at least one of those accounts having a balance, you can send funds from one account to the other account.
+
+To have **customer1** pay **100** to **merchant1**, run the following command:
+
 ```shell
 $ ./gradlew run --args="-action pay -amount 100 -from customer1 -to merchant1"
 ```
 
-- Get the balance of **customer1** by running the following command:
+### Get an account balance
+
+After sending funds from one account to the other, you can check the balance of each account.
+
+To get the balance of **customer1**, run the following command:
+
 ```shell
 $ ./gradlew run --args="-action getBalance -id customer1"
 ```
 
-- Get the balance of **merchant1** by running the following command:
+You should see the following output:
+
+```shell
+...
+The balance for customer1 is 900
+...
+```
+
+To get the balance of **merchant1**, run the following command:
+
 ```shell
 $ ./gradlew run --args="-action getBalance -id merchant1"
+```
+
+You should see the following output:
+
+```shell
+...
+The balance for merchant1 is 100
+...
 ```
 
 ## Reference
