@@ -15,6 +15,7 @@ public class Record {
   private final Instant appendedAt;
   private final Instant shrinkedAt;
 
+  /** A class that represents a write-set in `records` table. See also {@link WrittenTuple}. */
   public static class Value {
     public final String prevTxId;
     public final String txId;
