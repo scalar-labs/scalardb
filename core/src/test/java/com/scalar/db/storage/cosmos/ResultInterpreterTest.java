@@ -50,12 +50,7 @@ public class ResultInterpreterTest {
   @Test
   public void interpret_ShouldReturnWhatsSet() {
     // Arrange
-    Record record = new Record();
-    record.setId(ANY_ID_1);
-    record.setConcatenatedPartitionKey(ANY_TEXT_1);
-    record.setPartitionKey(ImmutableMap.of(ANY_NAME_1, ANY_TEXT_1));
-    record.setClusteringKey(ImmutableMap.of(ANY_NAME_2, ANY_TEXT_2));
-    record.setValues(
+    Map<String, Object> recordValues =
         ImmutableMap.<String, Object>builder()
             .put(ANY_COLUMN_NAME_1, true)
             .put(ANY_COLUMN_NAME_2, Integer.MAX_VALUE)
@@ -66,8 +61,14 @@ public class ResultInterpreterTest {
             .put(
                 ANY_COLUMN_NAME_7,
                 Base64.getEncoder().encodeToString("bytes".getBytes(StandardCharsets.UTF_8)))
-            .build());
-
+            .build();
+    Record record =
+        new Record(
+            ANY_ID_1,
+            ANY_TEXT_1,
+            ImmutableMap.of(ANY_NAME_1, ANY_TEXT_1),
+            ImmutableMap.of(ANY_NAME_2, ANY_TEXT_2),
+            recordValues);
     List<String> projections = Collections.emptyList();
     ResultInterpreter spy = spy(new ResultInterpreter(projections, TABLE_METADATA));
 
@@ -151,20 +152,21 @@ public class ResultInterpreterTest {
   @Test
   public void interpret_ShouldReturnWhatsSetWithNullValues() {
     // Arrange
-    Record record = new Record();
-    record.setId(ANY_ID_1);
-    record.setConcatenatedPartitionKey(ANY_TEXT_1);
-    record.setPartitionKey(ImmutableMap.of(ANY_NAME_1, ANY_TEXT_1));
-    record.setClusteringKey(ImmutableMap.of(ANY_NAME_2, ANY_TEXT_2));
-    Map<String, Object> v = new HashMap<>();
-    v.put(ANY_COLUMN_NAME_1, null);
-    v.put(ANY_COLUMN_NAME_2, null);
-    v.put(ANY_COLUMN_NAME_3, null);
-    v.put(ANY_COLUMN_NAME_4, null);
-    v.put(ANY_COLUMN_NAME_5, null);
-    v.put(ANY_COLUMN_NAME_6, null);
-    v.put(ANY_COLUMN_NAME_7, null);
-    record.setValues(v);
+    Map<String, Object> recordValues = new HashMap<>();
+    recordValues.put(ANY_COLUMN_NAME_1, null);
+    recordValues.put(ANY_COLUMN_NAME_2, null);
+    recordValues.put(ANY_COLUMN_NAME_3, null);
+    recordValues.put(ANY_COLUMN_NAME_4, null);
+    recordValues.put(ANY_COLUMN_NAME_5, null);
+    recordValues.put(ANY_COLUMN_NAME_6, null);
+    recordValues.put(ANY_COLUMN_NAME_7, null);
+    Record record =
+        new Record(
+            ANY_ID_1,
+            ANY_TEXT_1,
+            ImmutableMap.of(ANY_NAME_1, ANY_TEXT_1),
+            ImmutableMap.of(ANY_NAME_2, ANY_TEXT_2),
+            recordValues);
 
     List<String> projections = Collections.emptyList();
 

@@ -11,10 +11,10 @@ import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.util.CosmosPagedIterable;
-import com.google.common.collect.ImmutableList;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
+import org.assertj.core.util.Sets;
 
 public class CosmosAdminTestUtils extends AdminTestUtils {
 
@@ -60,9 +60,11 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
 
   @Override
   public void corruptMetadata(String namespace, String table) {
-    CosmosTableMetadata corruptedMetadata = new CosmosTableMetadata();
-    corruptedMetadata.setId(getFullTableName(namespace, table));
-    corruptedMetadata.setPartitionKeyNames(ImmutableList.of("corrupted"));
+    CosmosTableMetadata corruptedMetadata =
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("corrupted"))
+            .build();
 
     CosmosContainer container =
         client.getDatabase(metadataDatabase).getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER);
