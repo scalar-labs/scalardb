@@ -1,8 +1,10 @@
 package com.scalar.db.transaction.consensuscommit.replication.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.Set;
 
 public class Record {
@@ -42,6 +44,36 @@ public class Record {
       this.txCommittedAtInMillis = txCommittedAtInMillis;
       this.type = type;
       this.columns = columns;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      Value value = (Value) o;
+      return Objects.equals(txId, value.txId);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(txId);
+    }
+
+    @Override
+    public String toString() {
+      return MoreObjects.toStringHelper(this)
+          .add("prevTxId", prevTxId)
+          .add("txId", txId)
+          .add("txVersion", txVersion)
+          .add("txPreparedAtInMillis", txPreparedAtInMillis)
+          .add("txCommittedAtInMillis", txCommittedAtInMillis)
+          .add("type", type)
+          .add("columns", columns)
+          .toString();
     }
   }
 
@@ -94,5 +126,39 @@ public class Record {
 
   public Instant shrinkedAt() {
     return shrinkedAt;
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("namespace", namespace)
+        .add("table", table)
+        .add("pk", pk)
+        .add("ck", ck)
+        .add("currentTxId", currentTxId)
+        .add("values", values)
+        .add("appendedAt", appendedAt)
+        .add("shrinkedAt", shrinkedAt)
+        .toString();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    Record record = (Record) o;
+    return Objects.equals(namespace, record.namespace)
+        && Objects.equals(table, record.table)
+        && Objects.equals(pk, record.pk)
+        && Objects.equals(ck, record.ck);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(namespace, table, pk, ck);
   }
 }

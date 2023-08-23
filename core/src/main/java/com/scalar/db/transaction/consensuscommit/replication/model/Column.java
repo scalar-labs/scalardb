@@ -10,6 +10,7 @@ import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 import javax.annotation.Nullable;
 
 public class Column<T> {
@@ -48,5 +49,22 @@ public class Column<T> {
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this).add("name", name).add("value", value).toString();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    Column<?> column = (Column<?>) o;
+    return Objects.equals(name, column.name);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(name);
   }
 }

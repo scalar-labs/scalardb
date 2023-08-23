@@ -35,7 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RecordWriterThread implements Closeable {
-  private static final Logger logger = LoggerFactory.getLogger(ReplicationRecordRepository.class);
+  private static final Logger logger = LoggerFactory.getLogger(RecordWriterThread.class);
 
   private final ExecutorService executorService;
   private final int threadSize;
@@ -50,7 +50,12 @@ public class RecordWriterThread implements Closeable {
     this.threadSize = threadSize;
     this.executorService =
         Executors.newFixedThreadPool(
-            threadSize, new ThreadFactoryBuilder().setNameFormat("log-record-writer-%d").build());
+            threadSize,
+            new ThreadFactoryBuilder()
+                .setNameFormat("log-record-writer-%d")
+                .setUncaughtExceptionHandler(
+                    (thread, e) -> logger.error("Got an uncaught exception. thread:{}", thread, e))
+                .build());
     this.backupScalarDbStorage = StorageFactory.create(backupScalarDbProperties).getStorage();
     this.replicationRecordRepository = replicationRecordRepository;
   }
@@ -64,15 +69,22 @@ public class RecordWriterThread implements Closeable {
 
     Record record = recordOpt.get();
 
+    logger.info("[handleKey] key:{}\n  record:{}", key, record);
+
     Queue<Value> valuesForInsert = new LinkedList<>();
     Map<String, Value> valuesForNonInsert = new HashMap<>();
     for (Value value : record.values()) {
-      if (value.prevTxId == null) {
+      if (value.type.equals("insert")) {
+        if (value.prevTxId != null) {
+          throw new IllegalStateException(
+              String.format("`prevTxId` should be null. key:%s, value:%s", key, value));
+        }
         valuesForInsert.add(value);
       } else {
         valuesForNonInsert.put(value.prevTxId, value);
       }
     }
+    // TODO: Sort valuesForInsert just in case
 
     Value lastValue = null;
     Set<Column<?>> updatedColumns = new HashSet<>();
@@ -89,10 +101,16 @@ public class RecordWriterThread implements Closeable {
       }
 
       if (value.type.equals("insert")) {
-        assert updatedColumns.isEmpty();
+        if (!updatedColumns.isEmpty()) {
+          throw new IllegalStateException(
+              String.format(
+                  "`updatedColumns` should be empty. key:%s, value:%s, updatedColumns:%s",
+                  key, value, updatedColumns));
+        }
         updatedColumns.addAll(value.columns);
         currentTxId = value.txId;
       } else if (value.type.equals("update")) {
+        updatedColumns.removeAll(value.columns);
         updatedColumns.addAll(value.columns);
         currentTxId = value.txId;
       } else if (value.type.equals("delete")) {
@@ -148,16 +166,23 @@ public class RecordWriterThread implements Closeable {
       }
 
       // TODO: Consider partial commit issues
-      // FIXME: Support `tx_version | tx_prepared_at | tx_committed_at`
       backupScalarDbStorage.put(putBuilder.build());
     }
 
-    replicationRecordRepository.updateValues(
-        key,
-        record.currentTxId(),
-        lastValue.txId,
-        Streams.concat(valuesForInsert.stream(), valuesForNonInsert.values().stream())
-            .collect(Collectors.toSet()));
+    try {
+      replicationRecordRepository.updateValues(
+          key,
+          record.currentTxId(),
+          lastValue.txId,
+          Streams.concat(valuesForInsert.stream(), valuesForNonInsert.values().stream())
+              .collect(Collectors.toSet()));
+    } catch (Exception e) {
+      String message =
+          String.format(
+              "Failed to update the values. key:%s, txId:%s, lastValue:%s",
+              key, record.currentTxId(), lastValue);
+      throw new RuntimeException(message, e);
+    }
   }
 
   public BlockingQueue<Key> queue() {
@@ -185,8 +210,6 @@ public class RecordWriterThread implements Closeable {
                 handleKey(key);
               } catch (Throwable e) {
                 queue.add(key);
-                // TODO: Remove this
-                e.printStackTrace();
                 logger.error("Caught an exception. key:{}. Retrying...", key, e);
                 try {
                   // Avoid busy loop
