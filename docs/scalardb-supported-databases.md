@@ -25,14 +25,14 @@ For requirements when using Cassandra or Cassandra-compatible databases, see [Ca
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
 | Version | Apache Cassandra 4.1 | Apache Cassandra 4.0 | Apache Cassandra 3.11 | Apache Cassandra 3.0 | Apache Cassandra 2.2 |
-|:------------------|:---------------|:-----------------|:----------------|
-| **ScalarDB 3.10** |  |  | ✅ | ✅ | ✅ |
-| **ScalarDB 3.9** |  |  | ✅ | ✅ | ✅ |
-| **ScalarDB 3.8** |  |  | ✅ | ✅ | ✅ |
-| **ScalarDB 3.7** |  |  | ✅ | ✅ | ✅ |
-| **ScalarDB 3.6** |  |  | ✅ | ✅ | ✅ |
-| **ScalarDB 3.5** |  |  | ✅ | ✅ | ✅ |
-| **ScalarDB 3.4** |  |  | ✅ | ✅ | ✅ |
+|:------------------|:---------------|:-----------------|:----------------|:-----------------|:----------------|
+| **ScalarDB 3.10** | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **ScalarDB 3.9** | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **ScalarDB 3.8** | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **ScalarDB 3.7** | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **ScalarDB 3.6** | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **ScalarDB 3.5** | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **ScalarDB 3.4** | ❌ | ❌ | ✅ | ✅ | ✅ |
 
 ## Azure Cosmos DB for NoSQL
 
