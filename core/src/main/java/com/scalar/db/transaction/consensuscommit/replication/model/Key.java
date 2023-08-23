@@ -5,6 +5,7 @@ import com.google.common.base.MoreObjects;
 import com.scalar.db.io.Key.Builder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
@@ -37,5 +38,22 @@ public class Key {
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this).add("columns", columns).toString();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    Key key = (Key) o;
+    return Objects.equals(columns, key.columns);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(columns);
   }
 }

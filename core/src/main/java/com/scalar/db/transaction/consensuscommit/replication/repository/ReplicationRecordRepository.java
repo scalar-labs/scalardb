@@ -69,6 +69,8 @@ public class ReplicationRecordRepository {
                 .partitionKey(key)
                 .build());
 
+    logger.info("[get] key:{}\n  result:{}", key, result);
+
     return result.flatMap(
         r -> {
           try {
@@ -94,17 +96,18 @@ public class ReplicationRecordRepository {
 
   // TODO: Maybe `txId` should be replaced with `version`
   public void appendValue(Key key, Value newValue) throws ExecutionException {
+    Optional<Record> recordOpt = get(key);
+
     Buildable putBuilder =
         Put.newBuilder()
             .namespace(replicationDbNamespace)
             .table(replicationDbRecordsTable)
             .partitionKey(key);
 
-    Optional<Record> recordOpt = get(key);
-
     Set<Value> values;
     if (recordOpt.isPresent()) {
       Record record = recordOpt.get();
+      // FIXME: Use a condition using `version`
       values = record.values();
       if (record.currentTxId() == null) {
         putBuilder.condition(
@@ -123,9 +126,13 @@ public class ReplicationRecordRepository {
       values = new HashSet<>();
       putBuilder.condition(ConditionBuilder.putIfNotExists());
     }
-    values.add(newValue);
+
+    if (!values.add(newValue)) {
+      logger.warn("The new value is already stored. key:{}, txId:{}", key, newValue.txId);
+    }
 
     try {
+      logger.info("[appendValue] key:{}\n  values={}", key, values);
       replicationDbStorage.put(
           putBuilder.textValue("values", objectMapper.writeValueAsString(values)).build());
     } catch (JsonProcessingException e) {
@@ -157,6 +164,12 @@ public class ReplicationRecordRepository {
     }
 
     try {
+      logger.info(
+          "[updateValue] key:{}\n  currentTxId:{}\n  newTxId:{}\n  values={}",
+          key,
+          currentTxId,
+          newTxId,
+          values);
       replicationDbStorage.put(
           putBuilder
               .textValue("values", objectMapper.writeValueAsString(values))
