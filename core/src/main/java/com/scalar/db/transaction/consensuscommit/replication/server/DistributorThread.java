@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.transaction.consensuscommit.replication.model.CoordinatorState;
 import com.scalar.db.transaction.consensuscommit.replication.model.DeletedTuple;
 import com.scalar.db.transaction.consensuscommit.replication.model.InsertedTuple;
 import com.scalar.db.transaction.consensuscommit.replication.model.Record.Value;
@@ -18,6 +19,7 @@ import com.scalar.db.transaction.consensuscommit.replication.repository.Replicat
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Queue;
 import java.util.concurrent.ExecutorService;
@@ -67,7 +69,9 @@ public class DistributorThread implements Closeable {
   private void fetchAndHandleTransactionRecord(int partitionId)
       throws IOException, ExecutionException {
     for (Transaction transaction : replicationTransactionRepository.scan(partitionId)) {
-      if (!coordinatorStateRepository.isCommitted(transaction.transactionId())) {
+      Optional<CoordinatorState> coordinatorState =
+          coordinatorStateRepository.getCommitted(transaction.transactionId());
+      if (!coordinatorState.isPresent()) {
         continue;
       }
       for (WrittenTuple writtenTuple : transaction.writtenTuples()) {
@@ -87,6 +91,7 @@ public class DistributorThread implements Closeable {
                   transaction.transactionId(),
                   writtenTuple.txVersion,
                   writtenTuple.txPreparedAtInMillis,
+                  coordinatorState.get().txCommittedAt.toEpochMilli(),
                   "insert",
                   tuple.columns);
         } else if (writtenTuple instanceof UpdatedTuple) {
@@ -97,6 +102,7 @@ public class DistributorThread implements Closeable {
                   transaction.transactionId(),
                   writtenTuple.txVersion,
                   writtenTuple.txPreparedAtInMillis,
+                  coordinatorState.get().txCommittedAt.toEpochMilli(),
                   "update",
                   tuple.columns);
         } else if (writtenTuple instanceof DeletedTuple) {
@@ -107,6 +113,7 @@ public class DistributorThread implements Closeable {
                   transaction.transactionId(),
                   writtenTuple.txVersion,
                   writtenTuple.txPreparedAtInMillis,
+                  coordinatorState.get().txCommittedAt.toEpochMilli(),
                   "delete",
                   null);
         } else {
