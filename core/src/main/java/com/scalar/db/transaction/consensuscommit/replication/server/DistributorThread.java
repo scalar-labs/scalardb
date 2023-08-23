@@ -1,6 +1,5 @@
 package com.scalar.db.transaction.consensuscommit.replication.server;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -18,7 +17,6 @@ import com.scalar.db.transaction.consensuscommit.replication.repository.Replicat
 import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationTransactionRepository;
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Queue;
@@ -34,9 +32,6 @@ public class DistributorThread implements Closeable {
   private final ExecutorService executorService;
   private final int replicationDbPartitionSize;
   private final int threadSize;
-  private final ObjectMapper objectMapper = new ObjectMapper();
-  private final TypeReference<List<WrittenTuple>> typeRefForWrittenTupleInTransactions =
-      new TypeReference<List<WrittenTuple>>() {};
   private final ReplicationRecordRepository replicationRecordRepository;
   private final ReplicationTransactionRepository replicationTransactionRepository;
   private final CoordinatorStateRepository coordinatorStateRepository;
@@ -59,7 +54,12 @@ public class DistributorThread implements Closeable {
     this.threadSize = threadSize;
     this.executorService =
         Executors.newFixedThreadPool(
-            threadSize, new ThreadFactoryBuilder().setNameFormat("log-distributor-%d").build());
+            threadSize,
+            new ThreadFactoryBuilder()
+                .setNameFormat("log-distributor-%d")
+                .setUncaughtExceptionHandler(
+                    (thread, e) -> logger.error("Got an uncaught exception. thread:{}", thread, e))
+                .build());
     this.replicationTransactionRepository = replicationTransactionRepository;
     this.coordinatorStateRepository = coordinatorStateRepository;
     this.replicationRecordRepository = replicationRecordRepository;
@@ -120,7 +120,16 @@ public class DistributorThread implements Closeable {
           throw new AssertionError();
         }
 
-        replicationRecordRepository.appendValue(key, newValue);
+        try {
+          replicationRecordRepository.appendValue(key, newValue);
+        } catch (Exception e) {
+          String message =
+              String.format(
+                  "Failed to append the value. key:%s, txId:%s, newValue:%s",
+                  key, transaction.transactionId(), newValue);
+          throw new RuntimeException(message, e);
+        }
+
         recordWriterQueue.add(key);
 
         replicationTransactionRepository.delete(transaction);
@@ -140,8 +149,6 @@ public class DistributorThread implements Closeable {
                 try {
                   fetchAndHandleTransactionRecord(partitionId);
                 } catch (Throwable e) {
-                  // TODO: Remove this
-                  e.printStackTrace();
                   logger.error("Unexpected exception occurred", e);
                   try {
                     TimeUnit.SECONDS.sleep(2);

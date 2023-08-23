@@ -82,6 +82,10 @@ configurations {
 }
 
 dependencies {
+    // TODO: Delete this.
+    // For debug in Semi-Sync Replication development
+    implementation 'org.slf4j:slf4j-simple:2.0.7'
+
     implementation project(':rpc')
     implementation "com.google.guava:guava:${guavaVersion}"
     implementation "com.google.inject:guice:${guiceVersion}"
