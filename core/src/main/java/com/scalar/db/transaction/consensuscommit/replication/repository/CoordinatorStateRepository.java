@@ -39,8 +39,7 @@ public class CoordinatorStateRepository {
                     r.getText("tx_id"),
                     TransactionState.getInstance(r.getInt("tx_state")),
                     // TODO: Revisit here to think the difference between `${table}.tx_committed_at`
-                    // and
-                    //       `state.tx_created_at`.
+                    // and `state.tx_created_at`.
                     Instant.ofEpochMilli(r.getBigInt("tx_created_at"))))
         .filter(cs -> cs.txState == TransactionState.COMMITTED);
   }
