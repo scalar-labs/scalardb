@@ -142,6 +142,7 @@ public class RecordWriterThread implements Closeable {
       putBuilder.intValue("tx_state", TransactionState.COMMITTED.get());
       putBuilder.intValue("tx_version", lastValue.txVersion);
       putBuilder.bigIntValue("tx_prepared_at", lastValue.txPreparedAtInMillis);
+      putBuilder.bigIntValue("tx_committed_at", lastValue.txCommittedAtInMillis);
       for (Column<?> column : updatedColumns) {
         putBuilder.value(Column.toScalarDbColumn(column));
       }

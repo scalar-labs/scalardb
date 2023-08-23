@@ -6,6 +6,8 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
+import com.scalar.db.transaction.consensuscommit.replication.model.CoordinatorState;
+import java.time.Instant;
 import java.util.Optional;
 
 public class CoordinatorStateRepository {
@@ -22,7 +24,7 @@ public class CoordinatorStateRepository {
     this.coordinatorDbStorage = coordinatorDbStorage;
   }
 
-  public boolean isCommitted(String transactionId) throws ExecutionException {
+  public Optional<CoordinatorState> getCommitted(String transactionId) throws ExecutionException {
     Optional<Result> result =
         coordinatorDbStorage.get(
             Get.newBuilder()
@@ -31,7 +33,15 @@ public class CoordinatorStateRepository {
                 .partitionKey(Key.ofText("tx_id", transactionId))
                 .build());
     return result
-        .filter(value -> value.getInt("tx_state") == TransactionState.COMMITTED.get())
-        .isPresent();
+        .map(
+            r ->
+                new CoordinatorState(
+                    r.getText("tx_id"),
+                    TransactionState.getInstance(r.getInt("tx_state")),
+                    // TODO: Revisit here to think the difference between `${table}.tx_committed_at`
+                    // and
+                    //       `state.tx_created_at`.
+                    Instant.ofEpochMilli(r.getBigInt("tx_created_at"))))
+        .filter(cs -> cs.txState == TransactionState.COMMITTED);
   }
 }

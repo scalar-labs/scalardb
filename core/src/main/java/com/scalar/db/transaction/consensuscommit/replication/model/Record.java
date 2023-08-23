@@ -21,6 +21,7 @@ public class Record {
     public final String txId;
     public final int txVersion;
     public final long txPreparedAtInMillis;
+    public final long txCommittedAtInMillis;
 
     // TODO: This can be an enum.
     public final String type;
@@ -31,12 +32,14 @@ public class Record {
         @JsonProperty("txId") String txId,
         @JsonProperty("txVersion") int txVersion,
         @JsonProperty("txPreparedAtInMillis") long txPreparedAtInMillis,
+        @JsonProperty("txCommittedAtInMillis") long txCommittedAtInMillis,
         @JsonProperty("type") String type,
         @JsonProperty("columns") Collection<Column<?>> columns) {
       this.prevTxId = prevTxId;
       this.txId = txId;
       this.txVersion = txVersion;
       this.txPreparedAtInMillis = txPreparedAtInMillis;
+      this.txCommittedAtInMillis = txCommittedAtInMillis;
       this.type = type;
       this.columns = columns;
     }
