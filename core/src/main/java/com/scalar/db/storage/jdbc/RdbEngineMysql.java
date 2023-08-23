@@ -85,15 +85,6 @@ class RdbEngineMysql implements RdbEngineStrategy {
   }
 
   @Override
-  public String namespaceExistsStatement() {
-    return "SELECT 1 FROM "
-        + encloseFullTableName("information_schema", "schemata")
-        + " WHERE "
-        + enclose("schema_name")
-        + " = ?";
-  }
-
-  @Override
   public String alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
     return "ALTER TABLE "

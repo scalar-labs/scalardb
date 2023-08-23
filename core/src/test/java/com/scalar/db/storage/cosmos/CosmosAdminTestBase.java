@@ -64,6 +64,7 @@ public abstract class CosmosAdminTestBase {
   @Mock private CosmosConfig config;
   @Mock private CosmosDatabase database;
   @Mock private CosmosContainer container;
+  @Mock private CosmosException notFoundException;
   private CosmosAdmin admin;
   private String metadataDatabaseName;
 
@@ -72,10 +73,11 @@ public abstract class CosmosAdminTestBase {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    when(config.getTableMetadataDatabase()).thenReturn(getTableMetadataDatabaseConfig());
+    when(config.getMetadataDatabase()).thenReturn(getTableMetadataDatabaseConfig());
     admin = new CosmosAdmin(client, config);
 
     metadataDatabaseName = getTableMetadataDatabaseConfig().orElse("scalardb");
+    when(notFoundException.getStatusCode()).thenReturn(CosmosErrorCode.NOT_FOUND.get());
   }
 
   /**
@@ -97,7 +99,7 @@ public abstract class CosmosAdminTestBase {
     CosmosItemResponse<CosmosTableMetadata> response = mock(CosmosItemResponse.class);
 
     when(client.getDatabase(metadataDatabaseName)).thenReturn(database);
-    when(database.getContainer(CosmosAdmin.METADATA_CONTAINER)).thenReturn(container);
+    when(database.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER)).thenReturn(container);
     when(container.readItem(
             anyString(),
             any(PartitionKey.class),
@@ -126,7 +128,7 @@ public abstract class CosmosAdminTestBase {
                 .build());
 
     verify(client).getDatabase(metadataDatabaseName);
-    verify(database).getContainer(CosmosAdmin.METADATA_CONTAINER);
+    verify(database).getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER);
     verify(container).readItem(fullName, new PartitionKey(fullName), CosmosTableMetadata.class);
     verify(response).getItem();
   }
@@ -137,6 +139,10 @@ public abstract class CosmosAdminTestBase {
     // Arrange
     String namespace = "ns";
     String throughput = "2000";
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer namespacesContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(anyString())).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
 
     // Act
     admin.createNamespace(
@@ -147,6 +153,15 @@ public abstract class CosmosAdminTestBase {
         .createDatabase(
             eq(namespace),
             refEq(ThroughputProperties.createManualThroughput(Integer.parseInt(throughput))));
+    verify(client)
+        .createDatabaseIfNotExists(
+            eq(metadataDatabaseName),
+            refEq(
+                ThroughputProperties.createManualThroughput(
+                    Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
+    verify(client, times(2)).getDatabase(metadataDatabaseName);
+    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
+    verify(namespacesContainer).createItem(new CosmosNamespace(namespace));
   }
 
   @Test
@@ -155,6 +170,10 @@ public abstract class CosmosAdminTestBase {
     // Arrange
     String namespace = "ns";
     String throughput = "4000";
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer namespacesContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(anyString())).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
 
     // Act
     admin.createNamespace(
@@ -165,6 +184,15 @@ public abstract class CosmosAdminTestBase {
         .createDatabase(
             eq(namespace),
             refEq(ThroughputProperties.createAutoscaledThroughput(Integer.parseInt(throughput))));
+    verify(client)
+        .createDatabaseIfNotExists(
+            eq(metadataDatabaseName),
+            refEq(
+                ThroughputProperties.createManualThroughput(
+                    Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
+    verify(client, times(2)).getDatabase(metadataDatabaseName);
+    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
+    verify(namespacesContainer).createItem(new CosmosNamespace(namespace));
   }
 
   @Test
@@ -175,6 +203,10 @@ public abstract class CosmosAdminTestBase {
     String namespace = "ns";
     String throughput = "4000";
     String noScaling = "true";
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer namespacesContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(anyString())).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
 
     // Act
     admin.createNamespace(
@@ -186,6 +218,15 @@ public abstract class CosmosAdminTestBase {
         .createDatabase(
             eq(namespace),
             refEq(ThroughputProperties.createManualThroughput(Integer.parseInt(throughput))));
+    verify(client)
+        .createDatabaseIfNotExists(
+            eq(metadataDatabaseName),
+            refEq(
+                ThroughputProperties.createManualThroughput(
+                    Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
+    verify(client, times(2)).getDatabase(metadataDatabaseName);
+    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
+    verify(namespacesContainer).createItem(new CosmosNamespace(namespace));
   }
 
   @Test
@@ -217,7 +258,7 @@ public abstract class CosmosAdminTestBase {
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
     when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
-    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
+    when(metadataDatabase.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER))
         .thenReturn(metadataContainer);
 
     // Act
@@ -260,7 +301,7 @@ public abstract class CosmosAdminTestBase {
             refEq(ThroughputProperties.createManualThroughput(Integer.parseInt("400"))));
     verify(metadataDatabase).createContainerIfNotExists(containerPropertiesCaptor.capture());
     assertThat(containerPropertiesCaptor.getValue().getId())
-        .isEqualTo(CosmosAdmin.METADATA_CONTAINER);
+        .isEqualTo(CosmosAdmin.TABLE_METADATA_CONTAINER);
     assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getPaths())
         .containsExactly("/id");
     CosmosTableMetadata cosmosTableMetadata =
@@ -312,7 +353,7 @@ public abstract class CosmosAdminTestBase {
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
     when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
-    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
+    when(metadataDatabase.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER))
         .thenReturn(metadataContainer);
 
     // Act
@@ -344,7 +385,7 @@ public abstract class CosmosAdminTestBase {
             refEq(ThroughputProperties.createManualThroughput(Integer.parseInt("400"))));
     verify(metadataDatabase).createContainerIfNotExists(containerPropertiesCaptor.capture());
     assertThat(containerPropertiesCaptor.getValue().getId())
-        .isEqualTo(CosmosAdmin.METADATA_CONTAINER);
+        .isEqualTo(CosmosAdmin.TABLE_METADATA_CONTAINER);
     assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getPaths())
         .containsExactly("/id");
     CosmosTableMetadata cosmosTableMetadata =
@@ -386,7 +427,7 @@ public abstract class CosmosAdminTestBase {
   }
 
   @Test
-  public void dropTable_WithNoMetadataLeft_ShouldDropContainerAndDeleteMetadataAndDatabase()
+  public void dropTable_WithNoMetadataLeft_ShouldDropContainerAndDeleteTableMetadataContainer()
       throws ExecutionException {
     // Arrange
     String namespace = "ns";
@@ -399,7 +440,7 @@ public abstract class CosmosAdminTestBase {
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
     when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
-    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
+    when(metadataDatabase.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER))
         .thenReturn(metadataContainer);
     @SuppressWarnings("unchecked")
     CosmosPagedIterable<Object> queryResults = mock(CosmosPagedIterable.class);
@@ -415,13 +456,12 @@ public abstract class CosmosAdminTestBase {
 
     // for metadata table
     verify(client, atLeastOnce()).getDatabase(metadataDatabaseName);
-    verify(metadataDatabase, atLeastOnce()).getContainer(CosmosAdmin.METADATA_CONTAINER);
+    verify(metadataDatabase, atLeastOnce()).getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER);
     String fullTable = getFullTableName(namespace, table);
     verify(metadataContainer)
         .deleteItem(
             eq(fullTable), eq(new PartitionKey(fullTable)), refEq(new CosmosItemRequestOptions()));
     verify(metadataContainer).delete();
-    verify(metadataDatabase).delete();
   }
 
   public void dropTable_WithMetadataLeft_ShouldDropContainerAndOnlyDeleteMetadata()
@@ -437,7 +477,7 @@ public abstract class CosmosAdminTestBase {
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
     when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
-    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
+    when(metadataDatabase.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER))
         .thenReturn(metadataContainer);
     @SuppressWarnings("unchecked")
     CosmosPagedIterable<Object> queryResults = mock(CosmosPagedIterable.class);
@@ -453,7 +493,7 @@ public abstract class CosmosAdminTestBase {
 
     // for metadata table
     verify(client, atLeastOnce()).getDatabase(metadataDatabaseName);
-    verify(metadataDatabase, atLeastOnce()).getContainer(CosmosAdmin.METADATA_CONTAINER);
+    verify(metadataDatabase, atLeastOnce()).getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER);
     String fullTable = getFullTableName(namespace, table);
     verify(metadataContainer)
         .deleteItem(
@@ -463,16 +503,57 @@ public abstract class CosmosAdminTestBase {
   }
 
   @Test
-  public void dropNamespace_WithExistingDatabase_ShouldDropDatabase() throws ExecutionException {
+  public void
+      dropNamespace_WithExistingDatabaseAndNoMoreNamespaceLeft_ShouldDropDatabaseAndMetadataNamespace()
+          throws ExecutionException {
     // Arrange
     String namespace = "ns";
-    when(client.getDatabase(any())).thenReturn(database);
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    when(client.getDatabase(any())).thenReturn(database, metadataDatabase);
+    CosmosContainer namespacesContainer = mock(CosmosContainer.class);
+    when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
+
+    CosmosPagedIterable<Object> pagedIterable = mock(CosmosPagedIterable.class);
+    when(namespacesContainer.queryItems(anyString(), any(), any())).thenReturn(pagedIterable);
+    when(pagedIterable.stream()).thenReturn(Stream.empty());
 
     // Act
     admin.dropNamespace(namespace);
 
     // Assert
+    verify(client).getDatabase(namespace);
     verify(database).delete();
+    verify(client, times(2)).getDatabase(metadataDatabaseName);
+    verify(metadataDatabase).getContainer(CosmosAdmin.NAMESPACES_CONTAINER);
+    verify(namespacesContainer)
+        .deleteItem(eq(new CosmosNamespace(namespace)), refEq(new CosmosItemRequestOptions()));
+    verify(metadataDatabase).delete();
+  }
+
+  @Test
+  public void dropNamespace_WithExistingDatabaseAndSomeNamespacesLeft_ShouldDropDatabase()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    when(client.getDatabase(any())).thenReturn(database, metadataDatabase);
+    CosmosContainer namespacesContainer = mock(CosmosContainer.class);
+    when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
+
+    CosmosPagedIterable<Object> pagedIterable = mock(CosmosPagedIterable.class);
+    when(namespacesContainer.queryItems(anyString(), any(), any())).thenReturn(pagedIterable);
+    when(pagedIterable.stream()).thenReturn(Stream.of(mock(Object.class)));
+
+    // Act
+    admin.dropNamespace(namespace);
+
+    // Assert
+    verify(client).getDatabase(namespace);
+    verify(database).delete();
+    verify(client).getDatabase(metadataDatabaseName);
+    verify(metadataDatabase).getContainer(CosmosAdmin.NAMESPACES_CONTAINER);
+    verify(namespacesContainer)
+        .deleteItem(eq(new CosmosNamespace(namespace)), refEq(new CosmosItemRequestOptions()));
   }
 
   @Test
@@ -526,7 +607,7 @@ public abstract class CosmosAdminTestBase {
         CosmosTableMetadata.newBuilder().id(getFullTableName(namespace, "t2")).build();
 
     when(client.getDatabase(metadataDatabaseName)).thenReturn(database);
-    when(database.getContainer(CosmosAdmin.METADATA_CONTAINER)).thenReturn(container);
+    when(database.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER)).thenReturn(container);
     @SuppressWarnings("unchecked")
     CosmosPagedIterable<CosmosTableMetadata> queryResults = mock(CosmosPagedIterable.class);
     when(container.queryItems(anyString(), any(), eq(CosmosTableMetadata.class)))
@@ -539,7 +620,7 @@ public abstract class CosmosAdminTestBase {
     // Assert
     assertThat(actualTableNames).containsExactly("t1", "t2");
     verify(client, atLeastOnce()).getDatabase(metadataDatabaseName);
-    verify(database, atLeastOnce()).getContainer(CosmosAdmin.METADATA_CONTAINER);
+    verify(database, atLeastOnce()).getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER);
     verify(container)
         .queryItems(
             eq("SELECT * FROM metadata WHERE metadata.id LIKE 'ns.%'"),
@@ -565,7 +646,7 @@ public abstract class CosmosAdminTestBase {
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
     when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
-    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
+    when(metadataDatabase.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER))
         .thenReturn(metadataContainer);
     @SuppressWarnings("unchecked")
     CosmosItemResponse<CosmosTableMetadata> itemResponse = mock(CosmosItemResponse.class);
@@ -634,7 +715,7 @@ public abstract class CosmosAdminTestBase {
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
     when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
-    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
+    when(metadataDatabase.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER))
         .thenReturn(metadataContainer);
     @SuppressWarnings("unchecked")
     CosmosItemResponse<CosmosTableMetadata> itemResponse = mock(CosmosItemResponse.class);
@@ -726,7 +807,7 @@ public abstract class CosmosAdminTestBase {
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
     when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
-    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
+    when(metadataDatabase.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER))
         .thenReturn(metadataContainer);
 
     CosmosScripts scripts = mock(CosmosScripts.class);
@@ -774,7 +855,7 @@ public abstract class CosmosAdminTestBase {
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
     when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
-    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
+    when(metadataDatabase.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER))
         .thenReturn(metadataContainer);
 
     // Missing stored procedure
@@ -812,7 +893,7 @@ public abstract class CosmosAdminTestBase {
     CosmosItemResponse<CosmosTableMetadata> response = mock(CosmosItemResponse.class);
 
     when(client.getDatabase(metadataDatabaseName)).thenReturn(database);
-    when(database.getContainer(CosmosAdmin.METADATA_CONTAINER)).thenReturn(container);
+    when(database.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER)).thenReturn(container);
     when(container.readItem(
             anyString(),
             any(PartitionKey.class),
@@ -860,5 +941,74 @@ public abstract class CosmosAdminTestBase {
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getNamespaceNames_NonExistingNamespacesContainer_ShouldReturnEmptySet()
+      throws ExecutionException {
+    // Arrange
+    when(client.getDatabase(anyString())).thenThrow(notFoundException);
+
+    // Act
+    Set<String> actualNamespaces = admin.getNamespaceNames();
+
+    // Assert
+    assertThat(actualNamespaces).isEmpty();
+    verify(client).getDatabase(metadataDatabaseName);
+  }
+
+  @Test
+  public void getNamespaceNames_ShouldWorkProperly() throws ExecutionException {
+    // Arrange
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer namespacesContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(anyString())).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
+    CosmosPagedIterable<CosmosNamespace> pagedIterable = mock(CosmosPagedIterable.class);
+    when(namespacesContainer.queryItems(anyString(), any(), eq(CosmosNamespace.class)))
+        .thenReturn(pagedIterable);
+    when(pagedIterable.stream())
+        .thenReturn(Stream.of(new CosmosNamespace("ns1"), new CosmosNamespace("ns2")));
+
+    // Act
+    Set<String> actualNamespaces = admin.getNamespaceNames();
+
+    // Assert
+    verify(client, times(2)).getDatabase(metadataDatabaseName);
+    verify(metadataDatabase, times(2)).getContainer(CosmosAdmin.NAMESPACES_CONTAINER);
+    verify(namespacesContainer)
+        .queryItems(
+            eq("SELECT * FROM container"),
+            refEq(new CosmosQueryRequestOptions()),
+            eq(CosmosNamespace.class));
+    assertThat(actualNamespaces).containsOnly("ns1", "ns2");
+  }
+
+  @Test
+  public void namespaceExists_WithExistingNamespace_ShouldReturnTrue() throws ExecutionException {
+    // Arrange
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer namespacesContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(anyString())).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
+
+    // Act Assert
+    assertThat(admin.namespaceExists("ns")).isTrue();
+
+    verify(client).getDatabase(metadataDatabaseName);
+    verify(metadataDatabase).getContainer(CosmosAdmin.NAMESPACES_CONTAINER);
+    verify(namespacesContainer).readItem("ns", new PartitionKey("ns"), CosmosNamespace.class);
+  }
+
+  @Test
+  public void namespaceExists_WithNonExistingMetadataDatabase_ShouldReturnFalse()
+      throws ExecutionException {
+    // Arrange
+    when(client.getDatabase(anyString())).thenThrow(notFoundException);
+
+    // Act Assert
+    assertThat(admin.namespaceExists("ns")).isFalse();
+
+    verify(client).getDatabase(metadataDatabaseName);
   }
 }

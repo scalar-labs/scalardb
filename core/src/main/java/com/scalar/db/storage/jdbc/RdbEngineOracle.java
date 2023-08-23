@@ -105,11 +105,6 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
-  public String namespaceExistsStatement() {
-    return "SELECT 1 FROM " + enclose("ALL_USERS") + " WHERE " + enclose("USERNAME") + " = ?";
-  }
-
-  @Override
   public String alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
     return "ALTER TABLE "

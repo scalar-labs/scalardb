@@ -20,6 +20,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -190,6 +191,13 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
     admin.addNewColumnToTable(namespace, table, columnName, columnType);
     admin.addNewColumnToTable(namespace, table, beforeColumnName, columnType);
+  }
+
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    return admin.getNamespaceNames().stream()
+        .filter(namespace -> !namespace.equals(coordinatorNamespace))
+        .collect(Collectors.toSet());
   }
 
   @Override

@@ -348,6 +348,23 @@ boolean ifExists = true;
 admin.dropNamespace("ns", ifExists);
 ```
 
+### Get the namespaces
+
+You can get the existing namespaces as follows:
+
+```java
+Set<String> namespaces = admin.getNamespaceNames();
+```
+
+### Get the tables of a namespace
+
+You can get the tables of a namespace as follows:
+
+```java
+// Get the tables of the namespace "ns"
+Set<String> tables = admin.getNamespaceTableNames("ns");
+```
+
 #### Get a table metadata
 
 You can get a table metadata as follows:
