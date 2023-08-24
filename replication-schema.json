@@ -31,6 +31,7 @@
       "table": "TEXT",
       "pk": "TEXT",
       "ck": "TEXT",
+      "version": "BIGINT",
       "current_tx_id": "TEXT",
       "values": "TEXT",
       "appended_at": "BIGINT",

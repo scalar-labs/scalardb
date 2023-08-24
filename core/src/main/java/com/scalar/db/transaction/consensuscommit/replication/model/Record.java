@@ -12,6 +12,7 @@ public class Record {
   private final String table;
   private final Key pk;
   private final Key ck;
+  public final long version;
   private final String currentTxId;
   private final Set<Value> values;
   private final Instant appendedAt;
@@ -82,6 +83,7 @@ public class Record {
       String table,
       Key pk,
       Key ck,
+      long version,
       String currentTxId,
       Set<Value> values,
       Instant appendedAt,
@@ -90,6 +92,7 @@ public class Record {
     this.table = table;
     this.pk = pk;
     this.ck = ck;
+    this.version = version;
     this.currentTxId = currentTxId;
     this.values = values;
     this.appendedAt = appendedAt;
