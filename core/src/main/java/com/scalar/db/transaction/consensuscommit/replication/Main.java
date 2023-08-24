@@ -17,16 +17,18 @@ import java.util.Optional;
 
 public class Main {
   private final TransactionFactory transactionFactory;
+  private final int numOfCustomers;
 
-  public Main(TransactionFactory transactionFactory) {
+  public Main(TransactionFactory transactionFactory, int numOfCustomers) {
     this.transactionFactory = transactionFactory;
+    this.numOfCustomers = numOfCustomers;
   }
 
-  private void insertRecords() {
-    for (int i = 0; i < 100; i++) {
-      DistributedTransactionManager transactionManager = transactionFactory.getTransactionManager();
+  private void insertRecords() throws TransactionException {
+    DistributedTransactionManager transactionManager = transactionFactory.getTransactionManager();
+    for (int i = 0; i < numOfCustomers / 10; i++) {
+      DistributedTransaction tx = transactionManager.begin();
       try {
-        DistributedTransaction tx = transactionManager.begin();
         for (int j = 0; j < 10; j++) {
           int id = i * 10 + j;
           tx.put(
@@ -40,19 +42,19 @@ public class Main {
                   .build());
         }
         tx.commit();
-      } catch (TransactionException e) {
+      } catch (Exception e) {
+        tx.abort();
         e.printStackTrace();
-      } finally {
-        transactionManager.close();
       }
     }
+    transactionManager.close();
   }
 
-  private void updateRecords() {
-    for (int i = 0; i < 100; i++) {
-      DistributedTransactionManager transactionManager = transactionFactory.getTransactionManager();
+  private void updateRecords() throws TransactionException {
+    DistributedTransactionManager transactionManager = transactionFactory.getTransactionManager();
+    for (int i = 0; i < numOfCustomers / 10; i++) {
+      DistributedTransaction tx = transactionManager.begin();
       try {
-        DistributedTransaction tx = transactionManager.begin();
         for (int j = 0; j < 10; j++) {
           int id = i * 10 + j;
           Optional<Result> result =
@@ -76,19 +78,19 @@ public class Main {
                   .build());
         }
         tx.commit();
-      } catch (TransactionException e) {
+      } catch (Exception e) {
+        tx.abort();
         e.printStackTrace();
-      } finally {
-        transactionManager.close();
       }
     }
+    transactionManager.close();
   }
 
-  private void deleteRecords() {
-    for (int i = 0; i < 100; i++) {
-      DistributedTransactionManager transactionManager = transactionFactory.getTransactionManager();
+  private void deleteRecords() throws TransactionException {
+    DistributedTransactionManager transactionManager = transactionFactory.getTransactionManager();
+    for (int i = 0; i < numOfCustomers / 10; i++) {
+      DistributedTransaction tx = transactionManager.begin();
       try {
-        DistributedTransaction tx = transactionManager.begin();
         for (int j = 0; j < 2; j++) {
           int id = i * 10 + j * 5;
           Optional<Result> result =
@@ -112,24 +114,28 @@ public class Main {
         }
         tx.commit();
       } catch (TransactionException e) {
+        tx.abort();
         e.printStackTrace();
-      } finally {
-        transactionManager.close();
       }
     }
+    transactionManager.close();
   }
 
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) throws IOException, TransactionException {
     if (args.length < 1) {
       throw new IllegalArgumentException("ScalarDB config file path isn't specified");
     }
     String scalarDbConfigPath = args[0];
     TransactionFactory transactionFactory = TransactionFactory.create(scalarDbConfigPath);
 
-    Main main = new Main(transactionFactory);
+    int numOfCustomers = 5000;
+    int updateLoop = 4;
+    Main main = new Main(transactionFactory, numOfCustomers);
     Instant start = Instant.now();
     main.insertRecords();
-    main.updateRecords();
+    for (int i = 0; i < updateLoop; i++) {
+      main.updateRecords();
+    }
     main.deleteRecords();
     System.out.println("Duration: " + Duration.between(start, Instant.now()));
   }

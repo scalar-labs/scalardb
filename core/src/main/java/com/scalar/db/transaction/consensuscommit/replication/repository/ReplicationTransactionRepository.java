@@ -32,22 +32,20 @@ public class ReplicationTransactionRepository {
   private final ObjectMapper objectMapper;
   private final String replicationDbNamespace;
   private final String replicationDbTransactionTable;
-  private final int fetchTransactionSize;
 
   public ReplicationTransactionRepository(
       DistributedStorage replicationDbStorage,
       ObjectMapper objectMapper,
       String replicationDbNamespace,
-      String replicationDbTransactionTable,
-      int fetchTransactionSize) {
+      String replicationDbTransactionTable) {
     this.replicationDbStorage = replicationDbStorage;
     this.objectMapper = objectMapper;
     this.replicationDbNamespace = replicationDbNamespace;
     this.replicationDbTransactionTable = replicationDbTransactionTable;
-    this.fetchTransactionSize = fetchTransactionSize;
   }
 
-  public List<Transaction> scan(int partitionId) throws ExecutionException, IOException {
+  public List<Transaction> scan(int partitionId, int fetchTransactionSize)
+      throws ExecutionException, IOException {
     try (Scanner scan =
         replicationDbStorage.scan(
             Scan.newBuilder()
