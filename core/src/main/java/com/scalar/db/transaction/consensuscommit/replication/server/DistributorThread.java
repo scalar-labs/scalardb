@@ -33,6 +33,7 @@ public class DistributorThread implements Closeable {
   private final ExecutorService executorService;
   private final int replicationDbPartitionSize;
   private final int threadSize;
+  private final int fetchThreadSize;
   private final ReplicationRecordRepository replicationRecordRepository;
   private final ReplicationTransactionRepository replicationTransactionRepository;
   private final CoordinatorStateRepository coordinatorStateRepository;
@@ -41,6 +42,7 @@ public class DistributorThread implements Closeable {
   public DistributorThread(
       int replicationDbPartitionSize,
       int threadSize,
+      int fetchThreadSize,
       CoordinatorStateRepository coordinatorStateRepository,
       ReplicationTransactionRepository replicationTransactionRepository,
       ReplicationRecordRepository replicationRecordRepository,
@@ -53,6 +55,7 @@ public class DistributorThread implements Closeable {
     }
     this.replicationDbPartitionSize = replicationDbPartitionSize;
     this.threadSize = threadSize;
+    this.fetchThreadSize = fetchThreadSize;
     this.executorService =
         Executors.newFixedThreadPool(
             threadSize,
@@ -136,7 +139,8 @@ public class DistributorThread implements Closeable {
   }
 
   private void fetchAndHandleTransactions(int partitionId) throws IOException, ExecutionException {
-    for (Transaction transaction : replicationTransactionRepository.scan(partitionId)) {
+    for (Transaction transaction :
+        replicationTransactionRepository.scan(partitionId, fetchThreadSize)) {
       Optional<CoordinatorState> coordinatorState =
           coordinatorStateRepository.getCommitted(transaction.transactionId());
       if (!coordinatorState.isPresent()) {
@@ -160,7 +164,7 @@ public class DistributorThread implements Closeable {
                 } catch (Throwable e) {
                   logger.error("Unexpected exception occurred", e);
                   try {
-                    TimeUnit.SECONDS.sleep(2);
+                    TimeUnit.MILLISECONDS.sleep(100);
                   } catch (InterruptedException ex) {
                     logger.error("Interrupted", ex);
                     Thread.currentThread().interrupt();
@@ -219,8 +223,7 @@ public class DistributorThread implements Closeable {
             StorageFactory.create(replicationDbProps).getStorage(),
             objectMapper,
             "replication",
-            "transactions",
-            4);
+            "transactions");
 
     ReplicationRecordRepository replicationRecordRepository =
         new ReplicationRecordRepository(
@@ -230,12 +233,13 @@ public class DistributorThread implements Closeable {
             "records");
 
     RecordWriterThread recordWriter =
-        new RecordWriterThread(8, replicationRecordRepository, backupScalarDbProps).run();
+        new RecordWriterThread(16, replicationRecordRepository, backupScalarDbProps).run();
 
     DistributorThread distributorThread =
         new DistributorThread(
                 256,
-                8,
+                16,
+                16,
                 coordinatorStateRepository,
                 replicationTransactionRepository,
                 replicationRecordRepository,

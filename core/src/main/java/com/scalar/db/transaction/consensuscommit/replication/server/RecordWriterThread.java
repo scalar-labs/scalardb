@@ -211,7 +211,7 @@ public class RecordWriterThread implements Closeable {
                 logger.error("Caught an exception. key:{}. Retrying...", key, e);
                 try {
                   // Avoid busy loop
-                  TimeUnit.MILLISECONDS.sleep(500);
+                  TimeUnit.MILLISECONDS.sleep(100);
                 } catch (InterruptedException ex) {
                   Thread.currentThread().interrupt();
                   logger.warn("Interrupted", ex);
