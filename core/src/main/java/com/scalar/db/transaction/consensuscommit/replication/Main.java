@@ -11,6 +11,8 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.TransactionFactory;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 
 public class Main {
@@ -21,7 +23,7 @@ public class Main {
   }
 
   private void insertRecords() {
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 100; i++) {
       DistributedTransactionManager transactionManager = transactionFactory.getTransactionManager();
       try {
         DistributedTransaction tx = transactionManager.begin();
@@ -47,7 +49,7 @@ public class Main {
   }
 
   private void updateRecords() {
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 100; i++) {
       DistributedTransactionManager transactionManager = transactionFactory.getTransactionManager();
       try {
         DistributedTransaction tx = transactionManager.begin();
@@ -83,7 +85,7 @@ public class Main {
   }
 
   private void deleteRecords() {
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 100; i++) {
       DistributedTransactionManager transactionManager = transactionFactory.getTransactionManager();
       try {
         DistributedTransaction tx = transactionManager.begin();
@@ -125,8 +127,10 @@ public class Main {
     TransactionFactory transactionFactory = TransactionFactory.create(scalarDbConfigPath);
 
     Main main = new Main(transactionFactory);
+    Instant start = Instant.now();
     main.insertRecords();
     main.updateRecords();
     main.deleteRecords();
+    System.out.println("Duration: " + Duration.between(start, Instant.now()));
   }
 }
