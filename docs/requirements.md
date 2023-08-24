@@ -26,4 +26,4 @@ For example, if you have asynchronous read replicas in your setup and perform re
 
 We recommend performing all operations or transactions against a single master instance so that you can achieve linearizability and avoid worrying about consistency issues in your application. Note that you can still use a read replica as a backup and standby even if you follow this recommendation.
 
-If you must perform operations or transactions on read replicas, you can configure your application to perform read-write-mixed transactions against a single master instance and read-only transactions against read replicas. The resulting configuration would not be strict serializable (linearizable and serializable) but would be serializable.
+If you must perform operations or transactions on read replicas, you can configure your application to perform read-write-mixed transactions against a single master instance and read-only transactions against read replicas. The resulting transaction schedules with the configuration would not be strict serializable (linearizable and serializable) but would be serializable.
