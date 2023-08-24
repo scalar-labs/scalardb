@@ -208,9 +208,9 @@ public class DistributorThread implements Closeable {
 
     Properties backupScalarDbProps = new Properties();
     backupScalarDbProps.put("scalar.db.storage", "jdbc");
-    backupScalarDbProps.put("scalar.db.contact_points", "jdbc:mysql://localhost/sample");
-    backupScalarDbProps.put("scalar.db.username", "root");
-    backupScalarDbProps.put("scalar.db.password", "mysql");
+    backupScalarDbProps.put("scalar.db.contact_points", "jdbc:postgresql://localhost/backup");
+    backupScalarDbProps.put("scalar.db.username", "postgres");
+    backupScalarDbProps.put("scalar.db.password", "postgres");
 
     ObjectMapper objectMapper = new ObjectMapper();
 
