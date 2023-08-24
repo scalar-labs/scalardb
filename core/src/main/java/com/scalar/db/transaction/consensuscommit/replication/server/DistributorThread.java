@@ -17,6 +17,7 @@ import com.scalar.db.transaction.consensuscommit.replication.repository.Replicat
 import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationTransactionRepository;
 import java.io.Closeable;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Queue;
@@ -66,74 +67,82 @@ public class DistributorThread implements Closeable {
     this.recordWriterQueue = recordWriterQueue;
   }
 
-  private void fetchAndHandleTransactionRecord(int partitionId)
-      throws IOException, ExecutionException {
+  private void handleWrittenTuple(
+      String transactionId, WrittenTuple writtenTuple, Instant committedAt) {
+    Key key =
+        replicationRecordRepository.createKey(
+            writtenTuple.namespace,
+            writtenTuple.table,
+            writtenTuple.partitionKey,
+            writtenTuple.clusteringKey);
+
+    Value newValue;
+    if (writtenTuple instanceof InsertedTuple) {
+      InsertedTuple tuple = (InsertedTuple) writtenTuple;
+      newValue =
+          new Value(
+              null,
+              transactionId,
+              writtenTuple.txVersion,
+              writtenTuple.txPreparedAtInMillis,
+              committedAt.toEpochMilli(),
+              "insert",
+              tuple.columns);
+    } else if (writtenTuple instanceof UpdatedTuple) {
+      UpdatedTuple tuple = (UpdatedTuple) writtenTuple;
+      newValue =
+          new Value(
+              tuple.prevTxId,
+              transactionId,
+              writtenTuple.txVersion,
+              writtenTuple.txPreparedAtInMillis,
+              committedAt.toEpochMilli(),
+              "update",
+              tuple.columns);
+    } else if (writtenTuple instanceof DeletedTuple) {
+      DeletedTuple tuple = (DeletedTuple) writtenTuple;
+      newValue =
+          new Value(
+              tuple.prevTxId,
+              transactionId,
+              writtenTuple.txVersion,
+              writtenTuple.txPreparedAtInMillis,
+              committedAt.toEpochMilli(),
+              "delete",
+              null);
+    } else {
+      throw new AssertionError();
+    }
+
+    try {
+      replicationRecordRepository.upsertWithNewValue(key, newValue);
+    } catch (Exception e) {
+      String message =
+          String.format(
+              "Failed to append the value. key:%s, txId:%s, newValue:%s",
+              key, transactionId, newValue);
+      throw new RuntimeException(message, e);
+    }
+
+    recordWriterQueue.add(key);
+  }
+
+  private void handleTransaction(Transaction transaction, Instant committedAt)
+      throws ExecutionException {
+    for (WrittenTuple writtenTuple : transaction.writtenTuples()) {
+      handleWrittenTuple(transaction.transactionId(), writtenTuple, committedAt);
+    }
+    replicationTransactionRepository.delete(transaction);
+  }
+
+  private void fetchAndHandleTransactions(int partitionId) throws IOException, ExecutionException {
     for (Transaction transaction : replicationTransactionRepository.scan(partitionId)) {
       Optional<CoordinatorState> coordinatorState =
           coordinatorStateRepository.getCommitted(transaction.transactionId());
       if (!coordinatorState.isPresent()) {
         continue;
       }
-      for (WrittenTuple writtenTuple : transaction.writtenTuples()) {
-        Key key =
-            replicationRecordRepository.createKey(
-                writtenTuple.namespace,
-                writtenTuple.table,
-                writtenTuple.partitionKey,
-                writtenTuple.clusteringKey);
-
-        Value newValue;
-        if (writtenTuple instanceof InsertedTuple) {
-          InsertedTuple tuple = (InsertedTuple) writtenTuple;
-          newValue =
-              new Value(
-                  null,
-                  transaction.transactionId(),
-                  writtenTuple.txVersion,
-                  writtenTuple.txPreparedAtInMillis,
-                  coordinatorState.get().txCommittedAt.toEpochMilli(),
-                  "insert",
-                  tuple.columns);
-        } else if (writtenTuple instanceof UpdatedTuple) {
-          UpdatedTuple tuple = (UpdatedTuple) writtenTuple;
-          newValue =
-              new Value(
-                  tuple.prevTxId,
-                  transaction.transactionId(),
-                  writtenTuple.txVersion,
-                  writtenTuple.txPreparedAtInMillis,
-                  coordinatorState.get().txCommittedAt.toEpochMilli(),
-                  "update",
-                  tuple.columns);
-        } else if (writtenTuple instanceof DeletedTuple) {
-          DeletedTuple tuple = (DeletedTuple) writtenTuple;
-          newValue =
-              new Value(
-                  tuple.prevTxId,
-                  transaction.transactionId(),
-                  writtenTuple.txVersion,
-                  writtenTuple.txPreparedAtInMillis,
-                  coordinatorState.get().txCommittedAt.toEpochMilli(),
-                  "delete",
-                  null);
-        } else {
-          throw new AssertionError();
-        }
-
-        try {
-          replicationRecordRepository.appendValue(key, newValue);
-        } catch (Exception e) {
-          String message =
-              String.format(
-                  "Failed to append the value. key:%s, txId:%s, newValue:%s",
-                  key, transaction.transactionId(), newValue);
-          throw new RuntimeException(message, e);
-        }
-
-        recordWriterQueue.add(key);
-
-        replicationTransactionRepository.delete(transaction);
-      }
+      handleTransaction(transaction, coordinatorState.get().txCommittedAt);
     }
   }
 
@@ -147,7 +156,7 @@ public class DistributorThread implements Closeable {
                   partitionId < replicationDbPartitionSize;
                   partitionId += threadSize) {
                 try {
-                  fetchAndHandleTransactionRecord(partitionId);
+                  fetchAndHandleTransactions(partitionId);
                 } catch (Throwable e) {
                   logger.error("Unexpected exception occurred", e);
                   try {
