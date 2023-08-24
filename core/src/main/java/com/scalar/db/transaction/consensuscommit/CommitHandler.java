@@ -59,13 +59,13 @@ public class CommitHandler {
     replicationDbProps.put("scalar.db.contact_points", "jdbc:mysql://localhost/replication");
     replicationDbProps.put("scalar.db.username", "root");
     replicationDbProps.put("scalar.db.password", "mysql");
+    replicationDbProps.put("scalar.db.jdbc.connection_pool.max_total", "50");
     ReplicationTransactionRepository replicationTransactionRepository =
         new ReplicationTransactionRepository(
             StorageFactory.create(replicationDbProps).getStorage(),
             new ObjectMapper(),
             "replication",
-            "transactions",
-            4);
+            "transactions");
     this.logRecorder =
         new DefaultLogRecorder(tableMetadataManager, replicationTransactionRepository);
   }
