@@ -4,7 +4,7 @@ ScalarDB supports the following databases and their versions.
 
 ## Amazon DynamoDB
 
-| Version | Amazon DynamoDB |
+| Version | DynamoDB |
 |:------------------|:---------------|
 | **ScalarDB 3.10** | ✅ |
 | **ScalarDB 3.9** | ✅ |
@@ -24,7 +24,7 @@ For requirements when using Cassandra or Cassandra-compatible databases, see [Ca
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
-| Version | Apache Cassandra 4.1 | Apache Cassandra 4.0 | Apache Cassandra 3.11 | Apache Cassandra 3.0 | Apache Cassandra 2.2 |
+| Version | Cassandra 4.1 | Cassandra 4.0 | Cassandra 3.11 | Cassandra 3.0 | Cassandra 2.2 |
 |:------------------|:---------------|:-----------------|:----------------|:-----------------|:----------------|
 | **ScalarDB 3.10** | ❌ | ❌ | ✅ | ✅ | ✅ |
 | **ScalarDB 3.9** | ❌ | ❌ | ✅ | ✅ | ✅ |
@@ -36,7 +36,7 @@ For requirements when using Cassandra or Cassandra-compatible databases, see [Ca
 
 ## Azure Cosmos DB for NoSQL
 
-| Version | Azure Cosmos DB for NoSQL |
+| Version | Cosmos DB for NoSQL |
 |:------------------|:---------------|
 | **ScalarDB 3.10** | ✅ |
 | **ScalarDB 3.9** | ✅ |
@@ -58,7 +58,7 @@ For recommendations when using JDBC databases, see [JDBC database recommendation
 
 ### Amazon Aurora MySQL
 
-| Version | Amazon Aurora MySQL 3 | Amazon Aurora MySQL 2 |
+| Version | Aurora MySQL 3 | Aurora MySQL 2 |
 :---------------|:---------------|:---------------|
 | **ScalarDB 3.10** | ✅ | ✅ |
 | **ScalarDB 3.9** | ✅ | ✅ |
@@ -70,7 +70,7 @@ For recommendations when using JDBC databases, see [JDBC database recommendation
 
 ### Amazon Aurora PostgreSQL
 
-| Version | Amazon Aurora PostgreSQL 14 | Amazon Aurora PostgreSQL 13 | Amazon Aurora PostgreSQL 12 |
+| Version | Aurora PostgreSQL 14 | Aurora PostgreSQL 13 | Aurora PostgreSQL 12 |
 :---------------|:---------------|:---------------|:---------------|
 | **ScalarDB 3.10** | ✅ | ✅ | ✅ |
 | **ScalarDB 3.9** | ✅ | ✅ | ✅ |
@@ -82,7 +82,7 @@ For recommendations when using JDBC databases, see [JDBC database recommendation
 
 ### Microsoft SQL Server
 
-| Version | Microsoft SQL Server 2022 | Microsoft SQL Server 2019 | Microsoft SQL Server 2017 |
+| Version | SQL Server 2022 | SQL Server 2019 | SQL Server 2017 |
 :---------------|:---------------|:---------------|:---------------|
 | **ScalarDB 3.10** | ✅ | ✅ | ✅ |
 | **ScalarDB 3.9** | ✅ | ✅ | ✅ |
