@@ -18,6 +18,12 @@ You must use a Cassandra-compatible database that supports LWTs.
 
 ScalarDB does not work on some Cassandra-compatible databases that do not support LWTs, such as [Amazon Keyspaces](https://aws.amazon.com/keyspaces/). This is because the Consensus Commit transaction manager relies on the linearizable operations of underlying databases to make transactions serializable.
 
+## CosmosDB database requirements
+
+In your Azure CosmosDB account, you must set the **default consistency level** to **Strong**.
+
+For instructions on how to configure this setting, see the official documentation at [Configure the default consistency level](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/how-to-manage-consistency#configure-the-default-consistency-level).
+
 ## JDBC database recommendations
 
 In ScalarDB on JDBC databases, you can't choose a consistency level (`LINEARIZABLE`, `SEQUENTIAL` or `EVENTUAL`) in your code by using the `Operation.withConsistency()` method. In addition, the consistency level depends on the setup of your JDBC database. 
