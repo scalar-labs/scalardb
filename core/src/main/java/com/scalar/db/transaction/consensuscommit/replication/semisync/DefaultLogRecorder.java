@@ -1,11 +1,11 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisync;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.transaction.consensuscommit.TransactionResult;
 import com.scalar.db.transaction.consensuscommit.TransactionTableMetadata;
 import com.scalar.db.transaction.consensuscommit.TransactionTableMetadataManager;
@@ -22,6 +22,10 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class DefaultLogRecorder implements LogRecorder {
   // TODO: Make these configurable
@@ -29,6 +33,9 @@ public class DefaultLogRecorder implements LogRecorder {
 
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ReplicationTransactionRepository replicationTransactionRepository;
+  private final ExecutorService executorService =
+      Executors.newCachedThreadPool(
+          new ThreadFactoryBuilder().setNameFormat("log-recorder-%d").setDaemon(true).build());
 
   private String defaultNamespace;
 
@@ -43,9 +50,8 @@ public class DefaultLogRecorder implements LogRecorder {
     this.replicationTransactionRepository = replicationTransactionRepository;
   }
 
-  @Override
-  public void record(PrepareMutationComposerForReplication composer)
-      throws PreparationConflictException, ExecutionException {
+  private void recordInternal(PrepareMutationComposerForReplication composer)
+      throws ExecutionException {
     List<Mutation> mutations = composer.get();
     List<Operation> operations = composer.operations();
     List<TransactionResult> txResults = composer.transactionResultList();
@@ -139,5 +145,13 @@ public class DefaultLogRecorder implements LogRecorder {
   }
 
   @Override
-  public void close() throws Exception {}
+  public Future<Void> record(PrepareMutationComposerForReplication composer)
+      throws ExecutionException {
+    return executorService.submit(
+        (Callable<Void>)
+            () -> {
+              recordInternal(composer);
+              return null;
+            });
+  }
 }

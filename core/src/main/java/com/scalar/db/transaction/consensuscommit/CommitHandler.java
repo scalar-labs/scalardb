@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.Future;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,8 +71,9 @@ public class CommitHandler {
   }
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
+    Optional<Future<Void>> logRecordFuture;
     try {
-      prepare(snapshot);
+      logRecordFuture = prepare(snapshot);
     } catch (PreparationException e) {
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
@@ -92,13 +94,29 @@ public class CommitHandler {
       throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
     }
 
+    logRecordFuture.ifPresent(
+        logRecord -> {
+          try {
+            logRecord.get();
+          } catch (InterruptedException e) {
+            throw new RuntimeException(
+                String.format(
+                    "Log recording failed due to an interruption. transactionId:%s",
+                    snapshot.getId()),
+                e);
+          } catch (java.util.concurrent.ExecutionException e) {
+            throw new RuntimeException(
+                String.format("Log recording failed. transactionId:%s", snapshot.getId()), e);
+          }
+        });
+
     commitState(snapshot);
     commitRecords(snapshot);
   }
 
-  public void prepare(Snapshot snapshot) throws PreparationException {
+  public Optional<Future<Void>> prepare(Snapshot snapshot) throws PreparationException {
     try {
-      prepareRecords(snapshot);
+      return prepareRecords(snapshot);
     } catch (NoMutationException e) {
       throw new PreparationConflictException("Preparing record exists", e, snapshot.getId());
     } catch (RetriableExecutionException e) {
@@ -109,14 +127,17 @@ public class CommitHandler {
     }
   }
 
-  private void prepareRecords(Snapshot snapshot)
+  private Optional<Future<Void>> prepareRecords(Snapshot snapshot)
       throws ExecutionException, PreparationConflictException {
     PrepareMutationComposer composer;
+    Optional<Future<Void>> logRecordFuture = Optional.empty();
     // FIXME: This should be configured
-    if (true) {
+    boolean logRecorderEnabled = true;
+    if (logRecorderEnabled) {
       composer = new PrepareMutationComposerForReplication(snapshot.getId(), tableMetadataManager);
       snapshot.to(composer);
-      logRecorder.record((PrepareMutationComposerForReplication) composer);
+      logRecordFuture =
+          Optional.of(logRecorder.record((PrepareMutationComposerForReplication) composer));
     } else {
       composer = new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
       snapshot.to(composer);
@@ -129,6 +150,8 @@ public class CommitHandler {
       tasks.add(() -> storage.mutate(mutations.get(key)));
     }
     parallelExecutor.prepare(tasks, snapshot.getId());
+
+    return logRecordFuture;
   }
 
   public void validate(Snapshot snapshot) throws ValidationException {
