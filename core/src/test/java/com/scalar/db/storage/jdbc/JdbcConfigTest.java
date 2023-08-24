@@ -13,7 +13,7 @@ public class JdbcConfigTest {
   private static final String ANY_USERNAME = "root";
   private static final String ANY_PASSWORD = "mysql";
   private static final String JDBC_STORAGE = "jdbc";
-  private static final String ANY_TABLE_METADATA_SCHEMA = "any_schema";
+  private static final String ANY_METADATA_SCHEMA = "any_schema";
 
   @Test
   public void constructor_AllPropertiesGiven_ShouldLoadProperly() {
@@ -29,7 +29,7 @@ public class JdbcConfigTest {
     props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_ENABLED, "true");
     props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "300");
     props.setProperty(JdbcConfig.ISOLATION_LEVEL, Isolation.SERIALIZABLE.name());
-    props.setProperty(JdbcConfig.TABLE_METADATA_SCHEMA, ANY_TABLE_METADATA_SCHEMA);
+    props.setProperty(JdbcConfig.METADATA_SCHEMA, ANY_METADATA_SCHEMA);
     props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MIN_IDLE, "100");
     props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_IDLE, "200");
     props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL, "300");
@@ -53,8 +53,8 @@ public class JdbcConfigTest {
     assertThat(config.getPreparedStatementsPoolMaxOpen()).isEqualTo(300);
     assertThat(config.getIsolation()).isPresent();
     assertThat(config.getIsolation().get()).isEqualTo(Isolation.SERIALIZABLE);
-    assertThat(config.getTableMetadataSchema()).isPresent();
-    assertThat(config.getTableMetadataSchema().get()).isEqualTo(ANY_TABLE_METADATA_SCHEMA);
+    assertThat(config.getMetadataSchema()).isPresent();
+    assertThat(config.getMetadataSchema().get()).isEqualTo(ANY_METADATA_SCHEMA);
     assertThat(config.getTableMetadataConnectionPoolMinIdle()).isEqualTo(100);
     assertThat(config.getTableMetadataConnectionPoolMaxIdle()).isEqualTo(200);
     assertThat(config.getTableMetadataConnectionPoolMaxTotal()).isEqualTo(300);
@@ -93,7 +93,7 @@ public class JdbcConfigTest {
     assertThat(config.getPreparedStatementsPoolMaxOpen())
         .isEqualTo(JdbcConfig.DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
     assertThat(config.getIsolation()).isNotPresent();
-    assertThat(config.getTableMetadataSchema()).isNotPresent();
+    assertThat(config.getMetadataSchema()).isNotPresent();
     assertThat(config.getTableMetadataConnectionPoolMinIdle())
         .isEqualTo(JdbcConfig.DEFAULT_TABLE_METADATA_CONNECTION_POOL_MIN_IDLE);
     assertThat(config.getTableMetadataConnectionPoolMaxIdle())
@@ -217,5 +217,45 @@ public class JdbcConfigTest {
     // Act Assert
     assertThatThrownBy(() -> new JdbcConfig(new DatabaseConfig(props)))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      constructor_WithTableMetadataSchemaAndMetadataSchemaGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
+    props.setProperty(JdbcConfig.TABLE_METADATA_SCHEMA, "aaa");
+    props.setProperty(JdbcConfig.METADATA_SCHEMA, "bbb");
+
+    // Act Assert
+    assertThatThrownBy(() -> new JdbcConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void constructor_PropertiesWithTableMetadataSchemaGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
+    props.setProperty(JdbcConfig.TABLE_METADATA_SCHEMA, ANY_METADATA_SCHEMA);
+
+    // Act
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.getJdbcUrl()).isEqualTo(ANY_JDBC_URL);
+    assertThat(config.getUsername().isPresent()).isTrue();
+    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
+    assertThat(config.getPassword().isPresent()).isTrue();
+    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.getMetadataSchema()).isPresent();
+    assertThat(config.getMetadataSchema().get()).isEqualTo(ANY_METADATA_SCHEMA);
   }
 }

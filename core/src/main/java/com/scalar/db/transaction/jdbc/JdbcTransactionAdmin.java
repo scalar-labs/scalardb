@@ -10,8 +10,6 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
-import com.scalar.db.storage.jdbc.JdbcConfig;
-import com.scalar.db.storage.jdbc.JdbcUtils;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
@@ -23,10 +21,7 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
 
   @Inject
   public JdbcTransactionAdmin(DatabaseConfig databaseConfig) {
-    // If the database is SQLite, the namespace check is skipped because SQLite does not support
-    // namespaces.
-    boolean isSqlite = JdbcUtils.isSqlite(new JdbcConfig(databaseConfig));
-    jdbcAdmin = new CheckedDistributedStorageAdmin(new JdbcAdmin(databaseConfig), !isSqlite);
+    jdbcAdmin = new CheckedDistributedStorageAdmin(new JdbcAdmin(databaseConfig));
   }
 
   @VisibleForTesting
@@ -133,6 +128,11 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {
     jdbcAdmin.addNewColumnToTable(namespace, table, columnName, columnType);
+  }
+
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    return jdbcAdmin.getNamespaceNames();
   }
 
   @Override

@@ -15,14 +15,18 @@ public class DynamoConfig {
 
   public static final String PREFIX = DatabaseConfig.PREFIX + "dynamo.";
   public static final String ENDPOINT_OVERRIDE = PREFIX + "endpoint_override";
+  /** @deprecated As of 5.0, will be removed. Use {@link #METADATA_NAMESPACE} instead. */
+  @Deprecated
   public static final String TABLE_METADATA_NAMESPACE = PREFIX + "table_metadata.namespace";
+
+  public static final String METADATA_NAMESPACE = PREFIX + "metadata.namespace";
   public static final String NAMESPACE_PREFIX = PREFIX + "namespace.prefix";
 
   private final String region;
   private final String accessKeyId;
   private final String secretAccessKey;
   @Nullable private final String endpointOverride;
-  @Nullable private final String tableMetadataNamespace;
+  @Nullable private final String metadataNamespace;
   @Nullable private final String namespacePrefix;
 
   public DynamoConfig(DatabaseConfig databaseConfig) {
@@ -52,8 +56,23 @@ public class DynamoConfig {
                 databaseConfig.getProperties(),
                 "scalar.db.dynamo.endpoint-override", // for backward compatibility
                 null));
-    tableMetadataNamespace =
-        getString(databaseConfig.getProperties(), TABLE_METADATA_NAMESPACE, null);
+    if (databaseConfig.getProperties().containsKey(METADATA_NAMESPACE)
+        && databaseConfig.getProperties().containsKey(TABLE_METADATA_NAMESPACE)) {
+      throw new IllegalArgumentException(
+          "Use either " + METADATA_NAMESPACE + " or " + TABLE_METADATA_NAMESPACE + " but not both");
+    }
+    if (databaseConfig.getProperties().containsKey(TABLE_METADATA_NAMESPACE)) {
+      logger.warn(
+          "The configuration property \""
+              + TABLE_METADATA_NAMESPACE
+              + "\" is deprecated and will be removed in 5.0.0. Please use \""
+              + METADATA_NAMESPACE
+              + "\" instead");
+
+      metadataNamespace = getString(databaseConfig.getProperties(), TABLE_METADATA_NAMESPACE, null);
+    } else {
+      metadataNamespace = getString(databaseConfig.getProperties(), METADATA_NAMESPACE, null);
+    }
     namespacePrefix = getString(databaseConfig.getProperties(), NAMESPACE_PREFIX, null);
   }
 
@@ -73,8 +92,8 @@ public class DynamoConfig {
     return Optional.ofNullable(endpointOverride);
   }
 
-  public Optional<String> getTableMetadataNamespace() {
-    return Optional.ofNullable(tableMetadataNamespace);
+  public Optional<String> getMetadataNamespace() {
+    return Optional.ofNullable(metadataNamespace);
   }
 
   public Optional<String> getNamespacePrefix() {

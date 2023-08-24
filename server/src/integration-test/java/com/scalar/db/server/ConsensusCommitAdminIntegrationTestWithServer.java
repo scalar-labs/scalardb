@@ -7,6 +7,7 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 
@@ -79,6 +80,11 @@ public class ConsensusCommitAdminIntegrationTestWithServer
     super
         .getTableMetadata_WhenIncludeMetadataIsEnabled_ShouldReturnCorrectMetadataWithTransactionMetadataColumns();
   }
+
+  @Override
+  @Test
+  @Disabled("Retrieving the namespace names is not supported in ScalarDB server")
+  public void getNamespaceNames_ShouldReturnCreatedNamespaces() {}
 
   @SuppressWarnings("unused")
   private boolean isExternalServerUsed() {

@@ -132,8 +132,8 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   }
 
   @Override
-  public boolean isValidTableName(String tableName) {
-    return !tableName.contains(NAMESPACE_SEPARATOR);
+  public boolean isValidNamespaceOrTableName(String namespaceOrTableName) {
+    return !namespaceOrTableName.contains(NAMESPACE_SEPARATOR);
   }
 
   @Override
@@ -209,20 +209,6 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
   public void dropNamespaceTranslateSQLException(SQLException e, String namespace) {
     throw new AssertionError("DropNamespace never happen in SQLite implementation");
-  }
-
-  @Override
-  public String namespaceExistsStatement() {
-    return "SELECT 1 FROM sqlite_master WHERE "
-        + enclose("type")
-        + " = \"table\" AND "
-        + enclose("tbl_name")
-        + " LIKE ?";
-  }
-
-  @Override
-  public String namespaceExistsPlaceholder(String namespace) {
-    return namespace + NAMESPACE_SEPARATOR + "%";
   }
 
   @Override

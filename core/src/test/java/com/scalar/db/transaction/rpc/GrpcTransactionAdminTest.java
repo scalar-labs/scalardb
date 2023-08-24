@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.rpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
@@ -410,5 +411,18 @@ public class GrpcTransactionAdminTest {
                 .setColumnName(columnName)
                 .setColumnType(com.scalar.db.rpc.DataType.DATA_TYPE_TEXT)
                 .build());
+  }
+
+  @Test
+  public void unsupportedOperations_ShouldThrowUnsupportedException() {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "tbl";
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.importTable(namespace, table))
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> admin.getNamespaceNames())
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 }

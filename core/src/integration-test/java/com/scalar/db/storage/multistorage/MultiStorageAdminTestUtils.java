@@ -7,7 +7,6 @@ import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngineFactory;
-import com.scalar.db.storage.jdbc.RdbEngineOracle;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -19,6 +18,7 @@ import org.apache.commons.dbcp2.BasicDataSource;
 
 public class MultiStorageAdminTestUtils extends AdminTestUtils {
 
+  // for JDBC
   private final JdbcConfig jdbcConfig;
   private final String jdbcMetadataSchema;
   private final RdbEngineStrategy rdbEngine;
@@ -27,8 +27,9 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     // Cassandra has the coordinator tables
     super(cassandraProperties);
 
+    // for JDBC
     jdbcConfig = new JdbcConfig(new DatabaseConfig(jdbcProperties));
-    jdbcMetadataSchema = jdbcConfig.getTableMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
+    jdbcMetadataSchema = jdbcConfig.getMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
     rdbEngine = RdbEngineFactory.create(jdbcConfig);
   }
 
@@ -40,14 +41,6 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     execute(
         "DROP TABLE "
             + rdbEngine.encloseFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE));
-
-    String dropNamespaceStatement;
-    if (rdbEngine instanceof RdbEngineOracle) {
-      dropNamespaceStatement = "DROP USER " + rdbEngine.enclose(jdbcMetadataSchema);
-    } else {
-      dropNamespaceStatement = "DROP SCHEMA " + rdbEngine.enclose(jdbcMetadataSchema);
-    }
-    execute(dropNamespaceStatement);
   }
 
   @Override

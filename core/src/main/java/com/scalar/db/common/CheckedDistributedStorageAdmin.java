@@ -14,26 +14,15 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
 
   private final DistributedStorageAdmin admin;
 
-  /**
-   * Whether to check if the namespace exists or not. Set false when the storage does not support
-   * namespaces.
-   */
-  private final boolean checkNamespace;
-
-  public CheckedDistributedStorageAdmin(DistributedStorageAdmin admin) {
-    this(admin, true);
-  }
-
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public CheckedDistributedStorageAdmin(DistributedStorageAdmin admin, boolean checkNamespace) {
+  public CheckedDistributedStorageAdmin(DistributedStorageAdmin admin) {
     this.admin = admin;
-    this.checkNamespace = checkNamespace;
   }
 
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
-    if (checkNamespace && namespaceExists(namespace)) {
+    if (namespaceExists(namespace)) {
       throw new IllegalArgumentException("Namespace already exists: " + namespace);
     }
 
@@ -48,7 +37,7 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    if (checkNamespace && !namespaceExists(namespace)) {
+    if (!namespaceExists(namespace)) {
       throw new IllegalArgumentException("Namespace does not exist: " + namespace);
     }
     if (tableExists(namespace, table)) {
@@ -81,7 +70,7 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
-    if (checkNamespace && !namespaceExists(namespace)) {
+    if (!namespaceExists(namespace)) {
       throw new IllegalArgumentException("Namespace does not exist: " + namespace);
     }
     if (!getNamespaceTableNames(namespace).isEmpty()) {
@@ -273,6 +262,15 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
               + ", "
               + columnName,
           e);
+    }
+  }
+
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    try {
+      return admin.getNamespaceNames();
+    } catch (ExecutionException e) {
+      throw new ExecutionException("Getting the namespace names failed", e);
     }
   }
 

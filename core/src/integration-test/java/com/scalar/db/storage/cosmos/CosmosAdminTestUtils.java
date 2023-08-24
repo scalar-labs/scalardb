@@ -6,16 +6,15 @@ import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
 import com.azure.cosmos.CosmosContainer;
-import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.CosmosStoredProcedure;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.util.CosmosPagedIterable;
-import com.google.common.collect.ImmutableList;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
+import org.assertj.core.util.Sets;
 
 public class CosmosAdminTestUtils extends AdminTestUtils {
 
@@ -34,26 +33,22 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
             .buildClient();
     metadataDatabase =
         new CosmosConfig(new DatabaseConfig(properties))
-            .getTableMetadataDatabase()
+            .getMetadataDatabase()
             .orElse(CosmosAdmin.METADATA_DATABASE);
   }
 
   @Override
   public void dropMetadataTable() {
-    client.getDatabase(metadataDatabase).delete();
-    try {
-      client.getDatabase(metadataDatabase).read();
-    } catch (CosmosException e) {
-      if (e.getStatusCode() != 404) {
-        throw new RuntimeException("Dropping the metadata table failed", e);
-      }
-    }
+    client
+        .getDatabase(metadataDatabase)
+        .getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER)
+        .delete();
   }
 
   @Override
   public void truncateMetadataTable() {
     CosmosContainer container =
-        client.getDatabase(metadataDatabase).getContainer(CosmosAdmin.METADATA_CONTAINER);
+        client.getDatabase(metadataDatabase).getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER);
 
     CosmosPagedIterable<Record> records =
         container.queryItems("SELECT t.id FROM t", new CosmosQueryRequestOptions(), Record.class);
@@ -65,12 +60,14 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
 
   @Override
   public void corruptMetadata(String namespace, String table) {
-    CosmosTableMetadata corruptedMetadata = new CosmosTableMetadata();
-    corruptedMetadata.setId(getFullTableName(namespace, table));
-    corruptedMetadata.setPartitionKeyNames(ImmutableList.of("corrupted"));
+    CosmosTableMetadata corruptedMetadata =
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("corrupted"))
+            .build();
 
     CosmosContainer container =
-        client.getDatabase(metadataDatabase).getContainer(CosmosAdmin.METADATA_CONTAINER);
+        client.getDatabase(metadataDatabase).getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER);
     container.upsertItem(corruptedMetadata);
   }
 

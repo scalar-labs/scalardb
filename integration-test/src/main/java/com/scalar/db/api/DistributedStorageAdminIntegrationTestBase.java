@@ -208,7 +208,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       // Arrange
 
       // Act
-      admin.createNamespace(namespace3);
+      admin.createNamespace(namespace3, getCreationOptions());
 
       // Assert
       assertThat(admin.namespaceExists(namespace3)).isTrue();
@@ -222,7 +222,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> admin.createNamespace(namespace1))
+    assertThatThrownBy(() -> admin.createNamespace(namespace1, getCreationOptions()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -231,7 +231,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act Assert
-    assertThatCode(() -> admin.createNamespace(namespace1, true)).doesNotThrowAnyException();
+    assertThatCode(() -> admin.createNamespace(namespace1, true, getCreationOptions()))
+        .doesNotThrowAnyException();
   }
 
   @Test
@@ -239,7 +240,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       throws ExecutionException {
     try {
       // Arrange
-      admin.createNamespace(namespace3);
+      admin.createNamespace(namespace3, getCreationOptions());
 
       // Act
       admin.dropNamespace(namespace3);
@@ -265,8 +266,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       throws ExecutionException {
     try {
       // Arrange
-      admin.createNamespace(namespace3);
-      admin.createTable(namespace3, TABLE1, TABLE_METADATA);
+      admin.createNamespace(namespace3, getCreationOptions());
+      admin.createTable(namespace3, TABLE1, TABLE_METADATA, getCreationOptions());
 
       // Act Assert
       assertThatThrownBy(() -> admin.dropNamespace(namespace3))
@@ -307,7 +308,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> admin.createTable(namespace1, TABLE1, TABLE_METADATA))
+    assertThatThrownBy(
+            () -> admin.createTable(namespace1, TABLE1, TABLE_METADATA, getCreationOptions()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -316,7 +318,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> admin.createTable(namespace3, TABLE1, TABLE_METADATA))
+    assertThatThrownBy(
+            () -> admin.createTable(namespace3, TABLE1, TABLE_METADATA, getCreationOptions()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -325,7 +328,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act Assert
-    assertThatCode(() -> admin.createTable(namespace1, TABLE1, TABLE_METADATA, true))
+    assertThatCode(
+            () -> admin.createTable(namespace1, TABLE1, TABLE_METADATA, true, getCreationOptions()))
         .doesNotThrowAnyException();
   }
 
@@ -728,6 +732,17 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
     }
+  }
+
+  @Test
+  public void getNamespaceNames_ShouldReturnCreatedNamespaces() throws ExecutionException {
+    // Arrange
+
+    // Act
+    Set<String> namespaces = admin.getNamespaceNames();
+
+    // Assert
+    assertThat(namespaces).containsOnly(namespace1, namespace2);
   }
 
   @Test

@@ -400,6 +400,12 @@ public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
         "Import-related functionality is not supported in ScalarDB Server");
   }
 
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    throw new UnsupportedOperationException(
+        "Retrieving the namespace names is not supported in ScalarDB Server");
+  }
+
   private static <T> T execute(ThrowableSupplier<T, ExecutionException> supplier)
       throws ExecutionException {
     try {

@@ -38,7 +38,7 @@ public interface RdbEngineStrategy {
 
   String[] createNamespaceSqls(String fullNamespace);
 
-  default boolean isValidTableName(String tableName) {
+  default boolean isValidNamespaceOrTableName(String tableName) {
     return true;
   }
 
@@ -64,12 +64,6 @@ public interface RdbEngineStrategy {
 
   void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException;
-
-  String namespaceExistsStatement();
-
-  default String namespaceExistsPlaceholder(String namespace) {
-    return namespace;
-  }
 
   String alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 

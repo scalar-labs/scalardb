@@ -49,10 +49,13 @@ import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndexDescription;
 import software.amazon.awssdk.services.dynamodb.model.IndexStatus;
+import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ListTablesRequest;
 import software.amazon.awssdk.services.dynamodb.model.ListTablesResponse;
+import software.amazon.awssdk.services.dynamodb.model.PointInTimeRecoverySpecification;
 import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
+import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
@@ -66,7 +69,7 @@ import software.amazon.awssdk.services.dynamodb.model.UpdateTableRequest;
 /**
  * Abstraction that defines unit tests for the {@link DynamoAdmin}. The class purpose is to be able
  * to run the {@link DynamoAdmin} unit tests with different values for the {@link DynamoConfig},
- * notably {@link DynamoConfig#NAMESPACE_PREFIX} and {@link DynamoConfig#TABLE_METADATA_NAMESPACE}
+ * notably {@link DynamoConfig#NAMESPACE_PREFIX} and {@link DynamoConfig#METADATA_NAMESPACE}
  */
 public abstract class DynamoAdminTestBase {
 
@@ -76,24 +79,38 @@ public abstract class DynamoAdminTestBase {
   @Mock private DynamoConfig config;
   @Mock private DynamoDbClient client;
   @Mock private ApplicationAutoScalingClient applicationAutoScalingClient;
+  @Mock private DescribeTableResponse tableIsActiveResponse;
+  @Mock private DescribeContinuousBackupsResponse backupIsEnabledResponse;
   private DynamoAdmin admin;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
     when(config.getNamespacePrefix()).thenReturn(getNamespacePrefixConfig());
-    when(config.getTableMetadataNamespace()).thenReturn(getTableMetadataNamespaceConfig());
+    when(config.getMetadataNamespace()).thenReturn(getMetadataNamespaceConfig());
+
+    // prepare tableIsActiveResponse
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(tableIsActiveResponse.table()).thenReturn(tableDescription);
+    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
+
+    // prepare backupIsEnabledResponse
+    ContinuousBackupsDescription continuousBackupsDescription =
+        mock(ContinuousBackupsDescription.class);
+    when(backupIsEnabledResponse.continuousBackupsDescription())
+        .thenReturn(continuousBackupsDescription);
+    when(continuousBackupsDescription.continuousBackupsStatus())
+        .thenReturn(ContinuousBackupsStatus.ENABLED);
 
     admin = new DynamoAdmin(client, applicationAutoScalingClient, config);
   }
 
   /**
-   * This sets the {@link DynamoConfig#TABLE_METADATA_NAMESPACE} value that will be used to run the
-   * tests
+   * This sets the {@link DynamoConfig#METADATA_NAMESPACE} value that will be used to run the tests
    *
-   * @return {@link DynamoConfig#TABLE_METADATA_NAMESPACE} value
+   * @return {@link DynamoConfig#METADATA_NAMESPACE} value
    */
-  abstract Optional<String> getTableMetadataNamespaceConfig();
+  abstract Optional<String> getMetadataNamespaceConfig();
 
   /**
    * This sets the {@link DynamoConfig#NAMESPACE_PREFIX} value that will be used to run the tests
@@ -112,9 +129,16 @@ public abstract class DynamoAdminTestBase {
 
   private String getFullMetadataTableName() {
     return getNamespacePrefixConfig().orElse("")
-        + getTableMetadataNamespaceConfig().orElse(DynamoAdmin.METADATA_NAMESPACE)
+        + getMetadataNamespaceConfig().orElse(DynamoAdmin.METADATA_NAMESPACE)
         + "."
         + DynamoAdmin.METADATA_TABLE;
+  }
+
+  private String getFullNamespaceTableName() {
+    return getNamespacePrefixConfig().orElse("")
+        + getMetadataNamespaceConfig().orElse(DynamoAdmin.METADATA_NAMESPACE)
+        + "."
+        + DynamoAdmin.NAMESPACES_TABLE;
   }
 
   @Test
@@ -198,21 +222,60 @@ public abstract class DynamoAdminTestBase {
     assertThat(actualRequest.consistentRead()).isTrue();
   }
 
-  // https://github.com/scalar-labs/scalardb/issues/784
   @Test
-  public void namespaceExists_ShouldPerformExactMatch() throws ExecutionException {
+  public void dropNamespace_WithOtherNamespacesExisting_ShouldDropNamespace()
+      throws ExecutionException {
+    // Arrange
+    ScanResponse scanResponse = mock(ScanResponse.class);
+    when(scanResponse.count()).thenReturn(1);
+    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
+
+    // Act
+    admin.dropNamespace(NAMESPACE);
+    // Assert
+    verify(client)
+        .deleteItem(
+            DeleteItemRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .key(
+                    ImmutableMap.of(
+                        DynamoAdmin.NAMESPACES_ATTR_NAME,
+                        AttributeValue.builder().s(getPrefixedNamespace()).build()))
+                .build());
+    verify(client)
+        .scan(ScanRequest.builder().tableName(getFullNamespaceTableName()).limit(1).build());
+  }
+
+  @Test
+  public void dropNamespace_WithNoNamespacesLeft_ShouldDropNamespaceAndNamespacesTable()
+      throws ExecutionException {
     // Arrange
     ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
     when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
     when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
-    when(listTablesResponse.tableNames())
-        .thenReturn(ImmutableList.<String>builder().add(getFullTableName()).build());
+    when(listTablesResponse.tableNames()).thenReturn(Collections.emptyList());
+    ScanResponse scanResponse = mock(ScanResponse.class);
+    when(scanResponse.count()).thenReturn(0);
+    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
 
     // Act
+    admin.dropNamespace(NAMESPACE);
+
     // Assert
-    assertThat(admin.namespaceExists(NAMESPACE)).isTrue();
-    // compare with namespace prefix
-    assertThat(admin.namespaceExists(NAMESPACE.substring(0, NAMESPACE.length() - 1))).isFalse();
+    verify(client)
+        .deleteItem(
+            DeleteItemRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .key(
+                    ImmutableMap.of(
+                        DynamoAdmin.NAMESPACES_ATTR_NAME,
+                        AttributeValue.builder().s(getPrefixedNamespace()).build()))
+                .build());
+
+    verify(client)
+        .scan(ScanRequest.builder().tableName(getFullNamespaceTableName()).limit(1).build());
+    verify(client)
+        .deleteTable(DeleteTableRequest.builder().tableName(getFullNamespaceTableName()).build());
   }
 
   @Test
@@ -234,33 +297,17 @@ public abstract class DynamoAdminTestBase {
             .addSecondaryIndex("c4")
             .build();
 
-    DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
     when(client.describeTable(DescribeTableRequest.builder().tableName(getFullTableName()).build()))
-        .thenReturn(describeTableResponse);
-    TableDescription tableDescription = mock(TableDescription.class);
-    when(describeTableResponse.table()).thenReturn(tableDescription);
-    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
+        .thenReturn(tableIsActiveResponse);
 
-    DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
-        mock(DescribeContinuousBackupsResponse.class);
     when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
-        .thenReturn(describeContinuousBackupsResponse);
-    ContinuousBackupsDescription continuousBackupsDescription =
-        mock(ContinuousBackupsDescription.class);
-    when(describeContinuousBackupsResponse.continuousBackupsDescription())
-        .thenReturn(continuousBackupsDescription);
-    when(continuousBackupsDescription.continuousBackupsStatus())
-        .thenReturn(ContinuousBackupsStatus.ENABLED);
+        .thenReturn(backupIsEnabledResponse);
 
     // for the table metadata table
-    describeTableResponse = mock(DescribeTableResponse.class);
-    tableDescription = mock(TableDescription.class);
-    when(describeTableResponse.table()).thenReturn(tableDescription);
-    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
     when(client.describeTable(
             DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build()))
         .thenThrow(ResourceNotFoundException.class)
-        .thenReturn(describeTableResponse);
+        .thenReturn(tableIsActiveResponse);
 
     // Act
     admin.createTable(NAMESPACE, TABLE, metadata);
@@ -438,22 +485,10 @@ public abstract class DynamoAdminTestBase {
             .addSecondaryIndex("c4")
             .build();
 
-    DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
-    when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(describeTableResponse);
-    TableDescription tableDescription = mock(TableDescription.class);
-    when(describeTableResponse.table()).thenReturn(tableDescription);
-    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
+    when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(tableIsActiveResponse);
 
-    DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
-        mock(DescribeContinuousBackupsResponse.class);
     when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
-        .thenReturn(describeContinuousBackupsResponse);
-    ContinuousBackupsDescription continuousBackupsDescription =
-        mock(ContinuousBackupsDescription.class);
-    when(describeContinuousBackupsResponse.continuousBackupsDescription())
-        .thenReturn(continuousBackupsDescription);
-    when(continuousBackupsDescription.continuousBackupsStatus())
-        .thenReturn(ContinuousBackupsStatus.ENABLED);
+        .thenReturn(backupIsEnabledResponse);
 
     Map<String, String> options = new HashMap<>();
     options.put(DynamoAdmin.REQUEST_UNIT, "100");
@@ -1044,29 +1079,15 @@ public abstract class DynamoAdminTestBase {
     when(listTablesResponse.tableNames()).thenReturn(ImmutableList.of(getFullTableName()));
 
     // Wait for metadata table creation
-    DescribeTableResponse describeTableResponseMetadataTableCreation =
-        mock(DescribeTableResponse.class);
-    TableDescription tableDescriptionMetadataTableCreation = mock(TableDescription.class);
-    when(describeTableResponseMetadataTableCreation.table())
-        .thenReturn(tableDescriptionMetadataTableCreation);
-    when(tableDescriptionMetadataTableCreation.tableStatus()).thenReturn(TableStatus.ACTIVE);
 
     when(client.describeTable(
             DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build()))
         .thenThrow(ResourceNotFoundException.class)
-        .thenReturn(describeTableResponseMetadataTableCreation);
+        .thenReturn(tableIsActiveResponse);
 
     // Continuous backup check
-    DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
-        mock(DescribeContinuousBackupsResponse.class);
     when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
-        .thenReturn(describeContinuousBackupsResponse);
-    ContinuousBackupsDescription continuousBackupsDescription =
-        mock(ContinuousBackupsDescription.class);
-    when(describeContinuousBackupsResponse.continuousBackupsDescription())
-        .thenReturn(continuousBackupsDescription);
-    when(continuousBackupsDescription.continuousBackupsStatus())
-        .thenReturn(ContinuousBackupsStatus.ENABLED);
+        .thenReturn(backupIsEnabledResponse);
 
     // Act
     admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
@@ -1174,6 +1195,249 @@ public abstract class DynamoAdminTestBase {
             PutItemRequest.builder()
                 .tableName(getFullMetadataTableName())
                 .item(itemValues)
+                .build());
+  }
+
+  @Test
+  public void
+      createNamespace_WithNonExistingNamespacesTable_ShouldCreateNamespacesTableAndAddNamespace()
+          throws ExecutionException {
+    // Arrange
+    when(client.describeTable(any(DescribeTableRequest.class)))
+        .thenThrow(mock(ResourceNotFoundException.class))
+        .thenReturn(tableIsActiveResponse);
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(backupIsEnabledResponse);
+
+    // Act
+    admin.createNamespace(NAMESPACE, Collections.emptyMap());
+
+    // Assert
+    verify(client, times(2))
+        .describeTable(
+            DescribeTableRequest.builder().tableName(getFullNamespaceTableName()).build());
+    CreateTableRequest createNamespaceTableRequest =
+        CreateTableRequest.builder()
+            .attributeDefinitions(
+                ImmutableList.of(
+                    AttributeDefinition.builder()
+                        .attributeName(DynamoAdmin.NAMESPACES_ATTR_NAME)
+                        .attributeType(ScalarAttributeType.S)
+                        .build()))
+            .keySchema(
+                KeySchemaElement.builder()
+                    .attributeName(DynamoAdmin.NAMESPACES_ATTR_NAME)
+                    .keyType(KeyType.HASH)
+                    .build())
+            .provisionedThroughput(
+                ProvisionedThroughput.builder()
+                    .readCapacityUnits(DynamoAdmin.METADATA_TABLES_REQUEST_UNIT)
+                    .writeCapacityUnits(DynamoAdmin.METADATA_TABLES_REQUEST_UNIT)
+                    .build())
+            .tableName(getFullNamespaceTableName())
+            .build();
+    verify(client).createTable(createNamespaceTableRequest);
+    verify(client)
+        .describeContinuousBackups(
+            DescribeContinuousBackupsRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .build());
+    verify(client)
+        .updateContinuousBackups(
+            UpdateContinuousBackupsRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .pointInTimeRecoverySpecification(
+                    PointInTimeRecoverySpecification.builder()
+                        .pointInTimeRecoveryEnabled(true)
+                        .build())
+                .build());
+    verify(client)
+        .putItem(
+            PutItemRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .item(
+                    ImmutableMap.of(
+                        DynamoAdmin.NAMESPACES_ATTR_NAME,
+                        AttributeValue.builder().s(getPrefixedNamespace()).build()))
+                .build());
+  }
+
+  @Test
+  public void createNamespace_WithExistingNamespacesTable_ShouldAddNamespace()
+      throws ExecutionException {
+    // Arrange
+
+    // Act
+    admin.createNamespace(NAMESPACE, Collections.emptyMap());
+
+    // Assert
+    verify(client)
+        .describeTable(
+            DescribeTableRequest.builder().tableName(getFullNamespaceTableName()).build());
+    verify(client)
+        .putItem(
+            PutItemRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .item(
+                    ImmutableMap.of(
+                        DynamoAdmin.NAMESPACES_ATTR_NAME,
+                        AttributeValue.builder().s(getPrefixedNamespace()).build()))
+                .build());
+  }
+
+  @Test
+  public void namespaceExists_WithExistingNamespace_ShouldReturnTrue() throws ExecutionException {
+    // Arrange
+    GetItemResponse getItemResponse = mock(GetItemResponse.class);
+    when(client.getItem(any(GetItemRequest.class))).thenReturn(getItemResponse);
+    when(getItemResponse.hasItem()).thenReturn(true);
+
+    // Act
+    boolean actualNamespaceExists = admin.namespaceExists(NAMESPACE);
+
+    // Assert]
+    assertThat(actualNamespaceExists).isTrue();
+    verify(client)
+        .getItem(
+            GetItemRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .key(
+                    ImmutableMap.of(
+                        DynamoAdmin.NAMESPACES_ATTR_NAME,
+                        AttributeValue.builder().s(getPrefixedNamespace()).build()))
+                .build());
+  }
+
+  @Test
+  public void namespaceExists_WithNonExistingNamespace_ShouldReturnFalse()
+      throws ExecutionException {
+    // Arrange
+    GetItemResponse getItemResponse = mock(GetItemResponse.class);
+    when(client.getItem(any(GetItemRequest.class))).thenReturn(getItemResponse);
+    when(getItemResponse.hasItem()).thenReturn(false);
+
+    // Act
+    boolean actualNamespaceExists = admin.namespaceExists(NAMESPACE);
+
+    // Assert]
+    assertThat(actualNamespaceExists).isFalse();
+    verify(client)
+        .getItem(
+            GetItemRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .key(
+                    ImmutableMap.of(
+                        DynamoAdmin.NAMESPACES_ATTR_NAME,
+                        AttributeValue.builder().s(getPrefixedNamespace()).build()))
+                .build());
+  }
+
+  @Test
+  public void namespaceExists_WithNonExistingNamespacesTable_ShouldReturnFalse()
+      throws ExecutionException {
+    // Arrange
+    when(client.getItem(any(GetItemRequest.class))).thenThrow(ResourceNotFoundException.class);
+
+    // Act
+    boolean actualNamespaceExists = admin.namespaceExists(NAMESPACE);
+
+    // Assert]
+    assertThat(actualNamespaceExists).isFalse();
+    verify(client)
+        .getItem(
+            GetItemRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .key(
+                    ImmutableMap.of(
+                        DynamoAdmin.NAMESPACES_ATTR_NAME,
+                        AttributeValue.builder().s(getPrefixedNamespace()).build()))
+                .build());
+  }
+
+  @Test
+  public void getNamespacesNames_WithExistingNamespacesTable_ShouldReturnNamespaceNames()
+      throws ExecutionException {
+    // Arrange
+    ScanResponse scanResponse = mock(ScanResponse.class);
+    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
+    when(scanResponse.items())
+        .thenReturn(
+            ImmutableList.of(
+                ImmutableMap.of(
+                    DynamoAdmin.NAMESPACES_ATTR_NAME,
+                    AttributeValue.builder().s(getPrefixedNamespace() + 1).build()),
+                ImmutableMap.of(
+                    DynamoAdmin.NAMESPACES_ATTR_NAME,
+                    AttributeValue.builder().s(getPrefixedNamespace() + 2).build())))
+        .thenReturn(
+            Collections.singletonList(
+                ImmutableMap.of(
+                    DynamoAdmin.NAMESPACES_ATTR_NAME,
+                    AttributeValue.builder().s(getPrefixedNamespace() + 3).build())));
+    Map<String, AttributeValue> lastEvaluatedKey =
+        ImmutableMap.of("foo", AttributeValue.builder().build());
+    when(scanResponse.lastEvaluatedKey())
+        .thenReturn(lastEvaluatedKey)
+        .thenReturn(Collections.emptyMap());
+
+    // Act
+    Set<String> actualNamespaceNames = admin.getNamespaceNames();
+
+    // Assert
+    assertThat(actualNamespaceNames).containsOnly(NAMESPACE + 1, NAMESPACE + 2, NAMESPACE + 3);
+    verify(client)
+        .scan(
+            ScanRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .exclusiveStartKey(null)
+                .build());
+    verify(client)
+        .scan(
+            ScanRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .exclusiveStartKey(lastEvaluatedKey)
+                .build());
+  }
+
+  @Test
+  public void getNamespacesNames_WithNonExistingNamespaces_ShouldReturnEmptySet()
+      throws ExecutionException {
+    // Arrange
+    ScanResponse scanResponse = mock(ScanResponse.class);
+    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
+    when(scanResponse.items()).thenReturn(Collections.emptyList());
+
+    when(scanResponse.lastEvaluatedKey()).thenReturn(Collections.emptyMap());
+
+    // Act
+    Set<String> actualNamespaceNames = admin.getNamespaceNames();
+
+    // Assert
+    assertThat(actualNamespaceNames).isEmpty();
+    verify(client)
+        .scan(
+            ScanRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .exclusiveStartKey(null)
+                .build());
+  }
+
+  @Test
+  public void getNamespacesNames_WithNonExistingNamespacesTable_ShouldReturnEmptySet()
+      throws ExecutionException {
+    // Arrange
+    when(client.scan(any(ScanRequest.class))).thenThrow(ResourceNotFoundException.class);
+
+    // Act
+    Set<String> actualNamespaceNames = admin.getNamespaceNames();
+
+    // Assert
+    assertThat(actualNamespaceNames).isEmpty();
+    verify(client)
+        .scan(
+            ScanRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .exclusiveStartKey(null)
                 .build());
   }
 
