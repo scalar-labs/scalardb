@@ -69,8 +69,6 @@ public class RecordWriterThread implements Closeable {
 
     Record record = recordOpt.get();
 
-    logger.info("[handleKey] key:{}\n  record:{}", key, record);
-
     Queue<Value> valuesForInsert = new LinkedList<>();
     Map<String, Value> valuesForNonInsert = new HashMap<>();
     for (Value value : record.values()) {
@@ -170,9 +168,9 @@ public class RecordWriterThread implements Closeable {
     }
 
     try {
-      replicationRecordRepository.updateValues(
+      replicationRecordRepository.updateWithValues(
           key,
-          record.currentTxId(),
+          record,
           lastValue.txId,
           Streams.concat(valuesForInsert.stream(), valuesForNonInsert.values().stream())
               .collect(Collectors.toSet()));

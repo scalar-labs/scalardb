@@ -11,8 +11,8 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder.Buildable;
 import com.scalar.db.api.Result;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextColumn;
 import com.scalar.db.transaction.consensuscommit.replication.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.model.Record.Value;
 import java.time.Instant;
@@ -49,14 +49,20 @@ public class ReplicationRecordRepository {
       String namespace,
       String table,
       com.scalar.db.transaction.consensuscommit.replication.model.Key partitionKey,
-      com.scalar.db.transaction.consensuscommit.replication.model.Key clusteringKey)
-      throws JsonProcessingException {
-    return Key.newBuilder()
-        .addText("namespace", namespace)
-        .addText("table", table)
-        .addText("pk", objectMapper.writeValueAsString(partitionKey))
-        .addText("ck", objectMapper.writeValueAsString(clusteringKey))
-        .build();
+      com.scalar.db.transaction.consensuscommit.replication.model.Key clusteringKey) {
+    try {
+      return Key.newBuilder()
+          .addText("namespace", namespace)
+          .addText("table", table)
+          .addText("pk", objectMapper.writeValueAsString(partitionKey))
+          .addText("ck", objectMapper.writeValueAsString(clusteringKey))
+          .build();
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(
+          String.format(
+              "Failed to create a key for record. namespace:%s, table:%s, pk:%s, ck:%s",
+              namespace, table, partitionKey, clusteringKey));
+    }
   }
 
   public Optional<Record> get(Key key) throws ExecutionException {
@@ -69,7 +75,7 @@ public class ReplicationRecordRepository {
                 .partitionKey(key)
                 .build());
 
-    logger.info("[get] key:{}\n  result:{}", key, result);
+    logger.info("[get]\n  key:{}\n  result:{}", key, result);
 
     return result.flatMap(
         r -> {
@@ -84,6 +90,7 @@ public class ReplicationRecordRepository {
                     objectMapper.readValue(
                         r.getText("ck"),
                         com.scalar.db.transaction.consensuscommit.replication.model.Key.class),
+                    r.getBigInt("version"),
                     r.getText("current_tx_id"),
                     objectMapper.readValue(r.getText("values"), typeRefForValueInRecords),
                     Instant.ofEpochMilli(r.getBigInt("appended_at")),
@@ -94,8 +101,23 @@ public class ReplicationRecordRepository {
         });
   }
 
+  private void setCasCondition(Buildable buildable, Optional<Record> existingRecord) {
+    if (existingRecord.isPresent()) {
+      long currentVersion = existingRecord.get().version;
+      buildable.value(BigIntColumn.of("version", currentVersion + 1));
+      buildable.condition(
+          ConditionBuilder.putIf(
+                  ConditionBuilder.buildConditionalExpression(
+                      BigIntColumn.of("version", currentVersion), Operator.EQ))
+              .build());
+    } else {
+      buildable.value(BigIntColumn.of("version", 1));
+      buildable.condition(ConditionBuilder.putIfNotExists());
+    }
+  }
+
   // TODO: Maybe `txId` should be replaced with `version`
-  public void appendValue(Key key, Value newValue) throws ExecutionException {
+  public void upsertWithNewValue(Key key, Value newValue) throws ExecutionException {
     Optional<Record> recordOpt = get(key);
 
     Buildable putBuilder =
@@ -103,36 +125,16 @@ public class ReplicationRecordRepository {
             .namespace(replicationDbNamespace)
             .table(replicationDbRecordsTable)
             .partitionKey(key);
+    setCasCondition(putBuilder, recordOpt);
 
-    Set<Value> values;
-    if (recordOpt.isPresent()) {
-      Record record = recordOpt.get();
-      // FIXME: Use a condition using `version`
-      values = record.values();
-      if (record.currentTxId() == null) {
-        putBuilder.condition(
-            ConditionBuilder.putIf(
-                    ConditionBuilder.buildConditionalExpression(
-                        TextColumn.of("current_tx_id", null), Operator.IS_NULL))
-                .build());
-      } else {
-        putBuilder.condition(
-            ConditionBuilder.putIf(
-                    ConditionBuilder.buildConditionalExpression(
-                        TextColumn.of("current_tx_id", recordOpt.get().currentTxId()), Operator.EQ))
-                .build());
-      }
-    } else {
-      values = new HashSet<>();
-      putBuilder.condition(ConditionBuilder.putIfNotExists());
-    }
-
+    Set<Value> values = new HashSet<>();
+    recordOpt.ifPresent(record -> values.addAll(record.values()));
     if (!values.add(newValue)) {
-      logger.warn("The new value is already stored. key:{}, txId:{}", key, newValue.txId);
+      logger.warn("The new value is already stored. key:%s, version:%s, newValue:%s");
     }
 
     try {
-      logger.info("[appendValue] key:{}\n  values={}", key, values);
+      logger.info("[appendValue]\n  key:{}\n  values={}", key, values);
       replicationDbStorage.put(
           putBuilder.textValue("values", objectMapper.writeValueAsString(values)).build());
     } catch (JsonProcessingException e) {
@@ -140,34 +142,24 @@ public class ReplicationRecordRepository {
     }
   }
 
-  // TODO: Maybe `txId` should be replaced with `version`
-  public void updateValues(Key key, String currentTxId, String newTxId, Collection<Value> values)
+  public void updateWithValues(Key key, Record record, String newTxId, Collection<Value> values)
       throws ExecutionException {
     Buildable putBuilder =
         Put.newBuilder()
             .namespace(replicationDbNamespace)
             .table(replicationDbRecordsTable)
             .partitionKey(key);
+    setCasCondition(putBuilder, Optional.of(record));
 
-    if (currentTxId == null) {
-      putBuilder.condition(
-          ConditionBuilder.putIf(
-                  ConditionBuilder.buildConditionalExpression(
-                      TextColumn.of("current_tx_id", null), Operator.IS_NULL))
-              .build());
-    } else {
-      putBuilder.condition(
-          ConditionBuilder.putIf(
-                  ConditionBuilder.buildConditionalExpression(
-                      TextColumn.of("current_tx_id", currentTxId), Operator.EQ))
-              .build());
+    if (newTxId.equals(record.currentTxId())) {
+      logger.warn("`tx_id` isn't changed. old:{}, new:{}", record.currentTxId(), newTxId);
     }
 
     try {
       logger.info(
-          "[updateValue] key:{}\n  currentTxId:{}\n  newTxId:{}\n  values={}",
+          "[updateValue]\n  key:{}\n  currentVersion:{}\n  newTxId:{}\n  values={}",
           key,
-          currentTxId,
+          record.version,
           newTxId,
           values);
       replicationDbStorage.put(
