@@ -56,9 +56,10 @@ public class CommitHandler {
     // FIXME: This is only for PoC.
     Properties replicationDbProps = new Properties();
     replicationDbProps.put("scalar.db.storage", "jdbc");
-    replicationDbProps.put("scalar.db.contact_points", "jdbc:mysql://localhost/replication");
-    replicationDbProps.put("scalar.db.username", "root");
-    replicationDbProps.put("scalar.db.password", "mysql");
+    replicationDbProps.put(
+        "scalar.db.contact_points", "jdbc:postgresql://localhost:5433/replication");
+    replicationDbProps.put("scalar.db.username", "postgres");
+    replicationDbProps.put("scalar.db.password", "postgres");
     replicationDbProps.put("scalar.db.jdbc.connection_pool.max_total", "50");
     ReplicationTransactionRepository replicationTransactionRepository =
         new ReplicationTransactionRepository(
