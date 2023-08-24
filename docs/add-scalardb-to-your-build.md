@@ -24,7 +24,7 @@ dependencies {
 </div>
 <div id="Maven" class="tabcontent" markdown="1">
 
-To add the build dependency for ScalarDB by using Maven, add the following to `~/.m2/settings.xml` in your application, replacing `<VERSION>` with the version of ScalarDB that you want to use:
+To add the build dependency for ScalarDB by using Maven, add the following to `pom.xml` in your application, replacing `<VERSION>` with the version of ScalarDB that you want to use:
 
 ```xml
 <dependency>
