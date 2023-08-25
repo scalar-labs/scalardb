@@ -26,12 +26,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-public class Main implements AutoCloseable {
+public class DemoClient implements AutoCloseable {
   private final int numOfCustomers;
   private final ExecutorService executorService;
   private final DistributedTransactionManager transactionManager;
 
-  public Main(TransactionFactory transactionFactory, int numOfThreads, int numOfCustomers) {
+  public DemoClient(TransactionFactory transactionFactory, int numOfThreads, int numOfCustomers) {
     this.numOfCustomers = numOfCustomers;
     transactionManager = transactionFactory.getTransactionManager();
     executorService = Executors.newFixedThreadPool(numOfThreads);
@@ -218,7 +218,7 @@ public class Main implements AutoCloseable {
     CommitHandler.replicationTransactionRepository.set(replicationTransactionRepository);
 
     TransactionFactory transactionFactory = TransactionFactory.create(scalarDbConfigPath);
-    try (Main main = new Main(transactionFactory, numOfThreads, numOfCustomers)) {
+    try (DemoClient main = new DemoClient(transactionFactory, numOfThreads, numOfCustomers)) {
       System.out.printf("Inserting %d customer records\n", numOfCustomers);
       Instant start = Instant.now();
       main.insertRecords();
