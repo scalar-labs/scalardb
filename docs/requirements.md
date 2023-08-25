@@ -22,13 +22,15 @@ ScalarDB does not work on some Cassandra-compatible databases that do not suppor
 
 In your Azure CosmosDB account, you must set the **default consistency level** to **Strong**.
 
+Consensus Commit, the ScalarDB transaction protocol, requires linearizable reads. By setting the **default consistency level** to **Strong**, CosmosDB can guarantee linearizability.
+
 For instructions on how to configure this setting, see the official documentation at [Configure the default consistency level](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/how-to-manage-consistency#configure-the-default-consistency-level).
 
 ## JDBC database recommendations
 
-In ScalarDB on JDBC databases, you can't choose a consistency level (`LINEARIZABLE`, `SEQUENTIAL` or `EVENTUAL`) in your code by using the `Operation.withConsistency()` method. In addition, the consistency level depends on the setup of your JDBC database. 
+In ScalarDB on JDBC databases, you can't choose a consistency level (`LINEARIZABLE`, `SEQUENTIAL` or `EVENTUAL`) in your code by using the `Operation.withConsistency()` method. In addition, the consistency level depends on the setup of your JDBC database.
 
-For example, if you have asynchronous read replicas in your setup and perform read operations against them, the consistency will be eventual because you can read stale data from the read replicas. On the other hand, if you perform all operations against a single master instance, the consistency will be linearizable. 
+For example, if you have asynchronous read replicas in your setup and perform read operations against them, the consistency will be eventual because you can read stale data from the read replicas. On the other hand, if you perform all operations against a single master instance, the consistency will be linearizable.
 
 We recommend performing all operations or transactions against a single master instance so that you can achieve linearizability and avoid worrying about consistency issues in your application. Note that you can still use a read replica as a backup and standby even if you follow this recommendation.
 
