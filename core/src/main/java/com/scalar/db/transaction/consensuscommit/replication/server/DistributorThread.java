@@ -1,10 +1,8 @@
 package com.scalar.db.transaction.consensuscommit.replication.server;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
-import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.replication.model.CoordinatorState;
 import com.scalar.db.transaction.consensuscommit.replication.model.DeletedTuple;
 import com.scalar.db.transaction.consensuscommit.replication.model.InsertedTuple;
@@ -19,7 +17,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -190,69 +187,5 @@ public class DistributorThread implements Closeable {
       Thread.currentThread().interrupt();
       logger.warn("Interrupted", e);
     }
-  }
-
-  public static void main(String[] args) {
-    // FIXME: This is only for PoC.
-    Properties replicationDbProps = new Properties();
-    replicationDbProps.put("scalar.db.storage", "jdbc");
-    replicationDbProps.put(
-        "scalar.db.contact_points", "jdbc:postgresql://localhost:5433/replication");
-    replicationDbProps.put("scalar.db.username", "postgres");
-    replicationDbProps.put("scalar.db.password", "postgres");
-
-    Properties coordinatorDbProps = new Properties();
-    coordinatorDbProps.put("scalar.db.storage", "jdbc");
-    coordinatorDbProps.put("scalar.db.contact_points", "jdbc:postgresql://localhost/scalardb");
-    coordinatorDbProps.put("scalar.db.username", "postgres");
-    coordinatorDbProps.put("scalar.db.password", "postgres");
-
-    Properties backupScalarDbProps = new Properties();
-    backupScalarDbProps.put("scalar.db.storage", "jdbc");
-    backupScalarDbProps.put("scalar.db.contact_points", "jdbc:postgresql://localhost/backup");
-    backupScalarDbProps.put("scalar.db.username", "postgres");
-    backupScalarDbProps.put("scalar.db.password", "postgres");
-
-    ObjectMapper objectMapper = new ObjectMapper();
-
-    CoordinatorStateRepository coordinatorStateRepository =
-        new CoordinatorStateRepository(
-            StorageFactory.create(coordinatorDbProps).getStorage(), "coordinator", "state");
-
-    ReplicationTransactionRepository replicationTransactionRepository =
-        new ReplicationTransactionRepository(
-            StorageFactory.create(replicationDbProps).getStorage(),
-            objectMapper,
-            "replication",
-            "transactions");
-
-    ReplicationRecordRepository replicationRecordRepository =
-        new ReplicationRecordRepository(
-            StorageFactory.create(replicationDbProps).getStorage(),
-            objectMapper,
-            "replication",
-            "records");
-
-    RecordWriterThread recordWriter =
-        new RecordWriterThread(16, replicationRecordRepository, backupScalarDbProps).run();
-
-    DistributorThread distributorThread =
-        new DistributorThread(
-                256,
-                16,
-                16,
-                coordinatorStateRepository,
-                replicationTransactionRepository,
-                replicationRecordRepository,
-                recordWriter.queue())
-            .run();
-
-    Runtime.getRuntime()
-        .addShutdownHook(
-            new Thread(
-                () -> {
-                  distributorThread.close();
-                  recordWriter.close();
-                }));
   }
 }
