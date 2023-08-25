@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit.replication;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
@@ -9,7 +10,10 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Key;
+import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.transaction.consensuscommit.CommitHandler;
+import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationTransactionRepository;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
@@ -121,15 +125,43 @@ public class Main {
     transactionManager.close();
   }
 
+  private static final String ENV_VAR_SCALARDB_CONFIG = "DEMO_SCALARDB_CONFIG";
+  private static final String ENV_VAR_REPLICATION_CONFIG = "DEMO_REPLICATION_CONFIG";
+  private static final String ENV_VAR_NUM_OF_CUSTOMERS = "DEMO_NUM_OF_CUSTOMERS";
+  private static final String ENV_VAR_UPDATE_LOOP = "DEMO_UPDATE_LOOP";
+
   public static void main(String[] args) throws IOException, TransactionException {
-    if (args.length < 1) {
-      throw new IllegalArgumentException("ScalarDB config file path isn't specified");
+    String scalarDbConfigPath = System.getenv(ENV_VAR_SCALARDB_CONFIG);
+    if (scalarDbConfigPath == null) {
+      throw new IllegalArgumentException(
+          "ScalarDB config file path isn't specified. key:" + ENV_VAR_SCALARDB_CONFIG);
     }
-    String scalarDbConfigPath = args[0];
-    TransactionFactory transactionFactory = TransactionFactory.create(scalarDbConfigPath);
+
+    String replicationDbConfigPath = System.getenv(ENV_VAR_REPLICATION_CONFIG);
+    if (replicationDbConfigPath == null) {
+      throw new IllegalArgumentException(
+          "Replication config file path isn't specified. key:" + ENV_VAR_REPLICATION_CONFIG);
+    }
 
     int numOfCustomers = 1000;
+    if (System.getenv(ENV_VAR_NUM_OF_CUSTOMERS) != null) {
+      numOfCustomers = Integer.parseInt(System.getenv(ENV_VAR_NUM_OF_CUSTOMERS));
+    }
+
     int updateLoop = 2;
+    if (System.getenv(ENV_VAR_UPDATE_LOOP) != null) {
+      updateLoop = Integer.parseInt(System.getenv(ENV_VAR_UPDATE_LOOP));
+    }
+
+    ReplicationTransactionRepository replicationTransactionRepository =
+        new ReplicationTransactionRepository(
+            StorageFactory.create(replicationDbConfigPath).getStorage(),
+            new ObjectMapper(),
+            "replication",
+            "transactions");
+    CommitHandler.replicationTransactionRepository.set(replicationTransactionRepository);
+
+    TransactionFactory transactionFactory = TransactionFactory.create(scalarDbConfigPath);
     Main main = new Main(transactionFactory, numOfCustomers);
     System.out.println("Inserting customer records");
     Instant start = Instant.now();
