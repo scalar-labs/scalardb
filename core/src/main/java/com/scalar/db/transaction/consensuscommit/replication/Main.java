@@ -128,14 +128,17 @@ public class Main {
     String scalarDbConfigPath = args[0];
     TransactionFactory transactionFactory = TransactionFactory.create(scalarDbConfigPath);
 
-    int numOfCustomers = 5000;
-    int updateLoop = 4;
+    int numOfCustomers = 1000;
+    int updateLoop = 2;
     Main main = new Main(transactionFactory, numOfCustomers);
+    System.out.println("Inserting customer records");
     Instant start = Instant.now();
     main.insertRecords();
     for (int i = 0; i < updateLoop; i++) {
+      System.out.printf("Updating customer records (#%d)\n", i);
       main.updateRecords();
     }
+    System.out.println("Deleting customer records");
     main.deleteRecords();
     System.out.println("Duration: " + Duration.between(start, Instant.now()));
   }
