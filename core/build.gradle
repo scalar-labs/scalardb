@@ -241,6 +241,6 @@ if (!project.gradle.startParameter.taskNames.isEmpty() &&
 
 // TODO: This is for replication test. Remove this.
 application {
-    mainClassName = 'com.scalar.db.transaction.consensuscommit.replication.server.DistributorThread'
+    mainClassName = 'com.scalar.db.transaction.consensuscommit.replication.server.LogApplier'
 }
 
