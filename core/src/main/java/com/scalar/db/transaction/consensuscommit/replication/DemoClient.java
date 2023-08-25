@@ -100,7 +100,7 @@ public class DemoClient implements AutoCloseable {
                             .table("customers")
                             .partitionKey(Key.ofInt("customer_id", id))
                             .condition(ConditionBuilder.putIfExists())
-                            .intValue("credit_total", id)
+                            .intValue("credit_total", result.get().getInt("credit_total") * 2)
                             .build());
                   }
                   tx.commit();
