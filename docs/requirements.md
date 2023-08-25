@@ -4,7 +4,7 @@ This document explains the requirements and recommendations in the underlying da
 
 ## Cassandra or Cassandra-compatible database requirements
 
-The following are requirements to make ScalarDB on Cassandra or Cassandra-compatible databases work properly and for storage operations with `LINEARIZABLE` to provide linearizablity and for transaction operations with `SERIALIZABLE` to provide strict serializability.
+The following are requirements to make ScalarDB on Cassandra or Cassandra-compatible databases work properly and for storage operations with `LINEARIZABLE` to provide linearizability and for transaction operations with `SERIALIZABLE` to provide strict serializability.
 
 ### Ensure durability in Cassandra
 
