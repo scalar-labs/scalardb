@@ -19,12 +19,9 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ReplicationTransactionRepository {
-  private static final Logger logger =
-      LoggerFactory.getLogger(ReplicationTransactionRepository.class);
+
   private final TypeReference<List<WrittenTuple>> typeReference =
       new TypeReference<List<WrittenTuple>>() {};
 
