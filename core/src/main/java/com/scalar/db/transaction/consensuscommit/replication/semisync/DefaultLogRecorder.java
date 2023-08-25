@@ -22,7 +22,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -71,7 +70,10 @@ public class DefaultLogRecorder implements LogRecorder {
       Operation op = operationsIterator.next();
       TransactionResult result = txResultIterator.next();
 
-      String namespace = op.forNamespace().get();
+      String namespace = op.forNamespace().orElse(defaultNamespace);
+      if (namespace == null) {
+        throw new IllegalArgumentException("`namespace` isn't specified");
+      }
       String table = op.forTable().get();
       int version = mutation.getIntValue("tx_version");
       long txPreparedAtInMillis = mutation.getBigIntValue("tx_prepared_at");
@@ -148,10 +150,9 @@ public class DefaultLogRecorder implements LogRecorder {
   public Future<Void> record(PrepareMutationComposerForReplication composer)
       throws ExecutionException {
     return executorService.submit(
-        (Callable<Void>)
-            () -> {
-              recordInternal(composer);
-              return null;
-            });
+        () -> {
+          recordInternal(composer);
+          return null;
+        });
   }
 }

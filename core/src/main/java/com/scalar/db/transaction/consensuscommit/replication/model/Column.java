@@ -56,7 +56,7 @@ public class Column<T> {
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof Column)) {
       return false;
     }
     Column<?> column = (Column<?>) o;
