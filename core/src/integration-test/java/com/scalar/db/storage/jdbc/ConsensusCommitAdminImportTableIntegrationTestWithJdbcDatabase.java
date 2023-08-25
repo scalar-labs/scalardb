@@ -25,7 +25,8 @@ public class ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
   @Override
   protected Map<String, TableMetadata> createExistingDatabaseWithAllDataTypes()
       throws SQLException {
-    return testUtils.createExistingDatabaseWithAllDataTypes(getNamespace());
+    return testUtils.createExistingDatabaseWithAllDataTypes(
+        JdbcEnv.getJdbcDatabaseMajorVersion(), getNamespace());
   }
 
   @Override
