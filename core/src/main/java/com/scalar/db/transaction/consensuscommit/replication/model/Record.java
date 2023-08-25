@@ -52,7 +52,7 @@ public class Record {
       if (this == o) {
         return true;
       }
-      if (o == null || getClass() != o.getClass()) {
+      if (!(o instanceof Value)) {
         return false;
       }
       Value value = (Value) o;
@@ -150,7 +150,7 @@ public class Record {
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof Record)) {
       return false;
     }
     Record record = (Record) o;

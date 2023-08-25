@@ -2,7 +2,6 @@ package com.scalar.db.transaction.consensuscommit.replication.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
-import com.scalar.db.io.Key.Builder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -28,7 +27,7 @@ public class Key {
     if (key == null) {
       return com.scalar.db.io.Key.of();
     }
-    Builder builder = com.scalar.db.io.Key.newBuilder();
+    com.scalar.db.io.Key.Builder builder = com.scalar.db.io.Key.newBuilder();
     for (Column<?> column : key.columns) {
       builder.add(Column.toScalarDbColumn(column));
     }
@@ -45,7 +44,7 @@ public class Key {
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof Key)) {
       return false;
     }
     Key key = (Key) o;

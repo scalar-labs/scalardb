@@ -16,9 +16,9 @@ import com.scalar.db.transaction.consensuscommit.replication.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.model.Record.Value;
 import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationRecordRepository;
 import java.io.Closeable;
+import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -69,7 +69,7 @@ public class RecordWriterThread implements Closeable {
 
     Record record = recordOpt.get();
 
-    Queue<Value> valuesForInsert = new LinkedList<>();
+    Queue<Value> valuesForInsert = new ArrayDeque<>();
     Map<String, Value> valuesForNonInsert = new HashMap<>();
     for (Value value : record.values()) {
       if (value.type.equals("insert")) {
