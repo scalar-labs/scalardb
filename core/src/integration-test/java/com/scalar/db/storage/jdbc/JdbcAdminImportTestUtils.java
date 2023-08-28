@@ -439,7 +439,7 @@ public class JdbcAdminImportTestUtils {
     Map<String, String> unsupportedTables =
         prepareCreateNonImportableTableSql(
             namespace,
-            majorVersion >= 14
+            majorVersion >= 13
                 ? Stream.concat(
                         UNSUPPORTED_DATA_TYPES_PGSQL.stream(),
                         UNSUPPORTED_DATA_TYPES_PGSQL_V13_OR_LATER.stream())
