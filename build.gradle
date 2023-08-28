@@ -41,7 +41,7 @@ subprojects {
         dropwizardMetricsVersion = '4.2.19'
         prometheusVersion = '0.16.0'
         commonsTextVersion = '1.10.0'
-        jettyVersion = '9.4.51.v20230217'
+        jettyVersion = '9.4.52.v20230823'
         junitVersion = '5.10.0'
         commonsLangVersion = '3.13.0'
         assertjVersion = '3.24.2'
