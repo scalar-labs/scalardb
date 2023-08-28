@@ -25,8 +25,7 @@ public class JdbcAdminImportTableIntegrationTest
   @Override
   protected Map<String, TableMetadata> createExistingDatabaseWithAllDataTypes()
       throws SQLException {
-    return testUtils.createExistingDatabaseWithAllDataTypes(
-        JdbcEnv.getJdbcDatabaseMajorVersion(), getNamespace());
+    return testUtils.createExistingDatabaseWithAllDataTypes(getNamespace());
   }
 
   @Override

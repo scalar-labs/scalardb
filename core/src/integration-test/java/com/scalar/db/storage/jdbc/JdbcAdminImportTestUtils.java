@@ -107,20 +107,22 @@ public class JdbcAdminImportTestUtils {
 
   private final JdbcConfig config;
   private final RdbEngineStrategy rdbEngine;
+  private final int majorVersion;
 
   public JdbcAdminImportTestUtils(Properties properties) {
     config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
+    majorVersion = getMajorVersion();
   }
 
-  public Map<String, TableMetadata> createExistingDatabaseWithAllDataTypes(
-      int majorVersion, String namespace) throws SQLException {
+  public Map<String, TableMetadata> createExistingDatabaseWithAllDataTypes(String namespace)
+      throws SQLException {
     if (rdbEngine instanceof RdbEngineMysql) {
       return createExistingMysqlDatabaseWithAllDataTypes(namespace);
     } else if (rdbEngine instanceof RdbEnginePostgresql) {
-      return createExistingPostgresDatabaseWithAllDataTypes(majorVersion, namespace);
+      return createExistingPostgresDatabaseWithAllDataTypes(namespace);
     } else if (rdbEngine instanceof RdbEngineOracle) {
-      return createExistingOracleDatabaseWithAllDataTypes(majorVersion, namespace);
+      return createExistingOracleDatabaseWithAllDataTypes(namespace);
     } else if (rdbEngine instanceof RdbEngineSqlServer) {
       return createExistingSqlServerDatabaseWithAllDataTypes(namespace);
     } else {
@@ -172,7 +174,7 @@ public class JdbcAdminImportTestUtils {
     columns.put("col19", "MEDIUMBLOB");
     columns.put("col20", "LONGBLOB");
     columns.put("col21", "BINARY(255)");
-    if (JdbcEnv.isMariaDB()) {
+    if (isMariaDB()) {
       columns.put("col22", "JSON");
     }
     return columns;
@@ -206,7 +208,7 @@ public class JdbcAdminImportTestUtils {
             .addColumn("col21", DataType.BLOB)
             .addPartitionKey("pk1")
             .addPartitionKey("pk2");
-    if (JdbcEnv.isMariaDB()) {
+    if (isMariaDB()) {
       builder.addColumn("col22", DataType.TEXT);
     }
     return builder.build();
@@ -407,7 +409,7 @@ public class JdbcAdminImportTestUtils {
         Collections.singletonMap(SUPPORTED_TABLE_NAME, tableMetadata);
 
     Map<String, String> unsupportedTables;
-    if (JdbcEnv.isMariaDB()) {
+    if (isMariaDB()) {
       unsupportedTables =
           prepareCreateNonImportableTableSql(
               namespace,
@@ -423,7 +425,7 @@ public class JdbcAdminImportTestUtils {
   }
 
   private Map<String, TableMetadata> createExistingPostgresDatabaseWithAllDataTypes(
-      int majorVersion, String namespace) throws SQLException {
+      String namespace) throws SQLException {
     TableMetadata tableMetadata = prepareTableMetadataForPostgresql();
     Map<String, String> supportedTables =
         Collections.singletonMap(
@@ -449,8 +451,8 @@ public class JdbcAdminImportTestUtils {
     return executeCreateTableSql(supportedTables, supportedTableMetadata, unsupportedTables);
   }
 
-  private Map<String, TableMetadata> createExistingOracleDatabaseWithAllDataTypes(
-      int majorVersion, String namespace) throws SQLException {
+  private Map<String, TableMetadata> createExistingOracleDatabaseWithAllDataTypes(String namespace)
+      throws SQLException {
     Map<String, String> supportedTables = new HashMap<>();
     Map<String, TableMetadata> supportedTableMetadata = new HashMap<>();
 
@@ -532,5 +534,24 @@ public class JdbcAdminImportTestUtils {
 
     execute(sqls.toArray(new String[0]));
     return results;
+  }
+
+  private boolean isMariaDB() {
+    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
+        Connection connection = dataSource.getConnection()) {
+      String version = connection.getMetaData().getDatabaseProductVersion();
+      return version.contains("MariaDB");
+    } catch (SQLException e) {
+      throw new RuntimeException("Get database major version failed");
+    }
+  }
+
+  private int getMajorVersion() {
+    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
+        Connection connection = dataSource.getConnection()) {
+      return connection.getMetaData().getDatabaseMajorVersion();
+    } catch (SQLException e) {
+      throw new RuntimeException("Get database major version failed");
+    }
   }
 }

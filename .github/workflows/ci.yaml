@@ -240,7 +240,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres -Dscalardb.jdbc.database.version.major=14
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
@@ -284,7 +284,7 @@ jobs:
         uses: gradle/gradle-build-action@v2
         #       Addressing the Oracle container with "@localhost" in the JDBC url cause the JDBC connection to fail for an unknown reason. As a workaround, using instead the container ip address is working.
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@${{ env.oracle_db_ip }}:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle21 -Dscalardb.jdbc.database.version.major=21
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@${{ env.oracle_db_ip }}:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle21
 
       - name: Upload Gradle test reports
         if: always()
@@ -377,7 +377,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.mariadb=true
+          arguments: integrationTestJdbc
 
       - name: Upload Gradle test reports
         if: always()
