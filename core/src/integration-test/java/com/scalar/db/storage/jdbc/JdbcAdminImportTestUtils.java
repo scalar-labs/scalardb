@@ -168,13 +168,8 @@ public class JdbcAdminImportTestUtils {
           results.put(table, null);
         });
 
-    createExistingDatabase(namespace);
     execute(sqls.toArray(new String[0]));
     return results;
-  }
-
-  public void createExistingDatabase(String namespace) throws SQLException {
-    execute(rdbEngine.createNamespaceSqls(rdbEngine.enclose(namespace)));
   }
 
   public void dropTable(String namespace, String table) throws SQLException {

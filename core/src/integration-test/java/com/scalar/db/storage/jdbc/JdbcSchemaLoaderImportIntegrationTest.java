@@ -28,11 +28,6 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
     return new JdbcAdminTestUtils(getProperties(testName));
   }
 
-  @Override
-  protected void createExistingDatabase(String namespace) throws Exception {
-    testUtils.createExistingDatabase(namespace);
-  }
-
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   @Override
   protected void createImportableTable(String namespace, String table) throws Exception {

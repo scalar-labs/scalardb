@@ -9,9 +9,12 @@ import java.util.Locale;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Immutable
 public class JdbcConfig {
+  private static final Logger logger = LoggerFactory.getLogger(JdbcConfig.class);
   public static final String PREFIX = DatabaseConfig.PREFIX + "jdbc.";
   public static final String CONNECTION_POOL_MIN_IDLE = PREFIX + "connection_pool.min_idle";
   public static final String CONNECTION_POOL_MAX_IDLE = PREFIX + "connection_pool.max_idle";
@@ -22,8 +25,10 @@ public class JdbcConfig {
       PREFIX + "prepared_statements_pool.max_open";
 
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
+  /** @deprecated As of 5.0, will be removed. Use {@link #METADATA_SCHEMA} instead. */
+  @Deprecated public static final String TABLE_METADATA_SCHEMA = PREFIX + "table_metadata.schema";
 
-  public static final String TABLE_METADATA_SCHEMA = PREFIX + "table_metadata.schema";
+  public static final String METADATA_SCHEMA = PREFIX + "metadata.schema";
   public static final String TABLE_METADATA_CONNECTION_POOL_MIN_IDLE =
       PREFIX + "table_metadata.connection_pool.min_idle";
   public static final String TABLE_METADATA_CONNECTION_POOL_MAX_IDLE =
@@ -64,7 +69,7 @@ public class JdbcConfig {
 
   @Nullable private final Isolation isolation;
 
-  @Nullable private final String tableMetadataSchema;
+  @Nullable private final String metadataSchema;
   private final int tableMetadataConnectionPoolMinIdle;
   private final int tableMetadataConnectionPoolMaxIdle;
   private final int tableMetadataConnectionPoolMaxTotal;
@@ -124,7 +129,6 @@ public class JdbcConfig {
       isolation = null;
     }
 
-    tableMetadataSchema = getString(databaseConfig.getProperties(), TABLE_METADATA_SCHEMA, null);
     tableMetadataConnectionPoolMinIdle =
         getInt(
             databaseConfig.getProperties(),
@@ -156,6 +160,24 @@ public class JdbcConfig {
             databaseConfig.getProperties(),
             ADMIN_CONNECTION_POOL_MAX_TOTAL,
             DEFAULT_ADMIN_CONNECTION_POOL_MAX_TOTAL);
+
+    if (databaseConfig.getProperties().containsKey(METADATA_SCHEMA)
+        && databaseConfig.getProperties().containsKey(TABLE_METADATA_SCHEMA)) {
+      throw new IllegalArgumentException(
+          "Use either " + METADATA_SCHEMA + " or " + TABLE_METADATA_SCHEMA + " but not both");
+    }
+    if (databaseConfig.getProperties().containsKey(TABLE_METADATA_SCHEMA)) {
+      logger.warn(
+          "The configuration property \""
+              + TABLE_METADATA_SCHEMA
+              + "\" is deprecated and will be removed in 5.0.0. Please use \""
+              + METADATA_SCHEMA
+              + "\" instead");
+
+      metadataSchema = getString(databaseConfig.getProperties(), TABLE_METADATA_SCHEMA, null);
+    } else {
+      metadataSchema = getString(databaseConfig.getProperties(), METADATA_SCHEMA, null);
+    }
   }
 
   public String getJdbcUrl() {
@@ -194,8 +216,8 @@ public class JdbcConfig {
     return Optional.ofNullable(isolation);
   }
 
-  public Optional<String> getTableMetadataSchema() {
-    return Optional.ofNullable(tableMetadataSchema);
+  public Optional<String> getMetadataSchema() {
+    return Optional.ofNullable(metadataSchema);
   }
 
   public int getTableMetadataConnectionPoolMinIdle() {

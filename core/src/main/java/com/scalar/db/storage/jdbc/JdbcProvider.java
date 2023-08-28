@@ -19,9 +19,6 @@ public class JdbcProvider implements DistributedStorageProvider {
 
   @Override
   public DistributedStorageAdmin createDistributedStorageAdmin(DatabaseConfig config) {
-    // If the database is SQLite, the namespace check is skipped because SQLite does not support
-    // namespaces.
-    boolean isSqlite = JdbcUtils.isSqlite(new JdbcConfig(config));
-    return new CheckedDistributedStorageAdmin(new JdbcAdmin(config), !isSqlite);
+    return new CheckedDistributedStorageAdmin(new JdbcAdmin(config));
   }
 }

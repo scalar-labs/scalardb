@@ -12,6 +12,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import java.util.Arrays;
 import java.util.Properties;
+import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -340,5 +341,16 @@ public class MultiStorageAdminIntegrationTest {
     assertThat(tableMetadata.getClusteringOrder(COL_NAME3)).isNull();
 
     assertThat(tableMetadata.getSecondaryIndexNames()).isEmpty();
+  }
+
+  @Test
+  public void getNamespaceNames_ShouldReturnExistingNamespaces() throws ExecutionException {
+    // Arrange
+
+    // Act
+    Set<String> namespaces = multiStorageAdmin.getNamespaceNames();
+
+    // Assert
+    assertThat(namespaces).containsExactlyInAnyOrder(NAMESPACE1, NAMESPACE2);
   }
 }

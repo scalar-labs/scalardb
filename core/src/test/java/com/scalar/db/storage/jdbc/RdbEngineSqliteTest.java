@@ -121,12 +121,12 @@ class RdbEngineSqliteTest {
   }
 
   @Test
-  void isValidTableName_True() {
-    assertTrue(rdbEngine.isValidTableName("a_b"));
+  void isValidNamespaceOrTableName_True() {
+    assertTrue(rdbEngine.isValidNamespaceOrTableName("a_b"));
   }
 
   @Test
-  void isValidTableName_False_WhenContainsNamespaceSeparator() {
-    assertFalse(rdbEngine.isValidTableName("a$b"));
+  void isValidNamespaceOrTableName_False_WhenContainsNamespaceSeparator() {
+    assertFalse(rdbEngine.isValidNamespaceOrTableName("a$b"));
   }
 }

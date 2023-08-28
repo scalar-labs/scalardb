@@ -55,6 +55,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String JDBC_COL_TYPE_NAME = "TYPE_NAME";
   @VisibleForTesting static final String JDBC_COL_COLUMN_SIZE = "COLUMN_SIZE";
   @VisibleForTesting static final String JDBC_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
+  public static final String NAMESPACES_TABLE = "namespaces";
+  @VisibleForTesting static final String NAMESPACE_COL_NAMESPACE_NAME = "namespace_name";
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
   private static final String INDEX_NAME_PREFIX = "index";
 
@@ -67,22 +69,27 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     JdbcConfig config = new JdbcConfig(databaseConfig);
     rdbEngine = RdbEngineFactory.create(config);
     dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
-    metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
+    metadataSchema = config.getMetadataSchema().orElse(METADATA_SCHEMA);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcAdmin(BasicDataSource dataSource, JdbcConfig config) {
     rdbEngine = RdbEngineFactory.create(config);
     this.dataSource = dataSource;
-    metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
+    metadataSchema = config.getMetadataSchema().orElse(METADATA_SCHEMA);
   }
 
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
+    if (!rdbEngine.isValidNamespaceOrTableName(namespace)) {
+      throw new ExecutionException("Namespace name is not acceptable: " + namespace);
+    }
     String fullNamespace = enclose(namespace);
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, rdbEngine.createNamespaceSqls(fullNamespace));
+      createNamespacesTableIfNotExists(connection);
+      insertIntoNamespacesTable(connection, namespace);
     } catch (SQLException e) {
       throw new ExecutionException("Creating the schema failed", e);
     }
@@ -92,7 +99,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    if (!rdbEngine.isValidTableName(table)) {
+    if (!rdbEngine.isValidNamespaceOrTableName(table)) {
       throw new ExecutionException("Table name is not acceptable: " + table);
     }
 
@@ -219,6 +226,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + enclose(METADATA_COL_COLUMN_NAME)
             + "))";
 
+    createTableIfNotExists(connection, createTableStatement);
+  }
+
+  private void createTableIfNotExists(Connection connection, String createTableStatement)
+      throws SQLException {
     String stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
     try {
       execute(connection, stmt);
@@ -314,7 +326,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws SQLException {
     try {
       execute(connection, getDeleteTableMetadataStatement(namespace, table));
-      deleteMetadataSchemaAndTableIfEmpty(connection);
+      deleteMetadataTableIfEmpty(connection);
     } catch (SQLException e) {
       if (e.getMessage().contains("Unknown table") || e.getMessage().contains("does not exist")) {
         return;
@@ -333,10 +345,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         + "'";
   }
 
-  private void deleteMetadataSchemaAndTableIfEmpty(Connection connection) throws SQLException {
+  private void deleteMetadataTableIfEmpty(Connection connection) throws SQLException {
     if (isMetadataTableEmpty(connection)) {
-      deleteMetadataTable(connection);
-      deleteMetadataSchema(connection);
+      deleteTable(connection, encloseFullTableName(metadataSchema, METADATA_TABLE));
     }
   }
 
@@ -352,9 +363,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void deleteMetadataTable(Connection connection) throws SQLException {
-    String dropTableStatement =
-        "DROP TABLE " + encloseFullTableName(metadataSchema, METADATA_TABLE);
+  private void deleteTable(Connection connection, String fullTableName) throws SQLException {
+    String dropTableStatement = "DROP TABLE " + fullTableName;
 
     execute(connection, dropTableStatement);
   }
@@ -368,6 +378,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void dropNamespace(String namespace) throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, rdbEngine.dropNamespaceSql(namespace));
+      deleteFromNamespacesTable(connection, namespace);
+      deleteNamespacesTableIfEmpty(connection);
     } catch (SQLException e) {
       rdbEngine.dropNamespaceTranslateSQLException(e, namespace);
     }
@@ -388,10 +400,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
     boolean tableExists = false;
-
-    if (!namespaceExists(metadataSchema)) {
-      return null;
-    }
 
     try (Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =
@@ -431,6 +439,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         }
       }
     } catch (SQLException e) {
+      // An exception will be thrown if the namespace table does not exist when executing the select
+      // query
+      if (rdbEngine.isUndefinedTableError(e)) {
+        return null;
+      }
       throw new ExecutionException("Getting a table metadata failed", e);
     }
 
@@ -553,13 +566,24 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    String namespaceExistsStatement = rdbEngine.namespaceExistsStatement();
+    String selectQuery =
+        "SELECT 1 FROM "
+            + encloseFullTableName(metadataSchema, NAMESPACES_TABLE)
+            + " WHERE "
+            + enclose(NAMESPACE_COL_NAMESPACE_NAME)
+            + " = ?";
     try (Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement =
-            connection.prepareStatement(namespaceExistsStatement)) {
-      preparedStatement.setString(1, rdbEngine.namespaceExistsPlaceholder(namespace));
-      return preparedStatement.executeQuery().next();
+        PreparedStatement statement = connection.prepareStatement(selectQuery); ) {
+      statement.setString(1, namespace);
+      try (ResultSet resultSet = statement.executeQuery()) {
+        return resultSet.next();
+      }
     } catch (SQLException e) {
+      // An exception will be thrown if the namespaces table does not exist when executing the
+      // select query
+      if (rdbEngine.isUndefinedTableError(e)) {
+        return false;
+      }
       throw new ExecutionException("Checking if the namespace exists failed", e);
     }
   }
@@ -823,5 +847,88 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   private String encloseFullTableName(String schema, String table) {
     return rdbEngine.encloseFullTableName(schema, table);
+  }
+
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    try (Connection connection = dataSource.getConnection()) {
+      String selectQuery =
+          "SELECT * FROM " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE);
+      Set<String> namespaces = new HashSet<>();
+      try (PreparedStatement preparedStatement = connection.prepareStatement(selectQuery);
+          ResultSet resultSet = preparedStatement.executeQuery()) {
+        while (resultSet.next()) {
+          namespaces.add(resultSet.getString(NAMESPACE_COL_NAMESPACE_NAME));
+        }
+        return namespaces;
+      }
+    } catch (SQLException e) {
+      // An exception will be thrown if the namespace table does not exist when executing the select
+      // query
+      if (rdbEngine.isUndefinedTableError(e)) {
+        return Collections.emptySet();
+      }
+      throw new ExecutionException("Getting the namespace names failed", e);
+    }
+  }
+
+  private void createNamespacesTableIfNotExists(Connection connection) throws ExecutionException {
+    try {
+      createMetadataSchemaIfNotExists(connection);
+      String createTableStatement =
+          "CREATE TABLE "
+              + encloseFullTableName(metadataSchema, NAMESPACES_TABLE)
+              + "("
+              + enclose(NAMESPACE_COL_NAMESPACE_NAME)
+              + " "
+              + getTextType(128)
+              + ", "
+              + "PRIMARY KEY ("
+              + enclose(NAMESPACE_COL_NAMESPACE_NAME)
+              + "))";
+      createTableIfNotExists(connection, createTableStatement);
+    } catch (SQLException e) {
+      throw new ExecutionException("Creating the namespace table failed", e);
+    }
+  }
+
+  private void insertIntoNamespacesTable(Connection connection, String namespaceName)
+      throws SQLException {
+    String insertStatement =
+        "INSERT INTO " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE) + " VALUES (?)";
+    try (PreparedStatement preparedStatement = connection.prepareStatement(insertStatement); ) {
+      preparedStatement.setString(1, namespaceName);
+      preparedStatement.execute();
+    }
+  }
+
+  private void deleteFromNamespacesTable(Connection connection, String namespaceName)
+      throws SQLException {
+    String deleteStatement =
+        "DELETE FROM "
+            + encloseFullTableName(metadataSchema, NAMESPACES_TABLE)
+            + " WHERE "
+            + enclose(NAMESPACE_COL_NAMESPACE_NAME)
+            + " = ?";
+    try (PreparedStatement preparedStatement = connection.prepareStatement(deleteStatement)) {
+      preparedStatement.setString(1, namespaceName);
+      preparedStatement.execute();
+    }
+  }
+
+  private void deleteNamespacesTableIfEmpty(Connection connection) throws SQLException {
+    if (isNamespacesTableEmpty(connection)) {
+      deleteTable(connection, encloseFullTableName(metadataSchema, NAMESPACES_TABLE));
+      deleteMetadataSchema(connection);
+    }
+  }
+
+  private boolean isNamespacesTableEmpty(Connection connection) throws SQLException {
+    String selectAllTables =
+        "SELECT * FROM " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE);
+    try (PreparedStatement preparedStatement = connection.prepareStatement(selectAllTables);
+        ResultSet results = preparedStatement.executeQuery()) {
+      return !results.next();
+    }
   }
 }
