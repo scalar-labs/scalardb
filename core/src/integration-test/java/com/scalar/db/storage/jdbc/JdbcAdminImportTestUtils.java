@@ -542,7 +542,7 @@ public class JdbcAdminImportTestUtils {
       String version = connection.getMetaData().getDatabaseProductVersion();
       return version.contains("MariaDB");
     } catch (SQLException e) {
-      throw new RuntimeException("Get database major version failed");
+      throw new RuntimeException("Get database product version failed");
     }
   }
 
