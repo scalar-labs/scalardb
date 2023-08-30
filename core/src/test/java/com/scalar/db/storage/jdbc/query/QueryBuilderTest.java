@@ -482,6 +482,153 @@ public class QueryBuilderTest {
   }
 
   @ParameterizedTest
+  @EnumSource(
+      value = RdbEngine.class,
+      names = {"MYSQL", "POSTGRESQL"},
+      mode = EnumSource.Mode.INCLUDE)
+  public void selectQueryWithLikeConditionsTest(RdbEngine rdbEngineType) throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+
+    SelectQuery query;
+    PreparedStatement preparedStatement;
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Collections.emptyList())
+            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .where(
+                ImmutableSet.of(
+                    Scan.Conjunction.of(
+                        ConditionBuilder.column("c1").isLikeText("%text"),
+                        ConditionBuilder.column("c2").isLikeText("text+%%", "+"),
+                        ConditionBuilder.column("v1").isLikeText("text\\%", ""),
+                        ConditionBuilder.column("v2").isNotLikeText("%text"),
+                        ConditionBuilder.column("v3").isNotLikeText("text+%%", "+"),
+                        ConditionBuilder.column("v4").isNotLikeText("text\\%", ""))))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql(
+                "SELECT * FROM n1.t1 WHERE"
+                    + " c1 LIKE ? ESCAPE ? AND c2 LIKE ? ESCAPE ? AND v1 LIKE ? ESCAPE ?"
+                    + " AND v2 NOT LIKE ? ESCAPE ? AND v3 NOT LIKE ? ESCAPE ? AND v4 NOT LIKE ? ESCAPE ?",
+                rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "%text");
+    verify(preparedStatement).setString(2, "\\");
+    verify(preparedStatement).setString(3, "text+%%");
+    verify(preparedStatement).setString(4, "+");
+    verify(preparedStatement).setString(5, "text\\%");
+    verify(preparedStatement).setString(6, "");
+    verify(preparedStatement).setString(7, "%text");
+    verify(preparedStatement).setString(8, "\\");
+    verify(preparedStatement).setString(9, "text+%%");
+    verify(preparedStatement).setString(10, "+");
+    verify(preparedStatement).setString(11, "text\\%");
+    verify(preparedStatement).setString(12, "");
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = RdbEngine.class,
+      names = {"ORACLE", "SQLITE"},
+      mode = EnumSource.Mode.INCLUDE)
+  public void selectQueryWithLikeConditionsTestForOracle(RdbEngine rdbEngineType)
+      throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+
+    SelectQuery query;
+    PreparedStatement preparedStatement;
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Collections.emptyList())
+            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .where(
+                ImmutableSet.of(
+                    Scan.Conjunction.of(
+                        ConditionBuilder.column("c1").isLikeText("%text"),
+                        ConditionBuilder.column("c2").isLikeText("text+%%", "+"),
+                        ConditionBuilder.column("v1").isLikeText("text\\%", ""),
+                        ConditionBuilder.column("v2").isNotLikeText("%text"),
+                        ConditionBuilder.column("v3").isNotLikeText("text+%%", "+"),
+                        ConditionBuilder.column("v4").isNotLikeText("text\\%", ""))))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql(
+                "SELECT * FROM n1.t1 WHERE"
+                    + " c1 LIKE ? ESCAPE ? AND c2 LIKE ? ESCAPE ? AND v1 LIKE ?"
+                    + " AND v2 NOT LIKE ? ESCAPE ? AND v3 NOT LIKE ? ESCAPE ? AND v4 NOT LIKE ?",
+                rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "%text");
+    verify(preparedStatement).setString(2, "\\");
+    verify(preparedStatement).setString(3, "text+%%");
+    verify(preparedStatement).setString(4, "+");
+    verify(preparedStatement).setString(5, "text\\%");
+    verify(preparedStatement).setString(6, "%text");
+    verify(preparedStatement).setString(7, "\\");
+    verify(preparedStatement).setString(8, "text+%%");
+    verify(preparedStatement).setString(9, "+");
+    verify(preparedStatement).setString(10, "text\\%");
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = RdbEngine.class,
+      names = {"SQL_SERVER"},
+      mode = EnumSource.Mode.INCLUDE)
+  public void selectQueryWithLikeConditionsTestForSQLServer(RdbEngine rdbEngineType)
+      throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+
+    SelectQuery query;
+    PreparedStatement preparedStatement;
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Collections.emptyList())
+            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .where(
+                ImmutableSet.of(
+                    Scan.Conjunction.of(
+                        ConditionBuilder.column("c1").isLikeText("%text[%]"),
+                        ConditionBuilder.column("c2").isLikeText("[%]text+%%", "+"),
+                        ConditionBuilder.column("v1").isLikeText("[%]text\\%", ""),
+                        ConditionBuilder.column("v2").isNotLikeText("%text[%]"),
+                        ConditionBuilder.column("v3").isNotLikeText("[%]text+%%", "+"),
+                        ConditionBuilder.column("v4").isNotLikeText("[%]text\\%", ""))))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql(
+                "SELECT * FROM n1.t1 WHERE"
+                    + " c1 LIKE ? ESCAPE ? AND c2 LIKE ? ESCAPE ? AND v1 LIKE ? ESCAPE ?"
+                    + " AND v2 NOT LIKE ? ESCAPE ? AND v3 NOT LIKE ? ESCAPE ? AND v4 NOT LIKE ? ESCAPE ?",
+                rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "%text\\[%\\]");
+    verify(preparedStatement).setString(2, "\\");
+    verify(preparedStatement).setString(3, "+[%+]text+%%");
+    verify(preparedStatement).setString(4, "+");
+    verify(preparedStatement).setString(5, "\\[%\\]text\\\\%");
+    verify(preparedStatement).setString(6, "\\");
+    verify(preparedStatement).setString(7, "%text\\[%\\]");
+    verify(preparedStatement).setString(8, "\\");
+    verify(preparedStatement).setString(9, "+[%+]text+%%");
+    verify(preparedStatement).setString(10, "+");
+    verify(preparedStatement).setString(11, "\\[%\\]text\\\\%");
+    verify(preparedStatement).setString(12, "\\");
+  }
+
+  @ParameterizedTest
   @EnumSource(RdbEngine.class)
   public void selectQueryWithIndexedColumnTest(RdbEngine rdbEngineType) throws SQLException {
     RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);

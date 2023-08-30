@@ -335,6 +335,15 @@ public abstract class DistributedStorageRelationalScanIntegrationTestBase {
         .build();
   }
 
+  private Put preparePut(int key, String text) {
+    return Put.newBuilder()
+        .namespace(getNamespaceName())
+        .table(CONDITION_TEST_TABLE)
+        .partitionKey(Key.ofInt(PARTITION_KEY_NAME, key))
+        .textValue(COL_NAME5, text)
+        .build();
+  }
+
   private List<Column<?>> prepareNonKeyColumns(int i) {
     List<Column<?>> columns = new ArrayList<>();
     columns.add(IntColumn.of(COL_NAME1, i));
@@ -541,6 +550,34 @@ public abstract class DistributedStorageRelationalScanIntegrationTestBase {
     return builder.build();
   }
 
+  private Scan prepareScanWithLike(boolean isLike, String pattern) {
+    LikeExpression condition =
+        isLike
+            ? ConditionBuilder.column(COL_NAME5).isLikeText(pattern)
+            : ConditionBuilder.column(COL_NAME5).isNotLikeText(pattern);
+    return Scan.newBuilder()
+        .namespace(getNamespaceName())
+        .table(CONDITION_TEST_TABLE)
+        .all()
+        .where(condition)
+        .ordering(Ordering.asc(PARTITION_KEY_NAME))
+        .build();
+  }
+
+  private Scan prepareScanWithLike(boolean isLike, String pattern, String escape) {
+    LikeExpression condition =
+        isLike
+            ? ConditionBuilder.column(COL_NAME5).isLikeText(pattern, escape)
+            : ConditionBuilder.column(COL_NAME5).isNotLikeText(pattern, escape);
+    return Scan.newBuilder()
+        .namespace(getNamespaceName())
+        .table(CONDITION_TEST_TABLE)
+        .all()
+        .where(condition)
+        .ordering(Ordering.asc(PARTITION_KEY_NAME))
+        .build();
+  }
+
   private void assertScanResult(
       List<Result> actualResults, List<Integer> expected, String description) {
     List<Integer> actual = new ArrayList<>();
@@ -644,18 +681,18 @@ public abstract class DistributedStorageRelationalScanIntegrationTestBase {
     prepareRecords();
 
     List<Callable<Void>> testCallables = new ArrayList<>();
-    for (Operator operator : Operator.values()) {
-      if (!operator.equals(Operator.IS_NULL) && !operator.equals(Operator.IS_NOT_NULL)) {
-        for (Column<?> column : prepareAllColumns(CONDITION_TEST_PREDICATE_VALUE)) {
-          testCallables.add(
-              () -> {
-                scan_WithCondition_ShouldReturnProperResult(
-                    column, operator, CONDITION_TEST_PREDICATE_VALUE);
-                return null;
-              });
-        }
-      }
-    }
+    ImmutableList.of(Operator.EQ, Operator.NE, Operator.GT, Operator.GTE, Operator.LT, Operator.LTE)
+        .forEach(
+            operator -> {
+              for (Column<?> column : prepareAllColumns(CONDITION_TEST_PREDICATE_VALUE)) {
+                testCallables.add(
+                    () -> {
+                      scan_WithCondition_ShouldReturnProperResult(
+                          column, operator, CONDITION_TEST_PREDICATE_VALUE);
+                      return null;
+                    });
+              }
+            });
 
     executeInParallel(testCallables);
   }
@@ -666,17 +703,17 @@ public abstract class DistributedStorageRelationalScanIntegrationTestBase {
     prepareNullRecords();
 
     List<Callable<Void>> testCallables = new ArrayList<>();
-    for (Operator operator : Operator.values()) {
-      if (operator.equals(Operator.IS_NULL) || operator.equals(Operator.IS_NOT_NULL)) {
-        for (Column<?> column : prepareNullColumns()) {
-          testCallables.add(
-              () -> {
-                scan_WithNullCondition_ShouldReturnProperResult(column, operator);
-                return null;
-              });
-        }
-      }
-    }
+    ImmutableList.of(Operator.IS_NULL, Operator.IS_NOT_NULL)
+        .forEach(
+            operator -> {
+              for (Column<?> column : prepareNullColumns()) {
+                testCallables.add(
+                    () -> {
+                      scan_WithNullCondition_ShouldReturnProperResult(column, operator);
+                      return null;
+                    });
+              }
+            });
 
     executeInParallel(testCallables);
   }
@@ -836,6 +873,127 @@ public abstract class DistributedStorageRelationalScanIntegrationTestBase {
         expected,
         description(
             firstColumnType, firstColumnOrder, secondColumnType, secondColumnOrder, withLimit));
+  }
+
+  @Test
+  public void scan_WithLikeCondition_ShouldReturnProperResult()
+      throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException {
+    // Arrange
+    storage.put(preparePut(1, "@scalar[$]"));
+    storage.put(preparePut(2, "@@scalar[$]"));
+    storage.put(preparePut(3, "%scalar[$]"));
+    storage.put(preparePut(4, "_scalar[$]"));
+    storage.put(preparePut(5, "\\scalar[$]"));
+    storage.put(preparePut(6, "\\\\scalar[$]"));
+    storage.put(preparePut(7, "scalar$"));
+
+    List<Callable<Void>> testCallables = new ArrayList<>();
+    testCallables.add(
+        () -> {
+          scan_WithLikeCondition_ShouldReturnProperResult(
+              prepareScanWithLike(true, "%scalar[$]"), ImmutableList.of(1, 2, 3, 4, 5, 6), "all");
+          return null;
+        });
+    testCallables.add(
+        () -> {
+          scan_WithLikeCondition_ShouldReturnProperResult(
+              prepareScanWithLike(true, "_scalar[$]"),
+              ImmutableList.of(1, 3, 4, 5),
+              "single character");
+          return null;
+        });
+    testCallables.add(
+        () -> {
+          scan_WithLikeCondition_ShouldReturnProperResult(
+              prepareScanWithLike(true, "\\%scalar[$]"),
+              ImmutableList.of(3),
+              "escape % with default escape");
+          return null;
+        });
+    testCallables.add(
+        () -> {
+          scan_WithLikeCondition_ShouldReturnProperResult(
+              prepareScanWithLike(true, "\\_scalar[$]"),
+              ImmutableList.of(4),
+              "escape _ with default escape");
+          return null;
+        });
+    testCallables.add(
+        () -> {
+          scan_WithLikeCondition_ShouldReturnProperResult(
+              prepareScanWithLike(true, "+%scalar[$]", "+"),
+              ImmutableList.of(3),
+              "escape % with specified escape");
+          return null;
+        });
+    testCallables.add(
+        () -> {
+          scan_WithLikeCondition_ShouldReturnProperResult(
+              prepareScanWithLike(true, "+_scalar[$]", "+"),
+              ImmutableList.of(4),
+              "escape _ with specified escape");
+          return null;
+        });
+    testCallables.add(
+        () -> {
+          scan_WithLikeCondition_ShouldReturnProperResult(
+              prepareScanWithLike(true, "\\%scalar[$]", ""),
+              ImmutableList.of(5, 6),
+              "no escape character");
+          return null;
+        });
+    testCallables.add(
+        () -> {
+          scan_WithLikeCondition_ShouldReturnProperResult(
+              prepareScanWithLike(true, "\\_scalar[$]", ""),
+              ImmutableList.of(6),
+              "no escape character");
+          return null;
+        });
+    testCallables.add(
+        () -> {
+          scan_WithLikeCondition_ShouldReturnProperResult(
+              prepareScanWithLike(false, "\\%scalar[$]"),
+              ImmutableList.of(1, 2, 4, 5, 6, 7),
+              "not like and escape % with default escape");
+          return null;
+        });
+    testCallables.add(
+        () -> {
+          scan_WithLikeCondition_ShouldReturnProperResult(
+              prepareScanWithLike(false, "\\_scalar[$]"),
+              ImmutableList.of(1, 2, 3, 5, 6, 7),
+              "not like and escape _ with default escape");
+          return null;
+        });
+    testCallables.add(
+        () -> {
+          scan_WithLikeCondition_ShouldReturnProperResult(
+              prepareScanWithLike(false, "+%scalar[$]", "+"),
+              ImmutableList.of(1, 2, 4, 5, 6, 7),
+              "not like and escape % with specified escape");
+          return null;
+        });
+    testCallables.add(
+        () -> {
+          scan_WithLikeCondition_ShouldReturnProperResult(
+              prepareScanWithLike(false, "\\_scalar[$]", ""),
+              ImmutableList.of(1, 2, 3, 4, 5, 7),
+              "not like with no escape character");
+          return null;
+        });
+
+    executeInParallel(testCallables);
+  }
+
+  private void scan_WithLikeCondition_ShouldReturnProperResult(
+      Scan scan, List<Integer> expected, String description)
+      throws IOException, ExecutionException {
+    // Arrange Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    assertScanResult(actual, expected, description);
   }
 
   private void executeInParallel(List<Callable<Void>> testCallables)

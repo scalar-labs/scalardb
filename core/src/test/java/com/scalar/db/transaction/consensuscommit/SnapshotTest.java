@@ -1470,6 +1470,29 @@ public class SnapshotTest {
 
   @Test
   public void
+      validate_RelationalScanGivenAndNewPutInSameTableAndLikeConditionsMatch_ShouldThrowException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    Scan scan =
+        Scan.newBuilder(prepareRelationalScan())
+            .clearConditions()
+            .where(ConditionBuilder.column(ANY_NAME_3).isLikeText("text%"))
+            .and(ConditionBuilder.column(ANY_NAME_4).isNotLikeText("text"))
+            .build();
+    snapshot.put(scan, Collections.emptyList());
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
       verify_RelationalScanGivenAndNewPutInSameTableButConditionNotMatch_ShouldNotThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);

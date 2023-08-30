@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ConditionBuilder;
@@ -137,6 +138,46 @@ public abstract class ConsensusCommitRelationalScanIntegrationTestBase
     DistributedTransaction transaction = manager.start();
     Put put = preparePut(10, NUM_TYPES);
     Scan scan = prepareRelationalScan(1, NUM_TYPES, NUM_TYPES);
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () -> {
+              transaction.put(put);
+              transaction.scan(scan);
+              transaction.commit();
+            });
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void scan_PutNonOverlappedWithRelationalScanWithLikeGiven_ShouldNotThrowAnyException()
+      throws TransactionException {
+    // Arrange
+    populateRecordsForLike();
+    DistributedTransaction transaction = manager.start();
+    Put put = preparePut(999, "\\scalar[$]");
+    Scan scan = prepareRelationalScanWithLike(true, "\\_scalar[$]", "");
+
+    // Act Assert
+    assertDoesNotThrow(
+        () -> {
+          transaction.put(put);
+          transaction.scan(scan);
+          transaction.commit();
+        });
+  }
+
+  @Test
+  public void scan_PutResultOverlappedWithRelationalScanWithLikeGiven_ShouldThrowException()
+      throws TransactionException {
+    // Arrange
+    populateRecordsForLike();
+    DistributedTransaction transaction = manager.start();
+    Put put = preparePut(999, "\\scalar[$]");
+    Scan scan = prepareRelationalScanWithLike(true, "\\%scalar[$]", "");
 
     // Act
     Throwable thrown =

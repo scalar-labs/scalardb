@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ConditionBuilder;
@@ -170,6 +171,69 @@ public abstract class TwoPhaseConsensusCommitRelationalScanIntegrationTestBase
   }
 
   @Test
+  public void scan_PutNonOverlappedWithRelationalScanWithLikeGiven_ShouldNotThrowAnyException()
+      throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+    populateRecordsForLike(manager2, namespace2, TABLE_2);
+    Scan scan1 = Scan.newBuilder(prepareRelationalScan(namespace1, TABLE_1, 1, 0, 2)).build();
+    Scan scan2 = prepareRelationalScanWithLike(namespace2, TABLE_2, true, "\\_scalar[$]", "");
+    Put put = preparePut(namespace2, TABLE_2, 999, "\\scalar[$]");
+
+    TwoPhaseCommitTransaction transaction1 = manager1.start();
+    TwoPhaseCommitTransaction transaction2 = manager2.join(transaction1.getId());
+
+    // Act Assert
+    assertDoesNotThrow(
+        () -> {
+          // Non-overlapped scan-after-write
+          transaction1.scan(scan1);
+          transaction2.put(put);
+          transaction2.scan(scan2);
+
+          // Prepare
+          transaction1.prepare();
+          transaction2.prepare();
+
+          // Validate
+          transaction1.validate();
+          transaction2.validate();
+
+          // Commit
+          transaction1.commit();
+          transaction2.commit();
+        });
+  }
+
+  @Test
+  public void scan_PutResultOverlappedWithRelationalScanWithLikeGiven_ShouldThrowException()
+      throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+    populateRecordsForLike(manager2, namespace2, TABLE_2);
+    Scan scan1 = Scan.newBuilder(prepareRelationalScan(namespace1, TABLE_1, 1, 0, 2)).build();
+    Scan scan2 = prepareRelationalScanWithLike(namespace2, TABLE_2, true, "\\scalar[$]", "");
+    Put put = preparePut(namespace2, TABLE_2, 999, "\\scalar[$]");
+
+    TwoPhaseCommitTransaction transaction1 = manager1.start();
+    TwoPhaseCommitTransaction transaction2 = manager2.join(transaction1.getId());
+
+    transaction1.scan(scan1);
+    transaction2.put(put);
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () -> {
+              // Overlapped scan-after-write
+              transaction2.scan(scan2);
+            });
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void scan_WithIncludeMetadataEnabled_ShouldReturnTransactionMetadataColumns()
       throws TransactionException {
     scan_WithIncludeMetadataEnabled_ShouldReturnCorrectColumns(false);
@@ -216,7 +280,7 @@ public abstract class TwoPhaseConsensusCommitRelationalScanIntegrationTestBase
 
     // Assert the actual result
     TableMetadata transactionTableMetadata =
-        ConsensusCommitUtils.buildTransactionTableMetadata(TABLE_METADATA);
+        ConsensusCommitUtils.buildTransactionTableMetadata(TABLE_1_METADATA);
     if (hasProjections) {
       assertThat(result.getContainedColumnNames()).isEqualTo(projections);
     } else {

@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.io.BigIntColumn;
@@ -712,5 +713,72 @@ public class ConditionBuilderTest {
 
     // Assert
     assertThat(actual.getExpressions()).isEmpty();
+  }
+
+  @Test
+  public void likeExpression_ShouldBuildProperly() {
+    // Arrange
+
+    // Act
+    LikeExpression actual1 = ConditionBuilder.column("col1").isLikeText("%text");
+    LikeExpression actual2 = ConditionBuilder.column("col1").isLikeText("+%text", "+");
+    LikeExpression actual3 = ConditionBuilder.column("col1").isNotLikeText("%text");
+    LikeExpression actual4 = ConditionBuilder.column("col1").isNotLikeText("+%text", "+");
+
+    // Assert
+    assertThat(actual1.getColumn()).isEqualTo(TextColumn.of("col1", "%text"));
+    assertThat(actual1.getOperator()).isEqualTo(Operator.LIKE);
+    assertThat(actual1.getEscape()).isEqualTo("\\");
+    assertThat(actual2.getColumn()).isEqualTo(TextColumn.of("col1", "+%text"));
+    assertThat(actual2.getOperator()).isEqualTo(Operator.LIKE);
+    assertThat(actual2.getEscape()).isEqualTo("+");
+    assertThat(actual3.getColumn()).isEqualTo(TextColumn.of("col1", "%text"));
+    assertThat(actual3.getOperator()).isEqualTo(Operator.NOT_LIKE);
+    assertThat(actual3.getEscape()).isEqualTo("\\");
+    assertThat(actual4.getColumn()).isEqualTo(TextColumn.of("col1", "+%text"));
+    assertThat(actual4.getOperator()).isEqualTo(Operator.NOT_LIKE);
+    assertThat(actual4.getEscape()).isEqualTo("+");
+  }
+
+  @Test
+  public void putIf_WithLikeConditions_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act
+    Throwable thrown1 =
+        catchThrowable(
+            () ->
+                ConditionBuilder.putIf(ConditionBuilder.column("col1").isLikeText("%text"))
+                    .build());
+    Throwable thrown2 =
+        catchThrowable(
+            () ->
+                ConditionBuilder.putIf(ConditionBuilder.column("col1").isNotLikeText("%text"))
+                    .build());
+
+    // Assert
+    assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
+    assertThat(thrown2).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void deleteIf_WithLikeConditions_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act
+    Throwable thrown1 =
+        catchThrowable(
+            () ->
+                ConditionBuilder.deleteIf(ConditionBuilder.column("col1").isLikeText("%text"))
+                    .build());
+    Throwable thrown2 =
+        catchThrowable(
+            () ->
+                ConditionBuilder.deleteIf(ConditionBuilder.column("col1").isNotLikeText("%text"))
+                    .build());
+
+    // Assert
+    assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
+    assertThat(thrown2).isInstanceOf(IllegalArgumentException.class);
   }
 }

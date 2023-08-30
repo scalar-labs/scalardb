@@ -7,6 +7,7 @@ import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
@@ -348,6 +349,9 @@ public class Snapshot {
         return column.compareTo((Column<T>) condition.getColumn()) < 0;
       case LTE:
         return column.compareTo((Column<T>) condition.getColumn()) <= 0;
+      case LIKE:
+      case NOT_LIKE:
+        return ((LikeExpression) condition).isMatchedWith(column.getTextValue());
       default:
         throw new IllegalArgumentException("Unknown operator: " + condition.getOperator());
     }

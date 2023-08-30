@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -275,5 +276,29 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   @Override
   public Driver getDriver() {
     return new com.microsoft.sqlserver.jdbc.SQLServerDriver();
+  }
+
+  @Override
+  public String getPattern(LikeExpression likeExpression) {
+    String escape = likeExpression.getEscape();
+    String pattern = likeExpression.getTextValue();
+    if (escape.isEmpty()) {
+      // Even if users do not want to use escape character in ScalarDB (i.e., specifying "" for
+      // escape character rather than omitting it), we need to add an implicit escape character to
+      // escape SQL server specific escape characters ("[" and "]") because it always works even
+      // without specifying the escape clause. We use "\" as the implicit escape character, so we
+      // also need to escape it to achieve the user's original intention (i.e., no escape).
+      return pattern.replaceAll("[\\[\\]\\\\]", "\\\\$0");
+    } else {
+      // Only escape SQL server specific escape characters ("[" and "]") with the specified escape.
+      return pattern.replaceAll(
+          "[\\[\\]]", String.format("%s$0", escape.equals("\\") ? "\\\\" : escape));
+    }
+  }
+
+  @Override
+  public String getEscape(LikeExpression likeExpression) {
+    String escape = likeExpression.getEscape();
+    return escape.isEmpty() ? "\\" : escape;
   }
 }
