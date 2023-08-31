@@ -7,7 +7,6 @@ public final class JdbcEnv {
   private static final String PROP_JDBC_URL = "scalardb.jdbc.url";
   private static final String PROP_JDBC_USERNAME = "scalardb.jdbc.username";
   private static final String PROP_JDBC_PASSWORD = "scalardb.jdbc.password";
-  private static final String PROP_JDBC_MARIADB = "scalardb.jdbc.mariadb";
 
   private static final String DEFAULT_JDBC_URL = "jdbc:mysql://localhost:3306/";
   private static final String DEFAULT_JDBC_USERNAME = "root";
@@ -38,9 +37,5 @@ public final class JdbcEnv {
         DatabaseConfig.CONTACT_POINTS, System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL));
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
     return JdbcUtils.isSqlite(new JdbcConfig(new DatabaseConfig(props)));
-  }
-
-  public static boolean isMariaDB() {
-    return Boolean.getBoolean(PROP_JDBC_MARIADB);
   }
 }
