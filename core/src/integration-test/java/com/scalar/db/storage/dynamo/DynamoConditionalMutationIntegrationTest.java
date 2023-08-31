@@ -27,6 +27,9 @@ public class DynamoConditionalMutationIntegrationTest
   protected List<OperatorAndDataType> getOperatorAndDataTypeListForTest() {
     List<OperatorAndDataType> ret = new ArrayList<>();
     for (Operator operator : Operator.values()) {
+      if (operator == Operator.LIKE || operator == Operator.NOT_LIKE) {
+        continue;
+      }
       for (DataType dataType : DataType.values()) {
         // DynamoDB only supports the 'equal' and 'not equal' and 'is null' and 'is not null'
         // conditions for BOOLEAN type
