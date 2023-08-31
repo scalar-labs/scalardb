@@ -235,7 +235,7 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      mysql:
+      postgres:
         image: postgres:12-alpine
         env:
           POSTGRES_USER: postgres
@@ -268,7 +268,7 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      mysql:
+      postgres:
         image: postgres:13-alpine
         env:
           POSTGRES_USER: postgres
@@ -301,7 +301,7 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      mysql:
+      postgres:
         image: postgres:14-alpine
         env:
           POSTGRES_USER: postgres
@@ -334,7 +334,7 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      mysql:
+      postgres:
         image: postgres:15-alpine
         env:
           POSTGRES_USER: postgres
