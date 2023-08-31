@@ -3,6 +3,7 @@ package com.scalar.db.transaction.jdbc;
 import com.scalar.db.api.DistributedTransactionAdminImportTableIntegrationTestBase;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.jdbc.JdbcAdminImportTestUtils;
 import com.scalar.db.storage.jdbc.JdbcEnv;
 import java.sql.SQLException;
@@ -52,7 +53,8 @@ public class JdbcTransactionAdminImportTableIntegrationTest
   @Test
   @Override
   @EnabledIf("isSqlite")
-  public void importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException() {
+  public void importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException()
+      throws ExecutionException {
     super.importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException();
   }
 }

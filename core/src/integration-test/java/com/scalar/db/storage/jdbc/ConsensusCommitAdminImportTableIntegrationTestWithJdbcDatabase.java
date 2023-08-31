@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminImportTableIntegrationTestBase;
 import java.sql.SQLException;
 import java.util.Map;
@@ -47,7 +48,8 @@ public class ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
   @Test
   @Override
   @EnabledIf("isSqlite")
-  public void importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException() {
+  public void importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException()
+      throws ExecutionException {
     super.importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException();
   }
 }
