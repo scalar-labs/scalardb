@@ -235,9 +235,8 @@ class RdbEngineMysql implements RdbEngineStrategy {
       case CHAR:
       case VARCHAR:
       case LONGVARCHAR:
-        if (typeName.equalsIgnoreCase("ENUM")
-            || typeName.equalsIgnoreCase("SET")
-            || typeName.equalsIgnoreCase("JSON")) {
+        if (!typeName.toUpperCase().endsWith("CHAR") && !typeName.toUpperCase().endsWith("TEXT")) {
+          // to exclude ENUM, SET, JSON, etc.
           throw new IllegalArgumentException(
               String.format("Data type %s is unsupported: %s", typeName, columnDescription));
         }
