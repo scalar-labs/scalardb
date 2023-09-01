@@ -722,7 +722,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates a 'like' conditional expression for a TEXT value.
+     * Creates a 'like' conditional expression for a TEXT value. For the escape character, the
+     * default one ("\", i.e., backslash) is used.
      *
      * @param value a TEXT value used to compare with the target column
      * @return a like conditional expression
@@ -732,7 +733,9 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates a 'like' conditional expression for a TEXT value with escape a character.
+     * Creates a 'like' conditional expression for a TEXT value with an escape character. The escape
+     * character must be a string of a single character or an empty string. If an empty string is
+     * specified, the escape character is disabled.
      *
      * @param value a pattern used to compare with the target column
      * @param escape an escape character used in the pattern

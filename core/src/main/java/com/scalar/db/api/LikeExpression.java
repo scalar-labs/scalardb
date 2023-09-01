@@ -5,16 +5,18 @@ import com.scalar.db.io.TextColumn;
 import java.util.Objects;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
 public class LikeExpression extends ConditionalExpression {
   private static final String DEFAULT_ESCAPE_CHAR = "\\";
-  @Nonnull private final String escape;
-  @Nonnull private final String regexPattern;
+  private final String escape;
+  private final String regexPattern;
 
   /**
-   * Constructs a {@code LikeExpression} with the specified column and operator.
+   * Constructs a {@code LikeExpression} with the specified column and operator. For the escape
+   * character, the default one ("\", i.e., backslash) is used.
    *
    * @param column a target column used to compare
    * @param operator an operator used to compare the target column
@@ -25,6 +27,8 @@ public class LikeExpression extends ConditionalExpression {
 
   /**
    * Constructs a {@code LikeExpression} with the specified column, operator and escape character.
+   * The escape character must be a string of a single character or an empty string. If an empty
+   * string is specified, the escape character is disabled.
    *
    * @param column a target column used to compare
    * @param operator an operator used to compare the target column
@@ -33,7 +37,8 @@ public class LikeExpression extends ConditionalExpression {
   LikeExpression(TextColumn column, Operator operator, String escape) {
     super(column, operator);
     if (operator != Operator.LIKE && operator != Operator.NOT_LIKE) {
-      throw new IllegalArgumentException("Operator must be like or not-like");
+      throw new IllegalArgumentException(
+          "Operator must be like or not-like. Operator: " + operator);
     }
     if (escape == null || escape.length() > 1) {
       throw new IllegalArgumentException(
@@ -57,7 +62,7 @@ public class LikeExpression extends ConditionalExpression {
    * @param escape an escape character.
    * @return the equivalent Java regular expression of the given pattern
    */
-  private String convertRegexPatternFrom(String likePattern, Character escape) {
+  private String convertRegexPatternFrom(String likePattern, @Nullable Character escape) {
     if (likePattern == null) {
       throw new IllegalArgumentException("LIKE pattern must not be null");
     }
