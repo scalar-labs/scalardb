@@ -76,6 +76,15 @@ $ pre-commit install
 
 The code formatter is automatically executed when commiting files. A commit will fail and be formatted by the formatter when any invalid code format is detected. Try to commit the change again.
 
+### Exception and log message guideline
+
+All the exception and log messages in this project are consistent with the following guideline.
+
+- The first character is capitalized
+- The message should not end with punctuation
+
+Follow the guideline when you contribute to this project.
+
 ## License
 ScalarDB is dual-licensed under both the Apache 2.0 License (found in the LICENSE file in the root directory) and a commercial license.
 You may select, at your option, one of the above-listed licenses.
