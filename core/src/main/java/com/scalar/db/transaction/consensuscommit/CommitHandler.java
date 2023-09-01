@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
@@ -15,17 +16,18 @@ import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
+import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationTransactionRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisync.DefaultLogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.semisync.PrepareMutationComposerForReplication;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,9 +41,28 @@ public class CommitHandler {
   private final ParallelExecutor parallelExecutor;
 
   // FIXME
-  public static AtomicReference<ReplicationTransactionRepository> replicationTransactionRepository =
-      new AtomicReference<>();
   private final LogRecorder logRecorder;
+
+  private Optional<LogRecorder> prepareLogRecorder() {
+    String replicationDbConfigPath = System.getenv("LOG_APPLIER_REPLICATION_CONFIG");
+    if (replicationDbConfigPath == null) {
+      return Optional.empty();
+    }
+    ReplicationTransactionRepository replicationTransactionRepository;
+    try {
+      replicationTransactionRepository =
+          new ReplicationTransactionRepository(
+              StorageFactory.create(replicationDbConfigPath).getStorage(),
+              new ObjectMapper(),
+              "replication",
+              "transactions");
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+    return Optional.of(
+        new DefaultLogRecorder(tableMetadataManager, replicationTransactionRepository));
+  }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
@@ -55,13 +76,7 @@ public class CommitHandler {
     this.parallelExecutor = checkNotNull(parallelExecutor);
 
     // FIXME: This is only for PoC.
-    ReplicationTransactionRepository repositoryForLogRecorder =
-        replicationTransactionRepository.get();
-    if (repositoryForLogRecorder != null) {
-      this.logRecorder = new DefaultLogRecorder(tableMetadataManager, repositoryForLogRecorder);
-    } else {
-      this.logRecorder = null;
-    }
+    logRecorder = prepareLogRecorder().orElse(null);
   }
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
@@ -125,9 +140,7 @@ public class CommitHandler {
       throws ExecutionException, PreparationConflictException {
     PrepareMutationComposer composer;
     Optional<Future<Void>> logRecordFuture = Optional.empty();
-    // FIXME: This should be configured
-    boolean logRecorderEnabled = true;
-    if (logRecorderEnabled) {
+    if (logRecorder != null) {
       composer = new PrepareMutationComposerForReplication(snapshot.getId(), tableMetadataManager);
       snapshot.to(composer);
       logRecordFuture =

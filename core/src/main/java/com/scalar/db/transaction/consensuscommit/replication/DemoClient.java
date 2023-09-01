@@ -1,6 +1,5 @@
 package com.scalar.db.transaction.consensuscommit.replication;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
@@ -10,10 +9,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Key;
-import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
-import com.scalar.db.transaction.consensuscommit.CommitHandler;
-import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationTransactionRepository;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
@@ -175,7 +171,6 @@ public class DemoClient implements AutoCloseable {
   }
 
   private static final String ENV_VAR_SCALARDB_CONFIG = "DEMO_SCALARDB_CONFIG";
-  private static final String ENV_VAR_REPLICATION_CONFIG = "DEMO_REPLICATION_CONFIG";
   private static final String ENV_VAR_NUM_OF_CUSTOMERS = "DEMO_NUM_OF_CUSTOMERS";
   private static final String ENV_VAR_NUM_OF_THREADS = "DEMO_NUM_OF_THREADS";
   private static final String ENV_VAR_UPDATE_LOOP = "DEMO_UPDATE_LOOP";
@@ -186,12 +181,6 @@ public class DemoClient implements AutoCloseable {
     if (scalarDbConfigPath == null) {
       throw new IllegalArgumentException(
           "ScalarDB config file path isn't specified. key:" + ENV_VAR_SCALARDB_CONFIG);
-    }
-
-    String replicationDbConfigPath = System.getenv(ENV_VAR_REPLICATION_CONFIG);
-    if (replicationDbConfigPath == null) {
-      throw new IllegalArgumentException(
-          "Replication config file path isn't specified. key:" + ENV_VAR_REPLICATION_CONFIG);
     }
 
     int numOfCustomers = 2000;
@@ -208,14 +197,6 @@ public class DemoClient implements AutoCloseable {
     if (System.getenv(ENV_VAR_UPDATE_LOOP) != null) {
       updateLoop = Integer.parseInt(System.getenv(ENV_VAR_UPDATE_LOOP));
     }
-
-    ReplicationTransactionRepository replicationTransactionRepository =
-        new ReplicationTransactionRepository(
-            StorageFactory.create(replicationDbConfigPath).getStorage(),
-            new ObjectMapper(),
-            "replication",
-            "transactions");
-    CommitHandler.replicationTransactionRepository.set(replicationTransactionRepository);
 
     TransactionFactory transactionFactory = TransactionFactory.create(scalarDbConfigPath);
     try (DemoClient main = new DemoClient(transactionFactory, numOfThreads, numOfCustomers)) {
