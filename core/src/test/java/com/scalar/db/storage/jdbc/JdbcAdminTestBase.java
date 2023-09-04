@@ -2247,7 +2247,10 @@ public abstract class JdbcAdminTestBase {
         .thenReturn(Types.VARCHAR)
         .thenReturn(Types.VARCHAR)
         .thenReturn(Types.REAL);
-    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("").thenReturn("").thenReturn("");
+    when(columnResults.getString(JDBC_COL_TYPE_NAME))
+        .thenReturn("VARCHAR")
+        .thenReturn("VARCHAR")
+        .thenReturn("");
     when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0).thenReturn(0).thenReturn(0);
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0).thenReturn(0).thenReturn(0);
     when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
@@ -2492,7 +2495,7 @@ public abstract class JdbcAdminTestBase {
     when(columnResults.next()).thenReturn(true).thenReturn(false);
     when(columnResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn(COLUMN_1);
     when(columnResults.getInt(JDBC_COL_DATA_TYPE)).thenReturn(Types.VARCHAR);
-    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("");
+    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("VARCHAR");
     when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0);
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0);
     when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
