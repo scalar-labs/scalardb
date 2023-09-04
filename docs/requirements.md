@@ -32,6 +32,12 @@ In ScalarDB on JDBC databases, you can't choose a consistency level (`LINEARIZAB
 
 For example, if you have asynchronous read replicas in your setup and perform read operations against them, the consistency will be eventual because you can read stale data from the read replicas. On the other hand, if you perform all operations against a single master instance, the consistency will be linearizable.
 
-We recommend performing all operations or transactions against a single master instance so that you can achieve linearizability and avoid worrying about consistency issues in your application. Note that you can still use a read replica as a backup and standby even if you follow this recommendation.
+With this in mind, you must perform all operations or transactions against a single master instance so that you can achieve linearizability and avoid worrying about consistency issues in your application. In other words, ScalarDB does not support read replicas. 
 
-If you must perform operations or transactions on read replicas, you can configure your application to perform read-write-mixed transactions against a single master instance and read-only transactions against read replicas. The resulting transaction schedules with the configuration would not be strict serializable (linearizable and serializable) but would be serializable.
+{% capture notice--info %}
+**Note**
+
+You can still use a read replica as a backup and standby even when following this guideline.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
