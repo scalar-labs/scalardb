@@ -492,7 +492,7 @@ public class ScanBuilder {
     protected final Set<Set<ConditionalExpression>> disjunctions = new HashSet<>();
     protected final List<String> projections = new ArrayList<>();
     protected final List<Scan.Ordering> orderings = new ArrayList<>();
-    protected int limit = 0;
+    protected int limit;
     @Nullable protected com.scalar.db.api.Consistency consistency;
 
     private BuildableScanAllWithWhere(BuildableScanAll buildable) {
@@ -516,6 +516,10 @@ public class ScanBuilder {
       this.condition = null;
       this.conjunctions.addAll(buildable.conjunctions);
       this.disjunctions.addAll(buildable.disjunctions);
+      this.limit = buildable.limit;
+      this.projections.addAll(buildable.projections);
+      this.orderings.addAll(buildable.orderings);
+      this.consistency = buildable.consistency;
     }
 
     @Override
