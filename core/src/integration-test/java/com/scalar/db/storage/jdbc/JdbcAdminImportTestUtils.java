@@ -103,7 +103,9 @@ public class JdbcAdminImportTestUtils {
           "sql_variant",
           "time",
           "uniqueidentifier",
-          "xml");
+          "xml",
+          "geometry",
+          "geography");
 
   private final JdbcConfig config;
   private final RdbEngineStrategy rdbEngine;
