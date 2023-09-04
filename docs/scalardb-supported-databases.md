@@ -1,28 +1,141 @@
-# Scalar DB Supported Databases
+# Supported Databases
 
-Scalar DB supports the following databases and the databases that are compatible with those databases.
-* Cassandra
-* Cosmos DB
-* DynamoDB
-* MySQL
-* PostgreSQL
-* Oracle Database
-* SQL Server
-* AWS Aurora MySQL
-* AWS Aurora PostgreSQL
+ScalarDB supports the following databases and their versions.
 
-## Compatibility matrix
+## Amazon DynamoDB
 
-| Scalar DB Version | Cassandra 3.11 | Cassandra 3.0    | Cassandra 2.2   | Cosmos DB | DynamoDB  | MySQL 8.0  | MySQL 5.7  | PostgreSQL 14 | PostgreSQL 13 | PostgreSQL 12 | Oracle 19.0.0.0.ru-2021-04.rur-2021-04.r1 | Oracle 12.2.0.1.ru-2021-04.rur-2021-04.r1 | Oracle 12.1.0.2.v24   | SQL Server 2019 | SQL Server 2017 | SQL Server 2016 | AWS Aurora MySQL 3 (MySQL 8) |  AWS Aurora PostgreSQL 13 | AWS Aurora PostgreSQL 12 | AWS Aurora PostgreSQL 11 |
-|:------------------|:---------------|:-----------------|:----------------|:----------|:----------|:-----------|:-----------|:--------------|:--------------|:--------------|:------------------------------------------|:------------------------------------------|:----------------------|:----------------|:----------------|:----------------|:-----------------------------|:--------------------------|:-------------------------|:-------------------------|
-| Scalar DB 3.5 |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |
-| Scalar DB 3.4 |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |
-| Scalar DB 3.3 |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |
-| Scalar DB 3.2 |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |
-| Scalar DB 3.1 |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |
-| Scalar DB 3.0 |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |
-| Scalar DB 2.4 |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |
-| Scalar DB 2.3 |  ✅  |  ✅  |  ✅  |  ✅  |  ✅  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |
-| Scalar DB 2.2 |  ✅  |  ✅  |  ✅  |  ✅  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |
-| Scalar DB 2.1 |  ✅  |  ✅  |  ✅  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |
-| Scalar DB 2.0 |  ✅  |  ✅  |  ✅  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |
+| Version | DynamoDB |
+|:------------------|:---------------|
+| **ScalarDB 3.10** | ✅ |
+| **ScalarDB 3.9** | ✅ |
+| **ScalarDB 3.8** | ✅ |
+| **ScalarDB 3.7** | ✅ |
+| **ScalarDB 3.6** | ✅ |
+| **ScalarDB 3.5** | ✅ |
+| **ScalarDB 3.4** | ✅ |
+
+## Apache Cassandra
+
+{% capture notice--info %}
+**Note**
+
+For requirements when using Cassandra or Cassandra-compatible databases, see [Cassandra or Cassandra-compatible database requirements](requirements/#cassandra-or-cassandra-compatible-database-requirements).
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
+| Version | Cassandra 4.1 | Cassandra 4.0 | Cassandra 3.11 | Cassandra 3.0 | Cassandra 2.2 |
+|:------------------|:---------------|:-----------------|:----------------|:-----------------|:----------------|
+| **ScalarDB 3.10** | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **ScalarDB 3.9** | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **ScalarDB 3.8** | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **ScalarDB 3.7** | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **ScalarDB 3.6** | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **ScalarDB 3.5** | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **ScalarDB 3.4** | ❌ | ❌ | ✅ | ✅ | ✅ |
+
+## Azure Cosmos DB for NoSQL
+
+| Version | Cosmos DB for NoSQL |
+|:------------------|:---------------|
+| **ScalarDB 3.10** | ✅ |
+| **ScalarDB 3.9** | ✅ |
+| **ScalarDB 3.8** | ✅ |
+| **ScalarDB 3.7** | ✅ |
+| **ScalarDB 3.6** | ✅ |
+| **ScalarDB 3.5** | ✅ |
+| **ScalarDB 3.4** | ✅ |
+
+## JDBC databases
+
+{% capture notice--info %}
+**Note**
+
+For recommendations when using JDBC databases, see [JDBC database recommendations](requirements/#jdbc-database-requirements).
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
+### Amazon Aurora MySQL
+
+| Version | Aurora MySQL 3 | Aurora MySQL 2 |
+:---------------|:---------------|:---------------|
+| **ScalarDB 3.10** | ✅ | ✅ |
+| **ScalarDB 3.9** | ✅ | ✅ |
+| **ScalarDB 3.8** | ✅ | ✅ |
+| **ScalarDB 3.7** | ✅ | ✅ |
+| **ScalarDB 3.6** | ✅ | ✅ |
+| **ScalarDB 3.5** | ✅ | ✅ |
+| **ScalarDB 3.4** | ✅ | ✅ |
+
+### Amazon Aurora PostgreSQL
+
+| Version | Aurora PostgreSQL 14 | Aurora PostgreSQL 13 | Aurora PostgreSQL 12 |
+:---------------|:---------------|:---------------|:---------------|
+| **ScalarDB 3.10** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.9** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.8** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.7** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.6** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.5** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.4** | ✅ | ✅ | ✅ |
+
+### Microsoft SQL Server
+
+| Version | SQL Server 2022 | SQL Server 2019 | SQL Server 2017 |
+:---------------|:---------------|:---------------|:---------------|
+| **ScalarDB 3.10** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.9** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.8** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.7** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.6** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.5** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.4** | ✅ | ✅ | ✅ |
+
+### MySQL
+
+| Version | MySQL 8.0 | MySQL 5.7 |
+|:---------------|:---------------|:---------------|
+| **ScalarDB 3.10** | ✅ | ✅ |
+| **ScalarDB 3.9** | ✅ | ✅ |
+| **ScalarDB 3.8** | ✅ | ✅ |
+| **ScalarDB 3.7** | ✅ | ✅ |
+| **ScalarDB 3.6** | ✅ | ✅ |
+| **ScalarDB 3.5** | ✅ | ✅ |
+| **ScalarDB 3.4** | ✅ | ✅ |
+
+### Oracle
+
+| Version | Oracle 21.3.0-xe | Oracle 18.4.0-xe |
+:---------------|:---------------|:---------------|
+| **ScalarDB 3.10** | ✅ | ✅ |
+| **ScalarDB 3.9** | ✅ | ✅ |
+| **ScalarDB 3.8** | ✅ | ✅ |
+| **ScalarDB 3.7** | ✅ | ✅ |
+| **ScalarDB 3.6** | ✅ | ✅ |
+| **ScalarDB 3.5** | ✅ | ✅ |
+| **ScalarDB 3.4** | ✅ | ✅ |
+
+### PostgreSQL
+
+| Version | PostgreSQL 14 | PostgreSQL 13 | PostgreSQL 12 |
+|:---------------|:---------------|:---------------|:---------------|
+| **ScalarDB 3.10** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.9** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.8** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.7** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.6** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.5** | ✅ | ✅ | ✅ |
+| **ScalarDB 3.4** | ✅ | ✅ | ✅ |
+
+### SQLite
+
+| Version | SQLite 3 |
+:---------------|:---------------|
+| **ScalarDB 3.10** | ✅ |
+| **ScalarDB 3.9** | ✅ |
+| **ScalarDB 3.8** | ❌ |
+| **ScalarDB 3.7** | ❌ |
+| **ScalarDB 3.6** | ❌ |
+| **ScalarDB 3.5** | ❌ |
+| **ScalarDB 3.4** | ❌ |
