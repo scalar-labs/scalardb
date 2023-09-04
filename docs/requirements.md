@@ -1,28 +1,43 @@
-# Requirements in the Underlying Databases of ScalarDB
+# Requirements and Recommendations for the Underlying Databases of ScalarDB
 
-This document explains the requirements in the underlying databases of ScalarDB to make ScalarDB applications work correctly.
+This document explains the requirements and recommendations in the underlying databases of ScalarDB to make ScalarDB applications work correctly.
 
-## Cassandra (or Cassandra compatible databases)
+## Cassandra or Cassandra-compatible database requirements
 
-Here are the requirements to make ScalarDB on Cassandra (or Cassandra compatible databases) work properly.
+The following are requirements to make ScalarDB on Cassandra or Cassandra-compatible databases work properly and for storage operations with `LINEARIZABLE` to provide linearizability and for transaction operations with `SERIALIZABLE` to provide strict serializability.
 
-1. Durability is provided.
-   1. In Cassandra, `commitlog_sync` in cassandra.yaml must be changed to `batch` or `group` from the default `periodic`.
-2. (For Cassandra-compatible databases) Lightweight transactions (LWTs) are supported.
+### Ensure durability in Cassandra
 
-The first requirement is necessary because ScalarDB provides only atomicity and isolation properties of ACID and requests the underlying databases to provide durability.
-You can still use `periodic`, but we do not recommend using this you know exactly what you are doing.
+In **cassandra.yaml**, you must change `commitlog_sync` from the default `periodic` to `batch` or `group` to ensure durability in Cassandra.
 
-The second requirement is necessary because ScalarDB does not work on some Cassandra-compatible databases, such as [Amazon Keyspaces](https://aws.amazon.com/keyspaces/), that do not support LWTs. This is because the Consensus Commit transaction manager relies on the linearizable operations of underlying databases to make transactions serializable.
+ScalarDB provides only the atomicity and isolation properties of ACID and requests the underlying databases to provide durability. Although you can specify `periodic`, we do not recommend doing so unless you know exactly what you are doing.
 
-If the above requirements are met, storage operations with `LINEARIZABLE` can provide linearizablity and transaction operations with `SERIALIZABLE` can provide strict serializability.
+### Confirm that the Cassandra-compatible database supports lightweight transactions (LWTs)
 
-## JDBC databases
+You must use a Cassandra-compatible database that supports LWTs.
 
-In ScalarDB on JDBC databases, you can't choose a consistency level (`LINEARIZABLE`, `SEQUENTIAL` or `EVENTUAL`) in your code with the `Operation.withConsistency()` method, and the consistency level depends on the setup of your JDBC database.
-For example, when you have asynchronous read replicas in your setup and perform read operations against them, the consistency will be eventual because you can read stale data from the read replicas.
-On the other hand, when you perform all operations against a single master instance, the consistency will be linearizable.
-We recommend performing all operations/transactions against a single master instance (so that you can achieve linearizable) if you want to avoid caring consistency issues in your applications. Note that you can still use a read replica as a backup and standby even if you follow the recommendation.
+ScalarDB does not work on some Cassandra-compatible databases that do not support LWTs, such as [Amazon Keyspaces](https://aws.amazon.com/keyspaces/). This is because the Consensus Commit transaction manager relies on the linearizable operations of underlying databases to make transactions serializable.
 
-If you strongly want to perform operations/transactions on read replicas, you can configure your application to perform read-write-mixed transactions against a master instance and read-only transactions against read replicas.
-The resulting schedule would not be strict serializable (linearizable and serializable) but would be serializable.
+## CosmosDB database requirements
+
+In your Azure CosmosDB account, you must set the **default consistency level** to **Strong**.
+
+Consensus Commit, the ScalarDB transaction protocol, requires linearizable reads. By setting the **default consistency level** to **Strong**, CosmosDB can guarantee linearizability.
+
+For instructions on how to configure this setting, see the official documentation at [Configure the default consistency level](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/how-to-manage-consistency#configure-the-default-consistency-level).
+
+## JDBC database recommendations
+
+In ScalarDB on JDBC databases, you can't choose a consistency level (`LINEARIZABLE`, `SEQUENTIAL` or `EVENTUAL`) in your code by using the `Operation.withConsistency()` method. In addition, the consistency level depends on the setup of your JDBC database.
+
+For example, if you have asynchronous read replicas in your setup and perform read operations against them, the consistency will be eventual because you can read stale data from the read replicas. On the other hand, if you perform all operations against a single master instance, the consistency will be linearizable.
+
+With this in mind, you must perform all operations or transactions against a single master instance so that you can achieve linearizability and avoid worrying about consistency issues in your application. In other words, ScalarDB does not support read replicas. 
+
+{% capture notice--info %}
+**Note**
+
+You can still use a read replica as a backup and standby even when following this guideline.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
