@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ComparisonChain;
 import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -34,7 +35,9 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
@@ -351,7 +354,7 @@ public class Snapshot {
         return column.compareTo((Column<T>) condition.getColumn()) <= 0;
       case LIKE:
       case NOT_LIKE:
-        return ((LikeExpression) condition).isMatchedWith(column.getTextValue());
+        return isMatched((LikeExpression) condition, column.getTextValue());
       default:
         throw new IllegalArgumentException("Unknown operator: " + condition.getOperator());
     }
@@ -525,6 +528,64 @@ public class Snapshot {
 
   public boolean isValidationRequired() {
     return isExtraReadEnabled();
+  }
+
+  @VisibleForTesting
+  boolean isMatched(LikeExpression likeExpression, String value) {
+    String escape = likeExpression.getEscape();
+    String regexPattern =
+        convertRegexPatternFrom(
+            likeExpression.getTextValue(), escape.isEmpty() ? null : escape.charAt(0));
+    if (likeExpression.getOperator().equals(Operator.LIKE)) {
+      return value != null && Pattern.compile(regexPattern).matcher(value).matches();
+    } else {
+      return value != null && !Pattern.compile(regexPattern).matcher(value).matches();
+    }
+  }
+
+  /**
+   * Convert SQL 'like' pattern to a Java regular expression. Underscores (_) are converted to '.'
+   * and percent signs (%) are converted to '.*', other characters are quoted literally. If an
+   * escape character specified, escaping is done for '_', '%', and the escape character itself.
+   * Although we validate the pattern when constructing {@code LikeExpression}, we will check it
+   * just in case and throw {@code IllegalArgumentException} for the invalid pattern. This method is
+   * implemented referencing the following Spark SQL implementation.
+   * https://github.com/apache/spark/blob/a8eadebd686caa110c4077f4199d11e797146dc5/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/util/StringUtils.scala
+   *
+   * @param likePattern a SQL LIKE pattern to convert
+   * @param escape an escape character.
+   * @return the equivalent Java regular expression of the given pattern
+   */
+  private String convertRegexPatternFrom(String likePattern, @Nullable Character escape) {
+    if (likePattern == null) {
+      throw new IllegalArgumentException("LIKE pattern must not be null");
+    }
+
+    StringBuilder out = new StringBuilder();
+    char[] chars = likePattern.toCharArray();
+    for (int i = 0; i < chars.length; i++) {
+      char c = chars[i];
+      if (escape != null && c == escape && i + 1 < chars.length) {
+        char nextChar = chars[++i];
+        if (nextChar == '_' || nextChar == '%') {
+          out.append(Pattern.quote(Character.toString(nextChar)));
+        } else if (nextChar == escape) {
+          out.append(Pattern.quote(Character.toString(nextChar)));
+        } else {
+          throw new IllegalArgumentException("LIKE pattern must not include only escape character");
+        }
+      } else if (escape != null && c == escape) {
+        throw new IllegalArgumentException("LIKE pattern must not end with escape character");
+      } else if (c == '_') {
+        out.append(".");
+      } else if (c == '%') {
+        out.append(".*");
+      } else {
+        out.append(Pattern.quote(Character.toString(c)));
+      }
+    }
+
+    return "(?s)" + out; // (?s) enables dotall mode, causing "." to match new lines
   }
 
   @Immutable
