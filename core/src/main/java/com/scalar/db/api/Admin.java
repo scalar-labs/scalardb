@@ -334,7 +334,7 @@ public interface Admin {
    * Returns the names of the table belonging to the given namespace.
    *
    * @param namespace a namespace
-   * @return a set of table names, an empty list if the namespace doesn't exist
+   * @return a set of table names, an empty set if the namespace doesn't exist
    * @throws ExecutionException if the operation fails
    */
   Set<String> getNamespaceTableNames(String namespace) throws ExecutionException;
@@ -413,4 +413,12 @@ public interface Admin {
    * @throws ExecutionException if the operation fails
    */
   void importTable(String namespace, String table) throws ExecutionException;
+
+  /**
+   * Returns the names of the existing namespaces created through Scalar DB.
+   *
+   * @return a set of namespaces names, an empty set if no namespaces exist
+   * @throws ExecutionException if the operation fails
+   */
+  Set<String> getNamespaceNames() throws ExecutionException;
 }

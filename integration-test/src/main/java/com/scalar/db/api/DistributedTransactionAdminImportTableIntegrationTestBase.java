@@ -79,6 +79,7 @@ public abstract class DistributedTransactionAdminImportTableIntegrationTestBase 
   @Test
   public void importTable_ShouldWorkProperly() throws Exception {
     // Arrange
+    admin.createNamespace(getNamespace(), getCreationOptions());
     tables.putAll(createExistingDatabaseWithAllDataTypes());
 
     // Act Assert
@@ -95,7 +96,11 @@ public abstract class DistributedTransactionAdminImportTableIntegrationTestBase 
   }
 
   @Test
-  public void importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException() {
+  public void importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException()
+      throws ExecutionException {
+    // Arrange
+    admin.createNamespace(getNamespace(), getCreationOptions());
+
     // Act Assert
     assertThatThrownBy(() -> admin.importTable(getNamespace(), "unsupported_db"))
         .isInstanceOf(UnsupportedOperationException.class);

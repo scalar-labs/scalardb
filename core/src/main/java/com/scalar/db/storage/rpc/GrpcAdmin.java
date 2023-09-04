@@ -294,17 +294,14 @@ public class GrpcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     execute(
         () ->
-            execute(
-                () ->
-                    stub.withDeadlineAfter(
-                            config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
-                        .repairTable(
-                            RepairTableRequest.newBuilder()
-                                .setNamespace(namespace)
-                                .setTable(table)
-                                .setTableMetadata(ProtoUtils.toTableMetadata(metadata))
-                                .putAllOptions(options)
-                                .build())));
+            stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                .repairTable(
+                    RepairTableRequest.newBuilder()
+                        .setNamespace(namespace)
+                        .setTable(table)
+                        .setTableMetadata(ProtoUtils.toTableMetadata(metadata))
+                        .putAllOptions(options)
+                        .build()));
   }
 
   @Override
@@ -313,17 +310,20 @@ public class GrpcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     execute(
         () ->
-            execute(
-                () ->
-                    stub.withDeadlineAfter(
-                            config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
-                        .addNewColumnToTable(
-                            AddNewColumnToTableRequest.newBuilder()
-                                .setNamespace(namespace)
-                                .setTable(table)
-                                .setColumnName(columnName)
-                                .setColumnType(ProtoUtils.toDataType(columnType))
-                                .build())));
+            stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                .addNewColumnToTable(
+                    AddNewColumnToTableRequest.newBuilder()
+                        .setNamespace(namespace)
+                        .setTable(table)
+                        .setColumnName(columnName)
+                        .setColumnType(ProtoUtils.toDataType(columnType))
+                        .build()));
+  }
+
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    throw new UnsupportedOperationException(
+        "Retrieving the namespace names is not supported in ScalarDB Server");
   }
 
   @Override

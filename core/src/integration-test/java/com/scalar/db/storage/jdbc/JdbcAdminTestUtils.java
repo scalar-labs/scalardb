@@ -19,7 +19,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   public JdbcAdminTestUtils(Properties properties) {
     super(properties);
     config = new JdbcConfig(new DatabaseConfig(properties));
-    metadataSchema = config.getTableMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
+    metadataSchema = config.getMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
     rdbEngine = RdbEngineFactory.create(config);
   }
 
@@ -27,9 +27,6 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   public void dropMetadataTable() throws SQLException {
     execute(
         "DROP TABLE " + rdbEngine.encloseFullTableName(metadataSchema, JdbcAdmin.METADATA_TABLE));
-
-    String dropNamespaceStatement = rdbEngine.dropNamespaceSql(metadataSchema);
-    execute(dropNamespaceStatement);
   }
 
   @Override

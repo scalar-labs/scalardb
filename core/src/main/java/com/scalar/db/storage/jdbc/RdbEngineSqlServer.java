@@ -86,15 +86,6 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   }
 
   @Override
-  public String namespaceExistsStatement() {
-    return "SELECT 1 FROM "
-        + encloseFullTableName("sys", "schemas")
-        + " WHERE "
-        + enclose("name")
-        + " = ?";
-  }
-
-  @Override
   public String alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
     // SQLServer does not require changes in column data types when making indices.
@@ -232,14 +223,16 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
         return DataType.TEXT;
       case BINARY:
       case VARBINARY:
-        if (typeName.equalsIgnoreCase("timestamp") || typeName.equalsIgnoreCase("hierarchyid")) {
+        if (!typeName.equalsIgnoreCase("binary") && !typeName.equalsIgnoreCase("varbinary")) {
           throw new IllegalArgumentException(
               String.format("Data type %s is unsupported: %s", typeName, columnDescription));
         }
-        logger.info(
-            "Data type larger than that of underlying database is assigned: {} ({} to BLOB)",
-            columnDescription,
-            typeName);
+        if (columnSize < Integer.MAX_VALUE) {
+          logger.info(
+              "Data type larger than that of underlying database is assigned: {} ({} to BLOB)",
+              columnDescription,
+              typeName);
+        }
         return DataType.BLOB;
       case LONGVARBINARY:
         return DataType.BLOB;

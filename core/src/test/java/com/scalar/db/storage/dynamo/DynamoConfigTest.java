@@ -14,7 +14,7 @@ public class DynamoConfigTest {
   private static final String ANY_SECRET_ACCESS_ID = "any_secret_access_id";
   private static final String DYNAMO_STORAGE = "dynamo";
   private static final String ANY_ENDPOINT_OVERRIDE = "http://localhost:8000";
-  private static final String ANY_TABLE_METADATA_NAMESPACE = "any_namespace";
+  private static final String ANY_METADATA_NAMESPACE = "any_namespace";
   private static final String ANY_NAMESPACE_PREFIX = "any_prefix";
 
   @Test
@@ -26,7 +26,7 @@ public class DynamoConfigTest {
     props.setProperty(DatabaseConfig.PASSWORD, ANY_SECRET_ACCESS_ID);
     props.setProperty(DatabaseConfig.STORAGE, DYNAMO_STORAGE);
     props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, ANY_ENDPOINT_OVERRIDE);
-    props.setProperty(DynamoConfig.TABLE_METADATA_NAMESPACE, ANY_TABLE_METADATA_NAMESPACE);
+    props.setProperty(DynamoConfig.METADATA_NAMESPACE, ANY_METADATA_NAMESPACE);
     props.setProperty(DynamoConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
 
     // Act
@@ -38,8 +38,8 @@ public class DynamoConfigTest {
     assertThat(config.getSecretAccessKey()).isEqualTo(ANY_SECRET_ACCESS_ID);
     assertThat(config.getEndpointOverride().isPresent()).isTrue();
     assertThat(config.getEndpointOverride().get()).isEqualTo(ANY_ENDPOINT_OVERRIDE);
-    assertThat(config.getTableMetadataNamespace()).isPresent();
-    assertThat(config.getTableMetadataNamespace().get()).isEqualTo(ANY_TABLE_METADATA_NAMESPACE);
+    assertThat(config.getMetadataNamespace()).isPresent();
+    assertThat(config.getMetadataNamespace().get()).isEqualTo(ANY_METADATA_NAMESPACE);
     assertThat(config.getNamespacePrefix()).isPresent();
     assertThat(config.getNamespacePrefix().get()).isEqualTo(ANY_NAMESPACE_PREFIX);
   }
@@ -52,7 +52,7 @@ public class DynamoConfigTest {
     props.setProperty(DatabaseConfig.USERNAME, ANY_ACCESS_KEY_ID);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_SECRET_ACCESS_ID);
     props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, ANY_ENDPOINT_OVERRIDE);
-    props.setProperty(DynamoConfig.TABLE_METADATA_NAMESPACE, ANY_TABLE_METADATA_NAMESPACE);
+    props.setProperty(DynamoConfig.METADATA_NAMESPACE, ANY_METADATA_NAMESPACE);
 
     // Act Assert
     assertThatThrownBy(() -> new DynamoConfig(new DatabaseConfig(props)))
@@ -67,7 +67,7 @@ public class DynamoConfigTest {
     props.setProperty(DatabaseConfig.USERNAME, ANY_ACCESS_KEY_ID);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_SECRET_ACCESS_ID);
     props.setProperty(DatabaseConfig.STORAGE, DYNAMO_STORAGE);
-    props.setProperty(DynamoConfig.TABLE_METADATA_NAMESPACE, ANY_TABLE_METADATA_NAMESPACE);
+    props.setProperty(DynamoConfig.METADATA_NAMESPACE, ANY_METADATA_NAMESPACE);
 
     // Act
     DynamoConfig config = new DynamoConfig(new DatabaseConfig(props));
@@ -77,8 +77,8 @@ public class DynamoConfigTest {
     assertThat(config.getAccessKeyId()).isEqualTo(ANY_ACCESS_KEY_ID);
     assertThat(config.getSecretAccessKey()).isEqualTo(ANY_SECRET_ACCESS_ID);
     assertThat(config.getEndpointOverride().isPresent()).isFalse();
-    assertThat(config.getTableMetadataNamespace()).isPresent();
-    assertThat(config.getTableMetadataNamespace().get()).isEqualTo(ANY_TABLE_METADATA_NAMESPACE);
+    assertThat(config.getMetadataNamespace()).isPresent();
+    assertThat(config.getMetadataNamespace().get()).isEqualTo(ANY_METADATA_NAMESPACE);
   }
 
   @Test
@@ -117,7 +117,7 @@ public class DynamoConfigTest {
     assertThat(config.getSecretAccessKey()).isEqualTo(ANY_SECRET_ACCESS_ID);
     assertThat(config.getEndpointOverride().isPresent()).isTrue();
     assertThat(config.getEndpointOverride().get()).isEqualTo(ANY_ENDPOINT_OVERRIDE);
-    assertThat(config.getTableMetadataNamespace()).isNotPresent();
+    assertThat(config.getMetadataNamespace()).isNotPresent();
   }
 
   @Test
@@ -147,10 +147,48 @@ public class DynamoConfigTest {
     props.setProperty(DatabaseConfig.USERNAME, ANY_ACCESS_KEY_ID);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_SECRET_ACCESS_ID);
     props.setProperty(DatabaseConfig.STORAGE, DYNAMO_STORAGE);
-    props.setProperty(DynamoConfig.TABLE_METADATA_NAMESPACE, ANY_TABLE_METADATA_NAMESPACE);
+    props.setProperty(DynamoConfig.TABLE_METADATA_NAMESPACE, ANY_METADATA_NAMESPACE);
 
     // Act Assert
     assertThatThrownBy(() -> new DynamoConfig(new DatabaseConfig(props)))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      constructor_WithTableMetadataNamespaceAndMetadataNamespaceGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_REGION);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_ACCESS_KEY_ID);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_SECRET_ACCESS_ID);
+    props.setProperty(DatabaseConfig.STORAGE, DYNAMO_STORAGE);
+    props.setProperty(DynamoConfig.METADATA_NAMESPACE, "aaa");
+    props.setProperty(DynamoConfig.TABLE_METADATA_NAMESPACE, "bbb");
+
+    // Act Assert
+    assertThatThrownBy(() -> new DynamoConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void constructor_PropertiesWithTableMetadataNamespaceGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_REGION);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_ACCESS_KEY_ID);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_SECRET_ACCESS_ID);
+    props.setProperty(DatabaseConfig.STORAGE, DYNAMO_STORAGE);
+    props.setProperty(DynamoConfig.TABLE_METADATA_NAMESPACE, ANY_METADATA_NAMESPACE);
+
+    // Act
+    DynamoConfig config = new DynamoConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.getRegion()).isEqualTo(ANY_REGION);
+    assertThat(config.getAccessKeyId()).isEqualTo(ANY_ACCESS_KEY_ID);
+    assertThat(config.getSecretAccessKey()).isEqualTo(ANY_SECRET_ACCESS_ID);
+    assertThat(config.getMetadataNamespace()).isPresent();
+    assertThat(config.getMetadataNamespace().get()).isEqualTo(ANY_METADATA_NAMESPACE);
   }
 }
