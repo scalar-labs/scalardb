@@ -75,7 +75,7 @@ public class ReplicationRecordRepository {
                 .partitionKey(key)
                 .build());
 
-    logger.info("[get]\n  key:{}\n  result:{}", key, result);
+    logger.debug("[get]\n  key:{}\n  result:{}", key, result);
 
     return result.flatMap(
         r -> {
@@ -134,7 +134,7 @@ public class ReplicationRecordRepository {
     }
 
     try {
-      logger.info("[appendValue]\n  key:{}\n  values={}", key, values);
+      logger.debug("[appendValue]\n  key:{}\n  values={}", key, values);
       replicationDbStorage.put(
           putBuilder.textValue("values", objectMapper.writeValueAsString(values)).build());
     } catch (JsonProcessingException e) {
@@ -156,7 +156,7 @@ public class ReplicationRecordRepository {
     }
 
     try {
-      logger.info(
+      logger.debug(
           "[updateValue]\n  key:{}\n  currentVersion:{}\n  newTxId:{}\n  values={}",
           key,
           record.version,

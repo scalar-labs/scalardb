@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit.replication.server;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
@@ -16,11 +17,16 @@ import com.scalar.db.transaction.consensuscommit.replication.repository.Replicat
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +41,90 @@ public class DistributorThread implements Closeable {
   private final ReplicationTransactionRepository replicationTransactionRepository;
   private final CoordinatorStateRepository coordinatorStateRepository;
   private final Queue<Key> recordWriterQueue;
+
+  private final MetricsLogger metricsLogger = new MetricsLogger();
+
+  private static class Metrics {
+    public final AtomicInteger scanCount = new AtomicInteger();
+    public final AtomicInteger scannedTransactions = new AtomicInteger();
+    public final AtomicInteger uncommittedTransactions = new AtomicInteger();
+    public final AtomicInteger handledCommittedTransactions = new AtomicInteger();
+    public final AtomicInteger exceptionCount = new AtomicInteger();
+
+    @Override
+    public String toString() {
+      return MoreObjects.toStringHelper(this)
+          .add("scans", scanCount)
+          .add("scannedTxns", scannedTransactions)
+          .add("uncommittedTxns", uncommittedTransactions)
+          .add("handledTxns", handledCommittedTransactions)
+          .add("exceptions", exceptionCount)
+          .toString();
+    }
+  }
+
+  private static class MetricsLogger {
+    private final boolean isEnabled;
+    private final Map<Instant, Metrics> metricsMap = new ConcurrentHashMap<>();
+    private final AtomicReference<Instant> keyHolder = new AtomicReference<>();
+
+    public MetricsLogger() {
+      this.isEnabled = System.getenv("LOG_APPLIER_METRICS_ENABLED").equalsIgnoreCase("true");
+    }
+
+    private Instant currentTimestampRoundedInSeconds() {
+      return Instant.ofEpochSecond(System.currentTimeMillis() / 1000);
+    }
+
+    private void withPrintAndCleanup(Consumer<Metrics> consumer) {
+      Instant currentKey = currentTimestampRoundedInSeconds();
+      Instant oldKey = keyHolder.getAndSet(currentKey);
+      Metrics metrics = metricsMap.computeIfAbsent(currentKey, k -> new Metrics());
+      consumer.accept(metrics);
+      if (oldKey == null) {
+        return;
+      }
+      if (!oldKey.equals(currentKey)) {
+        // logger.info("[{}] {}", currentKey, metricsMap.get(oldKey));
+        System.out.printf("[%s] %s\n", currentKey, metricsMap.get(oldKey));
+      }
+    }
+
+    public void incrementScanCount() {
+      if (!isEnabled) {
+        return;
+      }
+      withPrintAndCleanup(metrics -> metrics.scanCount.incrementAndGet());
+    }
+
+    public void incrementScannedTransactions() {
+      if (!isEnabled) {
+        return;
+      }
+      withPrintAndCleanup(metrics -> metrics.scannedTransactions.incrementAndGet());
+    }
+
+    public void incrementHandledCommittedTransactions() {
+      if (!isEnabled) {
+        return;
+      }
+      withPrintAndCleanup(metrics -> metrics.handledCommittedTransactions.incrementAndGet());
+    }
+
+    public void incrementUncommittedTransactions() {
+      if (!isEnabled) {
+        return;
+      }
+      withPrintAndCleanup(metrics -> metrics.uncommittedTransactions.incrementAndGet());
+    }
+
+    public void incrementExceptionCount() {
+      if (!isEnabled) {
+        return;
+      }
+      withPrintAndCleanup(metrics -> metrics.exceptionCount.incrementAndGet());
+    }
+  }
 
   public DistributorThread(
       int replicationDbPartitionSize,
@@ -133,14 +223,18 @@ public class DistributorThread implements Closeable {
       handleWrittenTuple(transaction.transactionId(), writtenTuple, committedAt);
     }
     replicationTransactionRepository.delete(transaction);
+    metricsLogger.incrementHandledCommittedTransactions();
   }
 
   private void fetchAndHandleTransactions(int partitionId) throws IOException, ExecutionException {
+    metricsLogger.incrementScanCount();
     for (Transaction transaction :
         replicationTransactionRepository.scan(partitionId, fetchThreadSize)) {
+      metricsLogger.incrementScannedTransactions();
       Optional<CoordinatorState> coordinatorState =
           coordinatorStateRepository.getCommitted(transaction.transactionId());
       if (!coordinatorState.isPresent()) {
+        metricsLogger.incrementUncommittedTransactions();
         continue;
       }
       handleTransaction(transaction, coordinatorState.get().txCommittedAt);
@@ -159,6 +253,7 @@ public class DistributorThread implements Closeable {
                 try {
                   fetchAndHandleTransactions(partitionId);
                 } catch (Throwable e) {
+                  metricsLogger.incrementExceptionCount();
                   logger.error("Unexpected exception occurred", e);
                   try {
                     TimeUnit.MILLISECONDS.sleep(100);
@@ -178,6 +273,7 @@ public class DistributorThread implements Closeable {
   @Override
   public void close() {
     executorService.shutdown();
+
     // TODO: Make this configurable
     try {
       if (!executorService.awaitTermination(10, TimeUnit.SECONDS)) {
