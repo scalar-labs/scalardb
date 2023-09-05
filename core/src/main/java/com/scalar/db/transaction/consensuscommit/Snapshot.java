@@ -547,9 +547,8 @@ public class Snapshot {
    * Convert SQL 'like' pattern to a Java regular expression. Underscores (_) are converted to '.'
    * and percent signs (%) are converted to '.*', other characters are quoted literally. If an
    * escape character specified, escaping is done for '_', '%', and the escape character itself.
-   * Although we validate the pattern when constructing {@code LikeExpression}, we will check it
-   * just in case and throw {@code IllegalArgumentException} for the invalid pattern. This method is
-   * implemented referencing the following Spark SQL implementation.
+   * Although we validate the pattern when constructing {@code LikeExpression}, we will assert it
+   * just in case. This method is implemented referencing the following Spark SQL implementation.
    * https://github.com/apache/spark/blob/a8eadebd686caa110c4077f4199d11e797146dc5/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/util/StringUtils.scala
    *
    * @param likePattern a SQL LIKE pattern to convert
@@ -557,9 +556,7 @@ public class Snapshot {
    * @return the equivalent Java regular expression of the given pattern
    */
   private String convertRegexPatternFrom(String likePattern, @Nullable Character escape) {
-    if (likePattern == null) {
-      throw new IllegalArgumentException("LIKE pattern must not be null");
-    }
+    assert likePattern != null : "LIKE pattern must not be null";
 
     StringBuilder out = new StringBuilder();
     char[] chars = likePattern.toCharArray();
@@ -572,10 +569,10 @@ public class Snapshot {
         } else if (nextChar == escape) {
           out.append(Pattern.quote(Character.toString(nextChar)));
         } else {
-          throw new IllegalArgumentException("LIKE pattern must not include only escape character");
+          throw new AssertionError("LIKE pattern must not include only escape character");
         }
       } else if (escape != null && c == escape) {
-        throw new IllegalArgumentException("LIKE pattern must not end with escape character");
+        throw new AssertionError("LIKE pattern must not end with escape character");
       } else if (c == '_') {
         out.append(".");
       } else if (c == '%') {
