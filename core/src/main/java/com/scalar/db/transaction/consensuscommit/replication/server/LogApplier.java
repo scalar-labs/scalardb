@@ -21,8 +21,9 @@ public class LogApplier {
       "LOG_APPLIER_NUM_OF_DISTRIBUTOR_THREADS";
   private static final String ENV_VAR_NUM_OF_RECORD_WRITER_THREADS =
       "LOG_APPLIER_NUM_OF_RECORD_WRITER_THREADS";
-  private static final String ENV_VAR_TRANSACTION_FETCH_SIZE =
-      "LOG_APPLIER_ENV_VAR_TRANSACTION_FETCH_SIZE";
+  private static final String ENV_VAR_TRANSACTION_FETCH_SIZE = "LOG_APPLIER_TRANSACTION_FETCH_SIZE";
+  private static final String ENV_VAR_TRANSACTION_WAIT_MILLIS_PER_PARTITION =
+      "LOG_APPLIER_TRANSACTION_WAIT_MILLIS_PER_PARTITION";
 
   private static final int REPLICATION_DB_PARTITION_SIZE = 256;
 
@@ -63,6 +64,12 @@ public class LogApplier {
       transactionFetchSize = Integer.parseInt(System.getenv(ENV_VAR_TRANSACTION_FETCH_SIZE));
     }
 
+    int waitMillisPerPartition = 10;
+    if (System.getenv(ENV_VAR_TRANSACTION_WAIT_MILLIS_PER_PARTITION) != null) {
+      waitMillisPerPartition =
+          Integer.parseInt(System.getenv(ENV_VAR_TRANSACTION_WAIT_MILLIS_PER_PARTITION));
+    }
+
     ObjectMapper objectMapper = new ObjectMapper();
 
     CoordinatorStateRepository coordinatorStateRepository =
@@ -98,6 +105,7 @@ public class LogApplier {
                 REPLICATION_DB_PARTITION_SIZE,
                 numOfDistributorThreads,
                 transactionFetchSize,
+                waitMillisPerPartition,
                 coordinatorStateRepository,
                 replicationTransactionRepository,
                 replicationRecordRepository,
