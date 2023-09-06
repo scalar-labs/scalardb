@@ -37,6 +37,7 @@ public class DistributorThread implements Closeable {
   private final int replicationDbPartitionSize;
   private final int threadSize;
   private final int fetchThreadSize;
+  private final int waitMillisPerPartition;
   private final ReplicationRecordRepository replicationRecordRepository;
   private final ReplicationTransactionRepository replicationTransactionRepository;
   private final CoordinatorStateRepository coordinatorStateRepository;
@@ -69,7 +70,8 @@ public class DistributorThread implements Closeable {
     private final AtomicReference<Instant> keyHolder = new AtomicReference<>();
 
     public MetricsLogger() {
-      this.isEnabled = System.getenv("LOG_APPLIER_METRICS_ENABLED").equalsIgnoreCase("true");
+      String metricsEnabled = System.getenv("LOG_APPLIER_METRICS_ENABLED");
+      this.isEnabled = metricsEnabled != null && metricsEnabled.equalsIgnoreCase("true");
     }
 
     private Instant currentTimestampRoundedInSeconds() {
@@ -130,6 +132,7 @@ public class DistributorThread implements Closeable {
       int replicationDbPartitionSize,
       int threadSize,
       int fetchThreadSize,
+      int waitMillisPerPartition,
       CoordinatorStateRepository coordinatorStateRepository,
       ReplicationTransactionRepository replicationTransactionRepository,
       ReplicationRecordRepository replicationRecordRepository,
@@ -143,6 +146,7 @@ public class DistributorThread implements Closeable {
     this.replicationDbPartitionSize = replicationDbPartitionSize;
     this.threadSize = threadSize;
     this.fetchThreadSize = fetchThreadSize;
+    this.waitMillisPerPartition = waitMillisPerPartition;
     this.executorService =
         Executors.newFixedThreadPool(
             threadSize,
@@ -255,12 +259,14 @@ public class DistributorThread implements Closeable {
                 } catch (Throwable e) {
                   metricsLogger.incrementExceptionCount();
                   logger.error("Unexpected exception occurred", e);
+                } finally {
                   try {
-                    TimeUnit.MILLISECONDS.sleep(100);
+                    if (waitMillisPerPartition > 0) {
+                      TimeUnit.MILLISECONDS.sleep(waitMillisPerPartition);
+                    }
                   } catch (InterruptedException ex) {
                     logger.error("Interrupted", ex);
                     Thread.currentThread().interrupt();
-                    break;
                   }
                 }
               }
