@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit.replication.server;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.replication.model.CoordinatorState;
@@ -239,6 +240,13 @@ public class DistributorThread implements Closeable {
           coordinatorStateRepository.getCommitted(transaction.transactionId());
       if (!coordinatorState.isPresent()) {
         metricsLogger.incrementUncommittedTransactions();
+        continue;
+      }
+      if (coordinatorState.get().txState != TransactionState.COMMITTED) {
+        metricsLogger.incrementUncommittedTransactions();
+        if (coordinatorState.get().txState == TransactionState.ABORTED) {
+          replicationTransactionRepository.delete(transaction);
+        }
         continue;
       }
       handleTransaction(transaction, coordinatorState.get().txCommittedAt);
