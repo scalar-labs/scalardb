@@ -74,7 +74,7 @@ $ pre-commit install
 
 The code formatter is automatically executed when commiting files. A commit will fail and be formatted by the formatter when any invalid code format is detected. Try to commit the change again.
 
-### Exception and log message guideline
+### Exception and log message guidelines
 
 All the exception and log messages in this project are consistent with the following guidelines:
 
