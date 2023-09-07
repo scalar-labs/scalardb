@@ -15,7 +15,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 8
         uses: actions/setup-java@v3
@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 8
         uses: actions/setup-java@v3
@@ -100,7 +100,7 @@ jobs:
           - 9042:9042
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 8
         uses: actions/setup-java@v3
@@ -124,7 +124,7 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 8
         uses: actions/setup-java@v3
@@ -164,7 +164,7 @@ jobs:
           - 8000:8000
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 8
         uses: actions/setup-java@v3
@@ -196,7 +196,7 @@ jobs:
           - 3306:3306
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 8
         uses: actions/setup-java@v3
@@ -229,7 +229,7 @@ jobs:
           - 5432:5432
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 8
         uses: actions/setup-java@v3
@@ -268,7 +268,7 @@ jobs:
           --health-timeout 5s
           --health-retries 120
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 8
         uses: actions/setup-java@v3
@@ -307,7 +307,7 @@ jobs:
           - 1433:1433
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 8
         uses: actions/setup-java@v3
@@ -331,7 +331,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 8
         uses: actions/setup-java@v3
@@ -366,7 +366,7 @@ jobs:
           - 3306:3306
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 8
         uses: actions/setup-java@v3
@@ -405,7 +405,7 @@ jobs:
           - 3306:3306
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 8
         uses: actions/setup-java@v3
@@ -437,7 +437,7 @@ jobs:
           - 3306:3306
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 8
         uses: actions/setup-java@v3
