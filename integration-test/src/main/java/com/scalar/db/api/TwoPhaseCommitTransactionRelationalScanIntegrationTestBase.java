@@ -31,7 +31,7 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class TwoPhaseCommitTransactionRelationalScanIntegrationTestBase {
 
-  protected static final String NAMESPACE_BASE_NAME = "int_test_";
+  protected static final String NAMESPACE_BASE_NAME = "int_rscan_2pc_test_";
   protected static final String TABLE_1 = "test_table1";
   protected static final String TABLE_2 = "test_table2";
   protected static final String ACCOUNT_ID = "account_id";
