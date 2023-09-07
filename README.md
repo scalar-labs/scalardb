@@ -76,12 +76,12 @@ The code formatter is automatically executed when commiting files. A commit will
 
 ### Exception and log message guideline
 
-All the exception and log messages in this project are consistent with the following guideline.
+All the exception and log messages in this project are consistent with the following guidelines:
 
-- The first character is capitalized
-- The message should not end with punctuation
+- The first character is capitalized.
+- The message does not end with a punctuation mark.
 
-Follow the guideline when you contribute to this project.
+When contributing to this project, please follow these guidelines.
 
 ## License
 ScalarDB is dual-licensed under both the Apache 2.0 License (found in the LICENSE file in the root directory) and a commercial license.
