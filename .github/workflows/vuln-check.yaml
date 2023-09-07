@@ -30,7 +30,7 @@ jobs:
 
     steps:
       # This first checkout is needed to use `ci/vuln-check/*`
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - id: prepare-target-ref
         name: Prepare target-ref
@@ -55,7 +55,7 @@ jobs:
             echo "target-ref=${{ inputs.target-ref }}" >> $GITHUB_OUTPUT
           fi
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ steps.prepare-target-ref.outputs.target-ref }}
 
