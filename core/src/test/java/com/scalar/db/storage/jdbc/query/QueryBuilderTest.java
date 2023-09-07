@@ -586,7 +586,7 @@ public class QueryBuilderTest {
       value = RdbEngine.class,
       names = {"ORACLE", "SQLITE"},
       mode = EnumSource.Mode.INCLUDE)
-  public void selectQueryWithLikeConditionsTestForOracle(RdbEngine rdbEngineType)
+  public void selectQueryWithLikeConditionsTestForOracleAndSqlLite(RdbEngine rdbEngineType)
       throws SQLException {
     RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
