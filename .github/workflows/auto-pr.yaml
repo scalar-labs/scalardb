@@ -18,7 +18,7 @@ jobs:
       # Escape the PR title. See https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable for details
       PR_TITLE: ${{ github.event.pull_request.title }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           # This is necessary to avoid unexpected auto-merge in git cherry-pick
           fetch-depth: 0

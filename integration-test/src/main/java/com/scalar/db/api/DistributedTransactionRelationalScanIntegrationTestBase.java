@@ -34,7 +34,7 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
 
-  protected static final String NAMESPACE_BASE_NAME = "int_test_";
+  protected static final String NAMESPACE_BASE_NAME = "int_rscan_tx_test_";
   protected static final String TABLE = "test_table";
   protected static final String TABLE_WITH_TEXT = "test_table_with_text";
   protected static final String ACCOUNT_ID = "account_id";

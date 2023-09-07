@@ -15,9 +15,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 public class JdbcAdminImportTestUtils {
+  static final String SUPPORTED_TABLE_NAME = "supported_table";
   static final List<String> UNSUPPORTED_DATA_TYPES_MYSQL =
       Arrays.asList(
           "BIGINT UNSIGNED",
@@ -54,7 +56,6 @@ public class JdbcAdminImportTestUtils {
           "numeric(8,2)",
           "path",
           "pg_lsn",
-          "pg_snapshot", // after v14
           "point",
           "polygon",
           "serial",
@@ -68,6 +69,8 @@ public class JdbcAdminImportTestUtils {
           "txid_snapshot",
           "uuid",
           "xml");
+  static final List<String> UNSUPPORTED_DATA_TYPES_PGSQL_V13_OR_LATER =
+      Collections.singletonList("pg_snapshot");
   static final List<String> UNSUPPORTED_DATA_TYPES_ORACLE =
       Arrays.asList(
           "BFILE",
@@ -76,13 +79,14 @@ public class JdbcAdminImportTestUtils {
           "INT",
           "INTERVAL YEAR(3) TO MONTH",
           "INTERVAL DAY(2) TO SECOND",
-          "JSON",
           "NUMBER(16,0)",
           "ROWID",
           "TIMESTAMP",
           "TIMESTAMP WITH TIME ZONE",
           "TIMESTAMP WITH LOCAL TIME ZONE",
           "UROWID");
+  static final List<String> UNSUPPORTED_DATA_TYPES_ORACLE_V20_OR_LATER =
+      Collections.singletonList("JSON");
   static final List<String> UNSUPPORTED_DATA_TYPES_MSSQL =
       Arrays.asList(
           "date",
@@ -99,77 +103,33 @@ public class JdbcAdminImportTestUtils {
           "sql_variant",
           "time",
           "uniqueidentifier",
-          "xml");
+          "xml",
+          "geometry",
+          "geography");
 
   private final JdbcConfig config;
   private final RdbEngineStrategy rdbEngine;
+  private final int majorVersion;
 
   public JdbcAdminImportTestUtils(Properties properties) {
     config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
+    majorVersion = getMajorVersion();
   }
 
   public Map<String, TableMetadata> createExistingDatabaseWithAllDataTypes(String namespace)
       throws SQLException {
-    Map<String, TableMetadata> results = new HashMap<>();
-    List<String> sqls = new ArrayList<>();
-    LinkedHashMap<String, String> goodTableColumns;
-    TableMetadata goodTableMetadata;
-    Map<String, String> badTables;
     if (rdbEngine instanceof RdbEngineMysql) {
-      goodTableColumns = prepareColumnsForMysql();
-      goodTableMetadata = prepareTableMetadataForMysql();
-      if (JdbcEnv.isMariaDB()) {
-        badTables =
-            prepareCreateNonImportableTableSql(
-                namespace,
-                UNSUPPORTED_DATA_TYPES_MYSQL.stream()
-                    .filter(type -> !type.equalsIgnoreCase("JSON"))
-                    .collect(Collectors.toList()));
-      } else {
-        badTables = prepareCreateNonImportableTableSql(namespace, UNSUPPORTED_DATA_TYPES_MYSQL);
-      }
+      return createExistingMysqlDatabaseWithAllDataTypes(namespace);
     } else if (rdbEngine instanceof RdbEnginePostgresql) {
-      goodTableColumns = prepareColumnsForPostgresql();
-      goodTableMetadata = prepareTableMetadataForPostgresql();
-      badTables = prepareCreateNonImportableTableSql(namespace, UNSUPPORTED_DATA_TYPES_PGSQL);
+      return createExistingPostgresDatabaseWithAllDataTypes(namespace);
     } else if (rdbEngine instanceof RdbEngineOracle) {
-      goodTableColumns = prepareColumnsForOracle();
-      goodTableMetadata = prepareTableMetadataForOracle();
-      badTables = prepareCreateNonImportableTableSql(namespace, UNSUPPORTED_DATA_TYPES_ORACLE);
-
-      // LONG columns must be tested with separated tables since they cannot be coexisted
-      TableMetadata longRawMetadata = prepareTableMetadataForOracleForLongRaw();
-      sqls.add(
-          prepareCreateTableSql(
-              namespace,
-              "good_table_long_raw",
-              prepareColumnsForOracleLongRaw(),
-              longRawMetadata.getPartitionKeyNames()));
-      results.put("good_table_long_raw", longRawMetadata);
+      return createExistingOracleDatabaseWithAllDataTypes(namespace);
     } else if (rdbEngine instanceof RdbEngineSqlServer) {
-      goodTableColumns = prepareColumnsForSqlServer();
-      goodTableMetadata = prepareTableMetadataForSqlServer();
-      badTables = prepareCreateNonImportableTableSql(namespace, UNSUPPORTED_DATA_TYPES_MSSQL);
+      return createExistingSqlServerDatabaseWithAllDataTypes(namespace);
     } else {
       throw new RuntimeException();
     }
-
-    // table with all supported columns
-    sqls.add(
-        prepareCreateTableSql(
-            namespace, "good_table", goodTableColumns, goodTableMetadata.getPartitionKeyNames()));
-    results.put("good_table", goodTableMetadata);
-
-    // tables with an unsupported column
-    badTables.forEach(
-        (table, sql) -> {
-          sqls.add(sql);
-          results.put(table, null);
-        });
-
-    execute(sqls.toArray(new String[0]));
-    return results;
   }
 
   public void dropTable(String namespace, String table) throws SQLException {
@@ -216,7 +176,7 @@ public class JdbcAdminImportTestUtils {
     columns.put("col19", "MEDIUMBLOB");
     columns.put("col20", "LONGBLOB");
     columns.put("col21", "BINARY(255)");
-    if (JdbcEnv.isMariaDB()) {
+    if (isMariaDB()) {
       columns.put("col22", "JSON");
     }
     return columns;
@@ -250,7 +210,7 @@ public class JdbcAdminImportTestUtils {
             .addColumn("col21", DataType.BLOB)
             .addPartitionKey("pk1")
             .addPartitionKey("pk2");
-    if (JdbcEnv.isMariaDB()) {
+    if (isMariaDB()) {
       builder.addColumn("col22", DataType.TEXT);
     }
     return builder.build();
@@ -434,5 +394,166 @@ public class JdbcAdminImportTestUtils {
         + ", PRIMARY KEY("
         + primaryKeys.stream().map(rdbEngine::enclose).collect(Collectors.joining(","))
         + "))";
+  }
+
+  private Map<String, TableMetadata> createExistingMysqlDatabaseWithAllDataTypes(String namespace)
+      throws SQLException {
+    TableMetadata tableMetadata = prepareTableMetadataForMysql();
+    Map<String, String> supportedTables =
+        Collections.singletonMap(
+            SUPPORTED_TABLE_NAME,
+            prepareCreateTableSql(
+                namespace,
+                SUPPORTED_TABLE_NAME,
+                prepareColumnsForMysql(),
+                tableMetadata.getPartitionKeyNames()));
+    Map<String, TableMetadata> supportedTableMetadata =
+        Collections.singletonMap(SUPPORTED_TABLE_NAME, tableMetadata);
+
+    Map<String, String> unsupportedTables;
+    if (isMariaDB()) {
+      unsupportedTables =
+          prepareCreateNonImportableTableSql(
+              namespace,
+              UNSUPPORTED_DATA_TYPES_MYSQL.stream()
+                  .filter(type -> !type.equalsIgnoreCase("JSON"))
+                  .collect(Collectors.toList()));
+    } else {
+      unsupportedTables =
+          prepareCreateNonImportableTableSql(namespace, UNSUPPORTED_DATA_TYPES_MYSQL);
+    }
+
+    return executeCreateTableSql(supportedTables, supportedTableMetadata, unsupportedTables);
+  }
+
+  private Map<String, TableMetadata> createExistingPostgresDatabaseWithAllDataTypes(
+      String namespace) throws SQLException {
+    TableMetadata tableMetadata = prepareTableMetadataForPostgresql();
+    Map<String, String> supportedTables =
+        Collections.singletonMap(
+            SUPPORTED_TABLE_NAME,
+            prepareCreateTableSql(
+                namespace,
+                SUPPORTED_TABLE_NAME,
+                prepareColumnsForPostgresql(),
+                tableMetadata.getPartitionKeyNames()));
+    Map<String, TableMetadata> supportedTableMetadata =
+        Collections.singletonMap(SUPPORTED_TABLE_NAME, tableMetadata);
+
+    Map<String, String> unsupportedTables =
+        prepareCreateNonImportableTableSql(
+            namespace,
+            majorVersion >= 13
+                ? Stream.concat(
+                        UNSUPPORTED_DATA_TYPES_PGSQL.stream(),
+                        UNSUPPORTED_DATA_TYPES_PGSQL_V13_OR_LATER.stream())
+                    .collect(Collectors.toList())
+                : UNSUPPORTED_DATA_TYPES_PGSQL);
+
+    return executeCreateTableSql(supportedTables, supportedTableMetadata, unsupportedTables);
+  }
+
+  private Map<String, TableMetadata> createExistingOracleDatabaseWithAllDataTypes(String namespace)
+      throws SQLException {
+    Map<String, String> supportedTables = new HashMap<>();
+    Map<String, TableMetadata> supportedTableMetadata = new HashMap<>();
+
+    TableMetadata tableMetadata = prepareTableMetadataForOracle();
+    supportedTables.put(
+        SUPPORTED_TABLE_NAME,
+        prepareCreateTableSql(
+            namespace,
+            SUPPORTED_TABLE_NAME,
+            prepareColumnsForOracle(),
+            tableMetadata.getPartitionKeyNames()));
+    supportedTableMetadata.put(SUPPORTED_TABLE_NAME, tableMetadata);
+
+    // LONG columns must be tested with separated tables since they cannot be coexisted
+    TableMetadata longRawTableMetadata = prepareTableMetadataForOracleForLongRaw();
+    supportedTables.put(
+        SUPPORTED_TABLE_NAME + "_long_raw",
+        prepareCreateTableSql(
+            namespace,
+            SUPPORTED_TABLE_NAME + "_long_raw",
+            prepareColumnsForOracleLongRaw(),
+            longRawTableMetadata.getPartitionKeyNames()));
+    supportedTableMetadata.put(SUPPORTED_TABLE_NAME + "_long_raw", longRawTableMetadata);
+
+    Map<String, String> unsupportedTables =
+        prepareCreateNonImportableTableSql(
+            namespace,
+            majorVersion >= 20
+                ? Stream.concat(
+                        UNSUPPORTED_DATA_TYPES_ORACLE.stream(),
+                        UNSUPPORTED_DATA_TYPES_ORACLE_V20_OR_LATER.stream())
+                    .collect(Collectors.toList())
+                : UNSUPPORTED_DATA_TYPES_ORACLE);
+
+    return executeCreateTableSql(supportedTables, supportedTableMetadata, unsupportedTables);
+  }
+
+  private Map<String, TableMetadata> createExistingSqlServerDatabaseWithAllDataTypes(
+      String namespace) throws SQLException {
+    TableMetadata tableMetadata = prepareTableMetadataForSqlServer();
+    Map<String, String> supportedTables =
+        Collections.singletonMap(
+            SUPPORTED_TABLE_NAME,
+            prepareCreateTableSql(
+                namespace,
+                SUPPORTED_TABLE_NAME,
+                prepareColumnsForSqlServer(),
+                tableMetadata.getPartitionKeyNames()));
+    Map<String, TableMetadata> supportedTableMetadata =
+        Collections.singletonMap(SUPPORTED_TABLE_NAME, tableMetadata);
+
+    Map<String, String> unsupportedTables =
+        prepareCreateNonImportableTableSql(namespace, UNSUPPORTED_DATA_TYPES_MSSQL);
+
+    return executeCreateTableSql(supportedTables, supportedTableMetadata, unsupportedTables);
+  }
+
+  private Map<String, TableMetadata> executeCreateTableSql(
+      Map<String, String> supportedTables,
+      Map<String, TableMetadata> supportedTableMetadata,
+      Map<String, String> unsupportedTables)
+      throws SQLException {
+    Map<String, TableMetadata> results = new HashMap<>();
+    List<String> sqls = new ArrayList<>();
+
+    // table with all supported columns
+    supportedTables.forEach(
+        (table, sql) -> {
+          sqls.add(sql);
+          results.put(table, supportedTableMetadata.get(table));
+        });
+
+    // tables with an unsupported column
+    unsupportedTables.forEach(
+        (table, sql) -> {
+          sqls.add(sql);
+          results.put(table, null);
+        });
+
+    execute(sqls.toArray(new String[0]));
+    return results;
+  }
+
+  private boolean isMariaDB() {
+    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
+        Connection connection = dataSource.getConnection()) {
+      String version = connection.getMetaData().getDatabaseProductVersion();
+      return version.contains("MariaDB");
+    } catch (SQLException e) {
+      throw new RuntimeException("Get database product version failed");
+    }
+  }
+
+  private int getMajorVersion() {
+    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
+        Connection connection = dataSource.getConnection()) {
+      return connection.getMetaData().getDatabaseMajorVersion();
+    } catch (SQLException e) {
+      throw new RuntimeException("Get database major version failed");
+    }
   }
 }
