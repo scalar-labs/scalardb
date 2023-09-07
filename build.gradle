@@ -27,7 +27,7 @@ subprojects {
         azureCosmosVersion = '4.49.0'
         jooqVersion = '3.14.16'
         awssdkVersion = '2.20.54'
-        commonsDbcp2Version = '2.9.0'
+        commonsDbcp2Version = '2.10.0'
         mysqlDriverVersion = '8.0.33'
         postgresqlDriverVersion = '42.6.0'
         oracleDriverVersion = '21.11.0.0'
