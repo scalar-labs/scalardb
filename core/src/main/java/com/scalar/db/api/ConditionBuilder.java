@@ -720,6 +720,51 @@ public class ConditionBuilder {
     public ConditionalExpression isNotNullBlob() {
       return new ConditionalExpression(BlobColumn.ofNull(columnName), Operator.IS_NOT_NULL);
     }
+
+    /**
+     * Creates a 'like' conditional expression for a TEXT value. For the escape character, the
+     * default one ("\", i.e., backslash) is used.
+     *
+     * @param value a TEXT value used to compare with the target column
+     * @return a like conditional expression
+     */
+    public LikeExpression isLikeText(String value) {
+      return new LikeExpression(TextColumn.of(columnName, value), Operator.LIKE);
+    }
+
+    /**
+     * Creates a 'like' conditional expression for a TEXT value with an escape character. The escape
+     * character must be a string of a single character or an empty string. If an empty string is
+     * specified, the escape character is disabled.
+     *
+     * @param value a pattern used to compare with the target column
+     * @param escape an escape character used in the pattern
+     * @return a like conditional expression
+     */
+    public LikeExpression isLikeText(String value, String escape) {
+      return new LikeExpression(TextColumn.of(columnName, value), Operator.LIKE, escape);
+    }
+
+    /**
+     * Creates a 'not like' conditional expression for a TEXT value.
+     *
+     * @param value a TEXT value used to compare with the target column
+     * @return a not-like conditional expression
+     */
+    public LikeExpression isNotLikeText(String value) {
+      return new LikeExpression(TextColumn.of(columnName, value), Operator.NOT_LIKE);
+    }
+
+    /**
+     * Creates a 'not like' conditional expression for a TEXT value with escape a character.
+     *
+     * @param value a pattern used to compare with the target column
+     * @param escape an escape character used in the pattern
+     * @return a not-like like conditional expression
+     */
+    public LikeExpression isNotLikeText(String value, String escape) {
+      return new LikeExpression(TextColumn.of(columnName, value), Operator.NOT_LIKE, escape);
+    }
   }
 
   public static class PutIfBuilder {
@@ -727,6 +772,7 @@ public class ConditionBuilder {
     private final List<ConditionalExpression> conditionalExpressions;
 
     private PutIfBuilder(ConditionalExpression conditionalExpression) {
+      check(conditionalExpression);
       conditionalExpressions = new ArrayList<>();
       conditionalExpressions.add(conditionalExpression);
     }
@@ -738,6 +784,7 @@ public class ConditionBuilder {
      * @return a builder object
      */
     public PutIfBuilder and(ConditionalExpression conditionalExpression) {
+      check(conditionalExpression);
       conditionalExpressions.add(conditionalExpression);
       return this;
     }
@@ -750,6 +797,15 @@ public class ConditionBuilder {
     public PutIf build() {
       return new PutIf(conditionalExpressions);
     }
+
+    private void check(ConditionalExpression conditionalExpression) {
+      if (conditionalExpression.getOperator().equals(Operator.LIKE)
+          || conditionalExpression.getOperator().equals(Operator.NOT_LIKE)) {
+        throw new IllegalArgumentException(
+            "This condition is not allowed for the PutIf operation. Condition: "
+                + conditionalExpression);
+      }
+    }
   }
 
   public static class DeleteIfBuilder {
@@ -757,6 +813,7 @@ public class ConditionBuilder {
     private final List<ConditionalExpression> conditionalExpressions;
 
     private DeleteIfBuilder(ConditionalExpression conditionalExpression) {
+      check(conditionalExpression);
       conditionalExpressions = new ArrayList<>();
       conditionalExpressions.add(conditionalExpression);
     }
@@ -768,6 +825,7 @@ public class ConditionBuilder {
      * @return a builder object
      */
     public DeleteIfBuilder and(ConditionalExpression conditionalExpression) {
+      check(conditionalExpression);
       conditionalExpressions.add(conditionalExpression);
       return this;
     }
@@ -779,6 +837,15 @@ public class ConditionBuilder {
      */
     public DeleteIf build() {
       return new DeleteIf(conditionalExpressions);
+    }
+
+    private void check(ConditionalExpression conditionalExpression) {
+      if (conditionalExpression.getOperator().equals(Operator.LIKE)
+          || conditionalExpression.getOperator().equals(Operator.NOT_LIKE)) {
+        throw new IllegalArgumentException(
+            "This condition is not allowed for the DeleteIf operation. Condition: "
+                + conditionalExpression);
+      }
     }
   }
 }

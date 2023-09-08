@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -8,6 +9,7 @@ import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
+import javax.annotation.Nullable;
 
 /**
  * An interface to hide the difference between underlying JDBC SQL engines in SQL dialects, error
@@ -97,5 +99,26 @@ public interface RdbEngineStrategy {
 
   default boolean isImportable() {
     return true;
+  }
+
+  /**
+   * Return properly-preprocessed like pattern for each underlying database.
+   *
+   * @param likeExpression A like conditional expression
+   * @return The properly-preprocessed like pattern
+   */
+  default String getPattern(LikeExpression likeExpression) {
+    return likeExpression.getTextValue();
+  }
+
+  /**
+   * Return properly-preprocessed escape character for each underlying database. Return null if the
+   * escape clause must be excluded.
+   *
+   * @param likeExpression A like conditional expression
+   * @return The properly-preprocessed escape character
+   */
+  default @Nullable String getEscape(LikeExpression likeExpression) {
+    return likeExpression.getEscape();
   }
 }

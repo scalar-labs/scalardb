@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
+import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -313,5 +314,11 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public Driver getDriver() {
     return new oracle.jdbc.driver.OracleDriver();
+  }
+
+  @Override
+  public String getEscape(LikeExpression likeExpression) {
+    String escape = likeExpression.getEscape();
+    return escape.isEmpty() ? null : escape;
   }
 }
