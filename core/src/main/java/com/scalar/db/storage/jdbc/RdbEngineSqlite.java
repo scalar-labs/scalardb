@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
@@ -256,5 +257,11 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
   public boolean isImportable() {
     return false;
+  }
+
+  @Override
+  public String getEscape(LikeExpression likeExpression) {
+    String escape = likeExpression.getEscape();
+    return escape.isEmpty() ? null : escape;
   }
 }

@@ -350,6 +350,8 @@ public class ConditionalExpression {
     LT,
     LTE,
     IS_NULL,
-    IS_NOT_NULL
+    IS_NOT_NULL,
+    LIKE,
+    NOT_LIKE,
   }
 }

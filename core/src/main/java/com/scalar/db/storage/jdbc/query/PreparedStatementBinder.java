@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc.query;
 
+import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -127,6 +128,19 @@ public class PreparedStatementBinder implements ColumnVisitor {
         preparedStatement.setNull(index++, getSqlType(column.getName()));
       } else {
         preparedStatement.setBytes(index++, column.getBlobValueAsBytes());
+      }
+    } catch (SQLException e) {
+      sqlException = e;
+    }
+  }
+
+  public void bindLikeClause(LikeExpression likeExpression) {
+    try {
+      String pattern = rdbEngine.getPattern(likeExpression);
+      String escape = rdbEngine.getEscape(likeExpression);
+      preparedStatement.setString(index++, pattern);
+      if (escape != null) {
+        preparedStatement.setString(index++, escape);
       }
     } catch (SQLException e) {
       sqlException = e;

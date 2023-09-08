@@ -1,6 +1,8 @@
 package com.scalar.db.storage.jdbc.query;
 
 import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.ConditionalExpression.Operator;
+import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Conjunction;
 import com.scalar.db.api.TableMetadata;
@@ -117,15 +119,15 @@ public class SimpleSelectQuery implements SelectQuery {
                         .map(
                             condition ->
                                 rdbEngine.enclose(condition.getColumn().getName())
-                                    + convert(condition.getOperator()))
+                                    + convert(condition))
                         .collect(Collectors.joining(" AND ")))
             .collect(Collectors.toList());
 
     return " WHERE " + String.join(" OR ", conjunctionList);
   }
 
-  private String convert(ConditionalExpression.Operator operator) {
-    switch (operator) {
+  private String convert(ConditionalExpression condition) {
+    switch (condition.getOperator()) {
       case EQ:
         return "=?";
       case NE:
@@ -142,9 +144,22 @@ public class SimpleSelectQuery implements SelectQuery {
         return " IS NULL";
       case IS_NOT_NULL:
         return " IS NOT NULL";
+      case LIKE:
+      case NOT_LIKE:
+        return convert((LikeExpression) condition);
       default:
-        throw new IllegalArgumentException("Unknown operator: " + operator);
+        throw new IllegalArgumentException("Unknown operator: " + condition.getOperator());
     }
+  }
+
+  private String convert(LikeExpression condition) {
+    StringBuilder builder =
+        new StringBuilder(
+            condition.getOperator().equals(Operator.LIKE) ? " LIKE ?" : " NOT LIKE ?");
+    if (rdbEngine.getEscape(condition) != null) {
+      builder.append(" ESCAPE ?");
+    }
+    return builder.toString();
   }
 
   private String orderBySqlString() {
@@ -233,10 +248,13 @@ public class SimpleSelectQuery implements SelectQuery {
 
     for (Conjunction conjunction : conjunctions) {
       for (ConditionalExpression condition : conjunction.getConditions()) {
-        if (!condition.getColumn().hasNullValue()) {
+        if ((condition.getOperator().equals(Operator.LIKE)
+            || condition.getOperator().equals(Operator.NOT_LIKE))) {
+          binder.bindLikeClause((LikeExpression) condition);
+        } else if (!condition.getColumn().hasNullValue()) {
           condition.getColumn().accept(binder);
-          binder.throwSQLExceptionIfOccurred();
         }
+        binder.throwSQLExceptionIfOccurred();
       }
     }
   }

@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -307,5 +308,26 @@ class RdbEngineMysql implements RdbEngineStrategy {
     } catch (SQLException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  public String getPattern(LikeExpression likeExpression) {
+    String escape = likeExpression.getEscape();
+    String pattern = likeExpression.getTextValue();
+    if (escape.isEmpty()) {
+      // MySQL accepts an empty escape character to disable the escape function, but MariaDB ignores
+      // the empty escape character (i.e., default escape character "\" is used). To handle both
+      // databases with the same SQL statement, we make the escape character disabled by internally
+      // double-escaping with the implicit escape character "\".
+      return pattern.replace("\\", "\\\\");
+    } else {
+      return pattern;
+    }
+  }
+
+  @Override
+  public String getEscape(LikeExpression likeExpression) {
+    String escape = likeExpression.getEscape();
+    return escape.isEmpty() ? "\\" : escape;
   }
 }

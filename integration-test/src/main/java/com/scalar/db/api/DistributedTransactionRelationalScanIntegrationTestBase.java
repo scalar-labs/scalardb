@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -11,6 +12,7 @@ import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.util.TestUtils;
 import com.scalar.db.util.TestUtils.ExpectedResult;
@@ -34,8 +36,10 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
 
   protected static final String NAMESPACE_BASE_NAME = "int_rscan_tx_test_";
   protected static final String TABLE = "test_table";
+  protected static final String TABLE_WITH_TEXT = "test_table_with_text";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String ACCOUNT_TYPE = "account_type";
+  protected static final String ACCOUNT_NAME = "account_name";
   protected static final String BALANCE = "balance";
   protected static final String SOME_COLUMN = "some_column";
   protected static final int INITIAL_BALANCE = 1000;
@@ -47,6 +51,13 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
           .addColumn(ACCOUNT_TYPE, DataType.INT)
           .addColumn(BALANCE, DataType.INT)
           .addColumn(SOME_COLUMN, DataType.INT)
+          .addPartitionKey(ACCOUNT_ID)
+          .build();
+  protected static final TableMetadata TABLE_METADATA_WITH_TEXT =
+      TableMetadata.newBuilder()
+          .addColumn(ACCOUNT_ID, DataType.INT)
+          .addColumn(ACCOUNT_NAME, DataType.TEXT)
+          .addColumn(BALANCE, DataType.INT)
           .addPartitionKey(ACCOUNT_ID)
           .build();
   protected DistributedTransactionAdmin admin;
@@ -79,6 +90,7 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
     Map<String, String> options = getCreationOptions();
     admin.createNamespace(namespace, true, options);
     admin.createTable(namespace, TABLE, TABLE_METADATA, true, options);
+    admin.createTable(namespace, TABLE_WITH_TEXT, TABLE_METADATA_WITH_TEXT, true, options);
     admin.createCoordinatorTables(true, options);
   }
 
@@ -89,6 +101,7 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
   @BeforeEach
   public void setUp() throws Exception {
     admin.truncateTable(namespace, TABLE);
+    admin.truncateTable(namespace, TABLE_WITH_TEXT);
     admin.truncateCoordinatorTables();
   }
 
@@ -101,6 +114,7 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
 
   private void dropTables() throws ExecutionException {
     admin.dropTable(namespace, TABLE);
+    admin.dropTable(namespace, TABLE_WITH_TEXT);
     admin.dropNamespace(namespace);
     admin.dropCoordinatorTables();
   }
@@ -255,6 +269,28 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
   }
 
   @Test
+  public void scan_RelationalScanWithLikeGivenForCommittedRecord_ShouldReturnRecords()
+      throws TransactionException {
+    // Arrange
+    populateRecordsForLike();
+    DistributedTransaction transaction = manager.start();
+    Scan scan1 = prepareRelationalScanWithLike(true, "%scalar[$]");
+    Scan scan2 = prepareRelationalScanWithLike(true, "+_scalar[$]", "+");
+    Scan scan3 = prepareRelationalScanWithLike(false, "\\_scalar[$]");
+
+    // Act
+    List<Result> actual1 = transaction.scan(scan1);
+    List<Result> actual2 = transaction.scan(scan2);
+    List<Result> actual3 = transaction.scan(scan3);
+    transaction.commit();
+
+    // Assert
+    assertScanResult(actual1, ImmutableList.of(1, 2, 3));
+    assertScanResult(actual2, ImmutableList.of(3));
+    assertScanResult(actual3, ImmutableList.of(1, 2));
+  }
+
+  @Test
   public void operation_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
@@ -304,6 +340,18 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
     transaction.commit();
   }
 
+  protected void populateRecordsForLike() throws TransactionException {
+    DistributedTransaction transaction = manager.start();
+    try {
+      transaction.put(preparePut(1, "@scalar[$]"));
+      transaction.put(preparePut(2, "@@scalar[$]"));
+      transaction.put(preparePut(3, "_scalar[$]"));
+    } catch (CrudException e) {
+      throw new RuntimeException(e);
+    }
+    transaction.commit();
+  }
+
   protected void populateSingleRecord() throws TransactionException {
     Put put =
         Put.newBuilder()
@@ -327,6 +375,16 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
         .build();
   }
 
+  protected Put preparePut(int id, String name) throws TransactionException {
+    return Put.newBuilder()
+        .namespace(namespace)
+        .table(TABLE_WITH_TEXT)
+        .partitionKey(Key.ofInt(ACCOUNT_ID, id))
+        .value(TextColumn.of(ACCOUNT_NAME, name))
+        .value(IntColumn.of(BALANCE, INITIAL_BALANCE))
+        .build();
+  }
+
   protected Scan prepareRelationalScan(int offset, int fromType, int toType) {
     return Scan.newBuilder()
         .namespace(namespace)
@@ -336,6 +394,36 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
         .and(ConditionBuilder.column(ACCOUNT_ID).isLessThanInt((offset + 1) * 10))
         .and(ConditionBuilder.column(ACCOUNT_TYPE).isGreaterThanOrEqualToInt(fromType))
         .and(ConditionBuilder.column(ACCOUNT_TYPE).isLessThanOrEqualToInt(toType))
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
+  }
+
+  protected Scan prepareRelationalScanWithLike(boolean isLike, String pattern) {
+    LikeExpression condition =
+        isLike
+            ? ConditionBuilder.column(ACCOUNT_NAME).isLikeText(pattern)
+            : ConditionBuilder.column(ACCOUNT_NAME).isNotLikeText(pattern);
+    return Scan.newBuilder()
+        .namespace(namespace)
+        .table(TABLE_WITH_TEXT)
+        .all()
+        .where(condition)
+        .ordering(Ordering.asc(ACCOUNT_ID))
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
+  }
+
+  protected Scan prepareRelationalScanWithLike(boolean isLike, String pattern, String escape) {
+    LikeExpression condition =
+        isLike
+            ? ConditionBuilder.column(ACCOUNT_NAME).isLikeText(pattern, escape)
+            : ConditionBuilder.column(ACCOUNT_NAME).isNotLikeText(pattern, escape);
+    return Scan.newBuilder()
+        .namespace(namespace)
+        .table(TABLE_WITH_TEXT)
+        .all()
+        .where(condition)
+        .ordering(Ordering.asc(ACCOUNT_ID))
         .consistency(Consistency.LINEARIZABLE)
         .build();
   }
@@ -363,5 +451,13 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
               expectedResults.add(builder.build());
             });
     return expectedResults;
+  }
+
+  private void assertScanResult(List<Result> actualResults, List<Integer> expected) {
+    List<Integer> actual = new ArrayList<>();
+    for (Result actualResult : actualResults) {
+      actual.add(actualResult.getInt(ACCOUNT_ID));
+    }
+    assertThat(actual).isEqualTo(expected);
   }
 }
