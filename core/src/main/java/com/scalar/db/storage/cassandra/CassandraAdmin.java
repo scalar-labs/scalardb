@@ -42,6 +42,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public static final String METADATA_KEYSPACE = "scalardb";
   public static final String NAMESPACES_TABLE = "namespaces";
   public static final String NAMESPACES_NAME_COL = "name";
+  private static final String DEFAULT_REPLICATION_FACTOR = "3";
   @VisibleForTesting static final String INDEX_NAME_PREFIX = "index";
   private final ClusterManager clusterManager;
   private final String metadataKeyspace;
@@ -86,7 +87,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     if (ifNotExists) {
       query = query.ifNotExists();
     }
-    String replicationFactor = options.getOrDefault(REPLICATION_FACTOR, "1");
+    String replicationFactor = options.getOrDefault(REPLICATION_FACTOR, DEFAULT_REPLICATION_FACTOR);
     ReplicationStrategy replicationStrategy =
         options.containsKey(REPLICATION_STRATEGY)
             ? ReplicationStrategy.fromString(options.get(REPLICATION_STRATEGY))

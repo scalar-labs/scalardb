@@ -186,7 +186,7 @@ public abstract class CassandraAdminTestBase {
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
     replicationOptions.put("class", ReplicationStrategy.SIMPLE_STRATEGY.toString());
-    replicationOptions.put("replication_factor", "1");
+    replicationOptions.put("replication_factor", "3");
     KeyspaceOptions query =
         SchemaBuilder.createKeyspace(namespace).with().replication(replicationOptions);
     verify(cassandraSession).execute(query.getQueryString());
@@ -208,7 +208,7 @@ public abstract class CassandraAdminTestBase {
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
     replicationOptions.put("class", ReplicationStrategy.SIMPLE_STRATEGY.toString());
-    replicationOptions.put("replication_factor", "1");
+    replicationOptions.put("replication_factor", "3");
     KeyspaceOptions query =
         SchemaBuilder.createKeyspace(quote(namespace)).with().replication(replicationOptions);
 

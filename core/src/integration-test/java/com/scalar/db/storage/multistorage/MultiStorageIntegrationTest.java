@@ -19,10 +19,12 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.storage.cassandra.CassandraAdmin;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import org.assertj.core.api.Assertions;
@@ -87,12 +89,16 @@ public class MultiStorageIntegrationTest {
   }
 
   private void createTables(DistributedStorageAdmin admin) throws ExecutionException {
-    admin.createNamespace(NAMESPACE1, true);
+    admin.createNamespace(NAMESPACE1, true, getCreationOptions());
     for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
-      admin.createTable(NAMESPACE1, table, TABLE_METADATA, true);
+      admin.createTable(NAMESPACE1, table, TABLE_METADATA, true, getCreationOptions());
     }
-    admin.createNamespace(NAMESPACE2, true);
-    admin.createTable(NAMESPACE2, TABLE1, TABLE_METADATA, true);
+    admin.createNamespace(NAMESPACE2, true, getCreationOptions());
+    admin.createTable(NAMESPACE2, TABLE1, TABLE_METADATA, true, getCreationOptions());
+  }
+
+  private Map<String, String> getCreationOptions() {
+    return Collections.singletonMap(CassandraAdmin.REPLICATION_FACTOR, "1");
   }
 
   private void initMultiStorage() {

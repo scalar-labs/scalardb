@@ -10,7 +10,10 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.storage.cassandra.CassandraAdmin;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
@@ -45,13 +48,17 @@ public class MultiStorageAdminIntegrationTest {
     initMultiStorageAdmin();
   }
 
+  private Map<String, String> getCreationOptions() {
+    return Collections.singletonMap(CassandraAdmin.REPLICATION_FACTOR, "1");
+  }
+
   private void initCassandraAdmin() throws ExecutionException {
     StorageFactory factory =
         StorageFactory.create(MultiStorageEnv.getPropertiesForCassandra(TEST_NAME));
     cassandraAdmin = factory.getAdmin();
 
     // create tables
-    cassandraAdmin.createNamespace(NAMESPACE1, true);
+    cassandraAdmin.createNamespace(NAMESPACE1, true, getCreationOptions());
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()
             .addPartitionKey(COL_NAME1)
@@ -63,11 +70,11 @@ public class MultiStorageAdminIntegrationTest {
             .addColumn(COL_NAME5, DataType.BOOLEAN)
             .build();
     for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
-      cassandraAdmin.createTable(NAMESPACE1, table, tableMetadata, true);
+      cassandraAdmin.createTable(NAMESPACE1, table, tableMetadata, true, getCreationOptions());
     }
 
-    cassandraAdmin.createNamespace(NAMESPACE2, true);
-    cassandraAdmin.createTable(NAMESPACE2, TABLE1, tableMetadata, true);
+    cassandraAdmin.createNamespace(NAMESPACE2, true, getCreationOptions());
+    cassandraAdmin.createTable(NAMESPACE2, TABLE1, tableMetadata, true, getCreationOptions());
   }
 
   private void initJdbcAdmin() throws ExecutionException {
@@ -152,7 +159,7 @@ public class MultiStorageAdminIntegrationTest {
   @Test
   public void ddlOperationsTest() throws ExecutionException {
     // createNamespace
-    multiStorageAdmin.createNamespace(NAMESPACE3, true);
+    multiStorageAdmin.createNamespace(NAMESPACE3, true, getCreationOptions());
     assertThat(cassandraAdmin.namespaceExists(NAMESPACE3)).isFalse();
     assertThat(jdbcAdmin.namespaceExists(NAMESPACE3)).isTrue();
 
@@ -166,7 +173,8 @@ public class MultiStorageAdminIntegrationTest {
             .addColumn(COL_NAME3, DataType.BOOLEAN)
             .addPartitionKey(COL_NAME1)
             .build(),
-        true);
+        true,
+        getCreationOptions());
 
     assertThat(jdbcAdmin.getNamespaceTableNames(NAMESPACE3).contains(TABLE1)).isTrue();
 
