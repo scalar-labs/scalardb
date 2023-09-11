@@ -49,7 +49,7 @@ public class ReplicationTransactionRepository {
                 .namespace(replicationDbNamespace)
                 .table(replicationDbTransactionTable)
                 .partitionKey(Key.ofInt("partition_id", partitionId))
-                .ordering(Ordering.asc("created_at"))
+                .ordering(Ordering.asc("updated_at"))
                 .limit(fetchTransactionSize)
                 .build())) {
       return scan.all().stream()
@@ -57,6 +57,7 @@ public class ReplicationTransactionRepository {
               result -> {
                 String transactionId = result.getText("transaction_id");
                 Instant createdAt = Instant.ofEpochMilli(result.getBigInt("created_at"));
+                Instant updatedAt = Instant.ofEpochMilli(result.getBigInt("updated_at"));
                 List<WrittenTuple> writtenTuples;
                 String writeSet = result.getText("write_set");
                 try {
@@ -65,7 +66,8 @@ public class ReplicationTransactionRepository {
                   throw new RuntimeException(
                       "Failed to deserialize write tuples into JSON string", e);
                 }
-                return new Transaction(partitionId, createdAt, transactionId, writtenTuples);
+                return new Transaction(
+                    partitionId, createdAt, updatedAt, transactionId, writtenTuples);
               })
           .collect(Collectors.toList());
     }
@@ -75,7 +77,7 @@ public class ReplicationTransactionRepository {
     String writeSet;
     try {
       writeSet =
-          objectMapper.writerFor(typeReference).writeValueAsString(transaction.writtenTuples());
+          objectMapper.writerFor(typeReference).writeValueAsString(transaction.writtenTuples);
     } catch (JsonProcessingException e) {
       throw new RuntimeException("Failed to serialize write tuples into JSON string", e);
     }
@@ -84,11 +86,11 @@ public class ReplicationTransactionRepository {
         Put.newBuilder()
             .namespace(replicationDbNamespace)
             .table(replicationDbTransactionTable)
-            .partitionKey(Key.ofInt("partition_id", transaction.partitionId()))
+            .partitionKey(Key.ofInt("partition_id", transaction.partitionId))
             .clusteringKey(
                 Key.newBuilder()
-                    .addBigInt("created_at", transaction.createdAt().toEpochMilli())
-                    .addText("transaction_id", transaction.transactionId())
+                    .addBigInt("created_at", transaction.createdAt.toEpochMilli())
+                    .addText("transaction_id", transaction.transactionId)
                     .build())
             // TODO: Revisit here
             /*
@@ -109,11 +111,11 @@ public class ReplicationTransactionRepository {
         Delete.newBuilder()
             .namespace(replicationDbNamespace)
             .table(replicationDbTransactionTable)
-            .partitionKey(Key.ofInt("partition_id", transaction.partitionId()))
+            .partitionKey(Key.ofInt("partition_id", transaction.partitionId))
             .clusteringKey(
                 Key.newBuilder()
-                    .addBigInt("created_at", transaction.createdAt().toEpochMilli())
-                    .addText("transaction_id", transaction.transactionId())
+                    .addBigInt("created_at", transaction.createdAt.toEpochMilli())
+                    .addText("transaction_id", transaction.transactionId)
                     .build())
             .build());
   }
