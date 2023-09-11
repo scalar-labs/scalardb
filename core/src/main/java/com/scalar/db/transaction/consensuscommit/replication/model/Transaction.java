@@ -2,37 +2,26 @@ package com.scalar.db.transaction.consensuscommit.replication.model;
 
 import java.time.Instant;
 import java.util.Collection;
+import javax.annotation.concurrent.Immutable;
 
+@Immutable
 public class Transaction {
-  private final int partitionId;
-  private final Instant createdAt;
-  private final String transactionId;
-  private final Collection<WrittenTuple> writtenTuples;
+  public final int partitionId;
+  public final Instant createdAt;
+  public final Instant updatedAt;
+  public final String transactionId;
+  public final Collection<WrittenTuple> writtenTuples;
 
   public Transaction(
       int partitionId,
       Instant createdAt,
+      Instant updatedAt,
       String transactionId,
       Collection<WrittenTuple> writtenTuples) {
     this.partitionId = partitionId;
     this.createdAt = createdAt;
+    this.updatedAt = updatedAt;
     this.transactionId = transactionId;
     this.writtenTuples = writtenTuples;
-  }
-
-  public int partitionId() {
-    return partitionId;
-  }
-
-  public Instant createdAt() {
-    return createdAt;
-  }
-
-  public String transactionId() {
-    return transactionId;
-  }
-
-  public Collection<WrittenTuple> writtenTuples() {
-    return writtenTuples;
   }
 }

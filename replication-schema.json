@@ -5,7 +5,7 @@
       "partition_id"
     ],
     "clustering-key": [
-      "created_at",
+      "updated_at",
       "transaction_id"
     ],
     "secondary-index": [
@@ -15,7 +15,8 @@
       "partition_id": "INT",
       "transaction_id": "TEXT",
       "write_set": "TEXT",
-      "created_at": "BIGINT"
+      "created_at": "BIGINT",
+      "updated_at": "BIGINT"
     }
   },
   "replication.records": {
