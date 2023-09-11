@@ -142,8 +142,9 @@ public class DefaultLogRecorder implements LogRecorder {
     }
 
     int partitionId = Math.abs(composer.transactionId().hashCode()) % REPLICATION_DB_PARTITION_SIZE;
+    Instant now = Instant.now();
     replicationTransactionRepository.add(
-        new Transaction(partitionId, Instant.now(), composer.transactionId(), writtenTuples));
+        new Transaction(partitionId, now, now, composer.transactionId(), writtenTuples));
   }
 
   @Override

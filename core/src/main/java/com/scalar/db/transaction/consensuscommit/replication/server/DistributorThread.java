@@ -224,8 +224,8 @@ public class DistributorThread implements Closeable {
 
   private void handleTransaction(Transaction transaction, Instant committedAt)
       throws ExecutionException {
-    for (WrittenTuple writtenTuple : transaction.writtenTuples()) {
-      handleWrittenTuple(transaction.transactionId(), writtenTuple, committedAt);
+    for (WrittenTuple writtenTuple : transaction.writtenTuples) {
+      handleWrittenTuple(transaction.transactionId, writtenTuple, committedAt);
     }
     replicationTransactionRepository.delete(transaction);
     metricsLogger.incrementHandledCommittedTransactions();
@@ -237,9 +237,10 @@ public class DistributorThread implements Closeable {
         replicationTransactionRepository.scan(partitionId, fetchThreadSize)) {
       metricsLogger.incrementScannedTransactions();
       Optional<CoordinatorState> coordinatorState =
-          coordinatorStateRepository.getCommitted(transaction.transactionId());
+          coordinatorStateRepository.getCommitted(transaction.transactionId);
       if (!coordinatorState.isPresent()) {
         metricsLogger.incrementUncommittedTransactions();
+        // TODO: Update `updated_at` if it's enough old
         continue;
       }
       if (coordinatorState.get().txState != TransactionState.COMMITTED) {
