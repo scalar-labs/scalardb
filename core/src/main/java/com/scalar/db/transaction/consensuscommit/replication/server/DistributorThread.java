@@ -292,21 +292,35 @@ public class DistributorThread implements Closeable {
       int startPartitionId = i;
       executorService.execute(
           () -> {
+            // Skip waits until this partition ID.
+            // For instance,
+            // - there are 64 threads and the number of total partitions is 256
+            // - this is the first thread and handles partition ID: 0, 64, 128, 192
+            // - if full transactions are fetched when handling partition ID 64,
+            //   the partition ID 64 is remembered
+            // - subsequent waits are skipped until next partition ID 64
+            Integer skipWaitsStartPartitionId = null;
             while (!executorService.isShutdown()) {
-              boolean anyFullSizeTransactionsFetchHappened = false;
               for (int partitionId = startPartitionId;
                   partitionId < conf.replicationDbPartitionSize;
                   partitionId += conf.threadSize) {
+                // Disable the skip waits mode if it reaches the target partition ID
+                if (skipWaitsStartPartitionId != null && skipWaitsStartPartitionId == partitionId) {
+                  skipWaitsStartPartitionId = null;
+                }
+
                 try {
                   if (fetchAndHandleTransactions(partitionId)) {
-                    anyFullSizeTransactionsFetchHappened = true;
+                    // Enable the skip waits mode
+                    skipWaitsStartPartitionId = partitionId;
                   }
                 } catch (Throwable e) {
                   metricsLogger.incrementExceptionCount();
                   logger.error("Unexpected exception occurred", e);
                 } finally {
                   try {
-                    if (!anyFullSizeTransactionsFetchHappened) {
+                    // Wait only if the skip wait mode is disabled
+                    if (skipWaitsStartPartitionId == null) {
                       if (conf.waitMillisPerPartition > 0) {
                         TimeUnit.MILLISECONDS.sleep(conf.waitMillisPerPartition);
                       }
