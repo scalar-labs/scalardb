@@ -35,7 +35,7 @@ scalar.db.multi_storage.storages.cassandra.password=cassandra
 
 # Define the "mysql" storage.
 # When defining JDBC-specific configurations for multi-storage transactions, you can follow a similar format of `scalar.db.multi_storage.storages.<STORAGE_NAME>.<PROPERTY_NAME>`.
-For example, to configure the `scalar.db.jdbc.connection_pool.min_idle` property for MySQL, specify `scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.min_idle`.
+# For example, to configure the `scalar.db.jdbc.connection_pool.min_idle` property for MySQL, specify `scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.min_idle`.
 scalar.db.multi_storage.storages.mysql.storage=jdbc
 scalar.db.multi_storage.storages.mysql.contact_points=jdbc:mysql://localhost:3306/
 scalar.db.multi_storage.storages.mysql.username=root
