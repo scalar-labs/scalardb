@@ -250,10 +250,14 @@ public class DistributorThread implements Closeable {
     metricsLogger.incrementHandledCommittedTransactions();
   }
 
-  private void fetchAndHandleTransactions(int partitionId) throws IOException, ExecutionException {
+  private boolean fetchAndHandleTransactions(int partitionId)
+      throws IOException, ExecutionException {
     metricsLogger.incrementScanCount();
+    int fetchedCount = 0;
     for (Transaction transaction :
         replicationTransactionRepository.scan(partitionId, conf.fetchThreadSize)) {
+      fetchedCount++;
+
       metricsLogger.incrementScannedTransactions();
       Optional<CoordinatorState> coordinatorState =
           coordinatorStateRepository.get(transaction.transactionId);
@@ -279,6 +283,8 @@ public class DistributorThread implements Closeable {
       }
       handleTransaction(transaction, coordinatorState.get().txCommittedAt);
     }
+
+    return fetchedCount >= conf.fetchThreadSize;
   }
 
   public DistributorThread run() {
@@ -287,18 +293,23 @@ public class DistributorThread implements Closeable {
       executorService.execute(
           () -> {
             while (!executorService.isShutdown()) {
+              boolean anyFullSizeTransactionsFetchHappened = false;
               for (int partitionId = startPartitionId;
                   partitionId < conf.replicationDbPartitionSize;
                   partitionId += conf.threadSize) {
                 try {
-                  fetchAndHandleTransactions(partitionId);
+                  if (fetchAndHandleTransactions(partitionId)) {
+                    anyFullSizeTransactionsFetchHappened = true;
+                  }
                 } catch (Throwable e) {
                   metricsLogger.incrementExceptionCount();
                   logger.error("Unexpected exception occurred", e);
                 } finally {
                   try {
-                    if (conf.waitMillisPerPartition > 0) {
-                      TimeUnit.MILLISECONDS.sleep(conf.waitMillisPerPartition);
+                    if (!anyFullSizeTransactionsFetchHappened) {
+                      if (conf.waitMillisPerPartition > 0) {
+                        TimeUnit.MILLISECONDS.sleep(conf.waitMillisPerPartition);
+                      }
                     }
                   } catch (InterruptedException ex) {
                     logger.error("Interrupted", ex);
