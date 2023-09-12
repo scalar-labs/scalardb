@@ -69,7 +69,7 @@ public class LogApplier {
       transactionFetchSize = Integer.parseInt(System.getenv(ENV_VAR_TRANSACTION_FETCH_SIZE));
     }
 
-    int waitMillisPerPartition = 10;
+    int waitMillisPerPartition = 40;
     if (System.getenv(ENV_VAR_TRANSACTION_WAIT_MILLIS_PER_PARTITION) != null) {
       waitMillisPerPartition =
           Integer.parseInt(System.getenv(ENV_VAR_TRANSACTION_WAIT_MILLIS_PER_PARTITION));
