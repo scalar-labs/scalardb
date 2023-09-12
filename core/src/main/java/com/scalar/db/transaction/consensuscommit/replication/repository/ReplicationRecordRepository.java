@@ -116,7 +116,6 @@ public class ReplicationRecordRepository {
     }
   }
 
-  // TODO: Maybe `txId` should be replaced with `version`
   public void upsertWithNewValue(Key key, Value newValue) throws ExecutionException {
     Optional<Record> recordOpt = get(key);
 
@@ -130,7 +129,7 @@ public class ReplicationRecordRepository {
     Set<Value> values = new HashSet<>();
     recordOpt.ifPresent(record -> values.addAll(record.values()));
     if (!values.add(newValue)) {
-      logger.warn("The new value is already stored. key:%s, version:%s, newValue:%s");
+      logger.warn("The new value is already stored. key:{}, txId:{}", key, newValue.txId);
     }
 
     try {
