@@ -5,6 +5,7 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.replication.repository.CoordinatorStateRepository;
 import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationRecordRepository;
 import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationTransactionRepository;
+import com.scalar.db.transaction.consensuscommit.replication.server.DistributorThread.Configuration;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -24,6 +25,10 @@ public class LogApplier {
   private static final String ENV_VAR_TRANSACTION_FETCH_SIZE = "LOG_APPLIER_TRANSACTION_FETCH_SIZE";
   private static final String ENV_VAR_TRANSACTION_WAIT_MILLIS_PER_PARTITION =
       "LOG_APPLIER_TRANSACTION_WAIT_MILLIS_PER_PARTITION";
+  private static final String ENV_VAR_THRESHOLD_MILLIS_FOR_OLD_TRANSACTION =
+      "LOG_APPLIER_THRESHOLD_MILLIS_FOR_OLD_TRANSACTION";
+  private static final String ENV_VAR_EXTRA_WAIT_MILLIS_FOR_OLD_TRANSACTION =
+      "LOG_APPLIER_EXTRA_WAIT_MILLIS_FOR_OLD_TRANSACTION";
 
   private static final int REPLICATION_DB_PARTITION_SIZE = 256;
 
@@ -70,6 +75,18 @@ public class LogApplier {
           Integer.parseInt(System.getenv(ENV_VAR_TRANSACTION_WAIT_MILLIS_PER_PARTITION));
     }
 
+    int thresholdMillisForOldTransaction = 2000;
+    if (System.getenv(ENV_VAR_THRESHOLD_MILLIS_FOR_OLD_TRANSACTION) != null) {
+      thresholdMillisForOldTransaction =
+          Integer.parseInt(System.getenv(ENV_VAR_THRESHOLD_MILLIS_FOR_OLD_TRANSACTION));
+    }
+
+    int extraWaitMillisForOldTransaction = 2000;
+    if (System.getenv(ENV_VAR_EXTRA_WAIT_MILLIS_FOR_OLD_TRANSACTION) != null) {
+      extraWaitMillisForOldTransaction =
+          Integer.parseInt(System.getenv(ENV_VAR_EXTRA_WAIT_MILLIS_FOR_OLD_TRANSACTION));
+    }
+
     ObjectMapper objectMapper = new ObjectMapper();
 
     CoordinatorStateRepository coordinatorStateRepository =
@@ -102,10 +119,13 @@ public class LogApplier {
 
     DistributorThread distributorThread =
         new DistributorThread(
-                REPLICATION_DB_PARTITION_SIZE,
-                numOfDistributorThreads,
-                transactionFetchSize,
-                waitMillisPerPartition,
+                new Configuration(
+                    REPLICATION_DB_PARTITION_SIZE,
+                    numOfDistributorThreads,
+                    transactionFetchSize,
+                    waitMillisPerPartition,
+                    thresholdMillisForOldTransaction,
+                    extraWaitMillisForOldTransaction),
                 coordinatorStateRepository,
                 replicationTransactionRepository,
                 replicationRecordRepository,
