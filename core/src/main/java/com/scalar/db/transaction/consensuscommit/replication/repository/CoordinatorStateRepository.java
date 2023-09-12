@@ -24,7 +24,7 @@ public class CoordinatorStateRepository {
     this.coordinatorDbStorage = coordinatorDbStorage;
   }
 
-  public Optional<CoordinatorState> getCommitted(String transactionId) throws ExecutionException {
+  public Optional<CoordinatorState> get(String transactionId) throws ExecutionException {
     Optional<Result> result =
         coordinatorDbStorage.get(
             Get.newBuilder()
@@ -32,15 +32,13 @@ public class CoordinatorStateRepository {
                 .table(coordinatorDbTable)
                 .partitionKey(Key.ofText("tx_id", transactionId))
                 .build());
-    return result
-        .map(
-            r ->
-                new CoordinatorState(
-                    r.getText("tx_id"),
-                    TransactionState.getInstance(r.getInt("tx_state")),
-                    // TODO: Revisit here to think the difference between `${table}.tx_committed_at`
-                    // and `state.tx_created_at`.
-                    Instant.ofEpochMilli(r.getBigInt("tx_created_at"))))
-        .filter(cs -> cs.txState == TransactionState.COMMITTED);
+    return result.map(
+        r ->
+            new CoordinatorState(
+                r.getText("tx_id"),
+                TransactionState.getInstance(r.getInt("tx_state")),
+                // TODO: Revisit here to think the difference between `${table}.tx_committed_at`
+                // and `state.tx_created_at`.
+                Instant.ofEpochMilli(r.getBigInt("tx_created_at"))));
   }
 }

@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,10 +36,7 @@ public class DistributorThread implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(DistributorThread.class);
 
   private final ExecutorService executorService;
-  private final int replicationDbPartitionSize;
-  private final int threadSize;
-  private final int fetchThreadSize;
-  private final int waitMillisPerPartition;
+  private final Configuration conf;
   private final ReplicationRecordRepository replicationRecordRepository;
   private final ReplicationTransactionRepository replicationTransactionRepository;
   private final CoordinatorStateRepository coordinatorStateRepository;
@@ -129,28 +127,49 @@ public class DistributorThread implements Closeable {
     }
   }
 
+  @Immutable
+  public static class Configuration {
+    final int replicationDbPartitionSize;
+    final int threadSize;
+    final int fetchThreadSize;
+    final int waitMillisPerPartition;
+    // For potential aborted transactions which don't have a corresponding committed/aborted state
+    final int thresholdMillisForOldTransaction;
+    final int extraWaitMillisForOldTransaction;
+
+    public Configuration(
+        int replicationDbPartitionSize,
+        int threadSize,
+        int fetchThreadSize,
+        int waitMillisPerPartition,
+        int thresholdMillisForOldTransaction,
+        int extraWaitMillisForOldTransaction) {
+      this.replicationDbPartitionSize = replicationDbPartitionSize;
+      this.threadSize = threadSize;
+      this.fetchThreadSize = fetchThreadSize;
+      this.waitMillisPerPartition = waitMillisPerPartition;
+      this.thresholdMillisForOldTransaction = thresholdMillisForOldTransaction;
+      this.extraWaitMillisForOldTransaction = extraWaitMillisForOldTransaction;
+    }
+  }
+
   public DistributorThread(
-      int replicationDbPartitionSize,
-      int threadSize,
-      int fetchThreadSize,
-      int waitMillisPerPartition,
+      Configuration conf,
       CoordinatorStateRepository coordinatorStateRepository,
       ReplicationTransactionRepository replicationTransactionRepository,
       ReplicationRecordRepository replicationRecordRepository,
       Queue<Key> recordWriterQueue) {
-    if (replicationDbPartitionSize % threadSize != 0) {
+    if (conf.replicationDbPartitionSize % conf.threadSize != 0) {
       throw new IllegalArgumentException(
           String.format(
               "`replicationDbPartitionSize`(%d) should be a multiple of `replicationDbThreadSize`(%d)",
-              replicationDbPartitionSize, threadSize));
+              conf.replicationDbPartitionSize, conf.threadSize));
     }
-    this.replicationDbPartitionSize = replicationDbPartitionSize;
-    this.threadSize = threadSize;
-    this.fetchThreadSize = fetchThreadSize;
-    this.waitMillisPerPartition = waitMillisPerPartition;
+    this.conf = conf;
+
     this.executorService =
         Executors.newFixedThreadPool(
-            threadSize,
+            conf.threadSize,
             new ThreadFactoryBuilder()
                 .setNameFormat("log-distributor-%d")
                 .setUncaughtExceptionHandler(
@@ -234,13 +253,20 @@ public class DistributorThread implements Closeable {
   private void fetchAndHandleTransactions(int partitionId) throws IOException, ExecutionException {
     metricsLogger.incrementScanCount();
     for (Transaction transaction :
-        replicationTransactionRepository.scan(partitionId, fetchThreadSize)) {
+        replicationTransactionRepository.scan(partitionId, conf.fetchThreadSize)) {
       metricsLogger.incrementScannedTransactions();
       Optional<CoordinatorState> coordinatorState =
-          coordinatorStateRepository.getCommitted(transaction.transactionId);
+          coordinatorStateRepository.get(transaction.transactionId);
       if (!coordinatorState.isPresent()) {
         metricsLogger.incrementUncommittedTransactions();
-        // TODO: Update `updated_at` if it's enough old
+        Instant now = Instant.now();
+        if (transaction.updatedAt.isBefore(
+            now.minusMillis(conf.thresholdMillisForOldTransaction))) {
+          logger.info(
+              "Updating an old transaction to be handled later. txId:{}",
+              transaction.transactionId);
+          replicationTransactionRepository.updateUpdatedAt(transaction);
+        }
         continue;
       }
       if (coordinatorState.get().txState != TransactionState.COMMITTED) {
@@ -248,6 +274,7 @@ public class DistributorThread implements Closeable {
         if (coordinatorState.get().txState == TransactionState.ABORTED) {
           replicationTransactionRepository.delete(transaction);
         }
+        // FIXME: Should delete other state?
         continue;
       }
       handleTransaction(transaction, coordinatorState.get().txCommittedAt);
@@ -255,14 +282,14 @@ public class DistributorThread implements Closeable {
   }
 
   public DistributorThread run() {
-    for (int i = 0; i < threadSize; i++) {
+    for (int i = 0; i < conf.threadSize; i++) {
       int startPartitionId = i;
       executorService.execute(
           () -> {
             while (!executorService.isShutdown()) {
               for (int partitionId = startPartitionId;
-                  partitionId < replicationDbPartitionSize;
-                  partitionId += threadSize) {
+                  partitionId < conf.replicationDbPartitionSize;
+                  partitionId += conf.threadSize) {
                 try {
                   fetchAndHandleTransactions(partitionId);
                 } catch (Throwable e) {
@@ -270,8 +297,8 @@ public class DistributorThread implements Closeable {
                   logger.error("Unexpected exception occurred", e);
                 } finally {
                   try {
-                    if (waitMillisPerPartition > 0) {
-                      TimeUnit.MILLISECONDS.sleep(waitMillisPerPartition);
+                    if (conf.waitMillisPerPartition > 0) {
+                      TimeUnit.MILLISECONDS.sleep(conf.waitMillisPerPartition);
                     }
                   } catch (InterruptedException ex) {
                     logger.error("Interrupted", ex);
