@@ -252,7 +252,7 @@ For details about using multiple storages, see [How to Configure ScalarDB for Mu
 
 This section shows several configuration examples for ScalarDB.
 
-### Example 1
+### Example - App and database
 
 ```mermaid
 flowchart LR
@@ -288,7 +288,7 @@ scalar.db.username=<USERNAME>
 scalar.db.password=<PASSWORD>
 ```
 
-### Example 2
+### Example - App, ScalarDB Server, and database
 
 ```mermaid
 flowchart LR
