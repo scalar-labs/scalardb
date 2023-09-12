@@ -198,7 +198,7 @@ To apply the schema, go to the [`scalardb` Releases](https://github.com/scalar-l
 Then, run the following command, replacing `<VERSION>` with the version of the ScalarDB Schema Loader that you downloaded:
 
 ```shell
-$ java -jar scalardb-schema-loader-<VERSION>.jar --config scalardb.properties --schema-file emoney.json --coordinator
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config scalardb.properties --schema-file emoney.json --coordinator --replication-factor=1
 ```
 
 {% capture notice--info %}
@@ -206,6 +206,15 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --config scalardb.properties --
 
 The `--coordinator` option is specified because a table with `transaction` set to `true` exists in the schema. For details about configuring and loading a schema, see [ScalarDB Schema Loader](schema-loader.md).
 {% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
+{% capture notice--info %}
+**Note**
+
+The `--replication-factor=1` option only has an effect when using Cassandra. The default replication factor is three, but to facilitate the setup, 
+we update it to one so that you only need to prepare a cluster with a single node instead of three.
+It should be noted that a replication factor of one is not suited for production.
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
