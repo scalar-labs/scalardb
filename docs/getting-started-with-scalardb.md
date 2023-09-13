@@ -193,9 +193,19 @@ For this tutorial, create a file named **emoney.json** in the `scalardb/docs/get
 }
 ```
 
-To apply the schema, go to the [`scalardb` Releases](https://github.com/scalar-labs/scalardb/releases) page and download the ScalarDB Schema Loader that matches the version of ScalarDB that you are using to the `getting-started` folder. 
+To apply the schema, go to the [`scalardb` Releases](https://github.com/scalar-labs/scalardb/releases) page and download the ScalarDB Schema Loader that matches the version of ScalarDB that you are using to the `getting-started` folder.
 
-Then, run the following command, replacing `<VERSION>` with the version of the ScalarDB Schema Loader that you downloaded:
+Then, based on your database, run the following command, replacing `<VERSION>` with the version of the ScalarDB Schema Loader that you downloaded:
+
+<div id="tabset-2">
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'Cassandra2', 'tabset-2')" id="defaultOpen-2">Cassandra</button>
+  <button class="tablinks" onclick="openTab(event, 'Cosmos_DB_for_NoSQL2', 'tabset-2')">Cosmos DB for NoSQL</button>
+  <button class="tablinks" onclick="openTab(event, 'DynamoDB2', 'tabset-2')">DynamoDB</button>
+  <button class="tablinks" onclick="openTab(event, 'JDBC_databases2', 'tabset-2')">JDBC databases</button>
+</div>
+
+<div id="Cassandra2" class="tabcontent" markdown="1">
 
 ```shell
 $ java -jar scalardb-schema-loader-<VERSION>.jar --config scalardb.properties --schema-file emoney.json --coordinator --replication-factor=1
@@ -205,18 +215,55 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --config scalardb.properties --
 **Note**
 
 The `--coordinator` option is specified because a table with `transaction` set to `true` exists in the schema. For details about configuring and loading a schema, see [ScalarDB Schema Loader](schema-loader.md).
+
+In addition, the `--replication-factor=1` option has an effect only when using Cassandra. The default replication factor is `3`, but to facilitate the setup in this tutorial, `1` is used so that you only need to prepare a cluster with one node instead of three nodes. However, keep in mind that a replication factor of `1` is not suited for production.
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
+</div>
+<div id="Cosmos_DB_for_NoSQL2" class="tabcontent" markdown="1">
+
+```shell
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config scalardb.properties --schema-file emoney.json --coordinator
+```
 
 {% capture notice--info %}
 **Note**
 
-The `--replication-factor=1` option only has an effect when using Cassandra. The default replication factor is three, but to facilitate the setup, 
-we update it to one so that you only need to prepare a cluster with a single node instead of three.
-It should be noted that a replication factor of one is not suited for production.
+The `--coordinator` option is specified because a table with `transaction` set to `true` exists in the schema. For details about configuring and loading a schema, see [ScalarDB Schema Loader](schema-loader.md).
+{% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
+</div>
+<div id="DynamoDB2" class="tabcontent" markdown="1">
+
+```shell
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config scalardb.properties --schema-file emoney.json --coordinator
+```
+
+{% capture notice--info %}
+**Note**
+
+The `--coordinator` option is specified because a table with `transaction` set to `true` exists in the schema. For details about configuring and loading a schema, see [ScalarDB Schema Loader](schema-loader.md).
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+</div>
+<div id="JDBC_databases2" class="tabcontent" markdown="1">
+
+```shell
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config scalardb.properties --schema-file emoney.json --coordinator
+```
+
+{% capture notice--info %}
+**Note**
+
+The `--coordinator` option is specified because a table with `transaction` set to `true` exists in the schema. For details about configuring and loading a schema, see [ScalarDB Schema Loader](schema-loader.md).
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+</div>
+</div>
 
 ## Execute transactions and retrieve data in the basic electronic money application
 
