@@ -99,9 +99,9 @@ tx.getId();
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
-### Join the transaction (for participants)
+### Join a transaction (for participants)
 
-For participants, you can join the transaction by specifying the transaction ID associated with the transaction that the coordinator has started or begun as follows:
+For participants, you can join a transaction by specifying the transaction ID associated with the transaction that the coordinator has started or begun as follows:
 
 ```java
 TwoPhaseCommitTransaction tx = transactionManager.join("<TRANSACTION_ID>")
