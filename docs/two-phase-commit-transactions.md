@@ -90,7 +90,7 @@ TwoPhaseCommitTransaction tx = transactionManager.start("<TRANSACTION_ID>");
 {% capture notice--info %}
 **Note**
 
-You must guarantee uniqueness of the transaction ID in this case. To get the transaction ID with `getId()`, you can specify the following:
+You must guarantee the uniqueness of the transaction ID in this case. To get the transaction ID with `getId()`, you can specify the following:
 
 ```java
 tx.getId();
@@ -109,8 +109,7 @@ TwoPhaseCommitTransaction tx = transactionManager.join("<TRANSACTION_ID>")
 
 ### CRUD operations for the transaction
 
-The CRUD operations for `TwoPhaseCommitTransacton` are the same as the operations for `DistributedTransaction`.
-For details, see [CRUD operations](api-guide.md#crud-operations).
+The CRUD operations for `TwoPhaseCommitTransacton` are the same as the operations for `DistributedTransaction`. For details, see [CRUD operations](api-guide.md#crud-operations).
 
 The following is example code for CRUD operations in two-phase commit transactions:
 
