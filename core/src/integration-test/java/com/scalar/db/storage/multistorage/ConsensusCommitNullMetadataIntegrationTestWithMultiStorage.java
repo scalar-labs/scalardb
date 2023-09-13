@@ -1,8 +1,11 @@
 package com.scalar.db.storage.multistorage;
 
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitNullMetadataIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Properties;
 
 public class ConsensusCommitNullMetadataIntegrationTestWithMultiStorage
@@ -49,5 +52,10 @@ public class ConsensusCommitNullMetadataIntegrationTestWithMultiStorage
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
     return props;
+  }
+
+  @Override
+  protected Map<String, String> getCreationOptions() {
+    return Collections.singletonMap(CassandraAdmin.REPLICATION_FACTOR, "1");
   }
 }

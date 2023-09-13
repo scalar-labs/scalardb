@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminRepairTableIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -21,6 +23,11 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithCassandra
   @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new CassandraAdminTestUtils(getProperties(testName));
+  }
+
+  @Override
+  protected Map<String, String> getCreationOptions() {
+    return Collections.singletonMap(CassandraAdmin.REPLICATION_FACTOR, "1");
   }
 
   @Test
