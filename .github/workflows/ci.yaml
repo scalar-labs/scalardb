@@ -464,7 +464,7 @@ jobs:
 
     services:
       oracle:
-        image: ghcr.io/scalar-labs/oracle/db-prebuilt:18.4.0-xe
+        image: ghcr.io/scalar-labs/oracle/db-prebuilt:18
         credentials:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
@@ -504,7 +504,7 @@ jobs:
 
     services:
       oracle:
-        image: ghcr.io/scalar-labs/oracle/db-prebuilt:21.3.0-xe
+        image: ghcr.io/scalar-labs/oracle/db-prebuilt:21
         credentials:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
@@ -544,7 +544,7 @@ jobs:
 
     services:
       oracle:
-        image: ghcr.io/scalar-labs/oracle/db-prebuilt:23.2.0-free
+        image: ghcr.io/scalar-labs/oracle/db-prebuilt:23
         credentials:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
