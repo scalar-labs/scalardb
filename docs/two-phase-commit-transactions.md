@@ -297,7 +297,7 @@ try {
 }
 ```
 
-For simplicity, the above example code doesn't handle the exceptions that the APIs may throw. For details about handling exceptions, see [Handle exceptions](#handle-exceptions).
+For simplicity, the above example code doesn't handle the exceptions that the APIs may throw. For details about handling exceptions, see [How to handle exceptions](#handle-exceptions).
 
 As previously mentioned, for `commit()`, if any of the coordinator or participant processes succeed in committing the transaction, you can consider the transaction as committed. Also, for better performance, you can execute `prepare()`, `validate()`, and `commit()` in parallel, respectively.
 
@@ -442,7 +442,7 @@ As shown above, by resuming the transaction, you can share the same transaction 
 
 ## How to handle exceptions
 
-When executing a transaction by using multiple transaction manager instances, you may also need to handle exceptions properly. If you don't handle exceptions properly, you may face anomalies or data inconsistency.
+When executing a transaction by using multiple transaction manager instances, you will also need to handle exceptions properly. If you don't handle exceptions properly, you may face anomalies or data inconsistency.
 
 For instance, in the example code in [Execute a transaction by using multiple transaction manager instances](#execute-a-transaction-by-using-multiple-transaction-manager-instances), multiple transaction managers (`transactionManager1` and `transactionManager2`) are used in a single process for ease of explanation. However, that example code doesn't include a way to handle exceptions.
 
@@ -509,8 +509,8 @@ public class Sample {
 
         return;
       } catch (UnknownTransactionStatusException e) {
-        // If you catch `UnknownTransactionStatusException` when committing the transaction, it 
-        // indicates that the status of the transaction, whether it was successful or not, is unknown.
+        // If you catch `UnknownTransactionStatusException` when committing the transaction, 
+        // it indicates that the status of the transaction, whether it was successful or not, is unknown.
         // In such a case, you need to check if the transaction is committed successfully or not and 
         // retry the transaction if it failed. How to identify a transaction status is delegated to users.
         return;
@@ -630,8 +630,8 @@ public class Sample {
               try {
                 t.rollback();
               } catch (RollbackException e) {
-                // Rolling back the transaction failed. Because the transaction should eventually recover,
-                // you don't need to do anything further. You can simply log the occurrence here.
+                // Rolling back the transaction failed. The transaction should eventually recover,
+                // so you don't need to do anything further. You can simply log the occurrence here.
               }
             });
   }
@@ -642,7 +642,7 @@ public class Sample {
 
 The `begin()` API could throw `TransactionException` or `TransactionNotFoundException`:
 
-- If you catch `TransactionException`, this exception indicates that the transaction has failed to begin due to transient or non-transient faults. You can attempt to retry the transaction, but you may not be able to begin the transaction due to non-transient faults.
+- If you catch `TransactionException`, this exception indicates that the transaction has failed to begin due to transient or non-transient faults. You can try retrying the transaction, but you may not be able to begin the transaction due to non-transient faults.
 - If you catch `TransactionNotFoundException`, this exception indicates that the transaction has failed to begin due to transient faults. In this case, you can retry the transaction.
 
 The `join()` API could also throw `TransactionException` or `TransactionNotFoundException`. You can handle these exceptions in the same way that you handle the exceptions for the `begin()` API.
@@ -651,7 +651,7 @@ The `join()` API could also throw `TransactionException` or `TransactionNotFound
 
 The APIs for CRUD operations (`get()`, `scan()`, `put()`, `delete()`, and `mutate()`) could throw `CrudException` or `CrudConflictException`:
 
-- If you catch `CrudException`, this exception indicates that the transaction CRUD operation has failed due to transient or non-transient faults. You can attempt to retry the transaction from the beginning, but the transaction may still fail if the cause is non-transient.
+- If you catch `CrudException`, this exception indicates that the transaction CRUD operation has failed due to transient or non-transient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is non-transient.
 - If you catch `CrudConflictException`, this exception indicates that the transaction CRUD operation has failed due to transient faults (for example, a conflict error). In this case, you can retry the transaction from the beginning.
 
 ### `UnsatisfiedConditionException`
@@ -662,21 +662,21 @@ If you catch `UnsatisfiedConditionException`, this exception indicates that the 
 
 ### `PreparationException` and `PreparationConflictException`
 
-The `prepare()` API could throw `PreparationException` or `PreparationConflictException`.
+The `prepare()` API could throw `PreparationException` or `PreparationConflictException`:
 
-- If you catch `PreparationException`, this exception indicates that preparing the transaction fails due to transient or non-transient faults. You can attempt to retry the transaction from the beginning, but the transaction may still fail if the cause is non-transient.
+- If you catch `PreparationException`, this exception indicates that preparing the transaction fails due to transient or non-transient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is non-transient.
 - If you catch `PreparationConflictException`, this exception indicates that preparing the transaction has failed due to transient faults (for example, a conflict error). In this case, you can retry the transaction from the beginning.
 
 ### `ValidationException` and `ValidationConflictException`
 
 The `validate()` API could throw `ValidationException` or `ValidationConflictException`:
 
-- If you catch `ValidationException`, this exception indicates that validating the transaction fails due to transient or non-transient faults. You can attempt to retry the transaction from the beginning, but the transaction may still fail if the cause is non-transient.
+- If you catch `ValidationException`, this exception indicates that validating the transaction fails due to transient or non-transient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is non-transient.
 - If you catch `ValidationConflictException`, this exception indicates that validating the transaction has failed due to transient faults (for example, a conflict error). In this case, you can retry the transaction from the beginning.
 
 ### `CommitException`, `CommitConflictException`, and `UnknownTransactionStatusException`
 
-Also, the `commit()` API could throw `CommitException`, `CommitConflictException`, or `UnknownTransactionStatusException`:
+The `commit()` API could throw `CommitException`, `CommitConflictException`, or `UnknownTransactionStatusException`:
 
 - If you catch `CommitException`, this exception indicates that committing the transaction fails due to transient or non-transient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is non-transient.
 - If you catch `CommitConflictException`, this exception indicates that committing the transaction has failed due to transient faults (for example, a conflict error). In this case, you can retry the transaction from the beginning.
