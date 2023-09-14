@@ -1,6 +1,6 @@
 # ScalarDB Configurations
 
-This page describes the possible configurations for ScalarDB.
+This page describes the available configurations for ScalarDB.
 
 ## Transaction managers
 
@@ -240,13 +240,13 @@ The following are additional configurations available for ScalarDB:
 
 ScalarDB supports two-phase commit transactions. With two-phase commit transactions, you can execute a transaction that spans multiple processes or applications, like in a microservice architecture.
 
-For details about using two-phase commit, see [How to Configure ScalarDB for Two-Phase Commit Transactions](two-phase-commit-transactions.md).
+For details about using two-phase commit, see [Two-Phase Commit Transactions](two-phase-commit-transactions.md).
 
 ### Multi-storage support
 
 ScalarDB supports using multiple storage implementations simultaneously. You can use multiple storages by specifying `multi-storage` as the value for the `scalar.db.storage` property.
 
-For details about using multiple storages, see [How to Configure ScalarDB for Multi-Storage Transactions](multi-storage-transactions.md).
+For details about using multiple storages, see [Multi-Storage Transactions](multi-storage-transactions.md).
 
 ## Configuration examples
 
