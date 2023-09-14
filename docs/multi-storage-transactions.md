@@ -1,4 +1,4 @@
-# How to Configure ScalarDB for Multi-Storage Transactions
+# Multi-Storage Transactions
 
 ScalarDB transactions can span multiple storages or databases while maintaining ACID compliance by using a feature called *multi-storage transactions*.
 
