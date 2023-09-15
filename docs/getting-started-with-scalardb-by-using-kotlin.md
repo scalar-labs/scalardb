@@ -370,4 +370,3 @@ The balance for merchant1 is 100
 ## Reference
 
 To see the source code for the electronic money application used in this tutorial, see [`ElectronicMoney.kt`](./getting-started-kotlin/src/main/kotlin/sample/ElectronicMoney.kt).
-
