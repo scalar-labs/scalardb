@@ -12,11 +12,20 @@ The electronic money application is simplified for this tutorial and isn't suita
 
 ## Install a JDK
 
-Because ScalarDB is written in Java, you must have one of the following Java Development Kits (JDKs) installed in your environment.
+Because ScalarDB is written in Java, you must have one of the following Java Development Kits (JDKs) installed in your environment:
 
-* [Oracle JDK 8](https://www.oracle.com/java/technologies/downloads/#java8)
-* [Oracle JDK 11](https://www.oracle.com/java/technologies/downloads/#java11)
-* [OpenJDK 8](https://openjdk.org/install/)
+- [Oracle JDK](https://www.oracle.com/java/technologies/downloads/) LTS version (8, 11, or 17)
+- [OpenJDK](https://openjdk.org/install/) LTS version (8, 11, or 17)
+
+{% capture notice--info %}
+**Note**
+
+We recommend using the LTS versions mentioned above, but other non-LTS versions may work.
+
+In addition, other JDKs should work with ScalarDB, but we haven't tested them.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 ## Clone the `scalardb` repository
  
