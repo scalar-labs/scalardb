@@ -78,7 +78,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       // thrown by ReplicationStrategy.fromString() when the given replication strategy is unknown
       throw e;
     } catch (RuntimeException e) {
-      throw new ExecutionException(String.format("Creating the keyspace %s failed", namespace), e);
+      throw new ExecutionException(String.format("Creating the %s keyspace failed", namespace), e);
     }
   }
 
@@ -180,7 +180,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     } catch (RuntimeException e) {
       throw new ExecutionException(
           String.format(
-              "Creating the secondary index for %s.%s.%s failed", namespace, table, columnName),
+              "Creating the secondary index on the %s column of the %s table failed",
+              columnName, getFullTableName(namespace, table)),
           e);
     }
   }
@@ -195,7 +196,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     } catch (RuntimeException e) {
       throw new ExecutionException(
           String.format(
-              "Dropping the secondary index for %s.%s.%s failed", namespace, table, columnName),
+              "Dropping the secondary index on the %s column  of the %s table failed",
+              columnName, getFullTableName(namespace, table)),
           e);
     }
   }
@@ -214,7 +216,11 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       }
       return createTableMetadata(metadata);
     } catch (RuntimeException e) {
-      throw new ExecutionException("Getting a table metadata failed", e);
+      throw new ExecutionException(
+          String.format(
+              "Getting a table metadata for the %s table failed",
+              getFullTableName(namespace, table)),
+          e);
     }
   }
 
@@ -280,7 +286,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
           .map(com.datastax.driver.core.TableMetadata::getName)
           .collect(Collectors.toSet());
     } catch (RuntimeException e) {
-      throw new ExecutionException("Retrieving the table names of the namespace failed", e);
+      throw new ExecutionException(
+          String.format("Retrieving the table names of the %s keyspace failed", namespace), e);
     }
   }
 
@@ -300,7 +307,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
       return resultSet.one() != null;
     } catch (RuntimeException e) {
-      throw new ExecutionException("Checking if the namespace exists failed", e);
+      throw new ExecutionException(
+          String.format("Checking if the %s keyspace exists failed", namespace), e);
     }
   }
 
@@ -311,7 +319,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     // We have this check to stay consistent with the behavior of the other admins classes
     if (!tableExists(namespace, table)) {
       throw new IllegalArgumentException(
-          "The table " + getFullTableName(namespace, table) + "  does not exist");
+          "The " + getFullTableName(namespace, table) + " table does not exist");
     }
     // The table metadata are not managed by ScalarDB, so we don't need to do anything here
   }
@@ -333,7 +341,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     } catch (RuntimeException e) {
       throw new ExecutionException(
           String.format(
-              "Adding the new column %s to the %s.%s table failed", columnName, namespace, table),
+              "Adding the new %s column  to the %s table failed",
+              columnName, getFullTableName(namespace, table)),
           e);
     }
   }
@@ -356,7 +365,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
       return keyspaceNames;
     } catch (RuntimeException e) {
-      throw new ExecutionException("Retrieving the existing namespace names failed", e);
+      throw new ExecutionException("Retrieving the existing keyspace names failed", e);
     }
   }
 
@@ -440,7 +449,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       clusterManager.getSession().execute(createTableWithOptions.getQueryString());
     } catch (RuntimeException e) {
       throw new ExecutionException(
-          String.format("Creating the table %s.%s failed", keyspace, table), e);
+          String.format("Creating the %s table failed", getFullTableName(keyspace, table)), e);
     }
   }
 
@@ -535,7 +544,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
         }
       }
       throw new IllegalArgumentException(
-          String.format("The network strategy %s does not exist", text));
+          String.format("The %s network strategy does not exist", text));
     }
 
     @Override
