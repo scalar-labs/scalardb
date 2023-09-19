@@ -71,7 +71,7 @@ public class RecordWriterThread implements Closeable {
 
     Queue<Value> valuesForInsert = new ArrayDeque<>();
     Map<String, Value> valuesForNonInsert = new HashMap<>();
-    for (Value value : record.values()) {
+    for (Value value : record.values) {
       if (value.type.equals("insert")) {
         if (value.prevTxId != null) {
           throw new IllegalStateException(
@@ -86,7 +86,7 @@ public class RecordWriterThread implements Closeable {
 
     Value lastValue = null;
     Set<Column<?>> updatedColumns = new HashSet<>();
-    @Nullable String currentTxId = record.currentTxId();
+    @Nullable String currentTxId = record.currentTxId;
     while (true) {
       Value value;
       if (currentTxId == null) {
@@ -119,6 +119,13 @@ public class RecordWriterThread implements Closeable {
       }
 
       lastValue = value;
+      if (lastValue.txId.equals(record.prepTxId)) {
+        logger.debug(
+            "The version chains reach prepTxId:{}. The number of remaining versions is {}",
+            record.prepTxId,
+            valuesForInsert.size() + valuesForNonInsert.size());
+        break;
+      }
     }
 
     if (lastValue == null) {
@@ -126,33 +133,38 @@ public class RecordWriterThread implements Closeable {
       return;
     }
 
+    if (record.prepTxId == null) {
+      // Write down the target transaction ID to let conflict transactions on the same page.
+      replicationRecordRepository.updateWithPrepTxId(key, record, lastValue.txId);
+    }
+
     if (lastValue.type.equals("delete")) {
       DeleteBuilder.Buildable deleteBuilder =
           Delete.newBuilder()
-              .namespace(record.namespace())
-              .table(record.table())
+              .namespace(record.namespace)
+              .table(record.table)
               .partitionKey(
                   com.scalar.db.transaction.consensuscommit.replication.model.Key.toScalarDbKey(
-                      record.pk()));
-      if (!record.ck().columns.isEmpty()) {
+                      record.pk));
+      if (!record.ck.columns.isEmpty()) {
         deleteBuilder.clusteringKey(
             com.scalar.db.transaction.consensuscommit.replication.model.Key.toScalarDbKey(
-                record.ck()));
+                record.ck));
       }
       // TODO: Consider partial commit issues
       backupScalarDbStorage.delete(deleteBuilder.build());
     } else {
       Buildable putBuilder =
           Put.newBuilder()
-              .namespace(record.namespace())
-              .table(record.table())
+              .namespace(record.namespace)
+              .table(record.table)
               .partitionKey(
                   com.scalar.db.transaction.consensuscommit.replication.model.Key.toScalarDbKey(
-                      record.pk()));
-      if (!record.ck().columns.isEmpty()) {
+                      record.pk));
+      if (!record.ck.columns.isEmpty()) {
         putBuilder.clusteringKey(
             com.scalar.db.transaction.consensuscommit.replication.model.Key.toScalarDbKey(
-                record.ck()));
+                record.ck));
       }
       putBuilder.textValue("tx_id", lastValue.txId);
       putBuilder.intValue("tx_state", TransactionState.COMMITTED.get());
@@ -178,7 +190,7 @@ public class RecordWriterThread implements Closeable {
       String message =
           String.format(
               "Failed to update the values. key:%s, txId:%s, lastValue:%s",
-              key, record.currentTxId(), lastValue);
+              key, record.currentTxId, lastValue);
       throw new RuntimeException(message, e);
     }
   }

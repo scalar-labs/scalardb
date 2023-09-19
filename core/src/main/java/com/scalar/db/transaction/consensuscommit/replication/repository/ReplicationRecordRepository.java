@@ -13,9 +13,11 @@ import com.scalar.db.api.Result;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.transaction.consensuscommit.replication.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.model.Record.Value;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Objects;
@@ -75,12 +77,10 @@ public class ReplicationRecordRepository {
                 .partitionKey(key)
                 .build());
 
-    logger.debug("[get]\n  key:{}\n  result:{}", key, result);
-
     return result.flatMap(
         r -> {
           try {
-            return Optional.of(
+            Record record =
                 new Record(
                     Objects.requireNonNull(r.getText("namespace")),
                     Objects.requireNonNull(r.getText("table")),
@@ -92,9 +92,14 @@ public class ReplicationRecordRepository {
                         com.scalar.db.transaction.consensuscommit.replication.model.Key.class),
                     r.getBigInt("version"),
                     r.getText("current_tx_id"),
+                    r.getText("prep_tx_id"),
                     objectMapper.readValue(r.getText("values"), typeRefForValueInRecords),
                     Instant.ofEpochMilli(r.getBigInt("appended_at")),
-                    Instant.ofEpochMilli(r.getBigInt("shrinked_at"))));
+                    Instant.ofEpochMilli(r.getBigInt("shrinked_at")));
+
+            logger.debug("[get]\n  key:{}\n  record:{}", key, record.toStringOnlyWithMetadata());
+
+            return Optional.of(record);
           } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize `values` for key:" + key, e);
           }
@@ -127,13 +132,16 @@ public class ReplicationRecordRepository {
     setCasCondition(putBuilder, recordOpt);
 
     Set<Value> values = new HashSet<>();
-    recordOpt.ifPresent(record -> values.addAll(record.values()));
+    recordOpt.ifPresent(record -> values.addAll(record.values));
     if (!values.add(newValue)) {
       logger.warn("The new value is already stored. key:{}, txId:{}", key, newValue.txId);
     }
 
     try {
-      logger.debug("[appendValue]\n  key:{}\n  values={}", key, values);
+      logger.debug(
+          "[appendValue]\n  key:{}\n  values={}",
+          key,
+          values.stream().map(Value::toStringOnlyWithMetadata));
       replicationDbStorage.put(
           putBuilder.textValue("values", objectMapper.writeValueAsString(values)).build());
     } catch (JsonProcessingException e) {
@@ -150,24 +158,51 @@ public class ReplicationRecordRepository {
             .partitionKey(key);
     setCasCondition(putBuilder, Optional.of(record));
 
-    if (newTxId.equals(record.currentTxId())) {
-      logger.warn("`tx_id` isn't changed. old:{}, new:{}", record.currentTxId(), newTxId);
+    if (newTxId.equals(record.currentTxId)) {
+      logger.warn("`tx_id` isn't changed. old:{}, new:{}", record.currentTxId, newTxId);
     }
 
     try {
       logger.debug(
-          "[updateValue]\n  key:{}\n  currentVersion:{}\n  newTxId:{}\n  values={}",
+          "[updateValues]\n  key:{}\n  currentVersion:{}\n  newTxId:{}\n  values={}",
           key,
           record.version,
           newTxId,
-          values);
+          values.stream().map(Value::toStringOnlyWithMetadata));
       replicationDbStorage.put(
           putBuilder
               .textValue("values", objectMapper.writeValueAsString(values))
               .textValue("current_tx_id", newTxId)
+              // Clear `prep_tx_id` for subsequent transactions
+              .textValue("prep_tx_id", null)
               .build());
     } catch (JsonProcessingException e) {
       throw new RuntimeException("Failed to serialize `values` for key:" + key, e);
     }
+  }
+
+  public void updateWithPrepTxId(Key key, Record record, String prepTxId)
+      throws ExecutionException {
+    long currentVersion = record.version;
+    Buildable putBuilder =
+        Put.newBuilder()
+            .namespace(replicationDbNamespace)
+            .table(replicationDbRecordsTable)
+            .partitionKey(key);
+    putBuilder.condition(
+        ConditionBuilder.putIf(
+            Arrays.asList(
+                ConditionBuilder.buildConditionalExpression(
+                    BigIntColumn.of("version", currentVersion), Operator.EQ),
+                ConditionBuilder.buildConditionalExpression(
+                    TextColumn.of("prep_tx_id", null), Operator.IS_NULL))));
+
+    logger.debug(
+        "[updatePrepTxId]\n  key:{}\n  currentVersion:{}\n  prepTxId:{}",
+        key,
+        record.version,
+        prepTxId);
+
+    replicationDbStorage.put(putBuilder.textValue("prep_tx_id", prepTxId).build());
   }
 }

@@ -34,6 +34,7 @@
       "ck": "TEXT",
       "version": "BIGINT",
       "current_tx_id": "TEXT",
+      "prep_tx_id": "TEXT",
       "values": "TEXT",
       "appended_at": "BIGINT",
       "shrinked_at": "BIGINT"
