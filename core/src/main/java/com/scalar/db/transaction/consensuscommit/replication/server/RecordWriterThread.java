@@ -122,7 +122,7 @@ public class RecordWriterThread implements Closeable {
     }
 
     if (lastValue == null) {
-      logger.warn("`values` in `records` table is empty. key:{}", key);
+      logger.debug("`values` in `records` table is empty. key:{}", key);
       return;
     }
 
@@ -208,7 +208,7 @@ public class RecordWriterThread implements Closeable {
                 handleKey(key);
               } catch (Throwable e) {
                 queue.add(key);
-                logger.error("Caught an exception. key:{}. Retrying...", key, e);
+                logger.error("Caught an exception. Retrying...\n  key:{}", key, e);
                 try {
                   // Avoid busy loop
                   TimeUnit.MILLISECONDS.sleep(100);
