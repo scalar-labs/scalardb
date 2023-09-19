@@ -196,7 +196,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     } catch (RuntimeException e) {
       throw new ExecutionException(
           String.format(
-              "Dropping the secondary index on the %s column  of the %s table failed",
+              "Dropping the secondary index on the %s column of the %s table failed",
               columnName, getFullTableName(namespace, table)),
           e);
     }
@@ -341,7 +341,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     } catch (RuntimeException e) {
       throw new ExecutionException(
           String.format(
-              "Adding the new %s column  to the %s table failed",
+              "Adding the new %s column to the %s table failed",
               columnName, getFullTableName(namespace, table)),
           e);
     }

@@ -579,7 +579,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     } catch (ExecutionException e) {
       throw new ExecutionException(
           String.format(
-              "Adding the new %s column  to the %s container failed",
+              "Adding the new %s column to the %s container failed",
               columnName, getFullTableName(namespace, table)),
           e);
     }
