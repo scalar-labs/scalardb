@@ -256,7 +256,7 @@ This section shows several configuration examples for ScalarDB.
 
 ```mermaid
 flowchart LR
-    app["App -<br />(ScalarDB library with<br />Consensus Commit)"]
+    app["<b>App</b><br />(ScalarDB library with<br />Consensus Commit)"]
     db[(Underlying storage or database)]
     app --> db
 ```
@@ -292,8 +292,8 @@ scalar.db.password=<PASSWORD>
 
 ```mermaid
 flowchart LR
-    app["App -<br />ScalarDB library with gRPC"]
-    server["ScalarDB Server -<br />(ScalarDB library with<br />Consensus Commit)"]
+    app["<b>App</b><br />ScalarDB library with gRPC"]
+    server["<b>ScalarDB Server</b><br />(ScalarDB library with<br />Consensus Commit)"]
     db[(Underlying storage or database)]
     app --> server --> db
 ```
