@@ -24,7 +24,7 @@ If you don't specify the `scalar.db.transaction_manager` property, `consensus-co
 
 #### Basic configurations
 
-The following basic configurations are available for Consensus Commit transactions:
+The following basic configurations are available for the Consensus Commit transaction manager:
 
 | Name                                                 | Description                                                                                                                                                                                                                                                                                                                                                                                             | Default       |
 |-------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
@@ -36,7 +36,7 @@ The following basic configurations are available for Consensus Commit transactio
 
 #### Performance-related configurations
 
-The following performance-related configurations are available for Consensus Commit transactions:
+The following performance-related configurations are available for the Consensus Commit transaction manager:
 
 | Name                                                     | Description                                                                    | Default                                                           |
 |-----------------------------------------------------------|--------------------------------------------------------------------------------|-------------------------------------------------------------------|
@@ -147,7 +147,7 @@ In addition, unlike other JDBC databases, [SQLite3 does not fully support concur
 
 [ScalarDB Server](scalardb-server.md) is a standalone server that provides a gRPC interface to ScalarDB. To interact with ScalarDB Server, you must specify `grpc` as the value for the `scalar.db.transaction_manager` property.
 
-The following configurations are available for ScalarDB Server using gRPC transactions:
+The following configurations are available for the gRPC transaction manager for ScalarDB Server:
 
 | Name                                       | Description                                                 | Default                 |
 |--------------------------------------------|-------------------------------------------------------------|-------------------------|
