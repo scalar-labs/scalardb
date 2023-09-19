@@ -57,7 +57,7 @@ jobs:
           password: ${{ secrets.ACR_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v3
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_MARKETPLACE_ROLE_OIDC }}
           aws-region: us-east-1
