@@ -168,7 +168,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: cassandra_3.0_integration_test_reports
-          path: core/build/reports/tests/integrationTestCassandra
+          path: /tmp/gradle_integration_test_reports/
 
   integration-test-for-cassandra-3-11:
     name: Cassandra 3.11 integration test
@@ -327,7 +327,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: mysql_5.7_integration_test_reports
-          path: core/build/reports/tests/integrationTestJdbc
+          path: /tmp/gradle_integration_test_reports/
 
   integration-test-for-jdbc-mysql-8-0:
     name: MySQL 8.0 integration test
@@ -409,7 +409,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: mysql_8.1_integration_test_reports
-          path: core/build/reports/tests/integrationTestJdbc
+          path: /tmp/gradle_integration_test_reports/
 
   integration-test-for-jdbc-postgresql-12:
     name: PostgreSQL 12 integration test
@@ -451,7 +451,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: postgresql_12_integration_test_reports
-          path: /tmp/gradle_integration_test_reports
+          path: /tmp/gradle_integration_test_reports/
 
   integration-test-for-jdbc-postgresql-13:
     name: PostgreSQL 13 integration test
@@ -493,7 +493,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: postgresql_13_integration_test_reports
-          path: core/build/reports/tests/integrationTestJdbc
+          path: /tmp/gradle_integration_test_reports/
 
   integration-test-for-jdbc-postgresql-14:
     name: PostgreSQL 14 integration test
@@ -535,7 +535,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: postgresql_14_integration_test_reports
-          path: core/build/reports/tests/integrationTestJdbc
+          path: /tmp/gradle_integration_test_reports/
 
   integration-test-for-jdbc-postgresql-15:
     name: PostgreSQL 15 integration test
@@ -577,7 +577,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: postgresql_15_integration_test_reports
-          path: core/build/reports/tests/integrationTestJdbc
+          path: /tmp/gradle_integration_test_reports/
 
   integration-test-for-jdbc-oracle-18:
     name: Oracle 18 integration test
@@ -625,7 +625,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: oracle_18_integration_test_reports
-          path: core/build/reports/tests/integrationTestJdbc
+          path: /tmp/gradle_integration_test_reports/
 
   integration-test-for-jdbc-oracle-21:
     name: Oracle 21 integration test
@@ -673,7 +673,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: oracle_21_integration_test_reports
-          path: core/build/reports/tests/integrationTestJdbc
+          path: /tmp/gradle_integration_test_reports/
 
   integration-test-for-jdbc-oracle-23:
     name: Oracle 23 integration test
@@ -719,7 +719,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: oracle_23_integration_test_reports
-          path: core/build/reports/tests/integrationTestJdbc
+          path: /tmp/gradle_integration_test_reports/
 
   integration-test-for-jdbc-sqlserver-2017:
     name: SQL Server 2017 integration test
@@ -805,9 +805,10 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: sqlserver_2019_integration_test_reports
-          path: core/build/reports/tests/integrationTestJdbc
+          path: /tmp/gradle_integration_test_reports/
 
-  integration-test-for-jdbc-mariadb:
+  integration-test-for-jdbc-mariadb-10:
+    name: MariaDB 10 integration test
     runs-on: ubuntu-latest
 
     services:
@@ -845,7 +846,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: mariadb_10_integration_test_reports
-          path: core/build/reports/tests/integrationTestJdbc
+          path: /tmp/gradle_integration_test_reports/
 
   integration-test-for-multi-storage:
     name: Multi-storage integration test
