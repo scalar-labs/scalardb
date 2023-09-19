@@ -6,17 +6,19 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Set;
+import javax.annotation.Nullable;
 
 public class Record {
-  private final String namespace;
-  private final String table;
-  private final Key pk;
-  private final Key ck;
+  public final String namespace;
+  public final String table;
+  public final Key pk;
+  public final Key ck;
   public final long version;
-  private final String currentTxId;
-  private final Set<Value> values;
-  private final Instant appendedAt;
-  private final Instant shrinkedAt;
+  @Nullable public final String currentTxId;
+  @Nullable public final String prepTxId;
+  public final Set<Value> values;
+  @Nullable public final Instant appendedAt;
+  @Nullable public final Instant shrinkedAt;
 
   /** A class that represents a write-set in `records` table. See also {@link WrittenTuple}. */
   public static class Value {
@@ -76,6 +78,17 @@ public class Record {
           .add("columns", columns)
           .toString();
     }
+
+    public String toStringOnlyWithMetadata() {
+      return MoreObjects.toStringHelper(this)
+          .add("prevTxId", prevTxId)
+          .add("txId", txId)
+          .add("txVersion", txVersion)
+          .add("txPreparedAtInMillis", txPreparedAtInMillis)
+          .add("txCommittedAtInMillis", txCommittedAtInMillis)
+          .add("type", type)
+          .toString();
+    }
   }
 
   public Record(
@@ -84,51 +97,21 @@ public class Record {
       Key pk,
       Key ck,
       long version,
-      String currentTxId,
+      @Nullable String currentTxId,
+      @Nullable String prepTxId,
       Set<Value> values,
-      Instant appendedAt,
-      Instant shrinkedAt) {
+      @Nullable Instant appendedAt,
+      @Nullable Instant shrinkedAt) {
     this.namespace = namespace;
     this.table = table;
     this.pk = pk;
     this.ck = ck;
     this.version = version;
     this.currentTxId = currentTxId;
+    this.prepTxId = prepTxId;
     this.values = values;
     this.appendedAt = appendedAt;
     this.shrinkedAt = shrinkedAt;
-  }
-
-  public String namespace() {
-    return namespace;
-  }
-
-  public String table() {
-    return table;
-  }
-
-  public Key pk() {
-    return pk;
-  }
-
-  public Key ck() {
-    return ck;
-  }
-
-  public String currentTxId() {
-    return currentTxId;
-  }
-
-  public Set<Value> values() {
-    return values;
-  }
-
-  public Instant appendedAt() {
-    return appendedAt;
-  }
-
-  public Instant shrinkedAt() {
-    return shrinkedAt;
   }
 
   @Override
@@ -139,7 +122,22 @@ public class Record {
         .add("pk", pk)
         .add("ck", ck)
         .add("currentTxId", currentTxId)
+        .add("prepTxId", currentTxId)
         .add("values", values)
+        .add("appendedAt", appendedAt)
+        .add("shrinkedAt", shrinkedAt)
+        .toString();
+  }
+
+  public String toStringOnlyWithMetadata() {
+    return MoreObjects.toStringHelper(this)
+        .add("namespace", namespace)
+        .add("table", table)
+        .add("pk", pk)
+        .add("ck", ck)
+        .add("currentTxId", currentTxId)
+        .add("prepTxId", currentTxId)
+        .add("values", values.stream().map(Value::toStringOnlyWithMetadata))
         .add("appendedAt", appendedAt)
         .add("shrinkedAt", shrinkedAt)
         .toString();
