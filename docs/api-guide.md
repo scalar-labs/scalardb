@@ -990,9 +990,9 @@ In addition, in the sample code, the transaction is retried three times maximum 
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
-## Investigating Consensus Commit transaction errors
+## Investigating Consensus Commit transaction manager errors
 
-To investigate errors when executing Consensus Commit transactions, you can enable a configuration that will return table metadata augmented with transaction metadata columns, which can be helpful when investigating transaction-related issues. This configuration, which is only available for troubleshooting Consensus Commit transactions, enables you to see transaction metadata column details for a given table by using the `DistributedTransactionAdmin.getTableMetadata()` method.
+To investigate errors when using the Consensus Commit transaction manager, you can enable a configuration that will return table metadata augmented with transaction metadata columns, which can be helpful when investigating transaction-related issues. This configuration, which is only available when troubleshooting the Consensus Commit transaction manager, enables you to see transaction metadata column details for a given table by using the `DistributedTransactionAdmin.getTableMetadata()` method.
 
 By adding the following configuration, `Get` and `Scan` operations results will contain [transaction metadata](schema-loader.md#internal-metadata-for-consensus-commit):
 
