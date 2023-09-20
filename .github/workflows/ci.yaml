@@ -682,6 +682,7 @@ jobs:
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-mariadb:
+    name: MariaDB 10 integration test
     runs-on: ubuntu-latest
 
     services:
@@ -710,7 +711,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: gradle_jdbc_mariadb_integration_test_reports
+          name: mariadb_10_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-multi-storage:
