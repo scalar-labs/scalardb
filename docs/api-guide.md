@@ -593,7 +593,7 @@ You can't specify clustering-key boundaries and orderings in `Scan` by using a s
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
-##### Execute a `Scan` without specifying a partition key to retrieve all the records of a table
+##### Execute `Scan` without specifying a partition key to retrieve all the records of a table
 
 You can execute a `Scan` operation without specifying a partition key.
 
