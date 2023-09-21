@@ -442,7 +442,15 @@ As shown above, by resuming the transaction, you can share the same transaction 
 
 ## How to handle exceptions
 
-When executing a transaction by using multiple transaction manager instances, you will also need to handle exceptions properly. If you don't handle exceptions properly, you may face anomalies or data inconsistency.
+When executing a transaction by using multiple transaction manager instances, you will also need to handle exceptions properly.
+
+{% capture notice--warning %}
+**Attention**
+
+If you don't handle exceptions properly, you may face anomalies or data inconsistency.
+{% endcapture %}
+
+<div class="notice--warning">{{ notice--warning | markdownify }}</div>
 
 For instance, in the example code in [Execute a transaction by using multiple transaction manager instances](#execute-a-transaction-by-using-multiple-transaction-manager-instances), multiple transaction managers (`transactionManager1` and `transactionManager2`) are used in a single process for ease of explanation. However, that example code doesn't include a way to handle exceptions.
 
