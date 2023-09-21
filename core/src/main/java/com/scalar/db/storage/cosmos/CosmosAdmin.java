@@ -95,7 +95,8 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       createContainer(namespace, table, metadata);
       putTableMetadata(namespace, table, metadata);
     } catch (RuntimeException e) {
-      throw new ExecutionException("Creating the container failed", e);
+      throw new ExecutionException(
+          String.format("Creating the %s container failed", getFullTableName(namespace, table)), e);
     }
   }
 
@@ -225,7 +226,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
           convertToCosmosTableMetadata(getFullTableName(namespace, table), metadata);
       getTableMetadataContainer().upsertItem(cosmosTableMetadata);
     } catch (RuntimeException e) {
-      throw new ExecutionException("Putting the table metadata failed", e);
+      throw new ExecutionException(
+          String.format(
+              "Putting the table metadata for the %s contained failed",
+              getFullTableName(namespace, table)),
+          e);
     }
   }
 
@@ -272,7 +277,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       createMetadataDatabaseAndNamespaceContainerIfNotExists();
       getNamespacesContainer().createItem(new CosmosNamespace(namespace));
     } catch (RuntimeException e) {
-      throw new ExecutionException("Creating the database failed", e);
+      throw new ExecutionException(String.format("Creating the %s database failed", namespace), e);
     }
   }
 
@@ -283,7 +288,8 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       database.getContainer(table).delete();
       deleteTableMetadata(namespace, table);
     } catch (RuntimeException e) {
-      throw new ExecutionException("Deleting the container failed", e);
+      throw new ExecutionException(
+          String.format("Deleting the %s container failed", getFullTableName(namespace, table)), e);
     }
   }
 
@@ -305,7 +311,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
         getTableMetadataContainer().delete();
       }
     } catch (RuntimeException e) {
-      throw new ExecutionException("Deleting the table metadata failed", e);
+      throw new ExecutionException(
+          String.format(
+              "Deleting the table metadata for the %s container failed",
+              getFullTableName(namespace, table)),
+          e);
     }
   }
 
@@ -330,7 +340,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
         client.getDatabase(metadataDatabase).delete();
       }
     } catch (RuntimeException e) {
-      throw new ExecutionException("Deleting the database failed", e);
+      throw new ExecutionException(String.format("Deleting the %s database failed", namespace), e);
     }
   }
 
@@ -352,7 +362,9 @@ public class CosmosAdmin implements DistributedStorageAdmin {
                   new PartitionKey(record.getConcatenatedPartitionKey()),
                   new CosmosItemRequestOptions()));
     } catch (RuntimeException e) {
-      throw new ExecutionException("Truncating the container failed", e);
+      throw new ExecutionException(
+          String.format("Truncating the %s container failed", getFullTableName(namespace, table)),
+          e);
     }
   }
 
@@ -399,7 +411,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       // update the container properties
       database.getContainer(containerName).replace(properties);
     } catch (RuntimeException e) {
-      throw new ExecutionException("Updating the indexing policy failed", e);
+      throw new ExecutionException(
+          String.format(
+              "Updating the indexing policy for the %s table failed",
+              getFullTableName(databaseName, containerName)),
+          e);
     }
   }
 
@@ -413,7 +429,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       }
       return convertToTableMetadata(cosmosTableMetadata);
     } catch (RuntimeException e) {
-      throw new ExecutionException("Getting the container metadata failed", e);
+      throw new ExecutionException(
+          String.format(
+              "Getting the table metadata for the %s container failed",
+              getFullTableName(namespace, table)),
+          e);
     }
   }
 
@@ -493,7 +513,8 @@ public class CosmosAdmin implements DistributedStorageAdmin {
           && ((CosmosException) e).getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
         return false;
       }
-      throw new ExecutionException("Checking if the namespace exists failed", e);
+      throw new ExecutionException(
+          String.format("Checking if the %s database exists failed", namespace), e);
     }
   }
 
@@ -513,7 +534,8 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       }
     } catch (ExecutionException | CosmosException e) {
       throw new ExecutionException(
-          String.format("Repairing the table %s.%s failed", namespace, table), e);
+          String.format("Repairing the %s container failed", getFullTableName(namespace, table)),
+          e);
     }
   }
 
@@ -540,7 +562,8 @@ public class CosmosAdmin implements DistributedStorageAdmin {
           .map(tableMetadata -> tableMetadata.getId().replaceFirst("^" + namespace + ".", ""))
           .collect(Collectors.toSet());
     } catch (RuntimeException e) {
-      throw new ExecutionException("Retrieving the container names of the database failed", e);
+      throw new ExecutionException(
+          String.format("Retrieving the container names of the %s database failed", namespace), e);
     }
   }
 
@@ -556,7 +579,8 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     } catch (ExecutionException e) {
       throw new ExecutionException(
           String.format(
-              "Adding the new column %s to the %s.%s table failed", columnName, namespace, table),
+              "Adding the new %s column to the %s container failed",
+              columnName, getFullTableName(namespace, table)),
           e);
     }
   }
@@ -596,7 +620,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
       return allNamespaces.stream().map(CosmosNamespace::getId).collect(Collectors.toSet());
     } catch (RuntimeException e) {
-      throw new ExecutionException("Retrieving the namespaces names failed", e);
+      throw new ExecutionException("Retrieving the database names failed", e);
     }
   }
 
