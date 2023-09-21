@@ -63,6 +63,7 @@ Select your database to see the options available:
   <button class="tablinks" onclick="openTab(event, 'Cassandra', 'tabset-1')" id="defaultOpen-1">Cassandra</button>
   <button class="tablinks" onclick="openTab(event, 'Cosmos_DB_for_NoSQL', 'tabset-1')">Cosmos DB for NoSQL</button>
   <button class="tablinks" onclick="openTab(event, 'DynamoDB', 'tabset-1')">DynamoDB</button>
+  <button class="tablinks" onclick="openTab(event, 'JDBC_databases', 'tabset-1')">JDBC databases</button>
 </div>
 
 <div id="Cassandra" class="tabcontent" markdown="1">
@@ -89,6 +90,11 @@ Select your database to see the options available:
 | no-scaling | Disable auto-scaling for DynamoDB.      | false   |
 | no-backup  | Disable continuous backup for DynamoDB. | false   |
 | ru         | Base resource unit.                     | 10      |
+
+</div>
+<div id="JDBC_databases" class="tabcontent" markdown="1">
+
+No options are available for JDBC databases.
 
 </div>
 </div>
@@ -184,7 +190,7 @@ admin.truncateTable("ns", "tbl");
 You can drop a secondary index as follows:
 
 ```java
-// Drop the secondary index on column "c5" from table "ns.tbl". If a secondary index does not exist, an exception will be thrown.
+// Drop the secondary index on column "c5" from table "ns.tbl". If the secondary index does not exist, an exception will be thrown.
 admin.dropIndex("ns", "tbl", "c5");
 
 // Drop the secondary index only if it exists.
@@ -491,7 +497,7 @@ And if you need to check if a value of a column is null, you can use the `isNull
 boolean isNull = result.isNull("<COLUMN_NAME>");
 ```
 
-For more details, see the Javadoc for [`Result`](https://javadoc.io/static/com.scalar-labs/scalardb/3.10.1/com/scalar/db/api/Result.html).
+For more details, see the `Result` page in the [Javadoc](https://javadoc.io/doc/com.scalar-labs/scalardb/latest/index.html) of the version of ScalarDB that you're using.
 
 ##### Execute `Get` by using a secondary index
 
@@ -862,7 +868,15 @@ For details about how to handle exceptions in ScalarDB, see [How to handle excep
 
 ## How to handle exceptions
 
-When executing a transaction, you will also need to handle exceptions properly. If you don't handle exceptions properly, you may face anomalies or data inconsistency.
+When executing a transaction, you will also need to handle exceptions properly.
+
+{% capture notice--warning %}
+**Attention**
+
+If you don't handle exceptions properly, you may face anomalies or data inconsistency.
+{% endcapture %}
+
+<div class="notice--warning">{{ notice--warning | markdownify }}</div>
 
 The following example code shows how to handle exceptions:
 
