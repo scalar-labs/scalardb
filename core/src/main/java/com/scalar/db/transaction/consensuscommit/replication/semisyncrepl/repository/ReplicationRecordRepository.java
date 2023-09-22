@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ReplicationRecordRepository {
+  private static final long ORIGIN_OF_VERSION = 1;
   private static final Logger logger = LoggerFactory.getLogger(ReplicationRecordRepository.class);
   private static final TypeReference<Set<Value>> typeRefForValueInRecords =
       new TypeReference<Set<Value>>() {};
@@ -118,12 +119,49 @@ public class ReplicationRecordRepository {
                       BigIntColumn.of("version", currentVersion), Operator.EQ))
               .build());
     } else {
-      buildable.value(BigIntColumn.of("version", 1));
+      buildable.value(BigIntColumn.of("version", ORIGIN_OF_VERSION));
       buildable.condition(ConditionBuilder.putIfNotExists());
     }
   }
 
-  public void upsertWithNewValue(Key key, Value newValue) throws ExecutionException {
+  private Record buildNewRecordAfterAppendingValue(
+      Key key, Set<Value> values, Optional<Record> existingRecord) {
+    if (existingRecord.isPresent()) {
+      Record r = existingRecord.get();
+      return new Record(
+          r.namespace,
+          r.table,
+          r.pk,
+          r.ck,
+          r.version + 1,
+          r.currentTxId,
+          r.prepTxId,
+          values,
+          r.appendedAt,
+          r.shrinkedAt);
+    } else {
+      try {
+        String namespace = key.getTextValue(0);
+        String table = key.getTextValue(1);
+        com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Key pk =
+            objectMapper.readValue(
+                key.getTextValue(2),
+                com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Key.class);
+        com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Key ck =
+            objectMapper.readValue(
+                key.getTextValue(3),
+                com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Key.class);
+
+        return new Record(
+            namespace, table, pk, ck, ORIGIN_OF_VERSION, null, null, values, null, null);
+      } catch (JsonProcessingException e) {
+        throw new RuntimeException(
+            "Failed to create a new record due to deserialization failure", e);
+      }
+    }
+  }
+
+  public Record upsertWithNewValue(Key key, Value newValue) throws ExecutionException {
     Optional<Record> recordOpt = get(key);
 
     Buildable putBuilder =
@@ -146,13 +184,15 @@ public class ReplicationRecordRepository {
           values.stream().map(Value::toStringOnlyWithMetadata));
       replicationDbStorage.put(
           putBuilder.textValue("values", objectMapper.writeValueAsString(values)).build());
+      return buildNewRecordAfterAppendingValue(key, values, recordOpt);
     } catch (JsonProcessingException e) {
       throw new RuntimeException("Failed to serialize `values` for key:" + key, e);
     }
   }
 
-  public void updateWithValues(Key key, Record record, String newTxId, Collection<Value> values)
+  public void updateWithValues(Record record, String newTxId, Collection<Value> values)
       throws ExecutionException {
+    Key key = createKey(record.namespace, record.table, record.pk, record.ck);
     Buildable putBuilder =
         Put.newBuilder()
             .namespace(replicationDbNamespace)
@@ -183,9 +223,9 @@ public class ReplicationRecordRepository {
     }
   }
 
-  public void updateWithPrepTxId(Key key, Record record, String prepTxId)
-      throws ExecutionException {
+  public void updateWithPrepTxId(Record record, String prepTxId) throws ExecutionException {
     long currentVersion = record.version;
+    Key key = createKey(record.namespace, record.table, record.pk, record.ck);
     Buildable putBuilder =
         Put.newBuilder()
             .namespace(replicationDbNamespace)
