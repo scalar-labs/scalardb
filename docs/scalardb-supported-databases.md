@@ -80,6 +80,18 @@ For recommendations when using JDBC databases, see [JDBC database recommendation
 | **ScalarDB 3.5**  | ✅                    | ✅                    | ✅                    | ✅                    |
 | **ScalarDB 3.4**  | ✅                    | ✅                    | ✅                    | ✅                    |
 
+### MariaDB
+
+| Version           | MariaDB 10.11 |
+|:------------------|:--------------|
+| **ScalarDB 3.10** | ✅            |
+| **ScalarDB 3.9**  | ✅            |
+| **ScalarDB 3.8**  | ✅            |
+| **ScalarDB 3.7**  | ✅            |
+| **ScalarDB 3.6**  | ✅            |
+| **ScalarDB 3.5**  | ✅            |
+| **ScalarDB 3.4**  | ✅            |
+
 ### Microsoft SQL Server
 
 | Version           | SQL Server 2022  | SQL Server 2019  | SQL Server 2017  |
