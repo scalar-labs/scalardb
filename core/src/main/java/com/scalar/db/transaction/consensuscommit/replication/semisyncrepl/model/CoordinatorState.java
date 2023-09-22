@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.consensuscommit.replication.model;
+package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model;
 
 import com.scalar.db.api.TransactionState;
 import java.time.Instant;

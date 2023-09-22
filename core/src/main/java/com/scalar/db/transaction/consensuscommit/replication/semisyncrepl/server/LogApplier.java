@@ -1,11 +1,11 @@
-package com.scalar.db.transaction.consensuscommit.replication.server;
+package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.transaction.consensuscommit.replication.repository.CoordinatorStateRepository;
-import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationRecordRepository;
-import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationTransactionRepository;
-import com.scalar.db.transaction.consensuscommit.replication.server.DistributorThread.Configuration;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.CoordinatorStateRepository;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.DistributorThread.Configuration;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;

@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.consensuscommit.replication.repository;
+package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -13,8 +13,8 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
-import com.scalar.db.transaction.consensuscommit.replication.model.Transaction;
-import com.scalar.db.transaction.consensuscommit.replication.model.WrittenTuple;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Transaction;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.WrittenTuple;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
