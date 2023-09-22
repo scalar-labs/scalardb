@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.consensuscommit.replication.repository;
+package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -14,8 +14,8 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
-import com.scalar.db.transaction.consensuscommit.replication.model.Record;
-import com.scalar.db.transaction.consensuscommit.replication.model.Record.Value;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record.Value;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
@@ -50,8 +50,8 @@ public class ReplicationRecordRepository {
   public Key createKey(
       String namespace,
       String table,
-      com.scalar.db.transaction.consensuscommit.replication.model.Key partitionKey,
-      com.scalar.db.transaction.consensuscommit.replication.model.Key clusteringKey) {
+      com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Key partitionKey,
+      com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Key clusteringKey) {
     try {
       return Key.newBuilder()
           .addText("namespace", namespace)
@@ -86,10 +86,12 @@ public class ReplicationRecordRepository {
                     Objects.requireNonNull(r.getText("table")),
                     objectMapper.readValue(
                         r.getText("pk"),
-                        com.scalar.db.transaction.consensuscommit.replication.model.Key.class),
+                        com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Key
+                            .class),
                     objectMapper.readValue(
                         r.getText("ck"),
-                        com.scalar.db.transaction.consensuscommit.replication.model.Key.class),
+                        com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Key
+                            .class),
                     r.getBigInt("version"),
                     r.getText("current_tx_id"),
                     r.getText("prep_tx_id"),

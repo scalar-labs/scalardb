@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.consensuscommit.replication.repository;
+package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
@@ -6,7 +6,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
-import com.scalar.db.transaction.consensuscommit.replication.model.CoordinatorState;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.CoordinatorState;
 import java.time.Instant;
 import java.util.Optional;
 

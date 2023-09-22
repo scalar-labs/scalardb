@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.consensuscommit.replication.semisync;
+package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.scalar.db.api.Delete;
@@ -10,14 +10,14 @@ import com.scalar.db.transaction.consensuscommit.TransactionResult;
 import com.scalar.db.transaction.consensuscommit.TransactionTableMetadata;
 import com.scalar.db.transaction.consensuscommit.TransactionTableMetadataManager;
 import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
-import com.scalar.db.transaction.consensuscommit.replication.model.Column;
-import com.scalar.db.transaction.consensuscommit.replication.model.DeletedTuple;
-import com.scalar.db.transaction.consensuscommit.replication.model.InsertedTuple;
-import com.scalar.db.transaction.consensuscommit.replication.model.Key;
-import com.scalar.db.transaction.consensuscommit.replication.model.Transaction;
-import com.scalar.db.transaction.consensuscommit.replication.model.UpdatedTuple;
-import com.scalar.db.transaction.consensuscommit.replication.model.WrittenTuple;
-import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationTransactionRepository;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Column;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.DeletedTuple;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.InsertedTuple;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Key;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Transaction;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedTuple;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.WrittenTuple;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;

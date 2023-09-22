@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.consensuscommit.replication.server;
+package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server;
 
 import com.google.common.collect.Streams;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -11,10 +11,10 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.transaction.consensuscommit.replication.model.Column;
-import com.scalar.db.transaction.consensuscommit.replication.model.Record;
-import com.scalar.db.transaction.consensuscommit.replication.model.Record.Value;
-import com.scalar.db.transaction.consensuscommit.replication.repository.ReplicationRecordRepository;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Column;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record.Value;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
 import java.io.Closeable;
 import java.util.ArrayDeque;
 import java.util.HashMap;
@@ -144,12 +144,12 @@ public class RecordWriterThread implements Closeable {
               .namespace(record.namespace)
               .table(record.table)
               .partitionKey(
-                  com.scalar.db.transaction.consensuscommit.replication.model.Key.toScalarDbKey(
-                      record.pk));
+                  com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Key
+                      .toScalarDbKey(record.pk));
       if (!record.ck.columns.isEmpty()) {
         deleteBuilder.clusteringKey(
-            com.scalar.db.transaction.consensuscommit.replication.model.Key.toScalarDbKey(
-                record.ck));
+            com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Key
+                .toScalarDbKey(record.ck));
       }
       // TODO: Consider partial commit issues
       backupScalarDbStorage.delete(deleteBuilder.build());
@@ -159,12 +159,12 @@ public class RecordWriterThread implements Closeable {
               .namespace(record.namespace)
               .table(record.table)
               .partitionKey(
-                  com.scalar.db.transaction.consensuscommit.replication.model.Key.toScalarDbKey(
-                      record.pk));
+                  com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Key
+                      .toScalarDbKey(record.pk));
       if (!record.ck.columns.isEmpty()) {
         putBuilder.clusteringKey(
-            com.scalar.db.transaction.consensuscommit.replication.model.Key.toScalarDbKey(
-                record.ck));
+            com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Key
+                .toScalarDbKey(record.ck));
       }
       putBuilder.textValue("tx_id", lastValue.txId);
       putBuilder.intValue("tx_state", TransactionState.COMMITTED.get());
