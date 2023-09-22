@@ -12,9 +12,7 @@ In ScalarDB, you can execute a two-phase commit transactions that span multiple 
 
 In two-phase commit transactions, there are two roles—a coordinator and a participant—that collaboratively execute a single transaction.
 
-A coordinator process and the participant processes all have different transaction manager instances.
-The coordinator process first begins or starts a transaction, and the participant processes join the transaction.
-After executing CRUD operations, the coordinator process and the participant processes commit the transaction by using the two-phase interface.
+The coordinator process and the participant processes all have different transaction manager instances. The coordinator process first begins or starts a transaction, and the participant processes join the transaction. After executing CRUD operations, the coordinator process and the participant processes commit the transaction by using the two-phase interface.
 
 ## How to configure ScalarDB to support two-phase commit transactions
 
