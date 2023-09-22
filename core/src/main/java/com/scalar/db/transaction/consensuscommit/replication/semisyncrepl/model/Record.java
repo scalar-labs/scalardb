@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.consensuscommit.replication.model;
+package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;

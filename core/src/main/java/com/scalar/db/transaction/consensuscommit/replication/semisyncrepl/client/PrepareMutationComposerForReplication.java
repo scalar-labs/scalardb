@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.consensuscommit.replication.semisync;
+package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client;
 
 import com.scalar.db.api.Operation;
 import com.scalar.db.exception.storage.ExecutionException;
