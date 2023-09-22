@@ -8,6 +8,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.CoordinatorState;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.DeletedTuple;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.InsertedTuple;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record.Value;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Transaction;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedTuple;
@@ -40,7 +41,7 @@ public class DistributorThread implements Closeable {
   private final ReplicationRecordRepository replicationRecordRepository;
   private final ReplicationTransactionRepository replicationTransactionRepository;
   private final CoordinatorStateRepository coordinatorStateRepository;
-  private final Queue<Key> recordWriterQueue;
+  private final Queue<RecordHolder> recordWriterQueue;
 
   private final MetricsLogger metricsLogger = new MetricsLogger();
 
@@ -158,7 +159,7 @@ public class DistributorThread implements Closeable {
       CoordinatorStateRepository coordinatorStateRepository,
       ReplicationTransactionRepository replicationTransactionRepository,
       ReplicationRecordRepository replicationRecordRepository,
-      Queue<Key> recordWriterQueue) {
+      Queue<RecordHolder> recordWriterQueue) {
     if (conf.replicationDbPartitionSize % conf.threadSize != 0) {
       throw new IllegalArgumentException(
           String.format(
@@ -229,7 +230,9 @@ public class DistributorThread implements Closeable {
     }
 
     try {
-      replicationRecordRepository.upsertWithNewValue(key, newValue);
+      Record record = replicationRecordRepository.upsertWithNewValue(key, newValue);
+      // Enqueue the record in addition to the key as an optimization
+      recordWriterQueue.add(new RecordHolder(key, record));
     } catch (Exception e) {
       String message =
           String.format(
@@ -237,8 +240,6 @@ public class DistributorThread implements Closeable {
               key, transactionId, newValue);
       throw new RuntimeException(message, e);
     }
-
-    recordWriterQueue.add(key);
   }
 
   private void handleTransaction(Transaction transaction, Instant committedAt)
