@@ -493,7 +493,7 @@ byte[] blobValueAsBytes = result.getBlobAsBytes("<COLUMN_NAME>");
 And if you need to check if a value of a column is null, you can use the `isNull("<COLUMN_NAME>")` method.
 
 ``` java
-// Check if a value of a column is null
+// Check if a value of a column is null.
 boolean isNull = result.isNull("<COLUMN_NAME>");
 ```
 
@@ -506,7 +506,7 @@ You can execute a `Get` operation by using a secondary index.
 Instead of specifying a partition key, you can specify an index key (indexed column) to use a secondary index as follows:
 
 ```java
-// Create a `Get` operation by using a secondary index
+// Create a `Get` operation by using a secondary index.
 Key indexKey = Key.ofFloat("c4", 1.23F);
 
 Get get =
@@ -517,7 +517,7 @@ Get get =
         .projections("c1", "c2", "c3", "c4")
         .build();
 
-// Execute the `Get` operation
+// Execute the `Get` operation.
 Optional<Result> result = transaction.get(get);
 ```
 
@@ -537,7 +537,7 @@ If the result has more than one record, the `transaction.get()` will throw an ex
 You need to create a `Scan` object first, and then you can execute the object by using the `transaction.scan()` method as follows:
 
 ```java
-// Create a `Scan` operation
+// Create a `Scan` operation.
 Key partitionKey = Key.ofInt("c1", 10);
 Key startClusteringKey = Key.of("c2", "aaa", "c3", 100L);
 Key endClusteringKey = Key.of("c2", "aaa", "c3", 300L);
@@ -554,7 +554,7 @@ Scan scan =
         .limit(10)
         .build();
 
-// Execute the `Scan` operation
+// Execute the `Scan` operation.
 List<Result> results = transaction.scan(scan);
 ```
 
@@ -569,7 +569,7 @@ You can execute a `Scan` operation by using a secondary index.
 Instead of specifying a partition key, you can specify an index key (indexed column) to use a secondary index as follows:
 
 ```java
-// Create a `Scan` operation by using a secondary index
+// Create a `Scan` operation by using a secondary index.
 Key indexKey = Key.ofFloat("c4", 1.23F);
 
 Scan scan =
@@ -581,7 +581,7 @@ Scan scan =
         .limit(10)
         .build();
 
-// Execute the `Scan` operation
+// Execute the `Scan` operation.
 List<Result> results = transaction.scan(scan);
 ```
 
@@ -600,7 +600,7 @@ You can execute a `Scan` operation without specifying a partition key.
 Instead of calling the `partitionKey()` method in the builder, you can call the `all()` method to scan a table without specifying a partition key as follows:
 
 ```java
-// Create a `Scan` operation without specifying a partition key
+// Create a `Scan` operation without specifying a partition key.
 Scan scan =
     Scan.newBuilder()
         .namespace("ns")
@@ -610,7 +610,7 @@ Scan scan =
         .limit(10)
         .build();
 
-// Execute the `Scan` operation
+// Execute the `Scan` operation.
 List<Result> results = transaction.scan(scan);
 ```
 
@@ -637,7 +637,7 @@ When you update an existing record, you need to read the record by using `Get` o
 You need to create a `Put` object first, and then you can execute the object by using the `transaction.put()` method as follows:
 
 ```java
-// Create a `Put` operation
+// Create a `Put` operation.
 Key partitionKey = Key.ofInt("c1", 10);
 Key clusteringKey = Key.of("c2", "aaa", "c3", 100L);
 
@@ -651,7 +651,7 @@ Put put =
         .doubleValue("c5", 4.56)
         .build();
 
-// Execute the `Put` operation
+// Execute the `Put` operation.
 transaction.put(put);
 ```
 
@@ -684,7 +684,7 @@ When you delete a record, you need to read the record by using `Get` or `Scan` b
 You need to create a `Delete` object first, and then you can execute the object by using the `transaction.delete()` method as follows:
 
 ```java
-// Create a `Delete` operation
+// Create a `Delete` operation.
 Key partitionKey = Key.ofInt("c1", 10);
 Key clusteringKey = Key.of("c2", "aaa", "c3", 100L);
 
@@ -696,7 +696,7 @@ Delete delete =
         .clusteringKey(clusteringKey)
         .build();
 
-// Execute the `Delete` operation
+// Execute the `Delete` operation.
 transaction.delete(delete);
 ```
 
@@ -711,7 +711,7 @@ When a `Put` or `Delete` operation includes a condition, the operation is execut
 You can specify a condition in a `Put` operation as follows:
 
 ```java
-// Build a condition
+// Build a condition.
 MutationCondition condition =
     ConditionBuilder.putIf(ConditionBuilder.column("c4").isEqualToFloat(0.0F))
         .and(ConditionBuilder.column("c5").isEqualToDouble(0.0))
@@ -728,17 +728,17 @@ Put put =
         .condition(condition) // condition
         .build();
 
-// Execute the `Put` operation
+// Execute the `Put` operation.
 transaction.put(put);
 ```
 
 In addition to using the `putIf` condition, you can specify the `putIfExists` and `putIfNotExists` conditions as follows:
 
 ```java
-// Build a `putIfExists` condition
+// Build a `putIfExists` condition.
 MutationCondition putIfExistsCondition = ConditionBuilder.putIfExists();
 
-// Build a `putIfNotExists` condition
+// Build a `putIfNotExists` condition.
 MutationCondition putIfNotExistsCondition = ConditionBuilder.putIfNotExists();
 ```
 
@@ -747,7 +747,7 @@ MutationCondition putIfNotExistsCondition = ConditionBuilder.putIfNotExists();
 You can specify a condition in a `Delete` operation as follows:
 
 ```java
-// Build a condition
+// Build a condition.
 MutationCondition condition =
     ConditionBuilder.deleteIf(ConditionBuilder.column("c4").isEqualToFloat(0.0F))
         .and(ConditionBuilder.column("c5").isEqualToDouble(0.0))
@@ -762,14 +762,14 @@ Delete delete =
         .condition(condition) // condition
         .build();
 
-// Execute the `Delete` operation
+// Execute the `Delete` operation.
 transaction.delete(delete);
 ```
 
 In addition to using the `deleteIf` condition, you can specify the `deleteIfExists` condition as follows:
 
 ```java
-// Build a `deleteIfExists` condition
+// Build a `deleteIfExists` condition.
 MutationCondition deleteIfExistsCondition = ConditionBuilder.deleteIfExists();
 ```
 
@@ -780,7 +780,7 @@ Mutate is an operation to execute multiple mutations (`Put` and `Delete` operati
 You need to create mutation objects first, and then you can execute the objects by using the `transaction.mutate()` method as follows:
 
 ```java
-// Create `Put` and `Delete` operations
+// Create `Put` and `Delete` operations.
 Key partitionKey = Key.ofInt("c1", 10);
 
 Key clusteringKeyForPut = Key.of("c2", "aaa", "c3", 100L);
@@ -805,7 +805,7 @@ Delete delete =
         .clusteringKey(clusteringKeyForDelete)
         .build();
 
-// Execute the operations
+// Execute the operations.
 transaction.mutate(Arrays.asList(put, delete));
 ```
 
@@ -820,13 +820,13 @@ scalar.db.default_namespace_name=<NAMESPACE_NAME>
 Any operation that does not specify a namespace will use the default namespace set in the configuration.
 
 ```java
-//This operation will target the default namespace
+// This operation will target the default namespace.
 Scan scanUsingDefaultNamespace =
     Scan.newBuilder()
         .table("tbl")
         .all()
         .build();
-//This operation will target the "ns" namespace
+// This operation will target the "ns" namespace.
 Scan scanUsingSpecifiedNamespace =
     Scan.newBuilder()
         .namespace("ns")
