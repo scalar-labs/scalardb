@@ -33,4 +33,4 @@
 > 
 > For example:
 > 
-> Added validation for the consensus commit mutation operation.
+> Added validation for the Consensus Commit mutation operation.
