@@ -43,7 +43,7 @@ public class DistributorThread implements Closeable {
   private final CoordinatorStateRepository coordinatorStateRepository;
   private final Queue<RecordHolder> recordWriterQueue;
 
-  private final MetricsLogger metricsLogger = new MetricsLogger();
+  private final MetricsLogger metricsLogger;
 
   private static class Metrics {
     public final AtomicInteger scanCount = new AtomicInteger();
@@ -52,6 +52,12 @@ public class DistributorThread implements Closeable {
     public final AtomicInteger handledCommittedTransactions = new AtomicInteger();
     public final AtomicInteger exceptionCount = new AtomicInteger();
 
+    private final Queue<RecordHolder> recordWriterQueue;
+
+    public Metrics(Queue<RecordHolder> recordWriterQueue) {
+      this.recordWriterQueue = recordWriterQueue;
+    }
+
     @Override
     public String toString() {
       return MoreObjects.toStringHelper(this)
@@ -59,6 +65,7 @@ public class DistributorThread implements Closeable {
           .add("scannedTxns", scannedTransactions)
           .add("uncommittedTxns", uncommittedTransactions)
           .add("handledTxns", handledCommittedTransactions)
+          .add("queueLength", recordWriterQueue.size())
           .add("exceptions", exceptionCount)
           .toString();
     }
@@ -68,10 +75,12 @@ public class DistributorThread implements Closeable {
     private final boolean isEnabled;
     private final Map<Instant, Metrics> metricsMap = new ConcurrentHashMap<>();
     private final AtomicReference<Instant> keyHolder = new AtomicReference<>();
+    private final Queue<RecordHolder> recordWriterQueue;
 
-    public MetricsLogger() {
+    public MetricsLogger(Queue<RecordHolder> recordWriterQueue) {
       String metricsEnabled = System.getenv("LOG_APPLIER_METRICS_ENABLED");
       this.isEnabled = metricsEnabled != null && metricsEnabled.equalsIgnoreCase("true");
+      this.recordWriterQueue = recordWriterQueue;
     }
 
     private Instant currentTimestampRoundedInSeconds() {
@@ -81,7 +90,7 @@ public class DistributorThread implements Closeable {
     private void withPrintAndCleanup(Consumer<Metrics> consumer) {
       Instant currentKey = currentTimestampRoundedInSeconds();
       Instant oldKey = keyHolder.getAndSet(currentKey);
-      Metrics metrics = metricsMap.computeIfAbsent(currentKey, k -> new Metrics());
+      Metrics metrics = metricsMap.computeIfAbsent(currentKey, k -> new Metrics(recordWriterQueue));
       consumer.accept(metrics);
       if (oldKey == null) {
         return;
@@ -180,6 +189,7 @@ public class DistributorThread implements Closeable {
     this.coordinatorStateRepository = coordinatorStateRepository;
     this.replicationRecordRepository = replicationRecordRepository;
     this.recordWriterQueue = recordWriterQueue;
+    this.metricsLogger = new MetricsLogger(recordWriterQueue);
   }
 
   private void handleWrittenTuple(
