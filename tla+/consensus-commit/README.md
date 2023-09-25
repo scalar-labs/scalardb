@@ -51,7 +51,7 @@ The implementation is done in message passing style. All messages are sent on th
 2. In "What is the behavior spec?" select "Temporal formula" and enter "Spec".
 3. In "What is the model?" enter "R <- r1, r2, r3" and select "Set of model values" and also "Symmetry set". This means that r1, r2, and r3 are interchangable and will make model checking much faster.
 4. Make sure "Deadlock" is _not_ selected.
-5. Under "Invariants" you can enter "TypeOK" and "Consistent".
+5. Under "Invariants" you can enter "TypeOK".
 6. Under "Properties" enter "Spec".
 7. Now you should be able to run the model checker. Push the little green arrow at the top.
 8. The number in "States Found" and "Distinct States" should give you a good idea if the model checker is working correctly or not.
