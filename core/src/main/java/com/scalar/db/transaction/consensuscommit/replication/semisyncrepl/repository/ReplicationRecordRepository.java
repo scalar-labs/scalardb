@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -181,7 +182,11 @@ public class ReplicationRecordRepository {
       logger.debug(
           "[appendValue]\n  key:{}\n  values={}",
           key,
-          values.stream().map(Value::toStringOnlyWithMetadata));
+          "["
+              + values.stream()
+                  .map(Value::toStringOnlyWithMetadata)
+                  .collect(Collectors.joining(","))
+              + "]");
       replicationDbStorage.put(
           putBuilder.textValue("values", objectMapper.writeValueAsString(values)).build());
       return buildNewRecordAfterAppendingValue(key, values, recordOpt);
@@ -210,7 +215,11 @@ public class ReplicationRecordRepository {
           key,
           record.version,
           newTxId,
-          values.stream().map(Value::toStringOnlyWithMetadata));
+          "["
+              + values.stream()
+                  .map(Value::toStringOnlyWithMetadata)
+                  .collect(Collectors.joining(","))
+              + "]");
       replicationDbStorage.put(
           putBuilder
               .textValue("values", objectMapper.writeValueAsString(values))
