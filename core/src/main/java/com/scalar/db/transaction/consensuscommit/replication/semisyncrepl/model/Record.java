@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 public class Record {
@@ -137,7 +138,13 @@ public class Record {
         .add("ck", ck)
         .add("currentTxId", currentTxId)
         .add("prepTxId", currentTxId)
-        .add("values", values.stream().map(Value::toStringOnlyWithMetadata))
+        .add(
+            "values",
+            "["
+                + values.stream()
+                    .map(Value::toStringOnlyWithMetadata)
+                    .collect(Collectors.joining(","))
+                + "]")
         .add("appendedAt", appendedAt)
         .add("shrinkedAt", shrinkedAt)
         .toString();
