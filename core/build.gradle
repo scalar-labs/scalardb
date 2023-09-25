@@ -244,6 +244,6 @@ if (!project.gradle.startParameter.taskNames.isEmpty() &&
 // TODO: This is for replication test. Remove this.
 application {
     mainClassName = 'com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.LogApplier'
-    applicationDefaultJvmArgs = ['-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG']
+    applicationDefaultJvmArgs = ['-Dorg.slf4j.simpleLogger.defaultLogLevel=INFO']
 }
 
