@@ -211,9 +211,10 @@ public class ReplicationRecordRepository {
 
     try {
       logger.debug(
-          "[updateValues]\n  key:{}\n  currentVersion:{}\n  newTxId:{}\n  values={}",
+          "[updateValues]\n  key:{}\n  curVer:{}\n  newTxId:{}\n  prepTxId:{}\n  values={}",
           key,
           record.version,
+          record.prepTxId,
           newTxId,
           "["
               + values.stream()
@@ -249,10 +250,7 @@ public class ReplicationRecordRepository {
                     TextColumn.of("prep_tx_id", null), Operator.IS_NULL))));
 
     logger.debug(
-        "[updatePrepTxId]\n  key:{}\n  currentVersion:{}\n  prepTxId:{}",
-        key,
-        record.version,
-        prepTxId);
+        "[updatePrepTxId]\n  key:{}\n  curVer:{}\n  prepTxId:{}", key, record.version, prepTxId);
 
     replicationDbStorage.put(putBuilder.textValue("prep_tx_id", prepTxId).build());
   }

@@ -122,6 +122,7 @@ public class Record {
         .add("table", table)
         .add("pk", pk)
         .add("ck", ck)
+        .add("version", version)
         .add("currentTxId", currentTxId)
         .add("prepTxId", currentTxId)
         .add("values", values)
@@ -136,6 +137,7 @@ public class Record {
         .add("table", table)
         .add("pk", pk)
         .add("ck", ck)
+        .add("version", version)
         .add("currentTxId", currentTxId)
         .add("prepTxId", currentTxId)
         .add(
