@@ -651,7 +651,7 @@ The `begin()` API could throw `TransactionException` or `TransactionNotFoundExce
 - If you catch `TransactionException`, this exception indicates that the transaction has failed to begin due to transient or non-transient faults. You can try retrying the transaction, but you may not be able to begin the transaction due to non-transient faults.
 - If you catch `TransactionNotFoundException`, this exception indicates that the transaction has failed to begin due to transient faults. In this case, you can retry the transaction.
 
-The `join()` API could also throw `TransactionException` or `TransactionNotFoundException`. You can handle these exceptions in the same way that you handle the exceptions for the `begin()` API.
+The `join()` API could also throw `TransactionNotFoundException`. You can handle this exception in the same way that you handle the exceptions for the `begin()` API.
 
 ### `CrudException` and `CrudConflictException`
 
