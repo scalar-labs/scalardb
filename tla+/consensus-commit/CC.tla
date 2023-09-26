@@ -132,3 +132,4 @@ CCS == INSTANCE CCSpec
 THEOREM Spec => CCS!Spec
 \* Put "CCS!Spec" into the Properties section of the model to check it
 
+=============================================================================

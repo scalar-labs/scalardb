@@ -51,3 +51,4 @@ Spec == Init /\ [][Next]_<<rState, cState>>
 
 THEOREM Spec => [](TypeOK /\ Consistent)
 
+=============================================================================
