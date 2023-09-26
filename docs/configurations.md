@@ -192,17 +192,13 @@ ScalarDB supports two-phase commit transactions. With two-phase commit transacti
 
 For details about using two-phase commit, see [Two-Phase Commit Transactions](two-phase-commit-transactions.md).
 
-### Multi-storage support
+### Underlying storage or database configurations
 
 ScalarDB supports using multiple storage implementations simultaneously. You can use multiple storages by specifying `multi-storage` as the value for the `scalar.db.storage` property.
 
 For details about using multiple storages, see [Multi-Storage Transactions](multi-storage-transactions.md).
 
-## Configuration examples
-
-This section shows several configuration examples for ScalarDB.
-
-### Example - App and database
+## Configuration example - App and database
 
 ```mermaid
 flowchart LR
@@ -226,50 +222,6 @@ The following is an example of the configuration for connecting the app to the u
 ```properties
 # Transaction manager implementation.
 scalar.db.transaction_manager=consensus-commit
-
-# Storage implementation.
-scalar.db.storage=cassandra
-
-# Comma-separated contact points.
-scalar.db.contact_points=<CASSANDRA_HOST>
-
-# Credential information to access the database.
-scalar.db.username=<USERNAME>
-scalar.db.password=<PASSWORD>
-```
-
-### Example - App, ScalarDB Server, and database
-
-```mermaid
-flowchart LR
-    app["<b>App</b><br />ScalarDB library with gRPC"]
-    server["<b>ScalarDB Server</b><br />(ScalarDB library with<br />Consensus Commit)"]
-    db[(Underlying storage or database)]
-    app --> server --> db
-```
-
-In this example configuration, the app (ScalarDB library with gRPC) connects to an underlying storage or database (in this case, Cassandra) through ScalarDB Server.
-
-{% capture notice--info %}
-**Note**
-
-This configuration is acceptable for production use because ScalarDB Server implements the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface, which enables you to take transactionally consistent backups for ScalarDB by pausing ScalarDB Server.
-
-{% endcapture %}
-
-<div class="notice--info">{{ notice--info | markdownify }}</div>
-
-The following is an example of the configuration for connecting the app to the underlying database through ScalarDB Server:
-
-```properties
-# Transaction manager implementation.
-scalar.db.transaction_manager=grpc
-
-# ScalarDB Server host.
-scalar.db.contact_points=<SCALARDB_SERVER_HOST>
-
-# ScalarDB Server port.
-scalar.db.contact_port=<SCALARDB_SERVER_PORT>
 
 # Storage implementation.
 scalar.db.storage=cassandra
