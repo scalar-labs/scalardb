@@ -10,9 +10,9 @@ ScalarDB normally executes transactions in a single transaction manager instance
 
 In ScalarDB, you can execute a two-phase commit transactions that span multiple transaction manager instances. The transaction manager instances can be in the same process or application, or the instances can be in different processes or applications. For example, if you have transaction manager instances in multiple microservices, you can execute a transaction that spans multiple microservices.
 
-In two-phase commit transactions, there are two roles—a coordinator and a participant—that collaboratively execute a single transaction.
+In two-phase commit transactions, there are two roles—Coordinator and a participant—that collaboratively execute a single transaction.
 
-The coordinator process and the participant processes all have different transaction manager instances. The coordinator process first begins or starts a transaction, and the participant processes join the transaction. After executing CRUD operations, the coordinator process and the participant processes commit the transaction by using the two-phase interface.
+The Coordinator process and the participant processes all have different transaction manager instances. The Coordinator process first begins or starts a transaction, and the participant processes join the transaction. After executing CRUD operations, the Coordinator process and the participant processes commit the transaction by using the two-phase interface.
 
 ## How to configure ScalarDB to support two-phase commit transactions
 
@@ -42,7 +42,7 @@ For additional configurations, see [ScalarDB Configurations](configurations.md).
 
 ## How to execute two-phase commit transactions
 
-To execute a two-phase commit transaction, you must get the transaction manager instance. Then, the coordinator process can begin or start the transaction, and the participant can process the transaction.
+To execute a two-phase commit transaction, you must get the transaction manager instance. Then, the Coordinator process can begin or start the transaction, and the participant can process the transaction.
 
 ### Get a `TwoPhaseCommitTransactionManager` instance
 
@@ -55,16 +55,16 @@ TransactionFactory factory = TransactionFactory.create("<CONFIGURATION_FILE_PATH
 TwoPhaseCommitTransactionManager transactionManager = factory.getTwoPhaseCommitTransactionManager();
 ```
 
-### Begin or start a transaction (for the coordinator)
+### Begin or start a transaction (for Coordinator)
 
-For the process or application that begins the transaction to act as a coordinator, you should use the following `begin` method:
+For the process or application that begins the transaction to act as Coordinator, you should use the following `begin` method:
 
 ```java
 // Begin a transaction.
 TwoPhaseCommitTransaction tx = transactionManager.begin();
 ```
 
-Or, for the process or application that begins the transaction to act as a coordinator, you should use the following `start` method:
+Or, for the process or application that begins the transaction to act as Coordinator, you should use the following `start` method:
 
 ```java
 // Start a transaction.
@@ -99,7 +99,7 @@ tx.getId();
 
 ### Join a transaction (for participants)
 
-For participants, you can join a transaction by specifying the transaction ID associated with the transaction that the coordinator has started or begun as follows:
+For participants, you can join a transaction by specifying the transaction ID associated with the transaction that Coordinator has started or begun as follows:
 
 ```java
 TwoPhaseCommitTransaction tx = transactionManager.join("<TRANSACTION_ID>")
@@ -161,54 +161,54 @@ tx.put(toPut);
 
 After finishing CRUD operations, you need to commit the transaction. As with the standard two-phase commit protocol, there are two phases: prepare and commit.
 
-In all the coordinator and participant processes, you need to prepare and then commit the transaction as follows:
+In all the Coordinator and participant processes, you need to prepare and then commit the transaction as follows:
 
 ```java
 TwoPhaseCommitTransaction tx = ...
 
 try {
-  // Execute CRUD operations in the coordinator and participant processes.
+  // Execute CRUD operations in the Coordinator and participant processes.
   ...
 
-  // Prepare phase: Prepare the transaction in all the coordinator and participant processes.
+  // Prepare phase: Prepare the transaction in all the Coordinator and participant processes.
   tx.prepare();
   ...
 
-  // Commit phase: Commit the transaction in all the coordinator and participant processes.
+  // Commit phase: Commit the transaction in all the Coordinator and participant processes.
   tx.commit();
   ...
 } catch (TransactionException e) {
-  // If an error happens, you will need to roll back the transaction in all the coordinator and participant processes.
+  // If an error happens, you will need to roll back the transaction in all the Coordinator and participant processes.
   tx.rollback();
   ...
 }
 ```
 
-For `prepare()`, if any of the coordinator or participant processes fail to prepare the transaction, you will need to call `rollback()` (or `abort()`) in all the coordinator and participant processes.
+For `prepare()`, if any of the Coordinator or participant processes fail to prepare the transaction, you will need to call `rollback()` (or `abort()`) in all the Coordinator and participant processes.
 
-For `commit()`, if any of the coordinator or participant processes successfully commit the transaction, you can consider the transaction as committed. When a transaction has been committed, you can ignore any errors in the other coordinator and participant processes. If all the coordinator and participant processes fail to commit the transaction, you will need to call `rollback()` (or `abort()`) in all the coordinator and participant processes.
+For `commit()`, if any of the Coordinator or participant processes successfully commit the transaction, you can consider the transaction as committed. When a transaction has been committed, you can ignore any errors in the other Coordinator and participant processes. If all the Coordinator and participant processes fail to commit the transaction, you will need to call `rollback()` (or `abort()`) in all the Coordinator and participant processes.
 
-For better performance, you can call `prepare()`, `commit()`, and `rollback()` in the coordinator and participant processes in parallel, respectively.
+For better performance, you can call `prepare()`, `commit()`, and `rollback()` in the Coordinator and participant processes in parallel, respectively.
 
 #### Validate the transaction
 
-Depending on the concurrency control protocol, you need to call `validate()` in all the coordinator and participant processes after `prepare()` and before `commit()`, as shown below:
+Depending on the concurrency control protocol, you need to call `validate()` in all the Coordinator and participant processes after `prepare()` and before `commit()`, as shown below:
 
 ```java
-// Prepare phase 1: Prepare the transaction in all the coordinator and participant processes.
+// Prepare phase 1: Prepare the transaction in all the Coordinator and participant processes.
 tx.prepare();
 ...
 
-// Prepare phase 2: Validate the transaction in all the coordinator and participant processes.
+// Prepare phase 2: Validate the transaction in all the Coordinator and participant processes.
 tx.validate();
 ...
 
-// Commit phase: Commit the transaction in all the coordinator and participant processes.
+// Commit phase: Commit the transaction in all the Coordinator and participant processes.
 tx.commit();
 ...
 ```
 
-Similar to `prepare()`, if any of the coordinator or participant processes fail to validate the transaction, you will need to call `rollback()` (or `abort()`) in all the coordinator and participant processes. In addition, you can call `validate()` in the coordinator and participant processes in parallel for better performance.
+Similar to `prepare()`, if any of the Coordinator or participant processes fail to validate the transaction, you will need to call `rollback()` (or `abort()`) in all the Coordinator and participant processes. In addition, you can call `validate()` in the Coordinator and participant processes in parallel for better performance.
 
 {% capture notice--info %}
 **Note**
@@ -297,7 +297,7 @@ try {
 
 For simplicity, the above example code doesn't handle the exceptions that the APIs may throw. For details about handling exceptions, see [How to handle exceptions](#handle-exceptions).
 
-As previously mentioned, for `commit()`, if any of the coordinator or participant processes succeed in committing the transaction, you can consider the transaction as committed. Also, for better performance, you can execute `prepare()`, `validate()`, and `commit()` in parallel, respectively.
+As previously mentioned, for `commit()`, if any of the Coordinator or participant processes succeed in committing the transaction, you can consider the transaction as committed. Also, for better performance, you can execute `prepare()`, `validate()`, and `commit()` in parallel, respectively.
 
 ### Resume a transaction
 
@@ -525,7 +525,7 @@ public class Sample {
 
         // For `CrudConflictException`, `PreparationConflictException`, `ValidationConflictException`, 
         // `CommitConflictException`, and `TransactionNotFoundException`, you can basically retry the 
-        // transaction. However, for the other exceptions, the transaction may still fail if the cause of 
+        // transaction. However, for the other exceptions, the transaction will still fail if the cause of 
         // the exception is non-transient. In such a case, you will exhaust the number of retries and 
         // throw the last exception.
 
@@ -657,7 +657,7 @@ The `join()` API could also throw `TransactionNotFoundException`. You can handle
 
 The APIs for CRUD operations (`get()`, `scan()`, `put()`, `delete()`, and `mutate()`) could throw `CrudException` or `CrudConflictException`:
 
-- If you catch `CrudException`, this exception indicates that the transaction CRUD operation has failed due to transient or non-transient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is non-transient.
+- If you catch `CrudException`, this exception indicates that the transaction CRUD operation has failed due to transient or non-transient faults. You can try retrying the transaction from the beginning, but the transaction will still fail if the cause is non-transient.
 - If you catch `CrudConflictException`, this exception indicates that the transaction CRUD operation has failed due to transient faults (for example, a conflict error). In this case, you can retry the transaction from the beginning.
 
 ### `UnsatisfiedConditionException`
@@ -670,21 +670,21 @@ If you catch `UnsatisfiedConditionException`, this exception indicates that the 
 
 The `prepare()` API could throw `PreparationException` or `PreparationConflictException`:
 
-- If you catch `PreparationException`, this exception indicates that preparing the transaction fails due to transient or non-transient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is non-transient.
+- If you catch `PreparationException`, this exception indicates that preparing the transaction fails due to transient or non-transient faults. You can try retrying the transaction from the beginning, but the transaction will still fail if the cause is non-transient.
 - If you catch `PreparationConflictException`, this exception indicates that preparing the transaction has failed due to transient faults (for example, a conflict error). In this case, you can retry the transaction from the beginning.
 
 ### `ValidationException` and `ValidationConflictException`
 
 The `validate()` API could throw `ValidationException` or `ValidationConflictException`:
 
-- If you catch `ValidationException`, this exception indicates that validating the transaction fails due to transient or non-transient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is non-transient.
+- If you catch `ValidationException`, this exception indicates that validating the transaction fails due to transient or non-transient faults. You can try retrying the transaction from the beginning, but the transaction will still fail if the cause is non-transient.
 - If you catch `ValidationConflictException`, this exception indicates that validating the transaction has failed due to transient faults (for example, a conflict error). In this case, you can retry the transaction from the beginning.
 
 ### `CommitException`, `CommitConflictException`, and `UnknownTransactionStatusException`
 
 The `commit()` API could throw `CommitException`, `CommitConflictException`, or `UnknownTransactionStatusException`:
 
-- If you catch `CommitException`, this exception indicates that committing the transaction fails due to transient or non-transient faults. You can try retrying the transaction from the beginning, but the transaction may still fail if the cause is non-transient.
+- If you catch `CommitException`, this exception indicates that committing the transaction fails due to transient or non-transient faults. You can try retrying the transaction from the beginning, but the transaction will still fail if the cause is non-transient.
 - If you catch `CommitConflictException`, this exception indicates that committing the transaction has failed due to transient faults (for example, a conflict error). In this case, you can retry the transaction from the beginning.
 - If you catch `UnknownTransactionStatusException`, this exception indicates that the status of the transaction, whether it was successful or not, is unknown. In this case, you need to check if the transaction is committed successfully and retry the transaction if it has failed.
 
@@ -694,7 +694,7 @@ How to identify a transaction status is delegated to users. You may want to crea
 
 Although not illustrated in the example code, the `resume()` API could also throw `TransactionNotFoundException`. This exception indicates that the transaction associated with the specified ID was not found and/or the transaction might have expired. In either case, you can retry the transaction from the beginning since the cause of this exception is basically transient.
 
-In the sample code, for `UnknownTransactionStatusException`, the transaction is not retried because the cause of the exception is non-transient. For other exceptions, the transaction is retried because the cause of the exception is transient or non-transient. If the cause of the exception is transient, the transaction may succeed if you retry it. However, if the cause of the exception is non-transient, the transaction may still fail even if you retry it. In such a case, you will exhaust the number of retries.
+In the sample code, for `UnknownTransactionStatusException`, the transaction is not retried because the cause of the exception is non-transient. For other exceptions, the transaction is retried because the cause of the exception is transient or non-transient. If the cause of the exception is transient, the transaction may succeed if you retry it. However, if the cause of the exception is non-transient, the transaction will still fail even if you retry it. In such a case, you will exhaust the number of retries.
 
 {% capture notice--info %}
 **Note**
