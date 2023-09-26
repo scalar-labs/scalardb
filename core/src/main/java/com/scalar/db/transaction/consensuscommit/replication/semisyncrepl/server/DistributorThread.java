@@ -51,9 +51,9 @@ public class DistributorThread implements Closeable {
     public final AtomicInteger handledCommittedTransactions = new AtomicInteger();
     public final AtomicInteger exceptionCount = new AtomicInteger();
 
-    private final Queue<RecordHolder> recordWriterQueue;
+    private final Queue<Key> recordWriterQueue;
 
-    public Metrics(Queue<RecordHolder> recordWriterQueue) {
+    public Metrics(Queue<Key> recordWriterQueue) {
       this.recordWriterQueue = recordWriterQueue;
     }
 
@@ -74,9 +74,9 @@ public class DistributorThread implements Closeable {
     private final boolean isEnabled;
     private final Map<Instant, Metrics> metricsMap = new ConcurrentHashMap<>();
     private final AtomicReference<Instant> keyHolder = new AtomicReference<>();
-    private final Queue<RecordHolder> recordWriterQueue;
+    private final Queue<Key> recordWriterQueue;
 
-    public MetricsLogger(Queue<RecordHolder> recordWriterQueue) {
+    public MetricsLogger(Queue<Key> recordWriterQueue) {
       String metricsEnabled = System.getenv("LOG_APPLIER_METRICS_ENABLED");
       this.isEnabled = metricsEnabled != null && metricsEnabled.equalsIgnoreCase("true");
       this.recordWriterQueue = recordWriterQueue;

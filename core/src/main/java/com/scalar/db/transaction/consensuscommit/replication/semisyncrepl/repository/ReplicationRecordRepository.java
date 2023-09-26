@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -156,7 +157,8 @@ public class ReplicationRecordRepository {
     }
   }
 
-  public void updateWithValues(Key key, Record record, String newTxId, Collection<Value> values)
+  public void updateWithValues(
+      Key key, Record record, @Nullable String newTxId, Collection<Value> values)
       throws ExecutionException {
     Buildable putBuilder =
         Put.newBuilder()
@@ -165,7 +167,7 @@ public class ReplicationRecordRepository {
             .partitionKey(key);
     setCasCondition(putBuilder, Optional.of(record));
 
-    if (newTxId.equals(record.currentTxId)) {
+    if (newTxId != null && newTxId.equals(record.currentTxId)) {
       logger.warn("`tx_id` isn't changed. old:{}, new:{}", record.currentTxId, newTxId);
     }
 
@@ -174,8 +176,8 @@ public class ReplicationRecordRepository {
           "[updateValues]\n  key:{}\n  curVer:{}\n  newTxId:{}\n  prepTxId:{}\n  values={}",
           key,
           record.version,
-          record.prepTxId,
           newTxId,
+          record.prepTxId,
           "["
               + values.stream()
                   .map(Value::toStringOnlyWithMetadata)

@@ -124,7 +124,7 @@ public class Record {
         .add("ck", ck)
         .add("version", version)
         .add("currentTxId", currentTxId)
-        .add("prepTxId", currentTxId)
+        .add("prepTxId", prepTxId)
         .add("values", values)
         .add("appendedAt", appendedAt)
         .add("shrinkedAt", shrinkedAt)
@@ -139,7 +139,7 @@ public class Record {
         .add("ck", ck)
         .add("version", version)
         .add("currentTxId", currentTxId)
-        .add("prepTxId", currentTxId)
+        .add("prepTxId", prepTxId)
         .add(
             "values",
             "["
