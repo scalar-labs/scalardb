@@ -12,7 +12,7 @@
 
 ## Checklist
 
-> The following is a best-effort checklist. If any items in this checklist are not applicable to this PR or are dependent on other, unmerged PRs, please don't mark the checkboxes. Instead, leave a note about why the items in this checklist are not applicable in the "Additional notes" section.
+> The following is a best-effort checklist. If any items in this checklist are not applicable to this PR or are dependent on other, unmerged PRs, please still mark the checkboxes after you have read and understood each item.
 
 - [ ] I have commented my code, particularly in hard-to-understand areas.
 - [ ] I have updated the documentation to reflect the changes.
