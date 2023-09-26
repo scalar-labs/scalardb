@@ -250,45 +250,47 @@ You can get table metadata as follows:
 TableMetadata tableMetadata = admin.getTableMetadata("ns", "tbl");
 ```
 
-### Specify operations for coordinator tables
+### Specify operations for Coordinator tables
 
-Depending on the transaction manager type that you are using, you might need to create coordinator tables to execute transactions. In addition to creating tables, you can truncate and drop coordinator tables.
+Coordinator tables are used by the [Transactional API](#transactional-api) to track the statuses of transactions.
 
-#### Create coordinator tables
+When using a transaction manager, you must create Coordinator tables to execute transactions. In addition to creating tables, you can truncate and drop Coordinator tables.
 
-You can create coordinator tables as follows:
+#### Create Coordinator tables
+
+You can create Coordinator tables as follows:
 
 ```java
-// Create coordinator tables.
+// Create Coordinator tables.
 admin.createCoordinatorTables();
 
-// Create coordinator tables only if they do not already exist.
+// Create Coordinator tables only if they do not already exist.
 boolean ifNotExist = true;
 admin.createCoordinatorTables(ifNotExist);
 
-// Create coordinator tables with options.
+// Create Coordinator tables with options.
 Map<String, String> options = ...;
 admin.createCoordinatorTables(options);
 ```
 
-#### Truncate coordinator tables
+#### Truncate Coordinator tables
 
-You can truncate coordinator tables as follows:
+You can truncate Coordinator tables as follows:
 
 ```java
-// Truncate coordinator tables.
+// Truncate Coordinator tables.
 admin.truncateCoordinatorTables();
 ```
 
-#### Drop coordinator tables
+#### Drop Coordinator tables
 
-You can drop coordinator tables as follows:
+You can drop Coordinator tables as follows:
 
 ```java
-// Drop coordinator tables.
+// Drop Coordinator tables.
 admin.dropCoordinatorTables();
 
-// Drop coordinator tables if they exist.
+// Drop Coordinator tables if they exist.
 boolean ifExist = true;
 admin.dropCoordinatorTables(ifExist);
 ```
@@ -811,7 +813,7 @@ transaction.mutate(Arrays.asList(put, delete));
 
 #### Default namespace for CRUD operations
 
-A default namespace for all CRUD operations can be set by using a property in the ScalarDB configuration. If you would like to use this setting with ScalarDB Server, you will need to configure the setting on the client-side configuration.
+A default namespace for all CRUD operations can be set by using a property in the ScalarDB configuration.
 
 ```properties
 scalar.db.default_namespace_name=<NAMESPACE_NAME>
@@ -939,7 +941,7 @@ public class Sample {
 
         // For `CrudConflictException`, `CommitConflictException`, and `TransactionNotFoundException`,
         // you can basically retry the transaction. However, for the other exceptions, the transaction
-        // may still fail if the cause of the exception is non-transient. In such a case, you will 
+        // will still fail if the cause of the exception is non-transient. In such a case, you will 
         // exhaust the number of retries and throw the last exception.
 
         if (transaction != null) {
@@ -964,6 +966,8 @@ The `begin()` API could throw `TransactionException` or `TransactionNotFoundExce
 
 - If you catch `TransactionException`, this exception indicates that the transaction has failed to begin due to transient or non-transient faults. You can try retrying the transaction, but you may not be able to begin the transaction due to non-transient faults.
 - If you catch `TransactionNotFoundException`, this exception indicates that the transaction has failed to begin due to transient faults. In this case, you can retry the transaction.
+
+The `join()` API could also throw `TransactionNotFoundException`. You can handle this exception in the same way that you handle the exceptions for the `begin()` API.
 
 ### `CrudException` and `CrudConflictException`
 
@@ -992,7 +996,7 @@ How to identify a transaction status is delegated to users. You may want to crea
 
 Although not illustrated in the example code, the `resume()` API could also throw `TransactionNotFoundException`. This exception indicates that the transaction associated with the specified ID was not found and/or the transaction might have expired. In either case, you can retry the transaction from the beginning since the cause of this exception is basically transient.
 
-In the sample code, for `UnknownTransactionStatusException`, the transaction is not retried because the cause of the exception is non-transient. For other exceptions, the transaction is retried because the cause of the exception is transient or non-transient. If the cause of the exception is transient, the transaction may succeed if you retry it. However, if the cause of the exception is non-transient, the transaction may still fail even if you retry it. In such a case, you will exhaust the number of retries.
+In the sample code, for `UnknownTransactionStatusException`, the transaction is not retried because the cause of the exception is non-transient. For other exceptions, the transaction is retried because the cause of the exception is transient or non-transient. If the cause of the exception is transient, the transaction may succeed if you retry it. However, if the cause of the exception is non-transient, the transaction will still fail even if you retry it. In such a case, you will exhaust the number of retries.
 
 {% capture notice--info %}
 **Note**
