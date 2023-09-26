@@ -10,10 +10,6 @@
 
 > Outline the specific changes made in this pull request. Include relevant details, such as added features, bug fixes, code refactoring, or improvements.
 
-## How these changes were tested
-
-> Describe the testing that you have performed to ensure the changes are working as expected. Include details about the test cases or scenarios covered.
-
 ## Checklist
 
 > The following is a best-effort checklist. If any items in this checklist are not applicable to this PR or are dependent on other, unmerged PRs, please don't mark the checkboxes. Instead, leave a note about why the items in this checklist are not applicable in the "Additional notes" section.
