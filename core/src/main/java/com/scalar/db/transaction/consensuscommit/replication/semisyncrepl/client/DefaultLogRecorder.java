@@ -126,7 +126,7 @@ public class DefaultLogRecorder implements LogRecorder {
         }
       } else if (op instanceof Delete) {
         Delete delete = (Delete) op;
-        assert result != null;
+        String prevTxId = result != null ? result.getId() : null;
         writtenTuples.add(
             new DeletedTuple(
                 namespace,
@@ -135,7 +135,7 @@ public class DefaultLogRecorder implements LogRecorder {
                 txPreparedAtInMillis,
                 Key.fromScalarDbKey(delete.getPartitionKey()),
                 Key.fromScalarDbKey(delete.getClusteringKey().orElse(null)),
-                result.getId()));
+                prevTxId));
       } else {
         throw new IllegalArgumentException("Unexpected operation: " + op);
       }
