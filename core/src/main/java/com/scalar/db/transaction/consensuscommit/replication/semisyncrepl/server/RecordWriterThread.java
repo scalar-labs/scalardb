@@ -9,6 +9,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder.Buildable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Column;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
@@ -39,8 +40,7 @@ public class RecordWriterThread implements Closeable {
   private final ExecutorService executorService;
   private final int threadSize;
   private final DistributedStorage backupScalarDbStorage;
-  // TODO: Revisit this queuing Record(s) since it might block GC
-  private final BlockingQueue<RecordHolder> queue = new LinkedBlockingQueue<>();
+  private final BlockingQueue<Key> queue = new LinkedBlockingQueue<>();
   private final ReplicationRecordRepository replicationRecordRepository;
 
   public RecordWriterThread(
@@ -60,19 +60,14 @@ public class RecordWriterThread implements Closeable {
     this.replicationRecordRepository = replicationRecordRepository;
   }
 
-  private void handleRecord(RecordHolder recordHolder) throws ExecutionException {
-    Record record;
-
-    if (recordHolder.record == null) {
-      Optional<Record> recordOpt = replicationRecordRepository.get(recordHolder.key);
-      if (!recordOpt.isPresent()) {
-        logger.warn("key:{} is not found", recordHolder.key);
-        return;
-      }
-      record = recordOpt.get();
-    } else {
-      record = recordHolder.record;
+  private void handleKey(Key key) throws ExecutionException {
+    Optional<Record> recordOpt = replicationRecordRepository.get(key);
+    if (!recordOpt.isPresent()) {
+      logger.warn("key:{} is not found", key);
+      return;
     }
+
+    Record record = recordOpt.get();
 
     Queue<Value> valuesForInsert = new ArrayDeque<>();
     Map<String, Value> valuesForNonInsert = new HashMap<>();
@@ -80,7 +75,7 @@ public class RecordWriterThread implements Closeable {
       if (value.type.equals("insert")) {
         if (value.prevTxId != null) {
           throw new IllegalStateException(
-              String.format("`prevTxId` should be null. key:%s, value:%s", record, value));
+              String.format("`prevTxId` should be null. key:%s, value:%s", key, value));
         }
         valuesForInsert.add(value);
       } else {
@@ -108,7 +103,7 @@ public class RecordWriterThread implements Closeable {
           throw new IllegalStateException(
               String.format(
                   "`updatedColumns` should be empty. key:%s, value:%s, updatedColumns:%s",
-                  record, value, updatedColumns));
+                  key, value, updatedColumns));
         }
         updatedColumns.addAll(value.columns);
         currentTxId = value.txId;
@@ -134,13 +129,13 @@ public class RecordWriterThread implements Closeable {
     }
 
     if (lastValue == null) {
-      logger.debug("`values` in `records` table is empty. key:{}", record);
+      logger.debug("`values` in `records` table is empty. key:{}", key);
       return;
     }
 
     if (record.prepTxId == null) {
       // Write down the target transaction ID to let conflict transactions on the same page.
-      replicationRecordRepository.updateWithPrepTxId(record, lastValue.txId);
+      replicationRecordRepository.updateWithPrepTxId(key, record, lastValue.txId);
     }
 
     if (lastValue.type.equals("delete")) {
@@ -186,6 +181,7 @@ public class RecordWriterThread implements Closeable {
 
     try {
       replicationRecordRepository.updateWithValues(
+          key,
           record,
           lastValue.txId,
           Streams.concat(valuesForInsert.stream(), valuesForNonInsert.values().stream())
@@ -194,12 +190,12 @@ public class RecordWriterThread implements Closeable {
       String message =
           String.format(
               "Failed to update the values. key:%s, txId:%s, lastValue:%s",
-              record, record.currentTxId, lastValue);
+              key, record.currentTxId, lastValue);
       throw new RuntimeException(message, e);
     }
   }
 
-  public BlockingQueue<RecordHolder> queue() {
+  public BlockingQueue<Key> queue() {
     return queue;
   }
 
@@ -208,10 +204,10 @@ public class RecordWriterThread implements Closeable {
       executorService.execute(
           () -> {
             while (!executorService.isShutdown()) {
-              RecordHolder recordHolder;
+              Key key;
               try {
-                recordHolder = queue.poll(500, TimeUnit.MILLISECONDS);
-                if (recordHolder == null) {
+                key = queue.poll(500, TimeUnit.MILLISECONDS);
+                if (key == null) {
                   continue;
                 }
               } catch (InterruptedException e) {
@@ -221,11 +217,10 @@ public class RecordWriterThread implements Closeable {
               }
 
               try {
-                handleRecord(recordHolder);
+                handleKey(key);
               } catch (Throwable e) {
-                // Retry with only the key to fetch the latest record
-                queue.add(new RecordHolder(recordHolder.key, null));
-                logger.error("Caught an exception. Retrying...\n  key:{}", recordHolder.key, e);
+                queue.add(key);
+                logger.error("Caught an exception. Retrying...\n  key:{}", key, e);
                 try {
                   // Avoid busy loop
                   TimeUnit.MILLISECONDS.sleep(100);
