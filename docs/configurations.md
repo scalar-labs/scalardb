@@ -143,6 +143,12 @@ In addition, unlike other JDBC databases, [SQLite3 does not fully support concur
 </div>
 </div>
 
+##### Multi-storage support
+
+ScalarDB supports using multiple storage implementations simultaneously. You can use multiple storages by specifying `multi-storage` as the value for the `scalar.db.storage` property.
+
+For details about using multiple storages, see [Multi-Storage Transactions](multi-storage-transactions.md).
+
 ### ScalarDB Server (gRPC)
 
 [ScalarDB Server](scalardb-server.md) is a standalone server that provides a gRPC interface to ScalarDB. To interact with ScalarDB Server, you must specify `grpc` as the value for the `scalar.db.transaction_manager` property.
@@ -191,12 +197,6 @@ The following are additional configurations available for ScalarDB:
 ScalarDB supports two-phase commit transactions. With two-phase commit transactions, you can execute a transaction that spans multiple processes or applications, like in a microservice architecture.
 
 For details about using two-phase commit, see [Two-Phase Commit Transactions](two-phase-commit-transactions.md).
-
-### Underlying storage or database configurations
-
-ScalarDB supports using multiple storage implementations simultaneously. You can use multiple storages by specifying `multi-storage` as the value for the `scalar.db.storage` property.
-
-For details about using multiple storages, see [Multi-Storage Transactions](multi-storage-transactions.md).
 
 ## Configuration example - App and database
 
