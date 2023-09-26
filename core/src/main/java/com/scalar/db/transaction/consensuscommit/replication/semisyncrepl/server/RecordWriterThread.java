@@ -138,6 +138,7 @@ public class RecordWriterThread implements Closeable {
       replicationRecordRepository.updateWithPrepTxId(key, record, lastValue.txId);
     }
 
+    String newCurrentTxId;
     if (lastValue.type.equals("delete")) {
       DeleteBuilder.Buildable deleteBuilder =
           Delete.newBuilder()
@@ -153,6 +154,7 @@ public class RecordWriterThread implements Closeable {
       }
       // TODO: Consider partial commit issues
       backupScalarDbStorage.delete(deleteBuilder.build());
+      newCurrentTxId = null;
     } else {
       Buildable putBuilder =
           Put.newBuilder()
@@ -177,13 +179,14 @@ public class RecordWriterThread implements Closeable {
 
       // TODO: Consider partial commit issues
       backupScalarDbStorage.put(putBuilder.build());
+      newCurrentTxId = lastValue.txId;
     }
 
     try {
       replicationRecordRepository.updateWithValues(
           key,
           record,
-          lastValue.txId,
+          newCurrentTxId,
           Streams.concat(valuesForInsert.stream(), valuesForNonInsert.values().stream())
               .collect(Collectors.toSet()));
     } catch (Exception e) {
