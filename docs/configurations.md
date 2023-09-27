@@ -194,9 +194,9 @@ The following are additional configurations available for ScalarDB:
 
 ### Two-phase commit support
 
-ScalarDB supports two-phase commit transactions. With two-phase commit transactions, you can execute a transaction that spans multiple processes or applications, like in a microservice architecture.
+ScalarDB supports transactions with a two-phase commit interface. With transactions with a two-phase commit interface, you can execute a transaction that spans multiple processes or applications, like in a microservice architecture.
 
-For details about using two-phase commit, see [Two-Phase Commit Transactions](two-phase-commit-transactions.md).
+For details about using two-phase commit, see [Transactions with a Two-Phase Commit Interface](two-phase-commit-transactions.md).
 
 ## Configuration example - App and database
 
