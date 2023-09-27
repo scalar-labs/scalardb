@@ -395,7 +395,7 @@ DistributedTransaction transaction = transactionManager.resume("<TRANSACTION_ID>
 {% capture notice--info %}
 **Note**
 
-You must guarantee the uniqueness of the transaction ID in this case. To get the transaction ID with `getId()`, you can specify the following:
+To get the transaction ID with `getId()`, you can specify the following:
 
 ```java
 tx.getId();
