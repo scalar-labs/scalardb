@@ -1,6 +1,6 @@
 # ScalarDB Java API Guide
 
-The ScalarDB Java API is mainly composed of the Administrative API and Transactional API. This guide briefly explains what kinds of APIs exist, how to use them, and related topics like handling exceptions.
+The ScalarDB Java API is mainly composed of the Administrative API and Transactional API. This guide briefly explains what kinds of APIs exist, how to use them, and related topics like how to handle exceptions.
 
 ## Administrative API
 
@@ -164,8 +164,8 @@ You can add a new, non-partition key column to a table as follows:
 admin.addNewColumnToTable("ns", "tbl", "c6", DataType.INT)
 ```
 
-{% capture notice--info %}
-**Note**
+{% capture notice--warning %}
+**Attention**
 
 You should carefully consider adding a new column to a table because the execution time may vary greatly depending on the underlying storage. Please plan accordingly and consider the following, especially if the database runs in production:
 
@@ -174,7 +174,7 @@ You should carefully consider adding a new column to a table because the executi
 - **For relational databases (MySQL, Oracle, etc.):** Adding a column may take a very long time to execute. In addition, a table lock may occur.
 {% endcapture %}
 
-<div class="notice--info">{{ notice--info | markdownify }}</div>
+<div class="notice--warning">{{ notice--warning | markdownify }}</div>
 
 ### Truncate a table
 
@@ -351,12 +351,16 @@ DistributedTransaction transaction = transactionManager.start("<TRANSACTION_ID>"
 {% capture notice--info %}
 **Note**
 
-You must guarantee the uniqueness of the transaction ID in this case.
+Specifying a transaction ID is useful when you want to link external systems to ScalarDB. Otherwise, you should use the `start()` method.
+
+When you specify a transaction ID, make sure you specify a unique ID (for example, UUID v4) throughout the system since ScalarDB depends on the uniqueness of transaction IDs for correctness.
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
 ### Join a transaction
+
+Joining a transaction is particularly useful in a stateful application where a transaction spans multiple client requests. In such a scenario, the application can start a transaction during the first client request. Then, in subsequent client requests, the application can join the ongoing transaction by using the `join()` method.
 
 You can join an ongoing transaction that has already begun by specifying the transaction ID as follows:
 
@@ -365,9 +369,21 @@ You can join an ongoing transaction that has already begun by specifying the tra
 DistributedTransaction transaction = transactionManager.join("<TRANSACTION_ID>");
 ```
 
-Joining a transaction is particularly useful in a stateful application where a transaction spans multiple client requests. In such a scenario, the application can start a transaction during the first client request. Then, in subsequent client requests, the application can join the ongoing transaction by using the `join()` method.
+{% capture notice--info %}
+**Note**
+
+You must guarantee the uniqueness of the transaction ID in this case. To get the transaction ID with `getId()`, you can specify the following:
+
+```java
+tx.getId();
+```
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 ### Resume a transaction
+
+Resuming a transaction is particularly useful in a stateful application where a transaction spans multiple client requests. In such a scenario, the application can start a transaction during the first client request. Then, in subsequent client requests, the application can resume the ongoing transaction by using the `resume()` method.
 
 You can resume an ongoing transaction that you have already begun by specifying a transaction ID as follows:
 
@@ -376,7 +392,17 @@ You can resume an ongoing transaction that you have already begun by specifying 
 DistributedTransaction transaction = transactionManager.resume("<TRANSACTION_ID>");
 ```
 
-Resuming a transaction is particularly useful in a stateful application where a transaction spans multiple client requests. In such a scenario, the application can start a transaction during the first client request. Then, in subsequent client requests, the application can resume the ongoing transaction by using the `resume()` method.
+{% capture notice--info %}
+**Note**
+
+You must guarantee the uniqueness of the transaction ID in this case. To get the transaction ID with `getId()`, you can specify the following:
+
+```java
+tx.getId();
+```
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 ### Implement CRUD operations
 
@@ -880,7 +906,7 @@ If you don't handle exceptions properly, you may face anomalies or data inconsis
 
 <div class="notice--warning">{{ notice--warning | markdownify }}</div>
 
-The following example code shows how to handle exceptions:
+The following sample code shows how to handle exceptions:
 
 ```java
 public class Sample {
@@ -994,16 +1020,14 @@ How to identify a transaction status is delegated to users. You may want to crea
 
 ### Notes about some exceptions
 
-Although not illustrated in the example code, the `resume()` API could also throw `TransactionNotFoundException`. This exception indicates that the transaction associated with the specified ID was not found and/or the transaction might have expired. In either case, you can retry the transaction from the beginning since the cause of this exception is basically transient.
+Although not illustrated in the sample code, the `resume()` API could also throw `TransactionNotFoundException`. This exception indicates that the transaction associated with the specified ID was not found and/or the transaction might have expired. In either case, you can retry the transaction from the beginning since the cause of this exception is basically transient.
 
 In the sample code, for `UnknownTransactionStatusException`, the transaction is not retried because the cause of the exception is non-transient. For other exceptions, the transaction is retried because the cause of the exception is transient or non-transient. If the cause of the exception is transient, the transaction may succeed if you retry it. However, if the cause of the exception is non-transient, the transaction will still fail even if you retry it. In such a case, you will exhaust the number of retries.
 
 {% capture notice--info %}
 **Note**
 
-If you begin a transaction by specifying a transaction ID, you must use a different ID when you retry the transaction.
-
-In addition, in the sample code, the transaction is retried three times maximum and sleeps for 100 milliseconds before it is retried. But you can choose a retry policy, such as exponential backoff, according to your application requirements.
+In the sample code, the transaction is retried three times maximum and sleeps for 100 milliseconds before it is retried. But you can choose a retry policy, such as exponential backoff, according to your application requirements.
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
