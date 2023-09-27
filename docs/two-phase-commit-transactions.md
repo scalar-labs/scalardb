@@ -6,7 +6,7 @@ This page explains how two-phase commit transactions work in ScalarDB and how to
 
 ## How two-phase commit transactions work in ScalarDB
 
-ScalarDB normally executes transactions in a single transaction manager instance with a one-phase commit interface, which we call normal transactions. In normal transactions, you begin a transaction, execute CRUD operations, and commit the transaction in the same transaction manager instance.
+ScalarDB normally executes transactions in a single transaction manager instance with a one-phase commit interface. In transactions with a one-phase commit interface, you begin a transaction, execute CRUD operations, and commit the transaction in the same transaction manager instance.
 
 In ScalarDB, you can execute a two-phase commit transactions that span multiple transaction manager instances. The transaction manager instances can be in the same process or application, or the instances can be in different processes or applications. For example, if you have transaction manager instances in multiple microservices, you can execute a transaction that spans multiple microservices.
 
