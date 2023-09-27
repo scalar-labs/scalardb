@@ -351,7 +351,7 @@ DistributedTransaction transaction = transactionManager.start("<TRANSACTION_ID>"
 {% capture notice--info %}
 **Note**
 
-Specifying a transaction ID is useful when you want to link external systems to ScalarDB. Otherwise, you should use the `start()` method.
+Specifying a transaction ID is useful when you want to link external systems to ScalarDB. Otherwise, you should use the `begin()` method or the `start()` method.
 
 When you specify a transaction ID, make sure you specify a unique ID (for example, UUID v4) throughout the system since ScalarDB depends on the uniqueness of transaction IDs for correctness.
 {% endcapture %}
