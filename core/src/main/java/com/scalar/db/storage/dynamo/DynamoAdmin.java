@@ -155,7 +155,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private final ApplicationAutoScalingClient applicationAutoScalingClient;
   private final String metadataNamespace;
   private final String namespacePrefix;
-  private final int waitingDurationSecs;
 
   @Inject
   public DynamoAdmin(DatabaseConfig databaseConfig) {
@@ -175,7 +174,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         config.getNamespacePrefix().orElse("")
             + config.getMetadataNamespace().orElse(METADATA_NAMESPACE);
     namespacePrefix = config.getNamespacePrefix().orElse("");
-    waitingDurationSecs = DEFAULT_WAITING_DURATION_SECS;
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -186,7 +184,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         config.getNamespacePrefix().orElse("")
             + config.getMetadataNamespace().orElse(METADATA_NAMESPACE);
     namespacePrefix = config.getNamespacePrefix().orElse("");
-    waitingDurationSecs = DEFAULT_WAITING_DURATION_SECS;
   }
 
   @VisibleForTesting
@@ -200,7 +197,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         config.getNamespacePrefix().orElse("")
             + config.getMetadataNamespace().orElse(METADATA_NAMESPACE);
     namespacePrefix = config.getNamespacePrefix().orElse("");
-    waitingDurationSecs = 0;
   }
 
   private AwsCredentialsProvider createCredentialsProvider(DynamoConfig config) {
@@ -516,7 +512,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private void waitForTableCreation(Namespace namespace, String table) throws ExecutionException {
     try {
       while (true) {
-        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
+        Uninterruptibles.sleepUninterruptibly(DEFAULT_WAITING_DURATION_SECS, TimeUnit.SECONDS);
         DescribeTableResponse describeTableResponse =
             client.describeTable(
                 DescribeTableRequest.builder()
@@ -627,7 +623,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       while (true) {
-        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
+        Uninterruptibles.sleepUninterruptibly(DEFAULT_WAITING_DURATION_SECS, TimeUnit.SECONDS);
         DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
             client.describeContinuousBackups(
                 DescribeContinuousBackupsRequest.builder()
@@ -766,7 +762,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       while (true) {
-        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
+        Uninterruptibles.sleepUninterruptibly(DEFAULT_WAITING_DURATION_SECS, TimeUnit.SECONDS);
         Set<String> tableSet = getNamespaceTableNames(namespace.nonPrefixed());
         if (!tableSet.contains(tableName)) {
           break;
@@ -946,7 +942,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     try {
       String indexName = getGlobalIndexName(namespace, table, columnName);
       while (true) {
-        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
+        Uninterruptibles.sleepUninterruptibly(DEFAULT_WAITING_DURATION_SECS, TimeUnit.SECONDS);
         DescribeTableResponse response =
             client.describeTable(
                 DescribeTableRequest.builder()
@@ -1052,7 +1048,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     try {
       String indexName = getGlobalIndexName(namespace, table, columnName);
       while (true) {
-        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
+        Uninterruptibles.sleepUninterruptibly(DEFAULT_WAITING_DURATION_SECS, TimeUnit.SECONDS);
         DescribeTableResponse response =
             client.describeTable(
                 DescribeTableRequest.builder()
