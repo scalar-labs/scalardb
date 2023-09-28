@@ -272,6 +272,23 @@ boolean ifExists = true;
 admin.dropNamespace("ns", ifExists);
 ```
 
+### Get existing namespaces
+
+You can get the existing namespaces as follows:
+
+```java
+Set<String> namespaces = admin.getNamespaceNames();
+```
+
+### Get the tables of a namespace
+
+You can get the tables of a namespace as follows:
+
+```java
+// Get the tables of the namespace "ns".
+Set<String> tables = admin.getNamespaceTableNames("ns");
+```
+
 ### Get table metadata
 
 You can get table metadata as follows:
@@ -697,7 +714,7 @@ In addition, if you specify multiple conditions in a Mutate operation, the opera
 A default namespace for all CRUD operations can be set by using a property in the ScalarDB configuration.
 
 ```properties
-scalar.db.default_namespace_name=<a_namespace_name>
+scalar.db.default_namespace_name=<NAMESPACE_NAME>
 ```
 
 Any operation that does not specify a namespace will use the default namespace set in the configuration.
