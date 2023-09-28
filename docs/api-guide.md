@@ -552,7 +552,7 @@ Optional<Result> result = transaction.get(get);
 {% capture notice--info %}
 **Note**
 
-If the result has more than one record, the `transaction.get()` will throw an exception. If you want to handle multiple results, see [Execute `Scan` by using a secondary index](#execute-scan-by-using-a-secondary-index).
+If the result has more than one record, `transaction.get()` will throw an exception. If you want to handle multiple results, see [Execute `Scan` by using a secondary index](#execute-scan-by-using-a-secondary-index).
 
 {% endcapture %}
 
