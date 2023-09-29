@@ -72,7 +72,7 @@ Select your database to see the options available:
 |----------------------|----------------------------------------------------------------------------------------|------------------|
 | replication-strategy | Cassandra replication strategy. Must be `SimpleStrategy` or `NetworkTopologyStrategy`. | `SimpleStrategy` |
 | compaction-strategy  | Cassandra compaction strategy, Must be `LCS`, `STCS` or `TWCS`.                        | `STCS`           |
-| replication-factor   | Cassandra replication factor.                                                          | 1                |
+| replication-factor   | Cassandra replication factor.                                                          | 3                |
 
 </div>
 <div id="Cosmos_DB_for_NoSQL" class="tabcontent" markdown="1">
