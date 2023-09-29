@@ -378,19 +378,21 @@ public interface Admin {
    * Add a new column to an existing table. The new column cannot be a partition or clustering key.
    * <br>
    * <br>
-   * <strong>Attention:</strong> You should carefully consider adding a new column to a table because the
-   * execution time may vary greatly depending on the underlying storage. Please plan accordingly and
-   * consider the following, especially if the database runs in production:
+   * <strong>Attention:</strong> You should carefully consider adding a new column to a table
+   * because the execution time may vary greatly depending on the underlying storage. Please plan
+   * accordingly and consider the following, especially if the database runs in production:
    *
    * <ul>
-   *   <li><strong>For Cosmos DB for noSQL and DynamoDB:</strong> Adding a column is almost instantaneous as the
-   *       table schema is not modified. Only the table metadata stored in a separate table is updated.
-   *   <li><strong>For Cassandra:</strong> Adding a column will only update the schema metadata and will not 
-   *       modify the existing schema records. The cluster topology is the main factor for the execution time.
-   *       Changes to the schema metadata are shared to each cluster node via a gossip protocol. Because of this,
-   *       the larger the cluster, the longer it will take for all nodes to be updated.
-   *   <li><strong>For relational databases (MySQL, Oracle, etc.):</strong> Adding a column shouldn't take a long
-   *       time to execute.
+   *   <li><strong>For Cosmos DB for noSQL and DynamoDB:</strong> Adding a column is almost
+   *       instantaneous as the table schema is not modified. Only the table metadata stored in a
+   *       separate table is updated.
+   *   <li><strong>For Cassandra:</strong> Adding a column will only update the schema metadata and
+   *       will not modify the existing schema records. The cluster topology is the main factor for
+   *       the execution time. Changes to the schema metadata are shared to each cluster node via a
+   *       gossip protocol. Because of this, the larger the cluster, the longer it will take for all
+   *       nodes to be updated.
+   *   <li><strong>For relational databases (MySQL, Oracle, etc.):</strong> Adding a column
+   *       shouldn't take a long time to execute.
    * </ul>
    *
    * @param namespace the table namespace
