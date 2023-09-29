@@ -61,28 +61,28 @@ For the process or application that begins the transaction to act as Coordinator
 
 ```java
 // Begin a transaction.
-TwoPhaseCommitTransaction tx = transactionManager.begin();
+TwoPhaseCommitTransaction tx = manager.begin();
 ```
 
 Or, for the process or application that begins the transaction to act as Coordinator, you should use the following `start` method:
 
 ```java
 // Start a transaction.
-TwoPhaseCommitTransaction tx = transactionManager.start();
+TwoPhaseCommitTransaction tx = manager.start();
 ```
 
 Alternatively, you can use the `begin` method for a transaction by specifying a transaction ID as follows:
 
 ```java
 // Begin a transaction by specifying a transaction ID.
-TwoPhaseCommitTransaction tx = transactionManager.begin("<TRANSACTION_ID>");
+TwoPhaseCommitTransaction tx = manager.begin("<TRANSACTION_ID>");
 ```
 
 Or, you can use the `start` method for a transaction by specifying a transaction ID as follows:
 
 ```java
 // Start a transaction by specifying a transaction ID.
-TwoPhaseCommitTransaction tx = transactionManager.start("<TRANSACTION_ID>");
+TwoPhaseCommitTransaction tx = manager.start("<TRANSACTION_ID>");
 ```
 
 ### Join a transaction (for participants)
@@ -90,7 +90,7 @@ TwoPhaseCommitTransaction tx = transactionManager.start("<TRANSACTION_ID>");
 For participants, you can join a transaction by specifying the transaction ID associated with the transaction that Coordinator has started or begun as follows:
 
 ```java
-TwoPhaseCommitTransaction tx = transactionManager.join("<TRANSACTION_ID>")
+TwoPhaseCommitTransaction tx = manager.join("<TRANSACTION_ID>")
 ```
 
 {% capture notice--info %}
@@ -307,12 +307,12 @@ The following shows how `resume()` works:
 
 ```java
 // Join (or begin) the transaction.
-TwoPhaseCommitTransaction tx = transactionManager.join("<TRANSACTION_ID>");
+TwoPhaseCommitTransaction tx = manager.join("<TRANSACTION_ID>");
 
 ...
 
 // Resume the transaction by using the transaction ID.
-TwoPhaseCommitTransaction tx1 = transactionManager.resume("<TRANSACTION_ID>")
+TwoPhaseCommitTransaction tx1 = manager.resume("<TRANSACTION_ID>")
 ```
 
 {% capture notice--info %}
@@ -359,7 +359,7 @@ public class ServiceAImpl implements ServiceA {
 
   @Override
   public void facadeEndpoint() throws Exception {
-    TwoPhaseCommitTransaction tx = transactionManager.begin();
+    TwoPhaseCommitTransaction tx = manager.begin();
 
     try {
       ...
@@ -404,19 +404,19 @@ public class ServiceBImpl implements ServiceB {
   @Override
   public void endpoint1(String txId) throws Exception {
     // Join the transaction.
-    TwoPhaseCommitTransaction tx = transactionManager.join(txId);
+    TwoPhaseCommitTransaction tx = manager.join(txId);
   }
 
   @Override
   public void endpoint2(String txId) throws Exception {
     // Resume the transaction that you joined in `endpoint1()`.
-    TwoPhaseCommitTransaction tx = transactionManager.resume(txId);
+    TwoPhaseCommitTransaction tx = manager.resume(txId);
   }
 
   @Override
   public void prepare(String txId) throws Exception {
     // Resume the transaction.
-    TwoPhaseCommitTransaction tx = transactionManager.resume(txId);
+    TwoPhaseCommitTransaction tx = manager.resume(txId);
 
     ...
 
@@ -427,7 +427,7 @@ public class ServiceBImpl implements ServiceB {
   @Override
   public void commit(String txId) throws Exception {
     // Resume the transaction.
-    TwoPhaseCommitTransaction tx = transactionManager.resume(txId);
+    TwoPhaseCommitTransaction tx = manager.resume(txId);
 
     ...
 
@@ -438,7 +438,7 @@ public class ServiceBImpl implements ServiceB {
   @Override
   public void rollback(String txId) throws Exception {
     // Resume the transaction.
-    TwoPhaseCommitTransaction tx = transactionManager.resume(txId);
+    TwoPhaseCommitTransaction tx = manager.resume(txId);
 
     ...
 
