@@ -190,7 +190,6 @@ The following are additional configurations available for ScalarDB:
 |------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------|
 | `scalar.db.metadata.cache_expiration_time_secs`                  | ScalarDB has a metadata cache to reduce the number of requests to the database. This setting specifies the expiration time of the cache in seconds.                                                               | `-1` (no expiration) |
 | `scalar.db.active_transaction_management.expiration_time_millis` | ScalarDB maintains ongoing transactions, which can be resumed by using a transaction ID. This setting specifies the expiration time of this transaction management feature in milliseconds.                       | `-1` (no expiration) |
-| `scalar.db.default_namespace_name`                               | The given namespace name will be used by operations that do not already specify a namespace. If you would like to use this setting with ScalarDB Server, configure this setting in the client-side configuration. |                      |
 
 ### Two-phase commit support
 
