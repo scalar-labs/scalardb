@@ -73,7 +73,6 @@ The following configurations are available for Cassandra:
 | `scalar.db.contact_port`                | Port number for all the contact points.                               |            |
 | `scalar.db.username`                    | Username to access the database.                                      |            |
 | `scalar.db.password`                    | Password to access the database.                                      |            |
-| `scalar.db.cassandra.metadata.keyspace` | Keyspace name for the namespace and table metadata used for ScalarDB. | `scalardb` |
 
 </div>
 <div id="CosmosDB_for_NoSQL" class="tabcontent" markdown="1">
@@ -178,7 +177,6 @@ In addition to [transaction managers](#transaction-managers) and [other configur
 | `scalar.db.server.prometheus_exporter_port`       | Prometheus exporter port. Prometheus exporter will not be started if a negative number is given. | `8080`                  |
 | `scalar.db.server.grpc.max_inbound_message_size`  | The maximum message size allowed to be received.                                                 | The gRPC default value. |
 | `scalar.db.server.grpc.max_inbound_metadata_size` | The maximum size of metadata allowed to be received.                                             | The gRPC default value. |
-| `scalar.db.server.decommissioning_duration_secs`  | The decommissioning duration in seconds.                                                         | `30`                    |
 
 For details about ScalarDB Server, see [ScalarDB Server](scalardb-server.md).
 
