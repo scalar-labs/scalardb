@@ -672,12 +672,6 @@ The APIs for CRUD operations (`get()`, `scan()`, `put()`, `delete()`, and `mutat
 - If you catch `CrudException`, this exception indicates that the transaction CRUD operation has failed due to transient or non-transient faults. You can try retrying the transaction from the beginning, but the transaction will still fail if the cause is non-transient.
 - If you catch `CrudConflictException`, this exception indicates that the transaction CRUD operation has failed due to transient faults (for example, a conflict error). In this case, you can retry the transaction from the beginning.
 
-### `UnsatisfiedConditionException`
-
-The APIs for mutation operations (`put()`, `delete()`, and `mutate()`) could also throw `UnsatisfiedConditionException`.
-
-If you catch `UnsatisfiedConditionException`, this exception indicates that the condition for the mutation operation is not met. You can handle this exception according to your application requirements.
-
 ### `PreparationException` and `PreparationConflictException`
 
 The `prepare()` API could throw `PreparationException` or `PreparationConflictException`:
