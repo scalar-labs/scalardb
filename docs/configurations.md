@@ -126,22 +126,6 @@ The following configurations are available for JDBC databases:
 | `scalar.db.jdbc.admin.connection_pool.max_idle`           | Maximum number of connections that can remain idle in the connection pool for admin.                                                                                         | `10`                         |
 | `scalar.db.jdbc.admin.connection_pool.max_total`          | Maximum total number of idle and borrowed connections that can be active at the same time for the connection pool for admin. Use a negative value for no limit.              | `25`                         |
 
-{% capture notice--info %}
-**Note**
-
-If you use SQLite3 as a JDBC database, you must set `scalar.db.contact_points` as follows, replacing `YOUR_DB` with the URL of your SQLite3 database:
-
-```properties
-scalar.db.contact_points=jdbc:sqlite:<YOUR_DB>.sqlite3?busy_timeout=10000
-```
-
-In addition, unlike other JDBC databases, [SQLite3 does not fully support concurrent access](https://www.sqlite.org/lang_transaction.html). To avoid frequent errors caused internally by [`SQLITE_BUSY`](https://www.sqlite.org/rescode.html#busy), we recommend setting a [`busy_timeout`](https://www.sqlite.org/c3ref/busy_timeout.html) parameter.
-{% endcapture %}
-
-<div class="notice--info">{{ notice--info | markdownify }}</div>
-</div>
-</div>
-
 ##### Multi-storage support
 
 ScalarDB supports using multiple storage implementations simultaneously. You can use multiple storages by specifying `multi-storage` as the value for the `scalar.db.storage` property.
