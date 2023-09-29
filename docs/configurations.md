@@ -85,7 +85,7 @@ The following configurations are available for CosmosDB for NoSQL:
 | `scalar.db.storage`                  | `cosmos` must be specified.                                                                              | -          |
 | `scalar.db.contact_points`           | Azure Cosmos DB for NoSQL endpoint with which ScalarDB should communicate.                               |            |
 | `scalar.db.password`                 | Either a master or read-only key used to perform authentication for accessing Azure Cosmos DB for NoSQL. |            |
-| `scalar.db.cosmos.metadata.database` | Database name for the namespace and table metadata used for ScalarDB.                                    | `scalardb` |
+| `scalar.db.cosmos.table_metadata.database` | Database name for the table metadata used for ScalarDB.                                    | `scalardb` |
 
 </div>
 <div id="DynamoDB" class="tabcontent" markdown="1">
