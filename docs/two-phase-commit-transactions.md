@@ -517,15 +517,6 @@ public class Sample {
 
         // Commit the transaction.
         commit(transaction1, transaction2);
-      } catch (UnsatisfiedConditionException e) {
-        // You need to handle `UnsatisfiedConditionException` only if a mutation operation specifies 
-        // a condition. This exception indicates the condition for the mutation operation is not met.
-
-        rollback(transaction1, transaction2);
-
-        // You can handle the exception here, according to your application requirements.
-
-        return;
       } catch (UnknownTransactionStatusException e) {
         // If you catch `UnknownTransactionStatusException` when committing the transaction, 
         // it indicates that the status of the transaction, whether it was successful or not, is unknown.
