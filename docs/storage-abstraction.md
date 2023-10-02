@@ -69,7 +69,7 @@ In the following JSON, the `transaction` field is set to `false`, which indicate
 }
 ```
 
-To apply the schema, go to the [`scalardb Releases`](https://github.com/scalar-labs/scalardb/releases) page and download the ScalarDB Schema Loader that matches the version of ScalarDB that you are using to the `getting-started` folder.
+To apply the schema, go to the [ScalarDB Releases](https://github.com/scalar-labs/scalardb/releases) page and download the ScalarDB Schema Loader that matches the version of ScalarDB that you are using to the `getting-started` folder.
 
 Then, run the following command, replacing `<VERSION>` with the version of the ScalarDB Schema Loader that you downloaded:
 
