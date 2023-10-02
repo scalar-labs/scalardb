@@ -74,7 +74,7 @@ To apply the schema, go to the [`scalardb Releases`](https://github.com/scalar-l
 Then, run the following command, replacing `<VERSION>` with the version of the ScalarDB Schema Loader that you downloaded:
 
 ```console
-$ java -jar scalardb-schema-loader-<version>.jar --config scalardb.properties -f emoney-storage.json
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config scalardb.properties -f emoney-storage.json
 ```
 
 ### Example code
