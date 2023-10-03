@@ -1,4 +1,4 @@
-# How to Backup and Restore Databases Used Through ScalarDB
+# How to Back Up and Restore Databases Used Through ScalarDB
 
 Since ScalarDB provides transaction capabilities on top of non-transactional (possibly transactional) databases non-invasively, you need to take special care to back up and restore the databases in a transactionally consistent way.
 
