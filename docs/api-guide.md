@@ -250,47 +250,47 @@ You can get table metadata as follows:
 TableMetadata tableMetadata = admin.getTableMetadata("ns", "tbl");
 ```
 
-### Specify operations for Coordinator tables
+### Specify operations for the Coordinator table
 
-Coordinator tables are used by the [Transactional API](#transactional-api) to track the statuses of transactions.
+The Coordinator table is used by the [Transactional API](#transactional-api) to track the statuses of transactions.
 
-When using a transaction manager, you must create Coordinator tables to execute transactions. In addition to creating tables, you can truncate and drop Coordinator tables.
+When using a transaction manager, you must create the Coordinator table to execute transactions. In addition to creating the table, you can truncate and drop the Coordinator table.
 
-#### Create Coordinator tables
+#### Create the Coordinator table
 
-You can create Coordinator tables as follows:
+You can create the Coordinator table as follows:
 
 ```java
-// Create Coordinator tables.
+// Create the Coordinator table.
 admin.createCoordinatorTables();
 
-// Create Coordinator tables only if they do not already exist.
+// Create the Coordinator table only if one does not already exist.
 boolean ifNotExist = true;
 admin.createCoordinatorTables(ifNotExist);
 
-// Create Coordinator tables with options.
+// Create the Coordinator table with options.
 Map<String, String> options = ...;
 admin.createCoordinatorTables(options);
 ```
 
-#### Truncate Coordinator tables
+#### Truncate the Coordinator table
 
-You can truncate Coordinator tables as follows:
+You can truncate the Coordinator table as follows:
 
 ```java
-// Truncate Coordinator tables.
+// Truncate the Coordinator table.
 admin.truncateCoordinatorTables();
 ```
 
-#### Drop Coordinator tables
+#### Drop the Coordinator table
 
-You can drop Coordinator tables as follows:
+You can drop the Coordinator table as follows:
 
 ```java
-// Drop Coordinator tables.
+// Drop the Coordinator table.
 admin.dropCoordinatorTables();
 
-// Drop Coordinator tables if they exist.
+// Drop the Coordinator table if one exist.
 boolean ifExist = true;
 admin.dropCoordinatorTables(ifExist);
 ```
