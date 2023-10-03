@@ -153,7 +153,7 @@ For details about ScalarDB Server, see [ScalarDB Server](scalardb-server.md).
 
 [ScalarDB Server](scalardb-server.md) is a standalone server that provides a gRPC interface to ScalarDB. This section explains ScalarDB Server configurations.
 
-In addition to [transaction managers](#transaction-managers) and [other configurations](#other-configurations), the following configurations are available for ScalarDB Server:
+In addition to [transaction managers](#transaction-managers) and [other ScalarDB configurations](#other-scalardb-configurations), the following configurations are available for ScalarDB Server:
 
 | Name                                              | Description                                                                                      | Default                 |
 |---------------------------------------------------|--------------------------------------------------------------------------------------------------|-------------------------|
