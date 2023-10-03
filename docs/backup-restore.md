@@ -2,7 +2,7 @@
 
 Since ScalarDB provides transaction capabilities on top of non-transactional (possibly transactional) databases non-invasively, you need to take special care to back up and restore the databases in a transactionally consistent way.
 
-This page describes guidelines for backing up and restoring the databases that ScalarDB supports.
+This guide describes how to back up and restore the databases that ScalarDB supports.
 
 ## Create a backup
 
