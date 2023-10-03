@@ -171,7 +171,7 @@ You should carefully consider adding a new column to a table because the executi
 
 - **For Cosmos DB for NoSQL and DynamoDB:** Adding a column is almost instantaneous as the table schema is not modified. Only the table metadata stored in a separate table is updated.
 - **For Cassandra:** Adding a column will only update the schema metadata and will not modify the existing schema records. The cluster topology is the main factor for the execution time. Changes to the schema metadata are shared to each cluster node via a gossip protocol. Because of this, the larger the cluster, the longer it will take for all nodes to be updated.
-- **For relational databases (MySQL, Oracle, etc.):** Adding a column may take a very long time to execute. In addition, a table lock may occur.
+- **For relational databases (MySQL, Oracle, etc.):** Adding a column shouldn't take a long time to execute.
 {% endcapture %}
 
 <div class="notice--warning">{{ notice--warning | markdownify }}</div>
