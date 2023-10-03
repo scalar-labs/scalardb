@@ -74,13 +74,6 @@ class Metrics {
 
     addDuration(
         stringHelper,
-        "countOfSetPrepTxIdInRecord",
-        "meanDurationInMillisToSetPrepTxIdInRecord",
-        totalCountToSetPrepTxIdInRecord.get(),
-        totalDurationInMillisToSetPrepTxIdInRecord.get());
-
-    addDuration(
-        stringHelper,
         "countOfGetRecord",
         "meanDurationInMillisToGetRecord",
         totalCountToGetRecord.get(),
