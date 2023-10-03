@@ -67,9 +67,9 @@ Another way to create a transactionally consistent backup is to create a backup 
 - If the underlying database has a point-in-time snapshot or backup feature, you can take a snapshot during the period.
 - If the underlying database has a point-in-time restore or recovery (PITR) feature, you can set a restore point to a time (preferably the mid-time) in the pause duration period.
 
-To make ScalarDB drain outstanding requests and stop accepting new requests so that a pause duration can be created, you should use [ScalarDB Server](scalardb-server.md), which uses the `scalar-admin` interface, or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application that uses ScalarDB.
+To make ScalarDB drain outstanding requests and stop accepting new requests so that a pause duration can be created, you should use [ScalarDB Server](scalardb-server.md), which uses the Scalar Admin interface, or implement the [Scalar Admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application that uses ScalarDB.
 
-By using the [scalar-admin client tool](https://github.com/scalar-labs/scalar-admin/tree/main/java#scalar-admin-client-tool), you can pause nodes, servers, or applications that implement the `scalar-admin` interface without losing ongoing transactions.
+By using the [Scalar Admin client tool](https://github.com/scalar-labs/scalar-admin/tree/main/java#scalar-admin-client-tool), you can pause nodes, servers, or applications that implement the Scalar Admin interface without losing ongoing transactions.
 
 {% capture notice--info %}
 **Note**
@@ -101,7 +101,7 @@ To create a transactionally consistent cluster-wide backup, pause the applicatio
 {% capture notice--info %}
 **Note**
 
-To avoid potential issues, you should use [Cassy](https://github.com/scalar-labs/cassy), which is a backup tool for Cassandra. Cassy is also integrated with `scalar-admin`, so the tool can issue a pause request to the Cassandra cluster of your application that is using ScalarDB or ScalarDB Server. For more details about how to create a backup by using Cassy, see [Take cluster-wide consistent backups](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups).
+To avoid potential issues, you should use [Cassy](https://github.com/scalar-labs/cassy), which is a backup tool for Cassandra. Cassy is also integrated with Scalar Admin, so the tool can issue a pause request to the Cassandra cluster of your application that is using ScalarDB or ScalarDB Server. For more details about how to create a backup by using Cassy, see [Take cluster-wide consistent backups](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups).
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
