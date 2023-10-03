@@ -4,7 +4,7 @@ This page describes the available configurations for ScalarDB.
 
 ## Transaction managers
 
-Implemented within ScalarDB are two transaction managers: Consensus Commit and gRPC. You can specify one of the transaction managers by using the `scalar.db.transaction_manager` property and then specify the configurations for the transaction manager.
+ScalarDB provides its own transaction protocol called Consensus Commit. You can use the Consensus Commit protocol directly through the ScalarDB client library or through the gRPC-based ScalarDB Server, which is a daemon process that manages ScalarDB transactions.
 
 ### Consensus Commit
 
@@ -134,7 +134,11 @@ For details about using multiple storages, see [Multi-Storage Transactions](mult
 
 ### ScalarDB Server (gRPC)
 
-[ScalarDB Server](scalardb-server.md) is a standalone server that provides a gRPC interface to ScalarDB. To interact with ScalarDB Server, you must specify `grpc` as the value for the `scalar.db.transaction_manager` property.
+[ScalarDB Server](scalardb-server.md) is a standalone server that provides a gRPC interface to ScalarDB. To interact with ScalarDB Server, you must add the following to the ScalarDB properties file:
+
+```properties
+scalar.db.transaction_manager=grpc
+```
 
 The following configurations are available for the gRPC transaction manager for ScalarDB Server:
 
