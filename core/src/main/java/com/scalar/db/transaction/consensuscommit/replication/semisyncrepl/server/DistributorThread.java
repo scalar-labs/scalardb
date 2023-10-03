@@ -1,6 +1,5 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server;
 
-import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -16,18 +15,13 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.reposi
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
 import java.io.Closeable;
-import java.io.IOException;
 import java.time.Instant;
-import java.util.Map;
+import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,98 +37,6 @@ public class DistributorThread implements Closeable {
   private final Queue<Key> recordWriterQueue;
 
   private final MetricsLogger metricsLogger;
-
-  private static class Metrics {
-    public final AtomicInteger scanCount = new AtomicInteger();
-    public final AtomicInteger scannedTransactions = new AtomicInteger();
-    public final AtomicInteger uncommittedTransactions = new AtomicInteger();
-    public final AtomicInteger handledCommittedTransactions = new AtomicInteger();
-    public final AtomicInteger exceptionCount = new AtomicInteger();
-
-    private final Queue<Key> recordWriterQueue;
-
-    public Metrics(Queue<Key> recordWriterQueue) {
-      this.recordWriterQueue = recordWriterQueue;
-    }
-
-    @Override
-    public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("scans", scanCount)
-          .add("scannedTxns", scannedTransactions)
-          .add("uncommittedTxns", uncommittedTransactions)
-          .add("handledTxns", handledCommittedTransactions)
-          .add("queueLength", recordWriterQueue.size())
-          .add("exceptions", exceptionCount)
-          .toString();
-    }
-  }
-
-  private static class MetricsLogger {
-    private final boolean isEnabled;
-    private final Map<Instant, Metrics> metricsMap = new ConcurrentHashMap<>();
-    private final AtomicReference<Instant> keyHolder = new AtomicReference<>();
-    private final Queue<Key> recordWriterQueue;
-
-    public MetricsLogger(Queue<Key> recordWriterQueue) {
-      String metricsEnabled = System.getenv("LOG_APPLIER_METRICS_ENABLED");
-      this.isEnabled = metricsEnabled != null && metricsEnabled.equalsIgnoreCase("true");
-      this.recordWriterQueue = recordWriterQueue;
-    }
-
-    private Instant currentTimestampRoundedInSeconds() {
-      return Instant.ofEpochSecond(System.currentTimeMillis() / 1000);
-    }
-
-    private void withPrintAndCleanup(Consumer<Metrics> consumer) {
-      Instant currentKey = currentTimestampRoundedInSeconds();
-      Instant oldKey = keyHolder.getAndSet(currentKey);
-      Metrics metrics = metricsMap.computeIfAbsent(currentKey, k -> new Metrics(recordWriterQueue));
-      consumer.accept(metrics);
-      if (oldKey == null) {
-        return;
-      }
-      if (!oldKey.equals(currentKey)) {
-        // logger.info("[{}] {}", currentKey, metricsMap.get(oldKey));
-        System.out.printf("[%s] %s\n", currentKey, metricsMap.get(oldKey));
-      }
-    }
-
-    public void incrementScanCount() {
-      if (!isEnabled) {
-        return;
-      }
-      withPrintAndCleanup(metrics -> metrics.scanCount.incrementAndGet());
-    }
-
-    public void incrementScannedTransactions() {
-      if (!isEnabled) {
-        return;
-      }
-      withPrintAndCleanup(metrics -> metrics.scannedTransactions.incrementAndGet());
-    }
-
-    public void incrementHandledCommittedTransactions() {
-      if (!isEnabled) {
-        return;
-      }
-      withPrintAndCleanup(metrics -> metrics.handledCommittedTransactions.incrementAndGet());
-    }
-
-    public void incrementUncommittedTransactions() {
-      if (!isEnabled) {
-        return;
-      }
-      withPrintAndCleanup(metrics -> metrics.uncommittedTransactions.incrementAndGet());
-    }
-
-    public void incrementExceptionCount() {
-      if (!isEnabled) {
-        return;
-      }
-      withPrintAndCleanup(metrics -> metrics.exceptionCount.incrementAndGet());
-    }
-  }
 
   @Immutable
   public static class Configuration {
@@ -167,7 +69,8 @@ public class DistributorThread implements Closeable {
       CoordinatorStateRepository coordinatorStateRepository,
       ReplicationTransactionRepository replicationTransactionRepository,
       ReplicationRecordRepository replicationRecordRepository,
-      Queue<Key> recordWriterQueue) {
+      Queue<Key> recordWriterQueue,
+      MetricsLogger metricsLogger) {
     if (conf.replicationDbPartitionSize % conf.threadSize != 0) {
       throw new IllegalArgumentException(
           String.format(
@@ -188,7 +91,7 @@ public class DistributorThread implements Closeable {
     this.coordinatorStateRepository = coordinatorStateRepository;
     this.replicationRecordRepository = replicationRecordRepository;
     this.recordWriterQueue = recordWriterQueue;
-    this.metricsLogger = new MetricsLogger(recordWriterQueue);
+    this.metricsLogger = metricsLogger;
   }
 
   private void handleWrittenTuple(
@@ -239,7 +142,11 @@ public class DistributorThread implements Closeable {
     }
 
     try {
-      replicationRecordRepository.upsertWithNewValue(key, newValue);
+      metricsLogger.execAppendValueToRecord(
+          () -> {
+            replicationRecordRepository.upsertWithNewValue(key, newValue);
+            return null;
+          });
     } catch (Exception e) {
       String message =
           String.format(
@@ -260,14 +167,11 @@ public class DistributorThread implements Closeable {
     metricsLogger.incrementHandledCommittedTransactions();
   }
 
-  private boolean fetchAndHandleTransactions(int partitionId)
-      throws IOException, ExecutionException {
-    metricsLogger.incrementScanCount();
-    int fetchedCount = 0;
-    for (Transaction transaction :
-        replicationTransactionRepository.scan(partitionId, conf.fetchThreadSize)) {
-      fetchedCount++;
-
+  private boolean fetchAndHandleTransactions(int partitionId) throws ExecutionException {
+    List<Transaction> scannedTxns =
+        metricsLogger.execFetchTransactions(
+            () -> replicationTransactionRepository.scan(partitionId, conf.fetchThreadSize));
+    for (Transaction transaction : scannedTxns) {
       metricsLogger.incrementScannedTransactions();
       Optional<CoordinatorState> coordinatorState =
           coordinatorStateRepository.get(transaction.transactionId);
@@ -294,7 +198,7 @@ public class DistributorThread implements Closeable {
       handleTransaction(transaction, coordinatorState.get().txCommittedAt);
     }
 
-    return fetchedCount >= conf.fetchThreadSize;
+    return scannedTxns.size() >= conf.fetchThreadSize;
   }
 
   public DistributorThread run() {

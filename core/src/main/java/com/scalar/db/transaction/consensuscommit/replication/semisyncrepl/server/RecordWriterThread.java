@@ -27,7 +27,6 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -40,13 +39,16 @@ public class RecordWriterThread implements Closeable {
   private final ExecutorService executorService;
   private final int threadSize;
   private final DistributedStorage backupScalarDbStorage;
-  private final BlockingQueue<Key> queue = new LinkedBlockingQueue<>();
   private final ReplicationRecordRepository replicationRecordRepository;
+  private final BlockingQueue<Key> recordWriterQueue;
+  private final MetricsLogger metricsLogger;
 
   public RecordWriterThread(
       int threadSize,
       ReplicationRecordRepository replicationRecordRepository,
-      Properties backupScalarDbProperties) {
+      Properties backupScalarDbProperties,
+      BlockingQueue<Key> recordWriterQueue,
+      MetricsLogger metricsLogger) {
     this.threadSize = threadSize;
     this.executorService =
         Executors.newFixedThreadPool(
@@ -58,10 +60,13 @@ public class RecordWriterThread implements Closeable {
                 .build());
     this.backupScalarDbStorage = StorageFactory.create(backupScalarDbProperties).getStorage();
     this.replicationRecordRepository = replicationRecordRepository;
+    this.recordWriterQueue = recordWriterQueue;
+    this.metricsLogger = metricsLogger;
   }
 
   private void handleKey(Key key) throws ExecutionException {
-    Optional<Record> recordOpt = replicationRecordRepository.get(key);
+    Optional<Record> recordOpt =
+        metricsLogger.execGetRecord(() -> replicationRecordRepository.get(key));
     if (!recordOpt.isPresent()) {
       logger.warn("key:{} is not found", key);
       return;
@@ -135,7 +140,12 @@ public class RecordWriterThread implements Closeable {
 
     if (record.prepTxId == null) {
       // Write down the target transaction ID to let conflict transactions on the same page.
-      replicationRecordRepository.updateWithPrepTxId(key, record, lastValue.txId);
+      Value finalLastValue = lastValue;
+      metricsLogger.execSetPrepTxIdInRecord(
+          () -> {
+            replicationRecordRepository.updateWithPrepTxId(key, record, finalLastValue.txId);
+            return null;
+          });
     }
 
     String newCurrentTxId;
@@ -183,12 +193,16 @@ public class RecordWriterThread implements Closeable {
     }
 
     try {
-      replicationRecordRepository.updateWithValues(
-          key,
-          record,
-          newCurrentTxId,
-          Streams.concat(valuesForInsert.stream(), valuesForNonInsert.values().stream())
-              .collect(Collectors.toSet()));
+      metricsLogger.execUpdateRecord(
+          () -> {
+            replicationRecordRepository.updateWithValues(
+                key,
+                record,
+                newCurrentTxId,
+                Streams.concat(valuesForInsert.stream(), valuesForNonInsert.values().stream())
+                    .collect(Collectors.toSet()));
+            return null;
+          });
     } catch (Exception e) {
       String message =
           String.format(
@@ -198,10 +212,6 @@ public class RecordWriterThread implements Closeable {
     }
   }
 
-  public BlockingQueue<Key> queue() {
-    return queue;
-  }
-
   public RecordWriterThread run() {
     for (int i = 0; i < threadSize; i++) {
       executorService.execute(
@@ -209,7 +219,7 @@ public class RecordWriterThread implements Closeable {
             while (!executorService.isShutdown()) {
               Key key;
               try {
-                key = queue.poll(500, TimeUnit.MILLISECONDS);
+                key = recordWriterQueue.poll(500, TimeUnit.MILLISECONDS);
                 if (key == null) {
                   continue;
                 }
@@ -222,7 +232,7 @@ public class RecordWriterThread implements Closeable {
               try {
                 handleKey(key);
               } catch (Throwable e) {
-                queue.add(key);
+                recordWriterQueue.add(key);
                 logger.error("Caught an exception. Retrying...\n  key:{}", key, e);
                 try {
                   // Avoid busy loop

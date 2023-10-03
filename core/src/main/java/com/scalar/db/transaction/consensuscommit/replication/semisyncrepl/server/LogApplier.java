@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.CoordinatorStateRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
@@ -12,6 +13,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Properties;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class LogApplier {
   private static final String ENV_VAR_BACKUP_SCALARDB_CONFIG = "LOG_APPLIER_BACKUP_SCALARDB_CONFIG";
@@ -107,6 +110,9 @@ public class LogApplier {
             "replication",
             "records");
 
+    BlockingQueue<Key> recordWriterQueue = new LinkedBlockingQueue<>();
+    MetricsLogger metricsLogger = new MetricsLogger(recordWriterQueue);
+
     Properties backupScalarDbProps = new Properties();
     try (InputStream in =
         Files.newInputStream(Paths.get(backupScalarDbConfigPath), StandardOpenOption.READ)) {
@@ -114,7 +120,11 @@ public class LogApplier {
     }
     RecordWriterThread recordWriter =
         new RecordWriterThread(
-                numOfRecordWriterThreads, replicationRecordRepository, backupScalarDbProps)
+                numOfRecordWriterThreads,
+                replicationRecordRepository,
+                backupScalarDbProps,
+                recordWriterQueue,
+                metricsLogger)
             .run();
 
     DistributorThread distributorThread =
@@ -129,7 +139,8 @@ public class LogApplier {
                 coordinatorStateRepository,
                 replicationTransactionRepository,
                 replicationRecordRepository,
-                recordWriter.queue())
+                recordWriterQueue,
+                metricsLogger)
             .run();
 
     Runtime.getRuntime()
