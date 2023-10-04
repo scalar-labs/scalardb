@@ -598,9 +598,9 @@ storage.delete(delete);
 
 #### `Put` and `Delete` with a condition
 
-You can write arbitrary conditions (for example, a bank account balance must be equal to or more than zero) that you require a transaction to meet before being committed by implementing logic that checks the conditions in the transaction. Alternatively, you can write simple conditions in a mutation operation, such as `Put` and `Delete`.
+You can write arbitrary conditions (for example, a bank account balance must be equal to or more than zero) that you require an operation to meet before being executed by implementing logic that checks the conditions. Alternatively, you can write simple conditions in a mutation operation, such as `Put` and `Delete`.
 
-When a `Put` or `Delete` operation includes a condition, the operation is executed only if the specified condition is met. If the condition is not met when the operation is executed, an exception called `UnsatisfiedConditionException` will be thrown.
+When a `Put` or `Delete` operation includes a condition, the operation is executed only if the specified condition is met. If the condition is not met when the operation is executed, an exception called `NoMutationException` will be thrown.
 
 ##### Conditions for `Put`
 
