@@ -295,7 +295,7 @@ try {
 }
 ```
 
-For simplicity, the above example code doesn't handle the exceptions that the APIs may throw. For details about handling exceptions, see [How to handle exceptions](#handle-exceptions).
+For simplicity, the above example code doesn't handle the exceptions that the APIs may throw. For details about handling exceptions, see [How to handle exceptions](#how-to-handle-exceptions).
 
 As previously mentioned, for `commit()`, if any of the Coordinator or participant processes succeed in committing the transaction, you can consider the transaction as committed. Also, for better performance, you can execute `prepare()`, `validate()`, and `commit()` in parallel, respectively.
 
