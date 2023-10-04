@@ -134,7 +134,7 @@ public class RecordWriterThread implements Closeable {
     }
 
     if (lastValue == null) {
-      logger.debug("`values` in `records` table is empty. key:{}", key);
+      logger.debug("Didn't find a next value. key:{}", key);
       return;
     }
 
