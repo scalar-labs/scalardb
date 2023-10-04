@@ -122,7 +122,7 @@ public class LogApplier {
         new RecordWriterThread(
                 numOfRecordWriterThreads,
                 replicationRecordRepository,
-                backupScalarDbProps,
+                StorageFactory.create(backupScalarDbProps).getStorage(),
                 recordWriterQueue,
                 metricsLogger)
             .run();
