@@ -1,6 +1,6 @@
 # How to Back Up and Restore Databases Used Through ScalarDB
 
-Since ScalarDB provides transaction capabilities on top of non-transactional (possibly transactional) databases non-invasively, you need to take special care to back up and restore the databases in a transactionally consistent way.
+Since ScalarDB provides transaction capabilities on top of non-transactional or transactional databases non-invasively, you need to take special care to back up and restore the databases in a transactionally consistent way.
 
 This guide describes how to back up and restore the databases that ScalarDB supports.
 
@@ -64,10 +64,10 @@ For an example, see [BASH: SQLite3 .backup command](https://stackoverflow.com/qu
 
 Another way to create a transactionally consistent backup is to create a backup while ScalarDB Cluster does not have any outstanding transactions. Creating the backup depends on the following:
 
-- If the underlying database has a point-in-time snapshot or backup feature, you can take a snapshot during the period.
+- If the underlying database has a point-in-time snapshot or backup feature, you can create a backup during the period.
 - If the underlying database has a point-in-time restore or recovery (PITR) feature, you can set a restore point to a time (preferably the mid-time) in the pause duration period.
 
-To make ScalarDB drain outstanding requests and stop accepting new requests so that a pause duration can be created, you should use [ScalarDB Server](scalardb-server.md), which uses the Scalar Admin interface, or implement the [Scalar Admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application that uses ScalarDB.
+To make ScalarDB drain outstanding requests and stop accepting new requests so that a pause duration can be created, you should use ScalarDB Cluster, which uses the Scalar Admin interface, or implement the [Scalar Admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application that uses ScalarDB.
 
 By using the [Scalar Admin client tool](https://github.com/scalar-labs/scalar-admin/tree/main/java#scalar-admin-client-tool), you can pause nodes, servers, or applications that implement the Scalar Admin interface without losing ongoing transactions.
 
@@ -92,20 +92,11 @@ How you create a transactionally consistent backup depends on the type of databa
 
 <div id="Cassandra2" class="tabcontent" markdown="1">
 
-Cassandra has a built-in replication feature, so you do not always have to create a transactionally consistent backup. For example, if the replication factor is set to `3` and only the data of one of the nodes in a Cassandra cluster is lost, you won't need a transactionally consistent backup because the node can be recovered by using a normal, transactionally inconsistent snapshot and the repair feature.
+Cassandra has a built-in replication feature, so you do not always have to create a transactionally consistent backup. For example, if the replication factor is set to `3` and only the data of one of the nodes in a Cassandra cluster is lost, you won't need a transactionally consistent backup because the node can be recovered by using a normal, transactionally inconsistent backup (snapshot) and the repair feature.
 
-However, if the quorum of cluster nodes loses their data, you will need a transactionally consistent backup to restore the cluster to a certain transactionally consistent point.
+However, if the quorum of cluster nodes loses their data, you will need a transactionally consistent backup (snapshot) to restore the cluster to a certain transactionally consistent point.
 
-To create a transactionally consistent cluster-wide backup, pause the application that is using ScalarDB or ScalarDB Server and take snapshots of the nodes as described in [Back up with explicit pausing](#back-up-with-explicit-pausing) or stop the Cassandra cluster, take copies of all the data in the nodes, and start the cluster.
-
-{% capture notice--info %}
-**Note**
-
-To avoid potential issues, you should use [Cassy](https://github.com/scalar-labs/cassy), which is a backup tool for Cassandra. Cassy is also integrated with Scalar Admin, so the tool can issue a pause request to the Cassandra cluster of your application that is using ScalarDB or ScalarDB Server. For more details about how to create a backup by using Cassy, see [Take cluster-wide consistent backups](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups).
-{% endcapture %}
-
-<div class="notice--info">{{ notice--info | markdownify }}</div>
-
+To create a transactionally consistent cluster-wide backup, pause the application that is using ScalarDB or ScalarDB Cluster and take snapshots of the nodes as described in [Back up with explicit pausing](#back-up-with-explicit-pausing) or stop the Cassandra cluster, take copies of all the data in the nodes, and start the cluster.
 </div>
 <div id="Cosmos_DB_for_NoSQL2" class="tabcontent" markdown="1">
 
@@ -145,18 +136,6 @@ You can restore to any point within the backup retention period by using the aut
 First, stop all the nodes of the Cassandra cluster. Then, clean the `data`, `commitlog`, and `hints` directories, and place the backups (snapshots) in each node.
 
 After placing the backups (snapshots) in each node, start all the nodes of the Cassandra Cluster.
-
-{% capture notice--info %}
-**Note**
-
-To avoid potential issues, you should use [Cassy](https://github.com/scalar-labs/cassy). For more details about how to restore a backup by using Cassy, see the following:
-
-- [Restore backups to a node](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#restore-backups-to-a-node).
-- [Restore backups to a cluster](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#restore-backups-to-a-cluster)
-
-{% endcapture %}
-<div class="notice--info">{{ notice--info | markdownify }}</div>
-
 </div>
 <div id="Cosmos_DB_for_NoSQL3" class="tabcontent" markdown="1">
 
