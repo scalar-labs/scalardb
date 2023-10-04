@@ -203,7 +203,7 @@ Map<String, String> options = ...;
 admin.createIndex("ns", "tbl", "c5", options);
 ```
 
-### Add a new column to a table
+#### Add a new column to a table
 
 You can add a new, non-partition key column to a table as follows:
 
@@ -219,12 +219,12 @@ You should carefully consider adding a new column to a table because the executi
 
 - **For Cosmos DB for NoSQL and DynamoDB:** Adding a column is almost instantaneous as the table schema is not modified. Only the table metadata stored in a separate table is updated.
 - **For Cassandra:** Adding a column will only update the schema metadata and will not modify the existing schema records. The cluster topology is the main factor for the execution time. Changes to the schema metadata are shared to each cluster node via a gossip protocol. Because of this, the larger the cluster, the longer it will take for all nodes to be updated.
-- **For relational databases (MySQL, Oracle, etc.):** Adding a column may take a very long time to execute. In addition, a table lock may occur.
+- **For relational databases (MySQL, Oracle, etc.):** Adding a column shouldn't take a long time to execute.
 {% endcapture %}
 
 <div class="notice--warning">{{ notice--warning | markdownify }}</div>
 
-### Truncate a table
+#### Truncate a table
 
 You can truncate a table as follows:
 
@@ -233,7 +233,7 @@ You can truncate a table as follows:
 admin.truncateTable("ns", "tbl");
 ```
 
-### Drop a secondary index
+#### Drop a secondary index
 
 You can drop a secondary index as follows:
 
@@ -246,7 +246,7 @@ boolean ifExists = true;
 admin.dropIndex("ns", "tbl", "c5", ifExists);
 ```
 
-### Drop a table
+#### Drop a table
 
 You can drop a table as follows:
 
@@ -259,7 +259,7 @@ boolean ifExists = true;
 admin.dropTable("ns", "tbl", ifExists);
 ```
 
-### Drop a namespace
+#### Drop a namespace
 
 You can drop a namespace as follows:
 
@@ -272,7 +272,7 @@ boolean ifExists = true;
 admin.dropNamespace("ns", ifExists);
 ```
 
-### Get existing namespaces
+#### Get existing namespaces
 
 You can get the existing namespaces as follows:
 
@@ -289,7 +289,7 @@ You can get the tables of a namespace as follows:
 Set<String> tables = admin.getNamespaceTableNames("ns");
 ```
 
-### Get table metadata
+#### Get table metadata
 
 You can get table metadata as follows:
 
