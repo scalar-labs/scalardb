@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Streams;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.scalar.db.api.Delete;
@@ -10,18 +11,17 @@ import com.scalar.db.api.PutBuilder.Buildable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
-import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Column;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record.Value;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
 import java.io.Closeable;
 import java.util.ArrayDeque;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
@@ -30,6 +30,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +47,7 @@ public class RecordWriterThread implements Closeable {
   public RecordWriterThread(
       int threadSize,
       ReplicationRecordRepository replicationRecordRepository,
-      Properties backupScalarDbProperties,
+      DistributedStorage backupScalarDbStorage,
       BlockingQueue<Key> recordWriterQueue,
       MetricsLogger metricsLogger) {
     this.threadSize = threadSize;
@@ -58,22 +59,29 @@ public class RecordWriterThread implements Closeable {
                 .setUncaughtExceptionHandler(
                     (thread, e) -> logger.error("Got an uncaught exception. thread:{}", thread, e))
                 .build());
-    this.backupScalarDbStorage = StorageFactory.create(backupScalarDbProperties).getStorage();
+    this.backupScalarDbStorage = backupScalarDbStorage;
     this.replicationRecordRepository = replicationRecordRepository;
     this.recordWriterQueue = recordWriterQueue;
     this.metricsLogger = metricsLogger;
   }
 
-  private void handleKey(Key key) throws ExecutionException {
-    Optional<Record> recordOpt =
-        metricsLogger.execGetRecord(() -> replicationRecordRepository.get(key));
-    if (!recordOpt.isPresent()) {
-      logger.warn("key:{} is not found", key);
-      return;
+  @Immutable
+  static class NextValueAndRest {
+    public final Value nextValue;
+    public final Set<Value> restValues;
+    public final Collection<Column<?>> updatedColumns;
+
+    public NextValueAndRest(
+        Value nextValue, Set<Value> restValues, Collection<Column<?>> updatedColumns) {
+      this.nextValue = nextValue;
+      this.restValues = restValues;
+      this.updatedColumns = updatedColumns;
     }
+  }
 
-    Record record = recordOpt.get();
-
+  @VisibleForTesting
+  @Nullable
+  NextValueAndRest findNextValue(Key key, Record record) {
     Queue<Value> valuesForInsert = new ArrayDeque<>();
     Map<String, Value> valuesForNonInsert = new HashMap<>();
     for (Value value : record.values) {
@@ -134,16 +142,39 @@ public class RecordWriterThread implements Closeable {
     }
 
     if (lastValue == null) {
-      logger.debug("Didn't find a next value. key:{}", key);
+      return null;
+    }
+
+    return new NextValueAndRest(
+        lastValue,
+        Streams.concat(valuesForInsert.stream(), valuesForNonInsert.values().stream())
+            .collect(Collectors.toSet()),
+        updatedColumns);
+  }
+
+  private void handleKey(Key key) throws ExecutionException {
+    Optional<Record> recordOpt =
+        metricsLogger.execGetRecord(() -> replicationRecordRepository.get(key));
+    if (!recordOpt.isPresent()) {
+      logger.warn("key:{} is not found", key);
       return;
     }
 
+    Record record = recordOpt.get();
+
+    NextValueAndRest nextValueAndRest = findNextValue(key, record);
+
+    if (nextValueAndRest == null) {
+      logger.debug("A next value is not found. key:{}", key);
+      return;
+    }
+    Value lastValue = nextValueAndRest.nextValue;
+
     if (record.prepTxId == null) {
       // Write down the target transaction ID to let conflict transactions on the same page.
-      Value finalLastValue = lastValue;
       metricsLogger.execSetPrepTxIdInRecord(
           () -> {
-            replicationRecordRepository.updateWithPrepTxId(key, record, finalLastValue.txId);
+            replicationRecordRepository.updateWithPrepTxId(key, record, lastValue.txId);
             return null;
           });
     }
@@ -183,11 +214,10 @@ public class RecordWriterThread implements Closeable {
       putBuilder.intValue("tx_version", lastValue.txVersion);
       putBuilder.bigIntValue("tx_prepared_at", lastValue.txPreparedAtInMillis);
       putBuilder.bigIntValue("tx_committed_at", lastValue.txCommittedAtInMillis);
-      for (Column<?> column : updatedColumns) {
+      for (Column<?> column : nextValueAndRest.updatedColumns) {
         putBuilder.value(Column.toScalarDbColumn(column));
       }
 
-      // TODO: Consider partial commit issues
       backupScalarDbStorage.put(putBuilder.build());
       newCurrentTxId = lastValue.txId;
     }
@@ -196,11 +226,7 @@ public class RecordWriterThread implements Closeable {
       metricsLogger.execUpdateRecord(
           () -> {
             replicationRecordRepository.updateWithValues(
-                key,
-                record,
-                newCurrentTxId,
-                Streams.concat(valuesForInsert.stream(), valuesForNonInsert.values().stream())
-                    .collect(Collectors.toSet()));
+                key, record, newCurrentTxId, nextValueAndRest.restValues);
             return null;
           });
     } catch (Exception e) {
