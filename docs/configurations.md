@@ -2,11 +2,11 @@
 
 This page describes the available configurations for ScalarDB.
 
-## Transaction managers
+## ScalarDB client configurations
 
 ScalarDB provides its own transaction protocol called Consensus Commit. You can use the Consensus Commit protocol directly through the ScalarDB client library or through the gRPC-based ScalarDB Server, which is a daemon process that manages ScalarDB transactions.
 
-### Consensus Commit
+### Use Consensus Commit directly
 
 Consensus Commit is the default transaction manager type in ScalarDB. To use the Consensus Commit transaction manager, add the following to the ScalarDB properties file:
 
@@ -132,7 +132,7 @@ ScalarDB supports using multiple storage implementations simultaneously. You can
 
 For details about using multiple storages, see [Multi-Storage Transactions](multi-storage-transactions.md).
 
-### ScalarDB Server (gRPC)
+### Use Consensus Commit through ScalarDB Server
 
 [ScalarDB Server](scalardb-server.md) is a standalone server that provides a gRPC interface to ScalarDB. To interact with ScalarDB Server, you must add the following to the ScalarDB properties file:
 
@@ -183,7 +183,11 @@ ScalarDB supports transactions with a two-phase commit interface. With transacti
 
 For details about using two-phase commit, see [Transactions with a Two-Phase Commit Interface](two-phase-commit-transactions.md).
 
-## Configuration example #1 - App and database
+## Configuration examples
+
+This section provides some configuration examples.
+
+### Configuration example #1 - App and database
 
 ```mermaid
 flowchart LR
