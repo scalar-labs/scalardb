@@ -321,7 +321,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
   }
 
   @Test
-  public void createTableThenDropMetadataTableThenRepairTables_ShouldExecuteProperly()
+  public void createTablesThenDropMetadataTableThenRepairTables_ShouldExecuteProperly()
       throws Exception {
     // Arrange
     int exitCodeCreation =
@@ -335,13 +335,15 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Assert
     assertThat(exitCodeReparation).isZero();
+    assertThat(adminTestUtils.tableExists(namespace1, TABLE_1)).isTrue();
+    assertThat(adminTestUtils.tableExists(namespace2, TABLE_2)).isTrue();
     assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1)).isEqualTo(TABLE_1_METADATA);
     assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2)).isEqualTo(TABLE_2_METADATA);
   }
 
   @Test
   public void
-      createTableThenDropMetadataTableThenRepairTablesWithCoordinator_ShouldExecuteProperly()
+      createTablesThenDropMetadataTableThenRepairTablesWithCoordinator_ShouldExecuteProperly()
           throws Exception {
     // Arrange
     int exitCodeCreation =
@@ -357,9 +359,38 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Assert
     assertThat(exitCodeReparation).isZero();
+    assertThat(adminTestUtils.tableExists(namespace1, TABLE_1)).isTrue();
+    assertThat(adminTestUtils.tableExists(namespace2, TABLE_2)).isTrue();
     assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1)).isEqualTo(TABLE_1_METADATA);
     assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2)).isEqualTo(TABLE_2_METADATA);
-    assertThat(adminTestUtils.areTableMetadataForCoordinatorTablesPresent()).isTrue();
+    assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
+  }
+
+  @Test
+  public void createTablesThenDropTablesThenRepairTablesWithCoordinator_ShouldExecuteProperly()
+      throws Exception {
+    // Arrange
+    int exitCodeCreation =
+        executeWithArgs(
+            getCommandArgsForCreationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+    assertThat(exitCodeCreation).isZero();
+    adminTestUtils.dropMetadataTable();
+    adminTestUtils.dropTable(namespace1, TABLE_1);
+    adminTestUtils.dropTable(namespace2, TABLE_2);
+
+    // Act
+    int exitCodeReparation =
+        executeWithArgs(
+            getCommandArgsForTableReparationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+
+    // Assert
+    assertThat(exitCodeReparation).isZero();
+    waitForCreationIfNecessary();
+    assertThat(adminTestUtils.tableExists(namespace1, TABLE_1)).isTrue();
+    assertThat(adminTestUtils.tableExists(namespace2, TABLE_2)).isTrue();
+    assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1)).isEqualTo(TABLE_1_METADATA);
+    assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2)).isEqualTo(TABLE_2_METADATA);
+    assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
   }
 
   @Test
@@ -422,5 +453,9 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
   private int executeWithArgs(List<String> args) {
     return SchemaLoader.mainInternal(args.toArray(new String[0]));
+  }
+
+  protected void waitForCreationIfNecessary() {
+    // Do nothing
   }
 }

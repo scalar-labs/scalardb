@@ -44,7 +44,11 @@ public class RdbEngineOracle implements RdbEngineStrategy {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata) {
+      boolean hasDescClusteringOrder,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists) {
     ArrayList<String> sqls = new ArrayList<>();
 
     // Set INITRANS to 3 and MAXTRANS to 255 for the table to improve the
@@ -315,5 +319,18 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   public String getEscape(LikeExpression likeExpression) {
     String escape = likeExpression.getEscape();
     return escape.isEmpty() ? null : escape;
+  }
+
+  @Override
+  public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
+    return createIndexSql;
+  }
+
+  @Override
+  public boolean isDuplicateIndexError(SQLException e) {
+    // https://docs.oracle.com/en/error-help/db/ora-00955/
+    // code : 955
+    // message : name is already used by an existing object
+    return e.getErrorCode() == 955;
   }
 }

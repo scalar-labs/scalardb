@@ -1,5 +1,6 @@
 package com.scalar.db.schemaloader.command;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.schemaloader.SchemaLoader;
 import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
@@ -7,7 +8,6 @@ import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
 import com.scalar.db.storage.cassandra.CassandraAdmin.ReplicationStrategy;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import org.slf4j.Logger;
@@ -36,7 +36,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
   @Option(
       names = "--replication-factor",
       description = "The replication factor (supported in Cassandra)")
-  private String replicaFactor;
+  private String replicationFactor;
 
   @Option(names = "--ru", description = "Base resource unit (supported in DynamoDB, Cosmos DB)")
   private String ru;
@@ -118,26 +118,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
   }
 
   private void createTables() throws SchemaLoaderException {
-    Map<String, String> options = new HashMap<>();
-    if (replicationStrategy != null) {
-      options.put(CassandraAdmin.REPLICATION_STRATEGY, replicationStrategy.toString());
-    }
-    if (compactionStrategy != null) {
-      options.put(CassandraAdmin.COMPACTION_STRATEGY, compactionStrategy.toString());
-    }
-    if (replicaFactor != null) {
-      options.put(CassandraAdmin.REPLICATION_FACTOR, replicaFactor);
-    }
-    if (ru != null) {
-      options.put(DynamoAdmin.REQUEST_UNIT, ru);
-    }
-    if (noScaling != null) {
-      options.put(DynamoAdmin.NO_SCALING, noScaling.toString());
-    }
-    if (noBackup != null) {
-      options.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
-    }
-
+    Map<String, String> options = prepareAllOptions();
     SchemaLoader.load(configPath, schemaFile, options, coordinator);
   }
 
@@ -146,10 +127,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       throw new IllegalArgumentException(
           "Specifying the '--schema-file' option is required when using the '--repair-all' option");
     }
-    Map<String, String> options = new HashMap<>();
-    if (noBackup != null) {
-      options.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
-    }
+    Map<String, String> options = prepareAllOptions();
     SchemaLoader.repairTables(configPath, schemaFile, options, coordinator);
   }
 
@@ -158,10 +136,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       throw new IllegalArgumentException(
           "Specifying the '--schema-file' option is required when using the '--alter' option");
     }
-    Map<String, String> options = new HashMap<>();
-    if (noScaling != null) {
-      options.put(DynamoAdmin.NO_SCALING, noScaling.toString());
-    }
+    Map<String, String> options = prepareOptions(DynamoAdmin.NO_SCALING);
     SchemaLoader.alterTables(configPath, schemaFile, options);
   }
 
@@ -178,5 +153,56 @@ public class SchemaLoaderCommand implements Callable<Integer> {
     }
 
     SchemaLoader.importTables(configPath, schemaFile);
+  }
+
+  private Map<String, String> prepareAllOptions() {
+    return prepareOptions(
+        CassandraAdmin.REPLICATION_STRATEGY,
+        CassandraAdmin.COMPACTION_STRATEGY,
+        CassandraAdmin.REPLICATION_FACTOR,
+        DynamoAdmin.REQUEST_UNIT,
+        DynamoAdmin.NO_SCALING,
+        DynamoAdmin.NO_BACKUP);
+  }
+
+  private Map<String, String> prepareOptions(String... options) {
+    ImmutableMap.Builder<String, String> optionToValue = ImmutableMap.builder();
+    for (String option : options) {
+      switch (option) {
+        case CassandraAdmin.REPLICATION_STRATEGY:
+          if (replicationStrategy != null) {
+            optionToValue.put(CassandraAdmin.REPLICATION_STRATEGY, replicationStrategy.toString());
+          }
+          break;
+        case CassandraAdmin.COMPACTION_STRATEGY:
+          if (compactionStrategy != null) {
+            optionToValue.put(CassandraAdmin.COMPACTION_STRATEGY, compactionStrategy.toString());
+          }
+          break;
+        case CassandraAdmin.REPLICATION_FACTOR:
+          if (replicationFactor != null) {
+            optionToValue.put(CassandraAdmin.REPLICATION_FACTOR, replicationFactor);
+          }
+          break;
+        case DynamoAdmin.REQUEST_UNIT:
+          if (ru != null) {
+            optionToValue.put(DynamoAdmin.REQUEST_UNIT, ru);
+          }
+          break;
+        case DynamoAdmin.NO_SCALING:
+          if (noScaling != null) {
+            optionToValue.put(DynamoAdmin.NO_SCALING, noScaling.toString());
+          }
+          break;
+        case DynamoAdmin.NO_BACKUP:
+          if (noBackup != null) {
+            optionToValue.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
+          }
+          break;
+        default:
+          throw new AssertionError("Unknown option " + option);
+      }
+    }
+    return optionToValue.build();
   }
 }

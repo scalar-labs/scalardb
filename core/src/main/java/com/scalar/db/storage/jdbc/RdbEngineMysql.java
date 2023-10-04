@@ -49,7 +49,11 @@ class RdbEngineMysql implements RdbEngineStrategy {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata) {
+      boolean hasDescClusteringOrder,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists) {
     // do nothing
     return new String[] {};
   }
@@ -329,5 +333,18 @@ class RdbEngineMysql implements RdbEngineStrategy {
   public String getEscape(LikeExpression likeExpression) {
     String escape = likeExpression.getEscape();
     return escape.isEmpty() ? "\\" : escape;
+  }
+
+  @Override
+  public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
+    return createIndexSql;
+  }
+
+  @Override
+  public boolean isDuplicateIndexError(SQLException e) {
+    // https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html
+    // Error number: 1061; Symbol: ER_DUP_KEYNAME; SQLSTATE: 42000
+    // Message: Duplicate key name '%s'
+    return e.getErrorCode() == 1061;
   }
 }

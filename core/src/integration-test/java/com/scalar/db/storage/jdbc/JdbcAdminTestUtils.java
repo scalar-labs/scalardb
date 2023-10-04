@@ -7,6 +7,7 @@ import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Properties;
 import org.apache.commons.dbcp2.BasicDataSource;
 
@@ -24,9 +25,8 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
-  public void dropMetadataTable() throws SQLException {
-    execute(
-        "DROP TABLE " + rdbEngine.encloseFullTableName(metadataSchema, JdbcAdmin.METADATA_TABLE));
+  public void dropMetadataTable() throws Exception {
+    dropTable(metadataSchema, JdbcAdmin.METADATA_TABLE);
   }
 
   @Override
@@ -53,5 +53,33 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
         Connection connection = dataSource.getConnection()) {
       JdbcAdmin.execute(connection, sql);
     }
+  }
+
+  @Override
+  public boolean tableExists(String namespace, String table) throws Exception {
+    String fullTableName = rdbEngine.encloseFullTableName(namespace, table);
+    String sql = rdbEngine.tableExistsInternalTableCheckSql(fullTableName);
+    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
+        Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement(); ) {
+      statement.execute(sql);
+      return true;
+    } catch (SQLException e) {
+      // An exception will be thrown if the table does not exist when executing the select
+      // query
+      if (rdbEngine.isUndefinedTableError(e)) {
+        return false;
+      }
+      throw new Exception(
+          String.format(
+              "Checking if the %s table exists failed", getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
+  public void dropTable(String namespace, String table) throws Exception {
+    String dropTableStatement = "DROP TABLE " + rdbEngine.encloseFullTableName(namespace, table);
+    execute(dropTableStatement);
   }
 }

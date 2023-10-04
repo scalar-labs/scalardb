@@ -7,7 +7,6 @@ import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 
 public class ConsensusCommitAdminRepairTableIntegrationTestWithServer
@@ -64,30 +63,51 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithServer
     return ServerEnv.getClient1Properties(testName);
   }
 
-  /** This test is disabled if {@link #isExternalServerUsed()} return true */
+  /** These tests are disabled if {@link #isExternalServerUsed()} return true */
   @Override
-  @Test
   @DisabledIf("isExternalServerUsed")
-  public void repairTableAndCoordinatorTable_ForDeletedMetadataTable_ShouldRepairProperly()
+  public void repairTableAndCoordinatorTables_ForDeletedMetadataTable_ShouldRepairProperly()
       throws Exception {
-    super.repairTableAndCoordinatorTable_ForDeletedMetadataTable_ShouldRepairProperly();
+    super.repairTableAndCoordinatorTables_ForDeletedMetadataTable_ShouldRepairProperly();
   }
 
-  /** This test is disabled if {@link #isExternalServerUsed()} return true */
   @Override
-  @Test
   @DisabledIf("isExternalServerUsed")
-  public void repairTableAndCoordinatorTable_ForTruncatedMetadataTable_ShouldRepairProperly()
+  public void repairTableAndCoordinatorTables_ForTruncatedMetadataTable_ShouldRepairProperly()
       throws Exception {
-    super.repairTableAndCoordinatorTable_ForTruncatedMetadataTable_ShouldRepairProperly();
+    super.repairTableAndCoordinatorTables_ForTruncatedMetadataTable_ShouldRepairProperly();
   }
 
-  /** This test is disabled if {@link #isExternalServerUsed()} return true */
   @Override
-  @Test
   @DisabledIf("isExternalServerUsed")
   public void repairTable_ForCorruptedMetadataTable_ShouldRepairProperly() throws Exception {
     super.repairTable_ForCorruptedMetadataTable_ShouldRepairProperly();
+  }
+
+  @Override
+  @DisabledIf("isExternalServerUsed")
+  public void repairCoordinatorTables_CoordinatorTablesExist_ShouldDoNothing() throws Exception {
+    super.repairCoordinatorTables_CoordinatorTablesExist_ShouldDoNothing();
+  }
+
+  @Override
+  @DisabledIf("isExternalServerUsed")
+  public void repairCoordinatorTables_CoordinatorTablesDoNotExist_ShouldCreateCoordinatorTables()
+      throws Exception {
+    super.repairCoordinatorTables_CoordinatorTablesDoNotExist_ShouldCreateCoordinatorTables();
+  }
+
+  @DisabledIf("isExternalServerUsed")
+  @Override
+  public void repairTable_ForNonExistingTableButExistingMetadata_ShouldCreateTable()
+      throws Exception {
+    super.repairTable_ForNonExistingTableButExistingMetadata_ShouldCreateTable();
+  }
+
+  @DisabledIf("isExternalServerUsed")
+  @Override
+  public void repairTable_ForExistingTableAndMetadata_ShouldDoNothing() throws Exception {
+    super.repairTable_ForExistingTableAndMetadata_ShouldDoNothing();
   }
 
   @SuppressWarnings("unused")

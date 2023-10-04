@@ -52,9 +52,9 @@ public class SchemaLoaderIntegrationTestWithServer extends SchemaLoaderIntegrati
   @Override
   @Test
   @DisabledIf("isExternalServerUsed")
-  public void createTableThenDropMetadataTableThenRepairTables_ShouldExecuteProperly()
+  public void createTablesThenDropMetadataTableThenRepairTables_ShouldExecuteProperly()
       throws Exception {
-    super.createTableThenDropMetadataTableThenRepairTables_ShouldExecuteProperly();
+    super.createTablesThenDropMetadataTableThenRepairTables_ShouldExecuteProperly();
   }
 
   /** This test is disabled if {@link #isExternalServerUsed()} return true */
@@ -62,9 +62,17 @@ public class SchemaLoaderIntegrationTestWithServer extends SchemaLoaderIntegrati
   @Test
   @DisabledIf("isExternalServerUsed")
   public void
-      createTableThenDropMetadataTableThenRepairTablesWithCoordinator_ShouldExecuteProperly()
+      createTablesThenDropMetadataTableThenRepairTablesWithCoordinator_ShouldExecuteProperly()
           throws Exception {
-    super.createTableThenDropMetadataTableThenRepairTablesWithCoordinator_ShouldExecuteProperly();
+    super.createTablesThenDropMetadataTableThenRepairTablesWithCoordinator_ShouldExecuteProperly();
+  }
+
+  @Test
+  @DisabledIf("isExternalServerUsed")
+  @Override
+  public void createTablesThenDropTablesThenRepairTablesWithCoordinator_ShouldExecuteProperly()
+      throws Exception {
+    super.createTablesThenDropTablesThenRepairTablesWithCoordinator_ShouldExecuteProperly();
   }
 
   @SuppressWarnings("unused")

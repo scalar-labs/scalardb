@@ -76,7 +76,8 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
     return false;
   }
 
-  private boolean tableExists(String nonPrefixedNamespace, String table) {
+  @Override
+  public boolean tableExists(String nonPrefixedNamespace, String table) {
     try {
       client.describeTable(
           DescribeTableRequest.builder()
@@ -134,5 +135,16 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
             .tableName(getFullTableName(metadataNamespace, DynamoAdmin.METADATA_TABLE))
             .item(itemValues)
             .build());
+  }
+
+  @Override
+  public void dropTable(String nonPrefixedNamespace, String table) {
+    String namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace).prefixed();
+    client.deleteTable(
+        DeleteTableRequest.builder().tableName(getFullTableName(namespace, table)).build());
+    if (!waitForTableDeletion(namespace, table)) {
+      throw new RuntimeException(
+          String.format("Deleting the %s table timed out", getFullTableName(namespace, table)));
+    }
   }
 }

@@ -49,7 +49,11 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata) {
+      boolean hasDescClusteringOrder,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists) {
     // do nothing
     return new String[0];
   }
@@ -302,5 +306,19 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   public String getEscape(LikeExpression likeExpression) {
     String escape = likeExpression.getEscape();
     return escape.isEmpty() ? "\\" : escape;
+  }
+
+  @Override
+  public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
+    return createIndexSql;
+  }
+
+  @Override
+  public boolean isDuplicateIndexError(SQLException e) {
+    // https://learn.microsoft.com/en-us/sql/relational-databases/errors-events/database-engine-events-and-errors-1000-to-1999?view=sql-server-ver16
+    // Error code: 1913
+    // Message: The operation failed because an index or statistics with name '%.*ls' already exists
+    // on %S_MSG '%.*ls'.
+    return e.getErrorCode() == 1913;
   }
 }

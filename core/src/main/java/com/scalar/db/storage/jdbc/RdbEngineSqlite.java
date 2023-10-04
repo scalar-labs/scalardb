@@ -166,7 +166,11 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata) {
+      boolean hasDescClusteringOrder,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists) {
     // do nothing
     return new String[] {};
   }
@@ -263,5 +267,16 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   public String getEscape(LikeExpression likeExpression) {
     String escape = likeExpression.getEscape();
     return escape.isEmpty() ? null : escape;
+  }
+
+  @Override
+  public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
+    return createIndexSql.replace("CREATE INDEX", "CREATE INDEX IF NOT EXISTS");
+  }
+
+  @Override
+  public boolean isDuplicateIndexError(SQLException e) {
+    // Since the "IF NOT EXISTS" syntax is used to create an index, we always return false
+    return false;
   }
 }

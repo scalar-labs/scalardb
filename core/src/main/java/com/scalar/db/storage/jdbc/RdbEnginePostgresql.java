@@ -40,13 +40,18 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata) {
+      boolean hasDescClusteringOrder,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists) {
     ArrayList<String> sqls = new ArrayList<>();
 
     if (hasDescClusteringOrder) {
       // Create a unique index for the clustering orders
       sqls.add(
           "CREATE UNIQUE INDEX "
+              + (ifNotExists ? "IF NOT EXISTS " : "")
               + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
               + " ON "
               + encloseFullTableName(schema, table)
@@ -284,5 +289,16 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   @Override
   public Driver getDriver() {
     return new org.postgresql.Driver();
+  }
+
+  @Override
+  public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
+    return createIndexSql.replace("CREATE INDEX", "CREATE INDEX IF NOT EXISTS");
+  }
+
+  @Override
+  public boolean isDuplicateIndexError(SQLException e) {
+    // Since the "IF NOT EXISTS" syntax is used to create an index, we always return false
+    return false;
   }
 }
