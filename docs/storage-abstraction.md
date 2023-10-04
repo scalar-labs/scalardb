@@ -37,13 +37,13 @@ The electronic money application is simplified for this example and isn’t suit
 
 Before you should configure ScalarDB in the same way mentioned in [Getting Started with ScalarDB](getting-started-with-scalardb.md).
 
-With that in mind, this Storage API example assumes that the configuration file **scalardb.properties** exists.
+With that in mind, this Storage API example assumes that the configuration file `scalardb.properties` exists.
 
 ### Set up the database schema
 
 You need to define the database schema (the method in which the data will be organized) in the application. For details about the supported data types, see [Data type mapping between ScalarDB and other databases](https://scalardb.scalar-labs.com/docs/latest/schema-loader/#data-type-mapping-between-scalardb-and-the-other-databases).
 
-For this example, create a file named **emoney-storage.json** in the `scalardb/docs/getting-started` directory. Then, add the following JSON code to define the schema.
+For this example, create a file named `emoney-storage.json` in the `scalardb/docs/getting-started` directory. Then, add the following JSON code to define the schema.
 
 {% capture notice--info %}
 **Note**
@@ -79,7 +79,9 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --config scalardb.properties -f
 
 ### Example code
 
-After loading the schema, you can execute transactions and retrieve data in the basic electronic money application. For details about which types of transactions are supported in the application and how to use the application, see [Execute transactions and retrieve data in the basic electronic money application](getting-started-with-scalardb.md#execute-transactions-and-retrieve-data-in-the-basic-electronic-money-application).
+The following is the source code for the electronic money application that uses the Storage API.
+
+To use this source code, create a file named `ElectronicMoneyStorage.java` in the `scalardb/docs/getting-started/src/main/java/sample` directory. Then, add the following Java code to the file.
 
 {% capture notice--warning %}
 **Attention**
@@ -89,9 +91,118 @@ As previously mentioned, since the Storage API cannot provide transaction capabi
 
 <div class="notice--warning">{{ notice--warning | markdownify }}</div>
 
-### Reference
+```java
+public class ElectronicMoney {
 
-To see the source code for the electronic money application used in this tutorial, see [`ElectronicMoney.java`](https://scalardb.scalar-labs.com/docs/latest/getting-started/src/main/java/sample/ElectronicMoney.java).
+  private static final String SCALARDB_PROPERTIES =
+      System.getProperty("user.dir") + File.separator + "scalardb.properties";
+  private static final String NAMESPACE = "emoney";
+  private static final String TABLENAME = "account";
+  private static final String ID = "id";
+  private static final String BALANCE = "balance";
+
+  private final DistributedStorage storage;
+
+  public ElectronicMoney() throws IOException {
+    StorageFactory factory = StorageFactory.create(SCALARDB_PROPERTIES);
+    storage = factory.getStorage();
+  }
+
+  public void charge(String id, int amount) throws ExecutionException {
+    // Retrieve the current balance for id
+    Get get =
+        Get.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLENAME)
+            .partitionKey(Key.ofText(ID, id))
+            .build();
+    Optional<Result> result = storage.get(get);
+
+    // Calculate the balance
+    int balance = amount;
+    if (result.isPresent()) {
+      int current = result.get().getInt(BALANCE);
+      balance += current;
+    }
+
+    // Update the balance
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLENAME)
+            .partitionKey(Key.ofText(ID, id))
+            .intValue(BALANCE, balance)
+            .build();
+    storage.put(put);
+  }
+
+  public void pay(String fromId, String toId, int amount) throws ExecutionException {
+    // Retrieve the current balances for ids
+    Get fromGet =
+        Get.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLENAME)
+            .partitionKey(Key.ofText(ID, fromId))
+            .build();
+    Get toGet =
+        Get.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLENAME)
+            .partitionKey(Key.ofText(ID, toId))
+            .build();
+    Optional<Result> fromResult = storage.get(fromGet);
+    Optional<Result> toResult = storage.get(toGet);
+
+    // Calculate the balances (it assumes that both accounts exist)
+    int newFromBalance = fromResult.get().getInt(BALANCE) - amount;
+    int newToBalance = toResult.get().getInt(BALANCE) + amount;
+    if (newFromBalance < 0) {
+      throw new RuntimeException(fromId + " doesn't have enough balance.");
+    }
+
+    // Update the balances
+    Put fromPut =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLENAME)
+            .partitionKey(Key.ofText(ID, fromId))
+            .intValue(BALANCE, newFromBalance)
+            .build();
+    Put toPut =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLENAME)
+            .partitionKey(Key.ofText(ID, toId))
+            .intValue(BALANCE, newToBalance)
+            .build();
+    storage.put(fromPut);
+    storage.put(toPut);
+  }
+
+  public int getBalance(String id) throws ExecutionException {
+    // Retrieve the current balances for id
+    Get get =
+        Get.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLENAME)
+            .partitionKey(Key.ofText(ID, id))
+            .build();
+    Optional<Result> result = storage.get(get);
+
+    int balance = -1;
+    if (result.isPresent()) {
+      balance = result.get().getInt(BALANCE);
+    }
+    return balance;
+  }
+
+  public void close() {
+    storage.close();
+  }
+}
+```
+
+After loading the schema, you can execute transactions and retrieve data in the basic electronic money application. For details about which types of transactions are supported in the application and how to use the application, see [Execute transactions and retrieve data in the basic electronic money application](getting-started-with-scalardb.md#execute-transactions-and-retrieve-data-in-the-basic-electronic-money-application).
 
 ## Storage API guide
 
