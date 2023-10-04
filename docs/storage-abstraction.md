@@ -404,7 +404,6 @@ If the result has more than one record, `storage.get()` will throw an exception.
 
 `Scan` is an operation to retrieve multiple records within a partition. You can specify clustering-key boundaries and orderings for clustering-key columns in `Scan` operations.
 
-
 You need to create a `Scan` object first, and then you can execute the object by using the `storage.scan()` method as follows:
 
 ```java
@@ -574,10 +573,38 @@ Put put =
         .build();
 ```
 
+#### `Delete` operation
+
+`Delete` is an operation to delete a record specified by a primary key.
+
+You need to create a `Delete` object first, and then you can execute the object by using the `storage.delete()` method as follows:
+
+```java
+// Create a `Delete` operation.
+Key partitionKey = Key.ofInt("c1", 10);
+Key clusteringKey = Key.of("c2", "aaa", "c3", 100L);
+
+Delete delete =
+    Delete.newBuilder()
+        .namespace("ns")
+        .table("tbl")
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
+
+// Execute the `Delete` operation.
+storage.delete(delete);
+```
+
+#### `Put` and `Delete` with a condition
+
+You can write arbitrary conditions (for example, a bank account balance must be equal to or more than zero) that you require a transaction to meet before being committed by implementing logic that checks the conditions in the transaction. Alternatively, you can write simple conditions in a mutation operation, such as `Put` and `Delete`.
+
+When a `Put` or `Delete` operation includes a condition, the operation is executed only if the specified condition is met. If the condition is not met when the operation is executed, an exception called `UnsatisfiedConditionException` will be thrown.
+
 ##### Conditions for `Put`
 
-In a `Put` operation in the Storage API, you can specify a condition that causes the `Put` operation to be executed only when the specified condition matches.
-This operation is like a compare-and-swap operation where the condition is compared and the update is performed atomically.
+In a `Put` operation in the Storage API, you can specify a condition that causes the `Put` operation to be executed only when the specified condition matches. This operation is like a compare-and-swap operation where the condition is compared and the update is performed atomically.
 
 You can specify a condition in a `Put` operation as follows:
 
@@ -608,29 +635,6 @@ MutationCondition putIfExistsCondition = ConditionBuilder.putIfExists();
 
 // Build a `putIfNotExists` condition.
 MutationCondition putIfNotExistsCondition = ConditionBuilder.putIfNotExists();
-```
-
-#### `Delete` operation
-
-`Delete` is an operation to delete a record specified by a primary key.
-
-You need to create a `Delete` object first, and then you can execute the object by using the `storage.delete()` method as follows:
-
-```java
-// Create a `Delete` operation.
-Key partitionKey = Key.ofInt("c1", 10);
-Key clusteringKey = Key.of("c2", "aaa", "c3", 100L);
-
-Delete delete =
-    Delete.newBuilder()
-        .namespace("ns")
-        .table("tbl")
-        .partitionKey(partitionKey)
-        .clusteringKey(clusteringKey)
-        .build();
-
-// Execute the `Delete` operation.
-storage.delete(delete);
 ```
 
 ##### Conditions for `Delete`
