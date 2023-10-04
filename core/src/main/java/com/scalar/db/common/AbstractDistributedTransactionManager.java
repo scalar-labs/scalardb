@@ -23,7 +23,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javax.annotation.Nullable;
 
 public abstract class AbstractDistributedTransactionManager
-    implements DistributedTransactionManager {
+    implements DistributedTransactionManager, DistributedTransactionDecoratorAddable {
 
   private Optional<String> namespace;
   private Optional<String> tableName;
@@ -83,6 +83,7 @@ public abstract class AbstractDistributedTransactionManager
     return decorated;
   }
 
+  @Override
   public void addTransactionDecorator(DistributedTransactionDecorator transactionDecorator) {
     transactionDecorators.add(transactionDecorator);
   }

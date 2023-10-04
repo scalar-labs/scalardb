@@ -25,7 +25,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javax.annotation.Nullable;
 
 public abstract class AbstractTwoPhaseCommitTransactionManager
-    implements TwoPhaseCommitTransactionManager {
+    implements TwoPhaseCommitTransactionManager, TwoPhaseCommitTransactionDecoratorAddable {
 
   private Optional<String> namespace;
   private Optional<String> tableName;
@@ -85,6 +85,7 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
     return decorated;
   }
 
+  @Override
   public void addTransactionDecorator(TwoPhaseCommitTransactionDecorator transactionDecorator) {
     transactionDecorators.add(transactionDecorator);
   }
