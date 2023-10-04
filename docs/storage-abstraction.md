@@ -1,4 +1,4 @@
-# Storage Abstraction
+# Storage Abstraction and API Guide
 
 This page explains how to use the Storage API for users who are experts in ScalarDB.
 
