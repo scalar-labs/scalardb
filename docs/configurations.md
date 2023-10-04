@@ -157,7 +157,7 @@ For details about ScalarDB Server, see [ScalarDB Server](scalardb-server.md).
 
 [ScalarDB Server](scalardb-server.md) is a standalone server that provides a gRPC interface to ScalarDB. This section explains ScalarDB Server configurations.
 
-In addition to [transaction managers](#transaction-managers) and [other ScalarDB configurations](#other-scalardb-configurations), the following configurations are available for ScalarDB Server:
+In addition to the [configurations when using Consensus Commit through ScalarDB Server](#use-consensus-commit-through-scalardb-server) and [other ScalarDB configurations](#other-scalardb-configurations), the following configurations are available for ScalarDB Server:
 
 | Name                                              | Description                                                                                      | Default                 |
 |---------------------------------------------------|--------------------------------------------------------------------------------------------------|-------------------------|
@@ -201,7 +201,7 @@ In this example configuration, the app (ScalarDB library with Consensus Commit) 
 {% capture notice--warning %}
 **Attention**
 
-This configuration exists only for development purposes and isn’t suitable for a production environment. This is because the app needs to implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface to take transactionally consistent backups for ScalarDB, which requires additional configurations.
+This configuration exists only for development purposes and isn’t suitable for a production environment. This is because the app needs to implement the [Scalar Admin](https://github.com/scalar-labs/scalar-admin) interface to take transactionally consistent backups for ScalarDB, which requires additional configurations.
 {% endcapture %}
 
 <div class="notice--warning">{{ notice--warning | markdownify }}</div>
@@ -238,7 +238,7 @@ In this example configuration, the app (ScalarDB library with gRPC) connects to 
 {% capture notice--info %}
 **Note**
 
-This configuration is acceptable for production use because ScalarDB Server implements the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface, which enables you to take transactionally consistent backups for ScalarDB by pausing ScalarDB Server.
+This configuration is acceptable for production use because ScalarDB Server implements the [Scalar Admin](https://github.com/scalar-labs/scalar-admin) interface, which enables you to take transactionally consistent backups for ScalarDB by pausing ScalarDB Server.
 
 {% endcapture %}
 
