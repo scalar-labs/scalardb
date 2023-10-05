@@ -14,10 +14,13 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.RecordWriterThread.NextValueAndRest;
 import java.util.Collections;
-import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.BlockingQueue;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 
 class RecordWriterThreadTest {
+  @Mock BlockingQueue<com.scalar.db.io.Key> blockingQueue;
+
   @Test
   void findNextValue() {
     RecordWriterThread recordWriterThread =
@@ -25,7 +28,7 @@ class RecordWriterThreadTest {
             1,
             mock(ReplicationRecordRepository.class),
             mock(DistributedStorage.class),
-            mock(BlockingDeque.class),
+            blockingQueue,
             mock(MetricsLogger.class));
 
     Key key = new Key(Collections.singletonList(new Column<>("k", 42)));
