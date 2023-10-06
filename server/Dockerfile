@@ -1,4 +1,4 @@
-FROM docker.io/busybox:1.32 AS tools
+FROM docker.io/busybox:latest AS tools
 
 ENV GRPC_HEALTH_PROBE_VERSION v0.4.17
 
