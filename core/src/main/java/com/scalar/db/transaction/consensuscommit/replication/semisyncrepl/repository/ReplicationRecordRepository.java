@@ -19,6 +19,7 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
@@ -32,11 +33,14 @@ public class ReplicationRecordRepository {
   private static final Logger logger = LoggerFactory.getLogger(ReplicationRecordRepository.class);
   private static final TypeReference<Set<Value>> typeRefForValueInRecords =
       new TypeReference<Set<Value>>() {};
+  private static final TypeReference<Set<String>> typeRefForInsertTxIdsInRecords =
+      new TypeReference<Set<String>>() {};
 
   private final DistributedStorage replicationDbStorage;
   private final ObjectMapper objectMapper;
   private final String replicationDbNamespace;
   private final String replicationDbRecordsTable;
+  private final String emptySet;
 
   public ReplicationRecordRepository(
       DistributedStorage replicationDbStorage,
@@ -47,6 +51,11 @@ public class ReplicationRecordRepository {
     this.objectMapper = objectMapper;
     this.replicationDbNamespace = replicationDbNamespace;
     this.replicationDbRecordsTable = replicationDbRecordsTable;
+    try {
+      emptySet = objectMapper.writeValueAsString(Collections.EMPTY_SET);
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException("Failed to serialize an empty set");
+    }
   }
 
   public Key createKey(
@@ -98,6 +107,8 @@ public class ReplicationRecordRepository {
                     r.getText("current_tx_id"),
                     r.getText("prep_tx_id"),
                     objectMapper.readValue(r.getText("values"), typeRefForValueInRecords),
+                    objectMapper.readValue(
+                        r.getText("insert_tx_ids"), typeRefForInsertTxIdsInRecords),
                     Instant.ofEpochMilli(r.getBigInt("appended_at")),
                     Instant.ofEpochMilli(r.getBigInt("shrinked_at")));
 
@@ -141,6 +152,10 @@ public class ReplicationRecordRepository {
       logger.warn("The new value is already stored. key:{}, txId:{}", key, newValue.txId);
     }
 
+    if (!recordOpt.isPresent()) {
+      putBuilder.textValue("insert_tx_ids", emptySet);
+    }
+
     try {
       logger.debug(
           "[appendValue]\n  key:{}\n  values={}",
@@ -158,7 +173,11 @@ public class ReplicationRecordRepository {
   }
 
   public void updateWithValues(
-      Key key, Record record, @Nullable String newTxId, Collection<Value> values)
+      Key key,
+      Record record,
+      @Nullable String newTxId,
+      Collection<Value> values,
+      Collection<String> newInsertions)
       throws ExecutionException {
     Buildable putBuilder =
         Put.newBuilder()
@@ -169,6 +188,17 @@ public class ReplicationRecordRepository {
 
     if (newTxId != null && newTxId.equals(record.currentTxId)) {
       logger.warn("`tx_id` isn't changed. old:{}, new:{}", record.currentTxId, newTxId);
+    }
+
+    if (!newInsertions.isEmpty()) {
+      Set<String> insertedTxIds = new HashSet<>();
+      insertedTxIds.addAll(record.insertTxIds);
+      insertedTxIds.addAll(newInsertions);
+      try {
+        putBuilder.textValue("insert_tx_ids", objectMapper.writeValueAsString(insertedTxIds));
+      } catch (JsonProcessingException e) {
+        throw new RuntimeException("Failed to serialize `insert_tx_ids` for key:" + key, e);
+      }
     }
 
     try {

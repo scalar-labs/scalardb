@@ -18,6 +18,7 @@ public class Record {
   @Nullable public final String currentTxId;
   @Nullable public final String prepTxId;
   public final Set<Value> values;
+  public final Set<String> insertTxIds;
   @Nullable public final Instant appendedAt;
   @Nullable public final Instant shrinkedAt;
 
@@ -101,6 +102,7 @@ public class Record {
       @Nullable String currentTxId,
       @Nullable String prepTxId,
       Set<Value> values,
+      Set<String> insertTxIds,
       @Nullable Instant appendedAt,
       @Nullable Instant shrinkedAt) {
     this.namespace = namespace;
@@ -111,6 +113,7 @@ public class Record {
     this.currentTxId = currentTxId;
     this.prepTxId = prepTxId;
     this.values = values;
+    this.insertTxIds = insertTxIds;
     this.appendedAt = appendedAt;
     this.shrinkedAt = shrinkedAt;
   }
@@ -126,6 +129,7 @@ public class Record {
         .add("currentTxId", currentTxId)
         .add("prepTxId", prepTxId)
         .add("values", values)
+        .add("insertTxIds", insertTxIds)
         .add("appendedAt", appendedAt)
         .add("shrinkedAt", shrinkedAt)
         .toString();
@@ -147,6 +151,7 @@ public class Record {
                     .map(Value::toStringOnlyWithMetadata)
                     .collect(Collectors.joining(","))
                 + "]")
+        .add("insertTxIds", insertTxIds)
         .add("appendedAt", appendedAt)
         .add("shrinkedAt", shrinkedAt)
         .toString();

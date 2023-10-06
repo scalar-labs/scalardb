@@ -66,22 +66,27 @@ public class RecordWriterThread implements Closeable {
   }
 
   @Immutable
-  static class NextValueAndRest {
+  static class NextValue {
     public final Value nextValue;
     public final Set<Value> restValues;
     public final Collection<Column<?>> updatedColumns;
+    public final Collection<String> insertTxIds;
 
-    public NextValueAndRest(
-        Value nextValue, Set<Value> restValues, Collection<Column<?>> updatedColumns) {
+    public NextValue(
+        Value nextValue,
+        Set<Value> restValues,
+        Collection<Column<?>> updatedColumns,
+        Collection<String> insertTxIds) {
       this.nextValue = nextValue;
       this.restValues = restValues;
       this.updatedColumns = updatedColumns;
+      this.insertTxIds = insertTxIds;
     }
   }
 
   @VisibleForTesting
   @Nullable
-  NextValueAndRest findNextValue(Key key, Record record) {
+  NextValue findNextValue(Key key, Record record) {
     Queue<Value> valuesForInsert = new ArrayDeque<>();
     Map<String, Value> valuesForNonInsert = new HashMap<>();
     for (Value value : record.values) {
@@ -99,6 +104,7 @@ public class RecordWriterThread implements Closeable {
 
     Value lastValue = null;
     Set<Column<?>> updatedColumns = new HashSet<>();
+    Set<String> insertTxIds = new HashSet<>();
     @Nullable String currentTxId = record.currentTxId;
     while (true) {
       Value value;
@@ -118,7 +124,15 @@ public class RecordWriterThread implements Closeable {
                   "`updatedColumns` should be empty. key:%s, value:%s, updatedColumns:%s",
                   key, value, updatedColumns));
         }
+        if (record.insertTxIds.contains(value.txId)) {
+          logger.warn(
+              "This insert will be skipped since txId:{} is already handled. key:{}",
+              value.txId,
+              key);
+          continue;
+        }
         updatedColumns.addAll(value.columns);
+        insertTxIds.add(value.txId);
         currentTxId = value.txId;
       } else if (value.type.equals("update")) {
         updatedColumns.removeAll(value.columns);
@@ -132,6 +146,7 @@ public class RecordWriterThread implements Closeable {
       }
 
       lastValue = value;
+      /*
       if (lastValue.txId.equals(record.prepTxId)) {
         logger.debug(
             "The version chains reach prepTxId:{}. The number of remaining versions is {}",
@@ -139,17 +154,19 @@ public class RecordWriterThread implements Closeable {
             valuesForInsert.size() + valuesForNonInsert.size());
         break;
       }
+       */
     }
 
     if (lastValue == null) {
       return null;
     }
 
-    return new NextValueAndRest(
+    return new NextValue(
         lastValue,
         Streams.concat(valuesForInsert.stream(), valuesForNonInsert.values().stream())
             .collect(Collectors.toSet()),
-        updatedColumns);
+        updatedColumns,
+        insertTxIds);
   }
 
   private void handleKey(Key key) throws ExecutionException {
@@ -162,13 +179,13 @@ public class RecordWriterThread implements Closeable {
 
     Record record = recordOpt.get();
 
-    NextValueAndRest nextValueAndRest = findNextValue(key, record);
+    NextValue nextValue = findNextValue(key, record);
 
-    if (nextValueAndRest == null) {
+    if (nextValue == null) {
       logger.debug("A next value is not found. key:{}", key);
       return;
     }
-    Value lastValue = nextValueAndRest.nextValue;
+    Value lastValue = nextValue.nextValue;
 
     if (record.prepTxId == null) {
       // Write down the target transaction ID to let conflict transactions on the same page.
@@ -214,7 +231,7 @@ public class RecordWriterThread implements Closeable {
       putBuilder.intValue("tx_version", lastValue.txVersion);
       putBuilder.bigIntValue("tx_prepared_at", lastValue.txPreparedAtInMillis);
       putBuilder.bigIntValue("tx_committed_at", lastValue.txCommittedAtInMillis);
-      for (Column<?> column : nextValueAndRest.updatedColumns) {
+      for (Column<?> column : nextValue.updatedColumns) {
         putBuilder.value(Column.toScalarDbColumn(column));
       }
 
@@ -226,7 +243,7 @@ public class RecordWriterThread implements Closeable {
       metricsLogger.execUpdateRecord(
           () -> {
             replicationRecordRepository.updateWithValues(
-                key, record, newCurrentTxId, nextValueAndRest.restValues);
+                key, record, newCurrentTxId, nextValue.restValues, nextValue.insertTxIds);
             return null;
           });
     } catch (Exception e) {
