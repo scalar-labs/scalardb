@@ -36,6 +36,7 @@
       "current_tx_id": "TEXT",
       "prep_tx_id": "TEXT",
       "values": "TEXT",
+      "insert_tx_ids": "TEXT",
       "appended_at": "BIGINT",
       "shrinked_at": "BIGINT"
     }
