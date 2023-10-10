@@ -79,7 +79,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       createKeyspace(namespace, options, false);
       createKeyspace(metadataKeyspace, options, true);
       createNamespacesTableIfNotExists();
-      insertIntoNamespacesTable(namespace);
+      upsertIntoNamespacesTable(namespace);
     } catch (IllegalArgumentException e) {
       // thrown by ReplicationStrategy.fromString() when the given replication strategy is unknown
       throw e;
@@ -116,7 +116,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     return replicationOptions;
   }
 
-  private void insertIntoNamespacesTable(String keyspace) {
+  private void upsertIntoNamespacesTable(String keyspace) {
+    // Cassandra insert behaves like an upsert
     String insertQuery =
         QueryBuilder.insertInto(
                 quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
@@ -389,6 +390,19 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       return keyspaceNames;
     } catch (RuntimeException e) {
       throw new ExecutionException("Retrieving the existing keyspace names failed", e);
+    }
+  }
+
+  @Override
+  public void repairNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    try {
+      createKeyspace(namespace, options, true);
+      createKeyspace(metadataKeyspace, options, true);
+      createNamespacesTableIfNotExists();
+      upsertIntoNamespacesTable(namespace);
+    } catch (RuntimeException e) {
+      throw new ExecutionException(String.format("Repairing the %s keyspace failed", namespace), e);
     }
   }
 

@@ -53,6 +53,17 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
+  public void dropNamespacesTable() {
+    client.deleteTable(
+        DeleteTableRequest.builder()
+            .tableName(getFullTableName(metadataNamespace, DynamoAdmin.NAMESPACES_TABLE))
+            .build());
+    if (!waitForTableDeletion(metadataNamespace, DynamoAdmin.NAMESPACES_TABLE)) {
+      throw new RuntimeException("Deleting the namespaces table timed out");
+    }
+  }
+
+  @Override
   public void dropMetadataTable() {
     client.deleteTable(
         DeleteTableRequest.builder()
@@ -89,6 +100,31 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
     } catch (ResourceNotFoundException e) {
       return false;
     }
+  }
+
+  @Override
+  public void truncateNamespacesTable() {
+    Map<String, AttributeValue> lastKeyEvaluated = null;
+    do {
+      ScanResponse scanResponse =
+          client.scan(
+              ScanRequest.builder()
+                  .tableName(getFullTableName(metadataNamespace, DynamoAdmin.NAMESPACES_TABLE))
+                  .exclusiveStartKey(lastKeyEvaluated)
+                  .build());
+
+      for (Map<String, AttributeValue> item : scanResponse.items()) {
+        Map<String, AttributeValue> keyToDelete = new HashMap<>();
+        keyToDelete.put("namespace_name", item.get("namespace_name"));
+
+        client.deleteItem(
+            DeleteItemRequest.builder()
+                .tableName(getFullTableName(metadataNamespace, DynamoAdmin.NAMESPACES_TABLE))
+                .key(keyToDelete)
+                .build());
+      }
+      lastKeyEvaluated = scanResponse.lastEvaluatedKey();
+    } while (!lastKeyEvaluated.isEmpty());
   }
 
   @Override
@@ -146,5 +182,22 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
       throw new RuntimeException(
           String.format("Deleting the %s table timed out", getFullTableName(namespace, table)));
     }
+  }
+
+  @Override
+  public void dropNamespace(String namespace) throws Exception {
+    // Do nothing
+    // Dynamo has no concept of namespace
+  }
+
+  @Override
+  public boolean namespaceExists(String namespace) throws Exception {
+    // Dynamo has no concept of namespace
+    return true;
+  }
+
+  @Override
+  public void close() {
+    client.close();
   }
 }

@@ -1337,6 +1337,8 @@ public abstract class DynamoAdminTestBase {
   public void createNamespace_WithExistingNamespacesTable_ShouldAddNamespace()
       throws ExecutionException {
     // Arrange
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(backupIsEnabledResponse);
 
     // Act
     admin.createNamespace(NAMESPACE, Collections.emptyMap());
@@ -1345,6 +1347,11 @@ public abstract class DynamoAdminTestBase {
     verify(client)
         .describeTable(
             DescribeTableRequest.builder().tableName(getFullNamespaceTableName()).build());
+    verify(client)
+        .describeContinuousBackups(
+            DescribeContinuousBackupsRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .build());
     verify(client)
         .putItem(
             PutItemRequest.builder()
@@ -1524,5 +1531,99 @@ public abstract class DynamoAdminTestBase {
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void
+      repairNamespace_WithNonExistingNamespacesTable_ShouldCreateNamespacesTableAndAddNamespace()
+          throws ExecutionException {
+    // Arrange
+    when(client.describeTable(any(DescribeTableRequest.class)))
+        .thenThrow(mock(ResourceNotFoundException.class))
+        .thenReturn(tableIsActiveResponse);
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(backupIsEnabledResponse);
+
+    // Act
+    admin.repairNamespace(NAMESPACE, Collections.emptyMap());
+
+    // Assert
+    verify(client, times(2))
+        .describeTable(
+            DescribeTableRequest.builder().tableName(getFullNamespaceTableName()).build());
+    CreateTableRequest createNamespaceTableRequest =
+        CreateTableRequest.builder()
+            .attributeDefinitions(
+                ImmutableList.of(
+                    AttributeDefinition.builder()
+                        .attributeName(DynamoAdmin.NAMESPACES_ATTR_NAME)
+                        .attributeType(ScalarAttributeType.S)
+                        .build()))
+            .keySchema(
+                KeySchemaElement.builder()
+                    .attributeName(DynamoAdmin.NAMESPACES_ATTR_NAME)
+                    .keyType(KeyType.HASH)
+                    .build())
+            .provisionedThroughput(
+                ProvisionedThroughput.builder()
+                    .readCapacityUnits(DynamoAdmin.METADATA_TABLES_REQUEST_UNIT)
+                    .writeCapacityUnits(DynamoAdmin.METADATA_TABLES_REQUEST_UNIT)
+                    .build())
+            .tableName(getFullNamespaceTableName())
+            .build();
+    verify(client).createTable(createNamespaceTableRequest);
+    verify(client)
+        .describeContinuousBackups(
+            DescribeContinuousBackupsRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .build());
+    verify(client)
+        .updateContinuousBackups(
+            UpdateContinuousBackupsRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .pointInTimeRecoverySpecification(
+                    PointInTimeRecoverySpecification.builder()
+                        .pointInTimeRecoveryEnabled(true)
+                        .build())
+                .build());
+    verify(client)
+        .putItem(
+            PutItemRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .item(
+                    ImmutableMap.of(
+                        DynamoAdmin.NAMESPACES_ATTR_NAME,
+                        AttributeValue.builder().s(getPrefixedNamespace()).build()))
+                .build());
+  }
+
+  @Test
+  public void repairNamespace_WithExistingNamespacesTable_ShouldAddNamespace()
+      throws ExecutionException {
+    // Arrange
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(backupIsEnabledResponse);
+
+    // Act
+    admin.repairNamespace(NAMESPACE, Collections.emptyMap());
+
+    // Assert
+    verify(client)
+        .describeTable(
+            DescribeTableRequest.builder().tableName(getFullNamespaceTableName()).build());
+    verify(client)
+        .describeContinuousBackups(
+            DescribeContinuousBackupsRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .build());
+    verify(client)
+        .putItem(
+            PutItemRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .item(
+                    ImmutableMap.of(
+                        DynamoAdmin.NAMESPACES_ATTR_NAME,
+                        AttributeValue.builder().s(getPrefixedNamespace()).build()))
+                .build());
   }
 }

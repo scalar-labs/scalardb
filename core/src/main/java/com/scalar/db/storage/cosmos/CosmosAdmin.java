@@ -635,6 +635,18 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     }
   }
 
+  @Override
+  public void repairNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    try {
+      client.createDatabaseIfNotExists(namespace, calculateThroughput(options));
+      createMetadataDatabaseAndNamespaceContainerIfNotExists();
+      getNamespacesContainer().upsertItem(new CosmosNamespace(namespace));
+    } catch (CosmosException e) {
+      throw new ExecutionException(String.format("Repairing the %s database failed", namespace), e);
+    }
+  }
+
   private void createMetadataDatabaseAndNamespaceContainerIfNotExists() {
     ThroughputProperties manualThroughput =
         ThroughputProperties.createManualThroughput(Integer.parseInt(DEFAULT_REQUEST_UNIT));

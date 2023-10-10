@@ -18,6 +18,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
 import org.apache.commons.dbcp2.BasicDataSource;
+import org.apache.commons.lang3.NotImplementedException;
 
 public class MultiStorageAdminTestUtils extends AdminTestUtils {
   // for Cassandra
@@ -39,6 +40,11 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
+  public void dropNamespacesTable() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void dropMetadataTable() throws SQLException {
     // Do nothing for Cassandra
 
@@ -46,6 +52,11 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     execute(
         "DROP TABLE "
             + rdbEngine.encloseFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE));
+  }
+
+  @Override
+  public void truncateNamespacesTable() {
+    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -72,6 +83,16 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
             + getFullTableName(namespace, table)
             + "','corrupted','corrupted','corrupted','corrupted','0','0')";
     execute(insertCorruptedMetadataStatement);
+  }
+
+  @Override
+  public void dropNamespace(String namespace) {
+    throw new NotImplementedException();
+  }
+
+  @Override
+  public boolean namespaceExists(String namespace) {
+    throw new NotImplementedException();
   }
 
   private void execute(String sql) throws SQLException {
@@ -145,5 +166,10 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
       String dropTableStatement = "DROP TABLE " + rdbEngine.encloseFullTableName(namespace, table);
       execute(dropTableStatement);
     }
+  }
+
+  @Override
+  public void close() {
+    clusterManager.close();
   }
 }

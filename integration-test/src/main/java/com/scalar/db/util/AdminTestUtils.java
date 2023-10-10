@@ -18,13 +18,24 @@ public abstract class AdminTestUtils {
   public AdminTestUtils(Properties coordinatorStorageProperties) {
     this.coordinatorStorageProperties = coordinatorStorageProperties;
   }
-
+  /**
+   * Deletes the namespaces table.
+   *
+   * @throws Exception if an error occurs
+   */
+  public abstract void dropNamespacesTable() throws Exception;
   /**
    * Deletes the metadata table.
    *
    * @throws Exception if an error occurs
    */
   public abstract void dropMetadataTable() throws Exception;
+  /**
+   * Truncates the namespaces table.
+   *
+   * @throws Exception if an error occurs
+   */
+  public abstract void truncateNamespacesTable() throws Exception;
 
   /**
    * Truncates the metadata table.
@@ -73,6 +84,25 @@ public abstract class AdminTestUtils {
   }
 
   /**
+   * Drop the namespace but do not delete its metadata
+   *
+   * @param namespace a namespace
+   * @throws Exception if an error occurs
+   */
+  public abstract void dropNamespace(String namespace) throws Exception;
+
+  /**
+   * Verify if the namespace exists in the underlying storage. It does not check the ScalarDB
+   * metadata.
+   *
+   * @param namespace a namespace
+   * @return true if the namespace exists or if the storage does not have the concept of namespace,
+   *     false otherwise
+   * @throws Exception if an error occurs
+   */
+  public abstract boolean namespaceExists(String namespace) throws Exception;
+
+  /**
    * Check if the table exists in the underlying storage.
    *
    * @param namespace a namespace
@@ -90,4 +120,6 @@ public abstract class AdminTestUtils {
    * @throws Exception if an errors occurs
    */
   public abstract void dropTable(String namespace, String table) throws Exception;
+  /** Closes connections to the storage */
+  public abstract void close() throws Exception;
 }

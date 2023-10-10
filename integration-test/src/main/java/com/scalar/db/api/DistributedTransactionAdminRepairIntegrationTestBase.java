@@ -2,9 +2,12 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Collections;
 import java.util.Map;
@@ -15,12 +18,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.condition.EnabledIf;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase {
+public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
 
-  protected static final String TEST_NAME = "tx_admin_repair_table";
+  protected static final String TEST_NAME = "tx_admin_repair";
   protected static final String NAMESPACE = "int_test_" + TEST_NAME;
 
   protected static final String TABLE = "test_table";
@@ -58,14 +60,23 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
           .build();
 
   protected DistributedTransactionAdmin admin;
-  protected AdminTestUtils adminTestUtils;
+  protected AdminTestUtils adminTestUtils = null;
 
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize(TEST_NAME);
   }
 
-  protected void initialize(String testName) throws Exception {}
+  protected void initialize(String testName) throws Exception {
+    TransactionFactory factory = TransactionFactory.create(getProperties(TEST_NAME));
+    admin = factory.getTransactionAdmin();
+  }
+
+  @AfterAll
+  public void afterAll() throws Exception {
+    admin.close();
+    adminTestUtils.close();
+  }
 
   protected abstract Properties getProperties(String testName);
 
@@ -81,7 +92,7 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     Map<String, String> options = getCreationOptions();
     admin.createNamespace(getNamespace(), options);
     admin.createTable(getNamespace(), getTable(), TABLE_METADATA, options);
-    admin.createCoordinatorTables(true, options);
+    admin.createCoordinatorTables(options);
   }
 
   protected Map<String, String> getCreationOptions() {
@@ -89,29 +100,20 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
   }
 
   private void dropTable() throws ExecutionException {
-    admin.dropTable(getNamespace(), TABLE);
-    admin.dropNamespace(getNamespace());
+    admin.dropTable(getNamespace(), getTable(), true);
+    admin.dropNamespace(getNamespace(), true);
     admin.dropCoordinatorTables(true);
   }
 
   @BeforeEach
   protected void setUp() throws Exception {
-    TransactionFactory factory = TransactionFactory.create(getProperties(TEST_NAME));
-    admin = factory.getTransactionAdmin();
     createTable();
-    adminTestUtils = getAdminTestUtils(TEST_NAME);
   }
-
-  protected abstract AdminTestUtils getAdminTestUtils(String testName);
 
   @AfterEach
   protected void afterEach() throws Exception {
     dropTable();
-    admin.close();
   }
-
-  @AfterAll
-  protected void afterAll() throws Exception {}
 
   @Test
   public void repairTable_ForExistingTableAndMetadata_ShouldDoNothing() throws Exception {
@@ -136,9 +138,7 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     // Assert
     assertThat(admin.tableExists(getNamespace(), TABLE)).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), TABLE)).isEqualTo(TABLE_METADATA);
-    if (hasCoordinatorTables()) {
-      assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
-    }
+    assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
   }
 
   @Test
@@ -154,9 +154,7 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     // Assert
     assertThat(admin.tableExists(getNamespace(), TABLE)).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), TABLE)).isEqualTo(TABLE_METADATA);
-    if (hasCoordinatorTables()) {
-      assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
-    }
+    assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
   }
 
   @Test
@@ -170,24 +168,19 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     // Assert
     assertThat(admin.tableExists(getNamespace(), getTable())).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
-    if (hasCoordinatorTables()) {
-      assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
-    }
+    assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
   }
 
   @Test
-  @EnabledIf("hasCoordinatorTables")
   public void repairCoordinatorTables_CoordinatorTablesExist_ShouldDoNothing() throws Exception {
     // Act
     admin.repairCoordinatorTables(getCreationOptions());
 
     // Assert
-    waitForCreationIfNecessary();
     assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
   }
 
   @Test
-  @EnabledIf("hasCoordinatorTables")
   public void repairCoordinatorTables_CoordinatorTablesDoNotExist_ShouldCreateCoordinatorTables()
       throws Exception {
     // Arrange
@@ -197,7 +190,6 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     admin.repairCoordinatorTables(getCreationOptions());
 
     // Assert
-    waitForCreationIfNecessary();
     assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
   }
 
@@ -211,19 +203,74 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
 
     // Assert
-    waitForCreationIfNecessary();
     assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
-    if (hasCoordinatorTables()) {
-      assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
-    }
+    assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
   }
 
-  protected void waitForCreationIfNecessary() {
-    // Do nothing
+  @Test
+  public void repairNamespace_ForExistingNamespace_ShouldDoNothing() throws Exception {
+    // Act
+    admin.repairNamespace(getNamespace(), getCreationOptions());
+
+    // Assert
+    assertThat(adminTestUtils.namespaceExists(getNamespace())).isTrue();
+    assertThat(admin.namespaceExists(getNamespace())).isTrue();
   }
 
-  protected boolean hasCoordinatorTables() {
-    return true;
+  @Test
+  public void
+      repairNamespaceAndCoordinatorTables_ForExistingNamespaceButDeletedNamespacesTable_ShouldCreateMetadata()
+          throws Exception {
+    // Arrange
+    adminTestUtils.dropNamespacesTable();
+
+    // Act
+    admin.repairNamespace(getNamespace(), getCreationOptions());
+    admin.repairCoordinatorTables(getCreationOptions());
+
+    // Assert
+    assertThat(adminTestUtils.namespaceExists(getNamespace())).isTrue();
+    assertThat(admin.namespaceExists(getNamespace())).isTrue();
+    assertThat(coordinatorNamespaceMetadataExits()).isTrue();
+  }
+
+  @Test
+  public void repairNamespaceAndCoordinatorTables_ForTruncatedNamespacesTable_ShouldRepairProperly()
+      throws Exception {
+    // Arrange
+    adminTestUtils.truncateNamespacesTable();
+
+    // Act
+    admin.repairNamespace(getNamespace(), getCreationOptions());
+    admin.repairCoordinatorTables(getCreationOptions());
+
+    // Assert
+    assertThat(adminTestUtils.namespaceExists(getNamespace())).isTrue();
+    assertThat(admin.namespaceExists(getNamespace())).isTrue();
+    assertThat(coordinatorNamespaceMetadataExits()).isTrue();
+  }
+
+  @Test
+  public void repairNamespace_ForNonExistingNamespaceButExistingMetadata_ShouldCreateNamespace()
+      throws Exception {
+    // Arrange
+    admin.dropTable(getNamespace(), getTable());
+    adminTestUtils.dropNamespace(getNamespace());
+
+    // Act
+    admin.repairNamespace(getNamespace(), getCreationOptions());
+
+    // Assert
+    assertThat(adminTestUtils.namespaceExists(getNamespace())).isTrue();
+    assertThat(admin.namespaceExists(getNamespace())).isTrue();
+  }
+
+  private boolean coordinatorNamespaceMetadataExits() throws ExecutionException {
+    String coordinatorNamespace =
+        new ConsensusCommitConfig(new DatabaseConfig(getProperties(TEST_NAME)))
+            .getCoordinatorNamespace()
+            .orElse(Coordinator.NAMESPACE);
+    return admin.namespaceExists(coordinatorNamespace);
   }
 }

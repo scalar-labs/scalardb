@@ -117,6 +117,12 @@ public class AdminService implements DistributedStorageAdmin {
   }
 
   @Override
+  public void repairNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    admin.repairNamespace(namespace, options);
+  }
+
+  @Override
   public void close() {
     admin.close();
   }

@@ -32,8 +32,18 @@ public class ServerAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
+  public void dropNamespacesTable() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void dropMetadataTable() throws Exception {
     dropTable(metadataNamespace, metadataTable);
+  }
+
+  @Override
+  public void truncateNamespacesTable() {
+    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -69,7 +79,7 @@ public class ServerAdminTestUtils extends AdminTestUtils {
     String sql = rdbEngine.tableExistsInternalTableCheckSql(fullTableName);
     try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
         Connection connection = dataSource.getConnection();
-        Statement statement = connection.createStatement(); ) {
+        Statement statement = connection.createStatement()) {
       statement.execute(sql);
       return true;
     } catch (SQLException e) {
@@ -89,5 +99,20 @@ public class ServerAdminTestUtils extends AdminTestUtils {
   public void dropTable(String namespace, String table) throws Exception {
     String dropTableStatement = "DROP TABLE " + rdbEngine.encloseFullTableName(namespace, table);
     execute(dropTableStatement);
+  }
+
+  @Override
+  public boolean namespaceExists(String namespace) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void dropNamespace(String namespace) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void close() {
+    // Do nothing
   }
 }

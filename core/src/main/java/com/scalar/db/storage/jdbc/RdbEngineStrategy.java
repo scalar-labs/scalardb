@@ -38,7 +38,9 @@ public interface RdbEngineStrategy {
 
   String computeBooleanValue(boolean value);
 
-  String[] createNamespaceSqls(String fullNamespace);
+  String[] createSchemaSqls(String fullSchema);
+
+  String[] createSchemaIfNotExistsSqls(String fullSchema);
 
   default boolean isValidNamespaceOrTableName(String tableName) {
     return true;
@@ -55,8 +57,6 @@ public interface RdbEngineStrategy {
       boolean ifNotExists);
 
   String tryAddIfNotExistsToCreateTableSql(String createTableSql);
-
-  String[] createMetadataSchemaIfNotExistsSql(String metadataSchema);
 
   boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e);
 

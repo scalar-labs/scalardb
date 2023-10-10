@@ -84,9 +84,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     if (!rdbEngine.isValidNamespaceOrTableName(namespace)) {
       throw new ExecutionException("The schema name is not acceptable: " + namespace);
     }
-    String fullNamespace = enclose(namespace);
     try (Connection connection = dataSource.getConnection()) {
-      execute(connection, rdbEngine.createNamespaceSqls(fullNamespace));
+      execute(connection, rdbEngine.createSchemaSqls(namespace));
       createNamespacesTableIfNotExists(connection);
       insertIntoNamespacesTable(connection, namespace);
     } catch (SQLException e) {
@@ -182,12 +181,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   private void createMetadataSchemaAndTableIfNotExists(Connection connection) throws SQLException {
-    createMetadataSchemaIfNotExists(connection);
+    createSchemaIfNotExists(connection, metadataSchema);
     createMetadataTableIfNotExists(connection);
   }
 
-  private void createMetadataSchemaIfNotExists(Connection connection) throws SQLException {
-    String[] sqls = rdbEngine.createMetadataSchemaIfNotExistsSql(metadataSchema);
+  private void createSchemaIfNotExists(Connection connection, String schema) throws SQLException {
+    String[] sqls = rdbEngine.createSchemaIfNotExistsSqls(schema);
     try {
       execute(connection, sqls);
     } catch (SQLException e) {
@@ -928,9 +927,31 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
+  @Override
+  public void repairNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    if (!rdbEngine.isValidNamespaceOrTableName(namespace)) {
+      throw new ExecutionException("The schema name is not acceptable: " + namespace);
+    }
+    try (Connection connection = dataSource.getConnection()) {
+      createSchemaIfNotExists(connection, namespace);
+      createNamespacesTableIfNotExists(connection);
+      try {
+        insertIntoNamespacesTable(connection, namespace);
+      } catch (SQLException e) {
+        // ignore if the schema already exists
+        if (!rdbEngine.isDuplicateKeyError(e)) {
+          throw e;
+        }
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException(String.format("Repairing the %s schema failed", namespace), e);
+    }
+  }
+
   private void createNamespacesTableIfNotExists(Connection connection) throws ExecutionException {
     try {
-      createMetadataSchemaIfNotExists(connection);
+      createSchemaIfNotExists(connection, metadataSchema);
       String createTableStatement =
           "CREATE TABLE "
               + encloseFullTableName(metadataSchema, NAMESPACES_TABLE)

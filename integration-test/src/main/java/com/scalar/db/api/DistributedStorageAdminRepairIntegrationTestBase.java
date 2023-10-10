@@ -17,9 +17,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
+public abstract class DistributedStorageAdminRepairIntegrationTestBase {
 
-  private static final String TEST_NAME = "storage_admin_repair_table";
+  private static final String TEST_NAME = "storage_admin_repair";
   private static final String NAMESPACE = "int_test_" + TEST_NAME;
   private static final String TABLE = "test_table";
   private static final String COL_NAME1 = "c1";
@@ -57,14 +57,23 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
 
   protected DistributedStorageAdmin admin;
 
-  protected AdminTestUtils adminTestUtils;
+  protected AdminTestUtils adminTestUtils = null;
 
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize(TEST_NAME);
   }
 
-  protected void initialize(String testName) throws Exception {}
+  protected void initialize(String testName) throws Exception {
+    StorageFactory factory = StorageFactory.create(getProperties(TEST_NAME));
+    admin = factory.getStorageAdmin();
+  }
+
+  @AfterAll
+  public void afterAll() throws Exception {
+    admin.close();
+    adminTestUtils.close();
+  }
 
   protected abstract Properties getProperties(String testName);
 
@@ -93,22 +102,14 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
 
   @BeforeEach
   protected void setUp() throws Exception {
-    StorageFactory factory = StorageFactory.create(getProperties(TEST_NAME));
-    admin = factory.getStorageAdmin();
-    createTable();
-    adminTestUtils = getAdminTestUtils(TEST_NAME);
-  }
 
-  protected abstract AdminTestUtils getAdminTestUtils(String testName);
+    createTable();
+  }
 
   @AfterEach
   protected void afterEach() throws Exception {
     dropTable();
-    admin.close();
   }
-
-  @AfterAll
-  protected void afterAll() throws Exception {}
 
   @Test
   public void repairTable_ForExistingTableAndMetadata_ShouldDoNothing() throws Exception {
@@ -169,12 +170,75 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
     admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
 
     // Assert
-    waitForCreationIfNecessary();
     assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
   }
 
-  protected void waitForCreationIfNecessary() {
-    // Do nothing
+  @Test
+  public void repairNamespace_ForExistingNamespace_ShouldDoNothing() throws Exception {
+    // Act
+    admin.repairNamespace(getNamespace(), getCreationOptions());
+
+    // Assert
+    assertThat(adminTestUtils.namespaceExists(getNamespace())).isTrue();
+    assertThat(admin.namespaceExists(getNamespace())).isTrue();
+  }
+
+  @Test
+  public void repairNamespace_ForExistingNamespaceButDeletedNamespacesTable_ShouldCreateMetadata()
+      throws Exception {
+    // Arrange
+    adminTestUtils.dropNamespacesTable();
+
+    // Act
+    admin.repairNamespace(getNamespace(), getCreationOptions());
+
+    // Assert
+    assertThat(adminTestUtils.namespaceExists(getNamespace())).isTrue();
+    assertThat(admin.namespaceExists(getNamespace())).isTrue();
+  }
+
+  @Test
+  public void repairNamespace_ForExistingNamespaceButTruncatedNamespacesTable_ShouldCreateMetadata()
+      throws Exception {
+    // Arrange
+    adminTestUtils.truncateNamespacesTable();
+
+    // Act
+    admin.repairNamespace(getNamespace(), getCreationOptions());
+
+    // Assert
+    assertThat(adminTestUtils.namespaceExists(getNamespace())).isTrue();
+    assertThat(admin.namespaceExists(getNamespace())).isTrue();
+  }
+
+  @Test
+  public void repairNamespace_ForNonExistingNamespaceButExistingMetadata_ShouldCreateNamespace()
+      throws Exception {
+    // Prepare
+    admin.dropTable(getNamespace(), getTable());
+    adminTestUtils.dropNamespace(getNamespace());
+
+    // Act
+    admin.repairNamespace(getNamespace(), getCreationOptions());
+
+    // Assert
+    assertThat(adminTestUtils.namespaceExists(getNamespace())).isTrue();
+    assertThat(admin.namespaceExists(getNamespace())).isTrue();
+  }
+
+  @Test
+  public void repairNamespace_ForNonExistingNamespaceAndMetadata_ShouldCreateNamespaceAndMetadata()
+      throws Exception {
+    // Prepare
+    admin.dropTable(getNamespace(), getTable());
+    admin.dropNamespace(getNamespace());
+
+    // Act
+    admin.repairNamespace(getNamespace(), getCreationOptions());
+
+    // Assert
+    assertThat(adminTestUtils.namespaceExists(getNamespace())).isTrue();
+    assertThat(admin.namespaceExists(getNamespace())).isTrue();
   }
 }
