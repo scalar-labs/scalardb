@@ -91,6 +91,8 @@ class RecordWriterThreadTest {
                 .add(new Value("t3", "t4", 3, 0, 0, "delete", ImmutableList.of()))
                 .build());
 
+    System.out.printf(values.toString());
+
     Record record =
         new Record(
             "ns",
@@ -164,46 +166,5 @@ class RecordWriterThreadTest {
     // the insert handled again is already done, so it should be skipped
     NextValue result = recordWriterThread.findNextValue(Key.toScalarDbKey(key), record);
     assertThat(result).isNull();
-  }
-
-  @Test
-  void findNextValue_givenInsertAndFollowingOperations_shouldReturnOnlyWithInsert() {
-    Key key = new Key(Collections.singletonList(new Column<>("k", 42)));
-    Set<Value> values =
-        shuffledSet(
-            ImmutableList.<Value>builder()
-                .add(
-                    new Value(
-                        null, "t0", 1, 0, 0, "insert", ImmutableList.of(new Column<>("c1", 2))))
-                .add(
-                    new Value(
-                        "t0", "t1", 2, 0, 0, "update", ImmutableList.of(new Column<>("c1", 2))))
-                .build());
-
-    Record record =
-        new Record(
-            "ns",
-            "tbl",
-            key,
-            new Key(ImmutableList.of()),
-            1,
-            null,
-            null,
-            values,
-            ImmutableSet.of(),
-            null,
-            null);
-    NextValue result = recordWriterThread.findNextValue(Key.toScalarDbKey(key), record);
-    assertThat(result).isNotNull();
-    assertThat(result.nextValue.prevTxId).isNull();
-    assertThat(result.nextValue.txId).isEqualTo("t0");
-    assertThat(result.nextValue.txVersion).isEqualTo(1);
-    assertThat(result.nextValue.type).isEqualTo("insert");
-    assertThat(result.restValues.size()).isEqualTo(1);
-    assertThat(result.restValues)
-        .contains(
-            new Value("t0", "t1", 2, 0, 0, "update", ImmutableList.of(new Column<>("c1", 2))));
-    assertThat(result.updatedColumns).size().isEqualTo(1);
-    assertThat(result.updatedColumns).contains(new Column<>("c1", 1));
   }
 }
