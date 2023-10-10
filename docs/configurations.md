@@ -157,7 +157,7 @@ For details about ScalarDB Server, see [ScalarDB Server](scalardb-server.md).
 
 [ScalarDB Server](scalardb-server.md) is a standalone server that provides a gRPC interface to ScalarDB. This section explains ScalarDB Server configurations.
 
-In addition to the [configurations when using Consensus Commit through ScalarDB Server](#use-consensus-commit-through-scalardb-server) and [other ScalarDB configurations](#other-scalardb-configurations), the following configurations are available for ScalarDB Server:
+In addition to the [configurations when using Consensus Commit directly](#use-consensus-commit-directly) and [other ScalarDB configurations](#other-scalardb-configurations), the following configurations are available for ScalarDB Server:
 
 | Name                                              | Description                                                                                      | Default                 |
 |---------------------------------------------------|--------------------------------------------------------------------------------------------------|-------------------------|
