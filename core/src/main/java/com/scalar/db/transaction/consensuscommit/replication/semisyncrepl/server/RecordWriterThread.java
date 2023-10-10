@@ -71,16 +71,19 @@ public class RecordWriterThread implements Closeable {
     public final Set<Value> restValues;
     public final Collection<Column<?>> updatedColumns;
     public final Collection<String> insertTxIds;
+    public final boolean shouldHandleTheSameKey;
 
     public NextValue(
         Value nextValue,
         Set<Value> restValues,
         Collection<Column<?>> updatedColumns,
-        Collection<String> insertTxIds) {
+        Collection<String> insertTxIds,
+        boolean shouldHandleTheSameKey) {
       this.nextValue = nextValue;
       this.restValues = restValues;
       this.updatedColumns = updatedColumns;
       this.insertTxIds = insertTxIds;
+      this.shouldHandleTheSameKey = shouldHandleTheSameKey;
     }
   }
 
@@ -111,12 +114,12 @@ public class RecordWriterThread implements Closeable {
     // `cur_tx_id` is null and merged t1 and t2 are written to the secondary database.
     // At this point, `prep_tx_id` is set to t2. But a next thread doesn't know which insert out of
     // t1 and t3 should be handled to reach t2.
-    boolean isInsertChosen = false;
+    boolean suspendFollowingOperation = false;
     Value lastValue = null;
     Set<Column<?>> updatedColumns = new HashSet<>();
     Set<String> insertTxIds = new HashSet<>();
     @Nullable String currentTxId = record.currentTxId;
-    while (!isInsertChosen) {
+    while (!suspendFollowingOperation) {
       Value value;
       if (currentTxId == null) {
         value = valuesForInsert.poll();
@@ -144,7 +147,7 @@ public class RecordWriterThread implements Closeable {
         updatedColumns.addAll(value.columns);
         insertTxIds.add(value.txId);
         currentTxId = value.txId;
-        isInsertChosen = true;
+        suspendFollowingOperation = true;
       } else if (value.type.equals("update")) {
         updatedColumns.removeAll(value.columns);
         updatedColumns.addAll(value.columns);
@@ -177,15 +180,16 @@ public class RecordWriterThread implements Closeable {
         Streams.concat(valuesForInsert.stream(), valuesForNonInsert.values().stream())
             .collect(Collectors.toSet()),
         updatedColumns,
-        insertTxIds);
+        insertTxIds,
+        suspendFollowingOperation);
   }
 
-  private void handleKey(Key key) throws ExecutionException {
+  private boolean handleKey(Key key) throws ExecutionException {
     Optional<Record> recordOpt =
         metricsLogger.execGetRecord(() -> replicationRecordRepository.get(key));
     if (!recordOpt.isPresent()) {
       logger.warn("key:{} is not found", key);
-      return;
+      return false;
     }
 
     Record record = recordOpt.get();
@@ -194,7 +198,7 @@ public class RecordWriterThread implements Closeable {
 
     if (nextValue == null) {
       logger.debug("A next value is not found. key:{}", key);
-      return;
+      return false;
     }
     Value lastValue = nextValue.nextValue;
 
@@ -257,6 +261,7 @@ public class RecordWriterThread implements Closeable {
                 key, record, newCurrentTxId, nextValue.restValues, nextValue.insertTxIds);
             return null;
           });
+      return nextValue.shouldHandleTheSameKey;
     } catch (Exception e) {
       String message =
           String.format(
@@ -284,7 +289,9 @@ public class RecordWriterThread implements Closeable {
               }
 
               try {
-                handleKey(key);
+                if (handleKey(key)) {
+                  recordWriterQueue.add(key);
+                }
               } catch (Throwable e) {
                 recordWriterQueue.add(key);
                 logger.error("Caught an exception. Retrying...\n  key:{}", key, e);
