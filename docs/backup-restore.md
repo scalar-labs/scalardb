@@ -109,11 +109,11 @@ The backup methods by database listed below are just examples of some of the dat
 
 <div id="Cassandra2" class="tabcontent" markdown="1">
 
-Cassandra has a built-in replication feature, so you do not always have to create a transactionally consistent backup. For example, if the replication factor is set to `3` and only the data of one of the nodes in a Cassandra cluster is lost, you won't need a transactionally consistent backup because the node can be recovered by using a normal, transactionally inconsistent backup (snapshot) and the repair feature.
+Cassandra has a built-in replication feature, so you do not always have to create a transactionally consistent backup. For example, if the replication factor is set to `3` and only the data of one of the nodes in a Cassandra cluster is lost, you won't need a transactionally consistent backup (snapshot) because the node can be recovered by using a normal, transactionally inconsistent backup (snapshot) and the repair feature.
 
 However, if the quorum of cluster nodes loses their data, you will need a transactionally consistent backup (snapshot) to restore the cluster to a certain transactionally consistent point.
 
-To create a transactionally consistent cluster-wide backup, pause the application that is using ScalarDB or ScalarDB Cluster and take snapshots of the nodes as described in [Back up with explicit pausing](#back-up-with-explicit-pausing) or stop the Cassandra cluster, take copies of all the data in the nodes, and start the cluster.
+To create a transactionally consistent cluster-wide backup (snapshot), pause the application that is using ScalarDB or ScalarDB Cluster and create backups (snapshots) of the nodes as described in [Back up with explicit pausing](#back-up-with-explicit-pausing) or stop the Cassandra cluster, take copies of all the data in the nodes, and start the cluster.
 </div>
 <div id="Cosmos_DB_for_NoSQL2" class="tabcontent" markdown="1">
 
