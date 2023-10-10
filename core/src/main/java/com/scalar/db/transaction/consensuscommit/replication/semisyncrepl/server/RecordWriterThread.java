@@ -102,11 +102,21 @@ public class RecordWriterThread implements Closeable {
     }
     // TODO: Sort valuesForInsert just in case
 
+    // Not merge following operations once an insert operation is found.
+    // Assuming the following operations are stored in `records.values`:
+    // - t1: INSERT(X: prev_tx_id=null, tx_id=v1, value=10)
+    // - t2: UPDATE(X: prev_tx_id=v1, tx_id=v2, value=20)
+    // (t3: DELETE is delayed)
+    // - t4: INSERT(X: prev_tx_id=null, tx_id=v4, value=40)
+    // `cur_tx_id` is null and merged t1 and t2 are written to the secondary database.
+    // At this point, `prep_tx_id` is set to t2. But a next thread doesn't know which insert out of
+    // t1 and t3 should be handled to reach t2.
+    boolean isInsertChosen = false;
     Value lastValue = null;
     Set<Column<?>> updatedColumns = new HashSet<>();
     Set<String> insertTxIds = new HashSet<>();
     @Nullable String currentTxId = record.currentTxId;
-    while (true) {
+    while (!isInsertChosen) {
       Value value;
       if (currentTxId == null) {
         value = valuesForInsert.poll();
@@ -134,6 +144,7 @@ public class RecordWriterThread implements Closeable {
         updatedColumns.addAll(value.columns);
         insertTxIds.add(value.txId);
         currentTxId = value.txId;
+        isInsertChosen = true;
       } else if (value.type.equals("update")) {
         updatedColumns.removeAll(value.columns);
         updatedColumns.addAll(value.columns);
