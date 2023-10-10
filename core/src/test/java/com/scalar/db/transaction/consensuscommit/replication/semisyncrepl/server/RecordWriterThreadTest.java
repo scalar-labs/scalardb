@@ -113,6 +113,7 @@ class RecordWriterThreadTest {
     assertThat(result.restValues).isEmpty();
     assertThat(result.updatedColumns).size().isEqualTo(2);
     assertThat(result.updatedColumns).contains(new Column<>("c1", 1), new Column<>("c4", 1111));
+    assertThat(result.shouldHandleTheSameKey).isFalse();
   }
 
   @Test
@@ -205,5 +206,6 @@ class RecordWriterThreadTest {
             new Value("t0", "t1", 2, 0, 0, "update", ImmutableList.of(new Column<>("c1", 2))));
     assertThat(result.updatedColumns).size().isEqualTo(1);
     assertThat(result.updatedColumns).contains(new Column<>("c1", 1));
+    assertThat(result.shouldHandleTheSameKey).isTrue();
   }
 }
