@@ -73,8 +73,8 @@ For an example, see [BASH: SQLite3 .backup command](https://stackoverflow.com/qu
 
 Another way to create a transactionally consistent backup is to create a backup while ScalarDB Cluster does not have any outstanding transactions. Creating the backup depends on the following:
 
-- If the underlying database has a point-in-time snapshot or backup feature, you can create a backup during the period.
-- If the underlying database has a point-in-time restore or recovery (PITR) feature, you can set a restore point to a time (preferably the mid-time) in the pause duration period.
+- If the underlying database has a point-in-time snapshot or backup feature, you can create a backup during the period when no outstanding transactions exist.
+- If the underlying database has a point-in-time restore or recovery (PITR) feature, you can set a restore point to a time (preferably the mid-time) in the pause duration period when no outstanding transactions exist.
 
 {% capture notice--info %}
 **Note**
@@ -136,7 +136,7 @@ How you restore a transactionally consistent backup depends on the type of datab
 {% capture notice--warning %}
 **Note**
 
-The backup methods by database listed below are just examples of some of the databases that ScalarDB supports.
+The restore methods by database listed below are just examples of some of the databases that ScalarDB supports.
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
@@ -164,7 +164,7 @@ After placing the backups (snapshots) in each node, start all the nodes of the C
 </div>
 <div id="Cosmos_DB_for_NoSQL3" class="tabcontent" markdown="1">
 
-Follow the official Azure documentation for [restore an account by using Azure portal](https://docs.microsoft.com/en-us/azure/cosmos-db/restore-account-continuous-backup#restore-account-portal). After restoring a backup, change the default consistencies of the restored databases to `STRONG`. In addition, you should use the mid-time of the paused duration as the restore point as previously explained.
+Follow the official Azure documentation for [restore an account by using Azure portal](https://docs.microsoft.com/en-us/azure/cosmos-db/restore-account-continuous-backup#restore-account-portal). After restoring a backup, [configure the default consistency level](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/how-to-manage-consistency#configure-the-default-consistency-level) of the restored databases to `STRONG`. In addition, you should use the mid-time of the paused duration as the restore point as previously explained.
 
 ScalarDB implements the Cosmos DB adapter by using its stored procedures, which are installed when creating schemas by using ScalarDB Schema Loader. However, the PITR feature of Cosmos DB doesn't restore stored procedures. Because of this, you need to re-install the required stored procedures for all tables after restoration. You can do this by using ScalarDB Schema Loader with the `--repair-all` option. For details, see [Repair tables](schema-loader.md#repair-tables).
 </div>
