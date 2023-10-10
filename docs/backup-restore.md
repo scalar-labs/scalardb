@@ -12,17 +12,14 @@ How you create a backup depends on which database you're using and whether or no
 flowchart TD
   A[Are you using a single database with ScalarDB?]
   A -->|Yes| B[Does the database have transaction support?]
-  B --> C[Perform <a href='#back-up-without-explicit-pausing'>back up without explicit pausing</a>]
-  A ---->|No| E[Perform <a href='#back-up-with-explicit-pausing'>back up with explicit pausing</a>]
+  B -->|Yes| C[Perform <a href='#back-up-without-explicit-pausing'>back up without explicit pausing</a>]
+  B ---->|No| D[Perform <a href='#back-up-with-explicit-pausing'>back up with explicit pausing</a>]
+  A ---->|No| D
 ```
 
 ### Back up without explicit pausing
 
 If you're using ScalarDB with a single database with support for transactions, you can create a backup of the database even while ScalarDB continues to accept transactions.
-
-One requirement for creating a backup in ScalarDB is that backups for all the ScalarDB-managed tables (including the Coordinator table) need to be transactionally consistent or automatically recoverable to a transactionally consistent state. That means that you need to create a consistent snapshot by dumping all tables in a single transaction.
-
-How to create transactionally consistent backups depends on the type of database. Select your database to see examples for how to create a transactionally consistent backup for ScalarDB.
 
 {% capture notice--warning %}
 **Attention**
@@ -31,6 +28,18 @@ Before creating a backup, you should consider the safest way to create a transac
 {% endcapture %}
 
 <div class="notice--warning">{{ notice--warning | markdownify }}</div>
+
+One requirement for creating a backup in ScalarDB is that backups for all the ScalarDB-managed tables (including the Coordinator table) need to be transactionally consistent or automatically recoverable to a transactionally consistent state. That means that you need to create a consistent snapshot by dumping all tables in a single transaction.
+
+How you create a transactionally consistent backup depends on the type of database that you're using. Select a database to see how to create a transactionally consistent backup for ScalarDB.
+
+{% capture notice--info %}
+**Note**
+
+The backup methods by database listed below are just examples of some of the databases that ScalarDB supports.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 <div id="tabset-1">
 <div class="tab">
@@ -67,10 +76,6 @@ Another way to create a transactionally consistent backup is to create a backup 
 - If the underlying database has a point-in-time snapshot or backup feature, you can create a backup during the period.
 - If the underlying database has a point-in-time restore or recovery (PITR) feature, you can set a restore point to a time (preferably the mid-time) in the pause duration period.
 
-To make ScalarDB drain outstanding requests and stop accepting new requests so that a pause duration can be created, you should use ScalarDB Cluster, which uses the Scalar Admin interface, or implement the [Scalar Admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application that uses ScalarDB.
-
-By using the [Scalar Admin client tool](https://github.com/scalar-labs/scalar-admin/tree/main/java#scalar-admin-client-tool), you can pause nodes, servers, or applications that implement the Scalar Admin interface without losing ongoing transactions.
-
 {% capture notice--info %}
 **Note**
 
@@ -81,7 +86,19 @@ In addition, you should pause for a sufficient amount of time (for example, 10 s
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
-How you create a transactionally consistent backup depends on the type of database that you're using. Select your database to see how to create a transactionally consistent backup for ScalarDB.
+To make ScalarDB drain outstanding requests and stop accepting new requests so that a pause duration can be created, you should use ScalarDB Cluster, which uses the Scalar Admin interface, or implement the [Scalar Admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application that uses ScalarDB.
+
+By using the [Scalar Admin client tool](https://github.com/scalar-labs/scalar-admin/tree/main/java#scalar-admin-client-tool), you can pause nodes, servers, or applications that implement the Scalar Admin interface without losing ongoing transactions.
+
+How you create a transactionally consistent backup depends on the type of database that you're using. Select a database to see how to create a transactionally consistent backup for ScalarDB.
+
+{% capture notice--warning %}
+**Note**
+
+The backup methods by database listed below are just examples of some of the databases that ScalarDB supports.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 <div id="tabset-2">
 <div class="tab">
@@ -114,7 +131,15 @@ To specify a transactionally consistent restore point, pause your application th
 
 ## Restore a backup
 
-How you restore a transactionally consistent backup depends on the type of database that you're using. Select your database to see how to restore a transactionally consistent backup for ScalarDB.
+How you restore a transactionally consistent backup depends on the type of database that you're using. Select a database to see how to create a transactionally consistent backup for ScalarDB.
+
+{% capture notice--warning %}
+**Note**
+
+The backup methods by database listed below are just examples of some of the databases that ScalarDB supports.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 <div id="tabset-3">
 <div class="tab">
