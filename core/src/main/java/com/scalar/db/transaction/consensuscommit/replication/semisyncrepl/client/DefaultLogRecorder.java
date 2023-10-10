@@ -25,8 +25,12 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DefaultLogRecorder implements LogRecorder {
+  private static final Logger logger = LoggerFactory.getLogger(DefaultLogRecorder.class);
+
   // TODO: Make these configurable
   private static final int REPLICATION_DB_PARTITION_SIZE = 256;
 
@@ -127,6 +131,13 @@ public class DefaultLogRecorder implements LogRecorder {
       } else if (op instanceof Delete) {
         Delete delete = (Delete) op;
         String prevTxId = result != null ? result.getId() : null;
+        if (prevTxId == null) {
+          logger.info(
+              "Skipping Delete operation deleting a record that doesn't exist. op:{}, result:{}",
+              op,
+              result);
+          continue;
+        }
         writtenTuples.add(
             new DeletedTuple(
                 namespace,
