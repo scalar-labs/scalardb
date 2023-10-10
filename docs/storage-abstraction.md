@@ -79,9 +79,7 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --config scalardb.properties -f
 
 ### Example code
 
-The following is the source code for the electronic money application that uses the Storage API.
-
-To use this source code, create a file named `ElectronicMoneyStorage.java` in the `scalardb/docs/getting-started/src/main/java/sample` directory. Then, add the following Java code to the file.
+The following is example source code for the electronic money application that uses the Storage API.
 
 {% capture notice--warning %}
 **Attention**
@@ -201,8 +199,6 @@ public class ElectronicMoney {
   }
 }
 ```
-
-After loading the schema, you can execute transactions and retrieve data in the basic electronic money application. For details about which types of transactions are supported in the application and how to use the application, see [Execute transactions and retrieve data in the basic electronic money application](getting-started-with-scalardb.md#execute-transactions-and-retrieve-data-in-the-basic-electronic-money-application).
 
 ## Storage API guide
 
