@@ -29,7 +29,7 @@ Before creating a backup, you should consider the safest way to create a transac
 
 <div class="notice--warning">{{ notice--warning | markdownify }}</div>
 
-One requirement for creating a backup in ScalarDB is that backups for all the ScalarDB-managed tables (including the Coordinator table) need to be transactionally consistent or automatically recoverable to a transactionally consistent state. That means that you need to create a consistent snapshot by dumping all tables in a single transaction.
+One requirement for creating a backup in ScalarDB is that backups for all the ScalarDB-managed tables (including the Coordinator table) need to be transactionally consistent or automatically recoverable to a transactionally consistent state. That means that you need to create a consistent backup by dumping all tables in a single transaction.
 
 How you create a transactionally consistent backup depends on the type of database that you're using. Select a database to see how to create a transactionally consistent backup for ScalarDB.
 
