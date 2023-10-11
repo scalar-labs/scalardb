@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -1051,38 +1052,90 @@ public abstract class DynamoAdminTestBase {
   }
 
   @Test
-  public void repairTable_WithNonExistingTableToRepair_shouldThrowIllegalArgumentException() {
-    // Arrange
-    TableMetadata metadata =
-        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
-    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
-    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
-    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
-    when(listTablesResponse.tableNames()).thenReturn(ImmutableList.of());
-
-    // Act Assert
-    assertThatThrownBy(() -> admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of()))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void repairTable_WithNonExistingMetadataForTable_shouldAddMetadataForTable()
+  public void repairTable_WithExistingTableToRepairAndMetadataTables_shouldNotCreateTables()
       throws ExecutionException {
     // Arrange
     TableMetadata metadata =
         TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
 
     // The table to repair exists
-    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
-    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
-    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
-    when(listTablesResponse.tableNames()).thenReturn(ImmutableList.of(getFullTableName()));
+    when(client.describeTable(DescribeTableRequest.builder().tableName(getFullTableName()).build()))
+        .thenReturn(tableIsActiveResponse);
+    // The metadata table exists
+    when(client.describeTable(
+            DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build()))
+        .thenReturn(tableIsActiveResponse);
 
-    // Wait for metadata table creation
+    // Continuous backup check
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(backupIsEnabledResponse);
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
+
+    // Assert
+    verify(client, never()).createTable(any(CreateTableRequest.class));
+
+    // Check continuous backup registration
+    ArgumentCaptor<UpdateContinuousBackupsRequest> updateContinuousBackupsRequestCaptor =
+        ArgumentCaptor.forClass(UpdateContinuousBackupsRequest.class);
+    verify(client, times(2))
+        .updateContinuousBackups(updateContinuousBackupsRequestCaptor.capture());
+    assertThat(updateContinuousBackupsRequestCaptor.getAllValues().get(0).tableName())
+        .isEqualTo(getFullTableName());
+    assertThat(updateContinuousBackupsRequestCaptor.getAllValues().get(1).tableName())
+        .isEqualTo(getFullMetadataTableName());
+
+    // Check scaling policy
+    ArgumentCaptor<RegisterScalableTargetRequest> registerScalableTargetRequestArgumentCaptor =
+        ArgumentCaptor.forClass(RegisterScalableTargetRequest.class);
+    verify(applicationAutoScalingClient, times(2))
+        .registerScalableTarget(registerScalableTargetRequestArgumentCaptor.capture());
+    registerScalableTargetRequestArgumentCaptor
+        .getAllValues()
+        .forEach(
+            captor ->
+                Assertions.assertThat(captor.resourceId())
+                    .isEqualTo("table/" + getFullTableName()));
+
+    // Check added metadata
+    Map<String, AttributeValue> itemValues = new HashMap<>();
+    itemValues.put(
+        DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(getFullTableName()).build());
+    Map<String, AttributeValue> columns = new HashMap<>();
+    columns.put("c1", AttributeValue.builder().s(DataType.TEXT.name().toLowerCase()).build());
+    itemValues.put(DynamoAdmin.METADATA_ATTR_COLUMNS, AttributeValue.builder().m(columns).build());
+    itemValues.put(
+        DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
+        AttributeValue.builder()
+            .l(ImmutableList.of(AttributeValue.builder().s("c1").build()))
+            .build());
+    verify(client)
+        .putItem(
+            PutItemRequest.builder()
+                .tableName(getFullMetadataTableName())
+                .item(itemValues)
+                .build());
+  }
+
+  @Test
+  public void repairTable_WithNonExistingTableAndMetadataTables_shouldCreateBothTables()
+      throws ExecutionException {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
+
+    when(client.describeTable(DescribeTableRequest.builder().tableName(getFullTableName()).build()))
+        // Check that the table repair do not exist
+        .thenThrow(ResourceNotFoundException.class)
+        // Check that waits for the table to repair to be created
+        .thenReturn(tableIsActiveResponse);
 
     when(client.describeTable(
             DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build()))
+        // Check that the metadata table do not exist
         .thenThrow(ResourceNotFoundException.class)
+        // Check that wait for the metadata table to be created
         .thenReturn(tableIsActiveResponse);
 
     // Continuous backup check
@@ -1096,17 +1149,35 @@ public abstract class DynamoAdminTestBase {
     // Check metadata table creation
     ArgumentCaptor<CreateTableRequest> createTableRequestArgumentCaptor =
         ArgumentCaptor.forClass(CreateTableRequest.class);
-    verify(client).createTable(createTableRequestArgumentCaptor.capture());
-    CreateTableRequest actualCreateTableRequest = createTableRequestArgumentCaptor.getValue();
-    assertThat(actualCreateTableRequest.tableName()).isEqualTo(getFullMetadataTableName());
+    verify(client, times(2)).createTable(createTableRequestArgumentCaptor.capture());
+    CreateTableRequest actualCreateTableToRepairRequest =
+        createTableRequestArgumentCaptor.getAllValues().get(0);
+    assertThat(actualCreateTableToRepairRequest.tableName()).isEqualTo(getFullTableName());
+    CreateTableRequest actualCreateMetadataTableRequest =
+        createTableRequestArgumentCaptor.getAllValues().get(1);
+    assertThat(actualCreateMetadataTableRequest.tableName()).isEqualTo(getFullMetadataTableName());
 
-    // Check continuous backup
+    // Check continuous backup registration
     ArgumentCaptor<UpdateContinuousBackupsRequest> updateContinuousBackupsRequestCaptor =
         ArgumentCaptor.forClass(UpdateContinuousBackupsRequest.class);
-    verify(client).updateContinuousBackups(updateContinuousBackupsRequestCaptor.capture());
-    UpdateContinuousBackupsRequest updateContinuousBackupsRequest =
-        updateContinuousBackupsRequestCaptor.getValue();
-    assertThat(updateContinuousBackupsRequest.tableName()).isEqualTo(getFullMetadataTableName());
+    verify(client, times(2))
+        .updateContinuousBackups(updateContinuousBackupsRequestCaptor.capture());
+    assertThat(updateContinuousBackupsRequestCaptor.getAllValues().get(0).tableName())
+        .isEqualTo(getFullTableName());
+    assertThat(updateContinuousBackupsRequestCaptor.getAllValues().get(1).tableName())
+        .isEqualTo(getFullMetadataTableName());
+
+    // Check scaling policy
+    ArgumentCaptor<RegisterScalableTargetRequest> registerScalableTargetRequestArgumentCaptor =
+        ArgumentCaptor.forClass(RegisterScalableTargetRequest.class);
+    verify(applicationAutoScalingClient, times(2))
+        .registerScalableTarget(registerScalableTargetRequestArgumentCaptor.capture());
+    registerScalableTargetRequestArgumentCaptor
+        .getAllValues()
+        .forEach(
+            captor ->
+                Assertions.assertThat(captor.resourceId())
+                    .isEqualTo("table/" + getFullTableName()));
 
     // Check added metadata
     Map<String, AttributeValue> itemValues = new HashMap<>();

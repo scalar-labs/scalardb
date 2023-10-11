@@ -90,14 +90,22 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    checkMetadata(metadata);
     try {
-      createContainer(namespace, table, metadata);
-      putTableMetadata(namespace, table, metadata);
-    } catch (RuntimeException e) {
+      createTableInternal(namespace, table, metadata, false);
+    } catch (IllegalArgumentException e) {
+      throw e;
+    } catch (Exception e) {
       throw new ExecutionException(
           String.format("Creating the %s container failed", getFullTableName(namespace, table)), e);
     }
+  }
+
+  private void createTableInternal(
+      String namespace, String table, TableMetadata metadata, boolean ifNotExists)
+      throws ExecutionException {
+    checkMetadata(metadata);
+    createContainer(namespace, table, metadata, ifNotExists);
+    upsertTableMetadata(namespace, table, metadata);
   }
 
   private void checkMetadata(TableMetadata metadata) {
@@ -109,19 +117,28 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void createContainer(String database, String table, TableMetadata metadata)
+  private void createContainer(
+      String database, String table, TableMetadata metadata, boolean ifNotExists)
       throws ExecutionException {
     CosmosDatabase cosmosDatabase = client.getDatabase(database);
     CosmosContainerProperties properties = computeContainerProperties(table, metadata);
-    cosmosDatabase.createContainer(properties);
-
-    addStoredProcedure(database, table);
+    if (ifNotExists) {
+      cosmosDatabase.createContainerIfNotExists(properties);
+    } else {
+      cosmosDatabase.createContainer(properties);
+    }
+    addStoredProcedure(database, table, ifNotExists);
   }
 
-  private void addStoredProcedure(String namespace, String table) throws ExecutionException {
+  private void addStoredProcedure(String namespace, String table, boolean ifNotExists)
+      throws ExecutionException {
     CosmosDatabase cosmosDatabase = client.getDatabase(namespace);
     CosmosStoredProcedureProperties storedProcedureProperties =
         computeContainerStoredProcedureProperties();
+
+    if (ifNotExists && storedProcedureExists(namespace, table)) {
+      return;
+    }
     cosmosDatabase
         .getContainer(table)
         .getScripts()
@@ -217,7 +234,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     return indexingPolicy;
   }
 
-  private void putTableMetadata(String namespace, String table, TableMetadata metadata)
+  private void upsertTableMetadata(String namespace, String table, TableMetadata metadata)
       throws ExecutionException {
     try {
       createMetadataDatabaseAndTableMetadataContainerIfNotExists();
@@ -379,7 +396,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     updateIndexingPolicy(namespace, table, newTableMetadata);
 
     // update metadata
-    putTableMetadata(namespace, table, newTableMetadata);
+    upsertTableMetadata(namespace, table, newTableMetadata);
   }
 
   @Override
@@ -392,7 +409,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     updateIndexingPolicy(namespace, table, newTableMetadata);
 
     // update metadata
-    putTableMetadata(namespace, table, newTableMetadata);
+    upsertTableMetadata(namespace, table, newTableMetadata);
   }
 
   private void updateIndexingPolicy(
@@ -523,16 +540,10 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try {
-      if (!containerExists(namespace, table)) {
-        throw new IllegalArgumentException(
-            "The table " + getFullTableName(namespace, table) + "  does not exist");
-      }
-      createMetadataDatabaseAndTableMetadataContainerIfNotExists();
-      putTableMetadata(namespace, table, metadata);
-      if (!storedProcedureExists(namespace, table)) {
-        addStoredProcedure(namespace, table);
-      }
-    } catch (ExecutionException | CosmosException e) {
+      createTableInternal(namespace, table, metadata, true);
+    } catch (IllegalArgumentException e) {
+      throw e;
+    } catch (Exception e) {
       throw new ExecutionException(
           String.format("Repairing the %s container failed", getFullTableName(namespace, table)),
           e);
@@ -575,7 +586,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
       TableMetadata updatedTableMetadata =
           TableMetadata.newBuilder(currentTableMetadata).addColumn(columnName, columnType).build();
-      putTableMetadata(namespace, table, updatedTableMetadata);
+      upsertTableMetadata(namespace, table, updatedTableMetadata);
     } catch (ExecutionException e) {
       throw new ExecutionException(
           String.format(
