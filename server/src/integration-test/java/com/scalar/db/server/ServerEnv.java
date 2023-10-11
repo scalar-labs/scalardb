@@ -61,8 +61,7 @@ public final class ServerEnv {
     properties.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "-1");
 
     // Add testName as a metadata schema suffix
-    properties.setProperty(
-        JdbcConfig.TABLE_METADATA_SCHEMA, JdbcAdmin.METADATA_SCHEMA + "_" + testName);
+    properties.setProperty(JdbcConfig.METADATA_SCHEMA, JdbcAdmin.METADATA_SCHEMA + "_" + testName);
 
     return properties;
   }
