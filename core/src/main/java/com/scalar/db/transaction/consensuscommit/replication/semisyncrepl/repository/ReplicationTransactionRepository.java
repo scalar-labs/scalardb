@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutBuilder.Buildable;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scanner;
@@ -73,7 +72,7 @@ public class ReplicationTransactionRepository {
     }
   }
 
-  public void add(Transaction transaction) throws ExecutionException {
+  private Put createPutFromTransaction(Transaction transaction) {
     String writeSet;
     try {
       writeSet =
@@ -82,28 +81,39 @@ public class ReplicationTransactionRepository {
       throw new RuntimeException("Failed to serialize write tuples into JSON string", e);
     }
 
-    Buildable builder =
-        Put.newBuilder()
-            .namespace(replicationDbNamespace)
-            .table(replicationDbTransactionTable)
-            .partitionKey(Key.ofInt("partition_id", transaction.partitionId))
-            .clusteringKey(
-                Key.newBuilder()
-                    .addBigInt("updated_at", transaction.updatedAt.toEpochMilli())
-                    .addText("transaction_id", transaction.transactionId)
-                    .build())
-            // TODO: Revisit here
-            /*
-            .condition(
-                ConditionBuilder.putIf(
-                        ConditionBuilder.column("transaction_id")
-                            .isNotEqualToText(extractor.txId()))
-                    .build())
-             */
-            // TODO: Revisit here as this would be slow. Schemaful serialization should be better
-            .value(TextColumn.of("write_set", writeSet));
+    return Put.newBuilder()
+        .namespace(replicationDbNamespace)
+        .table(replicationDbTransactionTable)
+        .partitionKey(Key.ofInt("partition_id", transaction.partitionId))
+        .clusteringKey(
+            Key.newBuilder()
+                .addBigInt("updated_at", transaction.updatedAt.toEpochMilli())
+                .addText("transaction_id", transaction.transactionId)
+                .build())
+        // TODO: Revisit here
+        /*
+        .condition(
+            ConditionBuilder.putIf(
+                    ConditionBuilder.column("transaction_id")
+                        .isNotEqualToText(extractor.txId()))
+                .build())
+         */
+        // TODO: Revisit here as this would be slow. Schemaful serialization should be better
+        .value(TextColumn.of("write_set", writeSet))
+        .build();
+  }
 
-    replicationDbStorage.put(builder.build());
+  public void add(Transaction transaction) throws ExecutionException {
+    replicationDbStorage.put(createPutFromTransaction(transaction));
+  }
+
+  public void add(List<Transaction> transactions) throws ExecutionException {
+    if (transactions.isEmpty()) {
+      return;
+    }
+
+    replicationDbStorage.mutate(
+        transactions.stream().map(this::createPutFromTransaction).collect(Collectors.toList()));
   }
 
   public void updateUpdatedAt(Transaction transaction) throws ExecutionException {
