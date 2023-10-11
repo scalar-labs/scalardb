@@ -679,20 +679,36 @@ jobs:
     name: Oracle 23 integration test
     runs-on: ubuntu-latest
 
-    services:
-      oracle:
-        image: ghcr.io/scalar-labs/oracle/db-prebuilt:23
-        credentials:
+    steps:
+      - name: Free up ~14GB of disk space by removing the Android SDK
+        run: |
+          echo "Storage available before deletion"
+          df -h /
+          echo 
+          sudo rm -r /usr/local/lib/android
+          echo "Storage available after deletion"
+          df -h /
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
-        ports:
-          - 1521:1521
-        options: >-
-          --health-cmd "/opt/oracle/checkDBStatus.sh"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 120
-    steps:
+
+      - name: Start Oracle 23 container
+        run: docker run -d --name oracle-23 -p 1521:1521  ghcr.io/scalar-labs/oracle/db-prebuilt:23
+
+      - name: Wait for the container to be ready
+        timeout-minutes: 5
+        run : |
+          while [ "`docker inspect -f {{.State.Health.Status}} oracle-23`" != "healthy" ] 
+          do 
+            sleep 10
+            echo "Container is not yet ready" 
+          done
+          echo "Container is ready"
+
       - uses: actions/checkout@v4
 
       - name: Set up JDK 8
@@ -705,6 +721,10 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+
+      - name: Stop Oracle 23 container
+        if: always()
+        run: docker stop oracle-23 | xargs docker rm
 
       - name: Save Gradle test reports
         if: always()
