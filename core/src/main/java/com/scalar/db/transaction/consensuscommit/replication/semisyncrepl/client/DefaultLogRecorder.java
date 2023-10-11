@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -35,10 +36,10 @@ public class DefaultLogRecorder implements LogRecorder {
   private static final int REPLICATION_DB_PARTITION_SIZE = 256;
 
   private final TransactionTableMetadataManager tableMetadataManager;
-  private final ReplicationTransactionRepository replicationTransactionRepository;
   private final ExecutorService executorService =
       Executors.newCachedThreadPool(
           new ThreadFactoryBuilder().setNameFormat("log-recorder-%d").setDaemon(true).build());
+  private final GroupCommitter<Integer, Transaction> groupCommitter;
 
   private String defaultNamespace;
 
@@ -50,7 +51,21 @@ public class DefaultLogRecorder implements LogRecorder {
       TransactionTableMetadataManager tableMetadataManager,
       ReplicationTransactionRepository replicationTransactionRepository) {
     this.tableMetadataManager = tableMetadataManager;
-    this.replicationTransactionRepository = replicationTransactionRepository;
+    this.groupCommitter =
+        new GroupCommitter<>(
+            "log-recorder",
+            40,
+            64,
+            10,
+            8,
+            transactions -> {
+              try {
+                replicationTransactionRepository.add(transactions);
+              } catch (ExecutionException e) {
+                // TODO: Revisit what information is needed in this log message
+                throw new RuntimeException("Failed to send transactions", e);
+              }
+            });
   }
 
   private void recordInternal(PrepareMutationComposerForReplication composer)
@@ -152,10 +167,24 @@ public class DefaultLogRecorder implements LogRecorder {
       }
     }
 
-    int partitionId = Math.abs(composer.transactionId().hashCode()) % REPLICATION_DB_PARTITION_SIZE;
+    int candidatePartitionId =
+        Math.abs(composer.transactionId().hashCode()) % REPLICATION_DB_PARTITION_SIZE;
     Instant now = Instant.now();
-    replicationTransactionRepository.add(
-        new Transaction(partitionId, now, now, composer.transactionId(), writtenTuples));
+
+    CountDownLatch countDownLatch =
+        groupCommitter.addValue(
+            candidatePartitionId,
+            partitionId ->
+                new Transaction(partitionId, now, now, composer.transactionId(), writtenTuples));
+    try {
+      countDownLatch.await();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(
+          String.format(
+              "Interrupted when waiting response from GroupCommitter. transactionId:%s",
+              composer.transactionId()),
+          e);
+    }
   }
 
   @Override
