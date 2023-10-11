@@ -424,6 +424,7 @@ public abstract class CosmosAdminTestBase {
     verify(metadataDatabase).delete();
   }
 
+  @Test
   public void dropTable_WithMetadataLeft_ShouldDropContainerAndOnlyDeleteMetadata()
       throws ExecutionException {
     // Arrange

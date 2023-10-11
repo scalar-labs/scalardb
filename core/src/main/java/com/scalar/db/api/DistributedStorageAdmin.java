@@ -50,6 +50,7 @@ public interface DistributedStorageAdmin extends Admin {
    * @throws IllegalArgumentException if the table does not exist
    * @throws IllegalStateException if the table does not meet the requirement of ScalarDB table
    * @throws ExecutionException if the operation fails
+   * @return import table metadata in the ScalarDB format
    */
   TableMetadata getImportTableMetadata(String namespace, String table) throws ExecutionException;
 
@@ -58,6 +59,8 @@ public interface DistributedStorageAdmin extends Admin {
    *
    * @param namespace namespace name of import table
    * @param table import table name
+   * @param columnName name of the column to be added
+   * @param columnType type of the column to be added
    * @throws IllegalArgumentException if the table does not exist
    * @throws ExecutionException if the operation fails
    */
