@@ -1,4 +1,4 @@
-FROM docker.io/busybox:1.32 AS tools
+FROM docker.io/busybox:1.36 AS tools
 
 ENV GRPC_HEALTH_PROBE_VERSION v0.4.17
 ENV DOCKERIZE_VERSION v0.6.1
