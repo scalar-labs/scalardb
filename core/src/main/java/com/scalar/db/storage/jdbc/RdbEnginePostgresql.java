@@ -145,6 +145,12 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   }
 
   @Override
+  public boolean isDuplicateIndexError(SQLException e) {
+    // Since the "IF NOT EXISTS" syntax is used to create an index, we always return false
+    return false;
+  }
+
+  @Override
   public String enclose(String name) {
     return "\"" + name + "\"";
   }
@@ -294,11 +300,5 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql.replace("CREATE INDEX", "CREATE INDEX IF NOT EXISTS");
-  }
-
-  @Override
-  public boolean isDuplicateIndexError(SQLException e) {
-    // Since the "IF NOT EXISTS" syntax is used to create an index, we always return false
-    return false;
   }
 }

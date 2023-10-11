@@ -88,9 +88,8 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
   public boolean tableExists(String namespace, String table) {
     try {
       client.getDatabase(namespace).getContainer(table).read();
-    } catch (RuntimeException e) {
-      if (e instanceof CosmosException
-          && ((CosmosException) e).getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
+    } catch (CosmosException e) {
+      if (e.getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
         return false;
       }
       throw e;

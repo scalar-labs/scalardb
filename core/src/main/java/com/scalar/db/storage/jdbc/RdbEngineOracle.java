@@ -172,6 +172,14 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
+  public boolean isDuplicateIndexError(SQLException e) {
+    // https://docs.oracle.com/en/error-help/db/ora-00955/
+    // code : 955
+    // message : name is already used by an existing object
+    return e.getErrorCode() == 955;
+  }
+
+  @Override
   public String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {
       case BIGINT:
@@ -324,13 +332,5 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql;
-  }
-
-  @Override
-  public boolean isDuplicateIndexError(SQLException e) {
-    // https://docs.oracle.com/en/error-help/db/ora-00955/
-    // code : 955
-    // message : name is already used by an existing object
-    return e.getErrorCode() == 955;
   }
 }

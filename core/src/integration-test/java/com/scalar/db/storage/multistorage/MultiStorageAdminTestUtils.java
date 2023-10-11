@@ -84,7 +84,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
 
   @Override
   public boolean tableExists(String namespace, String table) throws Exception {
-    boolean existsOnCassandraStorage = clusterManager.getMetadata(namespace, table) != null;
+    boolean existsOnCassandraStorage = tableExistsOnCassandra(namespace, table);
     boolean existsOnJdbcStorage = tableExistsOnJdbc(namespace, table);
     if (existsOnCassandraStorage && existsOnJdbcStorage) {
       throw new IllegalStateException(
@@ -104,7 +104,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     String sql = rdbEngine.tableExistsInternalTableCheckSql(fullTableName);
     try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(jdbcConfig, rdbEngine);
         Connection connection = dataSource.getConnection();
-        Statement statement = connection.createStatement(); ) {
+        Statement statement = connection.createStatement()) {
       statement.execute(sql);
       return true;
     } catch (SQLException e) {
