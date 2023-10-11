@@ -57,7 +57,7 @@ import org.mockito.MockitoAnnotations;
 /**
  * Abstraction that defines unit tests for the {@link CosmosAdmin}. The class purpose is to be able
  * to run the {@link CosmosAdmin} unit tests with different values for the {@link CosmosConfig},
- * notably {@link CosmosConfig#TABLE_METADATA_DATABASE}.
+ * notably {@link CosmosConfig#METADATA_DATABASE}.
  */
 public abstract class CosmosAdminTestBase {
   @Mock private CosmosClient client;
@@ -81,10 +81,9 @@ public abstract class CosmosAdminTestBase {
   }
 
   /**
-   * This sets the {@link CosmosConfig#TABLE_METADATA_DATABASE} value that will be used to run the
-   * tests.
+   * This sets the {@link CosmosConfig#METADATA_DATABASE} value that will be used to run the tests.
    *
-   * @return {@link CosmosConfig#TABLE_METADATA_DATABASE} value
+   * @return {@link CosmosConfig#METADATA_DATABASE} value
    */
   abstract Optional<String> getTableMetadataDatabaseConfig();
 
@@ -464,6 +463,7 @@ public abstract class CosmosAdminTestBase {
     verify(metadataContainer).delete();
   }
 
+  @Test
   public void dropTable_WithMetadataLeft_ShouldDropContainerAndOnlyDeleteMetadata()
       throws ExecutionException {
     // Arrange
@@ -513,6 +513,7 @@ public abstract class CosmosAdminTestBase {
     CosmosContainer namespacesContainer = mock(CosmosContainer.class);
     when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
 
+    @SuppressWarnings("unchecked")
     CosmosPagedIterable<Object> pagedIterable = mock(CosmosPagedIterable.class);
     when(namespacesContainer.queryItems(anyString(), any(), any())).thenReturn(pagedIterable);
     when(pagedIterable.stream()).thenReturn(Stream.empty());
@@ -540,6 +541,7 @@ public abstract class CosmosAdminTestBase {
     CosmosContainer namespacesContainer = mock(CosmosContainer.class);
     when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
 
+    @SuppressWarnings("unchecked")
     CosmosPagedIterable<Object> pagedIterable = mock(CosmosPagedIterable.class);
     when(namespacesContainer.queryItems(anyString(), any(), any())).thenReturn(pagedIterable);
     when(pagedIterable.stream()).thenReturn(Stream.of(mock(Object.class)));
@@ -964,6 +966,8 @@ public abstract class CosmosAdminTestBase {
     CosmosContainer namespacesContainer = mock(CosmosContainer.class);
     when(client.getDatabase(anyString())).thenReturn(metadataDatabase);
     when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
+
+    @SuppressWarnings("unchecked")
     CosmosPagedIterable<CosmosNamespace> pagedIterable = mock(CosmosPagedIterable.class);
     when(namespacesContainer.queryItems(anyString(), any(), eq(CosmosNamespace.class)))
         .thenReturn(pagedIterable);

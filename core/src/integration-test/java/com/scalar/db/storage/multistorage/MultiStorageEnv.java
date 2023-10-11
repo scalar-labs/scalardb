@@ -56,8 +56,7 @@ public final class MultiStorageEnv {
     properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
 
     // Add testName as a metadata schema suffix
-    properties.setProperty(
-        JdbcConfig.TABLE_METADATA_SCHEMA, JdbcAdmin.METADATA_SCHEMA + "_" + testName);
+    properties.setProperty(JdbcConfig.METADATA_SCHEMA, JdbcAdmin.METADATA_SCHEMA + "_" + testName);
 
     return properties;
   }
