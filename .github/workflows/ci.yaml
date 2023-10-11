@@ -556,6 +556,10 @@ jobs:
           --health-timeout 5s
           --health-retries 120
     steps:
+      - name: Free up ~2GB of disk space by removing .NET runtime and libraries.
+        run: |
+          sudo rm -r /usr/share/dotnet
+
       - uses: actions/checkout@v4
 
       - name: Set up JDK 8
