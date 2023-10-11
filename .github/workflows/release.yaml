@@ -63,7 +63,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Login to Amazon Elastic Container Registry
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
         with:
           registries: ${{ secrets.AWS_MARKETPLACE_ECR_ID }}
 
