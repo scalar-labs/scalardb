@@ -26,7 +26,7 @@ public final class JdbcEnv {
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
 
     // Add testName as a metadata schema suffix
-    props.setProperty(JdbcConfig.TABLE_METADATA_SCHEMA, JdbcAdmin.METADATA_SCHEMA + "_" + testName);
+    props.setProperty(JdbcConfig.METADATA_SCHEMA, JdbcAdmin.METADATA_SCHEMA + "_" + testName);
 
     return props;
   }

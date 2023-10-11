@@ -102,7 +102,7 @@ public class CosmosCommand extends StorageSpecificCommand implements Callable<In
     // For test
     if (tableMetadataDatabasePrefix != null) {
       props.setProperty(
-          CosmosConfig.TABLE_METADATA_DATABASE,
+          CosmosConfig.METADATA_DATABASE,
           tableMetadataDatabasePrefix + CosmosAdmin.METADATA_DATABASE);
     }
     if (coordinatorNamespacePrefix != null) {

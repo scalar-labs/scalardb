@@ -2463,15 +2463,6 @@ public abstract class JdbcAdminTestBase {
     assertThat(actualNamespaceNames).containsOnly(namespace1, namespace2);
   }
 
-  private List<Statement> prepareMockStatements(int count) {
-    List<Statement> statements = new ArrayList<>();
-    for (int i = 0; i < count; i++) {
-      Statement statement = mock(Statement.class);
-      statements.add(statement);
-    }
-    return statements;
-  }
-
   @Test
   public void getImportTableMetadata_ForX_ShouldWorkProperly()
       throws SQLException, ExecutionException {
@@ -2982,6 +2973,7 @@ public abstract class JdbcAdminTestBase {
   private RdbEngineStrategy getRdbEngineStrategy(RdbEngine rdbEngine) {
     return RDB_ENGINES.getOrDefault(rdbEngine, RdbEngineFactory.create("jdbc:mysql:"));
   }
+
   // Utility class used to mock ResultSet for a "select * from" query on the metadata table
   static class SelectAllFromMetadataTableResultSetMocker
       implements org.mockito.stubbing.Answer<Object> {
