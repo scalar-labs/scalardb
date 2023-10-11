@@ -560,7 +560,7 @@ jobs:
           password: ${{ secrets.CR_PAT }}
 
       - name: Start Oracle 23 container
-        run: docker run -d --name oracle-23 -p 1521:1521  ghcr.io/scalar-labs/oracle/db-prebuilt:23.2.0-free
+        run: docker run -d --name oracle-23 -p 1521:1521  ghcr.io/scalar-labs/oracle/db-prebuilt:23
 
       - name: Wait for the container to be ready
         timeout-minutes: 5
