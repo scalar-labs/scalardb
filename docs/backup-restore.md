@@ -71,7 +71,7 @@ For an example, see [BASH: SQLite3 .backup command](https://stackoverflow.com/qu
 
 ### Back up with explicit pausing
 
-Another way to create a transactionally consistent backup is to create a backup while ScalarDB Cluster does not have any outstanding transactions. Creating the backup depends on the following:
+Another way to create a transactionally consistent backup is to create a backup while a cluster of ScalarDB instances does not have any outstanding transactions. Creating the backup depends on the following:
 
 - If the underlying database has a point-in-time snapshot or backup feature, you can create a backup during the period when no outstanding transactions exist.
 - If the underlying database has a point-in-time restore or recovery (PITR) feature, you can set a restore point to a time (preferably the mid-time) in the pause duration period when no outstanding transactions exist.
@@ -86,7 +86,7 @@ In addition, you should pause for a sufficient amount of time (for example, 10 s
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
-To make ScalarDB drain outstanding requests and stop accepting new requests so that a pause duration can be created, you should use ScalarDB Cluster, which uses the Scalar Admin interface, or implement the [Scalar Admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application that uses ScalarDB.
+To make ScalarDB drain outstanding requests and stop accepting new requests so that a pause duration can be created, you should implement the [Scalar Admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application that uses ScalarDB or use ScalarDB Cluster (PAYG or BYOL license required), which uses the Scalar Admin interface.
 
 By using the [Scalar Admin client tool](https://github.com/scalar-labs/scalar-admin/tree/main/java#scalar-admin-client-tool), you can pause nodes, servers, or applications that implement the Scalar Admin interface without losing ongoing transactions.
 
@@ -113,7 +113,7 @@ Cassandra has a built-in replication feature, so you do not always have to creat
 
 However, if the quorum of cluster nodes loses their data, you will need a transactionally consistent backup (snapshot) to restore the cluster to a certain transactionally consistent point.
 
-To create a transactionally consistent cluster-wide backup (snapshot), pause the application that is using ScalarDB or ScalarDB Cluster and create backups (snapshots) of the nodes as described in [Back up with explicit pausing](#back-up-with-explicit-pausing) or stop the Cassandra cluster, take copies of all the data in the nodes, and start the cluster.
+To create a transactionally consistent cluster-wide backup (snapshot), pause the application that is using ScalarDB or ScalarDB Cluster (PAYG or BYOL license required) and create backups (snapshots) of the nodes as described in [Back up with explicit pausing](#back-up-with-explicit-pausing) or stop the Cassandra cluster, take copies of all the data in the nodes, and start the cluster.
 </div>
 <div id="Cosmos_DB_for_NoSQL2" class="tabcontent" markdown="1">
 
