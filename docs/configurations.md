@@ -147,8 +147,6 @@ The following configurations are available for the gRPC transaction manager for 
 | `scalar.db.contact_points`                 | ScalarDB Server host.                                       |                         |
 | `scalar.db.contact_port`                   | Port number for ScalarDB Server.                            | `60051`                 |
 | `scalar.db.grpc.deadline_duration_millis`  | The deadline duration for gRPC connections in milliseconds. | `60000` (60 seconds)    |
-| `scalar.db.grpc.max_inbound_message_size`  | The maximum message size allowed for a single gRPC frame.   | The gRPC default value. |
-| `scalar.db.grpc.max_inbound_metadata_size` | The maximum size of metadata allowed to be received.        | The gRPC default value. |
 
 For details about ScalarDB Server, see [ScalarDB Server](scalardb-server.md).
 
@@ -162,8 +160,6 @@ In addition to the [configurations when using Consensus Commit directly](#use-co
 |---------------------------------------------------|--------------------------------------------------------------------------------------------------|-------------------------|
 | `scalar.db.server.port`                           | Port number for ScalarDB Server.                                                                 | `60051`                 |
 | `scalar.db.server.prometheus_exporter_port`       | Prometheus exporter port. Prometheus exporter will not be started if a negative number is given. | `8080`                  |
-| `scalar.db.server.grpc.max_inbound_message_size`  | The maximum message size allowed to be received.                                                 | The gRPC default value. |
-| `scalar.db.server.grpc.max_inbound_metadata_size` | The maximum size of metadata allowed to be received.                                             | The gRPC default value. |
 
 For details about ScalarDB Server, see [ScalarDB Server](scalardb-server.md).
 
