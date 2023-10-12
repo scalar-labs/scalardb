@@ -175,6 +175,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
   @Override
   public void repairCoordinatorTables(Map<String, String> options) throws ExecutionException {
+    // TODO This will be replaced with admin.repairNamespace(coordinatorNamespace, options)
+    admin.createNamespace(coordinatorNamespace, true, options);
     admin.repairTable(coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
   }
 

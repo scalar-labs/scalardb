@@ -6,6 +6,7 @@ import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
 import com.azure.cosmos.CosmosContainer;
+import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.CosmosStoredProcedure;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
@@ -39,10 +40,7 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
 
   @Override
   public void dropMetadataTable() {
-    client
-        .getDatabase(metadataDatabase)
-        .getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER)
-        .delete();
+    dropTable(metadataDatabase, CosmosAdmin.TABLE_METADATA_CONTAINER);
   }
 
   @Override
@@ -84,5 +82,23 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
         .getContainer(table)
         .getScripts()
         .getStoredProcedure(CosmosAdmin.STORED_PROCEDURE_FILE_NAME);
+  }
+
+  @Override
+  public boolean tableExists(String namespace, String table) {
+    try {
+      client.getDatabase(namespace).getContainer(table).read();
+    } catch (CosmosException e) {
+      if (e.getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
+        return false;
+      }
+      throw e;
+    }
+    return true;
+  }
+
+  @Override
+  public void dropTable(String namespace, String table) {
+    client.getDatabase(namespace).getContainer(table).delete();
   }
 }

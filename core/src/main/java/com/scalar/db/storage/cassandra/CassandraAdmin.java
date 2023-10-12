@@ -10,6 +10,7 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.schemabuilder.Create;
+import com.datastax.driver.core.schemabuilder.CreateIndex;
 import com.datastax.driver.core.schemabuilder.CreateKeyspace;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder.Direction;
@@ -62,8 +63,13 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    createTableInternal(namespace, table, metadata, options);
-    createSecondaryIndexes(namespace, table, metadata.getSecondaryIndexNames(), options);
+    try {
+      createTableInternal(namespace, table, metadata, false, options);
+      createSecondaryIndexes(namespace, table, metadata.getSecondaryIndexNames(), false);
+    } catch (RuntimeException e) {
+      throw new ExecutionException(
+          String.format("Creating the %s table failed", getFullTableName(namespace, table)), e);
+    }
   }
 
   @Override
@@ -87,6 +93,13 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     if (ifNotExists) {
       query = query.ifNotExists();
     }
+    Map<String, Object> replicationOptions = prepareReplicationOptions(options);
+    String queryString = query.with().replication(replicationOptions).getQueryString();
+
+    clusterManager.getSession().execute(queryString);
+  }
+
+  private Map<String, Object> prepareReplicationOptions(Map<String, String> options) {
     String replicationFactor = options.getOrDefault(REPLICATION_FACTOR, DEFAULT_REPLICATION_FACTOR);
     ReplicationStrategy replicationStrategy =
         options.containsKey(REPLICATION_STRATEGY)
@@ -100,9 +113,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       replicationOptions.put("class", ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
       replicationOptions.put("dc1", replicationFactor);
     }
-    String queryString = query.with().replication(replicationOptions).getQueryString();
-
-    clusterManager.getSession().execute(queryString);
+    return replicationOptions;
   }
 
   private void insertIntoNamespacesTable(String keyspace) {
@@ -170,13 +181,24 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public void createIndex(
       String namespace, String table, String columnName, Map<String, String> options)
       throws ExecutionException {
+    createIndexInternal(namespace, table, columnName, false);
+  }
+
+  public void createIndexInternal(
+      String namespace, String table, String columnName, boolean ifNotExists)
+      throws ExecutionException {
     String indexName = getIndexName(table, columnName);
-    SchemaStatement createIndex =
-        SchemaBuilder.createIndex(indexName)
+    CreateIndex createIndex = SchemaBuilder.createIndex(indexName);
+    if (ifNotExists) {
+      createIndex = createIndex.ifNotExists();
+    }
+    SchemaStatement createIndexStatement =
+        createIndex
             .onTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
             .andColumn(quoteIfNecessary(columnName));
+
     try {
-      clusterManager.getSession().execute(createIndex.getQueryString());
+      clusterManager.getSession().execute(createIndexStatement.getQueryString());
     } catch (RuntimeException e) {
       throw new ExecutionException(
           String.format(
@@ -316,12 +338,13 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    // We have this check to stay consistent with the behavior of the other admins classes
-    if (!tableExists(namespace, table)) {
-      throw new IllegalArgumentException(
-          "The " + getFullTableName(namespace, table) + " table does not exist");
+    try {
+      createTableInternal(namespace, table, metadata, true, options);
+      createSecondaryIndexes(namespace, table, metadata.getSecondaryIndexNames(), true);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          String.format("Repairing the %s table failed", getFullTableName(namespace, table)), e);
     }
-    // The table metadata are not managed by ScalarDB, so we don't need to do anything here
   }
 
   @Override
@@ -393,10 +416,17 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   @VisibleForTesting
   void createTableInternal(
-      String keyspace, String table, TableMetadata metadata, Map<String, String> options)
+      String keyspace,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists,
+      Map<String, String> options)
       throws ExecutionException {
     Create createTable =
         SchemaBuilder.createTable(quoteIfNecessary(keyspace), quoteIfNecessary(table));
+    if (ifNotExists) {
+      createTable = createTable.ifNotExists();
+    }
     // Add columns
     for (String pk : metadata.getPartitionKeyNames()) {
       createTable =
@@ -455,10 +485,10 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   @VisibleForTesting
   void createSecondaryIndexes(
-      String keyspace, String table, Set<String> secondaryIndexNames, Map<String, String> options)
+      String keyspace, String table, Set<String> secondaryIndexNames, boolean ifNotExists)
       throws ExecutionException {
     for (String name : secondaryIndexNames) {
-      createIndex(keyspace, table, name, options);
+      createIndexInternal(keyspace, table, name, ifNotExists);
     }
   }
 
