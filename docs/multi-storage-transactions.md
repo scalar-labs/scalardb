@@ -6,7 +6,7 @@ This page explains how multi-storage transactions work and how to configure the 
 
 ## How multi-storage transactions work in ScalarDB
 
-In ScalarDB, the `multi-storage` implementation holds multiple storage instances and has mappings from a namespace name to a proper storage instance. When an operation is executed, the multi-storage transactions feature chooses a proper storage instance from the specified namespace by using the namespace-storage mapping and uses that storage instance.
+In ScalarDB, the `multi-storage` implementation holds multiple storage instances and has mapping from a table name or a namespace name to a proper storage instance. When an operation is executed, the multi-storage transactions feature chooses a proper storage instance from the specified table or namespace by using the table-storage or namespace-storage mapping and uses that storage instance.
 
 ## How to configure ScalarDB to support multi-storage transactions
 
@@ -45,9 +45,9 @@ scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.min_idle=5
 scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.max_idle=10
 scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.max_total=25
 
-# Define namespace mapping from a namespace name to a storage.
-# The format is "<NAMESPACE_NAME>:<STORAGE_NAME>,...".
-scalar.db.multi_storage.namespace_mapping=user:cassandra,coordinator:mysql
+# Define table mappings from a table name to a storage.
+# The format is "<TABLE_NAME>:<STORAGE_NAME>,...".
+scalar.db.multi_storage.table_mapping=user.ORDER:cassandra,user.CUSTOMER:mysql,coordinator.state:cassandra
 
 # Define the default storage that's used if a specified table doesn't have any mapping.
 scalar.db.multi_storage.default_storage=cassandra
