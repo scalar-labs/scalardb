@@ -1,50 +1,60 @@
-# Multi-storage Transactions
+# Multi-Storage Transactions
 
-Scalar DB transactions can span multiple storages/databases while preserving ACID property with a
-feature called *Multi-storage Transactions*. This documentation explains the feature briefly.
+ScalarDB transactions can span multiple storages or databases while maintaining ACID compliance by using a feature called *multi-storage transactions*.
 
-## How Multi-storage Transactions works
+This page explains how multi-storage transactions work and how to configure the feature in ScalarDB.
 
-Internally, the `multi-storage` implementation holds multiple storage instances and has mappings
-from a table name/a namespace name to a proper storage instance. When an operation is executed, it
-chooses a proper storage instance from the specified table/namespace by using the
-table-storage/namespace-storage mappings and uses it.
+## How multi-storage transactions work in ScalarDB
 
-## Configuration
+In ScalarDB, the `multi-storage` implementation holds multiple storage instances and has mappings from a namespace name to a proper storage instance. When an operation is executed, the multi-storage transactions feature chooses a proper storage instance from the specified namespace by using the namespace-storage mapping and uses that storage instance.
 
-You can use Multi-storage transactions in the same way as the other storages/databases at the code
-level as long as the configuration is properly set for `multi-storage`. An example of the
-configuration is shown as follows:
+## How to configure ScalarDB to support multi-storage transactions
 
-```
-# The storage is "multi-storage"
+To enable multi-storage transactions, you need to specify `consensus-commit` as the value for `scalar.db.transaction_manager`, `multi-storage` as the value for `scalar.db.storage`, and configure your databases in the ScalarDB properties file.
+
+The following is an example of configurations for multi-storage transactions:
+
+```properties
+# Consensus Commit is required to support multi-storage transactions.
+scalar.db.transaction_manager=consensus-commit
+
+# Multi-storage implementation is used for Consensus Commit.
 scalar.db.storage=multi-storage
 
-# Define storage names, comma-separated format. In this case, "cassandra" and "mysql"
+# Define storage names by using a comma-separated format. 
+# In this case, "cassandra" and "mysql" are used.
 scalar.db.multi_storage.storages=cassandra,mysql
 
-# Define the "cassandra" storage. You can set the storage properties (storage, contact_points, username, etc.) with the property name "scalar.db.multi_storage.storages.<storage name>.<property name without the prefix 'scalar.db.'>". For example, if you want to specify the "scalar.db.contact_points" property for the "cassandra" storage, you can specify "scalar.db.multi_storage.storages.cassandra.contact_points"
+# Define the "cassandra" storage.
+# When setting storage properties, such as `storage`, `contact_points`, `username`, and `password`, for multi-storage transactions, the format is `scalar.db.multi_storage.storages.<STORAGE_NAME>.<PROPERTY_NAME>`.
+# For example, to configure the `scalar.db.contact_points` property for Cassandra, specify `scalar.db.multi_storage.storages.cassandra.contact_point`.
 scalar.db.multi_storage.storages.cassandra.storage=cassandra
 scalar.db.multi_storage.storages.cassandra.contact_points=localhost
 scalar.db.multi_storage.storages.cassandra.username=cassandra
 scalar.db.multi_storage.storages.cassandra.password=cassandra
 
-# Define the "mysql" storage 
+# Define the "mysql" storage.
+# When defining JDBC-specific configurations for multi-storage transactions, you can follow a similar format of `scalar.db.multi_storage.storages.<STORAGE_NAME>.<PROPERTY_NAME>`.
+# For example, to configure the `scalar.db.jdbc.connection_pool.min_idle` property for MySQL, specify `scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.min_idle`.
 scalar.db.multi_storage.storages.mysql.storage=jdbc
 scalar.db.multi_storage.storages.mysql.contact_points=jdbc:mysql://localhost:3306/
 scalar.db.multi_storage.storages.mysql.username=root
 scalar.db.multi_storage.storages.mysql.password=mysql
-# JDBC specific configurations for the "mysql" storage. As mentioned before, the format is "scalar.db.multi_storage.storages.<storage name>.<property name without the prefix 'scalar.db.'>". So for example, if you want to specify the "scalar.db.jdbc.connection_pool.min_idle" property for the "mysql" storage, you can specify "scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.min_idle"
+# Define the JDBC-specific configurations for the "mysql" storage.
 scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.min_idle=5
 scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.max_idle=10
 scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.max_total=25
 
-# Define table mappings from a table name to a storage. The format is "<table name>:<storage name>,..."
-scalar.db.multi_storage.table_mapping=user.ORDER:cassandra,user.CUSTOMER:mysql,coordinator.state:cassandra
-
-# Define namespace mappings from a namespace name to a storage. The format is "<namespace name>:<storage name>,..."
+# Define namespace mapping from a namespace name to a storage.
+# The format is "<NAMESPACE_NAME>:<STORAGE_NAME>,...".
 scalar.db.multi_storage.namespace_mapping=user:cassandra,coordinator:mysql
 
-# Define the default storage that’s used if a specified table doesn’t have any table mapping
+# Define the default storage that's used if a specified table doesn't have any mapping.
 scalar.db.multi_storage.default_storage=cassandra
 ```
+
+For additional configurations, see [ScalarDB Configurations](configurations.md).
+
+## Hands-on tutorial
+
+For a hands-on tutorial, see [Create a Sample Application That Supports Multi-Storage Transactions](https://github.com/scalar-labs/scalardb-samples/tree/main/multi-storage-transaction-sample).
