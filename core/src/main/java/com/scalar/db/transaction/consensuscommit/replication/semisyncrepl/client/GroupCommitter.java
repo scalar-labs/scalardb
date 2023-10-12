@@ -13,11 +13,11 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 class GroupCommitter<K, V> {
-  private final int retentionTimeInMillis;
+  private final long retentionTimeInMillis;
   private final int numberOfRetentionValues;
   private Queue<K, V> queue;
   private final ExecutorService emitterExecutorService;
-  private final ScheduledExecutorService watcherExecutorService;
+  private final ScheduledExecutorService expirationCheckExecutorService;
   private final Consumer<List<V>> emitter;
 
   private static class Queue<K, V> {
@@ -37,9 +37,9 @@ class GroupCommitter<K, V> {
 
   GroupCommitter(
       String label,
-      int retentionTimeInMillis,
+      long retentionTimeInMillis,
       int numberOfRetentionValues,
-      int intervalForExpireCheckInMillis,
+      long expirationCheckIntervalInMillis,
       int numberOfThreads,
       Consumer<List<V>> emitter) {
     this.retentionTimeInMillis = retentionTimeInMillis;
@@ -53,7 +53,7 @@ class GroupCommitter<K, V> {
                 .setNameFormat(label + "-group-commit-%d")
                 .build());
 
-    this.watcherExecutorService =
+    this.expirationCheckExecutorService =
         Executors.newScheduledThreadPool(
             1,
             new ThreadFactoryBuilder()
@@ -61,10 +61,10 @@ class GroupCommitter<K, V> {
                 .setNameFormat(label + "-group-commit-watch-%d")
                 .build());
 
-    watcherExecutorService.scheduleAtFixedRate(
+    expirationCheckExecutorService.scheduleAtFixedRate(
         this::emitIfExpired,
-        intervalForExpireCheckInMillis,
-        intervalForExpireCheckInMillis,
+        expirationCheckIntervalInMillis,
+        expirationCheckIntervalInMillis,
         TimeUnit.MILLISECONDS);
   }
 

@@ -44,7 +44,7 @@ public class CommitHandler {
   private final LogRecorder logRecorder;
 
   private Optional<LogRecorder> prepareLogRecorder() {
-    String replicationDbConfigPath = System.getenv("LOG_APPLIER_REPLICATION_CONFIG");
+    String replicationDbConfigPath = System.getenv("LOG_RECORDER_REPLICATION_CONFIG");
     if (replicationDbConfigPath == null) {
       return Optional.empty();
     }
