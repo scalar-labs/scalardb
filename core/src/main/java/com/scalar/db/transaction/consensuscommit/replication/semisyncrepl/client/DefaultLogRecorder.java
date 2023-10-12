@@ -26,11 +26,22 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class DefaultLogRecorder implements LogRecorder {
   private static final Logger logger = LoggerFactory.getLogger(DefaultLogRecorder.class);
+
+  private static final String ENV_VAR_GROUP_COMMIT_ENABLED = "LOG_RECORDER_GROUP_COMMIT_ENABLED";
+  private static final String ENV_VAR_GROUP_COMMIT_NUM_OF_THREADS =
+      "LOG_RECORDER_GROUP_COMMIT_NUM_OF_THREADS";
+  private static final String ENV_VAR_GROUP_COMMIT_RETENTION_TIME_IN_MILLIS =
+      "LOG_RECORDER_GROUP_COMMIT_RETENTION_TIME_IN_MILLIS";
+  private static final String ENV_VAR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES =
+      "LOG_RECORDER_GROUP_COMMIT_NUM_OF_RETENTION_VALUES";
+  private static final String ENV_VAR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS =
+      "LOG_RECORDER_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS";
 
   // TODO: Make these configurable
   private static final int REPLICATION_DB_PARTITION_SIZE = 256;
@@ -39,7 +50,8 @@ public class DefaultLogRecorder implements LogRecorder {
   private final ExecutorService executorService =
       Executors.newCachedThreadPool(
           new ThreadFactoryBuilder().setNameFormat("log-recorder-%d").setDaemon(true).build());
-  private final GroupCommitter<Integer, Transaction> groupCommitter;
+  private final ReplicationTransactionRepository replicationTransactionRepository;
+  @Nullable private final GroupCommitter<Integer, Transaction> groupCommitter;
 
   private String defaultNamespace;
 
@@ -51,21 +63,56 @@ public class DefaultLogRecorder implements LogRecorder {
       TransactionTableMetadataManager tableMetadataManager,
       ReplicationTransactionRepository replicationTransactionRepository) {
     this.tableMetadataManager = tableMetadataManager;
-    this.groupCommitter =
-        new GroupCommitter<>(
-            "log-recorder",
-            40,
-            64,
-            10,
-            8,
-            transactions -> {
-              try {
-                replicationTransactionRepository.add(transactions);
-              } catch (ExecutionException e) {
-                // TODO: Revisit what information is needed in this log message
-                throw new RuntimeException("Failed to send transactions", e);
-              }
-            });
+    this.replicationTransactionRepository = replicationTransactionRepository;
+
+    boolean groupCommitEnabled = true;
+    if (System.getenv(ENV_VAR_GROUP_COMMIT_ENABLED) != null) {
+      groupCommitEnabled = Boolean.parseBoolean(System.getenv(ENV_VAR_GROUP_COMMIT_ENABLED));
+    }
+
+    int groupCommitNumOfThreads = 4;
+    if (System.getenv(ENV_VAR_GROUP_COMMIT_NUM_OF_THREADS) != null) {
+      groupCommitNumOfThreads =
+          Integer.parseInt(System.getenv(ENV_VAR_GROUP_COMMIT_NUM_OF_THREADS));
+    }
+
+    long groupCommitRetentionTimeInMillis = 40;
+    if (System.getenv(ENV_VAR_GROUP_COMMIT_RETENTION_TIME_IN_MILLIS) != null) {
+      groupCommitRetentionTimeInMillis =
+          Long.parseLong(System.getenv(ENV_VAR_GROUP_COMMIT_RETENTION_TIME_IN_MILLIS));
+    }
+
+    int groupCommitNumOfRetentionValues = 32;
+    if (System.getenv(ENV_VAR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES) != null) {
+      groupCommitNumOfRetentionValues =
+          Integer.parseInt(System.getenv(ENV_VAR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES));
+    }
+
+    long groupCommitExpirationCheckIntervalInMillis = 10;
+    if (System.getenv(ENV_VAR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS) != null) {
+      groupCommitExpirationCheckIntervalInMillis =
+          Long.parseLong(System.getenv(ENV_VAR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS));
+    }
+
+    if (groupCommitEnabled) {
+      this.groupCommitter =
+          new GroupCommitter<>(
+              "log-recorder",
+              groupCommitRetentionTimeInMillis,
+              groupCommitNumOfRetentionValues,
+              groupCommitExpirationCheckIntervalInMillis,
+              groupCommitNumOfThreads,
+              transactions -> {
+                try {
+                  replicationTransactionRepository.add(transactions);
+                } catch (ExecutionException e) {
+                  // TODO: Revisit what information is needed in this log message
+                  throw new RuntimeException("Failed to send transactions", e);
+                }
+              });
+    } else {
+      this.groupCommitter = null;
+    }
   }
 
   private void recordInternal(PrepareMutationComposerForReplication composer)
@@ -171,19 +218,24 @@ public class DefaultLogRecorder implements LogRecorder {
         Math.abs(composer.transactionId().hashCode()) % REPLICATION_DB_PARTITION_SIZE;
     Instant now = Instant.now();
 
-    CountDownLatch countDownLatch =
-        groupCommitter.addValue(
-            candidatePartitionId,
-            partitionId ->
-                new Transaction(partitionId, now, now, composer.transactionId(), writtenTuples));
-    try {
-      countDownLatch.await();
-    } catch (InterruptedException e) {
-      throw new RuntimeException(
-          String.format(
-              "Interrupted when waiting response from GroupCommitter. transactionId:%s",
-              composer.transactionId()),
-          e);
+    if (groupCommitter != null) {
+      CountDownLatch countDownLatch =
+          groupCommitter.addValue(
+              candidatePartitionId,
+              partitionId ->
+                  new Transaction(partitionId, now, now, composer.transactionId(), writtenTuples));
+      try {
+        countDownLatch.await();
+      } catch (InterruptedException e) {
+        throw new RuntimeException(
+            String.format(
+                "Interrupted when waiting response from GroupCommitter. transactionId:%s",
+                composer.transactionId()),
+            e);
+      }
+    } else {
+      replicationTransactionRepository.add(
+          new Transaction(candidatePartitionId, now, now, composer.transactionId(), writtenTuples));
     }
   }
 
