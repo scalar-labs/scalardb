@@ -81,7 +81,7 @@ Another way to create a transactionally consistent backup is to create a backup 
 
 When using a PITR feature, you should minimize the clock drifts between clients and servers by using clock synchronization, such as NTP. Otherwise, the time you get as the paused duration might be too different from the time in which the pause was actually conducted, which could restore the backup to a point where ongoing transactions exist.
 
-In addition, you should pause for a sufficient amount of time (for example, 10 seconds) and use the mid-time of the paused duration as a restore point since clock synchronization cannot perfectly synchronize clocks between nodes.
+In addition, you should pause for a sufficient amount of time (for example, five seconds) and use the mid-time of the paused duration as a restore point since clock synchronization cannot perfectly synchronize clocks between nodes.
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
