@@ -1,106 +1,120 @@
-# Two-phase Commit Transactions
+# Transactions with a Two-Phase Commit Interface
 
-Scalar DB also supports two-phase commit style transactions called *Two-phase Commit Transactions*.
-With Two-phase Commit Transactions, you can execute a transaction that spans multiple processes/applications (e.g., Microservices).
+ScalarDB supports executing transactions with a two-phase commit interface. With the two-phase commit interface, you can execute a transaction that spans multiple processes or applications, like in a microservice architecture.
 
-This document briefly explains how to execute Two-phase Commit Transactions in Scalar DB.
+This page explains how transactions with a two-phase commit interface work in ScalarDB and how to configure and execute them in ScalarDB.
 
-## Configuration
+## How transactions with a two-phase commit interface work in ScalarDB
 
-The configuration for Two-phase Commit Transactions is the same as the one for the normal transaction.
+ScalarDB normally executes transactions in a single transaction manager instance with a one-phase commit interface. In transactions with a one-phase commit interface, you begin a transaction, execute CRUD operations, and commit the transaction in the same transaction manager instance.
 
-For example, you can set the following configuration when you use Cassandra:
+In ScalarDB, you can execute transactions with a two-phase commit interface that span multiple transaction manager instances. The transaction manager instances can be in the same process or application, or the instances can be in different processes or applications. For example, if you have transaction manager instances in multiple microservices, you can execute a transaction that spans multiple microservices.
+
+In transactions with a two-phase commit interface, there are two roles—Coordinator and a participant—that collaboratively execute a single transaction.
+
+The Coordinator process and the participant processes all have different transaction manager instances. The Coordinator process first begins or starts a transaction, and the participant processes join the transaction. After executing CRUD operations, the Coordinator process and the participant processes commit the transaction by using the two-phase interface.
+
+## How to configure ScalarDB to support transactions with a two-phase commit interface
+
+To enable transactions with a two-phase commit interface, you need to specify `consensus-commit` as the value for `scalar.db.transaction_manager` in the ScalarDB properties file.
+
+The following is an example of a configuration for transactions with a two-phase commit interface when using Cassandra:
 
 ```properties
-# Comma separated contact points
+# Consensus Commit is required to support transactions with a two-phase commit interface.
+scalar.db.transaction_manager=consensus-commit
+
+# Storage implementation.
+scalar.db.storage=cassandra
+
+# Comma-separated contact points.
 scalar.db.contact_points=cassandra
 
-# Port number for all the contact points. Default port number for each database is used if empty.
+# Port number for all the contact points.
 scalar.db.contact_port=9042
 
-# Credential information to access the database
+# Credential information to access the database.
 scalar.db.username=cassandra
 scalar.db.password=cassandra
-
-# Storage implementation. Either cassandra or cosmos or dynamo or jdbc can be set. Default storage is cassandra.
-scalar.db.storage=cassandra
 ```
 
-Please see [Getting Started](getting-started.md) for configurations of other databases/storages.
+For additional configurations, see [ScalarDB Configurations](configurations.md).
 
-### Scalar DB Server
+## How to execute transactions with a two-phase commit interface
 
-You can also execute Two-phase Commit Transactions through the Scalar DB Server.
-You don't need a special configuration for Two-phase Commit Transactions, so you can follow [the Scalar DB Server document](scalardb-server.md) to use it.
+To execute a two-phase commit transaction, you must get the transaction manager instance. Then, the Coordinator process can begin or start the transaction, and the participant can process the transaction.
 
-## How to execute Two-phase Commit Transactions
+### Get a `TwoPhaseCommitTransactionManager` instance
 
-This section explains how to execute Two-phase Commit Transactions.
+You first need to get a `TwoPhaseCommitTransactionManager` instance to execute transactions with a two-phase commit interface.
 
-Like a well-known two-phase commit protocol, there are two roles, a coordinator and a participant, that collaboratively execute a single transaction.
-The coordinator process first starts a transaction, and the participant processes join the transaction after that.
+To get a `TwoPhaseCommitTransactionManager` instance, you can use `TransactionFactory` as follows:
 
-### Get a TwoPhaseCommitTransactionManager instance
-
-First, you need to get a `TwoPhaseCommitTransactionManager` instance to execute Two-phase Commit Transactions.
-You can use `TransactionFactory` to get a `TwoPhaseCommitTransactionManager` instance as follows:
 ```java
-TransactionFactory factory = TransactionFactory.create("<configuration file path>");
+TransactionFactory factory = TransactionFactory.create("<CONFIGURATION_FILE_PATH>");
 TwoPhaseCommitTransactionManager manager = factory.getTwoPhaseCommitTransactionManager();
 ```
 
-### Begin/Start a transaction (for coordinator)
+### Begin or start a transaction (for Coordinator)
 
-You can begin/start a transaction as follows:
+For the process or application that begins the transaction to act as Coordinator, you should use the following `begin` method:
+
 ```java
-// Begin a transaction
+// Begin a transaction.
 TwoPhaseCommitTransaction tx = manager.begin();
+```
 
-Or
+Or, for the process or application that starts the transaction to act as Coordinator, you should use the following `start` method:
 
-// Start a transaction
+```java
+// Start a transaction.
 TwoPhaseCommitTransaction tx = manager.start();
 ```
 
-The process/application that starts the transaction acts as a coordinator, as mentioned.
+Alternatively, you can use the `begin` method for a transaction by specifying a transaction ID as follows:
 
-You can also begin/start a transaction by specifying a transaction ID as follows:
 ```java
-// Begin a transaction with specifying a transaction ID
-TwoPhaseCommitTransaction tx = manager.begin("<transaction ID>");
-
-Or
-
-// Start a transaction with specifying a transaction ID
-TwoPhaseCommitTransaction tx = manager.start("<transaction ID>");
+// Begin a transaction by specifying a transaction ID.
+TwoPhaseCommitTransaction tx = manager.begin("<TRANSACTION_ID>");
 ```
 
-Note that you must guarantee uniqueness of the transaction ID in this case.
+Or, you can use the `start` method for a transaction by specifying a transaction ID as follows:
 
-And, you can get the transaction ID with `getId()` as follows:
+```java
+// Start a transaction by specifying a transaction ID.
+TwoPhaseCommitTransaction tx = manager.start("<TRANSACTION_ID>");
+```
+
+### Join a transaction (for participants)
+
+For participants, you can join a transaction by specifying the transaction ID associated with the transaction that Coordinator has started or begun as follows:
+
+```java
+TwoPhaseCommitTransaction tx = manager.join("<TRANSACTION_ID>")
+```
+
+{% capture notice--info %}
+**Note**
+
+To get the transaction ID with `getId()`, you can specify the following:
+
 ```java
 tx.getId();
 ```
+{% endcapture %}
 
-### Join the transaction (for participants)
-
-If you are a participant, you can join the transaction that has been started by the coordinator as follows:
-```java
-TwoPhaseCommitTransaction tx = manager.join("<transaction ID>")
-```
-
-You need to specify the transaction ID associated with the transaction that the coordinator has started.
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 ### CRUD operations for the transaction
 
-The CRUD operations of `TwoPhaseCommitTransacton` are the same as the ones of `DistributedTransaction`.
-So please see also [Java API Guide - CRUD operations](api-guide.md#crud-operations) for the details.
+The CRUD operations for `TwoPhaseCommitTransacton` are the same as the operations for `DistributedTransaction`. For details, see [CRUD operations](api-guide.md#crud-operations).
 
-This is an example code for CRUD operations in Two-phase Commit Transactions:
+The following is example code for CRUD operations in transactions with a two-phase commit interface:
+
 ```java
 TwoPhaseCommitTransaction tx = ...
 
-// Retrieve the current balances for ids
+// Retrieve the current balances by ID.
 Get fromGet =
     Get.newBuilder()
         .namespace(NAMESPACE)
@@ -118,11 +132,11 @@ Get toGet =
 Optional<Result> fromResult = tx.get(fromGet);
 Optional<Result> toResult = tx.get(toGet);
 
-// Calculate the balances (it assumes that both accounts exist)
+// Calculate the balances (assuming that both accounts exist).
 int newFromBalance = fromResult.get().getInt(BALANCE) - amount;
 int newToBalance = toResult.get().getInt(BALANCE) + amount;
 
-// Update the balances
+// Update the balances.
 Put fromPut =
     Put.newBuilder()
         .namespace(NAMESPACE)
@@ -143,114 +157,99 @@ tx.put(fromPut);
 tx.put(toPut);
 ```
 
-### Prepare/Commit/Rollback the transaction
+### Prepare, commit, or roll back a transaction
 
-After finishing CRUD operations, you need to commit the transaction.
-Like a well-known two-phase commit protocol, there are two phases: prepare and commit phases.
-You first need to prepare the transaction in all the coordinator/participant processes, then you need to call in the order of coordinator's `commit()` and the participants' `commit()` as follows:
+After finishing CRUD operations, you need to commit the transaction. As with the standard two-phase commit protocol, there are two phases: prepare and commit.
+
+In all the Coordinator and participant processes, you need to prepare and then commit the transaction as follows:
+
 ```java
 TwoPhaseCommitTransaction tx = ...
 
 try {
-  // Execute CRUD operations in the coordinator/participant processes
+  // Execute CRUD operations in the Coordinator and participant processes.
   ...
 
-  // Prepare phase: Prepare the transaction in all the coordinator/participant processes
+  // Prepare phase: Prepare the transaction in all the Coordinator and participant processes.
   tx.prepare();
   ...
 
-  // Commit phase: Commit the transaction in all the coordinator/participant processes
+  // Commit phase: Commit the transaction in all the Coordinator and participant processes.
   tx.commit();
   ...
 } catch (TransactionException e) {
-  // When an error happans, you need to rollback the transaction in all the coordinator/participant processes
+  // If an error happens, you will need to roll back the transaction in all the Coordinator and participant processes.
   tx.rollback();
   ...
 }
 ```
 
-If an error happens, you need to call `rollback()` (or `abort()`) in all the coordinator/participant processes.
-Note that you need to call it in the coordinator process first, and then call it in the participant processes in parallel.
+For `prepare()`, if any of the Coordinator or participant processes fail to prepare the transaction, you will need to call `rollback()` (or `abort()`) in all the Coordinator and participant processes.
 
-You can call `prepare()` in the coordinator/participant processes in parallel.
-Similarly, you can also call `commit()` in the participant processes in parallel.
+For `commit()`, if any of the Coordinator or participant processes successfully commit the transaction, you can consider the transaction as committed. When a transaction has been committed, you can ignore any errors in the other Coordinator and participant processes. If all the Coordinator and participant processes fail to commit the transaction, you will need to call `rollback()` (or `abort()`) in all the Coordinator and participant processes.
 
 #### Validate the transaction
 
-Depending on the concurrency control protocol, you need to call `validate()` in all the coordinator/participant processes after `prepare()` and before `commit()`:
+Depending on the concurrency control protocol, you need to call `validate()` in all the Coordinator and participant processes after `prepare()` and before `commit()`, as shown below:
+
 ```java
-// Prepare phase 1: Prepare the transaction in all the coordinator/participant processes
+// Prepare phase 1: Prepare the transaction in all the Coordinator and participant processes.
 tx.prepare();
 ...
 
-// Prepare phase 2: Validate the transaction in all the coordinator/participant processes
+// Prepare phase 2: Validate the transaction in all the Coordinator and participant processes.
 tx.validate();
 ...
 
-// Commit phase: Commit the transaction in all the coordinator/participant processes
+// Commit phase: Commit the transaction in all the Coordinator and participant processes.
 tx.commit();
 ...
 ```
 
-Similar to `prepare()`, you can call `validate()` in the coordinator/participant processes in parallel.
+Similar to `prepare()`, if any of the Coordinator or participant processes fail to validate the transaction, you will need to call `rollback()` (or `abort()`) in all the Coordinator and participant processes. In addition, you can call `validate()` in the Coordinator and participant processes in parallel for better performance.
 
-Currently, you need to call `validate()` when you use the `Consensus Commit` transaction manager with `EXTRA_READ` serializable strategy in `SERIALIZABLE` isolation level.
-In other cases, `validate()` does nothing.
+{% capture notice--info %}
+**Note**
 
-### Request Routing in Two-phase Commit Transactions
+When using the [Consensus Commit](configurations.md#use-consensus-commit-directly) transaction manager with `EXTRA_READ` set as the value for `scalar.db.consensus_commit.serializable_strategy` and `SERIALIZABLE` set as the value for `scalar.db.consensus_commit.isolation_level`, you need to call `validate()`. However, if you are not using Consensus Commit, specifying `validate()` will not have any effect.
+{% endcapture %}
 
-Services using Two-phase Commit Transactions usually execute a transaction by exchanging multiple requests and responses as follows:
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
-![](images/two_phase_commit_sequence_diagram.png)
+### Suspend and resume a transaction
 
-Also, each service typically has multiple servers (or hosts) for scalability and availability and uses server-side (proxy) or client-side load balancing to distribute requests to the servers.
-In such a case, since a transaction processing in Two-phase Commit Transactions is stateful, requests in a transaction must be routed to the same servers while different transactions need to be distributed to balance the load.
+Given that processes or applications that use transactions with a two-phase commit interface usually involve multiple request and response exchanges, you might need to execute a transaction across various endpoints or APIs. For such scenarios, you can use `suspend()` to suspend a transaction object and `resume()` to resume a transaction object (an instance of `TwoPhaseCommitTransaction`) that you previously began or joined.
 
-![](images/two_phase_commit_load_balancing.png)
-
-There are several approaches to achieve it depending on the protocol between the services. Here, we introduce some approaches for gRPC and HTTP/1.1.
-
-#### gPRC
-
-Please see [this document](https://grpc.io/blog/grpc-load-balancing/) for the details of gRPC Load Balancing.
-
-When you use a client-side load balancer, you can use the same gRPC connection to send requests in a transaction, which guarantees that the requests go to the same servers.
-
-When you use a server-side (proxy) load balancer, solutions are different between when using L3/L4 (transport level) and L7 (application level) load balancer.
-When using an L3/L4 load balancer, you can use the same gRPC connection to send requests in a transaction, similar to when you use a client-side load balancer.
-Requests in the same gRPC connection always go to the same server in L3/L4 load balancing.
-When using an L7 load balancer, since requests in the same gRPC connection do not necessarily go to the same server, you need to use cookies or similar for routing requests to correct server.
-For example, when you use [Envoy](https://www.envoyproxy.io/), you can use session affinity (sticky session) for gRPC.
-Or you can also use [Bidirectional streaming RPC in gRPC](https://grpc.io/docs/what-is-grpc/core-concepts/#bidirectional-streaming-rpc) since the L7 load balancer distributes requests in the same stream to the same server.
-
-#### HTTP/1.1
-
-Typically, you use a server-side (proxy) load balancer with HTTP/1.1.
-When using an L3/L4 load balancer, you can use the same HTTP connection to send requests in a transaction, which guarantees the requests go to the same server.
-When using an L7 load balancer, since requests in the same HTTP connection do not necessarily go to the same server, you need to use cookies or similar for routing requests to correct server.
-You can use session affinity (sticky session) in that case.
-
-#### Suspend and resume a transaction
-
-Since services using Two-phase Commit Transactions exchange multiple requests/responses, you may need to execute a transaction across multiple endpoints/APIs.
-For such cases, you can suspend and resume a transaction object (a `TwoPhaseCommitTransaction` instance) as follows:
+The following shows how `suspend()` and `resume()` works:
 
 ```java
-// Join the transaction
-TwoPhaseCommitTransaction tx = manager.join("<transaction ID>");
+// Join (or begin) the transaction.
+TwoPhaseCommitTransaction tx = manager.join("<TRANSACTION_ID>");
 
-....
+...
 
-// Suspend the transaction
+// Suspend the transaction.
 manager.suspend(tx);
 
 ...
 
-// Resume the suspended transaction by the trnasaction ID
-TwoPhaseCommitTransaction tx1 = manager.resume("<transaction ID>")
+// Resume the transaction by using the transaction ID.
+TwoPhaseCommitTransaction tx1 = manager.resume("<TRANSACTION_ID>")
 ```
 
-For example, let's say you have two services that have the following endpoints:
+{% capture notice--info %}
+**Note**
+
+To get the transaction ID with `getId()`, you can specify the following:
+
+```java
+tx.getId();
+```
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
+The following is an example of two services that have multiple endpoints:
 
 ```java
 interface ServiceA {
@@ -270,7 +269,7 @@ interface ServiceB {
 }
 ```
 
-And, let's say a client calls `ServiceA.facadeEndpoint()` that starts a transaction that spans the two services (`ServiceA` and `ServiceB`) as follows:
+The following is an example of a client calling `ServiceA.facadeEndpoint()` that starts a transaction that spans the two services (`ServiceA` and `ServiceB`):
 
 ```java
 public class ServiceAImpl implements ServiceA {
@@ -287,25 +286,25 @@ public class ServiceAImpl implements ServiceA {
     try {
       ...
 
-      // Call ServiceB endpoint1
+      // Call `ServiceB` `endpoint1`.
       serviceB.endpoint1(tx.getId());
 
       ...
 
-      // Call ServiceB endpoint2
+      // Call `ServiceB` `endpoint2`.
       serviceB.endpoint2(tx.getId());
 
       ...
 
-      // Prepare
+      // Prepare.
       tx.prepare();
       serviceB.prepare(tx.getId());
 
-      // Commit
+      // Commit.
       tx.commit();
       serviceB.commit(tx.getId());
     } catch (Exception e) {
-      // Rollback
+      // Roll back.
       tx.rollback();
       serviceB.rollback(tx.getId());
     }
@@ -313,10 +312,9 @@ public class ServiceAImpl implements ServiceA {
 }
 ```
 
-This facade endpoint in `ServiceA` calls multiple endpoints (`endpoint1()`, `endpoint2()`, `prepare()`, `commit()`, and `rollback()`) of `ServiceB`.
-And in Two-phase Commit Transactions, you need to use the same transaction object across the endpoints.
-For this situation, you can suspend and resume the transaction.
-The implementation of `ServiceB` is as follows:
+As shown above, the facade endpoint in `ServiceA` calls multiple endpoints (`endpoint1()`, `endpoint2()`, `prepare()`, `commit()`, and `rollback()`) of `ServiceB`. In addition, in transactions with a two-phase commit interface, you need to use the same transaction object across the endpoints.
+
+In this situation, you can suspend and resume the transaction. The implementation of `ServiceB` is as follows:
 
 ```java
 public class ServiceBImpl implements ServiceB {
@@ -327,76 +325,105 @@ public class ServiceBImpl implements ServiceB {
 
   @Override
   public void endpoint1(String txId) throws Exception {
-    // First, you need to join the transaction
+    // Join the transaction.
     TwoPhaseCommitTransaction tx = manager.join(txId);
 
     ...
 
-    // Suspend the transaction object
+    // Suspend the transaction object.
     manager.suspend(tx);
   }
 
   @Override
   public void endpoint2(String txId) throws Exception {
-    // You can resume the transaction suspended in endpoint1()
+    // Resume the transaction that you joined in `endpoint1()`.
     TwoPhaseCommitTransaction tx = manager.resume(txId);
 
     ...
 
-    // Suspend the transaction object
+    // Suspend the transaction object.
     manager.suspend(tx);
   }
 
   @Override
   public void prepare(String txId) throws Exception {
-    // You can resume the suspended transaction
+    // Resume the transaction.
     TwoPhaseCommitTransaction tx = manager.resume(txId);
 
     ...
 
-    // Prepare
+    // Prepare.
     tx.prepare();
 
     ...
 
-    // Suspend the transaction object
+    // Suspend the transaction object.
     manager.suspend(tx);
   }
 
   @Override
   public void commit(String txId) throws Exception {
-    // You can resume the suspended transaction
+    // Resume the transaction.
     TwoPhaseCommitTransaction tx = manager.resume(txId);
     try {
       ...
 
-      // Commit
+      // Commit.
       tx.commit();
     } catch (Exception e) {
-      // Suspend the transaction object (you need to suspend the transaction when commit fails
-      // because you need to rollback the transaction after that)
+      // Suspend the transaction object. You need to suspend the transaction if a commit fails
+      // because you will need to roll back that transaction.
       manager.suspend(tx);
     }
   }
 
   @Override
   public void rollback(String txId) throws Exception {
-    // You can resume the suspended transaction
+    // Resume the transaction.
     TwoPhaseCommitTransaction tx = manager.resume(txId);
 
     ...
 
-    // Rollback
+    // Roll back.
     tx.rollback();
   }
 }
 ```
 
-As you can see, by suspending and resuming the transaction, you can share the same transaction object across multiple endpoints in `ServiceB`.
+As shown above, by resuming the transaction, you can share the same transaction object across multiple endpoints in `ServiceB`.
 
-## Further reading
+## Request routing in transactions with a two-phase commit interface
 
-One of the use cases for Two-phase Commit Transactions is Microservice Transaction.
-Please see the following sample to learn Two-phase Commit Transactions further:
+Services that use transactions with a two-phase commit interface usually execute a transaction by exchanging multiple requests and responses, as shown in the following diagram:
 
-- [Microservice Transaction Sample](https://github.com/scalar-labs/scalardb-samples/tree/main/microservice-transaction-sample)
+![Sequence diagram for transactions with a two-phase commit interface](images/two_phase_commit_sequence_diagram.png)
+
+In addition, each service typically has multiple servers (or hosts) for scalability and availability and uses server-side (proxy) or client-side load balancing to distribute requests to the servers. In such a case, since transaction processing in transactions with a two-phase commit interface is stateful, requests in a transaction must be routed to the same servers while different transactions need to be distributed to balance the load, as shown in the following diagram:
+
+![Load balancing for transactions with a two-phase commit interface](images/two_phase_commit_load_balancing.png)
+
+There are several approaches to achieve load balancing for transactions with a two-phase commit interface depending on the protocol between the services. Some approaches for this include using gRPC and HTTP/1.1.
+
+### gRPC
+
+When you use a client-side load balancer, you can use the same gRPC connection to send requests in a transaction, which guarantees that the requests go to the same servers.
+
+When you use a server-side (proxy) load balancer, solutions are different between an L3/L4 (transport-level) load balancer and an L7 (application-level) load balancer:
+
+- When using an L3/L4 load balancer, you can use the same gRPC connection to send requests in a transaction, similar to when you use a client-side load balancer. In this case, requests in the same gRPC connection always go to the same server.
+- When using an L7 load balancer, since requests in the same gRPC connection don't necessarily go to the same server, you need to use cookies or similar method to route requests to the correct server.
+  - For example, if you use [Envoy](https://www.envoyproxy.io/), you can use session affinity (sticky session) for gRPC. Alternatively, you can use [bidirectional streaming RPC in gRPC](https://grpc.io/docs/what-is-grpc/core-concepts/#bidirectional-streaming-rpc) since the L7 load balancer distributes requests in the same stream to the same server.
+
+For more details about load balancing in gRPC, see [gRPC Load Balancing](https://grpc.io/blog/grpc-load-balancing/).
+
+### HTTP/1.1
+
+Typically, you use a server-side (proxy) load balancer with HTTP/1.1:
+
+- When using an L3/L4 load balancer, you can use the same HTTP connection to send requests in a transaction, which guarantees the requests go to the same server.
+- When using an L7 load balancer, since requests in the same HTTP connection don't necessarily go to the same server, you need to use cookies or similar method to route requests to the correct server.
+You can use session affinity (sticky session) in that case.
+
+## Hands-on tutorial
+
+One of the use cases for transactions with a two-phase commit interface is microservice transactions. For a hands-on tutorial, see [Create a Sample Application That Supports Microservice Transactions](https://github.com/scalar-labs/scalardb-samples/tree/main/microservice-transaction-sample).
