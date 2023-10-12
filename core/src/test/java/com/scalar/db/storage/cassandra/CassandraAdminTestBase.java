@@ -3,12 +3,11 @@ package com.scalar.db.storage.cassandra;
 import static com.datastax.driver.core.Metadata.quote;
 import static com.datastax.driver.core.Metadata.quoteIfNecessary;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -40,6 +39,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -267,7 +267,7 @@ public abstract class CassandraAdminTestBase {
             .addSecondaryIndex("c4")
             .build();
     // Act
-    cassandraAdmin.createTableInternal(namespace, table, tableMetadata, new HashMap<>());
+    cassandraAdmin.createTableInternal(namespace, table, tableMetadata, false, new HashMap<>());
 
     // Assert
     TableOptions<Options> createTableStatement =
@@ -310,7 +310,7 @@ public abstract class CassandraAdminTestBase {
     options.put(CassandraAdmin.COMPACTION_STRATEGY, CompactionStrategy.LCS.toString());
 
     // Act
-    cassandraAdmin.createTableInternal(namespace, table, tableMetadata, options);
+    cassandraAdmin.createTableInternal(namespace, table, tableMetadata, false, options);
 
     // Assert
     TableOptions<Options> createTableStatement =
@@ -355,7 +355,7 @@ public abstract class CassandraAdminTestBase {
     options.put(CassandraAdmin.COMPACTION_STRATEGY, CompactionStrategy.LCS.toString());
 
     // Act
-    cassandraAdmin.createTableInternal(namespace, table, tableMetadata, options);
+    cassandraAdmin.createTableInternal(namespace, table, tableMetadata, false, options);
 
     // Assert
     TableOptions<Options> createTableStatement =
@@ -385,7 +385,7 @@ public abstract class CassandraAdminTestBase {
     indexes.add("c5");
 
     // Act
-    cassandraAdmin.createSecondaryIndexes(namespace, table, indexes, Collections.emptyMap());
+    cassandraAdmin.createSecondaryIndexes(namespace, table, indexes, false);
 
     // Assert
     SchemaStatement c1IndexStatement =
@@ -411,7 +411,7 @@ public abstract class CassandraAdminTestBase {
     indexes.add("to");
 
     // Act
-    cassandraAdmin.createSecondaryIndexes(namespace, table, indexes, Collections.emptyMap());
+    cassandraAdmin.createSecondaryIndexes(namespace, table, indexes, false);
 
     // Assert
     SchemaStatement c1IndexStatement =
@@ -698,51 +698,50 @@ public abstract class CassandraAdminTestBase {
   }
 
   @Test
-  public void repairTable_WithExistingTable_ShouldDoNothing() {
+  public void repairTable_ShouldCreateTableAndIndexesIfTheyDoNotExists() throws ExecutionException {
     // Arrange
     String namespace = "sample_ns";
     String table = "tbl";
-    com.datastax.driver.core.TableMetadata tableMetadata1 =
-        mock(com.datastax.driver.core.TableMetadata.class);
-    when(tableMetadata1.getName()).thenReturn(table);
-    List<com.datastax.driver.core.TableMetadata> tableMetadataList =
-        ImmutableList.of(tableMetadata1);
-
-    when(cassandraSession.getCluster()).thenReturn(cluster);
-    when(cluster.getMetadata()).thenReturn(metadata);
-    when(metadata.getKeyspace(any())).thenReturn(keyspaceMetadata);
-    when(keyspaceMetadata.getTables()).thenReturn(tableMetadataList);
-
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addClusteringKey("c4")
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BLOB)
+            .addColumn("c4", DataType.INT)
+            .addColumn("c5", DataType.BOOLEAN)
+            .addSecondaryIndex("c2")
+            .addSecondaryIndex("c4")
+            .build();
     // Act
-    assertThatCode(
-            () ->
-                cassandraAdmin.repairTable(
-                    namespace, table, mock(TableMetadata.class), Collections.emptyMap()))
-        .doesNotThrowAnyException();
+    cassandraAdmin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
 
-    // Assert
-    verify(metadata).getKeyspace(namespace);
-  }
-
-  @Test
-  public void repairTable_WithNonExistingTable_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    String namespace = "sample_ns";
-    String table = "tbl";
-    when(cassandraSession.getCluster()).thenReturn(cluster);
-    when(cluster.getMetadata()).thenReturn(metadata);
-    when(metadata.getKeyspace(any())).thenReturn(keyspaceMetadata);
-    when(keyspaceMetadata.getTables()).thenReturn(ImmutableList.of());
-
-    // Act
-    assertThatThrownBy(
-            () ->
-                cassandraAdmin.repairTable(
-                    namespace, table, mock(TableMetadata.class), Collections.emptyMap()))
-        .isInstanceOf(IllegalArgumentException.class);
-
-    // Assert
-    verify(metadata).getKeyspace(namespace);
+    // Assert table creation
+    TableOptions<Options> createTableStatement =
+        SchemaBuilder.createTable(namespace, table)
+            .ifNotExists()
+            .addPartitionKey("c1", com.datastax.driver.core.DataType.cint())
+            .addClusteringColumn("c4", com.datastax.driver.core.DataType.cint())
+            .addColumn("c2", com.datastax.driver.core.DataType.text())
+            .addColumn("c3", com.datastax.driver.core.DataType.blob())
+            .addColumn("c5", com.datastax.driver.core.DataType.cboolean())
+            .withOptions()
+            .clusteringOrder("c4", Direction.ASC)
+            .compactionOptions(SchemaBuilder.sizedTieredStategy());
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(cassandraSession, times(3)).execute(captor.capture());
+    Assertions.assertThat(captor.getAllValues().get(0))
+        .isEqualTo(createTableStatement.getQueryString());
+    // Assert index creation
+    Iterator<String> indexIterator = tableMetadata.getSecondaryIndexNames().iterator();
+    for (int i = 1; indexIterator.hasNext(); i++) {
+      String index = indexIterator.next();
+      assertThat(captor.getAllValues().get(i).trim())
+          .isEqualTo(
+              String.format(
+                  "CREATE INDEX IF NOT EXISTS tbl_index_%1$s ON sample_ns.tbl(%1$s)", index));
+    }
   }
 
   @Test

@@ -1,7 +1,6 @@
 package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -16,6 +15,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.condition.EnabledIf;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase {
@@ -114,7 +114,17 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
   protected void afterAll() throws Exception {}
 
   @Test
-  public void repairTableAndCoordinatorTable_ForDeletedMetadataTable_ShouldRepairProperly()
+  public void repairTable_ForExistingTableAndMetadata_ShouldDoNothing() throws Exception {
+    // Act
+    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
+
+    // Assert
+    assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
+    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
+  }
+
+  @Test
+  public void repairTableAndCoordinatorTables_ForDeletedMetadataTable_ShouldRepairProperly()
       throws Exception {
     // Arrange
     adminTestUtils.dropMetadataTable();
@@ -126,14 +136,13 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     // Assert
     assertThat(admin.tableExists(getNamespace(), TABLE)).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), TABLE)).isEqualTo(TABLE_METADATA);
-    assertThat(admin.coordinatorTablesExist()).isTrue();
     if (hasCoordinatorTables()) {
-      assertThat(adminTestUtils.areTableMetadataForCoordinatorTablesPresent()).isTrue();
+      assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
     }
   }
 
   @Test
-  public void repairTableAndCoordinatorTable_ForTruncatedMetadataTable_ShouldRepairProperly()
+  public void repairTableAndCoordinatorTables_ForTruncatedMetadataTable_ShouldRepairProperly()
       throws Exception {
     // Arrange
     adminTestUtils.truncateMetadataTable();
@@ -146,24 +155,8 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     assertThat(admin.tableExists(getNamespace(), TABLE)).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), TABLE)).isEqualTo(TABLE_METADATA);
     if (hasCoordinatorTables()) {
-      assertThat(adminTestUtils.areTableMetadataForCoordinatorTablesPresent()).isTrue();
+      assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
     }
-  }
-
-  @Test
-  public void
-      repairTableAndCoordinatorTable_CoordinatorTablesDoNotExist_ShouldThrowIllegalArgumentException()
-          throws ExecutionException {
-    if (!hasCoordinatorTables()) {
-      return;
-    }
-
-    // Arrange
-    admin.dropCoordinatorTables(true);
-
-    // Act Assert
-    assertThatThrownBy(() -> admin.repairCoordinatorTables(getCreationOptions()))
-        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -178,20 +171,56 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     assertThat(admin.tableExists(getNamespace(), getTable())).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
     if (hasCoordinatorTables()) {
-      assertThat(adminTestUtils.areTableMetadataForCoordinatorTablesPresent()).isTrue();
+      assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
     }
   }
 
   @Test
-  public void repairTable_ForNonExistingTable_ShouldThrowIllegalArgument() {
-    // Arrange
+  @EnabledIf("hasCoordinatorTables")
+  public void repairCoordinatorTables_CoordinatorTablesExist_ShouldDoNothing() throws Exception {
+    // Act
+    admin.repairCoordinatorTables(getCreationOptions());
 
-    // Act Assert
-    assertThatThrownBy(
-            () ->
-                admin.repairTable(
-                    getNamespace(), "non-existing-table", TABLE_METADATA, getCreationOptions()))
-        .isInstanceOf(IllegalArgumentException.class);
+    // Assert
+    waitForCreationIfNecessary();
+    assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
+  }
+
+  @Test
+  @EnabledIf("hasCoordinatorTables")
+  public void repairCoordinatorTables_CoordinatorTablesDoNotExist_ShouldCreateCoordinatorTables()
+      throws Exception {
+    // Arrange
+    admin.dropCoordinatorTables();
+
+    // Act
+    admin.repairCoordinatorTables(getCreationOptions());
+
+    // Assert
+    waitForCreationIfNecessary();
+    assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
+  }
+
+  @Test
+  public void repairTable_ForNonExistingTableButExistingMetadata_ShouldCreateTable()
+      throws Exception {
+    // Arrange
+    adminTestUtils.dropTable(getNamespace(), getTable());
+
+    // Act
+    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
+
+    // Assert
+    waitForCreationIfNecessary();
+    assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
+    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
+    if (hasCoordinatorTables()) {
+      assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
+    }
+  }
+
+  protected void waitForCreationIfNecessary() {
+    // Do nothing
   }
 
   protected boolean hasCoordinatorTables() {
