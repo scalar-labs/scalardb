@@ -20,7 +20,7 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RdbEngineOracle implements RdbEngineStrategy {
+class RdbEngineOracle implements RdbEngineStrategy {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineOracle.class);
 
   @Override

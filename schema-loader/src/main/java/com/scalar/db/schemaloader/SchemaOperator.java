@@ -13,6 +13,7 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -81,6 +82,31 @@ public class SchemaOperator implements AutoCloseable {
         logger.warn("Table {} in the namespace {} already exists", tableName, namespace);
       } else {
         createTable(tableSchema);
+      }
+    }
+  }
+
+  public void repairNamespaces(List<TableSchema> tableSchemaList) throws SchemaLoaderException {
+    // Arbitrarily use the configuration of the first table listed in the schema for the reparation
+    // That means if tables of a namespace have different options (resource unit, replication
+    // factor, etc.), the options of the first table will be used for the reparation
+    Map<String, TableSchema> namespaceToTableSchema = new HashMap<>();
+    for (TableSchema tableSchema : tableSchemaList) {
+      namespaceToTableSchema.putIfAbsent(tableSchema.getNamespace(), tableSchema);
+    }
+    for (TableSchema tableSchema : namespaceToTableSchema.values()) {
+      try {
+        if (tableSchema.isTransactionTable()) {
+          transactionAdmin
+              .get()
+              .repairNamespace(tableSchema.getNamespace(), tableSchema.getOptions());
+        } else {
+          storageAdmin.get().repairNamespace(tableSchema.getNamespace(), tableSchema.getOptions());
+        }
+        logger.info("Repairing the namespace {} succeeded", tableSchema.getNamespace());
+      } catch (ExecutionException e) {
+        throw new SchemaLoaderException(
+            "Repairing the namespace " + tableSchema.getNamespace() + " failed", e);
       }
     }
   }
