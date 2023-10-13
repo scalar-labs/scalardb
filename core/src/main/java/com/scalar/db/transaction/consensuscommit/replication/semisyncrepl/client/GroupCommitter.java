@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -16,7 +15,6 @@ class GroupCommitter<K, V> {
   private final long retentionTimeInMillis;
   private final int numberOfRetentionValues;
   private Queue<K, V> queue;
-  private final ExecutorService emitterExecutorService;
   private final ScheduledExecutorService expirationCheckExecutorService;
   private final Consumer<List<V>> emitter;
 
@@ -40,18 +38,10 @@ class GroupCommitter<K, V> {
       long retentionTimeInMillis,
       int numberOfRetentionValues,
       long expirationCheckIntervalInMillis,
-      int numberOfThreads,
       Consumer<List<V>> emitter) {
     this.retentionTimeInMillis = retentionTimeInMillis;
     this.numberOfRetentionValues = numberOfRetentionValues;
     this.emitter = emitter;
-    this.emitterExecutorService =
-        Executors.newFixedThreadPool(
-            numberOfThreads,
-            new ThreadFactoryBuilder()
-                .setDaemon(true)
-                .setNameFormat(label + "-group-commit-%d")
-                .build());
 
     this.expirationCheckExecutorService =
         Executors.newScheduledThreadPool(
@@ -71,12 +61,9 @@ class GroupCommitter<K, V> {
   private synchronized void emit() {
     List<V> values = queue.values;
     CountDownLatch countDownLatch = queue.countDownLatch;
-    emitterExecutorService.execute(
-        () -> {
-          emitter.accept(values);
-          countDownLatch.countDown();
-        });
     queue = null;
+    emitter.accept(values);
+    countDownLatch.countDown();
   }
 
   synchronized CountDownLatch addValue(
