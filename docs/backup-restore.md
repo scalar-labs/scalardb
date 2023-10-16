@@ -195,11 +195,11 @@ To do this procedure:
 </div>
 <div id="MySQL3" class="tabcontent" markdown="1">
 
-Use the `mysql` command to restore the backup as specified in [Reloading SQL-Format Backups](https://dev.mysql.com/doc/mysql-backup-excerpt/8.0/en/reloading-sql-format-dumps.html).
+If you used `mysqldump` to create the backup file, use the `mysql` command to restore the backup as specified in [Reloading SQL-Format Backups](https://dev.mysql.com/doc/mysql-backup-excerpt/8.0/en/reloading-sql-format-dumps.html).
 </div>
 <div id="PostgreSQL3" class="tabcontent" markdown="1">
 
-Use the `psql` command to restore the backup as specified in [Restoring the Dump](https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-RESTORE).
+If you used `pg_dump` to create the backup file, use the `psql` command to restore the backup as specified in [Restoring the Dump](https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-RESTORE).
 </div>
 <div id="SQLite3" class="tabcontent" markdown="1">
 
