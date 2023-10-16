@@ -169,6 +169,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     }
 
     try {
+      long mutateStart = System.currentTimeMillis();
       if (!jdbcService.mutate(mutations, connection)) {
         try {
           connection.rollback();
@@ -177,7 +178,18 @@ public class JdbcDatabase extends AbstractDistributedStorage {
         }
         throw new NoMutationException("No mutation was applied");
       } else {
+        logger.info(
+            "Mutated (thread_id:{}, username:{}) {} ms",
+            Thread.currentThread().getId(),
+            dataSource.getUsername(),
+            System.currentTimeMillis() - mutateStart);
+        long commitStart = System.currentTimeMillis();
         connection.commit();
+        logger.info(
+            "Committed (thread_id:{}, username:{}) {} ms",
+            Thread.currentThread().getId(),
+            dataSource.getUsername(),
+            System.currentTimeMillis() - commitStart);
       }
     } catch (SQLException e) {
       try {
