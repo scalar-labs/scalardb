@@ -113,7 +113,7 @@ Cassandra has a built-in replication feature, so you do not always have to creat
 
 However, if the quorum of cluster nodes loses their data, you will need a transactionally consistent backup (snapshot) to restore the cluster to a certain transactionally consistent point.
 
-To create a transactionally consistent cluster-wide backup (snapshot), pause the application that is using ScalarDB or ScalarDB Cluster (PAYG or BYOL license required) and create backups (snapshots) of the nodes as described in [Back up with explicit pausing](#back-up-with-explicit-pausing) or stop the Cassandra cluster, take copies of all the data in the nodes, and start the cluster.
+To create a transactionally consistent cluster-wide backup (snapshot), pause the application that is using ScalarDB or [ScalarDB Cluster (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/) and create backups (snapshots) of the nodes as described in [Back up with explicit pausing](#back-up-with-explicit-pausing) or stop the Cassandra cluster, take copies of all the data in the nodes, and start the cluster.
 </div>
 <div id="Cosmos_DB_for_NoSQL2" class="tabcontent" markdown="1">
 
