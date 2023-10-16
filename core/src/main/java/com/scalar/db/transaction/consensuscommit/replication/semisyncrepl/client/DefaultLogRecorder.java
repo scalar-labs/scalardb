@@ -34,6 +34,8 @@ public class DefaultLogRecorder implements LogRecorder {
   private static final Logger logger = LoggerFactory.getLogger(DefaultLogRecorder.class);
 
   private static final String ENV_VAR_GROUP_COMMIT_ENABLED = "LOG_RECORDER_GROUP_COMMIT_ENABLED";
+  private static final String ENV_VAR_GROUP_COMMIT_NUM_OF_THREADS =
+      "LOG_RECORDER_GROUP_COMMIT_NUM_OF_THREADS";
   private static final String ENV_VAR_GROUP_COMMIT_RETENTION_TIME_IN_MILLIS =
       "LOG_RECORDER_GROUP_COMMIT_RETENTION_TIME_IN_MILLIS";
   private static final String ENV_VAR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES =
@@ -68,6 +70,12 @@ public class DefaultLogRecorder implements LogRecorder {
       groupCommitEnabled = Boolean.parseBoolean(System.getenv(ENV_VAR_GROUP_COMMIT_ENABLED));
     }
 
+    int groupCommitNumOfThreads = 4;
+    if (System.getenv(ENV_VAR_GROUP_COMMIT_NUM_OF_THREADS) != null) {
+      groupCommitNumOfThreads =
+          Integer.parseInt(System.getenv(ENV_VAR_GROUP_COMMIT_NUM_OF_THREADS));
+    }
+
     long groupCommitRetentionTimeInMillis = 40;
     if (System.getenv(ENV_VAR_GROUP_COMMIT_RETENTION_TIME_IN_MILLIS) != null) {
       groupCommitRetentionTimeInMillis =
@@ -93,6 +101,7 @@ public class DefaultLogRecorder implements LogRecorder {
               groupCommitRetentionTimeInMillis,
               groupCommitNumOfRetentionValues,
               groupCommitExpirationCheckIntervalInMillis,
+              groupCommitNumOfThreads,
               transactions -> {
                 try {
                   replicationTransactionRepository.add(transactions);
