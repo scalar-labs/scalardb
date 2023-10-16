@@ -5,7 +5,6 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -99,23 +98,26 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    if (!rdbEngine.isValidNamespaceOrTableName(table)) {
-      throw new ExecutionException("The table name is not acceptable: " + table);
-    }
-
     try (Connection connection = dataSource.getConnection()) {
-      createTableInternal(connection, namespace, table, metadata);
-      createIndex(connection, namespace, table, metadata);
-      addTableMetadata(connection, namespace, table, metadata, true);
+      createTableInternal(connection, namespace, table, metadata, false);
+      addTableMetadata(connection, namespace, table, metadata, true, false);
     } catch (SQLException e) {
       throw new ExecutionException(
           "Creating the " + getFullTableName(namespace, table) + " table failed ", e);
     }
   }
 
-  private void createTableInternal(
-      Connection connection, String schema, String table, TableMetadata metadata)
-      throws SQLException {
+  @VisibleForTesting
+  void createTableInternal(
+      Connection connection,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists)
+      throws ExecutionException, SQLException {
+    if (!rdbEngine.isValidNamespaceOrTableName(table)) {
+      throw new ExecutionException("The table name is not acceptable: " + table);
+    }
     String createTableStatement = "CREATE TABLE " + encloseFullTableName(schema, table) + "(";
     // Order the columns for their creation by (partition keys >> clustering keys >> other columns)
     LinkedHashSet<String> sortedColumnNames =
@@ -133,34 +135,42 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             .collect(Collectors.joining(","));
 
     // Add primary key definition
-    boolean hasDescClusteringOrder = hasDescClusteringOrder(metadata);
     createTableStatement +=
-        ", " + rdbEngine.createTableInternalPrimaryKeyClause(hasDescClusteringOrder, metadata);
-    execute(connection, createTableStatement);
-
-    String[] sqls =
-        rdbEngine.createTableInternalSqlsAfterCreateTable(
-            hasDescClusteringOrder, schema, table, metadata);
-    execute(connection, sqls);
+        ", "
+            + rdbEngine.createTableInternalPrimaryKeyClause(
+                hasDescClusteringOrder(metadata), metadata);
+    createTable(connection, createTableStatement, ifNotExists);
+    createTableInternalSqlsAfterCreateTable(connection, schema, table, metadata, ifNotExists);
+    createIndex(connection, schema, table, metadata, ifNotExists);
   }
 
   private void createIndex(
-      Connection connection, String schema, String table, TableMetadata metadata)
+      Connection connection,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists)
       throws SQLException {
     for (String indexedColumn : metadata.getSecondaryIndexNames()) {
-      createIndex(connection, schema, table, indexedColumn);
+      createIndex(connection, schema, table, indexedColumn, ifNotExists);
     }
   }
 
-  private void addTableMetadata(
+  @VisibleForTesting
+  void addTableMetadata(
       Connection connection,
       String namespace,
       String table,
       TableMetadata metadata,
-      boolean createMetadataTableIfNotExists)
+      boolean createMetadataTable,
+      boolean overwriteMetadata)
       throws SQLException {
-    if (createMetadataTableIfNotExists) {
+    if (createMetadataTable) {
       createMetadataSchemaAndTableIfNotExists(connection);
+    }
+    if (overwriteMetadata) {
+      // Delete the metadata for the table before we add them
+      execute(connection, getDeleteTableMetadataStatement(namespace, table));
     }
     LinkedHashSet<String> orderedColumns = new LinkedHashSet<>(metadata.getPartitionKeyNames());
     orderedColumns.addAll(metadata.getClusteringKeyNames());
@@ -226,17 +236,39 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + enclose(METADATA_COL_COLUMN_NAME)
             + "))";
 
-    createTableIfNotExists(connection, createTableStatement);
+    createTable(connection, createTableStatement, true);
   }
 
-  private void createTableIfNotExists(Connection connection, String createTableStatement)
+  private void createTable(Connection connection, String createTableStatement, boolean ifNotExists)
       throws SQLException {
-    String stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
+    String stmt = createTableStatement;
+    if (ifNotExists) {
+      stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
+    }
     try {
       execute(connection, stmt);
     } catch (SQLException e) {
       // Suppress the exception thrown when the table already exists
-      if (!rdbEngine.isDuplicateTableError(e)) {
+      if (!(ifNotExists && rdbEngine.isDuplicateTableError(e))) {
+        throw e;
+      }
+    }
+  }
+
+  private void createTableInternalSqlsAfterCreateTable(
+      Connection connection,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists)
+      throws SQLException {
+    String[] stmts =
+        rdbEngine.createTableInternalSqlsAfterCreateTable(
+            hasDescClusteringOrder(metadata), schema, table, metadata, ifNotExists);
+    try {
+      execute(connection, stmts);
+    } catch (SQLException e) {
+      if (!(ifNotExists && rdbEngine.isDuplicateIndexError(e))) {
         throw e;
       }
     }
@@ -513,10 +545,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public void importTable(String namespace, String table) throws ExecutionException {
-    TableMetadata tableMetadata = getImportTableMetadata(namespace, table);
-
-    // add ScalarDB metadata
-    repairTable(namespace, table, tableMetadata, ImmutableMap.of());
+    try (Connection connection = dataSource.getConnection()) {
+      TableMetadata tableMetadata = getImportTableMetadata(namespace, table);
+      addTableMetadata(connection, namespace, table, tableMetadata, true, false);
+    } catch (SQLException | ExecutionException e) {
+      throw new ExecutionException(
+          String.format("Importing the %s table failed", getFullTableName(namespace, table)), e);
+    }
   }
 
   private String getSelectColumnsStatement() {
@@ -583,7 +618,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + enclose(NAMESPACE_COL_NAMESPACE_NAME)
             + " = ?";
     try (Connection connection = dataSource.getConnection();
-        PreparedStatement statement = connection.prepareStatement(selectQuery); ) {
+        PreparedStatement statement = connection.prepareStatement(selectQuery)) {
       statement.setString(1, namespace);
       try (ResultSet resultSet = statement.executeQuery()) {
         return resultSet.next();
@@ -643,7 +678,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
       alterToIndexColumnTypeIfNecessary(connection, namespace, table, columnName);
-      createIndex(connection, namespace, table, columnName);
+      createIndex(connection, namespace, table, columnName, false);
       updateTableMetadata(connection, namespace, table, columnName, true);
     } catch (ExecutionException | SQLException e) {
       throw new ExecutionException(
@@ -725,22 +760,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
-      if (!tableExistsInternal(connection, namespace, table)) {
-        throw new IllegalArgumentException(
-            "The " + getFullTableName(namespace, table) + " table does not exist");
-      }
-
-      if (tableExistsInternal(connection, metadataSchema, METADATA_TABLE)) {
-        // Delete then add the metadata for the table
-        execute(connection, getDeleteTableMetadataStatement(namespace, table));
-        addTableMetadata(connection, namespace, table, metadata, false);
-      } else {
-        // Create the metadata table then add the metadata for the table
-        addTableMetadata(connection, namespace, table, metadata, true);
-      }
-    } catch (ExecutionException | SQLException e) {
+      createTableInternal(connection, namespace, table, metadata, true);
+      addTableMetadata(connection, namespace, table, metadata, true, true);
+    } catch (SQLException e) {
       throw new ExecutionException(
-          String.format("Repairing the %s table failed", getFullTableName(namespace, table)), e);
+          "Repairing the " + getFullTableName(namespace, table) + " table failed ", e);
     }
   }
 
@@ -761,8 +785,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               + getVendorDbColumnType(updatedTableMetadata, columnName);
       try (Connection connection = dataSource.getConnection()) {
         execute(connection, addNewColumnStatement);
-        execute(connection, getDeleteTableMetadataStatement(namespace, table));
-        addTableMetadata(connection, namespace, table, updatedTableMetadata, false);
+        addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
       }
     } catch (SQLException e) {
       throw new ExecutionException(
@@ -801,7 +824,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void createIndex(Connection connection, String schema, String table, String indexedColumn)
+  private void createIndex(
+      Connection connection, String schema, String table, String indexedColumn, boolean ifNotExists)
       throws SQLException {
     String indexName = getIndexName(schema, table, indexedColumn);
     String createIndexStatement =
@@ -812,7 +836,17 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + " ("
             + enclose(indexedColumn)
             + ")";
-    execute(connection, createIndexStatement);
+    if (ifNotExists) {
+      createIndexStatement = rdbEngine.tryAddIfNotExistsToCreateIndexSql(createIndexStatement);
+    }
+    try {
+      execute(connection, createIndexStatement);
+    } catch (SQLException e) {
+      // Suppress the exception thrown when the index already exists
+      if (!(ifNotExists && rdbEngine.isDuplicateIndexError(e))) {
+        throw e;
+      }
+    }
   }
 
   private void dropIndex(Connection connection, String schema, String table, String indexedColumn)
@@ -908,7 +942,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               + "PRIMARY KEY ("
               + enclose(NAMESPACE_COL_NAMESPACE_NAME)
               + "))";
-      createTableIfNotExists(connection, createTableStatement);
+      createTable(connection, createTableStatement, true);
     } catch (SQLException e) {
       throw new ExecutionException("Creating the namespace table failed", e);
     }
@@ -918,7 +952,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws SQLException {
     String insertStatement =
         "INSERT INTO " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE) + " VALUES (?)";
-    try (PreparedStatement preparedStatement = connection.prepareStatement(insertStatement); ) {
+    try (PreparedStatement preparedStatement = connection.prepareStatement(insertStatement)) {
       preparedStatement.setString(1, namespaceName);
       preparedStatement.execute();
     }

@@ -1,7 +1,6 @@
 package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -22,7 +21,6 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
 
   private static final String TEST_NAME = "storage_admin_repair_table";
   private static final String NAMESPACE = "int_test_" + TEST_NAME;
-
   private static final String TABLE = "test_table";
   private static final String COL_NAME1 = "c1";
   private static final String COL_NAME2 = "c2";
@@ -89,8 +87,8 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
   }
 
   private void dropTable() throws ExecutionException {
-    admin.dropTable(getNamespace(), getTable());
-    admin.dropNamespace(getNamespace());
+    admin.dropTable(getNamespace(), getTable(), true);
+    admin.dropNamespace(getNamespace(), true);
   }
 
   @BeforeEach
@@ -113,6 +111,16 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
   protected void afterAll() throws Exception {}
 
   @Test
+  public void repairTable_ForExistingTableAndMetadata_ShouldDoNothing() throws Exception {
+    // Act
+    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
+
+    // Assert
+    assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
+    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
+  }
+
+  @Test
   public void repairTable_ForDeletedMetadataTable_ShouldRepairProperly() throws Exception {
     // Arrange
     adminTestUtils.dropMetadataTable();
@@ -121,7 +129,7 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
     admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
 
     // Assert
-    assertThat(admin.tableExists(getNamespace(), getTable())).isTrue();
+    assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
   }
 
@@ -134,7 +142,7 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
     admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
 
     // Assert
-    assertThat(admin.tableExists(getNamespace(), getTable())).isTrue();
+    assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
   }
 
@@ -147,19 +155,26 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
     admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
 
     // Assert
-    assertThat(admin.tableExists(getNamespace(), getTable())).isTrue();
+    assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
   }
 
   @Test
-  public void repairTable_ForNonExistingTable_ShouldThrowIllegalArgument() {
+  public void repairTable_ForNonExistingTableButExistingMetadata_ShouldCreateTable()
+      throws Exception {
     // Arrange
+    adminTestUtils.dropTable(getNamespace(), getTable());
 
-    // Act Assert
-    assertThatThrownBy(
-            () ->
-                admin.repairTable(
-                    getNamespace(), "non-existing-table", TABLE_METADATA, getCreationOptions()))
-        .isInstanceOf(IllegalArgumentException.class);
+    // Act
+    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
+
+    // Assert
+    waitForCreationIfNecessary();
+    assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
+    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
+  }
+
+  protected void waitForCreationIfNecessary() {
+    // Do nothing
   }
 }

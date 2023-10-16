@@ -43,17 +43,20 @@ public abstract class AdminTestUtils {
   public abstract void corruptMetadata(String namespace, String table) throws Exception;
 
   /**
-   * Returns whether the table metadata for the coordinator tables are present or not.
+   * Returns whether the table and the table metadata for the coordinator tables are present or not.
    *
-   * @return whether the table metadata for the coordinator tables are present or not
+   * @return whether the table and the table metadata for the coordinator tables are present or not
    * @throws Exception if an error occurs
    */
-  public boolean areTableMetadataForCoordinatorTablesPresent() throws Exception {
+  public boolean areTableAndMetadataForCoordinatorTablesPresent() throws Exception {
     String coordinatorNamespace =
         new ConsensusCommitConfig(new DatabaseConfig(coordinatorStorageProperties))
             .getCoordinatorNamespace()
             .orElse(Coordinator.NAMESPACE);
     String coordinatorTable = Coordinator.TABLE;
+    if (!tableExists(coordinatorNamespace, coordinatorTable)) {
+      return false;
+    }
     // Use the DistributedStorageAdmin instead of the DistributedTransactionAdmin because the latter
     // expects the table to hold transaction table metadata columns which is not the case for the
     // coordinator table
@@ -68,4 +71,23 @@ public abstract class AdminTestUtils {
     }
     return tableMetadata.equals(Coordinator.TABLE_METADATA);
   }
+
+  /**
+   * Check if the table exists in the underlying storage.
+   *
+   * @param namespace a namespace
+   * @param table a table
+   * @return true if the table exists, false otherwise
+   * @throws Exception if an error occurs
+   */
+  public abstract boolean tableExists(String namespace, String table) throws Exception;
+
+  /**
+   * Drops the table in the underlying storage.
+   *
+   * @param namespace a namespace
+   * @param table a table
+   * @throws Exception if an errors occurs
+   */
+  public abstract void dropTable(String namespace, String table) throws Exception;
 }

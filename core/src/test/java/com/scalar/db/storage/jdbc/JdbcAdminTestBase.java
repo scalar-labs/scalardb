@@ -15,11 +15,11 @@ import static org.mockito.Mockito.description;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
@@ -46,6 +46,9 @@ import java.util.Set;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.EnumSource.Mode;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -385,7 +388,7 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  public void createTable_forSqlite_withInvalidTableName_shouldThrowExecutionException() {
+  public void createTableInternal_ForSqlite_withInvalidTableName_ShouldThrowExecutionException() {
     // Arrange
     String namespace = "my_ns";
     String table = "foo$table"; // contains namespace separator
@@ -401,215 +404,60 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  public void createTable_forMysql_shouldExecuteCreateTableStatement()
+  public void createTableInternal_ForMysql_ShouldCreateTableAndIndexes()
       throws ExecutionException, SQLException {
-    createTable_forX_shouldExecuteCreateTableStatement(
+    createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.MYSQL,
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3`,`c1`,`c4`))",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
         "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
-        "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
-        "CREATE SCHEMA IF NOT EXISTS `" + metadataSchemaName + "`",
-        "CREATE TABLE IF NOT EXISTS `"
-            + metadataSchemaName
-            + "`.`metadata`("
-            + "`full_table_name` VARCHAR(128),"
-            + "`column_name` VARCHAR(128),"
-            + "`data_type` VARCHAR(20) NOT NULL,"
-            + "`key_type` VARCHAR(20),"
-            + "`clustering_order` VARCHAR(10),"
-            + "`indexed` BOOLEAN NOT NULL,"
-            + "`ordinal_position` INTEGER NOT NULL,"
-            + "PRIMARY KEY (`full_table_name`, `column_name`))",
-        "INSERT INTO `"
-            + metadataSchemaName
-            + "`.`metadata` VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
-        "INSERT INTO `"
-            + metadataSchemaName
-            + "`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',true,2)",
-        "INSERT INTO `"
-            + metadataSchemaName
-            + "`.`metadata` VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
-        "INSERT INTO `"
-            + metadataSchemaName
-            + "`.`metadata` VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
-        "INSERT INTO `"
-            + metadataSchemaName
-            + "`.`metadata` VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
-        "INSERT INTO `"
-            + metadataSchemaName
-            + "`.`metadata` VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
-        "INSERT INTO `"
-            + metadataSchemaName
-            + "`.`metadata` VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
+        "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)");
   }
 
   @Test
-  public void createTable_forPostgresql_shouldExecuteCreateTableStatement()
+  public void createTableInternal_ForPostgresql_ShouldCreateTableAndIndexes()
       throws ExecutionException, SQLException {
-    createTable_forX_shouldExecuteCreateTableStatement(
+    createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.POSTGRESQL,
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
-        "CREATE SCHEMA IF NOT EXISTS \"" + metadataSchemaName + "\"",
-        "CREATE TABLE IF NOT EXISTS \""
-            + metadataSchemaName
-            + "\".\"metadata\"("
-            + "\"full_table_name\" VARCHAR(128),"
-            + "\"column_name\" VARCHAR(128),"
-            + "\"data_type\" VARCHAR(20) NOT NULL,"
-            + "\"key_type\" VARCHAR(20),"
-            + "\"clustering_order\" VARCHAR(10),"
-            + "\"indexed\" BOOLEAN NOT NULL,"
-            + "\"ordinal_position\" INTEGER NOT NULL,"
-            + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',true,2)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
 
   @Test
-  public void createTable_forSqlServer_shouldExecuteCreateTableStatement()
+  public void createTableInternal_ForSqlServer_ShouldCreateTableAndIndexes()
       throws ExecutionException, SQLException {
-    createTable_forX_shouldExecuteCreateTableStatement(
+    createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.SQL_SERVER,
         "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_BIN,"
-            + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3],[c1],[c4]))",
+            + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
         "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
-        "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])",
-        "CREATE SCHEMA [" + metadataSchemaName + "]",
-        "CREATE TABLE ["
-            + metadataSchemaName
-            + "].[metadata]("
-            + "[full_table_name] VARCHAR(128),"
-            + "[column_name] VARCHAR(128),"
-            + "[data_type] VARCHAR(20) NOT NULL,"
-            + "[key_type] VARCHAR(20),"
-            + "[clustering_order] VARCHAR(10),"
-            + "[indexed] BIT NOT NULL,"
-            + "[ordinal_position] INTEGER NOT NULL,"
-            + "PRIMARY KEY ([full_table_name], [column_name]))",
-        "INSERT INTO ["
-            + metadataSchemaName
-            + "].[metadata] VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
-        "INSERT INTO ["
-            + metadataSchemaName
-            + "].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',1,2)",
-        "INSERT INTO ["
-            + metadataSchemaName
-            + "].[metadata] VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
-        "INSERT INTO ["
-            + metadataSchemaName
-            + "].[metadata] VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
-        "INSERT INTO ["
-            + metadataSchemaName
-            + "].[metadata] VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
-        "INSERT INTO ["
-            + metadataSchemaName
-            + "].[metadata] VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
-        "INSERT INTO ["
-            + metadataSchemaName
-            + "].[metadata] VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
+        "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])");
   }
 
   @Test
-  public void createTable_forOracle_shouldExecuteCreateTableStatement()
+  public void createTableInternal_ForOracle_ShouldCreateTableAndIndexes()
       throws ExecutionException, SQLException {
-    createTable_forX_shouldExecuteCreateTableStatement(
+    createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.ORACLE,
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
-        "CREATE USER \"" + metadataSchemaName + "\" IDENTIFIED BY \"oracle\"",
-        "ALTER USER \"" + metadataSchemaName + "\" quota unlimited on USERS",
-        "CREATE TABLE \""
-            + metadataSchemaName
-            + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',1,2)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
 
   @Test
-  public void createTable_forSqlite_shouldExecuteCreateTableStatement()
+  public void createTableInternal_ForSqlite_ShouldCreateTableAndIndexes()
       throws ExecutionException, SQLException {
-    createTable_forX_shouldExecuteCreateTableStatement(
+    createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.SQLITE,
         "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns$foo_table\" (\"c4\")",
-        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")",
-        "CREATE TABLE IF NOT EXISTS \""
-            + metadataSchemaName
-            + "$metadata\"("
-            + "\"full_table_name\" TEXT,"
-            + "\"column_name\" TEXT,"
-            + "\"data_type\" TEXT NOT NULL,"
-            + "\"key_type\" TEXT,"
-            + "\"clustering_order\" TEXT,"
-            + "\"indexed\" BOOLEAN NOT NULL,"
-            + "\"ordinal_position\" INTEGER NOT NULL,"
-            + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "$metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,FALSE,1)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "$metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',TRUE,2)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "$metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',TRUE,3)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "$metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,FALSE,4)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "$metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,FALSE,5)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "$metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,FALSE,6)",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "$metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,FALSE,7)");
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")");
   }
 
-  private void createTable_forX_shouldExecuteCreateTableStatement(
+  private void createTableInternal_ForX_CreateTableAndIndexes(
       RdbEngine rdbEngine, String... expectedSqlStatements)
       throws SQLException, ExecutionException {
     // Arrange
@@ -618,8 +466,8 @@ public abstract class JdbcAdminTestBase {
     TableMetadata metadata =
         TableMetadata.newBuilder()
             .addPartitionKey("c3")
-            .addClusteringKey("c1")
-            .addClusteringKey("c4")
+            .addClusteringKey("c1", Order.DESC)
+            .addClusteringKey("c4", Order.ASC)
             .addColumn("c1", DataType.TEXT)
             .addColumn("c2", DataType.BIGINT)
             .addColumn("c3", DataType.BOOLEAN)
@@ -644,7 +492,7 @@ public abstract class JdbcAdminTestBase {
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
-    admin.createTable(namespace, table, metadata, new HashMap<>());
+    admin.createTableInternal(connection, namespace, table, metadata, false);
 
     // Assert
     for (int i = 0; i < expectedSqlStatements.length; i++) {
@@ -653,13 +501,382 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  public void createTable_WithClusteringOrderForMysql_shouldExecuteCreateTableStatement()
+  public void createTableInternal_IfNotExistsForMysql_ShouldCreateTableAndIndexesIfNotExists()
       throws ExecutionException, SQLException {
-    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
+    createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.MYSQL,
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
+        "CREATE TABLE IF NOT EXISTS `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
         "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
-        "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
+        "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)");
+  }
+
+  @Test
+  public void createTableInternal_IfNotExistsForPostgresql_ShouldCreateTableAndIndexesIfNotExists()
+      throws ExecutionException, SQLException {
+    createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
+        RdbEngine.POSTGRESQL,
+        "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE UNIQUE INDEX IF NOT EXISTS \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
+        "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
+  }
+
+  @Test
+  public void createTableInternal_IfNotExistsForSqlServer_ShouldCreateTableAndIndexesIfNotExists()
+      throws ExecutionException, SQLException {
+    createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
+        RdbEngine.SQL_SERVER,
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_BIN,"
+            + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
+        "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
+        "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])");
+  }
+
+  @Test
+  public void createTableInternal_IfNotExistsForOracle_ShouldCreateTableAndIndexesIfNotExists()
+      throws ExecutionException, SQLException {
+    createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
+        RdbEngine.ORACLE,
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
+  }
+
+  @Test
+  public void createTableInternal_IfNotExistsForSqlite_ShouldCreateTableAndIndexesIfNotExists()
+      throws ExecutionException, SQLException {
+    createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
+        RdbEngine.SQLITE,
+        "CREATE TABLE IF NOT EXISTS \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c4\" ON \"my_ns$foo_table\" (\"c4\")",
+        "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")");
+  }
+
+  private void createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
+      RdbEngine rdbEngine, String... expectedSqlStatements)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c3")
+            .addClusteringKey("c1", Order.DESC)
+            .addClusteringKey("c4", Order.ASC)
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .addColumn("c4", DataType.BLOB)
+            .addColumn("c5", DataType.INT)
+            .addColumn("c6", DataType.DOUBLE)
+            .addColumn("c7", DataType.FLOAT)
+            .addSecondaryIndex("c1")
+            .addSecondaryIndex("c4")
+            .build();
+
+    List<Statement> mockedStatements = new ArrayList<>();
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      mockedStatements.add(mock(Statement.class));
+    }
+    when(connection.createStatement())
+        .thenReturn(
+            mockedStatements.get(0),
+            mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    admin.createTableInternal(connection, namespace, table, metadata, true);
+
+    // Assert
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
+    }
+  }
+
+  @Test
+  public void addTableMetadata_OverwriteMetadataForMysql_ShouldWorkProperly() throws Exception {
+    addTableMetadata_overwriteMetadataForX_ShouldWorkProperly(
+        RdbEngine.MYSQL,
+        "DELETE FROM `"
+            + metadataSchemaName
+            + "`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
+        "INSERT INTO `"
+            + metadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO `"
+            + metadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,2)");
+  }
+
+  @Test
+  public void addTableMetadata_OverwriteMetadataForPostgresql_ShouldWorkProperly()
+      throws Exception {
+    addTableMetadata_overwriteMetadataForX_ShouldWorkProperly(
+        RdbEngine.POSTGRESQL,
+        "DELETE FROM \""
+            + metadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "INSERT INTO \""
+            + metadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO \""
+            + metadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,2)");
+  }
+
+  @Test
+  public void addTableMetadata_OverwriteMetadataForSqlServer_ShouldWorkProperly() throws Exception {
+    addTableMetadata_overwriteMetadataForX_ShouldWorkProperly(
+        RdbEngine.SQL_SERVER,
+        "DELETE FROM ["
+            + metadataSchemaName
+            + "].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
+        "INSERT INTO ["
+            + metadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)",
+        "INSERT INTO ["
+            + metadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,2)");
+  }
+
+  @Test
+  public void addTableMetadata_OverwriteMetadataForOracle_ShouldWorkProperly() throws Exception {
+    addTableMetadata_overwriteMetadataForX_ShouldWorkProperly(
+        RdbEngine.ORACLE,
+        "DELETE FROM \""
+            + metadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "INSERT INTO \""
+            + metadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)",
+        "INSERT INTO \""
+            + metadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,2)");
+  }
+
+  @Test
+  public void addTableMetadata_OverwriteMetadataForSqlite_ShouldWorkProperly() throws Exception {
+    addTableMetadata_overwriteMetadataForX_ShouldWorkProperly(
+        RdbEngine.SQLITE,
+        "DELETE FROM \""
+            + metadataSchemaName
+            + "$metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "INSERT INTO \""
+            + metadataSchemaName
+            + "$metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,FALSE,1)",
+        "INSERT INTO \""
+            + metadataSchemaName
+            + "$metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,FALSE,2)");
+  }
+
+  private void addTableMetadata_overwriteMetadataForX_ShouldWorkProperly(
+      RdbEngine rdbEngine, String... expectedSqlStatements) throws Exception {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .build();
+
+    List<Statement> mockedStatements = new ArrayList<>();
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      mockedStatements.add(mock(Statement.class));
+    }
+    when(connection.createStatement())
+        .thenReturn(
+            mockedStatements.get(0),
+            mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    admin.addTableMetadata(connection, namespace, table, metadata, false, true);
+
+    // Assert
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
+    }
+  }
+
+  @Test
+  public void addTableMetadata_ifNotExistsAndOverwriteMetadataForMysql_ShouldWorkProperly()
+      throws Exception {
+    addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
+        RdbEngine.MYSQL,
+        "CREATE SCHEMA IF NOT EXISTS `" + metadataSchemaName + "`",
+        "CREATE TABLE IF NOT EXISTS `"
+            + metadataSchemaName
+            + "`.`metadata`("
+            + "`full_table_name` VARCHAR(128),"
+            + "`column_name` VARCHAR(128),"
+            + "`data_type` VARCHAR(20) NOT NULL,"
+            + "`key_type` VARCHAR(20),"
+            + "`clustering_order` VARCHAR(10),"
+            + "`indexed` BOOLEAN NOT NULL,"
+            + "`ordinal_position` INTEGER NOT NULL,"
+            + "PRIMARY KEY (`full_table_name`, `column_name`))",
+        "DELETE FROM `"
+            + metadataSchemaName
+            + "`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
+        "INSERT INTO `"
+            + metadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO `"
+            + metadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,2)");
+  }
+
+  @Test
+  public void addTableMetadata_ifNotExistsAndOverwriteMetadataForPostgresql_ShouldWorkProperly()
+      throws Exception {
+    addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
+        RdbEngine.POSTGRESQL,
+        "CREATE SCHEMA IF NOT EXISTS \"" + metadataSchemaName + "\"",
+        "CREATE TABLE IF NOT EXISTS \""
+            + metadataSchemaName
+            + "\".\"metadata\"("
+            + "\"full_table_name\" VARCHAR(128),"
+            + "\"column_name\" VARCHAR(128),"
+            + "\"data_type\" VARCHAR(20) NOT NULL,"
+            + "\"key_type\" VARCHAR(20),"
+            + "\"clustering_order\" VARCHAR(10),"
+            + "\"indexed\" BOOLEAN NOT NULL,"
+            + "\"ordinal_position\" INTEGER NOT NULL,"
+            + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "DELETE FROM \""
+            + metadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "INSERT INTO \""
+            + metadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO \""
+            + metadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,2)");
+  }
+
+  @Test
+  public void addTableMetadata_ifNotExistsAndOverwriteMetadataForSqlServer_ShouldWorkProperly()
+      throws Exception {
+    addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
+        RdbEngine.SQL_SERVER,
+        "CREATE SCHEMA [" + metadataSchemaName + "]",
+        "CREATE TABLE ["
+            + metadataSchemaName
+            + "].[metadata]("
+            + "[full_table_name] VARCHAR(128),"
+            + "[column_name] VARCHAR(128),"
+            + "[data_type] VARCHAR(20) NOT NULL,"
+            + "[key_type] VARCHAR(20),"
+            + "[clustering_order] VARCHAR(10),"
+            + "[indexed] BIT NOT NULL,"
+            + "[ordinal_position] INTEGER NOT NULL,"
+            + "PRIMARY KEY ([full_table_name], [column_name]))",
+        "DELETE FROM ["
+            + metadataSchemaName
+            + "].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
+        "INSERT INTO ["
+            + metadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)",
+        "INSERT INTO ["
+            + metadataSchemaName
+            + "].[metadata] VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,2)");
+  }
+
+  @Test
+  public void addTableMetadata_ifNotExistsAndOverwriteMetadataForOracle_ShouldWorkProperly()
+      throws Exception {
+    addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
+        RdbEngine.ORACLE,
+        "CREATE USER \"" + metadataSchemaName + "\" IDENTIFIED BY \"oracle\"",
+        "ALTER USER \"" + metadataSchemaName + "\" quota unlimited on USERS",
+        "CREATE TABLE \""
+            + metadataSchemaName
+            + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "DELETE FROM \""
+            + metadataSchemaName
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "INSERT INTO \""
+            + metadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)",
+        "INSERT INTO \""
+            + metadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,2)");
+  }
+
+  @Test
+  public void addTableMetadata_ifNotExistsAndOverwriteMetadataForSqlite_ShouldWorkProperly()
+      throws Exception {
+    addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
+        RdbEngine.SQLITE,
+        "CREATE TABLE IF NOT EXISTS \""
+            + metadataSchemaName
+            + "$metadata\"("
+            + "\"full_table_name\" TEXT,"
+            + "\"column_name\" TEXT,"
+            + "\"data_type\" TEXT NOT NULL,"
+            + "\"key_type\" TEXT,"
+            + "\"clustering_order\" TEXT,"
+            + "\"indexed\" BOOLEAN NOT NULL,"
+            + "\"ordinal_position\" INTEGER NOT NULL,"
+            + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "DELETE FROM \""
+            + metadataSchemaName
+            + "$metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "INSERT INTO \""
+            + metadataSchemaName
+            + "$metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,FALSE,1)",
+        "INSERT INTO \""
+            + metadataSchemaName
+            + "$metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,FALSE,2)");
+  }
+
+  private void
+      addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
+          RdbEngine rdbEngine, String... expectedSqlStatements) throws Exception {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .build();
+
+    List<Statement> mockedStatements = new ArrayList<>();
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      mockedStatements.add(mock(Statement.class));
+    }
+    when(connection.createStatement())
+        .thenReturn(
+            mockedStatements.get(0),
+            mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    admin.addTableMetadata(connection, namespace, table, metadata, true, true);
+
+    // Assert
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
+    }
+  }
+
+  @Test
+  public void addTableMetadata_ifNotExistsAndDoNotOverwriteMetadataForMysql_ShouldWorkProperly()
+      throws Exception {
+    addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
+        RdbEngine.MYSQL,
         "CREATE SCHEMA IF NOT EXISTS `" + metadataSchemaName + "`",
         "CREATE TABLE IF NOT EXISTS `"
             + metadataSchemaName
@@ -696,14 +913,11 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  public void createTable_WithClusteringOrderForPostgresql_shouldExecuteCreateTableStatement()
-      throws ExecutionException, SQLException {
-    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
+  public void
+      addTableMetadata_ifNotExistsAndDoNotOverwriteMetadataForPostgresql_ShouldWorkProperly()
+          throws Exception {
+    addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
         RdbEngine.POSTGRESQL,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "CREATE SCHEMA IF NOT EXISTS \"" + metadataSchemaName + "\"",
         "CREATE TABLE IF NOT EXISTS \""
             + metadataSchemaName
@@ -740,14 +954,10 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  public void createTable_WithClusteringOrderForSqlServer_shouldExecuteCreateTableStatement()
-      throws ExecutionException, SQLException {
-    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
+  public void addTableMetadata_ifNotExistsAndDoNotOverwriteMetadataForSqlServer_ShouldWorkProperly()
+      throws Exception {
+    addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
         RdbEngine.SQL_SERVER,
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_BIN,"
-            + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
-        "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
-        "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])",
         "CREATE SCHEMA [" + metadataSchemaName + "]",
         "CREATE TABLE ["
             + metadataSchemaName
@@ -784,15 +994,10 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  public void createTable_WithClusteringOrderForOracle_shouldExecuteCreateTableStatement()
-      throws ExecutionException, SQLException {
-    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
+  public void addTableMetadata_ifNotExistsAndDoNotOverwriteMetadataForOracle_ShouldWorkProperly()
+      throws Exception {
+    addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
         RdbEngine.ORACLE,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
-        "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "CREATE USER \"" + metadataSchemaName + "\" IDENTIFIED BY \"oracle\"",
         "ALTER USER \"" + metadataSchemaName + "\" quota unlimited on USERS",
         "CREATE TABLE \""
@@ -822,13 +1027,10 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  public void createTable_WithClusteringOrderForSqlite_shouldExecuteCreateTableStatement()
-      throws ExecutionException, SQLException {
-    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
+  public void addTableMetadata_ifNotExistsAndDoNotOverwriteMetadataForSqlite_ShouldWorkProperly()
+      throws Exception {
+    addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
         RdbEngine.SQLITE,
-        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns$foo_table\" (\"c4\")",
-        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")",
         "CREATE TABLE IF NOT EXISTS \""
             + metadataSchemaName
             + "$metadata\"("
@@ -863,9 +1065,8 @@ public abstract class JdbcAdminTestBase {
             + "$metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,FALSE,7)");
   }
 
-  private void createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
-      RdbEngine rdbEngine, String... expectedSqlStatements)
-      throws SQLException, ExecutionException {
+  private void addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
+      RdbEngine rdbEngine, String... expectedSqlStatements) throws Exception {
     // Arrange
     String namespace = "my_ns";
     String table = "foo_table";
@@ -898,12 +1099,82 @@ public abstract class JdbcAdminTestBase {
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
-    admin.createTable(namespace, table, metadata, new HashMap<>());
+    admin.addTableMetadata(connection, namespace, table, metadata, true, false);
 
     // Assert
     for (int i = 0; i < expectedSqlStatements.length; i++) {
       verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
     }
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void createTable_ShouldCallCreateTableAndAddTableMetadataCorrectly(RdbEngine rdbEngine)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c3")
+            .addClusteringKey("c1", Order.DESC)
+            .addClusteringKey("c4", Order.ASC)
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .addColumn("c4", DataType.BLOB)
+            .addColumn("c5", DataType.INT)
+            .addColumn("c6", DataType.DOUBLE)
+            .addColumn("c7", DataType.FLOAT)
+            .addSecondaryIndex("c1")
+            .addSecondaryIndex("c4")
+            .build();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+
+    // Act
+    adminSpy.createTable(namespace, table, metadata, Collections.emptyMap());
+
+    // Assert
+    verify(adminSpy).createTableInternal(connection, namespace, table, metadata, false);
+    verify(adminSpy).addTableMetadata(connection, namespace, table, metadata, true, false);
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void repairTable_ShouldCallCreateTableAndAddTableMetadataCorrectly(RdbEngine rdbEngine)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c3")
+            .addClusteringKey("c1", Order.DESC)
+            .addClusteringKey("c4", Order.ASC)
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .addColumn("c4", DataType.BLOB)
+            .addColumn("c5", DataType.INT)
+            .addColumn("c6", DataType.DOUBLE)
+            .addColumn("c7", DataType.FLOAT)
+            .addSecondaryIndex("c1")
+            .addSecondaryIndex("c4")
+            .build();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+
+    // Act
+    adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
+
+    // Assert
+    verify(adminSpy).createTableInternal(connection, namespace, table, metadata, true);
+    verify(adminSpy).addTableMetadata(connection, namespace, table, metadata, true, true);
   }
 
   @Test
@@ -1980,298 +2251,6 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  public void
-      repairTable_WithMissingMetadataTableForMysql_shouldCreateMetadataTableAndAddMetadataForTable()
-          throws SQLException, ExecutionException {
-    repairTable_WithMissingMetadataTableForX_shouldCreateMetadataTableAndAddMetadataForTable(
-        RdbEngine.MYSQL,
-        "SELECT 1 FROM `my_ns`.`foo_table` LIMIT 1",
-        "SELECT 1 FROM `" + metadataSchemaName + "`.`metadata` LIMIT 1",
-        "CREATE SCHEMA IF NOT EXISTS `" + metadataSchemaName + "`",
-        "CREATE TABLE IF NOT EXISTS `"
-            + metadataSchemaName
-            + "`.`metadata`(`full_table_name` VARCHAR(128),`column_name` VARCHAR(128),`data_type` VARCHAR(20) NOT NULL,`key_type` VARCHAR(20),`clustering_order` VARCHAR(10),`indexed` BOOLEAN NOT NULL,`ordinal_position` INTEGER NOT NULL,PRIMARY KEY (`full_table_name`, `column_name`))",
-        "INSERT INTO `"
-            + metadataSchemaName
-            + "`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
-  }
-
-  @Test
-  public void
-      repairTable_WithMissingMetadataTableForOracle_shouldCreateMetadataTableAndAddMetadataForTable()
-          throws SQLException, ExecutionException {
-    repairTable_WithMissingMetadataTableForX_shouldCreateMetadataTableAndAddMetadataForTable(
-        RdbEngine.ORACLE,
-        "SELECT 1 FROM \"my_ns\".\"foo_table\" FETCH FIRST 1 ROWS ONLY",
-        "SELECT 1 FROM \"" + metadataSchemaName + "\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
-        "CREATE USER \"" + metadataSchemaName + "\" IDENTIFIED BY \"oracle\"",
-        "ALTER USER \"" + metadataSchemaName + "\" quota unlimited on USERS",
-        "CREATE TABLE \""
-            + metadataSchemaName
-            + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
-  }
-
-  @Test
-  public void
-      repairTable_WithMissingMetadataTableForPostgresql_shouldCreateMetadataTableAndAddMetadataForTable()
-          throws SQLException, ExecutionException {
-    repairTable_WithMissingMetadataTableForX_shouldCreateMetadataTableAndAddMetadataForTable(
-        RdbEngine.POSTGRESQL,
-        "SELECT 1 FROM \"my_ns\".\"foo_table\" LIMIT 1",
-        "SELECT 1 FROM \"" + metadataSchemaName + "\".\"metadata\" LIMIT 1",
-        "CREATE SCHEMA IF NOT EXISTS \"" + metadataSchemaName + "\"",
-        "CREATE TABLE IF NOT EXISTS \""
-            + metadataSchemaName
-            + "\".\"metadata\"(\"full_table_name\" VARCHAR(128),\"column_name\" VARCHAR(128),\"data_type\" VARCHAR(20) NOT NULL,\"key_type\" VARCHAR(20),\"clustering_order\" VARCHAR(10),\"indexed\" BOOLEAN NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
-  }
-
-  @Test
-  public void
-      repairTable_WithMissingMetadataTableForSqlServer_shouldCreateMetadataTableAndAddMetadataForTable()
-          throws SQLException, ExecutionException {
-    repairTable_WithMissingMetadataTableForX_shouldCreateMetadataTableAndAddMetadataForTable(
-        RdbEngine.SQL_SERVER,
-        "SELECT TOP 1 1 FROM [my_ns].[foo_table]",
-        "SELECT TOP 1 1 FROM [" + metadataSchemaName + "].[metadata]",
-        "CREATE SCHEMA [" + metadataSchemaName + "]",
-        "CREATE TABLE ["
-            + metadataSchemaName
-            + "].[metadata]([full_table_name] VARCHAR(128),[column_name] VARCHAR(128),[data_type] VARCHAR(20) NOT NULL,[key_type] VARCHAR(20),[clustering_order] VARCHAR(10),[indexed] BIT NOT NULL,[ordinal_position] INTEGER NOT NULL,PRIMARY KEY ([full_table_name], [column_name]))",
-        "INSERT INTO ["
-            + metadataSchemaName
-            + "].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
-  }
-
-  @Test
-  public void
-      repairTable_WithMissingMetadataTableForSqlite_shouldCreateMetadataTableAndAddMetadataForTable()
-          throws SQLException, ExecutionException {
-    repairTable_WithMissingMetadataTableForX_shouldCreateMetadataTableAndAddMetadataForTable(
-        RdbEngine.SQLITE,
-        "SELECT 1 FROM \"my_ns$foo_table\" LIMIT 1",
-        "SELECT 1 FROM \"" + metadataSchemaName + "$metadata\" LIMIT 1",
-        "CREATE TABLE IF NOT EXISTS \""
-            + metadataSchemaName
-            + "$metadata\"(\"full_table_name\" TEXT,\"column_name\" TEXT,\"data_type\" TEXT NOT NULL,\"key_type\" TEXT,\"clustering_order\" TEXT,\"indexed\" BOOLEAN NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "$metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,FALSE,1)");
-  }
-
-  private void
-      repairTable_WithMissingMetadataTableForX_shouldCreateMetadataTableAndAddMetadataForTable(
-          RdbEngine rdbEngine, String... expectedSqlStatements)
-          throws SQLException, ExecutionException {
-    // Arrange
-    String namespace = "my_ns";
-    String table = "foo_table";
-    TableMetadata metadata =
-        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
-
-    List<Statement> mockedStatements = new ArrayList<>();
-    for (int i = 0; i < expectedSqlStatements.length; i++) {
-      mockedStatements.add(mock(Statement.class));
-    }
-
-    when(connection.createStatement())
-        .thenReturn(
-            mockedStatements.get(0),
-            mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
-    when(dataSource.getConnection()).thenReturn(connection);
-
-    // Mock that the metadata table does not exist
-    SQLException sqlException = mock(SQLException.class);
-    mockUndefinedTableError(rdbEngine, sqlException);
-    when(mockedStatements.get(1).execute(anyString())).thenThrow(sqlException);
-
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
-
-    // Act
-    admin.repairTable(namespace, table, metadata, new HashMap<>());
-
-    // Assert
-    for (int i = 0; i < expectedSqlStatements.length; i++) {
-      verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
-    }
-  }
-
-  @Test
-  public void repairTable_ExistingMetadataTableForMysql_shouldDeleteThenAddMetadataForTable()
-      throws SQLException, ExecutionException {
-    repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
-        RdbEngine.MYSQL,
-        "SELECT 1 FROM `my_ns`.`foo_table` LIMIT 1",
-        "SELECT 1 FROM `" + metadataSchemaName + "`.`metadata` LIMIT 1",
-        "DELETE FROM `"
-            + metadataSchemaName
-            + "`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
-        "INSERT INTO `"
-            + metadataSchemaName
-            + "`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
-  }
-
-  @Test
-  public void repairTable_ExistingMetadataTableForOracle_shouldDeleteThenAddMetadataForTable()
-      throws SQLException, ExecutionException {
-    repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
-        RdbEngine.ORACLE,
-        "SELECT 1 FROM \"my_ns\".\"foo_table\" FETCH FIRST 1 ROWS ONLY",
-        "SELECT 1 FROM \"" + metadataSchemaName + "\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
-        "DELETE FROM \""
-            + metadataSchemaName
-            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
-  }
-
-  @Test
-  public void repairTable_ExistingMetadataTableForPostgresql_shouldDeleteThenAddMetadataForTable()
-      throws SQLException, ExecutionException {
-    repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
-        RdbEngine.POSTGRESQL,
-        "SELECT 1 FROM \"my_ns\".\"foo_table\" LIMIT 1",
-        "SELECT 1 FROM \"" + metadataSchemaName + "\".\"metadata\" LIMIT 1",
-        "DELETE FROM \""
-            + metadataSchemaName
-            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
-  }
-
-  @Test
-  public void repairTable_ExistingMetadataTableForSqlServer_shouldDeleteThenAddMetadataForTable()
-      throws SQLException, ExecutionException {
-    repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
-        RdbEngine.SQL_SERVER,
-        "SELECT TOP 1 1 FROM [my_ns].[foo_table]",
-        "SELECT TOP 1 1 FROM [" + metadataSchemaName + "].[metadata]",
-        "DELETE FROM ["
-            + metadataSchemaName
-            + "].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
-        "INSERT INTO ["
-            + metadataSchemaName
-            + "].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
-  }
-
-  @Test
-  public void repairTable_ExistingMetadataTableForSqlite_shouldDeleteThenAddMetadataForTable()
-      throws SQLException, ExecutionException {
-    repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
-        RdbEngine.SQLITE,
-        "SELECT 1 FROM \"my_ns$foo_table\" LIMIT 1",
-        "SELECT 1 FROM \"" + metadataSchemaName + "$metadata\" LIMIT 1",
-        "DELETE FROM \""
-            + metadataSchemaName
-            + "$metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "INSERT INTO \""
-            + metadataSchemaName
-            + "$metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,FALSE,1)");
-  }
-
-  private void repairTable_ExistingMetadataTableForX_shouldDeleteThenAddMetadataForTable(
-      RdbEngine rdbEngine, String... expectedSqlStatements)
-      throws SQLException, ExecutionException {
-    // Arrange
-    String namespace = "my_ns";
-    String table = "foo_table";
-    TableMetadata metadata =
-        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
-
-    List<Statement> mockedStatements = new ArrayList<>();
-    for (int i = 0; i < expectedSqlStatements.length; i++) {
-      mockedStatements.add(mock(Statement.class));
-    }
-
-    when(connection.createStatement())
-        .thenReturn(
-            mockedStatements.get(0),
-            mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
-    when(dataSource.getConnection()).thenReturn(connection);
-
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
-
-    // Act
-    admin.repairTable(namespace, table, metadata, new HashMap<>());
-
-    // Assert
-    for (int i = 0; i < expectedSqlStatements.length; i++) {
-      verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
-    }
-  }
-
-  @Test
-  public void repairTable_WithNonExistingTableToRepairForMysql_shouldThrowIllegalArgumentException()
-      throws SQLException {
-    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
-        RdbEngine.MYSQL, "SELECT 1 FROM `my_ns`.`foo_table` LIMIT 1");
-  }
-
-  @Test
-  public void
-      repairTable_WithNonExistingTableToRepairForOracle_shouldThrowIllegalArgumentException()
-          throws SQLException {
-    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
-        RdbEngine.ORACLE, "SELECT 1 FROM \"my_ns\".\"foo_table\" FETCH FIRST 1 ROWS ONLY");
-  }
-
-  @Test
-  public void
-      repairTable_WithNonExistingTableToRepairForPostgresql_shouldThrowIllegalArgumentException()
-          throws SQLException {
-    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
-        RdbEngine.POSTGRESQL, "SELECT 1 FROM \"my_ns\".\"foo_table\" LIMIT 1");
-  }
-
-  @Test
-  public void
-      repairTable_WithNonExistingTableToRepairForSqlServer_shouldThrowIllegalArgumentException()
-          throws SQLException {
-    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
-        RdbEngine.SQL_SERVER, "SELECT TOP 1 1 FROM [my_ns].[foo_table]");
-  }
-
-  @Test
-  public void
-      repairTable_WithNonExistingTableToRepairForSqlite_shouldThrowIllegalArgumentException()
-          throws SQLException {
-    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
-        RdbEngine.SQLITE, "SELECT 1 FROM \"my_ns$foo_table\" LIMIT 1");
-  }
-
-  private void repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
-      RdbEngine rdbEngine, String expectedCheckTableExistStatement) throws SQLException {
-    // Arrange
-    String namespace = "my_ns";
-    String table = "foo_table";
-    TableMetadata metadata =
-        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
-
-    Statement checkTableExistStatement = mock(Statement.class);
-    when(connection.createStatement()).thenReturn(checkTableExistStatement);
-    when(dataSource.getConnection()).thenReturn(connection);
-
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
-    SQLException sqlException = mock(SQLException.class);
-    mockUndefinedTableError(rdbEngine, sqlException);
-    when(checkTableExistStatement.execute(any())).thenThrow(sqlException);
-
-    // Act
-    assertThatThrownBy(() -> admin.repairTable(namespace, table, metadata, new HashMap<>()))
-        .isInstanceOf(IllegalArgumentException.class);
-
-    // Assert
-    verify(checkTableExistStatement).execute(expectedCheckTableExistStatement);
-  }
-
-  @Test
   public void addNewColumnToTable_ForMysql_ShouldWorkProperly()
       throws SQLException, ExecutionException {
     addNewColumnToTable_ForX_ShouldWorkProperly(
@@ -2461,15 +2440,6 @@ public abstract class JdbcAdminTestBase {
     verify(connection).prepareStatement(expectedSelectStatement);
     verify(mockPreparedStatement).executeQuery();
     assertThat(actualNamespaceNames).containsOnly(namespace1, namespace2);
-  }
-
-  private List<Statement> prepareMockStatements(int count) {
-    List<Statement> statements = new ArrayList<>();
-    for (int i = 0; i < count; i++) {
-      Statement statement = mock(Statement.class);
-      statements.add(statement);
-    }
-    return statements;
   }
 
   @Test
@@ -2733,26 +2703,14 @@ public abstract class JdbcAdminTestBase {
         .execute(expectedCheckTableExistStatement);
   }
 
-  @Test
-  public void importTable_ForX_ShouldWorkProperly() throws SQLException, ExecutionException {
-    for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
-      if (!rdbEngine.equals(RdbEngine.SQLITE)) {
-        List<String> statements = new ArrayList<>();
-        statements.add(prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
-        statements.add(prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
-        statements.add(prepareSqlForMetadataTableCheck(rdbEngine));
-        statements.addAll(prepareSqlForCreateSchemaStatements(rdbEngine));
-        statements.add(prepareSqlForCreateMetadataTable(rdbEngine));
-        statements.add(
-            prepareSqlForInsertMetadata(
-                rdbEngine, COLUMN_1, "TEXT", "PARTITION", "NULL", false, 1));
-        importTable_ForX_ShouldWorkProperly(rdbEngine, statements);
-      }
-    }
-  }
-
-  private void importTable_ForX_ShouldWorkProperly(
-      RdbEngine rdbEngine, List<String> expectedSqlStatements)
+  @ParameterizedTest
+  @EnumSource(
+      value = RdbEngine.class,
+      mode = Mode.EXCLUDE,
+      names = {
+        "SQLITE",
+      })
+  public void importTable_ForXBesidesSqlite_ShouldWorkProperly(RdbEngine rdbEngine)
       throws SQLException, ExecutionException {
     // Arrange
     DatabaseMetaData metadata = mock(DatabaseMetaData.class);
@@ -2770,34 +2728,25 @@ public abstract class JdbcAdminTestBase {
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0);
     when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
     when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
-    List<Statement> expectedStatements = new ArrayList<>();
-    for (int i = 0; i < expectedSqlStatements.size(); i++) {
-      Statement expectedStatement = mock(Statement.class);
-      expectedStatements.add(expectedStatement);
-    }
-    when(connection.createStatement())
-        .thenReturn(
-            expectedStatements.get(0),
-            expectedStatements.subList(1, expectedStatements.size()).toArray(new Statement[0]));
-
-    // prepare the situation where metadata table does not exist
-    SQLException sqlException = mock(SQLException.class);
-    mockUndefinedTableError(rdbEngine, sqlException);
-    when(expectedStatements.get(2).execute(any())).thenThrow(sqlException);
+    Statement checkTableExistsStatement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(checkTableExistsStatement);
 
     when(dataSource.getConnection()).thenReturn(connection);
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    TableMetadata importedTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey(COLUMN_1)
+            .addColumn(COLUMN_1, DataType.TEXT)
+            .build();
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
 
     // Act
-    admin.importTable(NAMESPACE, TABLE);
+    adminSpy.importTable(NAMESPACE, TABLE);
 
     // Assert
-    for (int i = 0; i < expectedSqlStatements.size(); i++) {
-      verify(
-              expectedStatements.get(i),
-              description("database engine specific test failed: " + rdbEngine))
-          .execute(expectedSqlStatements.get(i));
-    }
+    verify(adminSpy).getImportTableMetadata(NAMESPACE, TABLE);
+    verify(checkTableExistsStatement).execute(prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
+    verify(adminSpy)
+        .addTableMetadata(connection, NAMESPACE, TABLE, importedTableMetadata, true, false);
   }
 
   @Test
@@ -2810,10 +2759,6 @@ public abstract class JdbcAdminTestBase {
 
     // Assert
     assertThat(thrown).isInstanceOf(UnsupportedOperationException.class);
-  }
-
-  private String prepareSqlForMetadataTableCheck(RdbEngine rdbEngine) {
-    return prepareSqlForTableCheck(rdbEngine, metadataSchemaName, "metadata");
   }
 
   private String prepareSqlForTableCheck(RdbEngine rdbEngine, String namespace, String table) {
@@ -2846,142 +2791,10 @@ public abstract class JdbcAdminTestBase {
         + " INT";
   }
 
-  private List<String> prepareSqlForCreateSchemaStatements(RdbEngine rdbEngine) {
-    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
-    List<String> statements = new ArrayList<>();
-
-    switch (rdbEngine) {
-      case MYSQL:
-      case POSTGRESQL:
-      case SQL_SERVER:
-        statements.add(
-            "CREATE SCHEMA "
-                + (rdbEngine.equals(RdbEngine.SQL_SERVER) ? "" : "IF NOT EXISTS ")
-                + rdbEngineStrategy.enclose(metadataSchemaName));
-        break;
-      case ORACLE:
-        statements.add(
-            "CREATE USER "
-                + rdbEngineStrategy.enclose(metadataSchemaName)
-                + " IDENTIFIED BY "
-                + rdbEngineStrategy.enclose("oracle"));
-        statements.add(
-            "ALTER USER "
-                + rdbEngineStrategy.enclose(metadataSchemaName)
-                + " quota unlimited on USERS");
-        break;
-      default:
-        break;
-    }
-
-    return statements;
-  }
-
-  private String prepareSqlForCreateMetadataTable(RdbEngine rdbEngine) {
-    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
-    StringBuilder sql = new StringBuilder("CREATE TABLE ");
-    if (!rdbEngine.equals(RdbEngine.ORACLE) && !rdbEngine.equals(RdbEngine.SQL_SERVER)) {
-      sql.append("IF NOT EXISTS ");
-    }
-
-    sql.append(rdbEngineStrategy.encloseFullTableName(metadataSchemaName, "metadata"))
-        .append("(")
-        .append(rdbEngineStrategy.enclose("full_table_name"))
-        .append(" ")
-        .append(getVarcharString(rdbEngine, 128))
-        .append(",")
-        .append(rdbEngineStrategy.enclose("column_name"))
-        .append(" ")
-        .append(getVarcharString(rdbEngine, 128))
-        .append(",")
-        .append(rdbEngineStrategy.enclose("data_type"))
-        .append(" ")
-        .append(getVarcharString(rdbEngine, 20))
-        .append(" NOT NULL,")
-        .append(rdbEngineStrategy.enclose("key_type"))
-        .append(" ")
-        .append(getVarcharString(rdbEngine, 20))
-        .append(",")
-        .append(rdbEngineStrategy.enclose("clustering_order"))
-        .append(" ")
-        .append(getVarcharString(rdbEngine, 10))
-        .append(",")
-        .append(rdbEngineStrategy.enclose("indexed"));
-
-    switch (rdbEngine) {
-      case ORACLE:
-        sql.append(" NUMBER(1) NOT NULL,");
-        break;
-      case SQL_SERVER:
-        sql.append(" BIT NOT NULL,");
-        break;
-      default:
-        sql.append(" BOOLEAN NOT NULL,");
-        break;
-    }
-
-    sql.append(rdbEngineStrategy.enclose("ordinal_position"))
-        .append(" INTEGER NOT NULL,PRIMARY KEY (")
-        .append(rdbEngineStrategy.enclose("full_table_name"))
-        .append(", ")
-        .append(rdbEngineStrategy.enclose("column_name"))
-        .append("))");
-
-    return sql.toString();
-  }
-
-  private String getVarcharString(RdbEngine rdbEngine, int size) {
-    switch (rdbEngine) {
-      case ORACLE:
-        return "VARCHAR2(" + size + ")";
-      case SQLITE:
-        return "TEXT";
-      default:
-        return "VARCHAR(" + size + ")";
-    }
-  }
-
-  private String prepareSqlForInsertMetadata(
-      RdbEngine rdbEngine,
-      String column,
-      String dataType,
-      String keyType,
-      String clusteringOrder,
-      boolean indexed,
-      int ordinal) {
-    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
-    List<String> values =
-        ImmutableList.of(
-            "'" + NAMESPACE + "." + TABLE + "'",
-            "'" + column + "'",
-            "'" + dataType + "'",
-            "'" + keyType + "'",
-            clusteringOrder,
-            getBooleanString(rdbEngine, indexed),
-            Integer.toString(ordinal));
-
-    return "INSERT INTO "
-        + rdbEngineStrategy.encloseFullTableName(metadataSchemaName, "metadata")
-        + " VALUES ("
-        + String.join(",", values)
-        + ")";
-  }
-
-  private String getBooleanString(RdbEngine rdbEngine, boolean value) {
-    switch (rdbEngine) {
-      case ORACLE:
-      case SQL_SERVER:
-        return value ? "1" : "0";
-      case SQLITE:
-        return value ? "TRUE" : "FALSE";
-      default:
-        return value ? "true" : "false";
-    }
-  }
-
   private RdbEngineStrategy getRdbEngineStrategy(RdbEngine rdbEngine) {
     return RDB_ENGINES.getOrDefault(rdbEngine, RdbEngineFactory.create("jdbc:mysql:"));
   }
+
   // Utility class used to mock ResultSet for a "select * from" query on the metadata table
   static class SelectAllFromMetadataTableResultSetMocker
       implements org.mockito.stubbing.Answer<Object> {

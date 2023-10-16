@@ -48,7 +48,11 @@ public interface RdbEngineStrategy {
       boolean hasDescClusteringOrder, TableMetadata metadata);
 
   String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata);
+      boolean hasDescClusteringOrder,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists);
 
   String tryAddIfNotExistsToCreateTableSql(String createTableSql);
 
@@ -115,4 +119,8 @@ public interface RdbEngineStrategy {
   default @Nullable String getEscape(LikeExpression likeExpression) {
     return likeExpression.getEscape();
   }
+
+  boolean isDuplicateIndexError(SQLException e);
+
+  String tryAddIfNotExistsToCreateIndexSql(String createIndexSql);
 }

@@ -567,6 +567,7 @@ public abstract class ConsensusCommitAdminTestBase {
     admin.repairCoordinatorTables(options);
 
     // Assert
+    verify(distributedStorageAdmin).createNamespace(coordinatorNamespaceName, true, options);
     verify(distributedStorageAdmin)
         .repairTable(
             coordinatorNamespaceName, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);

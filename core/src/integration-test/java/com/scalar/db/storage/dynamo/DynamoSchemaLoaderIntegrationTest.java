@@ -34,6 +34,7 @@ public class DynamoSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTe
       Path configFilePath, Path schemaFilePath) {
     return ImmutableList.<String>builder()
         .addAll(super.getCommandArgsForTableReparation(configFilePath, schemaFilePath))
+        .add("--no-scaling")
         .add("--no-backup")
         .build();
   }

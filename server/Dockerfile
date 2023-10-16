@@ -1,4 +1,4 @@
-FROM docker.io/busybox:1.32 AS tools
+FROM docker.io/busybox:1.36 AS tools
 
 ENV GRPC_HEALTH_PROBE_VERSION v0.4.17
 
@@ -8,7 +8,7 @@ RUN set -x && \
     wget -q -O grpc_health_probe "https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-amd64" && \
     chmod +x grpc_health_probe
 
-FROM ghcr.io/scalar-labs/jre8:1.1.14
+FROM ghcr.io/scalar-labs/jre8:1.1.15
 
 COPY --from=tools grpc_health_probe /usr/local/bin/
 
