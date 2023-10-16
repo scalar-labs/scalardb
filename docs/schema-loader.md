@@ -1,50 +1,83 @@
 # ScalarDB Schema Loader
 
-ScalarDB has its own data model and schema, that maps to the implementation specific data model and schema.
-Also, it stores internal metadata (e.g., transaction ID, record version, transaction status) for managing transaction logs and statuses when you use the Consensus Commit transaction manager.
-It is a little hard for application developers to manage the schema mapping and metadata for transactions, so we offer a tool called ScalarDB Schema Loader for creating schema without requiring much knowledge about those.
+ScalarDB has its own data model and schema that maps to the implementation-specific data model and schema. In addition, ScalarDB stores internal metadata, such as transaction IDs, record versions, and transaction statuses, to manage transaction logs and statuses when you use the Consensus Commit transaction manager.
 
-There are two ways to specify general CLI options in Schema Loader:
-  - Pass a ScalarDB configuration file and database/storage-specific options additionally.
-  - Pass the options without a ScalarDB configuration (Deprecated).
+Since managing the schema mapping and metadata for transactions can be difficult, you can use ScalarDB Schema Loader, which is a tool to create schemas that doesn't require you to need in-depth knowledge about schema mapping or metadata.
 
-Note that this tool supports only basic options to create/delete/repair/alter a table. If you want
-to use the advanced features of a database, please alter your tables with a database specific tool after creating them with this tool.
+You have two options to specify general CLI options in Schema Loader:
 
-# Usage
+- Pass the ScalarDB properties file and database-specific or storage-specific options.
+- Pass database-specific or storage-specific options without the ScalarDB properties file. (Deprecated)
 
-## Install
+{% capture notice--info %}
+**Note**
 
-The release versions of `schema-loader` can be downloaded from [releases](https://github.com/scalar-labs/scalardb/releases) page of ScalarDB.
+This tool supports only basic options to create, delete, repair, or alter a table. If you want to use the advanced features of a database, you must alter your tables with a database-specific tool after creating the tables with this tool.
+{% endcapture %}
 
-## Build
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
-In case you want to build `schema-loader` from the source:
+## Set up Schema Loader
+
+Select your preferred method to set up Schema Loader, and follow the instructions.
+
+<div id="tabset-1">
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'Install', 'tabset-1')" id="defaultOpen-1">Install</button>
+  <button class="tablinks" onclick="openTab(event, 'Build', 'tabset-1')">Build</button>
+  <button class="tablinks" onclick="openTab(event, 'Docker', 'tabset-1')">Docker</button>
+</div>
+
+<div id="Install" class="tabcontent" markdown="1">
+
+You can download the release versions of Schema Loader from the [ScalarDB Releases](https://github.com/scalar-labs/scalardb/releases) page.
+</div>
+<div id="Build" class="tabcontent" markdown="1">
+
+If you want to build Schema Loader from the source, run the following command:
+
 ```console
 $ ./gradlew schema-loader:shadowJar
 ```
-- The built fat jar file is `schema-loader/build/libs/scalardb-schema-loader-<version>.jar`
 
-## Docker
+Running that command builds a fat JAR file named `scalardb-schema-loader-<VERSION>.jar` in the `schema-loader/build/libs` folder, with `<VERSION>` matching the version of ScalarDB that you are using.
+</div>
+<div id="Docker" class="tabcontent" markdown="1">
 
-You can pull the docker image from [Scalar's container registry](https://github.com/orgs/scalar-labs/packages/container/package/scalardb-schema-loader).
+You can pull the Docker image from the [Scalar container registry](https://github.com/orgs/scalar-labs/packages/container/package/scalardb-schema-loader) by running the following command, replacing the contents in the angle brackets as described:
+
 ```console
-docker run --rm -v <your_local_schema_file_path>:<schema_file_path_in_docker> [-v <your_local_config_file_path>:<config_file_path_in_docker>] ghcr.io/scalar-labs/scalardb-schema-loader:<version> <command_arguments>
+docker run --rm -v <PATH_TO_YOUR_LOCAL_SCHEMA_FILE>:<PATH_TO_SCHEMA_FILE_DOCKER> [-v <PATH_TO_YOUR_LOCAL_PROPERTIES_FILE>:<PATH_TO_PROPERTIES_FILE_IN_DOCKER>] ghcr.io/scalar-labs/scalardb-schema-loader:<VERSION> <COMMAND_ARGUMENTS>
 ```
-- Note that you can specify the same command arguments even if you use the fat jar or the container. The example commands in the next section are shown with a jar, but you can run the commands with the container in the same way by replacing `java -jar scalardb-schema-loader-<version>.jar` with `docker run --rm -v <your_local_schema_file_path>:<schema_file_path_in_docker> [-v <your_local_config_file_path>:<config_file_path_in_docker>] ghcr.io/scalar-labs/scalardb-schema-loader:<version>`.
 
-You can also build the docker image as follows.
+{% capture notice--info %}
+**Note**
+
+You can specify the same command arguments even if you use the fat JAR or the container. In the [Available commands](#available-commands) section, the JAR is used, but you can run the commands by using the container in the same way by replacing `java -jar scalardb-schema-loader-<VERSION>.jar` with `docker run --rm -v <PATH_TO_YOUR_LOCAL_SCHEMA_FILE>:<PATH_TO_SCHEMA_FILE_DOCKER> [-v <PATH_TO_YOUR_LOCAL_PROPERTIES_FILE>:<PATH_TO_PROPERTIES_FILE_IN_DOCKER>] ghcr.io/scalar-labs/scalardb-schema-loader:<VERSION>`.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
+You can also build the Docker image as follows by running the following command:
+
 ```console
 $ ./gradlew schema-loader:docker
 ```
+</div>
+</div>
 
-## Run
+## Run Schema Loader
+
+This section explains how to run Schema Loader.
 
 ### Available commands
 
-For using a config file:
+Select how you would like to configure Schema Loader for your database. The preferred method is to use the properties file since other, database-specific methods are deprecated.
+
+The following commands are available when using the properties file:
+
 ```console
-Usage: java -jar scalardb-schema-loader-<version>.jar [-D] [--coordinator]
+Usage: java -jar scalardb-schema-loader-<VERSION>.jar [-D] [--coordinator]
        [--no-backup] [--no-scaling] -c=<configPath>
        [--compaction-strategy=<compactionStrategy>] [-f=<schemaFile>]
        [--replication-factor=<replicaFactor>]
@@ -60,7 +93,7 @@ Create/Delete schemas in the storage defined in the config file
       --compaction-strategy=<compactionStrategy>
                       The compaction strategy, must be LCS, STCS or TWCS
                         (supported in Cassandra)
-      --coordinator   Create/delete/repair coordinator tables
+      --coordinator   Create/delete/repair Coordinator tables
   -D, --delete-all    Delete tables
   -f, --schema-file=<schemaFile>
                       Path to the schema json file
@@ -79,8 +112,9 @@ Create/Delete schemas in the storage defined in the config file
 ```
 
 For Cosmos DB for NoSQL (Deprecated. Please use the command using a config file instead):
+
 ```console
-Usage: java -jar scalardb-schema-loader-<version>.jar --cosmos [-D]
+Usage: java -jar scalardb-schema-loader-<VERSION>.jar --cosmos [-D]
        [--no-scaling] -f=<schemaFile> -h=<uri> -p=<key> [-r=<ru>]
 Create/Delete Cosmos DB schemas
   -A, --alter         Alter tables : it will add new columns and create/delete
@@ -101,8 +135,9 @@ Create/Delete Cosmos DB schemas
 ```
 
 For DynamoDB (Deprecated. Please use the command using a config file instead):
+
 ```console
-Usage: java -jar scalardb-schema-loader-<version>.jar --dynamo [-D]
+Usage: java -jar scalardb-schema-loader-<VERSION>.jar --dynamo [-D]
        [--no-backup] [--no-scaling] [--endpoint-override=<endpointOverride>]
        -f=<schemaFile> -p=<awsSecKey> [-r=<ru>] --region=<awsRegion>
        -u=<awsKeyId>
@@ -129,8 +164,9 @@ Create/Delete DynamoDB schemas
 ```
 
 For Cassandra (Deprecated. Please use the command using a config file instead):
+
 ```console
-Usage: java -jar scalardb-schema-loader-<version>.jar --cassandra [-D]
+Usage: java -jar scalardb-schema-loader-<VERSION>.jar --cassandra [-D]
        [-c=<compactionStrategy>] -f=<schemaFile> -h=<hostIp>
        [-n=<replicationStrategy>] [-p=<password>] [-P=<port>]
        [-R=<replicationFactor>] [-u=<user>]
@@ -160,8 +196,9 @@ Create/Delete Cassandra schemas
 ```
 
 For a JDBC database (Deprecated. Please use the command using a config file instead):
+
 ```console
-Usage: java -jar scalardb-schema-loader-<version>.jar --jdbc [-D]
+Usage: java -jar scalardb-schema-loader-<VERSION>.jar --jdbc [-D]
        -f=<schemaFile> -j=<url> -p=<password> -u=<user>
 Create/Delete JDBC schemas
   -A, --alter         Alter tables : it will add new columns and create/delete
@@ -182,31 +219,43 @@ Create/Delete JDBC schemas
 
 ### Create namespaces and tables
 
-For using a config file (Sample config file can be found [here](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties)):
+To create a namespace and tables by using a properties file, run the following command, replacing `<VERSION>` with the version of ScalarDB that you're using and `<PATH_TO_PROPERTIES_FILE>` with the path to the properties file. If `--coordinator` is specified, a Coordinator table will be created.
+
 ```console
-$ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json [--coordinator]
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f schema.json [--coordinator]
 ```
-  - if `--coordinator` is specified, the coordinator tables will be created.
+
+{% capture notice--info %}
+**Note**
+
+For a sample configuration, see [`database.properties`](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties).
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 For using CLI arguments fully for configuration (Deprecated. Please use the command using a config file instead):
+
 ```console
 # For Cosmos DB for NoSQL
-$ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f schema.json [-r BASE_RESOURCE_UNIT]
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f schema.json [-r BASE_RESOURCE_UNIT]
+
 ```
   - `<COSMOS_DB_FOR_NOSQL_KEY>` you can use a primary key or a secondary key.
   - `-r BASE_RESOURCE_UNIT` is an option. You can specify the RU of each database. The maximum RU in tables in the database will be set. If you don't specify RU of tables, the database RU will be set with this option. By default, it's 400.
 
 ```console
 # For DynamoDB
-$ java -jar scalardb-schema-loader-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json [-r BASE_RESOURCE_UNIT]
+$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json [-r BASE_RESOURCE_UNIT]
 ```
+
   - `<REGION>` should be a string to specify an AWS region like `ap-northeast-1`.
   - `-r` option is almost the same as Cosmos DB for NoSQL option. However, the unit means DynamoDB capacity unit. The read and write capacity units are set the same value.
 
 ```console
 # For Cassandra
-$ java -jar scalardb-schema-loader-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json [-n <NETWORK_STRATEGY>] [-R <REPLICATION_FACTOR>]
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json [-n <NETWORK_STRATEGY>] [-R <REPLICATION_FACTOR>]
 ```
+
   - If `-P <CASSANDRA_PORT>` is not supplied, it defaults to `9042`.
   - If `-u <CASSANDRA_USER>` is not supplied, it defaults to `cassandra`.
   - If `-p <CASSANDRA_PASSWORD>` is not supplied, it defaults to `cassandra`.
@@ -214,107 +263,140 @@ $ java -jar scalardb-schema-loader-<version>.jar --cassandra -h <CASSANDRA_IP> [
 
 ```console
 # For a JDBC database
-$ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json
+$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f schema.json
 ```
 
 ### Alter tables
 
-This command will add new columns and create/delete secondary index for existing tables. It compares
-the provided table schema to the existing schema to decide which columns need to be added and which
-indexes need to be created or deleted.
+You can use a command to add new columns to and create or delete a secondary index for existing tables. This command compares the provided table schema to the existing schema to decide which columns need to be added and which indexes need to be created or deleted.
 
-For using config file (Sample config file can be found [here](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties)):
+To add new colums to and create or delete a secondary index for existing tables, run the following command, replacing `<VERSION>` with the version of ScalarDB that you're using:
 
 ```console
-$ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json --alter
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f schema.json --alter
 ```
+
+{% capture notice--info %}
+**Note**
+
+For a sample configuration, see [`database.properties`](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties).
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 For using CLI arguments fully for configuration (Deprecated. Please use the command using a config
 file instead):
 
 ```console
 # For Cosmos DB for NoSQL
-$ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f schema.json --alter
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f schema.json --alter
 ```
 
 ```console
 # For DynamoDB
-$ java -jar scalardb-schema-loader-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json --alter
+$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json --alter
 ```
 
 ```console
 # For Cassandra
-$ java -jar scalardb-schema-loader-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json --alter
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json --alter
 ```
 
 ```console
 # For a JDBC database
-$ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json --alter
+$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f schema.json --alter
 ```
 
 ### Delete tables
 
-For using config file (Sample config file can be found [here](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties)):
+You can delete tables by using the properties file. To delete tables, run the following command, replacing `<VERSION>` with the version of ScalarDB that you're using:
+
 ```console
-$ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json [--coordinator] -D 
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f schema.json [--coordinator] -D 
 ```
-  - if `--coordinator` is specified, the coordinator tables will be deleted.
+
+{% capture notice--info %}
+**Note**
+
+- For a sample configuration, see [`database.properties`](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties).
+- If `--coordinator` is specified, the Coordinator table will be deleted as well.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
   
 For using CLI arguments fully for configuration (Deprecated. Please use the command using a config file instead):
+
 ```console
 # For Cosmos DB for NoSQL
-$ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f schema.json -D
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f schema.json -D
 ```
 
 ```console
 # For DynamoDB
-$ java -jar scalardb-schema-loader-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json -D
+$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json -D
 ```
 
 ```console
 # For Cassandra
-$ java -jar scalardb-schema-loader-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json -D
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json -D
 ```
 
 ```console
 # For a JDBC database
-$ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json -D
+$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f schema.json -D
 ```
 
 ### Repair tables
 
-This command will repair the table metadata of existing tables. When using Cosmos DB for NoSQL, it additionally repairs stored procedure attached to each table.
+You can repair the table metadata of existing tables by using the properties file. To repair table metadata of exisitng tables, run the following command, replacing `<VERSION>` with the version of ScalarDB that you're using:
 
-For using config file (Sample config file can be found [here](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties)):
 ```console
-$ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json [--coordinator] --repair-all 
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f schema.json [--coordinator] --repair-all 
 ```
-- if `--coordinator` is specified, the coordinator tables will be repaired as well.
+
+{% capture notice--info %}
+**Note**
+
+- For a sample configuration, see [`database.properties`](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties).
+- If `--coordinator` is specified, the Coordinator table will be repaired as well.
+- If you're using Cosmos DB for NoSQL, running this command will also repair stored procedures attached to each table.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 For using CLI arguments fully for configuration (Deprecated. Please use the command using a config file instead):
+
 ```console
 # For Cosmos DB for NoSQL
-$ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f schema.json --repair-all
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f schema.json --repair-all
 ```
 
 ```console
 # For DynamoDB
-$ java -jar scalardb-schema-loader-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> [--no-backup] -f schema.json --repair-all
+$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> [--no-backup] -f schema.json --repair-all
 ```
 
 ```console
 # For Cassandra
-$ java -jar scalardb-schema-loader-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json --repair-all
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json --repair-all
 ```
 
 ```console
 # For a JDBC database
-$ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json --repair-all
+$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f schema.json --repair-all
 ```
 
 ### Sample schema file
 
-The sample schema is as follows (Sample schema file can be found [here](https://github.com/scalar-labs/scalardb/blob/master/schema-loader/sample/schema_sample.json)):
+The following is a sample schema.
+
+{% capture notice--info %}
+**Note**
+
+For a sample schema file, see [`schema_sample.json`](https://github.com/scalar-labs/scalardb/blob/master/schema-loader/sample/schema_sample.json).
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 ```json
 {
@@ -379,14 +461,17 @@ The sample schema is as follows (Sample schema file can be found [here](https://
 ```
 
 The schema has table definitions that include `columns`, `partition-key`, `clustering-key`, `secondary-index`,  and `transaction` fields.
-The `columns` field defines columns of the table and their data types.
-The `partition-key` field defines which columns the partition key is composed of, and `clustering-key` defines which columns the clustering key is composed of.
-The `secondary-index` field defines which columns are indexed.
-The `transaction` field indicates whether the table is for transactions or not.
-If you set the `transaction` field to `true` or don't specify the `transaction` field, this tool creates a table with transaction metadata if needed.
-If not, it creates a table without any transaction metadata (that is, for a table with [Storage API](storage-abstraction.md)).
 
-You can also specify database/storage-specific options in the table definition as follows:
+- The `columns` field defines columns of the table and their data types.
+- The `partition-key` field defines which columns the partition key is composed of.
+- The `clustering-key` field defines which columns the clustering key is composed of.
+- The `secondary-index` field defines which columns are indexed.
+- The `transaction` field indicates whether the table is for transactions or not.
+  - If you set the `transaction` field to `true` or don't specify the `transaction` field, this tool creates a table with transaction metadata if needed.
+  - If you set the `transaction` field to `false`, this tool creates a table without any transaction metadata (that is, for a table with [Storage API](storage-abstraction.md)).
+
+You can also specify database or storage-specific options in the table definition as follows:
+
 ```json
 {
   "sample_db.sample_table3": {
@@ -404,30 +489,68 @@ You can also specify database/storage-specific options in the table definition a
 }
 ```
 
-The database/storage-specific options you can specify are as follows:
+The database or storage-specific options you can specify are as follows:
 
-For Cassandra:
-- `compaction-strategy`, a compaction strategy. It should be `STCS` (SizeTieredCompaction), `LCS` (LeveledCompactionStrategy) or `TWCS` (TimeWindowCompactionStrategy).
+<div id="tabset-2">
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'Cassandra', 'tabset-2')" id="defaultOpen-2">Cassandra</button>
+  <button class="tablinks" onclick="openTab(event, 'Cosmos DB for NoSQL', 'tabset-2')">Cosmos DB for NoSQL</button>
+  <button class="tablinks" onclick="openTab(event, 'DynamoDB', 'tabset-2')">DynamoDB</button>
+  <button class="tablinks" onclick="openTab(event, 'JDBC_databases', 'tabset-2')">JDBC databases</button>
+</div>
 
-For DynamoDB and Cosmos DB for NoSQL:
-- `ru`, a request unit. Please see [RU](#ru) for the details.
+<div id="Cassandra" class="tabcontent" markdown="1">
 
-## Scaling Performance
+The `compaction-strategy` option is the compaction strategy used. This option should be `STCS` (SizeTieredCompaction), `LCS` (LeveledCompactionStrategy), or `TWCS` (TimeWindowCompactionStrategy).
+</div>
+<div id="Cosmos DB for NoSQL" class="tabcontent" markdown="1">
 
-### RU
+The `ru` option stands for Request Units. For details, see [RUs](#rus).
+</div>
+<div id="DynamoDB" class="tabcontent" markdown="1">
 
-You can scale the throughput of Cosmos DB for NoSQL and DynamoDB by specifying `--ru` option (which applies to all the tables) or `ru` parameter for each table. The default values are `400` for Cosmos DB for NoSQL and `10` for DynamoDB respectively, which are set without `--ru` option.
+The `ru` option stands for Request Units. For details, see [RUs](#rus).
+</div>
+<div id="JDBC_databases" class="tabcontent" markdown="1">
 
-Note that the schema loader abstracts [Request Unit](https://docs.microsoft.com/azure/cosmos-db/request-units) of Cosmos DB for NoSQL and [Capacity Unit](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadWriteCapacityMode.html#HowItWorks.ProvisionedThroughput.Manual) of DynamoDB with `RU`.
-So, please set an appropriate value depending on the database implementations. Please also note that the schema loader sets the same value to both Read Capacity Unit and Write Capacity Unit for DynamoDB.
+No options are available for JDBC databases.
+</div>
+</div>
+
+## Scale for performance when using Cosmos DB for NoSQL or DynamoDB
+
+When using Cosmos DB for NoSQL or DynamoDB, you can scale by using Request Units (RUs) or auto-scaling.
+
+### RUs
+
+You can scale the throughput of Cosmos DB for NoSQL and DynamoDB by specifying the `--ru` option. When specifying this option, scaling applies to all tables or the `ru` parameter for each table.
+
+If the `--ru` option is not set, the default values will be `400` for Cosmos DB for NoSQL and `10` for DynamoDB.
+
+{% capture notice--info %}
+**Note**
+
+- Schema Loader abstracts [Request Units](https://docs.microsoft.com/azure/cosmos-db/request-units) for Cosmos DB for NoSQL and [Capacity Units](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadWriteCapacityMode.html#HowItWorks.ProvisionedThroughput.Manual) for DynamoDB with `RU`. Therefore, be sure to set an appropriate value depending on the database implementation.
+- Be aware that Schema Loader sets the same value to both read capacity unit and write capacity unit for DynamoDB.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 ### Auto-scaling
 
-By default, the schema loader enables auto-scaling of RU for all tables: RU is scaled in or out between 10% and 100% of a specified RU depending on a workload. For example, if you specify `-r 10000`, RU of each table is scaled in or out between 1000 and 10000. Note that auto-scaling of Cosmos DB for NoSQL is enabled only when you set more than or equal to 4000 RU.
+By default, Schema Loader enables auto-scaling of RUs for all tables: RUs scale between 10 percent and 100 percent of a specified RU depending on the workload. For example, if you specify `-r 10000`, the RUs of each table auto-scales between `1000` and `10000`.
 
-## Data type mapping between ScalarDB and the other databases
+{% capture notice--info %}
+**Note**
 
-Here are the supported data types in ScalarDB and their mapping to the data types of other databases.
+Auto-scaling for Cosmos DB for NoSQL is enabled only when this option is set to `4000` or more.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
+## Data-type mapping between ScalarDB and other databases
+
+The following table shows the supported data types in ScalarDB and their mapping to the data types of other databases.
 
 | ScalarDB  | Cassandra | Cosmos DB for NoSQL | DynamoDB | MySQL    | PostgreSQL       | Oracle         | SQL Server      | SQLite  |
 |-----------|-----------|---------------------|----------|----------|------------------|----------------|-----------------|---------|
@@ -439,48 +562,47 @@ Here are the supported data types in ScalarDB and their mapping to the data type
 | TEXT      | text      | string (JSON)       | S        | longtext | text             | varchar2(4000) | varchar(8000)   | text    |
 | BLOB      | blob      | string (JSON)       | B        | longblob | bytea            | RAW(2000)      | varbinary(8000) | blob    |
 
-However, the following types in JDBC databases are converted differently when they are used as a primary key or a secondary index key due to the limitations of RDB data types.
+However, the following data types in JDBC databases are converted differently when they are used as a primary key or a secondary index key. This is due to the limitations of RDB data types.
 
 | ScalarDB | MySQL         | PostgreSQL        | Oracle       |
 |----------|---------------|-------------------|--------------|
 | TEXT     | VARCHAR(64)   | VARCHAR(10485760) | VARCHAR2(64) |
 | BLOB     | VARBINARY(64) |                   | RAW(64)      |
 
-The value range of `BIGINT` in ScalarDB is from -2^53 to 2^53 regardless of the underlying database.
+The value range of `BIGINT` in ScalarDB is from -2^53 to 2^53, regardless of the underlying database.
 
-If this data type mapping doesn't match your application, please alter the tables to change the data types after creating them with this tool.
+If this data-type mapping doesn't match your application, please alter the tables to change the data types after creating them by using this tool.
 
 ## Internal metadata for Consensus Commit
 
-The Consensus Commit transaction manager manages metadata (e.g., transaction ID, record version, transaction status) stored along with the actual records to handle transactions properly.
-Thus, along with any required columns by the application, additional columns for the metadata need to be defined in the schema.
-Additionaly, this tool creates a table with the metadata when you use the Consensus Commit transaction manager.
+The Consensus Commit transaction manager manages metadata (for example, transaction ID, record version, and transaction status) stored along with the actual records to handle transactions properly.
 
-## Using Schema Loader in your program
-You can check the version of `schema-loader` from [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb-schema-loader).
-For example in Gradle, you can add the following dependency to your build.gradle. Please replace the `<version>` with the version you want to use.
+Thus, along with any columns that the application requires, additional columns for the metadata need to be defined in the schema. Additionally, this tool creates a table with the metadata if you use the Consensus Commit transaction manager.
+
+## Use Schema Loader in your application
+
+You can check the version of Schema Loader from the [Maven Central Repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb-schema-loader). For example in Gradle, you can add the following dependency to your `build.gradle` file, replacing `<VERSION>` with the version of Schema Loader that you want to use:
+
 ```gradle
 dependencies {
-    implementation 'com.scalar-labs:scalardb-schema-loader:<version>'
+    implementation 'com.scalar-labs:scalardb-schema-loader:<VERSION>'
 }
 ```
 
-### Create, alter, repair and delete
+### Create, alter, repair, or delete tables
 
-You can create, alter, delete and repair tables that are defined in the schema using SchemaLoader by
-simply passing ScalarDB configuration file, schema, and additional options if needed as shown
-below.
+You can create, alter, delete, or repair tables that are defined in the schema by using Schema Loader. To do this, you can pass a ScalarDB properties file, schema, and additional options, if needed, as shown below:
 
 ```java
 public class SchemaLoaderSample {
   public static int main(String... args) throws SchemaLoaderException {
     Path configFilePath = Paths.get("database.properties");
-    // "sample_schema.json" and "altered_sample_schema.json" can be found in the "/sample" directory
+    // "sample_schema.json" and "altered_sample_schema.json" can be found in the "/sample" directory.
     Path schemaFilePath = Paths.get("sample_schema.json");
     Path alteredSchemaFilePath = Paths.get("altered_sample_schema.json");
-    boolean createCoordinatorTables = true; // whether to create the coordinator tables or not
-    boolean deleteCoordinatorTables = true; // whether to delete the coordinator tables or not
-    boolean repairCoordinatorTables = true; // whether to repair the coordinator tables or not
+    boolean createCoordinatorTables = true; // whether to create the Coordinator table or not
+    boolean deleteCoordinatorTables = true; // whether to delete the Coordinator table or not
+    boolean repairCoordinatorTables = true; // whether to repair the Coordinator table or not
 
     Map<String, String> tableCreationOptions = new HashMap<>();
 
@@ -499,16 +621,16 @@ public class SchemaLoaderSample {
     Map<String, String> tableReparationOptions = new HashMap<>();
     indexCreationOptions.put(DynamoAdmin.NO_BACKUP, "true");
 
-    // Create tables
+    // Create tables.
     SchemaLoader.load(configFilePath, schemaFilePath, tableCreationOptions, createCoordinatorTables);
 
-    // Alter tables 
+    // Alter tables.
     SchemaLoader.alterTables(configFilePath, alteredSchemaFilePath, indexCreationOptions);
 
-    // Repair tables
+    // Repair tables.
     SchemaLoader.repairTables(configFilePath, schemaFilePath, tableReparationOptions, repairCoordinatorTables);
 
-    // Delete tables
+    // Delete tables.
     SchemaLoader.unload(configFilePath, schemaFilePath, deleteCoordinatorTables);
 
     return 0;
@@ -516,33 +638,34 @@ public class SchemaLoaderSample {
 }
 ```
 
-You can also create, delete or repair a schema by passing a serialized schema JSON string (the raw text of a schema file).
+You can also create, delete, or repair a schema by passing a serialized-schema JSON string (the raw text of a schema file) as shown below:
+
 ```java
-// Create tables
+// Create tables.
 SchemaLoader.load(configFilePath, serializedSchemaJson, tableCreationOptions, createCoordinatorTables);
 
-// Alter tables 
+// Alter tables.
 SchemaLoader.alterTables(configFilePath, serializedAlteredSchemaFilePath, indexCreationOptions);
 
-// Repair tables
+// Repair tables.
 SchemaLoader.repairTables(configFilePath, serializedSchemaJson, tableReparationOptions, repairCoordinatorTables);
 
-// Delete tables
+// Delete tables.
 SchemaLoader.unload(configFilePath, serializedSchemaJson, deleteCoordinatorTables);
 ```
 
-For ScalarDB configuration, a `Properties` object can be used as well.
+When configuring ScalarDB, you can use a `Properties` object as well, as shown below:
 
 ```java
-// Create tables
+// Create tables.
 SchemaLoader.load(properties, serializedSchemaJson, tableCreationOptions, createCoordinatorTables);
 
-// Alter tables
+// Alter tables.
 SchemaLoader.alterTables(properties, serializedAlteredSchemaFilePath, indexCreationOptions);
 
-// Repair tables
+// Repair tables.
 SchemaLoader.repairTables(properties, serializedSchemaJson, tableReparationOptions, repairCoordinatorTables);
 
-// Delete tables
+// Delete tables.
 SchemaLoader.unload(properties, serializedSchemaJson, deleteCoordinatorTables);
 ```
