@@ -35,7 +35,7 @@ The electronic money application is simplified for this example and isn’t suit
 
 ### ScalarDB configuration
 
-Before you should configure ScalarDB in the same way mentioned in [Getting Started with ScalarDB](getting-started-with-scalardb.md).
+Before you begin, you should configure ScalarDB in the same way mentioned in [Getting Started with ScalarDB](getting-started-with-scalardb.md).
 
 With that in mind, this Storage API example assumes that the configuration file `scalardb.properties` exists.
 
