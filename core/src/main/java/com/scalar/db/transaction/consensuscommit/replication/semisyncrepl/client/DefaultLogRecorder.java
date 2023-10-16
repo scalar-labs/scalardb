@@ -219,13 +219,19 @@ public class DefaultLogRecorder implements LogRecorder {
     Instant now = Instant.now();
 
     if (groupCommitter != null) {
+      logger.info("Wait start(thread_id:{})", Thread.currentThread().getId());
       CountDownLatch countDownLatch =
           groupCommitter.addValue(
               candidatePartitionId,
               partitionId ->
                   new Transaction(partitionId, now, now, composer.transactionId(), writtenTuples));
+      logger.info("Wait enqueued(thread_id:{})", Thread.currentThread().getId());
       try {
         countDownLatch.await();
+        logger.info(
+            "Wait end(thread_id:{}): {} ms",
+            Thread.currentThread().getId(),
+            System.currentTimeMillis() - now.toEpochMilli());
       } catch (InterruptedException e) {
         throw new RuntimeException(
             String.format(
@@ -234,8 +240,13 @@ public class DefaultLogRecorder implements LogRecorder {
             e);
       }
     } else {
+      logger.info("Add start(thread_id:{})", Thread.currentThread().getId());
       replicationTransactionRepository.add(
           new Transaction(candidatePartitionId, now, now, composer.transactionId(), writtenTuples));
+      logger.info(
+          "Add end(thread_id:{}): {} ms",
+          Thread.currentThread().getId(),
+          System.currentTimeMillis() - now.toEpochMilli());
     }
   }
 
