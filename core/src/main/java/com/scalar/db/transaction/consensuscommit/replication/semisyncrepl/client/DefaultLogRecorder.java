@@ -22,7 +22,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -220,24 +220,29 @@ public class DefaultLogRecorder implements LogRecorder {
 
     if (groupCommitter != null) {
       logger.info("Wait start(thread_id:{})", Thread.currentThread().getId());
-      CountDownLatch countDownLatch =
-          groupCommitter.addValue(
-              candidatePartitionId,
-              partitionId ->
-                  new Transaction(partitionId, now, now, composer.transactionId(), writtenTuples));
+      CompletableFuture<Void> future = new CompletableFuture<>();
+      groupCommitter.addValue(
+          candidatePartitionId,
+          partitionId ->
+              new Transaction(partitionId, now, now, composer.transactionId(), writtenTuples),
+          future);
       logger.info("Wait enqueued(thread_id:{})", Thread.currentThread().getId());
       try {
-        countDownLatch.await();
+        future.get();
         logger.info(
             "Wait end(thread_id:{}): {} ms",
             Thread.currentThread().getId(),
             System.currentTimeMillis() - now.toEpochMilli());
       } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(
             String.format(
                 "Interrupted when waiting response from GroupCommitter. transactionId:%s",
                 composer.transactionId()),
             e);
+      } catch (java.util.concurrent.ExecutionException e) {
+        throw new RuntimeException(
+            "Group commit failed. transactionId:" + composer.transactionId(), e);
       }
     } else {
       logger.info("Add start(thread_id:{})", Thread.currentThread().getId());
