@@ -86,7 +86,7 @@ In addition, you should pause for a sufficient amount of time (for example, five
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
-To make ScalarDB drain outstanding requests and stop accepting new requests so that a pause duration can be created, you should implement the [Scalar Admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application that uses ScalarDB or use ScalarDB Cluster (PAYG or BYOL license required), which uses the Scalar Admin interface.
+To make ScalarDB drain outstanding requests and stop accepting new requests so that a pause duration can be created, you should implement the [Scalar Admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application that uses ScalarDB or use [ScalarDB Cluster (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/), which uses the Scalar Admin interface.
 
 By using the [Scalar Admin client tool](https://github.com/scalar-labs/scalar-admin/tree/main/java#scalar-admin-client-tool), you can pause nodes, servers, or applications that implement the Scalar Admin interface without losing ongoing transactions.
 
