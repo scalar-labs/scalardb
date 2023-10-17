@@ -755,6 +755,28 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void repairNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    if (!rdbEngine.isValidNamespaceOrTableName(namespace)) {
+      throw new ExecutionException("The schema name is not acceptable: " + namespace);
+    }
+    try (Connection connection = dataSource.getConnection()) {
+      createSchemaIfNotExists(connection, namespace);
+      createNamespacesTableIfNotExists(connection);
+      try {
+        insertIntoNamespacesTable(connection, namespace);
+      } catch (SQLException e) {
+        // ignore if the schema already exists
+        if (!rdbEngine.isDuplicateKeyError(e)) {
+          throw e;
+        }
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException(String.format("Repairing the %s schema failed", namespace), e);
+    }
+  }
+
+  @Override
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
@@ -924,28 +946,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         return Collections.emptySet();
       }
       throw new ExecutionException("Getting the existing schema names failed", e);
-    }
-  }
-
-  @Override
-  public void repairNamespace(String namespace, Map<String, String> options)
-      throws ExecutionException {
-    if (!rdbEngine.isValidNamespaceOrTableName(namespace)) {
-      throw new ExecutionException("The schema name is not acceptable: " + namespace);
-    }
-    try (Connection connection = dataSource.getConnection()) {
-      createSchemaIfNotExists(connection, namespace);
-      createNamespacesTableIfNotExists(connection);
-      try {
-        insertIntoNamespacesTable(connection, namespace);
-      } catch (SQLException e) {
-        // ignore if the schema already exists
-        if (!rdbEngine.isDuplicateKeyError(e)) {
-          throw e;
-        }
-      }
-    } catch (SQLException e) {
-      throw new ExecutionException(String.format("Repairing the %s schema failed", namespace), e);
     }
   }
 

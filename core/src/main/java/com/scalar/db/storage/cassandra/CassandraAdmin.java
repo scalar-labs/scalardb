@@ -336,6 +336,19 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void repairNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    try {
+      createKeyspace(namespace, options, true);
+      createKeyspace(metadataKeyspace, options, true);
+      createNamespacesTableIfNotExists();
+      upsertIntoNamespacesTable(namespace);
+    } catch (RuntimeException e) {
+      throw new ExecutionException(String.format("Repairing the %s keyspace failed", namespace), e);
+    }
+  }
+
+  @Override
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
@@ -390,19 +403,6 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       return keyspaceNames;
     } catch (RuntimeException e) {
       throw new ExecutionException("Retrieving the existing keyspace names failed", e);
-    }
-  }
-
-  @Override
-  public void repairNamespace(String namespace, Map<String, String> options)
-      throws ExecutionException {
-    try {
-      createKeyspace(namespace, options, true);
-      createKeyspace(metadataKeyspace, options, true);
-      createNamespacesTableIfNotExists();
-      upsertIntoNamespacesTable(namespace);
-    } catch (RuntimeException e) {
-      throw new ExecutionException(String.format("Repairing the %s keyspace failed", namespace), e);
     }
   }
 

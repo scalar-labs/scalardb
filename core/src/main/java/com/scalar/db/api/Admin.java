@@ -361,6 +361,15 @@ public interface Admin {
   }
 
   /**
+   * Repair a namespace which may be in an unknown state.
+   *
+   * @param namespace an existing namespace
+   * @param options options to repair
+   * @throws ExecutionException if the operation fails
+   */
+  void repairNamespace(String namespace, Map<String, String> options) throws ExecutionException;
+
+  /**
    * Repair a table which may be in an unknown state.
    *
    * @param namespace an existing namespace
@@ -422,13 +431,4 @@ public interface Admin {
    * @throws ExecutionException if the operation fails
    */
   Set<String> getNamespaceNames() throws ExecutionException;
-
-  /**
-   * Repair a namespace which may be in an unknown state.
-   *
-   * @param namespace an existing namespace
-   * @param options options to repair
-   * @throws ExecutionException if the operation fails
-   */
-  void repairNamespace(String namespace, Map<String, String> options) throws ExecutionException;
 }

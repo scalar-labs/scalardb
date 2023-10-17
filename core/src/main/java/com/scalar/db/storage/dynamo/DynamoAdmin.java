@@ -1264,6 +1264,19 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void repairNamespace(String nonPrefixedNamespace, Map<String, String> options)
+      throws ExecutionException {
+    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
+    try {
+      boolean noBackup = Boolean.parseBoolean(options.getOrDefault(NO_BACKUP, DEFAULT_NO_BACKUP));
+      createNamespacesTableIfNotExists(noBackup);
+      upsertIntoNamespacesTable(namespace);
+    } catch (ExecutionException e) {
+      throw new ExecutionException("Repairing the " + namespace + " namespace failed", e);
+    }
+  }
+
+  @Override
   public void repairTable(
       String nonPrefixedNamespace,
       String table,
@@ -1382,19 +1395,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
     if (!noBackup) {
       enableContinuousBackup(Namespace.of(metadataNamespace), NAMESPACES_TABLE);
-    }
-  }
-
-  @Override
-  public void repairNamespace(String nonPrefixedNamespace, Map<String, String> options)
-      throws ExecutionException {
-    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
-    try {
-      boolean noBackup = Boolean.parseBoolean(options.getOrDefault(NO_BACKUP, DEFAULT_NO_BACKUP));
-      createNamespacesTableIfNotExists(noBackup);
-      upsertIntoNamespacesTable(namespace);
-    } catch (ExecutionException e) {
-      throw new ExecutionException("Repairing the " + namespace + " namespace failed", e);
     }
   }
 

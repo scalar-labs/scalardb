@@ -24,9 +24,9 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
   // for Cassandra
   private final ClusterManager clusterManager;
   // for JDBC
-  private final JdbcConfig jdbcConfig;
   private final String jdbcMetadataSchema;
   private final RdbEngineStrategy rdbEngine;
+  private final BasicDataSource dataSource;
 
   public MultiStorageAdminTestUtils(Properties cassandraProperties, Properties jdbcProperties) {
     // Cassandra has the coordinator tables
@@ -34,9 +34,10 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     clusterManager = new ClusterManager(new DatabaseConfig(cassandraProperties));
 
     // for JDBC
-    jdbcConfig = new JdbcConfig(new DatabaseConfig(jdbcProperties));
+    JdbcConfig jdbcConfig = new JdbcConfig(new DatabaseConfig(jdbcProperties));
     jdbcMetadataSchema = jdbcConfig.getMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
     rdbEngine = RdbEngineFactory.create(jdbcConfig);
+    dataSource = JdbcUtils.initDataSourceForAdmin(jdbcConfig, rdbEngine);
   }
 
   @Override
@@ -96,8 +97,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
   }
 
   private void execute(String sql) throws SQLException {
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(jdbcConfig, rdbEngine);
-        Connection connection = dataSource.getConnection();
+    try (Connection connection = dataSource.getConnection();
         Statement stmt = connection.createStatement()) {
       stmt.execute(sql);
     }
@@ -123,8 +123,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
   private boolean tableExistsOnJdbc(String namespace, String table) throws Exception {
     String fullTableName = rdbEngine.encloseFullTableName(namespace, table);
     String sql = rdbEngine.tableExistsInternalTableCheckSql(fullTableName);
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(jdbcConfig, rdbEngine);
-        Connection connection = dataSource.getConnection();
+    try (Connection connection = dataSource.getConnection();
         Statement statement = connection.createStatement()) {
       statement.execute(sql);
       return true;
@@ -169,7 +168,8 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
-  public void close() {
+  public void close() throws SQLException {
     clusterManager.close();
+    dataSource.close();
   }
 }

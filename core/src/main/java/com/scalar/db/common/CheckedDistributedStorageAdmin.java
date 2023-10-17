@@ -224,6 +224,16 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void repairNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    try {
+      admin.repairNamespace(namespace, options);
+    } catch (ExecutionException e) {
+      throw new ExecutionException("Repairing the namespace failed: " + namespace, e);
+    }
+  }
+
+  @Override
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
@@ -314,16 +324,6 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
           "Adding the raw column to the table failed: "
               + ScalarDbUtils.getFullTableName(namespace, table),
           e);
-    }
-  }
-
-  @Override
-  public void repairNamespace(String namespace, Map<String, String> options)
-      throws ExecutionException {
-    try {
-      admin.repairNamespace(namespace, options);
-    } catch (ExecutionException e) {
-      throw new ExecutionException("Repairing the namespace failed: " + namespace, e);
     }
   }
 

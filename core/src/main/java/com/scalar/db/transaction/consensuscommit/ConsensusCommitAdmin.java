@@ -167,6 +167,12 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
+  public void repairNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    admin.repairNamespace(namespace, options);
+  }
+
+  @Override
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
@@ -227,12 +233,6 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     // add ScalarDB metadata
     admin.repairTable(
         namespace, table, buildTransactionTableMetadata(tableMetadata), ImmutableMap.of());
-  }
-
-  @Override
-  public void repairNamespace(String namespace, Map<String, String> options)
-      throws ExecutionException {
-    admin.repairNamespace(namespace, options);
   }
 
   @Override

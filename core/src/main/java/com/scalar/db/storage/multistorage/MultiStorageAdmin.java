@@ -176,6 +176,12 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void repairNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    getAdmin(namespace).repairNamespace(namespace, options);
+  }
+
+  @Override
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
@@ -247,12 +253,6 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
     }
 
     return namespaceNames;
-  }
-
-  @Override
-  public void repairNamespace(String namespace, Map<String, String> options)
-      throws ExecutionException {
-    getAdmin(namespace).repairNamespace(namespace, options);
   }
 
   private DistributedStorageAdmin getAdmin(String namespace) {
