@@ -151,6 +151,10 @@ ScalarDB supports using multiple storage implementations simultaneously. You can
 
 For details about using multiple storages, see [Multi-Storage Transactions](multi-storage-transactions.md).
 
+## ScalarDB Cluster configurations
+
+For details about how to configure ScalarDB Cluster, see [ScalarDB Cluster Configurations (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/scalardb-cluster-configurations/).
+
 ## Other ScalarDB configurations
 
 The following are additional configurations available for ScalarDB:
