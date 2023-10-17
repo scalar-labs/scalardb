@@ -153,7 +153,7 @@ For details about using multiple storages, see [Multi-Storage Transactions](mult
 
 ### Use Consensus Commit through ScalarDB Cluster
 
-[ScalarDB Cluster (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/) is a server that provides a gRPC interface to ScalarDB. To interact with ScalarDB Cluster, you must add the following to the ScalarDB properties file:
+[ScalarDB Cluster (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/) is a component that provides a gRPC interface to ScalarDB.
 
 For configurations available for the gRPC transaction manager for ScalarDB Cluster, see the ScalarDB Cluster [client configurations (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/developer-guide-for-scalardb-cluster-with-java-api/#client-configurations).
 
