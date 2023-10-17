@@ -310,27 +310,6 @@ Map<String, String> options = ...;
 admin.createIndex("ns", "tbl", "c5", options);
 ```
 
-#### Add a new column to a table
-
-You can add a new, non-partition key column to a table as follows:
-
-```java
-// Add a new column "c6" with the INT data type to the table "ns.tbl".
-admin.addNewColumnToTable("ns", "tbl", "c6", DataType.INT)
-```
-
-{% capture notice--warning %}
-**Attention**
-
-You should carefully consider adding a new column to a table because the execution time may vary greatly depending on the underlying storage. Please plan accordingly and consider the following, especially if the database runs in production:
-
-- **For Cosmos DB for NoSQL and DynamoDB:** Adding a column is almost instantaneous as the table schema is not modified. Only the table metadata stored in a separate table is updated.
-- **For Cassandra:** Adding a column will only update the schema metadata and will not modify the existing schema records. The cluster topology is the main factor for the execution time. Changes to the schema metadata are shared to each cluster node via a gossip protocol. Because of this, the larger the cluster, the longer it will take for all nodes to be updated.
-- **For relational databases (MySQL, Oracle, etc.):** Adding a column shouldn't take a long time to execute.
-{% endcapture %}
-
-<div class="notice--warning">{{ notice--warning | markdownify }}</div>
-
 #### Truncate a table
 
 You can truncate a table as follows:
