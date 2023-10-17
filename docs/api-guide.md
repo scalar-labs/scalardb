@@ -654,14 +654,6 @@ You can't specify clustering-key boundaries and orderings in `Scan` without spec
 
 `Put` is an operation to put a record specified by a primary key. The operation behaves as an upsert operation for a record, in which the operation updates the record if the record exists or inserts the record if the record does not exist.
 
-{% capture notice--info %}
-**Note**
-
-When you update an existing record, you need to read the record by using `Get` or `Scan` before using a `Put` operation.
-{% endcapture %}
-
-<div class="notice--info">{{ notice--info | markdownify }}</div>
-
 You need to create a `Put` object first, and then you can execute the object by using the `transaction.put()` method as follows:
 
 ```java
@@ -697,17 +689,28 @@ Put put =
         .build();
 ```
 
+##### Blind `Put` operation
+
+If you're certain that a record you're trying to write doesn't exist, you can use a blind `Put` operation for better performance. A blind `Put` is faster than a regular `Put` as it doesn't read the record beforehand. However, if the record does exist, the operation will fail due to a conflict.
+
+You can use a blind `Put` operation by specifying `blind()` in the `Put` operation builder as follows:
+
+```java
+Put put =
+    Put.newBuilder()
+        .namespace("ns")
+        .table("tbl")
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .floatValue("c4", 1.23F)
+        .doubleValue("c5", 4.56)
+        .blind()
+        .build();
+```
+
 #### `Delete` operation
 
 `Delete` is an operation to delete a record specified by a primary key.
-
-{% capture notice--info %}
-**Note**
-
-When you delete a record, you need to read the record by using `Get` or `Scan` before using a `Delete` operation.
-{% endcapture %}
-
-<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 You need to create a `Delete` object first, and then you can execute the object by using the `transaction.delete()` method as follows:
 

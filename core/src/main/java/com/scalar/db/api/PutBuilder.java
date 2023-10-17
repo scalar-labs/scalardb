@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.scalar.db.api.OperationBuilder.Blind;
 import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
 import com.scalar.db.api.OperationBuilder.ClearCondition;
 import com.scalar.db.api.OperationBuilder.ClearNamespace;
@@ -76,11 +77,13 @@ public class PutBuilder {
       implements ClusteringKey<Buildable>,
           Consistency<Buildable>,
           Condition<Buildable>,
-          Values<Buildable> {
+          Values<Buildable>,
+          Blind<Buildable> {
     final Map<String, Column<?>> columns = new LinkedHashMap<>();
     @Nullable Key clusteringKey;
     @Nullable com.scalar.db.api.Consistency consistency;
     @Nullable MutationCondition condition;
+    boolean blind;
 
     private Buildable(@Nullable String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
@@ -200,6 +203,18 @@ public class PutBuilder {
     }
 
     @Override
+    public Buildable blind() {
+      blind = true;
+      return this;
+    }
+
+    @Override
+    public Buildable blind(boolean blind) {
+      this.blind = blind;
+      return this;
+    }
+
+    @Override
     public Put build() {
       Put put = new Put(partitionKey, clusteringKey);
       put.forNamespace(namespaceName).forTable(tableName);
@@ -210,6 +225,7 @@ public class PutBuilder {
       if (condition != null) {
         put.withCondition(condition);
       }
+      put.setBlind(blind);
 
       return put;
     }
@@ -237,6 +253,7 @@ public class PutBuilder {
       this.columns.putAll(put.getColumns());
       this.consistency = put.getConsistency();
       this.condition = put.getCondition().orElse(null);
+      this.blind = put.isBlind();
     }
 
     @Override
@@ -389,6 +406,18 @@ public class PutBuilder {
     @Override
     public BuildableFromExisting clearNamespace() {
       this.namespaceName = null;
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting blind(boolean blind) {
+      super.blind(blind);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting blind() {
+      super.blind();
       return this;
     }
   }

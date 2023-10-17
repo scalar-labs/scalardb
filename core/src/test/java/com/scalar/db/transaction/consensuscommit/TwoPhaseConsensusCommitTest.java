@@ -17,7 +17,9 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -216,7 +218,8 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void prepare_ProcessedCrudGiven_ShouldPrepareWithSnapshot() throws PreparationException {
+  public void prepare_ProcessedCrudGiven_ShouldPrepareWithSnapshot()
+      throws PreparationException, CrudException {
     // Arrange
     when(crud.getSnapshot()).thenReturn(snapshot);
 
@@ -224,7 +227,34 @@ public class TwoPhaseConsensusCommitTest {
     transaction.prepare();
 
     // Assert
+    verify(crud).fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread();
     verify(commit).prepare(snapshot);
+  }
+
+  @Test
+  public void
+      prepare_ProcessedCrudGiven_CrudConflictExceptionThrownWhileFillingReadSet_ShouldThrowPreparationConflictException()
+          throws CrudException {
+    // Arrange
+    when(crud.getSnapshot()).thenReturn(snapshot);
+    doThrow(CrudConflictException.class)
+        .when(crud)
+        .fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread();
+
+    // Act Assert
+    assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationConflictException.class);
+  }
+
+  @Test
+  public void
+      prepare_ProcessedCrudGiven_CrudExceptionThrownWhileFillingReadSet_ShouldThrowPreparationException()
+          throws CrudException {
+    // Arrange
+    when(crud.getSnapshot()).thenReturn(snapshot);
+    doThrow(CrudException.class).when(crud).fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread();
+
+    // Act Assert
+    assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationException.class);
   }
 
   @Test

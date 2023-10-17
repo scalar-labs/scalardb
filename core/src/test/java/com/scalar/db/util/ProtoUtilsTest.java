@@ -651,6 +651,7 @@ public class ProtoUtilsTest {
                     .and(ConditionBuilder.column("col7").isNotNullBlob())
                     .build())
             .consistency(Consistency.EVENTUAL)
+            .blind()
             .build();
 
     // Act
@@ -790,6 +791,7 @@ public class ProtoUtilsTest {
                                 .build())
                         .build())
                 .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_EVENTUAL)
+                .setBlind(true)
                 .setNamespace("ns")
                 .setTable("tbl")
                 .build());
@@ -909,6 +911,7 @@ public class ProtoUtilsTest {
                             .build())
                     .build())
             .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_EVENTUAL)
+            .setBlind(true)
             .setNamespace("ns")
             .setTable("tbl")
             .build();
@@ -942,6 +945,7 @@ public class ProtoUtilsTest {
                         .and(ConditionBuilder.column("col7").isNotNullBlob())
                         .build())
                 .consistency(Consistency.EVENTUAL)
+                .blind()
                 .build());
   }
 
@@ -1012,6 +1016,7 @@ public class ProtoUtilsTest {
                         .setType(com.scalar.db.rpc.MutateCondition.Type.PUT_IF_NOT_EXISTS))
                 .setNamespace("ns")
                 .setTable("tbl")
+                .setBlind(false)
                 .build());
   }
 

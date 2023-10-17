@@ -39,6 +39,8 @@ public class Put extends Mutation {
 
   private final Map<String, Column<?>> columns;
 
+  private boolean blind;
+
   /**
    * Constructs a {@code Put} with the specified partition {@link Key}.
    *
@@ -80,6 +82,7 @@ public class Put extends Mutation {
   public Put(Put put) {
     super(put);
     columns = new LinkedHashMap<>(put.columns);
+    blind = put.blind;
   }
 
   /**
@@ -705,6 +708,7 @@ public class Put extends Mutation {
       throw new IllegalArgumentException(name + " doesn't exist");
     }
   }
+
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
@@ -751,6 +755,25 @@ public class Put extends Mutation {
   }
 
   /**
+   * Returns whether this Put is a blind write.
+   *
+   * @return whether this Put is a blind write
+   */
+  public boolean isBlind() {
+    return blind;
+  }
+
+  /**
+   * Sets whether this Put is a blind write.
+   *
+   * @param blind whether this Put is a blind write
+   */
+  Put setBlind(boolean blind) {
+    this.blind = blind;
+    return this;
+  }
+
+  /**
    * Indicates whether some other object is "equal to" this object. The other object is considered
    * equal if:
    *
@@ -775,12 +798,12 @@ public class Put extends Mutation {
       return false;
     }
     Put other = (Put) o;
-    return columns.equals(other.columns);
+    return columns.equals(other.columns) && blind == other.blind;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), columns);
+    return Objects.hash(super.hashCode(), columns, blind);
   }
 
   @Override
@@ -793,6 +816,7 @@ public class Put extends Mutation {
         .add("columns", getColumns())
         .add("consistency", getConsistency())
         .add("condition", getCondition())
+        .add("blind", isBlind())
         .toString();
   }
 }

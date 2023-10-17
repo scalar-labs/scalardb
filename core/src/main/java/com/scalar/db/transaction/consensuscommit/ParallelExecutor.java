@@ -4,6 +4,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
@@ -23,7 +24,7 @@ public class ParallelExecutor {
 
   @FunctionalInterface
   public interface ParallelExecutorTask {
-    void run() throws ExecutionException, ValidationConflictException;
+    void run() throws ExecutionException, ValidationConflictException, CrudException;
   }
 
   private final ConsensusCommitConfig config;
@@ -34,7 +35,8 @@ public class ParallelExecutor {
     if (config.isParallelPreparationEnabled()
         || config.isParallelValidationEnabled()
         || config.isParallelCommitEnabled()
-        || config.isParallelRollbackEnabled()) {
+        || config.isParallelRollbackEnabled()
+        || config.isParallelFillReadSetEnabled()) {
       parallelExecutorService =
           Executors.newFixedThreadPool(
               config.getParallelExecutorCount(),
@@ -76,16 +78,22 @@ public class ParallelExecutor {
           stopOnError,
           "preparation",
           transactionId);
-    } catch (ValidationConflictException e) {
+    } catch (ValidationConflictException | CrudException e) {
       throw new AssertionError(
-          "Tasks for preparation should not throw ValidationConflictException", e);
+          "Tasks for preparing a transaction should not throw ValidationConflictException and CrudException",
+          e);
     }
   }
 
   public void validate(List<ParallelExecutorTask> tasks, String transactionId)
       throws ExecutionException, ValidationConflictException {
-    executeTasks(
-        tasks, config.isParallelValidationEnabled(), false, true, "validation", transactionId);
+    try {
+      executeTasks(
+          tasks, config.isParallelValidationEnabled(), false, true, "validation", transactionId);
+    } catch (CrudException e) {
+      throw new AssertionError(
+          "Tasks for validating a transaction should not throw CrudException", e);
+    }
   }
 
   public void commitRecords(List<ParallelExecutorTask> tasks, String transactionId)
@@ -98,8 +106,10 @@ public class ParallelExecutor {
           false,
           "commitRecords",
           transactionId);
-    } catch (ValidationConflictException e) {
-      throw new AssertionError("Tasks for commit should not throw ValidationConflictException", e);
+    } catch (ValidationConflictException | CrudException e) {
+      throw new AssertionError(
+          "Tasks for committing a transaction should not throw ValidationConflictException and CrudException",
+          e);
     }
   }
 
@@ -113,9 +123,27 @@ public class ParallelExecutor {
           false,
           "rollbackRecords",
           transactionId);
-    } catch (ValidationConflictException e) {
+    } catch (ValidationConflictException | CrudException e) {
       throw new AssertionError(
-          "Tasks for rollback should not throw ValidationConflictException", e);
+          "Tasks for rolling back a transaction should not throw ValidationConflictException and CrudException",
+          e);
+    }
+  }
+
+  public void fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread(
+      List<ParallelExecutorTask> tasks, String transactionId) throws CrudException {
+    try {
+      executeTasks(
+          tasks,
+          config.isParallelFillReadSetEnabled(),
+          false,
+          true,
+          "fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread",
+          transactionId);
+    } catch (ExecutionException | ValidationConflictException e) {
+      throw new AssertionError(
+          "Tasks for filling a read set should not throw ExecutionException and ValidationConflictException",
+          e);
     }
   }
 
@@ -126,7 +154,7 @@ public class ParallelExecutor {
       boolean stopOnError,
       String taskName,
       String transactionId)
-      throws ExecutionException, ValidationConflictException {
+      throws ExecutionException, ValidationConflictException, CrudException {
     if (parallel) {
       executeTasksInParallel(tasks, noWait, stopOnError, taskName, transactionId);
     } else {
@@ -140,7 +168,7 @@ public class ParallelExecutor {
       boolean stopOnError,
       String taskName,
       String transactionId)
-      throws ExecutionException, ValidationConflictException {
+      throws ExecutionException, ValidationConflictException, CrudException {
     assert parallelExecutorService != null;
 
     CompletionService<Void> completionService =
@@ -179,6 +207,12 @@ public class ParallelExecutor {
             } else {
               throw (ValidationConflictException) e.getCause();
             }
+          } else if (e.getCause() instanceof CrudException) {
+            if (!stopOnError) {
+              exception = (CrudException) e.getCause();
+            } else {
+              throw (CrudException) e.getCause();
+            }
           } else if (e.getCause() instanceof RuntimeException) {
             throw (RuntimeException) e.getCause();
           } else if (e.getCause() instanceof Error) {
@@ -192,8 +226,10 @@ public class ParallelExecutor {
       if (!stopOnError && exception != null) {
         if (exception instanceof ExecutionException) {
           throw (ExecutionException) exception;
-        } else {
+        } else if (exception instanceof ValidationConflictException) {
           throw (ValidationConflictException) exception;
+        } else {
+          throw (CrudException) exception;
         }
       }
     }
@@ -201,12 +237,12 @@ public class ParallelExecutor {
 
   private void executeTasksSerially(
       List<ParallelExecutorTask> tasks, boolean stopOnError, String taskName, String transactionId)
-      throws ExecutionException, ValidationConflictException {
+      throws ExecutionException, ValidationConflictException, CrudException {
     Exception exception = null;
     for (ParallelExecutorTask task : tasks) {
       try {
         task.run();
-      } catch (ExecutionException | ValidationConflictException e) {
+      } catch (ExecutionException | ValidationConflictException | CrudException e) {
         logger.warn("Failed to run a {} task. transaction ID: {}", taskName, transactionId, e);
 
         if (!stopOnError) {
@@ -220,8 +256,10 @@ public class ParallelExecutor {
     if (!stopOnError && exception != null) {
       if (exception instanceof ExecutionException) {
         throw (ExecutionException) exception;
-      } else {
+      } else if (exception instanceof ValidationConflictException) {
         throw (ValidationConflictException) exception;
+      } else {
+        throw (CrudException) exception;
       }
     }
   }

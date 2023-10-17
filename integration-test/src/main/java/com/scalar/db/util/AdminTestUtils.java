@@ -18,18 +18,21 @@ public abstract class AdminTestUtils {
   public AdminTestUtils(Properties coordinatorStorageProperties) {
     this.coordinatorStorageProperties = coordinatorStorageProperties;
   }
+
   /**
    * Deletes the namespaces table.
    *
    * @throws Exception if an error occurs
    */
   public abstract void dropNamespacesTable() throws Exception;
+
   /**
    * Deletes the metadata table.
    *
    * @throws Exception if an error occurs
    */
   public abstract void dropMetadataTable() throws Exception;
+
   /**
    * Truncates the namespaces table.
    *
@@ -120,6 +123,11 @@ public abstract class AdminTestUtils {
    * @throws Exception if an errors occurs
    */
   public abstract void dropTable(String namespace, String table) throws Exception;
-  /** Closes connections to the storage */
+
+  /**
+   * Closes connections to the storage
+   *
+   * @throws Exception if an error occurs
+   */
   public abstract void close() throws Exception;
 }

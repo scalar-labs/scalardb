@@ -30,6 +30,9 @@ public class ConsensusCommitConfig {
   public static final String ASYNC_COMMIT_ENABLED = PREFIX + "async_commit.enabled";
   public static final String ASYNC_ROLLBACK_ENABLED = PREFIX + "async_rollback.enabled";
 
+  public static final String PARALLEL_FILL_READ_SET_ENABLED =
+      PREFIX + "parallel_fill_read_set.enabled";
+
   public static final int DEFAULT_PARALLEL_EXECUTOR_COUNT = 128;
 
   public static final String INCLUDE_METADATA_ENABLED = PREFIX + "include_metadata.enabled";
@@ -47,6 +50,8 @@ public class ConsensusCommitConfig {
   private final boolean asyncRollbackEnabled;
 
   private final boolean isIncludeMetadataEnabled;
+
+  private final boolean parallelFillReadSetEnabled;
 
   public ConsensusCommitConfig(DatabaseConfig databaseConfig) {
     String transactionManager = databaseConfig.getTransactionManager();
@@ -102,10 +107,16 @@ public class ConsensusCommitConfig {
             databaseConfig.getProperties(), PARALLEL_ROLLBACK_ENABLED, parallelCommitEnabled);
 
     asyncCommitEnabled = getBoolean(databaseConfig.getProperties(), ASYNC_COMMIT_ENABLED, false);
+
+    // Use the value of async commit for async rollback as default value
     asyncRollbackEnabled =
         getBoolean(databaseConfig.getProperties(), ASYNC_ROLLBACK_ENABLED, asyncCommitEnabled);
+
     isIncludeMetadataEnabled =
         getBoolean(databaseConfig.getProperties(), INCLUDE_METADATA_ENABLED, false);
+
+    parallelFillReadSetEnabled =
+        getBoolean(databaseConfig.getProperties(), PARALLEL_FILL_READ_SET_ENABLED, true);
   }
 
   public Isolation getIsolation() {
@@ -150,5 +161,9 @@ public class ConsensusCommitConfig {
 
   public boolean isIncludeMetadataEnabled() {
     return isIncludeMetadataEnabled;
+  }
+
+  public boolean isParallelFillReadSetEnabled() {
+    return parallelFillReadSetEnabled;
   }
 }

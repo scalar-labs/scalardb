@@ -1073,7 +1073,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @Test
   public void putAndCommit_PutGivenForExistingAfterRead_ShouldUpdateRecord()
-      throws TransactionException {
+      throws TransactionException, ExecutionException {
     // Arrange
     populateRecords(namespace1, TABLE_1);
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
@@ -1088,6 +1088,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.commit();
 
     // Assert
+    verify(storage).get(any(Get.class));
+
     DistributedTransaction another = manager.begin();
     Optional<Result> r = another.get(get);
     another.commit();
@@ -1100,17 +1102,30 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void putAndCommit_PutGivenForExistingAndNeverRead_ShouldThrowCommitException()
-      throws TransactionException {
+  public void putAndCommit_PutGivenForExistingAndNeverRead_ShouldUpdateRecord()
+      throws TransactionException, ExecutionException {
     // Arrange
     populateRecords(namespace1, TABLE_1);
-    List<Put> puts = preparePuts(namespace1, TABLE_1);
-    puts.get(0).withValue(BALANCE, 1100);
     DistributedTransaction transaction = manager.begin();
 
-    // Act Assert
-    transaction.put(puts.get(0));
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
+    // Act
+    int expected = INITIAL_BALANCE + 100;
+    Put put = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, expected);
+    transaction.put(put);
+    transaction.commit();
+
+    // Assert
+    verify(storage).get(any(Get.class));
+
+    DistributedTransaction another = manager.begin();
+    Optional<Result> r = another.get(prepareGet(0, 0, namespace1, TABLE_1));
+    another.commit();
+
+    assertThat(r).isPresent();
+    TransactionResult actual = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+    assertThat(getBalance(actual)).isEqualTo(expected);
+    Assertions.assertThat(actual.getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(actual.getVersion()).isEqualTo(2);
   }
 
   @Test
@@ -1211,6 +1226,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     int expected = INITIAL_BALANCE;
     List<Put> puts1 = preparePuts(namespace1, table1);
     List<Put> puts2 = differentTables ? preparePuts(namespace2, table2) : puts1;
+    List<Get> gets1 = prepareGets(namespace1, table1);
+    List<Get> gets2 = differentTables ? prepareGets(namespace2, table2) : gets1;
 
     int from = 0;
     int to = NUM_TYPES;
@@ -1220,6 +1237,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     puts2.get(to).withValue(BALANCE, expected);
 
     DistributedTransaction transaction1 = manager.begin();
+    transaction1.get(gets1.get(from));
+    transaction1.get(gets2.get(to));
     transaction1.put(puts1.get(from));
     transaction1.put(puts2.get(to));
 
@@ -1239,8 +1258,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     verify(commit).rollbackRecords(any(Snapshot.class));
-    List<Get> gets1 = prepareGets(namespace1, table1);
-    List<Get> gets2 = differentTables ? prepareGets(namespace2, table2) : gets1;
 
     DistributedTransaction another = manager.begin();
     assertThat(another.get(gets1.get(from)).isPresent()).isFalse();
@@ -2705,13 +2722,17 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     DistributedTransaction transaction = manager.begin();
     for (int i = 0; i < NUM_ACCOUNTS; i++) {
       for (int j = 0; j < NUM_TYPES; j++) {
-        Key partitionKey = new Key(ACCOUNT_ID, i);
-        Key clusteringKey = new Key(ACCOUNT_TYPE, j);
+        Key partitionKey = Key.ofInt(ACCOUNT_ID, i);
+        Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, j);
         Put put =
-            new Put(partitionKey, clusteringKey)
-                .forNamespace(namespace)
-                .forTable(table)
-                .withValue(BALANCE, INITIAL_BALANCE);
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey)
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .blind()
+                .build();
         transaction.put(put);
       }
     }

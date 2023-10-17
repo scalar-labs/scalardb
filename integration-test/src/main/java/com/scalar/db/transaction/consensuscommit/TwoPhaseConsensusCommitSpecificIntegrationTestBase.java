@@ -1074,10 +1074,12 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     // Arrange
     populate(manager1, namespace1, TABLE_1);
 
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+
     TwoPhaseCommitTransaction transaction = manager1.begin();
 
     // Act
-    Optional<Result> result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+    Optional<Result> result = transaction.get(get);
     assertThat(result.isPresent()).isTrue();
 
     int afterBalance = getBalance(result.get()) + 100;
@@ -1087,7 +1089,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     TwoPhaseCommitTransaction another = manager1.begin();
-    result = another.get(prepareGet(0, 0, namespace1, TABLE_1));
+    result = another.get(get);
     another.prepare();
     another.commit();
 
@@ -1098,17 +1100,18 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void putAndCommit_PutGivenForExistingAndNeverRead_ShouldThrowPreparationException()
+  public void putAndCommit_PutGivenForExistingAndNeverRead_ShouldUpdateRecord()
       throws TransactionException {
     // Arrange
     populate(manager1, namespace1, TABLE_1);
 
     TwoPhaseCommitTransaction transaction = manager1.begin();
-    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1100));
 
-    // Act Assert
-    assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationException.class);
-    transaction.rollback();
+    // Act
+    int afterBalance = INITIAL_BALANCE + 100;
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, afterBalance));
+    transaction.prepare();
+    transaction.commit();
 
     // Assert
     TwoPhaseCommitTransaction another = manager1.begin();
@@ -1119,7 +1122,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     assertThat(result).isPresent();
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
-    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE); // a rolled back value
+    assertThat(getBalance(result.get())).isEqualTo(afterBalance);
   }
 
   @Test
@@ -1195,6 +1198,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
     TwoPhaseCommitTransaction fromTx = manager1.begin();
     TwoPhaseCommitTransaction toTx = manager2.join(fromTx.getId());
+    fromTx.get(prepareGet(fromId, fromType, namespace1, TABLE_1));
+    toTx.get(prepareGet(toId, toType, namespace2, TABLE_2));
     fromTx.put(preparePut(fromId, fromType, namespace1, TABLE_1).withValue(BALANCE, expected));
     toTx.put(preparePut(toId, toType, namespace2, TABLE_2).withValue(BALANCE, expected));
 
@@ -2886,7 +2891,17 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     TwoPhaseCommitTransaction transaction = manager.begin();
     for (int i = 0; i < NUM_ACCOUNTS; i++) {
       for (int j = 0; j < NUM_TYPES; j++) {
-        transaction.put(preparePut(i, j, namespace, table).withValue(BALANCE, INITIAL_BALANCE));
+        Key partitionKey = Key.ofInt(ACCOUNT_ID, i);
+        Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, j);
+        transaction.put(
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey)
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .blind()
+                .build());
       }
     }
     transaction.prepare();

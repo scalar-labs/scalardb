@@ -39,9 +39,7 @@ public class MutationConditionsValidator {
    */
   public void checkIfConditionIsSatisfied(Put put, @Nullable TransactionResult existingRecord)
       throws UnsatisfiedConditionException {
-    if (!put.getCondition().isPresent()) {
-      return;
-    }
+    assert put.getCondition().isPresent();
     MutationCondition condition = put.getCondition().get();
     boolean recordExists = existingRecord != null;
     if (condition instanceof PutIf) {
@@ -73,9 +71,7 @@ public class MutationConditionsValidator {
    */
   public void checkIfConditionIsSatisfied(Delete delete, @Nullable TransactionResult existingRecord)
       throws UnsatisfiedConditionException {
-    if (!delete.getCondition().isPresent()) {
-      return;
-    }
+    assert delete.getCondition().isPresent();
     MutationCondition condition = delete.getCondition().get();
     boolean recordExists = existingRecord != null;
     if (condition instanceof DeleteIf) {

@@ -185,4 +185,14 @@ public interface MutationOrBuilder extends
    */
   com.scalar.db.rpc.ColumnOrBuilder getColumnsOrBuilder(
       int index);
+
+  /**
+   * <pre>
+   * only for Put operations
+   * </pre>
+   *
+   * <code>bool blind = 10;</code>
+   * @return The blind.
+   */
+  boolean getBlind();
 }

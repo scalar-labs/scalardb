@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
-import com.scalar.db.api.GetBuilder.BuildableGet;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -442,7 +441,14 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void putAndCommit_PutGivenForNonExisting_ShouldCreateRecord() throws TransactionException {
     // Arrange
     int expected = INITIAL_BALANCE;
-    Put put = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, expected);
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
     TwoPhaseCommitTransaction transaction = manager1.start();
 
     // Act
@@ -463,18 +469,54 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
-  public void putAndCommit_PutGivenForExistingAfterRead_ShouldUpdateRecord()
+  public void putAndCommit_BlindPutGivenForNonExisting_ShouldCreateRecord()
       throws TransactionException {
     // Arrange
-    populateRecords(manager1, namespace1, TABLE_1);
-    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    int expected = INITIAL_BALANCE;
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .blind()
+            .build();
     TwoPhaseCommitTransaction transaction = manager1.start();
 
     // Act
-    Optional<Result> result = transaction.get(get);
+    transaction.put(put);
+    transaction.prepare();
+    transaction.validate();
+    transaction.commit();
+
+    // Assert
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction another = manager1.start();
+    Optional<Result> result = another.get(get);
+    another.prepare();
+    another.validate();
+    another.commit();
     assertThat(result.isPresent()).isTrue();
-    int expected = getBalance(result.get()) + 100;
-    Put put = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, expected);
+    assertThat(getBalance(result.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void putAndCommit_PutGivenForExisting_ShouldUpdateRecord() throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.start();
+
+    // Act
+    int expected = INITIAL_BALANCE + 100;
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
     transaction.put(put);
     transaction.prepare();
     transaction.validate();
@@ -482,13 +524,35 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
     // Assert
     TwoPhaseCommitTransaction another = manager1.start();
-    Optional<Result> actual = another.get(get);
+    Optional<Result> actual = another.get(prepareGet(0, 0, namespace1, TABLE_1));
     another.prepare();
     another.validate();
     another.commit();
 
     assertThat(actual.isPresent()).isTrue();
     assertThat(getBalance(actual.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void putAndCommit_BlindPutGivenForExisting_ShouldThrowPreparationConflictException()
+      throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.start();
+
+    // Act Assert
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE + 100)
+            .blind()
+            .build();
+    transaction.put(put);
+    assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationConflictException.class);
+    transaction.rollback();
   }
 
   @Test
@@ -625,53 +689,70 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
-  public void deleteAndRollback_ShouldNotDeleteRecord() throws TransactionException {
+  public void deleteAndCommit_DeleteGivenForExisting_ShouldDeleteRecord()
+      throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
-    Get get = prepareGet(0, 0, namespace1, TABLE_1);
     Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.begin();
 
     // Act
-    Optional<Result> result = transaction.get(get);
+    transaction.delete(delete);
+    transaction.prepare();
+    transaction.validate();
+    transaction.commit();
+
+    // Assert
+    TwoPhaseCommitTransaction another = manager1.begin();
+    Optional<Result> result = another.get(prepareGet(0, 0, namespace1, TABLE_1));
+    another.prepare();
+    another.validate();
+    another.commit();
+    assertThat(result.isPresent()).isFalse();
+  }
+
+  @Test
+  public void deleteAndRollback_ShouldNotDeleteRecord() throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+    Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+
+    // Act
     transaction.delete(delete);
     transaction.rollback();
 
     // Assert
-    assertThat(result).isPresent();
     TwoPhaseCommitTransaction another = manager1.begin();
-    Optional<Result> result1 = another.get(get);
+    Optional<Result> result = another.get(prepareGet(0, 0, namespace1, TABLE_1));
     another.prepare();
     another.validate();
     another.commit();
-    assertThat(result1).isPresent();
+    assertThat(result).isPresent();
   }
 
   @Test
   public void deleteAndAbort_ShouldNotDeleteRecord() throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
-    Get get = prepareGet(0, 0, namespace1, TABLE_1);
     Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.begin();
 
     // Act
-    Optional<Result> result = transaction.get(get);
     transaction.delete(delete);
     transaction.abort();
 
     // Assert
-    assertThat(result).isPresent();
     TwoPhaseCommitTransaction another = manager1.begin();
-    Optional<Result> result1 = another.get(get);
+    Optional<Result> result = another.get(prepareGet(0, 0, namespace1, TABLE_1));
     another.prepare();
     another.validate();
     another.commit();
-    assertThat(result1).isPresent();
+    assertThat(result).isPresent();
   }
 
   @Test
-  public void mutateAndCommit_ShouldMutateRecordsProperly() throws TransactionException {
+  public void mutateAndCommit_AfterRead_ShouldMutateRecordsProperly() throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
     Get get1 = prepareGet(0, 0, namespace1, TABLE_1);
@@ -703,14 +784,40 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
+  public void mutateAndCommit_ShouldMutateRecordsProperly() throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+    Put put = preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, INITIAL_BALANCE - 100);
+    Delete delete = prepareDelete(1, 0, namespace1, TABLE_1);
+
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+
+    // Act
+    transaction.mutate(Arrays.asList(put, delete));
+    transaction.prepare();
+    transaction.validate();
+    transaction.commit();
+
+    // Assert
+    TwoPhaseCommitTransaction another = manager1.begin();
+    Optional<Result> result1 = another.get(prepareGet(0, 0, namespace1, TABLE_1));
+    Optional<Result> result2 = another.get(prepareGet(1, 0, namespace1, TABLE_1));
+    another.prepare();
+    another.validate();
+    another.commit();
+
+    assertThat(result1.isPresent()).isTrue();
+    assertThat(result1.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE - 100);
+    assertThat(result2.isPresent()).isFalse();
+  }
+
+  @Test
   public void mutateAndCommit_WithMultipleSubTransactions_ShouldMutateRecordsProperly()
       throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
     populateRecords(manager2, namespace2, TABLE_2);
 
-    Get get1 = prepareGet(0, 0, namespace1, TABLE_1);
-    Get get2 = prepareGet(1, 0, namespace2, TABLE_2);
     Put put = preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, INITIAL_BALANCE - 100);
     Delete delete = prepareDelete(1, 0, namespace2, TABLE_2);
 
@@ -718,10 +825,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     TwoPhaseCommitTransaction transaction2 = manager2.join(transaction1.getId());
 
     // Act
-    transaction1.get(get1);
     transaction1.put(put);
-
-    transaction2.get(get2);
     transaction2.delete(delete);
 
     // Prepare
@@ -745,8 +849,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     // Assert
     TwoPhaseCommitTransaction another1 = manager1.begin();
     TwoPhaseCommitTransaction another2 = manager2.join(another1.getId());
-    Optional<Result> result1 = another1.get(get1);
-    Optional<Result> result2 = another2.get(get2);
+    Optional<Result> result1 = another1.get(prepareGet(0, 0, namespace1, TABLE_1));
+    Optional<Result> result2 = another2.get(prepareGet(1, 0, namespace2, TABLE_2));
     another1.prepare();
     another2.prepare();
     another1.validate();
@@ -766,8 +870,6 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     populateRecords(manager1, namespace1, TABLE_1);
     populateRecords(manager2, namespace2, TABLE_2);
 
-    Get get1 = prepareGet(0, 0, namespace1, TABLE_1);
-    Get get2 = prepareGet(1, 0, namespace2, TABLE_2);
     Put put = preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, INITIAL_BALANCE - 100);
     Delete delete = prepareDelete(1, 0, namespace2, TABLE_2);
 
@@ -775,10 +877,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     TwoPhaseCommitTransaction transaction2 = manager2.join(transaction1.getId());
 
     // Act
-    transaction1.get(get1);
     transaction1.put(put);
-
-    transaction2.get(get2);
     transaction2.delete(delete);
 
     // Prepare
@@ -802,8 +901,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     // Assert
     TwoPhaseCommitTransaction another1 = manager1.begin();
     TwoPhaseCommitTransaction another2 = manager2.join(another1.getId());
-    Optional<Result> result1 = another1.get(get1);
-    Optional<Result> result2 = another2.get(get2);
+    Optional<Result> result1 = another1.get(prepareGet(0, 0, namespace1, TABLE_1));
+    Optional<Result> result2 = another2.get(prepareGet(1, 0, namespace2, TABLE_2));
     another1.prepare();
     another2.prepare();
     another1.validate();
@@ -1259,7 +1358,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .build();
 
     // Act
-    getThenPut(putIf);
+    put(putIf);
 
     // Assert
     Optional<Result> optResult = get(prepareGet(0, 0, namespace1, TABLE_1));
@@ -1292,7 +1391,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> getThenPut(putIf)).isInstanceOf(UnsatisfiedConditionException.class);
+    assertThatThrownBy(() -> put(putIf)).isInstanceOf(UnsatisfiedConditionException.class);
 
     Optional<Result> optResult = get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(optResult.isPresent()).isTrue();
@@ -1307,7 +1406,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void put_withPutIfWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException()
       throws TransactionException {
     // Arrange
-    Put put =
+    Put putIf =
         Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
             .intValue(BALANCE, INITIAL_BALANCE)
             .condition(
@@ -1315,7 +1414,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> put(put)).isInstanceOf(UnsatisfiedConditionException.class);
+    assertThatThrownBy(() -> put(putIf)).isInstanceOf(UnsatisfiedConditionException.class);
 
     Optional<Result> result = get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
@@ -1325,14 +1424,14 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void put_withPutIfExistsWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException()
       throws TransactionException {
     // Arrange
-    Put put =
+    Put putIfExists =
         Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
             .intValue(BALANCE, INITIAL_BALANCE)
             .condition(ConditionBuilder.putIfExists())
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> getThenPut(put)).isInstanceOf(UnsatisfiedConditionException.class);
+    assertThatThrownBy(() -> put(putIfExists)).isInstanceOf(UnsatisfiedConditionException.class);
 
     Optional<Result> result = get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
@@ -1349,9 +1448,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .condition(ConditionBuilder.putIfExists())
             .build();
 
-    // Act Assert
-    getThenPut(putIfExists);
+    // Act
+    put(putIfExists);
 
+    // Assert
     Optional<Result> optResult = get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(optResult.isPresent()).isTrue();
     Result result = optResult.get();
@@ -1370,9 +1470,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .condition(ConditionBuilder.putIfNotExists())
             .build();
 
-    // Act Assert
-    getThenPut(putIfNotExists);
+    // Act
+    put(putIfNotExists);
 
+    // Assert
     Optional<Result> optResult = get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(optResult.isPresent()).isTrue();
     Result result = optResult.get();
@@ -1395,8 +1496,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> getThenPut(putIfNotExists))
-        .isInstanceOf(UnsatisfiedConditionException.class);
+    assertThatThrownBy(() -> put(putIfNotExists)).isInstanceOf(UnsatisfiedConditionException.class);
 
     Optional<Result> optResult = get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(optResult.isPresent()).isTrue();
@@ -1427,7 +1527,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .build();
 
     // Act
-    getThenDelete(deleteIf);
+    delete(deleteIf);
 
     // Assert
     Optional<Result> optResult = get(prepareGet(0, 0, namespace1, TABLE_1));
@@ -1451,8 +1551,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> getThenDelete(deleteIf))
-        .isInstanceOf(UnsatisfiedConditionException.class);
+    assertThatThrownBy(() -> delete(deleteIf)).isInstanceOf(UnsatisfiedConditionException.class);
 
     Optional<Result> optResult = get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(optResult.isPresent()).isTrue();
@@ -1470,30 +1569,30 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     Put initialData = Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1)).build();
     put(initialData);
 
-    Delete deleteIf =
+    Delete deleteIfExists =
         Delete.newBuilder(prepareDelete(0, 0, namespace1, TABLE_1))
             .condition(ConditionBuilder.deleteIfExists())
             .build();
 
-    // Act Assert
-    getThenDelete(deleteIf);
+    // Act
+    delete(deleteIfExists);
 
+    // Assert
     Optional<Result> optResult = get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(optResult.isPresent()).isFalse();
   }
 
   @Test
   public void
-      delete_withDeleteIfExistsWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException()
-          throws Exception {
+      delete_withDeleteIfExistsWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException() {
     // Arrange
-    Delete deleteIf =
+    Delete deleteIfExists =
         Delete.newBuilder(prepareDelete(0, 0, namespace1, TABLE_1))
             .condition(ConditionBuilder.deleteIfExists())
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> getThenDelete(deleteIf))
+    assertThatThrownBy(() -> delete(deleteIfExists))
         .isInstanceOf(UnsatisfiedConditionException.class);
   }
 
@@ -1524,28 +1623,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     }
   }
 
-  private void getThenPut(Put put) throws TransactionException {
-    getThenMutate(put);
-  }
-
-  private void getThenDelete(Delete delete) throws TransactionException {
-    getThenMutate(delete);
-  }
-
-  private void getThenMutate(Mutation mutation) throws TransactionException {
-    assert mutation.forNamespace().isPresent();
-    assert mutation.forTable().isPresent();
-    BuildableGet get =
-        Get.newBuilder()
-            .namespace(mutation.forNamespace().get())
-            .table(mutation.forTable().get())
-            .partitionKey(mutation.getPartitionKey());
-    mutation.getClusteringKey().ifPresent(get::clusteringKey);
-
+  private void delete(Delete delete) throws TransactionException {
     TwoPhaseCommitTransaction tx = manager1.start();
     try {
-      tx.get(get.build());
-      tx.mutate(Collections.singletonList(mutation));
+      tx.delete(delete);
       tx.prepare();
       tx.validate();
       tx.commit();
@@ -1565,14 +1646,18 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
                 IntStream.range(0, NUM_TYPES)
                     .forEach(
                         j -> {
-                          Key partitionKey = new Key(ACCOUNT_ID, i);
-                          Key clusteringKey = new Key(ACCOUNT_TYPE, j);
+                          Key partitionKey = Key.ofInt(ACCOUNT_ID, i);
+                          Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, j);
                           Put put =
-                              new Put(partitionKey, clusteringKey)
-                                  .forNamespace(namespaceName)
-                                  .forTable(tableName)
-                                  .withIntValue(BALANCE, INITIAL_BALANCE)
-                                  .withIntValue(SOME_COLUMN, i * j);
+                              Put.newBuilder()
+                                  .namespace(namespaceName)
+                                  .table(tableName)
+                                  .partitionKey(partitionKey)
+                                  .clusteringKey(clusteringKey)
+                                  .intValue(BALANCE, INITIAL_BALANCE)
+                                  .intValue(SOME_COLUMN, i * j)
+                                  .blind()
+                                  .build();
                           try {
                             transaction.put(put);
                           } catch (CrudException e) {
@@ -1586,12 +1671,20 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
   protected void populateSingleRecord(String namespaceName, String tableName)
       throws TransactionException {
-    Put put =
-        new Put(Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0))
-            .forNamespace(namespaceName)
-            .forTable(tableName)
-            .withIntValue(BALANCE, INITIAL_BALANCE);
     TwoPhaseCommitTransaction transaction = manager1.begin();
+
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, 0);
+    Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, 0);
+    Put put =
+        Put.newBuilder()
+            .namespace(namespaceName)
+            .table(tableName)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .blind()
+            .build();
+
     transaction.put(put);
     transaction.prepare();
     transaction.validate();

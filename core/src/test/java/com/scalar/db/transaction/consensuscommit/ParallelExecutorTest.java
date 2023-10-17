@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import java.util.Arrays;
@@ -57,7 +58,7 @@ public class ParallelExecutorTest {
 
   @Test
   public void prepare_ParallelPreparationNotEnabled_ShouldExecuteTasksSerially()
-      throws ExecutionException, ValidationConflictException {
+      throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelPreparationEnabled()).thenReturn(false);
 
@@ -72,7 +73,7 @@ public class ParallelExecutorTest {
   @Test
   public void
       prepare_ParallelPreparationNotEnabled_ExecutionExceptionThrownByTask_ShouldStopRunningTasks()
-          throws ExecutionException, ValidationConflictException {
+          throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelPreparationEnabled()).thenReturn(false);
     doThrow(ExecutionException.class).when(task).run();
@@ -87,7 +88,7 @@ public class ParallelExecutorTest {
 
   @Test
   public void prepare_ParallelPreparationEnabled_ShouldExecuteTasksInParallel()
-      throws ExecutionException, ValidationConflictException {
+      throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelPreparationEnabled()).thenReturn(true);
 
@@ -102,7 +103,7 @@ public class ParallelExecutorTest {
   @Test
   public void
       prepare_ParallelPreparationEnabled_ExecutionExceptionThrownByTask_ShouldNotStopRunningTasks()
-          throws ExecutionException, ValidationConflictException {
+          throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelPreparationEnabled()).thenReturn(true);
     doThrow(ExecutionException.class).when(task).run();
@@ -117,7 +118,7 @@ public class ParallelExecutorTest {
 
   @Test
   public void validate_ParallelValidationNotEnabled_ShouldExecuteTasksSerially()
-      throws ExecutionException, ValidationConflictException {
+      throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelValidationEnabled()).thenReturn(false);
 
@@ -132,7 +133,7 @@ public class ParallelExecutorTest {
   @Test
   public void
       validate_ParallelValidationNotEnabled_ExecutionExceptionThrownByTask_ShouldStopRunningTasks()
-          throws ExecutionException, ValidationConflictException {
+          throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelValidationEnabled()).thenReturn(false);
     doThrow(ExecutionException.class).when(task).run();
@@ -148,7 +149,7 @@ public class ParallelExecutorTest {
   @Test
   public void
       validate_ParallelValidationNotEnabled_ValidationConflictExceptionThrownByTask_ShouldStopRunningTasks()
-          throws ExecutionException, ValidationConflictException {
+          throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelValidationEnabled()).thenReturn(false);
     doThrow(ValidationConflictException.class).when(task).run();
@@ -163,7 +164,7 @@ public class ParallelExecutorTest {
 
   @Test
   public void validate_ParallelValidationEnabled_ShouldExecuteTasksInParallel()
-      throws ExecutionException, ValidationConflictException {
+      throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelValidationEnabled()).thenReturn(true);
 
@@ -178,7 +179,7 @@ public class ParallelExecutorTest {
   @Test
   public void
       validate_ParallelValidationEnabled_ExecutionExceptionThrownByTask_ShouldStopRunningTasks()
-          throws ExecutionException, ValidationConflictException {
+          throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelValidationEnabled()).thenReturn(true);
     doThrow(ExecutionException.class).when(task).run();
@@ -194,7 +195,7 @@ public class ParallelExecutorTest {
   @Test
   public void
       validate_ParallelValidationEnabled_ValidationConflictExceptionThrownByTask_ShouldStopRunningTasks()
-          throws ExecutionException, ValidationConflictException {
+          throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelValidationEnabled()).thenReturn(true);
     doThrow(ValidationConflictException.class).when(task).run();
@@ -209,7 +210,7 @@ public class ParallelExecutorTest {
 
   @Test
   public void commitRecords_ParallelCommitNotEnabled_ShouldExecuteTasksSerially()
-      throws ExecutionException, ValidationConflictException {
+      throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelCommitEnabled()).thenReturn(false);
 
@@ -224,7 +225,7 @@ public class ParallelExecutorTest {
   @Test
   public void
       commitRecords_ParallelCommitNotEnabled_ExecutionExceptionThrownByTask_ShouldNotStopRunningTasks()
-          throws ExecutionException, ValidationConflictException {
+          throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelCommitEnabled()).thenReturn(false);
     doThrow(ExecutionException.class).when(task).run();
@@ -240,7 +241,7 @@ public class ParallelExecutorTest {
   @Test
   public void
       commitRecords_ParallelCommitEnabledAndAsyncCommitNotEnabled_ShouldExecuteTasksInParallel()
-          throws ExecutionException, ValidationConflictException {
+          throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelCommitEnabled()).thenReturn(true);
     when(config.isAsyncCommitEnabled()).thenReturn(false);
@@ -256,7 +257,7 @@ public class ParallelExecutorTest {
   @Test
   public void
       commitRecords_ParallelCommitEnabledAndAsyncCommitNotEnabled_ExecutionExceptionThrownByTask_ShouldNotStopRunningTasks()
-          throws ExecutionException, ValidationConflictException {
+          throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelCommitEnabled()).thenReturn(true);
     when(config.isAsyncCommitEnabled()).thenReturn(false);
@@ -273,7 +274,7 @@ public class ParallelExecutorTest {
   @Test
   public void
       commitRecords_ParallelCommitEnabledAndAsyncCommitEnabled_ShouldExecuteTasksInParallelAndAsynchronously()
-          throws ExecutionException, ValidationConflictException {
+          throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelCommitEnabled()).thenReturn(true);
     when(config.isAsyncCommitEnabled()).thenReturn(true);
@@ -289,7 +290,7 @@ public class ParallelExecutorTest {
   @Test
   public void
       commitRecords_ParallelCommitEnabledAndAsyncCommitEnabled_ExecutionExceptionThrownByTask_ShouldNotStopRunningTasks()
-          throws ExecutionException, ValidationConflictException {
+          throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelCommitEnabled()).thenReturn(true);
     when(config.isAsyncCommitEnabled()).thenReturn(true);
@@ -304,7 +305,7 @@ public class ParallelExecutorTest {
 
   @Test
   public void rollbackRecords_ParallelRollbackNotEnabled_ShouldExecuteTasksSerially()
-      throws ExecutionException, ValidationConflictException {
+      throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelRollbackEnabled()).thenReturn(false);
 
@@ -319,7 +320,7 @@ public class ParallelExecutorTest {
   @Test
   public void
       rollbackRecords_ParallelRollbackNotEnabled_ExecutionExceptionThrownByTask_ShouldNotStopRunningTasks()
-          throws ExecutionException, ValidationConflictException {
+          throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelRollbackEnabled()).thenReturn(false);
     doThrow(ExecutionException.class).when(task).run();
@@ -335,7 +336,7 @@ public class ParallelExecutorTest {
   @Test
   public void
       rollbackRecords_ParallelRollbackEnabledAndAsyncRollbackNotEnabled_ShouldExecuteTasksInParallel()
-          throws ExecutionException, ValidationConflictException {
+          throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelRollbackEnabled()).thenReturn(true);
     when(config.isAsyncRollbackEnabled()).thenReturn(false);
@@ -351,7 +352,7 @@ public class ParallelExecutorTest {
   @Test
   public void
       rollbackRecords_ParallelRollbackEnabledAndAsyncRollbackNotEnabled_ExecutionExceptionThrownByTask_ShouldNotStopRunningTasks()
-          throws ExecutionException, ValidationConflictException {
+          throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelRollbackEnabled()).thenReturn(true);
     when(config.isAsyncRollbackEnabled()).thenReturn(false);
@@ -368,7 +369,7 @@ public class ParallelExecutorTest {
   @Test
   public void
       rollbackRecords_ParallelRollbackEnabledAndAsyncRollbackEnabled_ShouldExecuteTasksInParallelAndAsynchronously()
-          throws ExecutionException, ValidationConflictException {
+          throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelRollbackEnabled()).thenReturn(true);
     when(config.isAsyncRollbackEnabled()).thenReturn(true);
@@ -384,7 +385,7 @@ public class ParallelExecutorTest {
   @Test
   public void
       rollbackRecords_ParallelRollbackEnabledAndAsyncRollbackEnabled_ExecutionExceptionThrownByTask_ShouldNotStopRunningTasks()
-          throws ExecutionException, ValidationConflictException {
+          throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelRollbackEnabled()).thenReturn(true);
     when(config.isAsyncRollbackEnabled()).thenReturn(true);
@@ -395,5 +396,65 @@ public class ParallelExecutorTest {
 
     verify(task, atMost(tasks.size())).run();
     verify(parallelExecutorService, times(tasks.size())).execute(any());
+  }
+
+  @Test
+  public void
+      fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread_ParallelRollbackParallelFillReadSetNotEnabled_ShouldExecuteTasksSerially()
+          throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    when(config.isParallelFillReadSetEnabled()).thenReturn(false);
+
+    // Act
+    parallelExecutor.fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread(tasks, TX_ID);
+
+    // Assert
+    verify(task, times(tasks.size())).run();
+    verify(parallelExecutorService, never()).execute(any());
+  }
+
+  @Test
+  public void
+      fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread_ParallelRollbackParallelFillReadSetNotEnabled_CrudExceptionThrownByTask_ShouldThrowCrudException()
+          throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    when(config.isParallelFillReadSetEnabled()).thenReturn(false);
+    doThrow(CrudException.class).when(task).run();
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                parallelExecutor.fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread(tasks, TX_ID))
+        .isInstanceOf(CrudException.class);
+  }
+
+  @Test
+  public void
+      fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread_ParallelRollbackParallelFillReadSetEnabled_ShouldExecuteTasksInParallel()
+          throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    when(config.isParallelFillReadSetEnabled()).thenReturn(true);
+
+    // Act
+    parallelExecutor.fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread(tasks, TX_ID);
+
+    // Assert
+    verify(task, times(tasks.size())).run();
+    verify(parallelExecutorService, times(tasks.size())).execute(any());
+  }
+
+  @Test
+  public void
+      fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread_ParallelRollbackParallelFillReadSetEnabled_CrudExceptionThrownByTask_ShouldThrowCrudException()
+          throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    when(config.isParallelFillReadSetEnabled()).thenReturn(true);
+    doThrow(CrudException.class).when(task).run();
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                parallelExecutor.fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread(tasks, TX_ID))
+        .isInstanceOf(CrudException.class);
   }
 }

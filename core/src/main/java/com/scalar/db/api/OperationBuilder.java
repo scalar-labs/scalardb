@@ -281,6 +281,23 @@ class OperationBuilder {
     T clearValue(String columnName);
   }
 
+  interface Blind<T> {
+    /**
+     * Sets this put operation as a blind write.
+     *
+     * @return the operation builder
+     */
+    T blind();
+
+    /**
+     * Sets whether this put operation is a blind write or not.
+     *
+     * @param blind {@code true} if this put operation is a blind write, {@code false} otherwise
+     * @return the operation builder
+     */
+    T blind(boolean blind);
+  }
+
   interface Limit<T> {
     /**
      * Sets the specified number of results to be returned

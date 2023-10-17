@@ -471,6 +471,21 @@ private static final long serialVersionUID = 0L;
     return columns_.get(index);
   }
 
+  public static final int BLIND_FIELD_NUMBER = 10;
+  private boolean blind_ = false;
+  /**
+   * <pre>
+   * only for Put operations
+   * </pre>
+   *
+   * <code>bool blind = 10;</code>
+   * @return The blind.
+   */
+  @java.lang.Override
+  public boolean getBlind() {
+    return blind_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -511,6 +526,9 @@ private static final long serialVersionUID = 0L;
     }
     for (int i = 0; i < columns_.size(); i++) {
       output.writeMessage(9, columns_.get(i));
+    }
+    if (blind_ != false) {
+      output.writeBool(10, blind_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -555,6 +573,10 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(9, columns_.get(i));
     }
+    if (blind_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(10, blind_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -595,6 +617,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getValueList())) return false;
     if (!getColumnsList()
         .equals(other.getColumnsList())) return false;
+    if (getBlind()
+        != other.getBlind()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -634,6 +658,9 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + COLUMNS_FIELD_NUMBER;
       hash = (53 * hash) + getColumnsList().hashCode();
     }
+    hash = (37 * hash) + BLIND_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getBlind());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -796,6 +823,7 @@ private static final long serialVersionUID = 0L;
         columnsBuilder_.clear();
       }
       bitField0_ = (bitField0_ & ~0x00000100);
+      blind_ = false;
       return this;
     }
 
@@ -877,6 +905,9 @@ private static final long serialVersionUID = 0L;
       }
       if (((from_bitField0_ & 0x00000040) != 0)) {
         result.type_ = type_;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.blind_ = blind_;
       }
     }
 
@@ -1001,6 +1032,9 @@ private static final long serialVersionUID = 0L;
           }
         }
       }
+      if (other.getBlind() != false) {
+        setBlind(other.getBlind());
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -1094,6 +1128,11 @@ private static final long serialVersionUID = 0L;
               }
               break;
             } // case 74
+            case 80: {
+              blind_ = input.readBool();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 80
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2340,6 +2379,50 @@ private static final long serialVersionUID = 0L;
         columns_ = null;
       }
       return columnsBuilder_;
+    }
+
+    private boolean blind_ ;
+    /**
+     * <pre>
+     * only for Put operations
+     * </pre>
+     *
+     * <code>bool blind = 10;</code>
+     * @return The blind.
+     */
+    @java.lang.Override
+    public boolean getBlind() {
+      return blind_;
+    }
+    /**
+     * <pre>
+     * only for Put operations
+     * </pre>
+     *
+     * <code>bool blind = 10;</code>
+     * @param value The blind to set.
+     * @return This builder for chaining.
+     */
+    public Builder setBlind(boolean value) {
+      
+      blind_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * only for Put operations
+     * </pre>
+     *
+     * <code>bool blind = 10;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearBlind() {
+      bitField0_ = (bitField0_ & ~0x00000200);
+      blind_ = false;
+      onChanged();
+      return this;
     }
     @java.lang.Override
     public final Builder setUnknownFields(
