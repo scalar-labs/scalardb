@@ -476,14 +476,14 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   private void createMetadataTableIfNotExists(boolean noBackup) throws ExecutionException {
-    List<AttributeDefinition> columnsToAttributeDefinitions = new ArrayList<>();
-    columnsToAttributeDefinitions.add(
-        AttributeDefinition.builder()
-            .attributeName(METADATA_ATTR_TABLE)
-            .attributeType(ScalarAttributeType.S)
-            .build());
     try {
       if (!metadataTableExists()) {
+        List<AttributeDefinition> columnsToAttributeDefinitions = new ArrayList<>();
+        columnsToAttributeDefinitions.add(
+            AttributeDefinition.builder()
+                .attributeName(METADATA_ATTR_TABLE)
+                .attributeType(ScalarAttributeType.S)
+                .build());
         client.createTable(
             CreateTableRequest.builder()
                 .attributeDefinitions(columnsToAttributeDefinitions)
@@ -1364,14 +1364,14 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   private void createNamespacesTableIfNotExists(boolean noBackup) throws ExecutionException {
-    List<AttributeDefinition> columnsToAttributeDefinitions = new ArrayList<>();
-    columnsToAttributeDefinitions.add(
-        AttributeDefinition.builder()
-            .attributeName(NAMESPACES_ATTR_NAME)
-            .attributeType(ScalarAttributeType.S)
-            .build());
     try {
       if (!namespacesTableExists()) {
+        List<AttributeDefinition> columnsToAttributeDefinitions = new ArrayList<>();
+        columnsToAttributeDefinitions.add(
+            AttributeDefinition.builder()
+                .attributeName(NAMESPACES_ATTR_NAME)
+                .attributeType(ScalarAttributeType.S)
+                .build());
         client.createTable(
             CreateTableRequest.builder()
                 .attributeDefinitions(columnsToAttributeDefinitions)
