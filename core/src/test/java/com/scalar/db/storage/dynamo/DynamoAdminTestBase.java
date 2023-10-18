@@ -3,6 +3,7 @@ package com.scalar.db.storage.dynamo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -1625,5 +1626,110 @@ public abstract class DynamoAdminTestBase {
                         DynamoAdmin.NAMESPACES_ATTR_NAME,
                         AttributeValue.builder().s(getPrefixedNamespace()).build()))
                 .build());
+  }
+
+  @Test
+  public void upgrade_WithExistingTables_ShouldUpsertNamespaceNames() throws ExecutionException {
+    // Arrange
+    when(client.describeTable(any(DescribeTableRequest.class)))
+        .thenReturn(mock(DescribeTableResponse.class))
+        .thenThrow(mock(ResourceNotFoundException.class))
+        .thenReturn(tableIsActiveResponse);
+
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(backupIsEnabledResponse);
+    ScanResponse scanResponse = mock(ScanResponse.class);
+    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
+    Map<String, AttributeValue> lastEvaluatedKeyFirstIteration =
+        ImmutableMap.of("", AttributeValue.builder().build());
+    Map<String, AttributeValue> lastEvaluatedKeySecondIteration = ImmutableMap.of();
+    when(scanResponse.lastEvaluatedKey())
+        .thenReturn(lastEvaluatedKeyFirstIteration)
+        .thenReturn(lastEvaluatedKeySecondIteration);
+    when(scanResponse.items())
+        .thenReturn(
+            ImmutableList.of(
+                ImmutableMap.of(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s("ns1.tbl1").build())))
+        .thenReturn(
+            ImmutableList.of(
+                ImmutableMap.of(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s("ns1.tbl2").build()),
+                ImmutableMap.of(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s("ns2.tbl3").build())));
+
+    // Act
+    admin.upgrade(Collections.emptyMap());
+
+    // Assert
+    verify(client)
+        .describeTable(
+            DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build());
+    verify(client, times(2))
+        .describeTable(
+            DescribeTableRequest.builder().tableName(getFullNamespaceTableName()).build());
+    CreateTableRequest createNamespaceTableRequest =
+        CreateTableRequest.builder()
+            .attributeDefinitions(
+                ImmutableList.of(
+                    AttributeDefinition.builder()
+                        .attributeName(DynamoAdmin.NAMESPACES_ATTR_NAME)
+                        .attributeType(ScalarAttributeType.S)
+                        .build()))
+            .keySchema(
+                KeySchemaElement.builder()
+                    .attributeName(DynamoAdmin.NAMESPACES_ATTR_NAME)
+                    .keyType(KeyType.HASH)
+                    .build())
+            .provisionedThroughput(
+                ProvisionedThroughput.builder()
+                    .readCapacityUnits(DynamoAdmin.METADATA_TABLES_REQUEST_UNIT)
+                    .writeCapacityUnits(DynamoAdmin.METADATA_TABLES_REQUEST_UNIT)
+                    .build())
+            .tableName(getFullNamespaceTableName())
+            .build();
+    verify(client).createTable(createNamespaceTableRequest);
+    verify(client)
+        .describeContinuousBackups(
+            DescribeContinuousBackupsRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .build());
+    verify(client)
+        .updateContinuousBackups(
+            UpdateContinuousBackupsRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .pointInTimeRecoverySpecification(
+                    PointInTimeRecoverySpecification.builder()
+                        .pointInTimeRecoveryEnabled(true)
+                        .build())
+                .build());
+    verify(client)
+        .scan(
+            ScanRequest.builder()
+                .tableName(getFullMetadataTableName())
+                .exclusiveStartKey(null)
+                .build());
+    verify(client)
+        .scan(
+            ScanRequest.builder()
+                .tableName(getFullMetadataTableName())
+                .exclusiveStartKey(lastEvaluatedKeyFirstIteration)
+                .build());
+    ArgumentCaptor<PutItemRequest> putItemRequestCaptor =
+        ArgumentCaptor.forClass(PutItemRequest.class);
+    verify(client, times(2)).putItem(putItemRequestCaptor.capture());
+    PutItemRequest actualPutItemRequest1 = putItemRequestCaptor.getAllValues().get(0);
+    assertThat(actualPutItemRequest1.tableName()).isEqualTo(getFullNamespaceTableName());
+    assertThat(actualPutItemRequest1.item())
+        .containsExactly(
+            entry(DynamoAdmin.NAMESPACES_ATTR_NAME, AttributeValue.builder().s("ns1").build()));
+    PutItemRequest actualPutItemRequest2 = putItemRequestCaptor.getAllValues().get(1);
+    assertThat(actualPutItemRequest2.tableName()).isEqualTo(getFullNamespaceTableName());
+    assertThat(actualPutItemRequest2.item())
+        .containsExactly(
+            entry(DynamoAdmin.NAMESPACES_ATTR_NAME, AttributeValue.builder().s("ns2").build()));
   }
 }

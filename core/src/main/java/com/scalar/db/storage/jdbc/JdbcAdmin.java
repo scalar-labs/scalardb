@@ -763,14 +763,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection()) {
       createSchemaIfNotExists(connection, namespace);
       createNamespacesTableIfNotExists(connection);
-      try {
-        insertIntoNamespacesTable(connection, namespace);
-      } catch (SQLException e) {
-        // ignore if the schema already exists
-        if (!rdbEngine.isDuplicateKeyError(e)) {
-          throw e;
-        }
-      }
+      upsertIntoNamespaceTable(connection, namespace);
     } catch (SQLException e) {
       throw new ExecutionException(String.format("Repairing the %s schema failed", namespace), e);
     }
@@ -979,6 +972,18 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
+  private void upsertIntoNamespaceTable(Connection connection, String namespace)
+      throws SQLException {
+    try {
+      insertIntoNamespacesTable(connection, namespace);
+    } catch (SQLException e) {
+      // ignore if the schema already exists
+      if (!rdbEngine.isDuplicateKeyError(e)) {
+        throw e;
+      }
+    }
+  }
+
   private void deleteFromNamespacesTable(Connection connection, String namespaceName)
       throws SQLException {
     String deleteStatement =
@@ -1006,6 +1011,41 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try (PreparedStatement preparedStatement = connection.prepareStatement(selectAllTables);
         ResultSet results = preparedStatement.executeQuery()) {
       return !results.next();
+    }
+  }
+
+  @Override
+  public void upgrade(Map<String, String> options) throws ExecutionException {
+    try (Connection connection = dataSource.getConnection()) {
+      if (tableExistsInternal(connection, metadataSchema, METADATA_TABLE)) {
+        createNamespacesTableIfNotExists(connection);
+        importNamespaceNamesOfExistingTables(connection);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException("Upgrading the ScalarDB environment failed", e);
+    }
+  }
+
+  private void importNamespaceNamesOfExistingTables(Connection connection)
+      throws ExecutionException {
+    String selectAllTableNames =
+        "SELECT DISTINCT "
+            + enclose(METADATA_COL_FULL_TABLE_NAME)
+            + " FROM "
+            + encloseFullTableName(metadataSchema, METADATA_TABLE);
+    try (Statement stmt = connection.createStatement();
+        ResultSet rs = stmt.executeQuery(selectAllTableNames)) {
+      Set<String> namespaceOfExistingTables = new HashSet<>();
+      while (rs.next()) {
+        String fullTableName = rs.getString(METADATA_COL_FULL_TABLE_NAME);
+        String namespaceName = fullTableName.substring(0, fullTableName.indexOf('.'));
+        namespaceOfExistingTables.add(namespaceName);
+      }
+      for (String namespace : namespaceOfExistingTables) {
+        upsertIntoNamespaceTable(connection, namespace);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException("Importing the namespace names of existing tables failed", e);
     }
   }
 }

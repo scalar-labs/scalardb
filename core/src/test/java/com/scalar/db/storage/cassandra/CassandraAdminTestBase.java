@@ -917,4 +917,56 @@ public abstract class CassandraAdminTestBase {
     verifyCreateKeyspacesTableQuery();
     verifyInsertIntoKeyspacesTableQuery(namespace);
   }
+
+  @Test
+  public void upgrade_withExistingUserKeyspaces_ShouldUpsertKeyspacesIntoNamespacesTable()
+      throws ExecutionException {
+    // Arrange
+    String replicationFactor = "5";
+    Map<String, String> options = new HashMap<>();
+    options.put(
+        CassandraAdmin.REPLICATION_STRATEGY, ReplicationStrategy.SIMPLE_STRATEGY.toString());
+    options.put(CassandraAdmin.REPLICATION_FACTOR, replicationFactor);
+    Cluster cluster = mock(Cluster.class);
+    Metadata metadata = mock(Metadata.class);
+    KeyspaceMetadata keyspace1 = mock(KeyspaceMetadata.class);
+    KeyspaceMetadata keyspace2 = mock(KeyspaceMetadata.class);
+    KeyspaceMetadata keyspace3 = mock(KeyspaceMetadata.class);
+    KeyspaceMetadata keyspace4 = mock(KeyspaceMetadata.class);
+
+    when(cassandraSession.getCluster()).thenReturn(cluster);
+    when(cluster.getMetadata()).thenReturn(metadata);
+    when(metadata.getKeyspaces())
+        .thenReturn(ImmutableList.of(keyspace1, keyspace2, keyspace3, keyspace4));
+    when(keyspace1.getName()).thenReturn("system_foo");
+    when(keyspace2.getName()).thenReturn(metadataKeyspaceName);
+    when(keyspace3.getName()).thenReturn("ks1");
+    when(keyspace4.getName()).thenReturn("ks2");
+
+    // Act
+    cassandraAdmin.upgrade(options);
+
+    // Assert
+    Map<String, Object> replicationOptions = new LinkedHashMap<>();
+    replicationOptions.put("class", ReplicationStrategy.SIMPLE_STRATEGY.toString());
+    replicationOptions.put("replication_factor", replicationFactor);
+    verifyCreateMetadataKeyspaceQuery(replicationOptions);
+    verifyCreateKeyspacesTableQuery();
+    verify(clusterManager, times(5)).getSession();
+    String upsertKs1Query =
+        QueryBuilder.insertInto(
+                quoteIfNecessary(metadataKeyspaceName),
+                quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
+            .value(CassandraAdmin.NAMESPACES_NAME_COL, "ks1")
+            .toString();
+
+    String upsertKs2Query =
+        QueryBuilder.insertInto(
+                quoteIfNecessary(metadataKeyspaceName),
+                quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
+            .value(CassandraAdmin.NAMESPACES_NAME_COL, "ks2")
+            .toString();
+    verify(cassandraSession).execute(upsertKs1Query);
+    verify(cassandraSession).execute(upsertKs2Query);
+  }
 }

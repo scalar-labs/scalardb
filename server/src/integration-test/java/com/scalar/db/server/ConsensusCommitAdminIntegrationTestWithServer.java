@@ -5,6 +5,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Disabled;
@@ -85,6 +86,17 @@ public class ConsensusCommitAdminIntegrationTestWithServer
   @Test
   @Disabled("Retrieving the namespace names is not supported in ScalarDB server")
   public void getNamespaceNames_ShouldReturnCreatedNamespaces() {}
+
+  @Test
+  @Disabled("upgrade() is not supported in ScalarDB server")
+  @Override
+  public void
+      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
+
+  @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    throw new UnsupportedOperationException();
+  }
 
   @SuppressWarnings("unused")
   private boolean isExternalServerUsed() {

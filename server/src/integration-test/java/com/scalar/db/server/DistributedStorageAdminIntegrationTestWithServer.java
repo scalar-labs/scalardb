@@ -1,6 +1,7 @@
 package com.scalar.db.server;
 
 import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
+import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
@@ -30,6 +31,17 @@ public class DistributedStorageAdminIntegrationTestWithServer
   @Test
   @Disabled("Retrieving the namespace names is not supported in ScalarDB server")
   public void getNamespaceNames_ShouldReturnCreatedNamespaces() {}
+
+  @Test
+  @Disabled("upgrade() is not supported in ScalarDB server")
+  @Override
+  public void
+      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
+
+  @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    throw new UnsupportedOperationException();
+  }
 
   @AfterAll
   @Override

@@ -328,6 +328,15 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void upgrade(Map<String, String> options) throws ExecutionException {
+    try {
+      admin.upgrade(options);
+    } catch (ExecutionException e) {
+      throw new ExecutionException("Upgrading the ScalarDB environment failed", e);
+    }
+  }
+
+  @Override
   public void close() {
     admin.close();
   }

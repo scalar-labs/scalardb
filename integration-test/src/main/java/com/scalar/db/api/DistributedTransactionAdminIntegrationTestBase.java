@@ -9,6 +9,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.util.AdminTestUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -113,6 +114,8 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
   }
+
+  protected abstract AdminTestUtils getAdminTestUtils(String testName);
 
   @AfterAll
   public void afterAll() throws Exception {
@@ -852,6 +855,25 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
     // Assert
     assertThat(namespaces).containsOnly(namespace1, namespace2);
+  }
+
+  @Test
+  public void
+      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces()
+          throws Exception {
+    AdminTestUtils adminTestUtils = getAdminTestUtils(TEST_NAME);
+    try {
+      // Arrange
+      adminTestUtils.dropNamespacesTable();
+
+      // Act
+      admin.upgrade(getCreationOptions());
+
+      // Assert
+      assertThat(admin.getNamespaceNames()).containsOnly(namespace1, namespace2);
+    } finally {
+      adminTestUtils.close();
+    }
   }
 
   protected boolean isIndexOnBooleanColumnSupported() {

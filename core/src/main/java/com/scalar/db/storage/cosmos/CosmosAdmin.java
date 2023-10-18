@@ -647,6 +647,33 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     }
   }
 
+  @Override
+  public void upgrade(Map<String, String> options) throws ExecutionException {
+    try {
+      if (!tableMetadataContainerExists()) {
+        return;
+      }
+      createMetadataDatabaseAndNamespaceContainerIfNotExists();
+
+      // Upsert namespace of existing tables in the "namespaces" container
+      getTableMetadataContainer()
+          .queryItems(
+              "SELECT container.id FROM container",
+              new CosmosQueryRequestOptions(),
+              CosmosTableMetadata.class)
+          .stream()
+          .map(
+              tableMetadata ->
+                  tableMetadata.getId().substring(0, tableMetadata.getId().indexOf('.')))
+          .distinct()
+          .forEach(
+              namespaceName ->
+                  getNamespacesContainer().upsertItem(new CosmosNamespace(namespaceName)));
+    } catch (RuntimeException e) {
+      throw new ExecutionException("Upgrading the ScalarDB environemnt failed", e);
+    }
+  }
+
   private void createMetadataDatabaseAndNamespaceContainerIfNotExists() {
     ThroughputProperties manualThroughput =
         ThroughputProperties.createManualThroughput(Integer.parseInt(DEFAULT_REQUEST_UNIT));

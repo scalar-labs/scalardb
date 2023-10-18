@@ -20,6 +20,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
@@ -2894,6 +2895,152 @@ public abstract class JdbcAdminTestBase {
     }
     verify(connection).prepareStatement(expectedSqlStatements[expectedSqlStatements.length - 1]);
     verify(preparedStatement).execute();
+  }
+
+  @Test
+  public void upgrade_ForMysql_ShouldInsertAllNamespacesFromMetadataTable()
+      throws SQLException, ExecutionException {
+    upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
+        RdbEngine.MYSQL,
+        "SELECT 1 FROM `" + metadataSchemaName + "`.`metadata` LIMIT 1",
+        ImmutableList.of(
+            "CREATE SCHEMA IF NOT EXISTS `"
+                + metadataSchemaName
+                + "` character set utf8 COLLATE utf8_bin"),
+        "CREATE TABLE IF NOT EXISTS `"
+            + metadataSchemaName
+            + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
+        "SELECT DISTINCT `full_table_name` FROM `" + metadataSchemaName + "`.`metadata`",
+        "INSERT INTO `" + metadataSchemaName + "`.`namespaces` VALUES (?)");
+  }
+
+  @Test
+  public void upgrade_ForPosgresql_ShouldInsertAllNamespacesFromMetadataTable()
+      throws SQLException, ExecutionException {
+    upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
+        RdbEngine.POSTGRESQL,
+        "SELECT 1 FROM \"" + metadataSchemaName + "\".\"metadata\" LIMIT 1",
+        ImmutableList.of("CREATE SCHEMA IF NOT EXISTS \"" + metadataSchemaName + "\""),
+        "CREATE TABLE IF NOT EXISTS \""
+            + metadataSchemaName
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + metadataSchemaName + "\".\"metadata\"",
+        "INSERT INTO \"" + metadataSchemaName + "\".\"namespaces\" VALUES (?)");
+  }
+
+  @Test
+  public void upgrade_ForOracle_ShouldInsertAllNamespacesFromMetadataTable()
+      throws SQLException, ExecutionException {
+    upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
+        RdbEngine.ORACLE,
+        "SELECT 1 FROM \"" + metadataSchemaName + "\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
+        ImmutableList.of(
+            "CREATE USER \"" + metadataSchemaName + "\" IDENTIFIED BY \"oracle\"",
+            "ALTER USER \"" + metadataSchemaName + "\" quota unlimited on USERS"),
+        "CREATE TABLE \""
+            + metadataSchemaName
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + metadataSchemaName + "\".\"metadata\"",
+        "INSERT INTO \"" + metadataSchemaName + "\".\"namespaces\" VALUES (?)");
+  }
+
+  @Test
+  public void upgrade_ForSqlServer_ShouldInsertAllNamespacesFromMetadataTable()
+      throws SQLException, ExecutionException {
+    upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
+        RdbEngine.SQL_SERVER,
+        "SELECT TOP 1 1 FROM [" + metadataSchemaName + "].[metadata]",
+        ImmutableList.of("CREATE SCHEMA [" + metadataSchemaName + "]"),
+        "CREATE TABLE ["
+            + metadataSchemaName
+            + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
+        "SELECT DISTINCT [full_table_name] FROM [" + metadataSchemaName + "].[metadata]",
+        "INSERT INTO [" + metadataSchemaName + "].[namespaces] VALUES (?)");
+  }
+
+  @Test
+  public void upgrade_ForSqlite_ShouldInsertAllNamespacesFromMetadataTable()
+      throws SQLException, ExecutionException {
+    upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
+        RdbEngine.SQLITE,
+        "SELECT 1 FROM \"" + metadataSchemaName + "$metadata\" LIMIT 1",
+        Collections.emptyList(),
+        "CREATE TABLE IF NOT EXISTS \""
+            + metadataSchemaName
+            + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + metadataSchemaName + "$metadata\"",
+        "INSERT INTO \"" + metadataSchemaName + "$namespaces\" VALUES (?)");
+  }
+
+  private void upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
+      RdbEngine rdbEngine,
+      String tableMetadataExistStatement,
+      List<String> createMetadataNamespaceStatements,
+      String createNamespaceTableStatement,
+      String getTableMetadataNamespacesStatement,
+      String insertNamespaceStatement)
+      throws SQLException, ExecutionException {
+    // Arrange
+    // Instantiate mocks
+    Statement tableMetadataExistsStatementMock = mock(Statement.class);
+    List<Statement> createMetadataNamespaceStatementsMock =
+        prepareMockStatements(createMetadataNamespaceStatements.size());
+    Statement createNamespaceTableStatementMock = mock(Statement.class);
+    Statement getTableMetadataNamespacesStatementMock = mock(Statement.class);
+    PreparedStatement insertNamespacePrepStmt1 = mock(PreparedStatement.class);
+    PreparedStatement insertNamespacePrepStmt2 = mock(PreparedStatement.class);
+
+    when(connection.prepareStatement(anyString()))
+        .thenReturn(insertNamespacePrepStmt1, insertNamespacePrepStmt2);
+    List<Statement> statementsMock =
+        ImmutableList.<Statement>builder()
+            .add(tableMetadataExistsStatementMock)
+            .addAll(createMetadataNamespaceStatementsMock)
+            .add(createNamespaceTableStatementMock)
+            .add(getTableMetadataNamespacesStatementMock)
+            .build();
+
+    // Prepare calls
+    when(connection.createStatement())
+        .thenReturn(
+            statementsMock.get(0),
+            statementsMock.subList(1, statementsMock.size()).toArray(new Statement[0]));
+    Connection connection2 = mock(Connection.class);
+    when(dataSource.getConnection()).thenReturn(connection, connection2);
+    ResultSet resultSet1 =
+        mockResultSet(
+            new SelectFullTableNameFromMetadataTableResultSetMocker.Row("ns1.tbl1"),
+            new SelectFullTableNameFromMetadataTableResultSetMocker.Row("ns1.tbl2"),
+            new SelectFullTableNameFromMetadataTableResultSetMocker.Row("ns2.tbl3"));
+    when(getTableMetadataNamespacesStatementMock.executeQuery(anyString())).thenReturn(resultSet1);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    admin.upgrade(Collections.emptyMap());
+
+    // Assert
+    verify(tableMetadataExistsStatementMock).execute(tableMetadataExistStatement);
+    for (int i = 0; i < createMetadataNamespaceStatementsMock.size(); i++) {
+      verify(createMetadataNamespaceStatementsMock.get(i))
+          .execute(createMetadataNamespaceStatements.get(i));
+    }
+    verify(createNamespaceTableStatementMock).execute(createNamespaceTableStatement);
+    verify(getTableMetadataNamespacesStatementMock)
+        .executeQuery(getTableMetadataNamespacesStatement);
+    verify(connection, times(2)).prepareStatement(insertNamespaceStatement);
+    verify(insertNamespacePrepStmt1).setString(1, "ns2");
+    verify(insertNamespacePrepStmt2).setString(1, "ns1");
+    verify(insertNamespacePrepStmt1).execute();
+    verify(insertNamespacePrepStmt2).execute();
+  }
+
+  private List<Statement> prepareMockStatements(int count) {
+    List<Statement> statements = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      Statement statement = mock(Statement.class);
+      statements.add(statement);
+    }
+    return statements;
   }
 
   // Utility class used to mock ResultSet for a "select * from" query on the metadata table
