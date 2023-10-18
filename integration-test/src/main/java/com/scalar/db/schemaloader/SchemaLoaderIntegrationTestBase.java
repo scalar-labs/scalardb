@@ -261,6 +261,10 @@ public abstract class SchemaLoaderIntegrationTestBase {
         .build();
   }
 
+  protected List<String> getCommandArgsForUpgrade(Path configFilePath) {
+    return ImmutableList.of("--config", configFilePath.toString(), "--upgrade");
+  }
+
   @AfterAll
   public void afterAll() throws Exception {
     dropTablesIfExist();
@@ -405,6 +409,25 @@ public abstract class SchemaLoaderIntegrationTestBase {
         .isEqualTo(expectedTable1Metadata);
     assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2))
         .isEqualTo(expectedTable2Metadata);
+  }
+
+  @Test
+  public void createThenDropNamespacesTableThenUpgrade_ShouldCreateNamespacesTableCorrectly()
+      throws Exception {
+    // Arrange
+    int exitCodeCreation =
+        executeWithArgs(
+            getCommandArgsForCreationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+    assertThat(exitCodeCreation).isZero();
+    adminTestUtils.dropNamespacesTable();
+
+    // Act
+    int exitCodeUpgrade = executeWithArgs(getCommandArgsForUpgrade(CONFIG_FILE_PATH));
+
+    // Assert
+    assertThat(exitCodeUpgrade).isZero();
+    waitForCreationIfNecessary();
+    assertThat(transactionAdmin.getNamespaceNames()).containsOnly(namespace1, namespace2);
   }
 
   private void createTables_ShouldCreateTablesWithCoordinator() throws Exception {
