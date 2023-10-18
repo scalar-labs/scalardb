@@ -155,11 +155,7 @@ For details about using multiple storages, see [Multi-Storage Transactions](mult
 
 [ScalarDB Cluster (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/) is a component that provides a gRPC interface to ScalarDB.
 
-For configurations available for the gRPC transaction manager for ScalarDB Cluster, see the ScalarDB Cluster [client configurations (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/developer-guide-for-scalardb-cluster-with-java-api/#client-configurations).
-
-## ScalarDB Cluster configurations
-
-For details about how to configure ScalarDB Cluster, see [ScalarDB Cluster Configurations (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/scalardb-cluster-configurations/).
+For details about client configurations, see the ScalarDB Cluster [client configurations (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/developer-guide-for-scalardb-cluster-with-java-api/#client-configurations).
 
 ## Other ScalarDB configurations
 
@@ -170,12 +166,6 @@ The following are additional configurations available for ScalarDB:
 | `scalar.db.metadata.cache_expiration_time_secs`                  | ScalarDB has a metadata cache to reduce the number of requests to the database. This setting specifies the expiration time of the cache in seconds.                                                               | `-1` (no expiration) |
 | `scalar.db.active_transaction_management.expiration_time_millis` | ScalarDB maintains ongoing transactions, which can be resumed by using a transaction ID. This setting specifies the expiration time of this transaction management feature in milliseconds.                       | `-1` (no expiration) |
 | `scalar.db.default_namespace_name`                               | The given namespace name will be used by operations that do not already specify a namespace. |                      |
-
-### Two-phase commit support
-
-ScalarDB supports transactions with a two-phase commit interface. With transactions with a two-phase commit interface, you can execute a transaction that spans multiple processes or applications, like in a microservice architecture.
-
-For details about using two-phase commit, see [Transactions with a Two-Phase Commit Interface](two-phase-commit-transactions.md).
 
 ## Configuration examples
 
@@ -244,8 +234,8 @@ The following is an example of the configuration for connecting the app to the u
 # Transaction manager implementation.
 scalar.db.transaction_manager=cluster
 
-# ScalarDB Cluster host.
-scalar.db.contact_points=<SCALARDB_CLUSTER_HOST>
+# Contact point of the cluster.
+scalar.db.contact_points=indirect:<SCALARDB_CLUSTER_CONTACT_POINT>
 
 # ScalarDB Cluster port.
 scalar.db.contact_port=<SCALARDB_CLUSTER_PORT>
@@ -260,3 +250,5 @@ scalar.db.contact_points=<CASSANDRA_HOST>
 scalar.db.username=<USERNAME>
 scalar.db.password=<PASSWORD>
 ```
+
+For details about client configurations, see the ScalarDB Cluster [client configurations (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/developer-guide-for-scalardb-cluster-with-java-api/#client-configurations).
