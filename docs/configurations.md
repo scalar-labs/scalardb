@@ -236,19 +236,6 @@ scalar.db.transaction_manager=cluster
 
 # Contact point of the cluster.
 scalar.db.contact_points=indirect:<SCALARDB_CLUSTER_CONTACT_POINT>
-
-# ScalarDB Cluster port.
-scalar.db.contact_port=<SCALARDB_CLUSTER_PORT>
-
-# Storage implementation.
-scalar.db.storage=cassandra
-
-# Comma-separated contact points.
-scalar.db.contact_points=<CASSANDRA_HOST>
-
-# Credential information to access the database.
-scalar.db.username=<USERNAME>
-scalar.db.password=<PASSWORD>
 ```
 
 For details about client configurations, see the ScalarDB Cluster [client configurations (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/developer-guide-for-scalardb-cluster-with-java-api/#client-configurations).
