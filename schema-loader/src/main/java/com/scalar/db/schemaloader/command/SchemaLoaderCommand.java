@@ -81,7 +81,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
         description =
             "Repair namespaces and tables that are in an unknown state: it recreates namespaces, tables, secondary indexes and their metadata if necessary.",
         defaultValue = "false")
-    boolean repairTables;
+    boolean repairAll;
 
     @Option(
         names = {"-A", "--alter"},
@@ -107,7 +107,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       createTables();
     } else if (mode.deleteTables) {
       SchemaLoader.unload(configPath, schemaFile, coordinator);
-    } else if (mode.repairTables) {
+    } else if (mode.repairAll) {
       repairAll();
     } else if (mode.alterTables) {
       alterTables();
